@@ -1,0 +1,720 @@
+{
+  "schemaVersion": 1,
+  "status": "ORIGINAL_FAILURE_AUDITED_NO_RUNTIME_FIX_SELECTED",
+  "reviewer": "installer_review",
+  "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "runId": 43959134974,
+  "jobId": 133638325312,
+  "artifactId": 14281075669,
+  "archive": {
+    "path": "packaged-75cf-winarm64/artifact.zip",
+    "bytes": 427402,
+    "sha256": "fc06962076147e201007ec9a295977578b0529189c778761e6eebb2a10cb312c",
+    "gitBlob": "043918c414033b094896e487a5a54eade876fb4e"
+  },
+  "jobLog": {
+    "path": "packaged-75cf-winarm64/job.log",
+    "bytes": 324327,
+    "sha256": "57766313ad8851e4e7719ec44dec7a0366ac02942443130a44ec21f5aac872ad",
+    "gitBlob": "19b0795e09ae6a62cdf179f7e5daaabdfdcba1a5"
+  },
+  "downloadManifest": {
+    "path": "packaged-75cf-winarm64/download-manifest.json",
+    "bytes": 1579,
+    "sha256": "9eea82000ae65ba8e8cd59eec5519cb6408ea57ee0882041bdbc89a04438c230",
+    "gitBlob": "f8068b14ec365a1f0eac7c3a611043dd10e3718e"
+  },
+  "members": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154843,
+      "sha256": "5e100b65f495b637ca9491b78970490f27f45c99a3476e4444c9afce706ed419"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-inputs.json",
+      "bytes": 782,
+      "sha256": "6c1519c5028e50ae011e267072b4b068433c6b7e325cd4a2042a9c9c9038df59"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-native.json",
+      "bytes": 5389,
+      "sha256": "902ba433ebfed2728d497b3d10f9ecb5b74ae82b440846d258464808d49d1f90"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged.json",
+      "bytes": 1188,
+      "sha256": "836366c291926dffc80d083253dbaa79cf9af93a29ef290fbe43d9a61c55ba2b"
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.app.log",
+      "bytes": 5654,
+      "sha256": "17c534489a32f20a8ea25ec36240c26d672b9c1a4d1a0ae77e8c84867304723a"
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.before-crash.png",
+      "bytes": 79785,
+      "sha256": "a6e44edcdbcf8506a7e3e9245c4f354a27c2dda66b298363efa191eb092c6c21"
+    },
+    {
+      "path": "_temp/windows-same-main-process-ui.controller.log",
+      "bytes": 34269,
+      "sha256": "88657e33803597ad8d9ded664a33712a1f304c60b57242551c87b980c9c42224"
+    }
+  ],
+  "nativePackaged": {
+    "status": "PASS_NATIVE_PACKAGED_ONLY",
+    "originalReceipt": {
+      "path": "packaged-75cf-winarm64/extracted/_temp/opencode-v2-packaged-native.json",
+      "bytes": 5389,
+      "sha256": "902ba433ebfed2728d497b3d10f9ecb5b74ae82b440846d258464808d49d1f90",
+      "gitBlob": "41fa61f67df3ecb2242c3be4146c523fc219bb31"
+    },
+    "outerReceipt": {
+      "path": "packaged-75cf-winarm64/extracted/_temp/opencode-v2-packaged.json",
+      "bytes": 1188,
+      "sha256": "836366c291926dffc80d083253dbaa79cf9af93a29ef290fbe43d9a61c55ba2b",
+      "gitBlob": "aabe57263b3b642aaaa32cb308d6da8d6653fc6c"
+    },
+    "inputReceipt": {
+      "path": "packaged-75cf-winarm64/extracted/_temp/opencode-v2-packaged-inputs.json",
+      "bytes": 782,
+      "sha256": "6c1519c5028e50ae011e267072b4b068433c6b7e325cd4a2042a9c9c9038df59",
+      "gitBlob": "f7b13b1460ed74a11084d1ffe0d42c9b40ac202e"
+    },
+    "candidateManifest": {
+      "path": "packaged-75cf-winarm64/extracted/agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154843,
+      "sha256": "5e100b65f495b637ca9491b78970490f27f45c99a3476e4444c9afce706ed419",
+      "gitBlob": "1f0c1ea5970ecb609e82ea8a19d33e897de6d789"
+    },
+    "steps": [
+      "original_host_embedded_native_and_mcp_ready",
+      "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+      "changed_project_config_did_not_retarget_running_native_session",
+      "original_uploaded_PNG_native_image_inference_and_public_readback",
+      "checkpoint_and_original_host_native_cleanup_confirmed",
+      "cold_host_restored_native_history_without_model_or_tool_replay"
+    ],
+    "manual": true,
+    "modelOrigin": "localhost-scripted",
+    "modelRequests": 11,
+    "successfulInputs": 2,
+    "resolvedPermissions": 2,
+    "hosts": [
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      },
+      {
+        "exitCode": 0,
+        "signalCode": null,
+        "stdoutValid": true
+      }
+    ],
+    "cleanup": true,
+    "inputReadCount": 314,
+    "elapsedMs": 265338,
+    "scopeLimits": "Original receipt/manifest joins only; no independent rehash of8133 packaged payload files. Coordination, Desktop journey, vendor authentication and release remain unqualified."
+  },
+  "sameMainUi": {
+    "status": "INCOMPLETE_ORIGINAL_RETRY_PHASE",
+    "phaseRecords": [
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "packaged-App-startup",
+        "atMs": 0.0849000000016531,
+        "budgetMs": 120000
+      },
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "one-initial-Runtime-Open",
+        "atMs": 12241.639900000002,
+        "budgetMs": 45000
+      },
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "one-original-business-input-and-UI",
+        "atMs": 19157.0881,
+        "budgetMs": 35000
+      },
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "atMs": 44146.19150000001,
+        "budgetMs": 10000
+      },
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "one-explicit-same-Main-Retry",
+        "atMs": 53198.29870000001,
+        "budgetMs": 10000
+      },
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "original-product-Quit",
+        "atMs": 63493.21510000001,
+        "budgetMs": 30000
+      }
+    ],
+    "firstFailure": {
+      "phase": "one-explicit-same-Main-Retry",
+      "errorKind": "AssertionError original phase expired at remaining",
+      "originalErrorCharacters": 128,
+      "recordBytesIncludingLF": 556,
+      "retryUi": {
+        "stages": {
+          "clickReturnedMs": 5138,
+          "writerObservedMs": 7192,
+          "hostCheckedMs": 7760,
+          "uiReadyMs": 8465
+        },
+        "returnedReads": 1,
+        "countTruncated": false,
+        "last": {
+          "atMs": 8465,
+          "result": "ready"
+        }
+      },
+      "census": {
+        "counts": {
+          "process-census": 1,
+          "process-listener-snapshot": 10
+        },
+        "totalMs": 7568,
+        "maxMs": 732,
+        "lastMs": 716,
+        "failedReads": 0,
+        "truncated": false
+      }
+    },
+    "preciseAttributionLimit": "Only the first128 stack characters and bounded aggregate survived. Failure is after uiReady and before next UI phase; the exact post-ready await/read/screenshot admission is not retained, so it is not assigned to a specific call. Rounded totalMs is the sum of individually rounded census durations, not a recovered raw duration total.",
+    "sourceInferredCompletedPrefix": [
+      "One initial Runtime Open returned nativeReady and attached.",
+      "One original bootstrap input completed successfully; original two registrations and their native witnesses were captured.",
+      "Original pre-crash rows and screenshot passed; original Host A absence and metadata Refresh recovery marker preceded Retry phase.",
+      "One Retry click returned; successor writer and actual Host checks succeeded; recovery UI returned ready once. These are source-ordered progress inferences from original stage records, not a substitute for absent full final receipt."
+    ],
+    "unreachedOrUnproved": [
+      "No original-UI-Kill-primary or neighbor phase was entered; no two-Stop contract.",
+      "No after-retry or after-Stop PNG.",
+      "No final public binding/rows/Main identity proof object retained; completion of post-uiReady recovery assertions remains unknown.",
+      "No final source hash before/after vectors, packaged/native freeze verdict, peer final counts, nativeCleanup, Main exit0 or Browser.close acknowledgement retained."
+    ],
+    "quitAndContainment": {
+      "quitPhaseEntered": true,
+      "orderlyQuitQualified": false,
+      "nativeCleanupQualified": false,
+      "controller": {
+        "gateController": "emergency-fail",
+        "rootExitCode": 99,
+        "activeProcesses": 0
+      },
+      "meaning": "Original controller emergency termination reached zero active members and cleaned its sandbox under the unchanged native bound. This is emergency containment, not original product Quit or full native HANDLE success."
+    },
+    "loggedDurations": {
+      "loggedControllerSandboxToEmergencyMs": 120070.932,
+      "loggedStartupPhaseToEmergencyMs": 84272.916,
+      "loggedQuitEntryToEmergencyMs": 20773.36,
+      "retryPhaseToQuitEntryLocalMs": 10294.916400000002
+    },
+    "clixml": "Repeated PowerShell XML Error-stream warnings coexist with returned census calls and earlier business progress; no causal query refusal is proved."
+  },
+  "timedOriginalRecords": [
+    {
+      "line": 2118,
+      "timestamp": "2026-11-16T22:58:55.3574046Z",
+      "event": "original-controller-sandbox"
+    },
+    {
+      "line": 2135,
+      "timestamp": "2026-11-16T22:59:31.1554203Z",
+      "event": {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "packaged-App-startup",
+        "atMs": 0.0849000000016531,
+        "budgetMs": 120000
+      }
+    },
+    {
+      "line": 2184,
+      "timestamp": "2026-11-16T22:59:43.6743273Z",
+      "event": {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "one-initial-Runtime-Open",
+        "atMs": 12241.639900000002,
+        "budgetMs": 45000
+      }
+    },
+    {
+      "line": 2193,
+      "timestamp": "2026-11-16T22:59:50.1297577Z",
+      "event": {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "one-original-business-input-and-UI",
+        "atMs": 19157.0881,
+        "budgetMs": 35000
+      }
+    },
+    {
+      "line": 2402,
+      "timestamp": "2026-11-16T23:00:15.2154554Z",
+      "event": {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "actual-Host-A-exit-and-metadata-Refresh",
+        "atMs": 44146.19150000001,
+        "budgetMs": 10000
+      }
+    },
+    {
+      "line": 2499,
+      "timestamp": "2026-11-16T23:00:24.2917338Z",
+      "event": {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "one-explicit-same-Main-Retry",
+        "atMs": 53198.29870000001,
+        "budgetMs": 10000
+      }
+    },
+    {
+      "line": 2588,
+      "timestamp": "2026-11-16T23:00:34.6510582Z",
+      "event": {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_FAILURE",
+        "phase": "one-explicit-same-Main-Retry",
+        "error": "AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: one-explicit-same-Main-Retry\n    at remaining (file:///C:/a/a",
+        "retryUi": {
+          "stages": {
+            "clickReturnedMs": 5138,
+            "writerObservedMs": 7192,
+            "hostCheckedMs": 7760,
+            "uiReadyMs": 8465
+          },
+          "returnedReads": 1,
+          "countTruncated": false,
+          "last": {
+            "atMs": 8465,
+            "result": "ready"
+          }
+        },
+        "census": {
+          "counts": {
+            "process-census": 1,
+            "process-listener-snapshot": 10
+          },
+          "totalMs": 7568,
+          "maxMs": 732,
+          "lastMs": 716,
+          "failedReads": 0,
+          "truncated": false
+        }
+      }
+    },
+    {
+      "line": 2589,
+      "timestamp": "2026-11-16T23:00:34.6549763Z",
+      "event": {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "original-product-Quit",
+        "atMs": 63493.21510000001,
+        "budgetMs": 30000
+      }
+    },
+    {
+      "line": 2662,
+      "timestamp": "2026-11-16T23:00:55.4283367Z",
+      "event": {
+        "gateController": "emergency-fail",
+        "rootExitCode": 99,
+        "activeProcesses": 0
+      }
+    }
+  ],
+  "sources": [
+    {
+      "path": "packaged-75cf-winx64/installer-review/source/tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "bytes": 38528,
+      "sha256": "feccb3979905fb65ee65d9d925d6d50496c9123c6d6b9fadec3ea11a7f0654ea",
+      "gitBlob": "40d7c19142de2cafdb0a7b433bbedddc216e99da"
+    },
+    {
+      "path": "packaged-75cf-winx64/installer-review/source/tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "bytes": 31614,
+      "sha256": "3a9fbd77f972662a185f44c9a169ef3473198f7148b60096e8b551a306ea9db4",
+      "gitBlob": "8b0842abf55362dfd2223d042f423db447881794"
+    },
+    {
+      "path": "packaged-75cf-winx64/installer-review/source/.github/workflows/electron-packaged-ci.yml",
+      "bytes": 19680,
+      "sha256": "13981d0a919eb7debdffbe57f12716db2ed0b754572643ff0ce2730f1e62d7ee",
+      "gitBlob": "8a39884bdf09fe22fe153c7a9fc3eae89dc749e8"
+    },
+    {
+      "path": "packaged-75cf-winx64/installer-review/source/scripts/e2e/opencode-diagnostics/platform.mjs",
+      "bytes": 15906,
+      "sha256": "e803175c8a272e8d5abe9b4c5f7a395321c16d08e64f9adcc535bf8211335a4b",
+      "gitBlob": "d4ad4e8976da305cc6fb4b0d5f7ff62007130782"
+    },
+    {
+      "path": "desktop-taskboard-75cf/source/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 30733,
+      "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e",
+      "gitBlob": "1c11809c6458f829bd9bb6995aea2ad60b85511e"
+    },
+    {
+      "path": "process-75cf-winarm64/source/tools/owned-process-broker/gateController.cpp",
+      "bytes": 5935,
+      "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+      "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5"
+    }
+  ],
+  "screenshotReview": {
+    "path": "_temp/windows-same-main-process-ui.before-crash.png",
+    "observation": "Retained before-crash image shows the finite Team Running/lead online, Refresh control, TEST registered both services text and the selected task. The Processes rows are below the visible area; the image does not visually qualify recovery or Stop."
+  },
+  "adjacentCensusAssessment": {
+    "scope": "Read-only minimal feasibility; no repair plan or afterimage selected",
+    "oneLineCandidate": {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "gitBlob": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+      "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e",
+      "windowsCapturedCrlfSha256": "bea04398b4e5c72a1a0a891c109951f8812bf1a2cb9c4b0c6d7c9cc081201b81",
+      "outerGuardLine": 440,
+      "innerGuardLine": 190,
+      "proof": "scrollTo invokes waitRead synchronously; before the inner guard there are only argument construction and deadline reads. The same inner guard remains before the first actual renderer evaluation and every retry. Removing only the outer call removes no authority check across an await or input/native action. An expired loop still refuses without dispatch.",
+      "limits": "Relevant to scroll phases including x64 primary Kill; not on the ARM Retry click route. No guarantee either original10s failure would pass."
+    },
+    "otherStructuralAdjacency": {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "lines": "574–576 then screenshot349–351",
+      "proof": "After Retry, captureCensus supplies sameMainAfterRetry, sameIdentity is synchronous, then screenshot immediately performs a fresh stronger combined ownership census before its first CDP await.",
+      "selection": "Not a one-line deletion: the earlier read supplies a retained receipt field. Any reuse/recomposition needs separate selected semantics retaining the later fresh guard; no cache may cross screenshot await. No cut proposed."
+    },
+    "preservedBoundaries": [
+      "All click geometry samples, pointer-enter checks, delayed stabilization reads and pre-press ownership checks cross relevant awaits/actions and remain.",
+      "No positive authority caching; no removal of an ownership check across renderer/native/input operations.",
+      "No10s extension, screenshot removal, guard relaxation, click replay, or promotion of partial Stop to full cleanup."
+    ]
+  },
+  "checks": [
+    {
+      "check": "Exact original archive",
+      "passed": true
+    },
+    {
+      "check": "Exact original decoded job log",
+      "passed": true
+    },
+    {
+      "check": "Original ZIP CRC complete",
+      "passed": true
+    },
+    {
+      "check": "Seven unique closed artifact members",
+      "passed": true
+    },
+    {
+      "check": "Safe ordinary ZIP member agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "passed": true
+    },
+    {
+      "check": "Extracted original bytes agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "passed": true
+    },
+    {
+      "check": "Safe ordinary ZIP member _temp/opencode-v2-packaged-inputs.json",
+      "passed": true
+    },
+    {
+      "check": "Extracted original bytes _temp/opencode-v2-packaged-inputs.json",
+      "passed": true
+    },
+    {
+      "check": "Safe ordinary ZIP member _temp/opencode-v2-packaged-native.json",
+      "passed": true
+    },
+    {
+      "check": "Extracted original bytes _temp/opencode-v2-packaged-native.json",
+      "passed": true
+    },
+    {
+      "check": "Safe ordinary ZIP member _temp/opencode-v2-packaged.json",
+      "passed": true
+    },
+    {
+      "check": "Extracted original bytes _temp/opencode-v2-packaged.json",
+      "passed": true
+    },
+    {
+      "check": "Safe ordinary ZIP member _temp/windows-same-main-process-ui.app.log",
+      "passed": true
+    },
+    {
+      "check": "Extracted original bytes _temp/windows-same-main-process-ui.app.log",
+      "passed": true
+    },
+    {
+      "check": "Safe ordinary ZIP member _temp/windows-same-main-process-ui.before-crash.png",
+      "passed": true
+    },
+    {
+      "check": "Extracted original bytes _temp/windows-same-main-process-ui.before-crash.png",
+      "passed": true
+    },
+    {
+      "check": "Safe ordinary ZIP member _temp/windows-same-main-process-ui.controller.log",
+      "passed": true
+    },
+    {
+      "check": "Extracted original bytes _temp/windows-same-main-process-ui.controller.log",
+      "passed": true
+    },
+    {
+      "check": "Download manifest member metadata exact",
+      "passed": true
+    },
+    {
+      "check": "Original upload log joins exact artifact/run/source",
+      "passed": true
+    },
+    {
+      "check": "Official checkout/source environment binds original head",
+      "passed": true
+    },
+    {
+      "check": "Exact source/platform native",
+      "passed": true
+    },
+    {
+      "check": "Exact source/platform outer",
+      "passed": true
+    },
+    {
+      "check": "Exact source/platform inputs",
+      "passed": true
+    },
+    {
+      "check": "Exact source/platform candidate",
+      "passed": true
+    },
+    {
+      "check": "Native packaged PASS and cleanup true",
+      "passed": true
+    },
+    {
+      "check": "All six original native journey steps retained",
+      "passed": true
+    },
+    {
+      "check": "Manual finite local model scope",
+      "passed": true
+    },
+    {
+      "check": "Exactly two successful native inputs",
+      "passed": true
+    },
+    {
+      "check": "Exactly two resolved native permissions",
+      "passed": true
+    },
+    {
+      "check": "Both original native Host exits clean",
+      "passed": true
+    },
+    {
+      "check": "Native original launch actual120s limit",
+      "passed": true
+    },
+    {
+      "check": "Native negative qualification fields retained",
+      "passed": true
+    },
+    {
+      "check": "Outer qualification native receipt hash binds exact bytes",
+      "passed": true
+    },
+    {
+      "check": "Outer PASS exact observed cleanup and exit",
+      "passed": true
+    },
+    {
+      "check": "Original resource displacement/restoration attested",
+      "passed": true
+    },
+    {
+      "check": "Candidate digest and Host join",
+      "passed": true
+    },
+    {
+      "check": "Original appAsar join",
+      "passed": true
+    },
+    {
+      "check": "Candidate Node binary/archive exact join",
+      "passed": true
+    },
+    {
+      "check": "Candidate harness and Host source digest join",
+      "passed": true
+    },
+    {
+      "check": "Original c930 provider and unchanged SPI pin",
+      "passed": true
+    },
+    {
+      "check": "Current160 engine and native inputs unchanged join",
+      "passed": true
+    },
+    {
+      "check": "Package/file manifest counts recorded only",
+      "passed": true
+    },
+    {
+      "check": "Outer unqualified desktopJourneyQualified",
+      "passed": true
+    },
+    {
+      "check": "Outer unqualified vendorAuthQualified",
+      "passed": true
+    },
+    {
+      "check": "Outer unqualified releaseQualified",
+      "passed": true
+    },
+    {
+      "check": "One bounded original failure",
+      "passed": true
+    },
+    {
+      "check": "First refusing UI phase is original Retry deadline",
+      "passed": true
+    },
+    {
+      "check": "Failure formatter retains bounded original stack prefix",
+      "passed": true
+    },
+    {
+      "check": "Failure record within1024byte budget",
+      "passed": true
+    },
+    {
+      "check": "Exact positive bounded Retry observations",
+      "passed": true
+    },
+    {
+      "check": "Exact uncapped returned census aggregate",
+      "passed": true
+    },
+    {
+      "check": "Only original preStop phases and Quit entered",
+      "passed": true
+    },
+    {
+      "check": "Original phase budgets unchanged",
+      "passed": true
+    },
+    {
+      "check": "Original emergency containment only",
+      "passed": true
+    },
+    {
+      "check": "No final same-Main UI receipt or later screenshots",
+      "passed": true
+    },
+    {
+      "check": "Original UI controller failure stops workflow validator",
+      "passed": true
+    },
+    {
+      "check": "Native PASS precedes failed UI invocation",
+      "passed": true
+    },
+    {
+      "check": "Repeated CLIXML warnings coexist with returned reads",
+      "passed": true
+    },
+    {
+      "check": "Controller original120s wall observation consistent",
+      "passed": true
+    },
+    {
+      "check": "Exact retained75cf source body nativeWindowsAppGate.mjs",
+      "passed": true
+    },
+    {
+      "check": "Exact retained75cf source body nativeWindowsAppFixture.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact retained75cf source body electron-packaged-ci.yml",
+      "passed": true
+    },
+    {
+      "check": "Exact retained75cf source body platform.mjs",
+      "passed": true
+    },
+    {
+      "check": "Exact retained75cf source body desktop-ui-controls.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact retained75cf source body gateController.cpp",
+      "passed": true
+    },
+    {
+      "check": "Reached original Retry stage requires prior exact native/UI preparation",
+      "passed": true
+    },
+    {
+      "check": "uiReady is not full recovered rows or stop proof",
+      "passed": true
+    },
+    {
+      "check": "Entire remaining post-ready recovery sequence stays within original phase",
+      "passed": true
+    },
+    {
+      "check": "Original final receipt appears only at end of finally",
+      "passed": true
+    },
+    {
+      "check": "No full cleanup can pass without exactly two completed Stops",
+      "passed": true
+    },
+    {
+      "check": "Original controller bound and mandatory emergency termination retained",
+      "passed": true
+    },
+    {
+      "check": "Original final workflow requires drained root0 not emergency-fail",
+      "passed": true
+    },
+    {
+      "check": "Original final workflow requires all original UI actions and cleanup",
+      "passed": true
+    },
+    {
+      "check": "Exact adjacent scrollTo guard then waitRead invocation",
+      "passed": true
+    },
+    {
+      "check": "Nested waitRead guard is before first await and every read",
+      "passed": true
+    },
+    {
+      "check": "Retry path does not invoke scrollTo",
+      "passed": true
+    }
+  ],
+  "checkCount": 77,
+  "qualified": {
+    "packagedNativeReceiptScope": true,
+    "sameMainRetryUi": false,
+    "twoUiStops": false,
+    "orderlyUiQuit": false,
+    "fullUiSourceFreeze": false,
+    "release": false
+  },
+  "noScopeTransfer": "The75cf x64 after-primary failure and this ARM Retry failure remain distinct. Future code and later heads are not qualified by this audit. Original x64 report remains unchanged.",
+  "execution": "Only retained original artifact/source reads, ZIP CRC/safe-path/hash checks and inert screenshot view. No downloads, project/compiler/tests/providers/native/GUI execution, CI observation/action, or remote mutation."
+}

@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "status": "FROZEN_SOURCE_CANDIDATE",
+  "plan": {
+    "commit": "229991c46f94b4dec0b6060a98e777833d84e9fe",
+    "sha256": "129d5b1215c6bc12f29a38afac422d257130b746bcc05ab1493aa0ce93e9c09d",
+    "gitBlob": "b550f33385a1da00915548047fa814743fcd5324"
+  },
+  "preparedSourceBase": "3b584da7c5105564cc105e5731a1fca08b3f0a5a",
+  "prospectiveParent": "39a00ee65eb4ecfd5ba42c4c0504db837f6db470",
+  "parentNote": "Root independently confirms unrelated Plan66 layout leaves; exact selected six source preimages unchanged. Root owns fresh publication lease.",
+  "files": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "gitBlob": "f7d9534ccc58aa8b77fe7a424ff3d652873c0a15",
+        "sha256": "348d5a5c093e0608b6d16fe53d6136bf6c7f86c335287f979bb88e56be4d2979",
+        "bytes": 142325,
+        "lines": 1774
+      },
+      "after": {
+        "gitBlob": "d132a5e37cec1e62120571606f3f272f56b9b4af",
+        "sha256": "2470e8c83d8e77eddb4d5156947c30fda993e5b3485b9fb238bc12d6e2be6839",
+        "bytes": 142538,
+        "lines": 1777
+      },
+      "additions": 4,
+      "deletions": 1,
+      "hunks": 1
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "before": {
+        "gitBlob": "93606e49aedfe84b6452aee487efdf2055f45524",
+        "sha256": "1aa35cca543a731d88fb257522458e99f73964b1d18553c5118f4c8542815e7e",
+        "bytes": 32370,
+        "lines": 419
+      },
+      "after": {
+        "gitBlob": "b051fba3021eedd15ce256577c3fc711e0d0786b",
+        "sha256": "b0ad0cb688f5cf1a4c00d4252aa04094975189d2504f5acc0505a0ea92a7d926",
+        "bytes": 36941,
+        "lines": 446
+      },
+      "additions": 27,
+      "deletions": 0,
+      "hunks": 1
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+      "before": null,
+      "after": {
+        "gitBlob": "bfeb7748103d61fdcd82199ba637061ecad824a8",
+        "sha256": "ad6ef7894c8735b110d2573dea7fdeab2749f4c035b3bae9f5cc7861613ea80e",
+        "bytes": 20014,
+        "lines": 298
+      },
+      "additions": 298,
+      "deletions": 0,
+      "hunks": 1
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "before": {
+        "gitBlob": "67180ac5c567cbeb089d4ef3248391c792e1ba4d",
+        "sha256": "8cdc9a1bcc80b61998e93813959f53542a85cb5953c93ae1feb2397e37d9080e",
+        "bytes": 7926,
+        "lines": 105
+      },
+      "after": {
+        "gitBlob": "c0f616460e686a62bad9f1cdb2d05eb1f0a61312",
+        "sha256": "c67c2d4872a7ba0cb8773976e25f29716d5150d3b48e0a61979219bc6bb0d912",
+        "bytes": 8129,
+        "lines": 108
+      },
+      "additions": 6,
+      "deletions": 3,
+      "hunks": 2
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "before": {
+        "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+        "sha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd",
+        "bytes": 15213,
+        "lines": 231
+      },
+      "after": {
+        "gitBlob": "46c15f014e9e3e9e5a7d161c2aee5d37ee499e0b",
+        "sha256": "2241f833a8c4cb1a60cadcdd1583cf26adbef9031b4f133c9db8e54d9958854d",
+        "bytes": 15748,
+        "lines": 237
+      },
+      "additions": 7,
+      "deletions": 1,
+      "hunks": 4
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "before": {
+        "gitBlob": "6336605c2aa95ebd830b079c9e23c316231471c4",
+        "sha256": "f6e40050d1892a2f1f867a11906fb123c56df2626b2ca2b0359abce58fcf5661",
+        "bytes": 624,
+        "lines": 6
+      },
+      "after": {
+        "gitBlob": "d7ac2622eba336663453e5e4f1cf96feb0fd1346",
+        "sha256": "7e0b94cbac43fb23db2595838675f507e43b3005b7dae50b8efafc4c1471e37a",
+        "bytes": 662,
+        "lines": 6
+      },
+      "additions": 1,
+      "deletions": 1,
+      "hunks": 1
+    }
+  ],
+  "diff": {
+    "additions": 343,
+    "deletions": 6,
+    "net": 337
+  },
+  "patchSha256": "acb5b01ff96d116af22d690a7b622820198c389b6315ece6db9dd0bff71ee6fd",
+  "preservationProofSha256": "29527b6c3bcddb3e8f06ec9e55f3eafc508195f16c40025b9d3d7ba9d6007132",
+  "sourceCaps": {
+    "helperLines": 298,
+    "maximumChangedTsLines": 298
+  },
+  "lint": {
+    "before": 139,
+    "after": 142,
+    "prefixPreserved": true
+  },
+  "execution": "Source-only; no project/compiler/test/provider/native/GUI/CI/Git execution or remote mutation."
+}

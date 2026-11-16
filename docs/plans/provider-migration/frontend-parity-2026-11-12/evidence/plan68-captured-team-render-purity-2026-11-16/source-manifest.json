@@ -1,0 +1,59 @@
+{
+  "kind": "plan68-source-candidate-v1",
+  "status": "FROZEN_SOURCE_ONLY",
+  "selectionCommit": "b60f2d58cffd30129b0a96bccff643c3d30b3149",
+  "selectionTree": "9840220d1f285882f65e7c1f0d1e53df4ea4c81d",
+  "publishedPlanPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/68-captured-team-readiness-render-purity-2026-11-16.md",
+  "planSha256": "c859c7342a74681636c3d10ee39778a483d5272632c93c5b73d2f4120bd31422",
+  "planGitBlob": "bc75c16dc6db634df125bfb5faf8665975febdac",
+  "files": [
+    {
+      "path": "src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "before": {
+        "gitBlob": "c1d31ee945c28cfe1f1339d914d0d1be7fc5e928",
+        "sha256": "b0f3a9ede1f0bb08f75f11c2742d0fdb14b281b1ea63da5509e50b38d9d98cac",
+        "bytes": 13822,
+        "lines": 396
+      },
+      "after": {
+        "gitBlob": "5ceced2c642f104116899d000e9b20e87b7a8c1c",
+        "sha256": "3c9012b55260c7b25fdbc4004e01052dfdce1d67562fac4f0296070065bab6ce",
+        "bytes": 14537,
+        "lines": 415
+      },
+      "addedLines": 21,
+      "removedLines": 2
+    },
+    {
+      "path": "test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "before": {
+        "gitBlob": "c1ab11f043ea5bcfb5325cb8fb6f147541076f38",
+        "sha256": "375ab28dfb1aaf9506b0c852fc97dc48ae612d38edf5fad3099dcf9e420de286",
+        "bytes": 28286,
+        "lines": 844
+      },
+      "after": {
+        "gitBlob": "6316cdc53a951d99983266bdaa84493fdeb7dbbf",
+        "sha256": "5e71cad4e017265ca1adc156ecc51771a1703499ca37081db5752eb8912ed49a",
+        "bytes": 33597,
+        "lines": 984
+      },
+      "addedLines": 141,
+      "removedLines": 1
+    }
+  ],
+  "patch": {
+    "gitBlob": "20d1af7b085ab928094c39b721d1953eb5845a41",
+    "sha256": "859bc7ebb0312a187d0498d36d0c2b38ebd29bfee899f82426f4a5f9d51c0e49",
+    "bytes": 8595,
+    "lines": 210
+  },
+  "preservationReport": "preservation.json",
+  "projectExecution": false,
+  "compilerExecution": false,
+  "providerExecution": false,
+  "testExecution": false,
+  "ciObservationOrMutation": false,
+  "remoteMutation": false,
+  "scope": "two existing files only; root publication and independent source R2 remain required"
+}

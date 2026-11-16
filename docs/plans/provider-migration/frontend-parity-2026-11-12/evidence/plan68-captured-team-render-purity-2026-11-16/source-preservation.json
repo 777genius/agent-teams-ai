@@ -1,0 +1,156 @@
+{
+  "kind": "plan68-inert-preservation-v1",
+  "checks": [
+    {
+      "check": "src/renderer/components/common/ProviderActivityStatusStrip.tsx: exact official selected-parent preimage",
+      "pass": true
+    },
+    {
+      "check": "src/renderer/components/common/ProviderActivityStatusStrip.tsx: LF only and final newline",
+      "pass": true
+    },
+    {
+      "check": "src/renderer/components/common/ProviderActivityStatusStrip.tsx: no trailing whitespace",
+      "pass": true
+    },
+    {
+      "check": "test/renderer/components/common/ProviderActivityStatusStrip.test.ts: exact official selected-parent preimage",
+      "pass": true
+    },
+    {
+      "check": "test/renderer/components/common/ProviderActivityStatusStrip.test.ts: LF only and final newline",
+      "pass": true
+    },
+    {
+      "check": "test/renderer/components/common/ProviderActivityStatusStrip.test.ts: no trailing whitespace",
+      "pass": true
+    },
+    {
+      "check": "only two selected afterimages",
+      "pass": true
+    },
+    {
+      "check": "entire strip restored by only selected local substitutions",
+      "pass": true
+    },
+    {
+      "check": "new source remains naturally below 800 lines",
+      "pass": true
+    },
+    {
+      "check": "exact predicate identity before use",
+      "pass": true
+    },
+    {
+      "check": "strict original true predicate semantics",
+      "pass": true
+    },
+    {
+      "check": "loading and scoped-ready short circuits retained",
+      "pass": true
+    },
+    {
+      "check": "only Date.now call located in selected layout effect",
+      "pass": true
+    },
+    {
+      "check": "absent predicate clears without clock",
+      "pass": true
+    },
+    {
+      "check": "layout effect bound only to current predicate",
+      "pass": true
+    },
+    {
+      "check": "no new timing or authority mechanism",
+      "pass": true
+    },
+    {
+      "check": "memo retains original predicate dependency",
+      "pass": true
+    },
+    {
+      "check": "all original test/mock/helper bodies byte-identical contiguous prefix",
+      "pass": true
+    },
+    {
+      "check": "original describe closing delimiter retained",
+      "pass": true
+    },
+    {
+      "check": "exactly one new non-parameterized case",
+      "pass": true
+    },
+    {
+      "check": "all three parameterized suites retained",
+      "pass": true
+    },
+    {
+      "check": "all nine original scoped captured readiness cases retained",
+      "pass": true
+    },
+    {
+      "check": "actual hook and fence used, not mocked",
+      "pass": true
+    },
+    {
+      "check": "real proof uses actual hook signature",
+      "pass": true
+    },
+    {
+      "check": "original fixture required display name preserved",
+      "pass": true
+    },
+    {
+      "check": "delegating real permits observer",
+      "pass": true
+    },
+    {
+      "check": "non-vacuous child-only memo invalidation",
+      "pass": true
+    },
+    {
+      "check": "same timestamp required after child update",
+      "pass": true
+    },
+    {
+      "check": "independent actual-time guard receives actual owner",
+      "pass": true
+    },
+    {
+      "check": "original expiry-plus-one schedule observed",
+      "pass": true
+    },
+    {
+      "check": "real expiry drives new identity and error",
+      "pass": true
+    },
+    {
+      "check": "fake timer/React cleanup retained",
+      "pass": true
+    },
+    {
+      "check": "no new test preflight/provider/clock owner",
+      "pass": true
+    },
+    {
+      "check": "src/renderer/components/common/ProviderActivityStatusStrip.tsx: patch forward exact",
+      "pass": true
+    },
+    {
+      "check": "src/renderer/components/common/ProviderActivityStatusStrip.tsx: patch reverse exact",
+      "pass": true
+    },
+    {
+      "check": "test/renderer/components/common/ProviderActivityStatusStrip.test.ts: patch forward exact",
+      "pass": true
+    },
+    {
+      "check": "test/renderer/components/common/ProviderActivityStatusStrip.test.ts: patch reverse exact",
+      "pass": true
+    }
+  ],
+  "passed": 37,
+  "failed": 0,
+  "limits": "Inert UTF-8 text, official source/hash and diff checks only. No behavioral test/lint/typecheck/runtime result is claimed."
+}

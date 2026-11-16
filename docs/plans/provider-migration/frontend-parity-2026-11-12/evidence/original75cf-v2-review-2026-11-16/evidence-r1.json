@@ -1,0 +1,372 @@
+{
+  "kind": "ORIGINAL75CF_NATIVE_V2_REVIEW_FIRST_FAILURE_R1",
+  "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "runId": 43959134362,
+  "jobId": 133621515607,
+  "status": "FAILED_ORIGINAL_METADATA_LIFECYCLE_OBSERVATION_BEFORE_LAUNCH",
+  "artifact": {
+    "id": 14280335923,
+    "bytes": 293469,
+    "sha256": "cd5bfd3dbd5c3b9f507f7444e11bff57bd4cdf2af104b1dbd1e9f83511251d49"
+  },
+  "receipt": {
+    "bytes": 832317,
+    "sha256": "14d15156bcae1e61d751bbf49bd90aeabbb17dce6f22b49541d2653ec1d4661e"
+  },
+  "failure": "every selected metadata scope has one live owner\n\n1 !== 2\n",
+  "failureSource": {
+    "kind": "assertion",
+    "frames": [
+      "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts:153:10",
+      "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts:191:12",
+      "scripts/legacy-agent-host/desktop-native-stop-fixture.ts:369:34",
+      "scripts/legacy-agent-host/desktop-native-stop-fixture.ts:490:24",
+      "scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts:89:20",
+      "scripts/legacy-agent-host/desktop-native-review-compose.ts:48:7"
+    ]
+  },
+  "metadataFailure": {
+    "hostPid": 9135,
+    "expectedProfileHashes": [
+      "7470cc77e02fc55900a7e63d7893b7c0faff9d4cc5b1f8913182a654649dd974",
+      "32b89697ba96359200cb29fe384bc123825d790bfa5ce087811cda078235bc5e"
+    ],
+    "events": [
+      {
+        "hostPid": 9135,
+        "profileHash": "7470cc77e02fc55900a7e63d7893b7c0faff9d4cc5b1f8913182a654649dd974",
+        "mode": "provider",
+        "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+        "pid": 11853,
+        "startIdentityHash": "7d35b8a491f9a1834f902b5bf35941bfa373ac919d19ab10b8ffa5d8ef7f725f",
+        "stage": "ready"
+      },
+      {
+        "hostPid": 9135,
+        "profileHash": "7470cc77e02fc55900a7e63d7893b7c0faff9d4cc5b1f8913182a654649dd974",
+        "mode": "provider",
+        "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+        "pid": 11853,
+        "startIdentityHash": "7d35b8a491f9a1834f902b5bf35941bfa373ac919d19ab10b8ffa5d8ef7f725f",
+        "stage": "released"
+      },
+      {
+        "hostPid": 9135,
+        "profileHash": "7470cc77e02fc55900a7e63d7893b7c0faff9d4cc5b1f8913182a654649dd974",
+        "mode": "directory",
+        "providerHash": null,
+        "pid": 12655,
+        "startIdentityHash": "eec94c1a98c8a772f50a57547c71de9326fd195ef90840f44f85130b80041893",
+        "stage": "ready"
+      },
+      {
+        "hostPid": 9135,
+        "profileHash": "7470cc77e02fc55900a7e63d7893b7c0faff9d4cc5b1f8913182a654649dd974",
+        "mode": "directory",
+        "providerHash": null,
+        "pid": 12655,
+        "startIdentityHash": "eec94c1a98c8a772f50a57547c71de9326fd195ef90840f44f85130b80041893",
+        "stage": "released"
+      },
+      {
+        "hostPid": 9135,
+        "profileHash": "7470cc77e02fc55900a7e63d7893b7c0faff9d4cc5b1f8913182a654649dd974",
+        "mode": "provider",
+        "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+        "pid": 13844,
+        "startIdentityHash": "ea303393db10b293140283edb072372f36d45a511b01da00cf9ff0203af03771",
+        "stage": "ready"
+      },
+      {
+        "hostPid": 9135,
+        "profileHash": "32b89697ba96359200cb29fe384bc123825d790bfa5ce087811cda078235bc5e",
+        "mode": "provider",
+        "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+        "pid": 14401,
+        "startIdentityHash": "ad21df83406ff90018756e472023edaadbb2bb303757a364f895cb8918771482",
+        "stage": "ready"
+      },
+      {
+        "hostPid": 9135,
+        "profileHash": "32b89697ba96359200cb29fe384bc123825d790bfa5ce087811cda078235bc5e",
+        "mode": "provider",
+        "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+        "pid": 14401,
+        "startIdentityHash": "ad21df83406ff90018756e472023edaadbb2bb303757a364f895cb8918771482",
+        "stage": "released"
+      }
+    ],
+    "observedMetadataPids": [
+      13844
+    ]
+  },
+  "fullOriginalMetadataTrace": [
+    {
+      "at": "2026-11-16T22:40:51.721Z",
+      "profileHash": "7470cc77e02fc55900a7e63d7893b7c0faff9d4cc5b1f8913182a654649dd974",
+      "mode": "provider",
+      "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+      "pid": 11853,
+      "stage": "ready",
+      "startIdentityHash": "7d35b8a491f9a1834f902b5bf35941bfa373ac919d19ab10b8ffa5d8ef7f725f",
+      "hostPid": 9135
+    },
+    {
+      "at": "2026-11-16T22:40:56.179Z",
+      "profileHash": "7470cc77e02fc55900a7e63d7893b7c0faff9d4cc5b1f8913182a654649dd974",
+      "mode": "provider",
+      "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+      "pid": 11853,
+      "stage": "released",
+      "startIdentityHash": "7d35b8a491f9a1834f902b5bf35941bfa373ac919d19ab10b8ffa5d8ef7f725f",
+      "hostPid": 9135
+    },
+    {
+      "at": "2026-11-16T22:41:17.520Z",
+      "profileHash": "7470cc77e02fc55900a7e63d7893b7c0faff9d4cc5b1f8913182a654649dd974",
+      "mode": "directory",
+      "providerHash": null,
+      "pid": 12655,
+      "stage": "ready",
+      "startIdentityHash": "eec94c1a98c8a772f50a57547c71de9326fd195ef90840f44f85130b80041893",
+      "hostPid": 9135
+    },
+    {
+      "at": "2026-11-16T22:41:20.984Z",
+      "profileHash": "7470cc77e02fc55900a7e63d7893b7c0faff9d4cc5b1f8913182a654649dd974",
+      "mode": "directory",
+      "providerHash": null,
+      "pid": 12655,
+      "stage": "released",
+      "startIdentityHash": "eec94c1a98c8a772f50a57547c71de9326fd195ef90840f44f85130b80041893",
+      "hostPid": 9135
+    },
+    {
+      "at": "2026-11-16T22:41:38.574Z",
+      "profileHash": "7470cc77e02fc55900a7e63d7893b7c0faff9d4cc5b1f8913182a654649dd974",
+      "mode": "provider",
+      "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+      "pid": 13844,
+      "stage": "ready",
+      "startIdentityHash": "ea303393db10b293140283edb072372f36d45a511b01da00cf9ff0203af03771",
+      "hostPid": 9135
+    },
+    {
+      "at": "2026-11-16T22:41:52.471Z",
+      "profileHash": "32b89697ba96359200cb29fe384bc123825d790bfa5ce087811cda078235bc5e",
+      "mode": "provider",
+      "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+      "pid": 14401,
+      "stage": "ready",
+      "startIdentityHash": "ad21df83406ff90018756e472023edaadbb2bb303757a364f895cb8918771482",
+      "hostPid": 9135
+    },
+    {
+      "at": "2026-11-16T22:41:56.004Z",
+      "profileHash": "32b89697ba96359200cb29fe384bc123825d790bfa5ce087811cda078235bc5e",
+      "mode": "provider",
+      "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+      "pid": 14401,
+      "stage": "released",
+      "startIdentityHash": "ad21df83406ff90018756e472023edaadbb2bb303757a364f895cb8918771482",
+      "hostPid": 9135
+    },
+    {
+      "at": "2026-11-16T22:43:00.580Z",
+      "profileHash": "7470cc77e02fc55900a7e63d7893b7c0faff9d4cc5b1f8913182a654649dd974",
+      "mode": "provider",
+      "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+      "pid": 13844,
+      "stage": "released",
+      "startIdentityHash": "ea303393db10b293140283edb072372f36d45a511b01da00cf9ff0203af03771",
+      "hostPid": 9135
+    },
+    {
+      "at": "2026-11-16T22:43:01.370Z",
+      "profileHash": "32b89697ba96359200cb29fe384bc123825d790bfa5ce087811cda078235bc5e",
+      "mode": "directory",
+      "providerHash": null,
+      "stage": "read-failed",
+      "readStage": "native-client",
+      "reason": "unknown",
+      "elapsedMs": 65353,
+      "deadlineExpired": false,
+      "aborted": false,
+      "hostPid": 9135
+    }
+  ],
+  "modelCounts": {
+    "probes": 1,
+    "business": 0,
+    "failures": 0
+  },
+  "cleanup": {
+    "processGroup": 7633,
+    "remaining": [],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostObserved": true,
+    "capturedHostAbsent": true,
+    "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+  },
+  "failureQuit": {
+    "attempted": true,
+    "scope": "Close only the verified TEST window before stopping its dev wrapper",
+    "reply": "acknowledged",
+    "listenerAbsent": true
+  },
+  "sourcePins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+      "bytes": 17725,
+      "sha256": "fac4d4bf3d7b662efe23f921f05d5a76277f294ace34de3053c3447d0dd4347f",
+      "gitBlob": "79c288d8cd5f6dc432177a2047ce517f174d11b4"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "bytes": 29580,
+      "sha256": "2b954cec0846e30f530ae615e63ac05ae9a3969e0338e5d2ab03ec80a62a0f0d",
+      "gitBlob": "d2f58f7dd6ce6b05ff6200fabe67a4945f94a506"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts",
+      "bytes": 16588,
+      "sha256": "6b807423bd9ff2a1887c18417ee52dbd0c270c0f30bf24f33eb51236e392f4a1",
+      "gitBlob": "a914d3808022289da5f994d60ad4bb7cca5eac38"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-review-compose.ts",
+      "bytes": 3690,
+      "sha256": "b789c5473df78ac4b750e059762e806c26848b216288463e2dd4b8d75317958f",
+      "gitBlob": "2101d3d7352329524b9c02fd46ab0129df457fef"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts",
+      "bytes": 21535,
+      "sha256": "12ed489a313f075d4d5807f2d232fb6d5ff4cfbfa198a6159f685be5ce99f977",
+      "gitBlob": "f050499bc5ef2191460e1d22fa6cda4825a0b000"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts",
+      "bytes": 36898,
+      "sha256": "e54fda9c30ec3d53f20027d59faf81f59c75fd3ad3987593bd4cd64315a17d3a",
+      "gitBlob": "3e0d1ae7a3aa852fb5772821f7df1059edd7cead"
+    }
+  ],
+  "checks": [
+    {
+      "name": "Original source vectors1777 unchanged",
+      "passed": true
+    },
+    {
+      "name": "Original business tool model inputs absent",
+      "passed": true
+    },
+    {
+      "name": "One original no-tools model probe",
+      "passed": true
+    },
+    {
+      "name": "No scripted model failures",
+      "passed": true
+    },
+    {
+      "name": "Original selectedmetadata count failure",
+      "passed": true
+    },
+    {
+      "name": "Metadata failure is the first retained frame",
+      "passed": true
+    },
+    {
+      "name": "One observed Host before failure",
+      "passed": true
+    },
+    {
+      "name": "Seven original metadata lifecycle events",
+      "passed": true
+    },
+    {
+      "name": "Failure expectation exactly two original source profiles",
+      "passed": true
+    },
+    {
+      "name": "Observed live metadata only13844",
+      "passed": true
+    },
+    {
+      "name": "No retained original Launch action",
+      "passed": true
+    },
+    {
+      "name": "Original global Runtime ledger empty hash",
+      "passed": true
+    },
+    {
+      "name": "Original failure Quit acknowledged and listener absent",
+      "passed": true
+    },
+    {
+      "name": "Original Main exit0 no signal",
+      "passed": true
+    },
+    {
+      "name": "Original group empty before cleanup",
+      "passed": true
+    },
+    {
+      "name": "Final group empty, captured Host observed and absent",
+      "passed": true
+    },
+    {
+      "name": "Exact original source pin scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact original source pin scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact original source pin scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact original source pin scripts/legacy-agent-host/desktop-native-review-compose.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact original source pin packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact original source pin packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts",
+      "passed": true
+    },
+    {
+      "name": "Final read-failure is after final global release",
+      "passed": true
+    },
+    {
+      "name": "Later native-client error carries no precise cause",
+      "passed": true
+    }
+  ],
+  "checkCount": 24,
+  "causalLimits": [
+    "The original project provider metadata child14401 became ready and released before the failed two-owner observation; no successor ready event appears in the failure baseline.",
+    "The exact coordinator serializes per-profile catalog reads and retires a prior native child when selected provider/directory mode changes. It cannot affirm a successor before its native startup completes.",
+    "The later project directory native-client read-failed/unknown event is retained during failure Quit after global owner release. It is not sufficient to identify a startup reason or to attribute an earlier driver-disposal failure.",
+    "Original5s observer, original120s Launch readiness and all actions remain unchanged. No count relaxation, retry, refresh, timer widening, extra RPC or source repair is selected.",
+    "Visible saved-Team TEST-model and enabled Launch are presentation/setup evidence; no actual team Launch, native review tool edit, Stop, Changes operation or cold continuation was reached.",
+    "The captured Host exit code is not exposed; group absence and Host absence do not manufacture a native cleanup receipt for an unreached launch."
+  ],
+  "execution": {
+    "project": false,
+    "compiler": false,
+    "tests": false,
+    "native": false,
+    "provider": false,
+    "gui": false,
+    "sourceMutation": false
+  }
+}

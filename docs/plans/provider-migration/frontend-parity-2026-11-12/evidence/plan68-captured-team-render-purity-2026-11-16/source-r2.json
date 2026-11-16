@@ -1,0 +1,388 @@
+{
+  "schemaVersion": 1,
+  "status": "ACCEPT_EXACT_SOURCE_ONLY",
+  "reviewer": "installer_review",
+  "selectedPlan": {
+    "commit": "b60f2d58cffd30129b0a96bccff643c3d30b3149",
+    "path": "frontend-proposal/team-purity-75cf/plan.md",
+    "bytes": 7804,
+    "physicalLines": 46,
+    "sha256": "c859c7342a74681636c3d10ee39778a483d5272632c93c5b73d2f4120bd31422",
+    "gitBlob": "bc75c16dc6db634df125bfb5faf8665975febdac"
+  },
+  "packet": {
+    "manifest": {
+      "path": "frontend-proposal/team-purity-75cf/implementation/manifest.json",
+      "bytes": 2191,
+      "physicalLines": 59,
+      "sha256": "d271cca416c2276e0797c5dc3189ab96430bfbbb2d3bbf3cb1df82a414be99fd",
+      "gitBlob": "5df881876f3474d654176f3b506727df2d79648f"
+    },
+    "patch": {
+      "path": "frontend-proposal/team-purity-75cf/implementation/candidate.patch",
+      "bytes": 8595,
+      "physicalLines": 210,
+      "sha256": "859bc7ebb0312a187d0498d36d0c2b38ebd29bfee899f82426f4a5f9d51c0e49",
+      "gitBlob": "20d1af7b085ab928094c39b721d1953eb5845a41"
+    },
+    "authorR1": {
+      "path": "frontend-proposal/team-purity-75cf/implementation/source-r1.md",
+      "bytes": 5359,
+      "physicalLines": 32,
+      "sha256": "1a353067a02729879047251979e38c0d1e66977f7a64774d0c9649113838c297",
+      "gitBlob": "1d7d9adc20a1bf72568669913b60b4c218b91278"
+    },
+    "preservation": {
+      "path": "frontend-proposal/team-purity-75cf/implementation/preservation.json",
+      "bytes": 4191,
+      "physicalLines": 156,
+      "sha256": "8350f67c75342106fd135f37421873415a7e6d0609efe6cb3ece1d6587d01301",
+      "gitBlob": "99940ed7e61d95633fa4fb9933e4473d6e7f2854"
+    },
+    "officialPreimages": {
+      "path": "frontend-proposal/team-purity-75cf/implementation/official-preimages.json",
+      "bytes": 58886,
+      "physicalLines": 1,
+      "sha256": "78ce909a2a943576c9dabcdd54977aadd6859e6d835dd632efe9b284b40ac957",
+      "gitBlob": "1e40013328170de774fee96bebe4c2b6fcbe1630"
+    }
+  },
+  "files": [
+    {
+      "path": "src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "before": {
+        "gitBlob": "c1d31ee945c28cfe1f1339d914d0d1be7fc5e928",
+        "sha256": "b0f3a9ede1f0bb08f75f11c2742d0fdb14b281b1ea63da5509e50b38d9d98cac",
+        "bytes": 13822,
+        "lines": 396
+      },
+      "after": {
+        "gitBlob": "5ceced2c642f104116899d000e9b20e87b7a8c1c",
+        "sha256": "3c9012b55260c7b25fdbc4004e01052dfdce1d67562fac4f0296070065bab6ce",
+        "bytes": 14537,
+        "lines": 415
+      },
+      "addedLines": 21,
+      "removedLines": 2
+    },
+    {
+      "path": "test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "before": {
+        "gitBlob": "c1ab11f043ea5bcfb5325cb8fb6f147541076f38",
+        "sha256": "375ab28dfb1aaf9506b0c852fc97dc48ae612d38edf5fad3099dcf9e420de286",
+        "bytes": 28286,
+        "lines": 844
+      },
+      "after": {
+        "gitBlob": "6316cdc53a951d99983266bdaa84493fdeb7dbbf",
+        "sha256": "5e71cad4e017265ca1adc156ecc51771a1703499ca37081db5752eb8912ed49a",
+        "bytes": 33597,
+        "lines": 984
+      },
+      "addedLines": 141,
+      "removedLines": 1
+    }
+  ],
+  "diff": {
+    "additions": 162,
+    "deletions": 3,
+    "hunks": 5,
+    "completeForwardInverse": true
+  },
+  "findings": [],
+  "sourceReasoning": [
+    "The actual change moves the sole direct component Date.now call into a layout effect and stores only the current predicate identity and observation time. Render itself does not hide a fresh clock in a new helper.",
+    "A snapshot is usable only for the exact current predicate and literal true result. Loading and scoped OpenCode readiness retain their original short circuits; unrelated provider fallback, chip selection and rendering are byte-preserved.",
+    "The actual sole caller receives a fresh permits function on parent renders. The unchanged owner expiry+1 timer invalidates that parent. A child-only update does not recreate its parent prop; no new timer or provider/authority policy is introduced.",
+    "The appended regression forces providerStates recomputation through a fresh equivalent child loading object while retaining parent predicate identity. A delegating spy proves at least one real predicate call with the original observation time; the prior render-time clock implementation cannot satisfy that assertion at+250ms.",
+    "The guard uses the actual readiness object separately from the presentation spy. Exact expiry blocks actions before the original+1 callback; advancing that last millisecond triggers the real owner and removes Ready without another explicit parent render.",
+    "Every original body is an exact contiguous prefix after imports, including all nine captured-scope variants, sibling isolation and original guard/global-object assertions. No mock or store mutation is added.",
+    "StrictMode may replay effect setup in development; this cut does not promise a global once-only clock count. Existing set-state-in-effect is warning-level. Runtime, compiler/lint, and resulting Team/Desktop success remain unqualified."
+  ],
+  "dependencyBindings": [
+    {
+      "path": "frontend-proposal/team-purity-75cf/source/src/renderer/components/team/dialogs/useCapturedTeamLaunchReadiness.ts",
+      "bytes": 5710,
+      "physicalLines": 149,
+      "sha256": "7327fb6ed0504e412dcdafe4989c91625c2ef0712edf0705c767c5bfc52775af",
+      "gitBlob": "e8f5137ea0b7b69f4c098203d797780be99a5c01"
+    },
+    {
+      "path": "frontend-proposal/team-purity-75cf/source/src/renderer/components/team/dialogs/capturedTeamLaunchReadiness.ts",
+      "bytes": 1376,
+      "physicalLines": 45,
+      "sha256": "5a3e24af0a051afe0e8736e4d79e21239ef23b3aeb7a972c59fe5e79655db09e",
+      "gitBlob": "7a78f0791a54d09bcdda9c466b4df9c8b3b569d1"
+    },
+    {
+      "path": "frontend-proposal/team-purity-75cf/source/src/renderer/components/team/dialogs/providerLaunchAuthority.ts",
+      "bytes": 8286,
+      "physicalLines": 223,
+      "sha256": "7c122f43c764f438d9c9d78413f5e3912e83f29a3c30f72631333dc34d6e44d0",
+      "gitBlob": "a6dbcf114109c75f5a0dfad9ca20e71884956f31"
+    },
+    {
+      "path": "frontend-proposal/team-purity-75cf/source/src/renderer/components/team/dialogs/optionalProviderPreflight.ts",
+      "bytes": 11013,
+      "physicalLines": 291,
+      "sha256": "a3d491d4569b2ab696981bd4b3312a51778ce494919c0534ed889f2f0edb7f1b",
+      "gitBlob": "a57bb61faac6657400e60cefd39ff9dd4995c5c3"
+    },
+    {
+      "path": "frontend-proposal/team-purity-75cf/source/src/shared/utils/capturedTeamReadiness.ts",
+      "bytes": 715,
+      "physicalLines": 21,
+      "sha256": "7c9d4e0927d730d4021e023eb730cccc87c0aff738bbffbfae2cc45e3d088154",
+      "gitBlob": "cc60066eb073671927bd2158c44f178327221cb4"
+    },
+    {
+      "path": "installer-proposal/plan68-prospective-r2/eslint.config.js",
+      "bytes": 37840,
+      "physicalLines": 1166,
+      "sha256": "d9f0cf7c33672b9304fc524bbc028e07939bcab4583bb1e7c94b99fd773eb597",
+      "gitBlob": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c"
+    },
+    {
+      "path": "frontend-proposal/plan49-source-review/after/src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "bytes": 132386,
+      "physicalLines": 3220,
+      "sha256": "70f0a8dac05a8031d191de97c3e9ab7bc60ed21ca87b4dfcea167e32478ea66e",
+      "gitBlob": "832ed8f713a1bc34b2eaa78858180af19eda6862"
+    }
+  ],
+  "checks": [
+    {
+      "check": "Exact selected revision2 plan",
+      "passed": true
+    },
+    {
+      "check": "Exact frozen manifest",
+      "passed": true
+    },
+    {
+      "check": "Exact frozen patch",
+      "passed": true
+    },
+    {
+      "check": "Exact frozen author R1",
+      "passed": true
+    },
+    {
+      "check": "Exactly two selected paths",
+      "passed": true
+    },
+    {
+      "check": "Exact before inventory",
+      "passed": true
+    },
+    {
+      "check": "Exact before hash/blob/byte/line binding src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "passed": true
+    },
+    {
+      "check": "Exact before hash/blob/byte/line binding test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact after inventory",
+      "passed": true
+    },
+    {
+      "check": "Exact after hash/blob/byte/line binding src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "passed": true
+    },
+    {
+      "check": "Exact after hash/blob/byte/line binding test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "passed": true
+    },
+    {
+      "check": "Two retained official immutable beforeimages",
+      "passed": true
+    },
+    {
+      "check": "Official beforeimage body src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "passed": true
+    },
+    {
+      "check": "Official beforeimage body test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "passed": true
+    },
+    {
+      "check": "Independent full forward patch src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "passed": true
+    },
+    {
+      "check": "Independent full inverse patch src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "passed": true
+    },
+    {
+      "check": "Independent full forward patch test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "passed": true
+    },
+    {
+      "check": "Independent full inverse patch test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "passed": true
+    },
+    {
+      "check": "Complete two-path five-hunk patch",
+      "passed": true
+    },
+    {
+      "check": "Whole production body exact inverse",
+      "passed": true
+    },
+    {
+      "check": "Nullable snapshot retains exact predicate and observedAt only",
+      "passed": true
+    },
+    {
+      "check": "Direct clock occurs only in selected layout effect",
+      "passed": true
+    },
+    {
+      "check": "Absent predicate clears snapshot without clock",
+      "passed": true
+    },
+    {
+      "check": "Effect depends only on predicate identity",
+      "passed": true
+    },
+    {
+      "check": "Render rejects old predicate identity and still requires literal true",
+      "passed": true
+    },
+    {
+      "check": "Original loading and scoped OpenCode guards remain before snapshot",
+      "passed": true
+    },
+    {
+      "check": "Original fallback authority call byte-preserved",
+      "passed": true
+    },
+    {
+      "check": "Only snapshot appended to original complete memo dependency list",
+      "passed": true
+    },
+    {
+      "check": "No new timers refs authority APIs or global writes",
+      "passed": true
+    },
+    {
+      "check": "Natural production source remains below cap",
+      "passed": true
+    },
+    {
+      "check": "Every original mock/helper/hook/test body exact contiguous prefix",
+      "passed": true
+    },
+    {
+      "check": "All nine direct original declarations plus one new case",
+      "passed": true
+    },
+    {
+      "check": "All three parameterized declarations retained",
+      "passed": true
+    },
+    {
+      "check": "All nine original captured-scope variants retained",
+      "passed": true
+    },
+    {
+      "check": "No skip only todo or new mocks",
+      "passed": true
+    },
+    {
+      "check": "Real owner hook fence signature and launch guard used",
+      "passed": true
+    },
+    {
+      "check": "Actual captured owner proof derives current signature and preparation",
+      "passed": true
+    },
+    {
+      "check": "Delegating mock retains real predicate",
+      "passed": true
+    },
+    {
+      "check": "Child-only rerender changes memo input but not parent predicate",
+      "passed": true
+    },
+    {
+      "check": "Non-vacuous original timestamp assertion after250ms",
+      "passed": true
+    },
+    {
+      "check": "Guard consumes real owner not presentation wrapper",
+      "passed": true
+    },
+    {
+      "check": "Exact expiry refuses action while original expiry+1 UI callback is pending",
+      "passed": true
+    },
+    {
+      "check": "Real owner timer alone changes parent predicate and removes ready",
+      "passed": true
+    },
+    {
+      "check": "No artificial parent render after expiry timer",
+      "passed": true
+    },
+    {
+      "check": "Finally unmounts real hook and restores timers",
+      "passed": true
+    },
+    {
+      "check": "No preflight API provider or store mutation in new test",
+      "passed": true
+    },
+    {
+      "check": "No authority implementation or other paths changed",
+      "passed": true
+    },
+    {
+      "check": "Actual owner retains existing strict expiry+1 timer",
+      "passed": true
+    },
+    {
+      "check": "Actual owner creates fresh permits each parent render",
+      "passed": true
+    },
+    {
+      "check": "Actual pure predicate enforces scope and strict expiry",
+      "passed": true
+    },
+    {
+      "check": "Original launch guard samples action time independently",
+      "passed": true
+    },
+    {
+      "check": "Original captureForSubmit samples action time independently",
+      "passed": true
+    },
+    {
+      "check": "New owner test only reads existing source-context store",
+      "passed": true
+    },
+    {
+      "check": "Retained exact ESLint source binding",
+      "passed": true
+    },
+    {
+      "check": "No hiding purity violation or claiming warning-free effect state",
+      "passed": true
+    },
+    {
+      "check": "Retained actual Launch caller passes current owner permits",
+      "passed": true
+    }
+  ],
+  "checkCount": 56,
+  "publicationLease": "Root owns final fresh expected-parent/full-tree verification; no ref or CI observation by reviewer.",
+  "qualification": {
+    "compiler": false,
+    "lint": false,
+    "behavioralTests": false,
+    "desktopE2E": false
+  },
+  "execution": "Only inert file/hash/text/JSON/in-memory patch operations; no project/compiler/tests/providers/native/GUI/CI/Git execution or remote mutation."
+}

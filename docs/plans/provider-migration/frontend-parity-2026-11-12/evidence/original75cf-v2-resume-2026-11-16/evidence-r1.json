@@ -1,0 +1,632 @@
+{
+  "kind": "resume75cf-original-failure-source-r1",
+  "status": "INCOMPLETE_ORIGINAL_NOT_REQUALIFIED",
+  "head": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "runId": 43959134362,
+  "jobId": 133621515725,
+  "artifactId": 14279766798,
+  "platform": "darwin-arm64",
+  "archive": {
+    "path": "desktop-v2-resume-75cf/artifact.zip",
+    "bytes": 310174,
+    "sha256": "0f291a40359ae5af96545356b0bef70748519b115dfd6dfbb294b82a0a3df41d"
+  },
+  "jobLog": {
+    "path": "desktop-v2-resume-75cf/job.log",
+    "bytes": 150090,
+    "sha256": "a391e6815ec1d19f86aa0d80ccc92e96bde5494bc1ec809c97fd34b5ff140a68"
+  },
+  "receipt": {
+    "path": "desktop-v2-resume-75cf/extracted/TEST-desktop-backend-JCuHSv/desktop-backend-receipt.json",
+    "bytes": 841055,
+    "sha256": "5a4514b7e309617ec78b3757b53e535d360b9a12823222fcee7538d4735b82b5"
+  },
+  "members": [
+    {
+      "path": "TEST-desktop-backend-JCuHSv/desktop-app.log",
+      "bytes": 21361,
+      "crc32": "1b0385b1",
+      "sha256": "a4e3f4cfcb2c4caa00f5aaf0b73e97d8e9fc7b59e007a32344d54676c949a838"
+    },
+    {
+      "path": "TEST-desktop-backend-JCuHSv/host-profile.json",
+      "bytes": 5787,
+      "crc32": "873b54f9",
+      "sha256": "233487fad4185e12a964a07bb64f7250bcf2dbbff066cbe0f55ff462d3327e0c"
+    },
+    {
+      "path": "TEST-desktop-backend-JCuHSv/desktop-backend-receipt.json",
+      "bytes": 841055,
+      "crc32": "1f5e00ba",
+      "sha256": "5a4514b7e309617ec78b3757b53e535d360b9a12823222fcee7538d4735b82b5"
+    },
+    {
+      "path": "TEST-desktop-backend-JCuHSv/desktop-descriptor.json",
+      "bytes": 2511,
+      "crc32": "9d77cf7a",
+      "sha256": "b95d1810c4922e7a444cb1bfefa270c061d10b2112423dc503d66a8900641599"
+    },
+    {
+      "path": "TEST-desktop-backend-JCuHSv/hoststore/management-commands/425d667dcfa2d579afd077e569c2e485d87f94cf48558b3b9009a0ca94dc9ef6.json",
+      "bytes": 2739,
+      "crc32": "412eb313",
+      "sha256": "937edf9f3a7832a4892b8c8c71764a49830b91800c85d1f0ff7ee15cae349e27"
+    },
+    {
+      "path": "TEST-desktop-backend-JCuHSv/hoststore/management-commands/ffb9c7eed57f061a42bcaa5470bde9f6bde09120f3928ec31c5af4cb6f4c65ab.json",
+      "bytes": 3147,
+      "crc32": "83d325fa",
+      "sha256": "a7af1a6f84939cad1710ebf6443f18908e5580ad08e1803dbfd5164d03460a55"
+    },
+    {
+      "path": "TEST-desktop-backend-JCuHSv/hoststore/management-commands/c7fa66faa34b4657b5509f5009f39e1b452595bbb9f4be6c84e35964de1dd793.json",
+      "bytes": 5414,
+      "crc32": "eccc6d24",
+      "sha256": "752f176c6129ee786daa60b91f84dc4f79f7515484794a94a6456e40a02df309"
+    },
+    {
+      "path": "TEST-desktop-backend-JCuHSv/hoststore/runtime-sessions/bdd016a2b1d3803185bda5305ba6c40ef072bd4a058abef1f5a05b10833b6a65/c9a90d843e79872fb60f1ac661b7c9a6d517f863d18b5350c1453742f45d2960.json",
+      "bytes": 714,
+      "crc32": "1b61da5c",
+      "sha256": "322b567a33bb265f643dc3eea461fd2d771dc05f8465a6398a3cdac257fa71a2"
+    },
+    {
+      "path": "TEST-desktop-backend-JCuHSv/hoststore/runtime-sources/index.json",
+      "bytes": 4541,
+      "crc32": "533fcac1",
+      "sha256": "a5e585b7526d63ca646c67e7cf55c167911ab5b84a5b65035cafe507c715be00"
+    },
+    {
+      "path": "TEST-desktop-backend-JCuHSv/hoststore/tasks/test-desktop-backend/df6321bb-b8c9-5720-be16-8464bb451614.json",
+      "bytes": 868,
+      "crc32": "a91ab08c",
+      "sha256": "8b337183b6efc73cfa1ccf177083e06a23c4204b7cc1a01246c227384ceb828c"
+    },
+    {
+      "path": "TEST-desktop-backend-JCuHSv/hoststore/teams/test-desktop-backend/.host-owner/commands/73d51a47022bad35094134a650a17f09916cdc1f2cab13ca2201e1ac8ef59773.json",
+      "bytes": 2335,
+      "crc32": "8f0217cf",
+      "sha256": "932b353df58a721cedf830e53f64833779b63ee92f90f305ed32a27e82c8103e"
+    },
+    {
+      "path": "TEST-desktop-backend-JCuHSv/hoststore/teams/test-desktop-backend/.host-owner/launches/3ea059ae41408fd11f943cf18d00991a80ab8c81c697f145edc28d97bca25d14.json",
+      "bytes": 2094,
+      "crc32": "7dcff799",
+      "sha256": "69de35f571cc6ad816884e0a88de70bfaecaa091af361949e9b80258d879b4a6"
+    },
+    {
+      "path": "TEST-desktop-backend-JCuHSv/hoststore/teams/test-desktop-backend/.host-owner/state.json",
+      "bytes": 1225,
+      "crc32": "148fb9a6",
+      "sha256": "c21d776d1de41f48ee7e9e5555ef048427b4e50b5cb9a91234edf333542f1e28"
+    },
+    {
+      "path": "TEST-desktop-backend-JCuHSv/sentinel-invocations.ndjson",
+      "bytes": 338,
+      "crc32": "a491e889",
+      "sha256": "e2324d54a83b2b94596c0b90dc00796aa1d3843476600f47acfef50324c38692"
+    },
+    {
+      "path": "TEST-desktop-backend-JCuHSv/ui-failure.png",
+      "bytes": 91587,
+      "crc32": "8108d3b8",
+      "sha256": "3d71dbf7f33783f87c3ff18870324ef0b1da6a190e82b5378b42ad8527f7c972"
+    },
+    {
+      "path": "TEST-desktop-backend-JCuHSv/ui-seed-receipt.json",
+      "bytes": 2335,
+      "crc32": "8f0217cf",
+      "sha256": "932b353df58a721cedf830e53f64833779b63ee92f90f305ed32a27e82c8103e"
+    },
+    {
+      "path": "TEST-desktop-backend-JCuHSv/userData/logs/app-errors.ndjson",
+      "bytes": 43860,
+      "crc32": "2fdc77f4",
+      "sha256": "3b1afdc664b89da02bb3538d76189d80bb7560455901e8961af139b9ef95b224"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1090,
+      "crc32": "1d0ec20f",
+      "sha256": "c32a34373d2c15f177c700d9db7a82f1d1f11be68cc9cb5b280d9bce35ab72d2"
+    },
+    {
+      "path": "host-emulated-opencode-v2-inputs.json",
+      "bytes": 2374,
+      "crc32": "1f720773",
+      "sha256": "cb0539d7c6a2d2cf47ec5a8e42adb3acf6bcc8e8702c370fb1530c3fe5ed4531"
+    },
+    {
+      "path": "host-emulated-opencode-v2-resume-ui.log",
+      "bytes": 1448,
+      "crc32": "05bdc38f",
+      "sha256": "cd8871fde870c4e66d8cb2953fa837a404d9ad93722dfdce2b135e1eeb171432"
+    }
+  ],
+  "sources": [
+    {
+      "path": "desktop-taskboard-75cf/source/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 30733,
+      "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e",
+      "repoPath": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "gitBlob": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+      "originalPinPresent": true
+    },
+    {
+      "path": "frontend-proposal/v2-four-rows-r1/source/scripts/legacy-agent-host/desktop-launch-ui-smoke.ts",
+      "bytes": 38999,
+      "sha256": "b1ab72d21f81e777a9698b9491ad735bb6a7eaf228c6abfef30bcfe4debde34e",
+      "repoPath": "scripts/legacy-agent-host/desktop-launch-ui-smoke.ts",
+      "gitBlob": "cf7d2eb9f7b8c1f1397980f7f0feef2e310efdfb",
+      "originalPinPresent": true
+    },
+    {
+      "path": "frontend-proposal/plan63-prospective-r2/source/scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 55757,
+      "sha256": "bbd6647969c1ab0ae125b6a5e0685ca0f112dca05661a6c04b37c4fbee56a33e",
+      "repoPath": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "gitBlob": "9c724c3895e467bc1db062e5015ded70c30e65e4",
+      "originalPinPresent": true
+    },
+    {
+      "path": "frontend-proposal/resume-75cf/source/src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+      "bytes": 157938,
+      "sha256": "919572aefbd5b4f8f56eb0c6a0953e8ac1efff9868861ff32655e73b58994d38",
+      "repoPath": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+      "gitBlob": "e54fd44a11644202b3c3d0c17a0c85b66e9f1520",
+      "originalPinPresent": true
+    },
+    {
+      "path": "frontend-proposal/resume-75cf/source/src/renderer/components/team/dialogs/ResponsiveModelGrid.tsx",
+      "bytes": 1464,
+      "sha256": "599febb8768a2e9bb094308d16a847324b2890c09520964f134111af69e341b0",
+      "repoPath": "src/renderer/components/team/dialogs/ResponsiveModelGrid.tsx",
+      "gitBlob": "c0df7a850a0d1070de5af9c3745ea7008a840ab3",
+      "originalPinPresent": false
+    },
+    {
+      "path": "frontend-proposal/resume-75cf/source/src/features/localization/renderer/locales/en/team.json",
+      "bytes": 148603,
+      "sha256": "193cf3bc888f6e438bc5d2d18d807aab29c35030eb16d797d43ca091f48b168b",
+      "repoPath": "src/features/localization/renderer/locales/en/team.json",
+      "gitBlob": "8f11205931a67a90e14c312811953509988fbf18",
+      "originalPinPresent": false
+    }
+  ],
+  "sourcePins": {
+    "before": 1777,
+    "after": 1777,
+    "exactArrayEquality": true,
+    "extraImmutableReadNotReceiptPinned": [
+      "src/renderer/components/team/dialogs/ResponsiveModelGrid.tsx",
+      "src/features/localization/renderer/locales/en/team.json"
+    ]
+  },
+  "firstFailure": {
+    "message": "UI read timed out: visible TEST-model option from actual provider catalog; no mutation retry",
+    "frames": [
+      "scripts/legacy-agent-host/desktop-ui-controls.ts:204:11",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts:442:9",
+      "scripts/legacy-agent-host/desktop-launch-ui-smoke.ts:362:3",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:515:7",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:788:29"
+    ],
+    "steps": [
+      {
+        "monotonicMs": 187301,
+        "action": "mouseMoved",
+        "label": "hover sidebar row before measuring click"
+      },
+      {
+        "monotonicMs": 187803,
+        "action": "mouseClick",
+        "label": "sidebar task"
+      },
+      {
+        "monotonicMs": 188055,
+        "observation": "passive input delivery after sidebar click"
+      },
+      {
+        "monotonicMs": 189943,
+        "action": "mouseMoved",
+        "label": "hover Open team"
+      },
+      {
+        "monotonicMs": 190971,
+        "action": "mouseClick",
+        "label": "Open team"
+      },
+      {
+        "monotonicMs": 211747,
+        "action": "mouseMoved",
+        "label": "hover open original Launch dialog"
+      },
+      {
+        "monotonicMs": 214177,
+        "action": "mouseClick",
+        "label": "open original Launch dialog"
+      },
+      {
+        "monotonicMs": 220656,
+        "observation": "original saved launch summary before expansion"
+      },
+      {
+        "monotonicMs": 221265,
+        "action": "mouseMoved",
+        "label": "hover expand original launch settings"
+      },
+      {
+        "monotonicMs": 222857,
+        "action": "mouseClick",
+        "label": "expand original launch settings"
+      },
+      {
+        "monotonicMs": 223349,
+        "action": "mouseMoved",
+        "label": "hover expand original lead model row"
+      },
+      {
+        "monotonicMs": 223915,
+        "action": "mouseClick",
+        "label": "expand original lead model row"
+      }
+    ],
+    "noWheelDispatch": true,
+    "unreached": [
+      "actual TEST-model selection",
+      "lead prompt and Launch",
+      "native launch proof",
+      "cold Resume",
+      "second epoch",
+      "cold readback"
+    ]
+  },
+  "visibleEvidence": {
+    "screenshot": {
+      "path": "desktop-v2-resume-75cf/extracted/TEST-desktop-backend-JCuHSv/ui-failure.png",
+      "bytes": 91587,
+      "sha256": "3d71dbf7f33783f87c3ff18870324ef0b1da6a190e82b5378b42ad8527f7c972"
+    },
+    "dimensions": [
+      1024,
+      681
+    ],
+    "modelButtons": [
+      {
+        "text": "DefaultTEST-model (Test Local)",
+        "disabled": false,
+        "x": 354,
+        "y": 818.296875,
+        "width": 166.328125,
+        "height": 64
+      },
+      {
+        "text": "TEST-model",
+        "disabled": false,
+        "x": 354,
+        "y": 936.296875,
+        "width": 166.328125,
+        "height": 58
+      }
+    ],
+    "selector": "[role=\"dialog\"] [data-testid=\"team-model-selector-model-option\"]:is([aria-label=\"TEST-model\"],[aria-label^=\"TEST-model. \"])",
+    "defaultOptionEnglishLabel": "Default - {{model}}",
+    "nearestAncestorGeometryRetained": false,
+    "matchedSelectorCountRetained": false
+  },
+  "sourceFinding": {
+    "proven": "scrollTo waits before any wheel when the nearest scrolling ancestor has no intersection with the viewport; it never selects an outer visible scrolling ancestor in that state.",
+    "historicalInference": "Recorded default/model geometry and the exact nested grid structure support this reachable branch at failure. The wait-time matched count and full ancestor rectangles are not captured, so exclusive attribution over every poll is not asserted.",
+    "rendererContract": "Existing model is present in DOM; no missing catalog/permission/availability workaround is selected.",
+    "constraints": "No source afterimages, new UI action, retry, clock or deadline change."
+  },
+  "metadata": {
+    "events": [
+      {
+        "timestamp": "2026-11-16T22:41:05.487Z",
+        "profileHash": "0c847426e64be10655027877ba447ae4ea57e00d0dfe826b4b9432262c2b1767",
+        "mode": "provider",
+        "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+        "pid": 13135,
+        "stage": "ready",
+        "startIdentityHash": "28e290bcd1871069024d88c72108d4e866caaae8126624d512414d04cae19e9d",
+        "hostPid": 9282
+      },
+      {
+        "timestamp": "2026-11-16T22:41:10.027Z",
+        "profileHash": "0c847426e64be10655027877ba447ae4ea57e00d0dfe826b4b9432262c2b1767",
+        "mode": "provider",
+        "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+        "pid": 13135,
+        "stage": "released",
+        "startIdentityHash": "28e290bcd1871069024d88c72108d4e866caaae8126624d512414d04cae19e9d",
+        "hostPid": 9282
+      },
+      {
+        "timestamp": "2026-11-16T22:41:38.721Z",
+        "profileHash": "0c847426e64be10655027877ba447ae4ea57e00d0dfe826b4b9432262c2b1767",
+        "mode": "directory",
+        "providerHash": null,
+        "pid": 13973,
+        "stage": "ready",
+        "startIdentityHash": "23a8922cada86115afdbc5470d368320c7308c07d3352ff38695447bfe7b152d",
+        "hostPid": 9282
+      },
+      {
+        "timestamp": "2026-11-16T22:41:42.134Z",
+        "profileHash": "0c847426e64be10655027877ba447ae4ea57e00d0dfe826b4b9432262c2b1767",
+        "mode": "directory",
+        "providerHash": null,
+        "pid": 13973,
+        "stage": "released",
+        "startIdentityHash": "23a8922cada86115afdbc5470d368320c7308c07d3352ff38695447bfe7b152d",
+        "hostPid": 9282
+      },
+      {
+        "timestamp": "2026-11-16T22:41:58.553Z",
+        "profileHash": "0c847426e64be10655027877ba447ae4ea57e00d0dfe826b4b9432262c2b1767",
+        "mode": "provider",
+        "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+        "pid": 14860,
+        "stage": "ready",
+        "startIdentityHash": "d94f0be6e14fef5bf8de4c88d52965b73bae23f35c5bb093e22e79eed9104717",
+        "hostPid": 9282
+      },
+      {
+        "timestamp": "2026-11-16T22:42:09.776Z",
+        "profileHash": "6b563f1eeb5f00a3c2b19a6c70cc54aa142792b65c2e3ac839a628586d6ba333",
+        "mode": "provider",
+        "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+        "pid": 15431,
+        "stage": "ready",
+        "startIdentityHash": "62d226807d44de0ebfec05bbf86bf1a7808c915366123a7e36cdf79c5395209e",
+        "hostPid": 9282
+      },
+      {
+        "timestamp": "2026-11-16T22:42:13.364Z",
+        "profileHash": "6b563f1eeb5f00a3c2b19a6c70cc54aa142792b65c2e3ac839a628586d6ba333",
+        "mode": "provider",
+        "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+        "pid": 15431,
+        "stage": "released",
+        "startIdentityHash": "62d226807d44de0ebfec05bbf86bf1a7808c915366123a7e36cdf79c5395209e",
+        "hostPid": 9282
+      },
+      {
+        "timestamp": "2026-11-16T22:42:15.566Z",
+        "profileHash": "0c847426e64be10655027877ba447ae4ea57e00d0dfe826b4b9432262c2b1767",
+        "mode": "provider",
+        "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+        "pid": 14860,
+        "stage": "released",
+        "startIdentityHash": "d94f0be6e14fef5bf8de4c88d52965b73bae23f35c5bb093e22e79eed9104717",
+        "hostPid": 9282
+      },
+      {
+        "timestamp": "2026-11-16T22:42:19.757Z",
+        "profileHash": "6b563f1eeb5f00a3c2b19a6c70cc54aa142792b65c2e3ac839a628586d6ba333",
+        "mode": "directory",
+        "providerHash": null,
+        "stage": "read-failed",
+        "readStage": "native-client",
+        "reason": "unknown",
+        "elapsedMs": 6385,
+        "deadlineExpired": false,
+        "aborted": false,
+        "hostPid": 9282
+      }
+    ],
+    "readyReleasedPairs": 4,
+    "requestCorrelationAbsent": true,
+    "shutdown": [
+      {
+        "timestamp": "2026-11-16T22:42:15.228Z",
+        "message": "Shutdown step wait started {\"label\":\"agent backend cleanup\"}"
+      },
+      {
+        "timestamp": "2026-11-16T22:42:19.908Z",
+        "message": "Shutdown step wait finished {\"label\":\"agent backend cleanup\"}"
+      }
+    ]
+  },
+  "managementJournals": [
+    {
+      "path": "desktop-v2-resume-75cf/extracted/TEST-desktop-backend-JCuHSv/hoststore/management-commands/425d667dcfa2d579afd077e569c2e485d87f94cf48558b3b9009a0ca94dc9ef6.json",
+      "sha256": "937edf9f3a7832a4892b8c8c71764a49830b91800c85d1f0ff7ee15cae349e27",
+      "kind": "runtime.source",
+      "phase": "published",
+      "resourceHeld": false,
+      "providerId": "opencode"
+    },
+    {
+      "path": "desktop-v2-resume-75cf/extracted/TEST-desktop-backend-JCuHSv/hoststore/management-commands/c7fa66faa34b4657b5509f5009f39e1b452595bbb9f4be6c84e35964de1dd793.json",
+      "sha256": "752f176c6129ee786daa60b91f84dc4f79f7515484794a94a6456e40a02df309",
+      "kind": "model.probe",
+      "purpose": "native-local-readiness-v1",
+      "phase": "running",
+      "ok": false,
+      "resourceHeld": true,
+      "providerId": "test-local"
+    },
+    {
+      "path": "desktop-v2-resume-75cf/extracted/TEST-desktop-backend-JCuHSv/hoststore/management-commands/ffb9c7eed57f061a42bcaa5470bde9f6bde09120f3928ec31c5af4cb6f4c65ab.json",
+      "sha256": "a7af1a6f84939cad1710ebf6443f18908e5580ad08e1803dbfd5164d03460a55",
+      "kind": "runtime.source",
+      "phase": "published",
+      "resourceHeld": false,
+      "providerId": "opencode"
+    }
+  ],
+  "cleanup": {
+    "processGroup": 7689,
+    "remaining": [],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostObserved": false,
+    "capturedHostAbsent": null,
+    "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+  },
+  "beforeHarnessCleanup": [],
+  "quitRequested": true,
+  "sentinelCensus": {
+    "invocations": [
+      {
+        "executable": "claude-multimodel",
+        "allowed": true,
+        "argc": 1,
+        "command": null,
+        "flags": [
+          "--version"
+        ]
+      },
+      {
+        "executable": "opencode",
+        "allowed": true,
+        "argc": 1,
+        "command": null,
+        "flags": [
+          "--version"
+        ]
+      },
+      {
+        "executable": "shell-env",
+        "allowed": true,
+        "argc": 2,
+        "flags": [
+          "-lic"
+        ]
+      },
+      {
+        "executable": "opencode",
+        "allowed": true,
+        "argc": 1,
+        "command": null,
+        "flags": [
+          "--version"
+        ]
+      }
+    ],
+    "preQuitCount": null,
+    "postQuitOrCleanupInvocations": null,
+    "refusedInvocations": [],
+    "qualification": "Sentinels refuse nonversion commands without launching providers. Post-Quit/cleanup refusals are retained legacy maintenance gaps; they do not prove native execution or full fork-free/P5 qualification."
+  },
+  "limits": [
+    "No native Launch/Resume/cold-readback acceptance.",
+    "Empty app group is not complete native/Host cleanup; original readiness journal remains running/resourceHeld.",
+    "Four metadata ready/released pairs qualify only those identities, not all possible children.",
+    "Source review does not assert each catalog child belongs to this one UI wait.",
+    "No project, compiler, provider, GUI or test execution; no CI polling or remote mutations."
+  ],
+  "checks": [
+    {
+      "check": "original ZIP API hash/length",
+      "pass": true
+    },
+    {
+      "check": "original 20 member ZIP retained",
+      "pass": true
+    },
+    {
+      "check": "no duplicate/path traversal member",
+      "pass": true
+    },
+    {
+      "check": "all existing extracted members exact archive data",
+      "pass": true
+    },
+    {
+      "check": "original decoded job log exact",
+      "pass": true
+    },
+    {
+      "check": "original receipt exact hash",
+      "pass": true
+    },
+    {
+      "check": "exact input head/platform",
+      "pass": true
+    },
+    {
+      "check": "original mode and failure retained",
+      "pass": true
+    },
+    {
+      "check": "native receipt has no asserted source header",
+      "pass": true
+    },
+    {
+      "check": "1777 source rows unchanged",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-ui-controls.ts: matches original receipt pin",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-launch-ui-smoke.ts: matches original receipt pin",
+      "pass": true
+    },
+    {
+      "check": "scripts/legacy-agent-host/desktop-backend-smoke.ts: matches original receipt pin",
+      "pass": true
+    },
+    {
+      "check": "src/renderer/components/team/dialogs/TeamModelSelector.tsx: matches original receipt pin",
+      "pass": true
+    },
+    {
+      "check": "last action original lead expansion",
+      "pass": true
+    },
+    {
+      "check": "no original wheel was dispatched",
+      "pass": true
+    },
+    {
+      "check": "no launch/native Resume business proof claimed",
+      "pass": true
+    },
+    {
+      "check": "one original Launch dialog snapshot",
+      "pass": true
+    },
+    {
+      "check": "original two relevant model buttons recorded",
+      "pass": true
+    },
+    {
+      "check": "original screenshot dimensions",
+      "pass": true
+    },
+    {
+      "check": "model button below original screenshot extent",
+      "pass": true
+    },
+    {
+      "check": "four observed metadata ready events all identity-paired released",
+      "pass": true
+    },
+    {
+      "check": "directory read failure follows original cleanup start",
+      "pass": true
+    },
+    {
+      "check": "original held running probe disclosed",
+      "pass": true
+    },
+    {
+      "check": "sole static descriptor closed without native readiness/input",
+      "pass": true
+    },
+    {
+      "check": "original requested Quit and empty final app-group cleanup",
+      "pass": true
+    },
+    {
+      "check": "captured Host final physical absence not qualified",
+      "pass": true
+    }
+  ],
+  "passedInertChecks": 27
+}

@@ -1,0 +1,730 @@
+{
+  "schemaVersion": 1,
+  "status": "ACCEPT_EXACT_SOURCE_ONLY",
+  "reviewer": "installer_review",
+  "selectedPlan": {
+    "commit": "229991c46f94b4dec0b6060a98e777833d84e9fe",
+    "path": "w05-owner-loss-proposal/plan.md",
+    "bytes": 18528,
+    "physicalLines": 78,
+    "sha256": "129d5b1215c6bc12f29a38afac422d257130b746bcc05ab1493aa0ce93e9c09d",
+    "gitBlob": "b550f33385a1da00915548047fa814743fcd5324"
+  },
+  "packet": {
+    "manifest": {
+      "path": "w05-owner-loss-proposal/source/manifest.json",
+      "bytes": 4418,
+      "physicalLines": 134,
+      "sha256": "0bbc4070b16ebe9cb5e76b8948f376c3da988ce6b21df2994dd3a06866b3dd61",
+      "gitBlob": "e0c576e04144f12b0ed9dd3f1974e7dd894e0a6d"
+    },
+    "patch": {
+      "path": "w05-owner-loss-proposal/source/source.patch",
+      "bytes": 33582,
+      "physicalLines": 436,
+      "sha256": "acb5b01ff96d116af22d690a7b622820198c389b6315ece6db9dd0bff71ee6fd",
+      "gitBlob": "365ffc515a44b9efc6b24d2b560be82fa0da6ab1"
+    },
+    "authorR1": {
+      "path": "w05-owner-loss-proposal/source/source-r1.md",
+      "bytes": 7090,
+      "physicalLines": 39,
+      "sha256": "a1fba74ed1b4764db4bbbf884c433ba476f328cce0662d4efddb5950bb432796",
+      "gitBlob": "041452e9cb302636c9f41016664719a5419c5eb5"
+    },
+    "preservationProof": {
+      "path": "w05-owner-loss-proposal/source/preservation-proof.json",
+      "bytes": 7458,
+      "physicalLines": 268,
+      "sha256": "29527b6c3bcddb3e8f06ec9e55f3eafc508195f16c40025b9d3d7ba9d6007132",
+      "gitBlob": "7d1cf1f393652362a8a827a98781e6f788682e09"
+    }
+  },
+  "base": {
+    "prepared": "3b584da7c5105564cc105e5731a1fca08b3f0a5a",
+    "prospective": "39a00ee65eb4ecfd5ba42c4c0504db837f6db470",
+    "freshPublicationLease": "Root responsibility; no remote ref or full-tree observation performed by reviewer"
+  },
+  "files": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "gitBlob": "f7d9534ccc58aa8b77fe7a424ff3d652873c0a15",
+        "sha256": "348d5a5c093e0608b6d16fe53d6136bf6c7f86c335287f979bb88e56be4d2979",
+        "bytes": 142325,
+        "lines": 1774
+      },
+      "after": {
+        "gitBlob": "d132a5e37cec1e62120571606f3f272f56b9b4af",
+        "sha256": "2470e8c83d8e77eddb4d5156947c30fda993e5b3485b9fb238bc12d6e2be6839",
+        "bytes": 142538,
+        "lines": 1777
+      },
+      "additions": 4,
+      "deletions": 1,
+      "hunks": 1
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "before": {
+        "gitBlob": "93606e49aedfe84b6452aee487efdf2055f45524",
+        "sha256": "1aa35cca543a731d88fb257522458e99f73964b1d18553c5118f4c8542815e7e",
+        "bytes": 32370,
+        "lines": 419
+      },
+      "after": {
+        "gitBlob": "b051fba3021eedd15ce256577c3fc711e0d0786b",
+        "sha256": "b0ad0cb688f5cf1a4c00d4252aa04094975189d2504f5acc0505a0ea92a7d926",
+        "bytes": 36941,
+        "lines": 446
+      },
+      "additions": 27,
+      "deletions": 0,
+      "hunks": 1
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+      "before": null,
+      "after": {
+        "gitBlob": "bfeb7748103d61fdcd82199ba637061ecad824a8",
+        "sha256": "ad6ef7894c8735b110d2573dea7fdeab2749f4c035b3bae9f5cc7861613ea80e",
+        "bytes": 20014,
+        "lines": 298
+      },
+      "additions": 298,
+      "deletions": 0,
+      "hunks": 1
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "before": {
+        "gitBlob": "67180ac5c567cbeb089d4ef3248391c792e1ba4d",
+        "sha256": "8cdc9a1bcc80b61998e93813959f53542a85cb5953c93ae1feb2397e37d9080e",
+        "bytes": 7926,
+        "lines": 105
+      },
+      "after": {
+        "gitBlob": "c0f616460e686a62bad9f1cdb2d05eb1f0a61312",
+        "sha256": "c67c2d4872a7ba0cb8773976e25f29716d5150d3b48e0a61979219bc6bb0d912",
+        "bytes": 8129,
+        "lines": 108
+      },
+      "additions": 6,
+      "deletions": 3,
+      "hunks": 2
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "before": {
+        "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+        "sha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd",
+        "bytes": 15213,
+        "lines": 231
+      },
+      "after": {
+        "gitBlob": "46c15f014e9e3e9e5a7d161c2aee5d37ee499e0b",
+        "sha256": "2241f833a8c4cb1a60cadcdd1583cf26adbef9031b4f133c9db8e54d9958854d",
+        "bytes": 15748,
+        "lines": 237
+      },
+      "additions": 7,
+      "deletions": 1,
+      "hunks": 4
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "before": {
+        "gitBlob": "6336605c2aa95ebd830b079c9e23c316231471c4",
+        "sha256": "f6e40050d1892a2f1f867a11906fb123c56df2626b2ca2b0359abce58fcf5661",
+        "bytes": 624,
+        "lines": 6
+      },
+      "after": {
+        "gitBlob": "d7ac2622eba336663453e5e4f1cf96feb0fd1346",
+        "sha256": "7e0b94cbac43fb23db2595838675f507e43b3005b7dae50b8efafc4c1471e37a",
+        "bytes": 662,
+        "lines": 6
+      },
+      "additions": 1,
+      "deletions": 1,
+      "hunks": 1
+    }
+  ],
+  "diff": {
+    "additions": 343,
+    "deletions": 6,
+    "hunks": 10,
+    "fullForwardAndInverse": true
+  },
+  "sourceReview": [
+    {
+      "topic": "Precise fault boundary",
+      "finding": "The original prepare response is forwarded only after the independent HANDLE capture. HostWindowsLaunch awaits installOwner before sending Resume. The observer holds the first Resume for attachment A and the one prepared capability before original.handle; no physical Resume or successful result is fabricated."
+    },
+    {
+      "topic": "Loss attribution",
+      "finding": "The open promise is observed pending and A is observed nonaborted immediately before the single exclusive marker write. The same captured child exit and abort precede accepting exactly HostClientError transport-closed/unknown. Timeout, not-dispatched, earlier completion, or unrelated error cannot pass."
+    },
+    {
+      "topic": "Recovery and durable history",
+      "finding": "Host B attaches only after A exit/abort. Actual hello incarnation belongs to its attachment; Runtime journal incarnation is independently retained. Public read precedes one explicit reconcile; identical original intent replay preserves held/unknown and no new allocation, prepare, Resume, write or peer journal rows."
+    },
+    {
+      "topic": "Native negatives",
+      "finding": "Four direct original-port negatives retain stale-A versus successor-B capability checks; numeric PID is refused by the strict public Runtime payload. These do not substitute for original queryable HANDLE identity or ordinary business execution."
+    },
+    {
+      "topic": "Cleanup",
+      "finding": "Original CapturedHostClient shutdown and original Main close remain the only owners. Main physical cleanup and HANDLE absence are separate from Host providerCustody unresolved and the persistent held/unknown record. Expected lost callback is separately identified; all other callback/cleanup errors remain observable and block PASS."
+    },
+    {
+      "topic": "Partial evidence",
+      "finding": "The normal Gate creates and retains the INCOMPLETE ownerLoss object before its first await and ordinary cases; helper phases mutate that same external-finally receipt. This is not a guarantee for arbitrary synchronous setup failures before the original Gate try or controller hard termination."
+    },
+    {
+      "topic": "Preservation and closure",
+      "finding": "All five original files invert exactly. Original ordinary providers and source branch, source A/B resumed predicates, commands, matrices, budgets, artifact paths, and W07/compiler/lint neighbors remain. New helper is process-gate-only; no Desktop roster expansion is needed."
+    },
+    {
+      "topic": "Qualification",
+      "finding": "Source-only acceptance does not establish canonical TS/lint, timing inside the original controller120s, Windows x64/ARM runtime behavior, broader W05, W07, same-Main Desktop Retry, P09, Ready, release, or genuine vendor qualification."
+    }
+  ],
+  "dependencyBindings": [
+    {
+      "path": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "bytes": 22408,
+      "physicalLines": 581,
+      "sha256": "447a3ae82ab6ce0ec866305af2cd426619df3618fbec2397931212379d945784",
+      "gitBlob": "3b5a244c27d004af6e82fffa092fa83e1894de73"
+    },
+    {
+      "path": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/adapters/providers/WindowsCapturedProcess.ts",
+      "bytes": 9559,
+      "physicalLines": 179,
+      "sha256": "07f000974d765d3608924302865e27ba638bba64b47ca4303a359c33c0dd47c8",
+      "gitBlob": "b63b0c2b97bc196d0c1c87c0f106c2e2346e3de9"
+    },
+    {
+      "path": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts",
+      "bytes": 20070,
+      "physicalLines": 522,
+      "sha256": "cd06debca46ae13d02935268f4905b2ade7f3a5c8c4ed8a81139dde99de5c117",
+      "gitBlob": "10e1a457bb65a136128eb1db5176a4701d2fe4e2"
+    },
+    {
+      "path": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/runtime/prepareSessionOpen.ts",
+      "bytes": 1964,
+      "physicalLines": 48,
+      "sha256": "d481256476fc8b28f9c677f0f7560bd4946fee2d6fb130235a2db3c3c0c96833",
+      "gitBlob": "f02e7aaa2b12d337c43c25aec58a1c113b96728b"
+    },
+    {
+      "path": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "bytes": 30469,
+      "physicalLines": 757,
+      "sha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d",
+      "gitBlob": "a566efc5987b6859d004a8531cb8e6bac80bec30"
+    },
+    {
+      "path": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/adapters/runtime/FileRuntimeStore.ts",
+      "bytes": 12625,
+      "physicalLines": 325,
+      "sha256": "b33e3d6a60c0af5b84aa2c90e307f2fccffb659c57458bf056dc289cb09dde4b",
+      "gitBlob": "60873a7a750aacfd4affbff90b21e1a739f127d4"
+    },
+    {
+      "path": "native-proposal/w05-completed-install-r1/source/packages/legacy-agent-host/src/composition/createRuntimeLifecyclePorts.ts",
+      "bytes": 4284,
+      "physicalLines": 82,
+      "sha256": "ed7564367d572c10cc65108e2a680b37752485f8877187d99bd5f6b7c4762b33",
+      "gitBlob": "2353eb333b3cc5b91c03c8ae78624b8fd8948c55"
+    },
+    {
+      "path": "native-proposal/w05-completed-install-r1/source/src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "bytes": 32706,
+      "physicalLines": 800,
+      "sha256": "33e65a4aa30e2edce5eba2e7354c55f89700e15c437611f42c5d06f49cf74b87",
+      "gitBlob": "c4389ac113de03138fd6a9b4b0c6070fb2f06d86"
+    },
+    {
+      "path": "native-proposal/w07-prospective-r2/source/tools/owned-process-broker/tsconfig.retained-host.json",
+      "bytes": 393,
+      "physicalLines": 6,
+      "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+      "gitBlob": "905f1a1489f3b37d651a9984169b0321c9915a15"
+    },
+    {
+      "path": "native-proposal/w05-completed-install-r1/source/tools/owned-process-broker/nativeGateContext.ts",
+      "bytes": 7278,
+      "physicalLines": 192,
+      "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+      "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31"
+    },
+    {
+      "path": "w05-owner-loss-proposal/source-inputs/tools/owned-process-broker/nativeGateEvents.ts",
+      "bytes": 1367,
+      "physicalLines": 39,
+      "sha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+      "gitBlob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a"
+    }
+  ],
+  "closedOwnSourcePinOperands": [
+    "./nativeEmulatedOwnerLossScenario.ts",
+    "./nativeEmulatedProfile.ts",
+    "./nativeEmulatedProviderGate.ts",
+    "./nativeGateContext.ts",
+    "./nativeGateEvents.ts",
+    "../../src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+    "../../src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+    "../../src/features/agent-backend/main/infrastructure/selectedHostProfile.ts",
+    "../../packages/legacy-agent-host/src/adapters/runtime/FileRuntimeStore.ts",
+    "../../packages/legacy-agent-host/dist/adapters/runtime/FileRuntimeStore.js",
+    "../../packages/legacy-agent-host/src/runtime/prepareSessionOpen.ts",
+    "../../packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+    "../../packages/legacy-agent-host/src/adapters/providers/WindowsCapturedProcess.ts",
+    "../../packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+    "../../packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts",
+    "../../packages/legacy-agent-host/src/owned-process/hostCustody.ts"
+  ],
+  "checks": [
+    {
+      "check": "Exact frozen manifest",
+      "passed": true
+    },
+    {
+      "check": "Exact frozen patch",
+      "passed": true
+    },
+    {
+      "check": "Exact selected revision2 Plan67",
+      "passed": true
+    },
+    {
+      "check": "Exact frozen author narrative",
+      "passed": true
+    },
+    {
+      "check": "Only selected six afterimage paths",
+      "passed": true
+    },
+    {
+      "check": "Only selected five beforeimages",
+      "passed": true
+    },
+    {
+      "check": "Selected manifest path .github/workflows/host-emulated-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Exact before binding .github/workflows/host-emulated-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Exact after binding .github/workflows/host-emulated-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "UTF8/LF/trailing newline .github/workflows/host-emulated-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Selected manifest path .github/workflows/host-process-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Exact before binding .github/workflows/host-process-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Exact after binding .github/workflows/host-process-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "UTF8/LF/trailing newline .github/workflows/host-process-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Selected manifest path tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact after binding tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+      "passed": true
+    },
+    {
+      "check": "Unraised source cap tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+      "passed": true
+    },
+    {
+      "check": "UTF8/LF/trailing newline tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+      "passed": true
+    },
+    {
+      "check": "Selected manifest path tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact before binding tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact after binding tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "passed": true
+    },
+    {
+      "check": "Unraised source cap tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "passed": true
+    },
+    {
+      "check": "UTF8/LF/trailing newline tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "passed": true
+    },
+    {
+      "check": "Selected manifest path tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact before binding tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact after binding tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "passed": true
+    },
+    {
+      "check": "Unraised source cap tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "passed": true
+    },
+    {
+      "check": "UTF8/LF/trailing newline tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "passed": true
+    },
+    {
+      "check": "Selected manifest path tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "check": "Exact before binding tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "check": "Exact after binding tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "check": "UTF8/LF/trailing newline tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "check": "Independent complete forward patch .github/workflows/host-emulated-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Independent complete inverse patch .github/workflows/host-emulated-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Independent complete forward patch .github/workflows/host-process-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Independent complete inverse patch .github/workflows/host-process-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Independent complete forward patch tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+      "passed": true
+    },
+    {
+      "check": "Independent complete inverse patch tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+      "passed": true
+    },
+    {
+      "check": "Independent complete forward patch tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "passed": true
+    },
+    {
+      "check": "Independent complete inverse patch tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "passed": true
+    },
+    {
+      "check": "Independent complete forward patch tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "passed": true
+    },
+    {
+      "check": "Independent complete inverse patch tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "passed": true
+    },
+    {
+      "check": "Independent complete forward patch tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "check": "Independent complete inverse patch tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "check": "Complete patch scope and ten hunks",
+      "passed": true
+    },
+    {
+      "check": "Full delta matches selected packet",
+      "passed": true
+    },
+    {
+      "check": "Full ordinary and packaged Profile inverse",
+      "passed": true
+    },
+    {
+      "check": "Loss selector is exact Codex and excludes packaged mode",
+      "passed": true
+    },
+    {
+      "check": "Only crash and birth conditions gain loss operand",
+      "passed": true
+    },
+    {
+      "check": "Original complete providerScenario body identical",
+      "passed": true
+    },
+    {
+      "check": "Original source-provider branch identical",
+      "passed": true
+    },
+    {
+      "check": "Same incomplete object initialized before first Gate await",
+      "passed": true
+    },
+    {
+      "check": "One added helper after original wrapper and provider cases",
+      "passed": true
+    },
+    {
+      "check": "Same partial object retained in original external receipt",
+      "passed": true
+    },
+    {
+      "check": "Original source-only route receives no ownerLoss field",
+      "passed": true
+    },
+    {
+      "check": "One real Main construction and two captured clients",
+      "passed": true
+    },
+    {
+      "check": "Distinct child sandbox and nonpackaged closed finite selector",
+      "passed": true
+    },
+    {
+      "check": "No native action implementation, fake ACK or production hook",
+      "passed": true
+    },
+    {
+      "check": "First exact attachment and prepared capability guard before hold",
+      "passed": true
+    },
+    {
+      "check": "Held Resume throws before original physical port forwarding",
+      "passed": true
+    },
+    {
+      "check": "Prepared original root and independent HANDLE retained before prepare ACK",
+      "passed": true
+    },
+    {
+      "check": "Unexpected callback failure reaches existing first-failure latch",
+      "passed": true
+    },
+    {
+      "check": "One fenced read uses actual captured binding and no transaction write",
+      "passed": true
+    },
+    {
+      "check": "Opening intent observed before marker",
+      "passed": true
+    },
+    {
+      "check": "Pending and original nonaborted attachment immediately before marker",
+      "passed": true
+    },
+    {
+      "check": "One exclusive crash marker write",
+      "passed": true
+    },
+    {
+      "check": "Exact induced-loss error rejects timeout and wrong error identity",
+      "passed": true
+    },
+    {
+      "check": "Captured exit and abort precede hold release and B start",
+      "passed": true
+    },
+    {
+      "check": "Hello incarnation bound to actual Main attachment without Runtime equality",
+      "passed": true
+    },
+    {
+      "check": "Actual child birth ledger is corroboration only",
+      "passed": true
+    },
+    {
+      "check": "Read occurs before exactly one explicit reconcile",
+      "passed": true
+    },
+    {
+      "check": "One identical original open replay and one strict numeric PID negative",
+      "passed": true
+    },
+    {
+      "check": "Four original-port capability negatives remain exact",
+      "passed": true
+    },
+    {
+      "check": "Durable identity compares Runtime incarnation only to its original record",
+      "passed": true
+    },
+    {
+      "check": "Final no-input/counts and event latch run after original cleanup",
+      "passed": true
+    },
+    {
+      "check": "Original Main close and HANDLE wait precede observer-only fallback",
+      "passed": true
+    },
+    {
+      "check": "No native action replay used as cleanup fallback",
+      "passed": true
+    },
+    {
+      "check": "Shutdown explicitly preserves unresolved provider custody",
+      "passed": true
+    },
+    {
+      "check": "Status PASS only after complete, confirmed cleanup and no collected error",
+      "passed": true
+    },
+    {
+      "check": "All caught cleanup errors retained",
+      "passed": true
+    },
+    {
+      "check": "Closed sixteen direct source/body pin operands",
+      "passed": true
+    },
+    {
+      "check": "Original supplied binary/profile pins joined and rechecked",
+      "passed": true
+    },
+    {
+      "check": "Peer observation remains zero and no business input added",
+      "passed": true
+    },
+    {
+      "check": "Only aggregate assertions added to process workflow",
+      "passed": true
+    },
+    {
+      "check": "Original strict source jobs remain resumed stopped drained released absent",
+      "passed": true
+    },
+    {
+      "check": "Original controller clean exit remains mandatory",
+      "passed": true
+    },
+    {
+      "check": "Aggregate validates nested barrier, counts, unknown and HANDLE proofs",
+      "passed": true
+    },
+    {
+      "check": "New aggregate retains all negative qualifications",
+      "passed": true
+    },
+    {
+      "check": "Compiler only one append preserving complete original options",
+      "passed": true
+    },
+    {
+      "check": "Both previously selected helper exclusions retained",
+      "passed": true
+    },
+    {
+      "check": "139 original lint operands kept in exact order",
+      "passed": true
+    },
+    {
+      "check": "Exactly three selected lint append operands",
+      "passed": true
+    },
+    {
+      "check": "Full Host workflow inverse beyond three lint operands",
+      "passed": true
+    },
+    {
+      "check": "Retained semantic source binding packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "passed": true
+    },
+    {
+      "check": "Retained semantic source binding packages/legacy-agent-host/src/adapters/providers/WindowsCapturedProcess.ts",
+      "passed": true
+    },
+    {
+      "check": "Retained semantic source binding packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts",
+      "passed": true
+    },
+    {
+      "check": "Retained semantic source binding packages/legacy-agent-host/src/runtime/prepareSessionOpen.ts",
+      "passed": true
+    },
+    {
+      "check": "Retained semantic source binding packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "passed": true
+    },
+    {
+      "check": "Retained semantic source binding packages/legacy-agent-host/src/adapters/runtime/FileRuntimeStore.ts",
+      "passed": true
+    },
+    {
+      "check": "Retained semantic source binding packages/legacy-agent-host/src/composition/createRuntimeLifecyclePorts.ts",
+      "passed": true
+    },
+    {
+      "check": "Original completed install precedes Resume request",
+      "passed": true
+    },
+    {
+      "check": "Original stale/foreign capability refuses before native input",
+      "passed": true
+    },
+    {
+      "check": "Original child close is transport-closed and seals native authority",
+      "passed": true
+    },
+    {
+      "check": "Original late held callback cannot emit reply after transport seal",
+      "passed": true
+    },
+    {
+      "check": "Unchanged retained compiler includes Gate and excludes only node_modules",
+      "passed": true
+    },
+    {
+      "check": "Existing original HANDLE observation and wait bounds retained",
+      "passed": true
+    },
+    {
+      "check": "Existing callback latch preserves its first error and guards waits",
+      "passed": true
+    }
+  ],
+  "checkCount": 107,
+  "blockingFindings": [],
+  "qualified": {
+    "compiler": false,
+    "lint": false,
+    "nativeExecution": false,
+    "desktop": false,
+    "release": false
+  },
+  "execution": "Only inert file/hash/text/JSON/in-memory patch operations. No project/compiler/test/provider/native/GUI/CI/Git execution or remote mutation."
+}

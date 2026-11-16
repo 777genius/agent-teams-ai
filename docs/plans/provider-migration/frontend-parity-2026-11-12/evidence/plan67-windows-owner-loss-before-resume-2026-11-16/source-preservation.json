@@ -1,0 +1,268 @@
+{
+  "status": "PASS_INERT_PRESERVATION_ONLY",
+  "sourceBase": "3b584da7c5105564cc105e5731a1fca08b3f0a5a",
+  "selectedPlanCommit": "229991c46f94b4dec0b6060a98e777833d84e9fe",
+  "checks": [
+    {
+      "check": "Exact selected Plan67 bytes",
+      "passed": true
+    },
+    {
+      "check": "Known selected path .github/workflows/host-emulated-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Immutable beforeimage .github/workflows/host-emulated-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Trailing newline .github/workflows/host-emulated-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Known selected path .github/workflows/host-process-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Immutable beforeimage .github/workflows/host-process-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Trailing newline .github/workflows/host-process-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Known selected path tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+      "passed": true
+    },
+    {
+      "check": "New helper no preimage",
+      "passed": true
+    },
+    {
+      "check": "Trailing newline tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+      "passed": true
+    },
+    {
+      "check": "Source cap tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+      "passed": true
+    },
+    {
+      "check": "Known selected path tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "passed": true
+    },
+    {
+      "check": "Immutable beforeimage tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "passed": true
+    },
+    {
+      "check": "Trailing newline tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "passed": true
+    },
+    {
+      "check": "Source cap tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "passed": true
+    },
+    {
+      "check": "Known selected path tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "passed": true
+    },
+    {
+      "check": "Immutable beforeimage tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "passed": true
+    },
+    {
+      "check": "Trailing newline tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "passed": true
+    },
+    {
+      "check": "Source cap tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "passed": true
+    },
+    {
+      "check": "Known selected path tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "check": "Immutable beforeimage tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "check": "Trailing newline tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "check": "Full forward patch .github/workflows/host-emulated-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Full inverse patch .github/workflows/host-emulated-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Full forward patch .github/workflows/host-process-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Full inverse patch .github/workflows/host-process-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Full forward patch tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+      "passed": true
+    },
+    {
+      "check": "Full inverse patch tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+      "passed": true
+    },
+    {
+      "check": "Full forward patch tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "passed": true
+    },
+    {
+      "check": "Full inverse patch tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "passed": true
+    },
+    {
+      "check": "Full forward patch tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "passed": true
+    },
+    {
+      "check": "Full inverse patch tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "passed": true
+    },
+    {
+      "check": "Full forward patch tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "check": "Full inverse patch tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "check": "Complete ordinary/packaged Profile inverse",
+      "passed": true
+    },
+    {
+      "check": "Entire old providerScenario body byte-identical",
+      "passed": true
+    },
+    {
+      "check": "Fault receipt initialized before first Gate await",
+      "passed": true
+    },
+    {
+      "check": "Original normal actions before one added fault",
+      "passed": true
+    },
+    {
+      "check": "Source scenario branch unchanged",
+      "passed": true
+    },
+    {
+      "check": "Same partial receipt retained in existing finally",
+      "passed": true
+    },
+    {
+      "check": "One Main construction two explicit clients",
+      "passed": true
+    },
+    {
+      "check": "One explicit crash marker creation",
+      "passed": true
+    },
+    {
+      "check": "Pending and original attachment checked synchronously before marker",
+      "passed": true
+    },
+    {
+      "check": "Exact transport-closed unknown oracle",
+      "passed": true
+    },
+    {
+      "check": "Barrier exact original attachment and capability",
+      "passed": true
+    },
+    {
+      "check": "Held Resume unconditionally rejects before forwarding",
+      "passed": true
+    },
+    {
+      "check": "Actual exit precedes successful release and marker removal",
+      "passed": true
+    },
+    {
+      "check": "Fenced actual journal read only",
+      "passed": true
+    },
+    {
+      "check": "Runtime incarnation compared with its own original record",
+      "passed": true
+    },
+    {
+      "check": "One original intent and one exact replay",
+      "passed": true
+    },
+    {
+      "check": "Exactly one public reconcile and one numeric PID negative",
+      "passed": true
+    },
+    {
+      "check": "Four attachment negatives use original stored ports",
+      "passed": true
+    },
+    {
+      "check": "No input business method or new owner/protocol",
+      "passed": true
+    },
+    {
+      "check": "One Main close and original witness wait",
+      "passed": true
+    },
+    {
+      "check": "Original cleanup attempts precede observer fallback",
+      "passed": true
+    },
+    {
+      "check": "Final observed counts and event failure checked after cleanup",
+      "passed": true
+    },
+    {
+      "check": "PASS only after complete and confirmed cleanup",
+      "passed": true
+    },
+    {
+      "check": "Scope no SourceScenario afterimage",
+      "passed": true
+    },
+    {
+      "check": "Low-level exclusion append-only complete inverse",
+      "passed": true
+    },
+    {
+      "check": "Both previous helper exclusions retained",
+      "passed": true
+    },
+    {
+      "check": "139 to142 exact complete ordered lint prefix",
+      "passed": true
+    },
+    {
+      "check": "Host workflow full inverse one operand append",
+      "passed": true
+    },
+    {
+      "check": "Process workflow only original aggregate assertion addition",
+      "passed": true
+    },
+    {
+      "check": "Original compiler graph/budgets/actions unaffected",
+      "passed": true
+    }
+  ],
+  "checkCount": 64,
+  "hunks": 10,
+  "completeForwardInverse": true,
+  "originalParentQualified": false,
+  "execution": "Only data/hash/text/in-memory patch operations; no project/compiler/tests/providers/CI/Git execution."
+}

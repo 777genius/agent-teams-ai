@@ -1,0 +1,51 @@
+{
+  "kind": "B2_CREATE_CONTROL_PROSPECTIVE_R1",
+  "status": "PROSPECTIVE_SOURCE_NOT_IMPLEMENTED",
+  "plan": {
+    "path": "/workspace/scratch/20ba97c23d57/retained-b2-create-control-proposal/plan.md",
+    "bytes": 7926,
+    "lines": 41,
+    "sha256": "17ae879ba77b6dc9f0cbf6477dc370257bf194ff2dc7d646b5f239c1ecbd23d1",
+    "blob": "ec8fc3c3f8bb9377a02e7222231243856556a5f7"
+  },
+  "originalEvidence": {
+    "head": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "runId": 43959134337,
+    "jobId": 133637933704,
+    "artifactId": 14278973394,
+    "reviewPath": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/review.json",
+    "reviewSha256": "78b82113058b4238cb92e77a2a48a92deb5c1d40631285a418c72dfd2a75d515",
+    "summaryPath": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/r1.md",
+    "summarySha256": "cf02c0df504e95bc0fb7193a5231bbe2b6126175592d4e8a3d8ec6e8181e431b",
+    "checks": 62
+  },
+  "scope": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "preimageRef": "0e84576f2cf1be94b464e673713fcd74d7ff33fc",
+      "preimageBlob": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db",
+      "preimageSha256": "11e064039a9ff28261a2daf41c247d0f6a947e192af03541fc0974d49a0e15ef",
+      "preimageBytes": 49147,
+      "preimageLines": 727,
+      "expectedPostimageLines": 727,
+      "change": "Only first selector argument of existing donor open original creation call",
+      "selector": "div:has(> h2):has(input[aria-label=\"Search teams...\"]) + div > button",
+      "sourceRosterAdditionRequired": false,
+      "existingCompilerAndLintCoverage": true
+    }
+  ],
+  "preserved": [
+    "Core original29 recorded steps and business sequence",
+    "Original donor requested actions and no-replay assertions",
+    "Original unique positive-size exact-text target reader and hit/stability checks",
+    "Original30s target-read and900s test budgets",
+    "Historical158/f5 anddonor160/e13 identities",
+    "ActualV1/HostV2 andc930 archive pins",
+    "Private TEST sentinels and no genuine Claude/Codex",
+    "Original native custody, physical cleanup and final qualification",
+    "All current unrelated sources and future fresh parent binding"
+  ],
+  "noAfterimages": true,
+  "noProjectExecution": true,
+  "noCIReadOrMutation": true
+}

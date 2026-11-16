@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "status": "ACCEPT_EXACT_ONE_PATH_PROSPECTIVE_SCOPE",
+  "reviewer": "root-independent-of-plan-author",
+  "plan": {
+    "path": "retained-b2-create-control-proposal/plan.md",
+    "bytes": 7926,
+    "lines": 41,
+    "sha256": "17ae879ba77b6dc9f0cbf6477dc370257bf194ff2dc7d646b5f239c1ecbd23d1",
+    "gitBlob": "ec8fc3c3f8bb9377a02e7222231243856556a5f7"
+  },
+  "preimage": {
+    "path": "retained-b2-75cf/source-r1/source/scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+    "bytes": 49147,
+    "lines": 727,
+    "sha256": "11e064039a9ff28261a2daf41c247d0f6a947e192af03541fc0974d49a0e15ef",
+    "gitBlob": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db"
+  },
+  "sourceBindings": [
+    {
+      "path": "retained-b2-75cf/source-r1/donor/src/renderer/components/team/TeamListHeader.tsx",
+      "bytes": 5254,
+      "lines": 149,
+      "sha256": "f457121df5d77fdb94800ada94f4111e1e7efd8e82763909fb2d6e99fc6211ea",
+      "gitBlob": "11680dec43cd0050f24a2abc868eae0575e03f66"
+    },
+    {
+      "path": "retained-b2-75cf/source-r1/donor/src/renderer/components/team/TeamEmptyState.tsx",
+      "bytes": 1754,
+      "lines": 50,
+      "sha256": "c4f96fcd5d3d02777288eef8a49b4640e6a284866258ca194ad1266cb9e4a459",
+      "gitBlob": "7cd0020110a081447f7eb816728f3a33c77d03c7"
+    },
+    {
+      "path": "retained-b2-75cf/source-r1/donor/src/renderer/components/team/TeamListView.tsx",
+      "bytes": 58205,
+      "lines": 1540,
+      "sha256": "45412367fe95c2e455d7cc20bf2b15c2541e21a5dd3aa998364e46bd63672da0",
+      "gitBlob": "a83b4c18acccd53e9df45e346af813737f925a94"
+    },
+    {
+      "path": "retained-b2-75cf/source-r1/donor/src/renderer/components/ui/button.tsx",
+      "bytes": 2272,
+      "lines": 54,
+      "sha256": "e1e0fc2dcd7c792a296fd326667c7ba7fb15f89771aac433597edde401d21989",
+      "gitBlob": "a460eed1cbaf3ec1771951fb1073393fdde86401"
+    },
+    {
+      "path": "retained-b2-75cf/source-r1/donor/src/renderer/components/ui/input.tsx",
+      "bytes": 848,
+      "lines": 22,
+      "sha256": "3b74ec04725f652c0a02d4ffa339d6775c3de66c7bc18c9bdd827d6d49bd11ba",
+      "gitBlob": "7c6a2f65edee407a06aef45e4f3eb9dd01c2b363"
+    },
+    {
+      "path": "retained-b2-75cf/source-r1/donor/src/features/localization/renderer/locales/en/team.json",
+      "bytes": 147102,
+      "lines": 3411,
+      "sha256": "f1bdbde79c40b1ecd2ff33995a208016faf81ef67cb45e8e9c3114ebea22f232",
+      "gitBlob": "7635f35d831e58846d51d6959e372faa9c92b9bc"
+    }
+  ],
+  "findings": [],
+  "reasoning": [
+    "The first failure is target ambiguity before input. The two positive-size original controls have the same exact text and callback. Geometry false fields do not establish occlusion.",
+    "The proposed selector names the Header actions relation using its existing heading and search input. The existing exact-text filter and one-target rule still apply, so no first/nth fallback or repeated action is admitted.",
+    "The correction is only one selector literal in the donor branch. Original core/suffix actions, historical158 and donor160 role pins, actualV1/V2 inputs, budgets and custody remain.",
+    "No product/UI marker, shared helper, source roster, workflow or deadline edit is needed. Original exact resulting-source B2 and compiler/lint gates remain required."
+  ],
+  "checks": [
+    {
+      "name": "Exact frozen prospective plan",
+      "passed": true
+    },
+    {
+      "name": "Exactly one existing selected path",
+      "passed": true
+    },
+    {
+      "name": "Exact original/current target preimage",
+      "passed": true
+    },
+    {
+      "name": "Exactly one unchanged donor target call",
+      "passed": true
+    },
+    {
+      "name": "Header owns direct heading and descendant search",
+      "passed": true
+    },
+    {
+      "name": "Next sibling actions contains direct original Create button",
+      "passed": true
+    },
+    {
+      "name": "Empty state also contains same translated creation text",
+      "passed": true
+    },
+    {
+      "name": "Both callbacks retain same actual creation owner",
+      "passed": true
+    },
+    {
+      "name": "Empty state lacks proposed Header search/heading relation",
+      "passed": true
+    },
+    {
+      "name": "Original English labels exact",
+      "passed": true
+    },
+    {
+      "name": "Original reader refuses multiple positive-size targets",
+      "passed": true
+    },
+    {
+      "name": "Original ambiguity has absent geometry defaulted false",
+      "passed": true
+    },
+    {
+      "name": "Original exact text and physical click remain selected",
+      "passed": true
+    },
+    {
+      "name": "Original30s read preserved",
+      "passed": true
+    },
+    {
+      "name": "Entire script directory admitted by original source guard",
+      "passed": true
+    },
+    {
+      "name": "Existing exact script lint operand",
+      "passed": true
+    },
+    {
+      "name": "Existing strict script typecheck",
+      "passed": true
+    },
+    {
+      "name": "No afterimages at prospective review",
+      "passed": true
+    },
+    {
+      "name": "Original receipt retains first Create ambiguity",
+      "passed": true
+    }
+  ],
+  "checkCount": 19,
+  "sourceAfterimages": false,
+  "execution": {
+    "project": false,
+    "compiler": false,
+    "tests": false,
+    "providers": false,
+    "native": false,
+    "gui": false,
+    "ci": false
+  },
+  "limits": [
+    "Prospective source review only; no DOM query or UI action was executed.",
+    "Current parent must be rebound before publication; same-name duplicate Header would still fail closed.",
+    "The original B2 core positives do not qualify the future source or the unexecuted donor suffix."
+  ]
+}

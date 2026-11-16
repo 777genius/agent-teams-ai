@@ -1,0 +1,1084 @@
+{
+  "kind": "B2_ORIGINAL_RECEIPT_SOURCE_R1",
+  "status": "AUDIT_SEALED_FULL_JOURNEY_FAIL",
+  "head": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "runId": 43959134337,
+  "jobId": 133637933704,
+  "artifactId": 14278973394,
+  "artifactSha256": "ad13dbb3f4ce0dc9cd0f2314c5950adb76507125f467116601525a8c4c5fdbef",
+  "jobLogSha256": "b00b8b4f138a343cfcaa624f33279f0dd49e081714137f7b295b2270024136b3",
+  "receiptSha256": "2914bcd4048475717366c34e333e3f7241865085e5fe3df7902e4cbc588ebbca",
+  "sourceBindings": [
+    {
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+      "blob": "de1b4b77fa7b90bdeda9618da8f98ac20fdaaef5",
+      "sha256": "62b222833b0d6b86706f84e92fbb0fe954bb0f62b7cd8b48a7e38c1724b4ed43",
+      "bytes": 56997,
+      "lines": 764,
+      "localPath": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/source/scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts"
+    },
+    {
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "blob": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db",
+      "sha256": "11e064039a9ff28261a2daf41c247d0f6a947e192af03541fc0974d49a0e15ef",
+      "bytes": 49147,
+      "lines": 727,
+      "localPath": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/source/scripts/legacy-agent-host/desktop-retained-opencode-app.ts"
+    },
+    {
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": "scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts",
+      "blob": "99c8e76561a09eda865619c6e5bd7722d1f2f1e5",
+      "sha256": "9e904377c9020d54d8f2418a3612e6ab30f0273ceae39a94c94ff34631ec8ebb",
+      "bytes": 28446,
+      "lines": 409,
+      "localPath": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/source/scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts"
+    },
+    {
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "blob": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+      "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e",
+      "bytes": 30733,
+      "lines": 548,
+      "localPath": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/source/scripts/legacy-agent-host/desktop-ui-controls.ts"
+    },
+    {
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": "packages/legacy-agent-host/tests/opencode-v1-version-source.ts",
+      "blob": "78cb6f0026821785b1d0c0c1ad21ddfe76cdaee4",
+      "sha256": "0ff252732bedb1807cf428370e41628922a4d719090f479a41f25117d7227979",
+      "bytes": 9765,
+      "lines": 186,
+      "localPath": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/source/packages/legacy-agent-host/tests/opencode-v1-version-source.ts"
+    },
+    {
+      "ref": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "path": ".github/workflows/ci.yml",
+      "blob": "97a5aef8801b185d418b9c8c60764f7fcd32c5c0",
+      "sha256": "3adb6243ca0d6562b47577daf544c8bd85aba1b309c8f94acb1d046ec98bf0bf",
+      "bytes": 203111,
+      "lines": 2978,
+      "localPath": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/source/.github/workflows/ci.yml"
+    },
+    {
+      "ref": "4a0e06277fe216d9f82dbbede362668fe46622ee",
+      "path": "src/renderer/components/team/TeamListHeader.tsx",
+      "blob": "11680dec43cd0050f24a2abc868eae0575e03f66",
+      "sha256": "f457121df5d77fdb94800ada94f4111e1e7efd8e82763909fb2d6e99fc6211ea",
+      "bytes": 5254,
+      "lines": 149,
+      "localPath": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/donor/src/renderer/components/team/TeamListHeader.tsx"
+    },
+    {
+      "ref": "4a0e06277fe216d9f82dbbede362668fe46622ee",
+      "path": "src/renderer/components/team/TeamListView.tsx",
+      "blob": "a83b4c18acccd53e9df45e346af813737f925a94",
+      "sha256": "45412367fe95c2e455d7cc20bf2b15c2541e21a5dd3aa998364e46bd63672da0",
+      "bytes": 58205,
+      "lines": 1540,
+      "localPath": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/donor/src/renderer/components/team/TeamListView.tsx"
+    },
+    {
+      "ref": "4a0e06277fe216d9f82dbbede362668fe46622ee",
+      "path": "src/renderer/components/team/TeamEmptyState.tsx",
+      "blob": "7cd0020110a081447f7eb816728f3a33c77d03c7",
+      "sha256": "c4f96fcd5d3d02777288eef8a49b4640e6a284866258ca194ad1266cb9e4a459",
+      "bytes": 1754,
+      "lines": 50,
+      "localPath": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/donor/src/renderer/components/team/TeamEmptyState.tsx"
+    },
+    {
+      "ref": "4a0e06277fe216d9f82dbbede362668fe46622ee",
+      "path": "src/features/localization/renderer/locales/en/team.json",
+      "blob": "7635f35d831e58846d51d6959e372faa9c92b9bc",
+      "sha256": "f1bdbde79c40b1ecd2ff33995a208016faf81ef67cb45e8e9c3114ebea22f232",
+      "bytes": 147102,
+      "lines": 3411,
+      "localPath": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/donor/src/features/localization/renderer/locales/en/team.json"
+    },
+    {
+      "ref": "4a0e06277fe216d9f82dbbede362668fe46622ee",
+      "path": "src/renderer/components/ui/button.tsx",
+      "blob": "a460eed1cbaf3ec1771951fb1073393fdde86401",
+      "sha256": "e1e0fc2dcd7c792a296fd326667c7ba7fb15f89771aac433597edde401d21989",
+      "bytes": 2272,
+      "lines": 54,
+      "localPath": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/donor/src/renderer/components/ui/button.tsx"
+    },
+    {
+      "ref": "4a0e06277fe216d9f82dbbede362668fe46622ee",
+      "path": "src/renderer/components/ui/input.tsx",
+      "blob": "7c6a2f65edee407a06aef45e4f3eb9dd01c2b363",
+      "sha256": "3b74ec04725f652c0a02d4ffa339d6775c3de66c7bc18c9bdd827d6d49bd11ba",
+      "bytes": 848,
+      "lines": 22,
+      "localPath": "/workspace/scratch/20ba97c23d57/retained-b2-75cf/source-r1/donor/src/renderer/components/ui/input.tsx"
+    }
+  ],
+  "checkCount": 62,
+  "checks": [
+    {
+      "name": "original bytes: artifact.zip",
+      "pass": true,
+      "evidence": {
+        "bytes": 481540,
+        "sha256": "ad13dbb3f4ce0dc9cd0f2314c5950adb76507125f467116601525a8c4c5fdbef"
+      }
+    },
+    {
+      "name": "original bytes: job.log",
+      "pass": true,
+      "evidence": {
+        "bytes": 254894,
+        "sha256": "b00b8b4f138a343cfcaa624f33279f0dd49e081714137f7b295b2270024136b3"
+      }
+    },
+    {
+      "name": "original bytes: extracted/retained-opencode-coexistence.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 171552,
+        "sha256": "2914bcd4048475717366c34e333e3f7241865085e5fe3df7902e4cbc588ebbca"
+      }
+    },
+    {
+      "name": "ZIP member census",
+      "pass": true,
+      "evidence": [
+        "TEST-desktop-backend-dn7Jkq/coexistence-app-0.log",
+        "TEST-desktop-backend-dn7Jkq/coexistence-app-1.log",
+        "TEST-desktop-backend-dn7Jkq/coexistence-app-2.log",
+        "TEST-desktop-backend-dn7Jkq/coexistence-original-ui.png",
+        "TEST-desktop-backend-dn7Jkq/donor-history/coexistence-app-3.log",
+        "TEST-desktop-backend-dn7Jkq/donor-history/sentinel-invocations.ndjson",
+        "TEST-retained-opencode-inputs-jpnsHm/linux-child-exec/linux-child-exec",
+        "TEST-retained-opencode-inputs-jpnsHm/linux-child-exec/manifest.json",
+        "TEST-retained-opencode-inputs-jpnsHm/linux-child-exec-selection.json",
+        "retained-opencode-coexistence.json",
+        "retained-opencode-coexistence.log",
+        "retained-opencode-inputs.json",
+        "retained-opencode-v2-inputs.json"
+      ]
+    },
+    {
+      "name": "ZIP safe paths and no links",
+      "pass": true,
+      "evidence": "All original members inspected; no extraction or binary execution."
+    },
+    {
+      "name": "ZIP CRC",
+      "pass": true,
+      "evidence": "Original archive CRC verified independently."
+    },
+    {
+      "name": "member TEST-desktop-backend-dn7Jkq/coexistence-app-0.log",
+      "pass": true,
+      "evidence": {
+        "bytes": 12237,
+        "sha256": "10fd7b20fb0d014225a980e2a075beec6abf2cb4d78baf8ceaf61ea8f8d7f42e"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-dn7Jkq/coexistence-app-1.log",
+      "pass": true,
+      "evidence": {
+        "bytes": 20347,
+        "sha256": "eee20ae1708b3169b2777e907ca7586f28e28bef41332dc73d4a70087518aa2e"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-dn7Jkq/coexistence-app-2.log",
+      "pass": true,
+      "evidence": {
+        "bytes": 7005,
+        "sha256": "0e2cd16451358c03005e5853eeb0da1f9dfe4c9a60d413e8fc0086f5b94695ac"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-dn7Jkq/coexistence-original-ui.png",
+      "pass": true,
+      "evidence": {
+        "bytes": 104163,
+        "sha256": "8194e68de56d9ec4434542de26ffbff6b1cef50ab1dbca33c5a4876c1af48b39"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-dn7Jkq/donor-history/coexistence-app-3.log",
+      "pass": true,
+      "evidence": {
+        "bytes": 7999,
+        "sha256": "7784580a2b867a74a978dac13ee862d9cbb2cebb185e70852f6ca839e9ba17cc"
+      }
+    },
+    {
+      "name": "member TEST-desktop-backend-dn7Jkq/donor-history/sentinel-invocations.ndjson",
+      "pass": true,
+      "evidence": {
+        "bytes": 400,
+        "sha256": "9c72c0f28e8049cfc95525b36e0394ba075b7b521f0b64fd62cb3fe102b1469f"
+      }
+    },
+    {
+      "name": "member TEST-retained-opencode-inputs-jpnsHm/linux-child-exec/linux-child-exec",
+      "pass": true,
+      "evidence": {
+        "bytes": 789792,
+        "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+      }
+    },
+    {
+      "name": "member TEST-retained-opencode-inputs-jpnsHm/linux-child-exec/manifest.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 2408,
+        "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484"
+      }
+    },
+    {
+      "name": "member TEST-retained-opencode-inputs-jpnsHm/linux-child-exec-selection.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 277,
+        "sha256": "04071cbcce891e3b52658205f2b081f1463c4ad546f25a3e5b84fcfeaa629296"
+      }
+    },
+    {
+      "name": "member retained-opencode-coexistence.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 171552,
+        "sha256": "2914bcd4048475717366c34e333e3f7241865085e5fe3df7902e4cbc588ebbca"
+      }
+    },
+    {
+      "name": "member retained-opencode-coexistence.log",
+      "pass": true,
+      "evidence": {
+        "bytes": 2237,
+        "sha256": "a902c1804aef04eee095e6b02fc8254c8f77d1fc5bcb3ff2e3614cf198fe9f45"
+      }
+    },
+    {
+      "name": "member retained-opencode-inputs.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 8854,
+        "sha256": "9d41ce4baed49d0dec65aa56030eec351d2cfce06da0e56644e1dc6e7a9f4397"
+      }
+    },
+    {
+      "name": "member retained-opencode-v2-inputs.json",
+      "pass": true,
+      "evidence": {
+        "bytes": 783,
+        "sha256": "1a7bca823a63a78333653fbad0814d19c233ba7a3001a1fa325d18fd10081d2b"
+      }
+    },
+    {
+      "name": "official source scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+      "pass": true,
+      "evidence": "de1b4b77fa7b90bdeda9618da8f98ac20fdaaef5"
+    },
+    {
+      "name": "official source scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "pass": true,
+      "evidence": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db"
+    },
+    {
+      "name": "official source scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts",
+      "pass": true,
+      "evidence": "99c8e76561a09eda865619c6e5bd7722d1f2f1e5"
+    },
+    {
+      "name": "official source scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "pass": true,
+      "evidence": "1c11809c6458f829bd9bb6995aea2ad60b85511e"
+    },
+    {
+      "name": "official source packages/legacy-agent-host/tests/opencode-v1-version-source.ts",
+      "pass": true,
+      "evidence": "78cb6f0026821785b1d0c0c1ad21ddfe76cdaee4"
+    },
+    {
+      "name": "official source .github/workflows/ci.yml",
+      "pass": true,
+      "evidence": "97a5aef8801b185d418b9c8c60764f7fcd32c5c0"
+    },
+    {
+      "name": "official donor source src/renderer/components/team/TeamListHeader.tsx",
+      "pass": true,
+      "evidence": "11680dec43cd0050f24a2abc868eae0575e03f66"
+    },
+    {
+      "name": "official donor source src/renderer/components/team/TeamListView.tsx",
+      "pass": true,
+      "evidence": "a83b4c18acccd53e9df45e346af813737f925a94"
+    },
+    {
+      "name": "official donor source src/renderer/components/team/TeamEmptyState.tsx",
+      "pass": true,
+      "evidence": "7cd0020110a081447f7eb816728f3a33c77d03c7"
+    },
+    {
+      "name": "official donor source src/features/localization/renderer/locales/en/team.json",
+      "pass": true,
+      "evidence": "7635f35d831e58846d51d6959e372faa9c92b9bc"
+    },
+    {
+      "name": "official donor source src/renderer/components/ui/button.tsx",
+      "pass": true,
+      "evidence": "a460eed1cbaf3ec1771951fb1073393fdde86401"
+    },
+    {
+      "name": "official donor source src/renderer/components/ui/input.tsx",
+      "pass": true,
+      "evidence": "7c6a2f65edee407a06aef45e4f3eb9dd01c2b363"
+    },
+    {
+      "name": "exact head and platform",
+      "pass": true,
+      "evidence": {
+        "head": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+        "platform": "linux-x64"
+      }
+    },
+    {
+      "name": "prepared receipts are READY",
+      "pass": true,
+      "evidence": {
+        "retained": "TEST_RETAINED_V1_HOST_V2_INPUTS",
+        "v2": "TEST_NATIVE_V2_EMBEDDED_INPUTS"
+      }
+    },
+    {
+      "name": "original failure preserved",
+      "pass": true,
+      "evidence": "UI target read failed: open original creation; facts={\"matches\":2,\"disabled\":false,\"ariaDisabled\":false,\"pointerEventsNone\":false,\"centerInViewport\":false,\"hitPresent\":false}"
+    },
+    {
+      "name": "both cleanup receipts complete",
+      "pass": true,
+      "evidence": {
+        "top": true,
+        "donor": true
+      }
+    },
+    {
+      "name": "retained 158 app source preserved",
+      "pass": true,
+      "evidence": {
+        "root": "/home/runner/work/agent-teams-ai/agent-teams-ai/.runtime-download/TEST-retained-release-158",
+        "commit": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+        "tree": "ec540290c86af9755c94e52ac795aeda8586a98f",
+        "lockSha256": "1311acf34215a47950dd071a23669a69ed866d4825bcde5d21db41302a71d29d",
+        "stageScriptSha256": "7ee8a9036562728a66d5a1dcd3ce7c97abf75cabeb97092eb9b87171ed2e29be"
+      }
+    },
+    {
+      "name": "retained READY/runtime joins",
+      "pass": true,
+      "evidence": {
+        "archiveSha256": "4c106fcebab79de525aa7c9bb7636aa91fa43e76b4d567a00f98b2e6650ab29d",
+        "runtimeSha256": "b9b4c9f786238922cad49f46e5ac147b4e361b182bd250e5fbb47571571059cd"
+      }
+    },
+    {
+      "name": "retained source-built custody identity",
+      "pass": true,
+      "evidence": {
+        "kind": "EXACT_RELEASE_SOURCE_BUILD",
+        "sourceCommit": "f5c69c2e9024ffc36a5db5eafe30f53539b52f62",
+        "sourceTree": "0dbb5a59f199337dec51c82c16b81eb277cd7457",
+        "publishedRuntimeComplete": false
+      }
+    },
+    {
+      "name": "V1 exact input join",
+      "pass": true,
+      "evidence": {
+        "version": "1.19.4",
+        "sha256": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7"
+      }
+    },
+    {
+      "name": "Host V2 exact Bun join",
+      "pass": true,
+      "evidence": {
+        "nativeVersion": "2.1.4",
+        "bunVersion": "1.3.11",
+        "bunSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675"
+      }
+    },
+    {
+      "name": "delivered provider archive unchanged",
+      "pass": true,
+      "evidence": {
+        "hostSourceDigest": "d66151c6534dce86869bf0a088db51bf3d9a13683bf6f356b83e4f795d04bda5",
+        "hostDistDigest": "53f8d64a58741e94c50b16b09fad5bde977e3ac975bfaa39531403ac65bf7f63",
+        "providerDigest": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41"
+      }
+    },
+    {
+      "name": "donor entire preparation input join",
+      "pass": true,
+      "evidence": "Original donor input object equals prepared receipt, including all 22 selected file pins."
+    },
+    {
+      "name": "donor 4a/160/e13 identities distinct",
+      "pass": true,
+      "evidence": {
+        "appCommit": "4a0e06277fe216d9f82dbbede362668fe46622ee",
+        "runtime": {
+          "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/.runtime-download/TEST-donor-4a/resources/runtime/claude-multimodel",
+          "sha256": "fa3100f6476ce4c2d449f8991ab464874e3b04a7d7fc18555eaeffd8d6a41437",
+          "version": "0.0.160",
+          "cliVersion": "2.777.777",
+          "archiveSha256": "09b174841e74c95337f8b1be986f1501a71582ce190671c548bf4c70ab814e10",
+          "sourceCommit": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7"
+        }
+      }
+    },
+    {
+      "name": "donor source-built custody identity",
+      "pass": true,
+      "evidence": {
+        "kind": "EXACT_RELEASE_SOURCE_BUILD",
+        "sourceCommit": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+        "sourceTree": "a5ed6ffc453a68a5454328bd79a9422ce1e4e3e9",
+        "publishedRuntimeComplete": false
+      }
+    },
+    {
+      "name": "donor immutable input file census",
+      "pass": true,
+      "evidence": [
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        ".npmrc",
+        ".node-version",
+        "runtime.lock.json",
+        "electron.vite.config.ts",
+        "scripts/stage-runtime.mjs",
+        "scripts/lib/github-release-download-error.mjs",
+        "scripts/lib/runtime-archive-checksum.mjs",
+        "scripts/lib/runtime-payload-cache.mjs",
+        "scripts/lib/opencode-v2-base-inventory.mts",
+        "scripts/ci/enforce-pnpm-install.mjs",
+        "scripts/ci/install-dependencies-with-retry.mjs",
+        "scripts/ensure-electron-install.cjs",
+        "scripts/postinstall-electron.cjs",
+        "scripts/prepare-cpu-features-rebuild.cjs",
+        "agent-teams-controller/package.json",
+        "agent-teams-controller/scripts/build.mjs",
+        "mcp-server/package.json",
+        "resources/runtime/COMMIT_SHA",
+        "resources/runtime/VERSION"
+      ]
+    },
+    {
+      "name": "three runtime roles remain separate",
+      "pass": true,
+      "evidence": "Historical158 remains distinct; current embedded V2 and donor160 share intended e13 base provenance."
+    },
+    {
+      "name": "all 29 core recorded steps reached",
+      "pass": true,
+      "evidence": [
+        [
+          0,
+          "actual_legacy_fork_V1_history_before_new_Host_selection"
+        ],
+        [
+          1,
+          "retained_legacy_fork_owner_before_new_Host_runtime"
+        ],
+        [
+          2,
+          "both_actual_owner_inputs_through_original_renderer_routing"
+        ],
+        [
+          17,
+          "both_original_Stop_controls_preserve_the_other_actual_owner"
+        ],
+        [
+          28,
+          "same_profile_cold_original_UI_reads_both_histories_without_replay"
+        ]
+      ]
+    },
+    {
+      "name": "original core model observations",
+      "pass": true,
+      "evidence": [
+        {
+          "owner": "legacy",
+          "marker": null,
+          "toolCount": 0
+        },
+        {
+          "owner": "legacy",
+          "marker": null,
+          "toolCount": 0
+        },
+        {
+          "owner": "legacy",
+          "marker": "TEST_RETAINED_V1_HISTORY",
+          "toolCount": 62
+        },
+        {
+          "owner": "legacy",
+          "marker": null,
+          "toolCount": 0
+        },
+        {
+          "owner": "legacy",
+          "marker": null,
+          "toolCount": 0
+        },
+        {
+          "owner": "host",
+          "marker": null,
+          "toolCount": 0
+        },
+        {
+          "owner": "legacy",
+          "marker": "TEST_RETAINED_V1_FIRST",
+          "toolCount": 62
+        },
+        {
+          "owner": "host",
+          "marker": "TEST_OWNED_V2_FIRST",
+          "toolCount": 57
+        },
+        {
+          "owner": "host",
+          "marker": "TEST_OWNED_V2_AFTER_STOP",
+          "toolCount": 57
+        },
+        {
+          "owner": "legacy",
+          "marker": null,
+          "toolCount": 0
+        },
+        {
+          "owner": "legacy",
+          "marker": null,
+          "toolCount": 0
+        },
+        {
+          "owner": "legacy",
+          "marker": "TEST_RETAINED_V1_AFTER_STOP",
+          "toolCount": 62
+        }
+      ]
+    },
+    {
+      "name": "native legacy readiness and history positive",
+      "pass": true,
+      "evidence": {
+        "readiness": {
+          "runId": "4ea21b01-eddd-4d52-90a5-191514c87aa0",
+          "spawnRunId": "4ea21b01-eddd-4d52-90a5-191514c87aa0",
+          "alive": true,
+          "bootstrapConfirmed": true,
+          "historicalBootstrapConfirmed": true,
+          "nativeSessionPresent": true,
+          "status": "online"
+        },
+        "coverage": [
+          {
+            "provider": "claude_transcript",
+            "status": "skipped",
+            "reason": "no_member_transcripts"
+          },
+          {
+            "provider": "opencode_runtime",
+            "status": "included"
+          },
+          {
+            "provider": "codex_native_trace",
+            "status": "skipped",
+            "reason": "codex_member_wide_not_supported"
+          }
+        ]
+      }
+    },
+    {
+      "name": "donor failure before creation action",
+      "pass": true,
+      "evidence": [
+        {
+          "action": "mouseMoved",
+          "label": "hover open existing More menu"
+        },
+        {
+          "action": "mouseClick",
+          "label": "open existing More menu"
+        },
+        {
+          "action": "mouseMoved",
+          "label": "hover open original Teams"
+        },
+        {
+          "action": "mouseClick",
+          "label": "open original Teams"
+        }
+      ]
+    },
+    {
+      "name": "no donor native inference/producer corpus",
+      "pass": true,
+      "evidence": {
+        "model": {
+          "observations": [],
+          "failures": []
+        },
+        "nativeProcessCount": 0,
+        "corpusPresent": false,
+        "inferenceAtDonorQuit": null
+      }
+    },
+    {
+      "name": "one initial donor epoch only",
+      "pass": true,
+      "evidence": [
+        {
+          "kind": "donor",
+          "sourceCommit": "4a0e06277fe216d9f82dbbede362668fe46622ee",
+          "original": {
+            "pid": 9768,
+            "ppid": 5245,
+            "group": 9768,
+            "birth": "74905",
+            "state": "R"
+          },
+          "electron": {
+            "pid": 9791,
+            "ppid": 9768,
+            "group": 9768,
+            "birth": "76422",
+            "state": "R"
+          },
+          "inferenceAtStart": 0
+        }
+      ]
+    },
+    {
+      "name": "full qualification flags remain false",
+      "pass": true,
+      "evidence": "No vendor-auth, product/release qualification inferred."
+    },
+    {
+      "name": "first original stack is scoped donor call",
+      "pass": true,
+      "evidence": "Original job log 1930–1945."
+    },
+    {
+      "name": "later missing receipts are absent from archive",
+      "pass": true,
+      "evidence": "Workflow success-only source-selection steps follow failed coexistence; always() validators report ENOENT."
+    },
+    {
+      "name": "aggregate validator retains FAIL",
+      "pass": true,
+      "evidence": "Original job log 2453–2454; derivative failure does not replace initial selector cause."
+    },
+    {
+      "name": "single unscoped donor Create call",
+      "pass": true,
+      "evidence": "desktop-retained-opencode-app.ts:507; outside the normal core journey."
+    },
+    {
+      "name": "shared reader rejects ambiguity before geometry",
+      "pass": true,
+      "evidence": "Only matches:2 is populated by ambiguity; geometry false values are parser defaults."
+    },
+    {
+      "name": "both original buttons call existing creation owner",
+      "pass": true,
+      "evidence": "Donor TeamListView:1206–1236,1261–1268,1525–1533; Header128–133; EmptyState25–30."
+    },
+    {
+      "name": "English source anchor is captured",
+      "pass": true,
+      "evidence": "Donor en/team.json and current native fixture:552–555."
+    },
+    {
+      "name": "existing source closure already covers target",
+      "pass": true,
+      "evidence": "No source roster, workflow or typecheck route addition required."
+    },
+    {
+      "name": "original sentinels selected instead of vendors",
+      "pass": true,
+      "evidence": "native.ts521–550 creates private metadata sentinels, rejects vendor app-server attempts and selects actual OpenCode path explicitly."
+    }
+  ],
+  "manualSourceFindings": [
+    {
+      "finding": "first_failure",
+      "conclusion": "Source-proven overly broad test caller; global exact-text selector is ambiguous on the original empty donor Team list.",
+      "source": "app507; UI207–218 and301–347; donor Header60–134, EmptyState20–43, TeamListView1206–1268/1520–1537"
+    },
+    {
+      "finding": "core_positive_limit",
+      "conclusion": "Five explicit observed milestones and all 29 original recorded core steps precede donor invocation. Source control flow binds actual Stop/isolation, same-profile cold read and no replay; complete B2 remains FAIL.",
+      "source": "native331–397; original receipt steps0,1,2,17,28"
+    },
+    {
+      "finding": "cleanup",
+      "conclusion": "Core original native absence asserted before donor entry. Donor failure finally requires captured app cleanup and zero original/native TEST namespace survivors; top cleanup has same checks. True cleanup does not prove unexecuted donor Stop/normal-Quit/corpus actions.",
+      "source": "native393–425,589–604; app716–726"
+    },
+    {
+      "finding": "provenance_limit",
+      "conclusion": "Received evidence files and official source bytes independently hashed. CI-selected native executable and package bytes are not all in this artifact; their receipt pins join original guard code and original preparation, not an independent local rehash of those missing binaries. Both custody packets explicitly remain publishedRuntimeComplete:false."
+    },
+    {
+      "finding": "vendor_scope",
+      "conclusion": "Observed codex-named metadata/app-server records belong to generated TEST sentinels; no genuine Codex/Claude invocation is established or authorized. Historical 2.777.777 (Claude Code) is retained fork metadata. OpenCode V1/Host V2 use the closed local model fixture."
+    },
+    {
+      "finding": "repair_boundary",
+      "conclusion": "Prospective one caller selector only; existing header heading/search container plus adjacent direct action button and exact Create Team text. Keep shared uniqueness, hit-testing, action count, 30s read timeout, no mutation retries, pins and cleanup."
+    }
+  ],
+  "originalResult": {
+    "status": "FAIL",
+    "cleanup": true,
+    "cleanupFailures": [],
+    "failure": "UI target read failed: open original creation; facts={\"matches\":2,\"disabled\":false,\"ariaDisabled\":false,\"pointerEventsNone\":false,\"centerInViewport\":false,\"hitPresent\":false}",
+    "coreRecordedSteps": 29,
+    "coreMilestones": [
+      [
+        0,
+        "actual_legacy_fork_V1_history_before_new_Host_selection"
+      ],
+      [
+        1,
+        "retained_legacy_fork_owner_before_new_Host_runtime"
+      ],
+      [
+        2,
+        "both_actual_owner_inputs_through_original_renderer_routing"
+      ],
+      [
+        17,
+        "both_original_Stop_controls_preserve_the_other_actual_owner"
+      ],
+      [
+        28,
+        "same_profile_cold_original_UI_reads_both_histories_without_replay"
+      ]
+    ],
+    "modelObservations": [
+      {
+        "owner": "legacy",
+        "marker": null,
+        "toolCount": 0
+      },
+      {
+        "owner": "legacy",
+        "marker": null,
+        "toolCount": 0
+      },
+      {
+        "owner": "legacy",
+        "marker": "TEST_RETAINED_V1_HISTORY",
+        "toolCount": 62
+      },
+      {
+        "owner": "legacy",
+        "marker": null,
+        "toolCount": 0
+      },
+      {
+        "owner": "legacy",
+        "marker": null,
+        "toolCount": 0
+      },
+      {
+        "owner": "host",
+        "marker": null,
+        "toolCount": 0
+      },
+      {
+        "owner": "legacy",
+        "marker": "TEST_RETAINED_V1_FIRST",
+        "toolCount": 62
+      },
+      {
+        "owner": "host",
+        "marker": "TEST_OWNED_V2_FIRST",
+        "toolCount": 57
+      },
+      {
+        "owner": "host",
+        "marker": "TEST_OWNED_V2_AFTER_STOP",
+        "toolCount": 57
+      },
+      {
+        "owner": "legacy",
+        "marker": null,
+        "toolCount": 0
+      },
+      {
+        "owner": "legacy",
+        "marker": null,
+        "toolCount": 0
+      },
+      {
+        "owner": "legacy",
+        "marker": "TEST_RETAINED_V1_AFTER_STOP",
+        "toolCount": 62
+      }
+    ],
+    "donorRecordedSteps": 4,
+    "donorNativeProcessCount": 0,
+    "donorModelObservationCount": 0,
+    "donorCleanup": true,
+    "donorProducerCorpusReached": false,
+    "followingV1AndV2SourceSelectionReached": false
+  },
+  "provenance": {
+    "build": {
+      "hostSourceDigest": "d66151c6534dce86869bf0a088db51bf3d9a13683bf6f356b83e4f795d04bda5",
+      "hostDistDigest": "53f8d64a58741e94c50b16b09fad5bde977e3ac975bfaa39531403ac65bf7f63",
+      "providerDigest": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41"
+    },
+    "inputs": {
+      "v1": {
+        "version": "1.19.4",
+        "sha256": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7"
+      },
+      "retainedRuntime": {
+        "version": "0.0.158",
+        "cliVersion": "2.777.777 (Claude Code)",
+        "sourceCommit": "f5c69c2e9024ffc36a5db5eafe30f53539b52f62",
+        "sha256": "b9b4c9f786238922cad49f46e5ac147b4e361b182bd250e5fbb47571571059cd",
+        "sourceBuiltRetainedHelper": {
+          "kind": "EXACT_RELEASE_SOURCE_BUILD",
+          "sourceCommit": "f5c69c2e9024ffc36a5db5eafe30f53539b52f62",
+          "sourceRepository": "777genius/agent_teams_orchestrator",
+          "sourceTree": "0dbb5a59f199337dec51c82c16b81eb277cd7457",
+          "manifest": {
+            "schemaVersion": 1,
+            "platform": "linux",
+            "arch": "x64",
+            "size": 985408,
+            "sha256": "f7925ea34f749981633c9d2b8c02de984dceaf7e5449b31cd9a6ceb82dae9e3c",
+            "sourceSha256": "86896bedd1555aa1f34351def4ee24bb6811f12422c062709c96148c6e86519e"
+          },
+          "manifestSha256": "276e84dfe719eb759386766a8c5a2f62ec8aa6a555bcdadf60c5ce2c30e892b7",
+          "buildScriptSha256": "95c78e23fa018812612adba89e3efcb35a3275913e209191ac865472a86269dd",
+          "validatorSha256": "73703ca097b06263037dc8a539dd95b90f9e51faa0492efa587663337bfcb892",
+          "compiler": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+          "publishedRuntimeComplete": false
+        },
+        "appSource": {
+          "root": "/home/runner/work/agent-teams-ai/agent-teams-ai/.runtime-download/TEST-retained-release-158",
+          "commit": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+          "tree": "ec540290c86af9755c94e52ac795aeda8586a98f",
+          "lockSha256": "1311acf34215a47950dd071a23669a69ed866d4825bcde5d21db41302a71d29d",
+          "stageScriptSha256": "7ee8a9036562728a66d5a1dcd3ce7c97abf75cabeb97092eb9b87171ed2e29be"
+        },
+        "archiveSha256": "4c106fcebab79de525aa7c9bb7636aa91fa43e76b4d567a00f98b2e6650ab29d"
+      },
+      "v2": {
+        "version": "2.1.4",
+        "bunSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675"
+      },
+      "profileSha256": "26440130988b560b0c21e89902f939fd4f5d5da9fc73b3319f9d97433160cef1",
+      "descriptorSha256": "b1fe4613e496409e251e4cfe42716577e2cb586a415fdfdc9c0527091ffc9b5f",
+      "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+    },
+    "retainedPreparation": {
+      "version": "0.0.158",
+      "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/.runtime-download/TEST-retained-release-158/resources/runtime/claude-multimodel",
+      "sha256": "b9b4c9f786238922cad49f46e5ac147b4e361b182bd250e5fbb47571571059cd",
+      "sourceCommit": "f5c69c2e9024ffc36a5db5eafe30f53539b52f62",
+      "appSource": {
+        "root": "/home/runner/work/agent-teams-ai/agent-teams-ai/.runtime-download/TEST-retained-release-158",
+        "commit": "1d0f97f55de566036c970eab4f36b84620afdb3f",
+        "tree": "ec540290c86af9755c94e52ac795aeda8586a98f",
+        "lockSha256": "1311acf34215a47950dd071a23669a69ed866d4825bcde5d21db41302a71d29d",
+        "stageScriptSha256": "7ee8a9036562728a66d5a1dcd3ce7c97abf75cabeb97092eb9b87171ed2e29be"
+      },
+      "archiveSha256": "4c106fcebab79de525aa7c9bb7636aa91fa43e76b4d567a00f98b2e6650ab29d"
+    },
+    "currentEmbeddedPreparation": {
+      "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+      "status": "READY",
+      "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+      "platform": "linux-x64",
+      "nodeVersion": "v24.21.0",
+      "productQualified": false,
+      "stage": "prepared",
+      "baseArchiveSha256": "09b174841e74c95337f8b1be986f1501a71582ce190671c548bf4c70ab814e10",
+      "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "bun": {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+        "sha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "version": "1.3.11"
+      },
+      "supportArchiveSha256": "c49a71cd1b4f253ed2d1392b44db419eaa28d91764f278c78b8c0fabe35a06ee",
+      "manifestSha256": "30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce"
+    },
+    "donorInputs": {
+      "kind": "TEST_DONOR_4A_RUNTIME_160_INPUTS",
+      "root": "/home/runner/work/agent-teams-ai/agent-teams-ai/.runtime-download/TEST-donor-4a",
+      "commit": "4a0e06277fe216d9f82dbbede362668fe46622ee",
+      "tree": "4bb456a5b35b6fca0e795bc8b19a13f5f1f6defd",
+      "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621",
+      "files": [
+        {
+          "path": "package.json",
+          "sha256": "77d38aa6501f49e42cc556c47446c269cc05e76fc2ae0dc4c6a8b66705a296f9"
+        },
+        {
+          "path": "pnpm-lock.yaml",
+          "sha256": "ee36f9b252359d02f164eaa61ce847f6056370e5a6c900f2928f9175c9c74571"
+        },
+        {
+          "path": "pnpm-workspace.yaml",
+          "sha256": "a5074fe53c697ac3d8ea2693d43e6c0c9b5d1bcc9253ec0cdb2cb7b850e21f36"
+        },
+        {
+          "path": ".npmrc",
+          "sha256": "7151cf397def0c2cb0ab65643701d27d335a72c90f775675b5f826bc7005818a"
+        },
+        {
+          "path": ".node-version",
+          "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5"
+        },
+        {
+          "path": "runtime.lock.json",
+          "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87"
+        },
+        {
+          "path": "electron.vite.config.ts",
+          "sha256": "923962614d297f9b5ea7efeb2adc66724e1a888475884c97ce0c34808e9e5acf"
+        },
+        {
+          "path": "scripts/stage-runtime.mjs",
+          "sha256": "7ee8a9036562728a66d5a1dcd3ce7c97abf75cabeb97092eb9b87171ed2e29be"
+        },
+        {
+          "path": "scripts/lib/github-release-download-error.mjs",
+          "sha256": "7dd1d7032c77b3ae9d2aca9db7bd5c469e471f7f97254cf71349954e6ba5fca0"
+        },
+        {
+          "path": "scripts/lib/runtime-archive-checksum.mjs",
+          "sha256": "38f1a3b6c45ae60d6e414d842dbafe3abc86841a79b6d07a8342ae454f71529f"
+        },
+        {
+          "path": "scripts/lib/runtime-payload-cache.mjs",
+          "sha256": "e6945e8305f2c29df253b441e2cca83f57b8d441e07085cfd6a985241953196c"
+        },
+        {
+          "path": "scripts/lib/opencode-v2-base-inventory.mts",
+          "sha256": "dd815caed1e577ad54b61d788eb2045b44e627a45f3ee391a509887106b8bf88"
+        },
+        {
+          "path": "scripts/ci/enforce-pnpm-install.mjs",
+          "sha256": "79b147e33807a5d236bda58f6fd4c401c54015b09684e66b054497d08a4f9bed"
+        },
+        {
+          "path": "scripts/ci/install-dependencies-with-retry.mjs",
+          "sha256": "509a91f84a072bc076de0dc29bd49cf1017126435a68b2a4f30ec318624d610f"
+        },
+        {
+          "path": "scripts/ensure-electron-install.cjs",
+          "sha256": "9bd7bd4a400eeb7ef4987189ffc9d64774677576a9198e417839989401bf4edb"
+        },
+        {
+          "path": "scripts/postinstall-electron.cjs",
+          "sha256": "28e967a5ebc00448d1c79ef388344e822ba893a6ec6fdc4e78cfdbaab7411dae"
+        },
+        {
+          "path": "scripts/prepare-cpu-features-rebuild.cjs",
+          "sha256": "7db42e4683bf1d1ea149c4bc3e772e67a402513c7f3e2f83e33d66969ebe5741"
+        },
+        {
+          "path": "agent-teams-controller/package.json",
+          "sha256": "2f1b7c7f690adacb009e3aa513dba9c1a54fd4e83c6f0e08d5c521d6e4dfa3bf"
+        },
+        {
+          "path": "agent-teams-controller/scripts/build.mjs",
+          "sha256": "a7afb7428749efcd15c45acf9b4da03ce4d529ff663b57af876a55b373b97399"
+        },
+        {
+          "path": "mcp-server/package.json",
+          "sha256": "b6b245a0062d111cee110ec7222ce00c3730e03a70cf99a29b92bfda245efa5f"
+        },
+        {
+          "path": "resources/runtime/COMMIT_SHA",
+          "sha256": "e35b7fe615ca19b013e06c65603253f27f04a7b28973b49e57c9e3f9b7d5df86"
+        },
+        {
+          "path": "resources/runtime/VERSION",
+          "sha256": "cb82a3238f7f7a46e4febac2eac15ba8e0c213793dece724289c73afcc97dfba"
+        }
+      ],
+      "node": {
+        "path": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+        "sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+        "version": "v24.21.0"
+      },
+      "electron": {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/.runtime-download/TEST-donor-4a/node_modules/.pnpm/electron@44.10.1_supports-color@10.2.2/node_modules/electron/dist/electron",
+        "sha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+        "version": "44.10.1"
+      },
+      "runtime": {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/.runtime-download/TEST-donor-4a/resources/runtime/claude-multimodel",
+        "sha256": "fa3100f6476ce4c2d449f8991ab464874e3b04a7d7fc18555eaeffd8d6a41437",
+        "version": "0.0.160",
+        "cliVersion": "2.777.777",
+        "archiveSha256": "09b174841e74c95337f8b1be986f1501a71582ce190671c548bf4c70ab814e10",
+        "sourceCommit": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7"
+      },
+      "custody": {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/.runtime-download/TEST-donor-runtime-source/dist/native/opencode-custody/linux-x64/custodian",
+        "sha256": "f7925ea34f749981633c9d2b8c02de984dceaf7e5449b31cd9a6ceb82dae9e3c",
+        "kind": "EXACT_RELEASE_SOURCE_BUILD",
+        "sourceDirectory": "/home/runner/work/agent-teams-ai/agent-teams-ai/.runtime-download/TEST-donor-runtime-source",
+        "sourceCommit": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+        "sourceTree": "a5ed6ffc453a68a5454328bd79a9422ce1e4e3e9",
+        "manifest": {
+          "schemaVersion": 1,
+          "platform": "linux",
+          "arch": "x64",
+          "size": 985408,
+          "sha256": "f7925ea34f749981633c9d2b8c02de984dceaf7e5449b31cd9a6ceb82dae9e3c",
+          "sourceSha256": "86896bedd1555aa1f34351def4ee24bb6811f12422c062709c96148c6e86519e"
+        },
+        "manifestSha256": "276e84dfe719eb759386766a8c5a2f62ec8aa6a555bcdadf60c5ce2c30e892b7",
+        "sourceSha256": "86896bedd1555aa1f34351def4ee24bb6811f12422c062709c96148c6e86519e",
+        "buildScriptSha256": "95c78e23fa018812612adba89e3efcb35a3275913e209191ac865472a86269dd",
+        "validatorSha256": "73703ca097b06263037dc8a539dd95b90f9e51faa0492efa587663337bfcb892",
+        "compiler": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0",
+        "publishedRuntimeComplete": false
+      }
+    }
+  },
+  "prospectiveSourcePreimage": {
+    "ref": "39a00ee65eb4ecfd5ba42c4c0504db837f6db470",
+    "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+    "blob": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db",
+    "sourceSha256": "11e064039a9ff28261a2daf41c247d0f6a947e192af03541fc0974d49a0e15ef",
+    "lines": 727,
+    "plannedScopeFiles": 1
+  },
+  "nonActions": [
+    "No source afterimage or repository mutation",
+    "No CI read/action or artifact download",
+    "No project/compiler/test/native/provider/GUI execution",
+    "No genuine Claude/Codex command",
+    "No assertion, timer, pin or cleanup changes"
+  ]
+}
