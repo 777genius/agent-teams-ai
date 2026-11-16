@@ -71,7 +71,7 @@ function validateSourceRefusal(value: Record<string, unknown>, persisted: boolea
   assert.ok(Object.getOwnPropertySymbols(value).length === 0 && Object.values(Object.getOwnPropertyDescriptors(value)).every(row => 'value' in row));
   const hash = (raw: unknown) => typeof raw === 'string' && /^[a-f0-9]{64}$/.test(raw), clock = (raw: unknown) => typeof raw === 'number' && Number.isSafeInteger(raw) && raw >= 0;
   const fields: Record<string, string> = { native: 'capability phase reason dispatched staged rootCaptured deadlineExpired',
-    consumer: 'actionDigest groupDigest bindingDigest consumerId phase reason cutoff observedAt',
+    consumer: 'actionDigest groupDigest bindingDigest consumerId phase reason cutoff observedAt currentCalls',
     'opencode-open': 'bindingDigest phase reason',
     reference: 'commandDigest contextDigest phase reason probeCutoff probeNow scopeCutoff scopeNow preparationCutoff preparationNow', limit: '' };
   assert.ok(typeof value.kind === 'string' && Object.hasOwn(fields, value.kind));
@@ -89,6 +89,17 @@ function validateSourceRefusal(value: Record<string, unknown>, persisted: boolea
     assert.ok('configuration server-launch native-ready startup-authority startup-configuration startup-delay session-authority session-create driver-readiness'.split(' ').includes(value.phase));
   } else {
     assert.ok(value.reason === 'held' || value.reason === 'threw'); const consumer = value.kind === 'consumer';
+    if (consumer) {
+      const timing = object(value.currentCalls);
+      assert.ok(timing && typeof timing === 'object' && !Array.isArray(timing) && [Object.prototype, null].includes(Object.getPrototypeOf(timing)));
+      assert.ok(Object.getOwnPropertySymbols(timing).length === 0 && Object.values(Object.getOwnPropertyDescriptors(timing)).every(row => 'value' in row));
+      assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'totalMs', 'truncated']);
+      assert.ok(clock(timing.count) && (timing.count as number) <= 4096 && clock(timing.totalMs) && clock(timing.maxMs) && (timing.maxMs as number) <= (timing.totalMs as number));
+      assert.equal(typeof timing.truncated, 'boolean');
+      assert.ok(timing.lastMs === null || clock(timing.lastMs) && (timing.lastMs as number) <= (timing.maxMs as number));
+      if (timing.count === 0) assert.ok(timing.totalMs === 0 && timing.maxMs === 0 && timing.lastMs === null);
+      else if (!timing.truncated) assert.notEqual(timing.lastMs, null);
+    }
     assert.ok((consumer ? ['actionDigest', 'groupDigest', 'bindingDigest', 'consumerId'] : ['commandDigest', 'contextDigest']).every(key => hash(value[key])));
     assert.ok((consumer ? 'initial-authority read-consumer identity continuation requirements cutoff reference equality final-authority' :
       'read inspect admission target scope retired completion probe-expiry scope-cutoff preparation-expiry origin purpose readiness account projection').split(' ').includes(value.phase));

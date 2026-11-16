@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { channel } from 'node:diagnostics_channel';
 import {
   mkdirSync,
   lstatSync,
@@ -1571,6 +1572,9 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
       }
       return target(selected);
     } };
+    const diagnostic = channel('agent-teams.legacy-host.first-refusal'), observations: unknown[] = [];
+    const observe = (value: unknown) => { observations.push(value); };
+    if (change === 'unchanged') diagnostic.subscribe(observe);
     const inspection = { management: manager, launch, entry, hostIncarnation: 'TEST-retained-host',
       assertCurrent() { if (!active) throw Error('TEST original member owner revoked'); } };
     const read = (): ReturnType<TeamLaunchOwner['readModelReadiness']> => launch.readModelReadiness({ binding, configRevision: member.configRevision,
@@ -1603,6 +1607,27 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
       assert.deepEqual(inspected.reference, selectedReference);
       assert.deepEqual(read(), pending, 'readonly inspection leaves consumption to its existing owner');
       inspected.assertCurrent();
+      if (change === 'unchanged') {
+        const originalCheck = inspection.assertCurrent, failure = Error('TEST exact original current refusal');
+        inspection.assertCurrent = () => { throw failure; };
+        try {
+          assert.throws(inspected.assertCurrent, error => error === failure);
+          assert.throws(inspected.assertCurrent, error => error === failure);
+        } finally { inspection.assertCurrent = originalCheck; }
+        assert.equal(observations.length, 1, 'only the first failure of this actual inspector is observed');
+        const observed = observations[0] as Record<string, unknown>;
+        assert.equal(observed.kind, 'consumer'); assert.equal(observed.phase, 'initial-authority');
+        assert.equal(observed.reason, 'threw'); assert.equal(observed.bindingDigest, managementDigest(binding));
+        assert.equal(observed.consumerId, pending.consumer.consumerId);
+        assert.ok(observed.currentCalls && typeof observed.currentCalls === 'object', 'actual current calls retain bounded timings');
+        const timing = observed.currentCalls as { count: number; totalMs: number; maxMs: number; lastMs: number | null; truncated: boolean };
+        assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'totalMs', 'truncated']);
+        assert.equal(timing.count, 3, 'initial inspection, explicit check, and first failed check are measured once');
+        assert.equal(timing.truncated, false);
+        assert.ok([timing.totalMs, timing.maxMs, timing.lastMs].every(value => Number.isSafeInteger(value) && value! >= 0));
+        assert.ok(timing.totalMs >= timing.maxMs && timing.maxMs >= timing.lastMs!);
+        assert.deepEqual(read(), pending, 'observation and the unchanged error never consume readiness');
+      }
       if (change === 'shadowed-native') {
         mkdirSync(shadowDirectory, { mode: 0o700 });
         const shadowConfig = (key: string) => JSON.stringify({ provider: { [providerId]: {
@@ -1637,6 +1662,7 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
       assert.equal(runs, 1); assert.equal(closes, 1);
       assert.equal(allocations, 0); assert.equal(businessOpens, 0);
     } finally {
+      diagnostic.unsubscribe(observe);
       launch.seal();
       if (change === 'shadowed-native') rmSync(shadowDirectory, { recursive: true, force: true });
       rmSync(consulted, { force: true });
