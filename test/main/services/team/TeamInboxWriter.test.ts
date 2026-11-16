@@ -373,6 +373,28 @@ describe('TeamInboxWriter', () => {
     });
   });
 
+  it('reports a committed row when ownership changes after transient read failure', async () => {
+    let stillCurrent = true;
+    hoisted.atomicWrite.mockImplementationOnce(async (filePath, data, options) => {
+      await options?.beforeCommit?.();
+      hoisted.files.set(filePath.replace(/\\/g, '/'), data);
+      hoisted.readFile.mockImplementationOnce(async () => {
+        stillCurrent = false;
+        const error = new Error('EACCES') as NodeJS.ErrnoException;
+        error.code = 'EACCES';
+        throw error;
+      });
+    });
+    const result = await writer.sendMessage('my-team',
+      { member: 'alice', text: 'committed before cancellation' },
+      { shouldStillWrite: () => stillCurrent });
+    expect(result.deliveredToInbox).toBe(true);
+    expect(hoisted.atomicWrite).toHaveBeenCalledTimes(1);
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as { text: string }[];
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]?.text).toBe('committed before cancellation');
+  });
+
   it('rejects changed payload for a generated ID after a lost write acknowledgement', async () => {
     hoisted.atomicWrite.mockImplementationOnce(async (filePath, data, options) => {
       await options?.beforeCommit?.();
@@ -905,6 +927,31 @@ describe('TeamInboxWriter', () => {
     });
     expect(persisted).toHaveLength(1);
     expect(persisted[0].taskRefs).toEqual([taskRef]);
+  });
+
+  it('returns the appended identity after a transient duplicate-merge retry', async () => {
+    await writer.sendMessage('my-team', {
+      member: 'user', from: 'alice', to: 'user', text: 'Same reply',
+      source: 'runtime_delivery', relayOfMessageId: 'inbound-race',
+    });
+    hoisted.atomicWrite.mockImplementationOnce(async (filePath, _data, options) => {
+      await options?.beforeCommit?.();
+      hoisted.files.set(filePath.replace(/\\/g, '/'), '[]');
+      const error = new Error('EPERM') as NodeJS.ErrnoException;
+      error.code = 'EPERM';
+      throw error;
+    });
+    const result = await writer.sendMessage('my-team', {
+      member: 'user', from: 'alice', to: 'user', text: 'Same reply',
+      source: 'runtime_delivery', relayOfMessageId: 'inbound-race',
+      taskRefs: [{ taskId: 'task-2', displayId: 'efgh5678', teamName: 'my-team' }],
+    });
+    expect(result).toMatchObject({ deliveredToInbox: true, messageId: 'msg-2' });
+    expect(result.deduplicated).toBeUndefined();
+    const persisted = JSON.parse(hoisted.files.get('/mock/teams/my-team/inboxes/user.json') ??
+      '[]') as { messageId: string }[];
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]?.messageId).toBe('msg-2');
   });
 
   it('merges taskRefs into an exact runtime delivery reply row', async () => {

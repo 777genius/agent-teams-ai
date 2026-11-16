@@ -144,14 +144,16 @@ async function runParent() {
         else resolve();
       };
       const timer = setTimeout(() => {
-        terminateOwnedTree(child, marker);
+        try { terminateOwnedTree(child, marker); }
+        catch (error) { finish(error); return; }
         finish(new Error('teammate fixture timed out: ' + stderr));
       }, RUN_TIMEOUT_MS);
       child.on('message', (msg) => {
         if (msg?.type === 'tool') tools.push(msg);
         if (msg?.type === 'ready') {
           if (msg.pid !== child.pid) {
-            terminateOwnedTree(child, marker);
+            try { terminateOwnedTree(child, marker); }
+            catch (error) { finish(error); return; }
             finish(new Error('teammate fixture identity mismatch'));
             return;
           }

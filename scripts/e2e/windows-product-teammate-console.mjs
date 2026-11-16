@@ -575,8 +575,9 @@ async function run() {
     const observed = await getProcess(pid);
     return observed?.command?.includes(forcedTeamName) ? observed : false;
   }, 150_000);
-  assert(forceExitMember.pid !== originalMember.pid,
-    'Forced-exit product member must be a new process, not a recycled stopped member');
+  assert(forceExitMember.pid !== originalMember.pid ||
+    forceExitMember.creation !== originalMember.creation,
+    'Forced-exit product member must have a distinct original process identity');
   forceExitOwnedLauncher = await findOriginalTeammateJobLauncher(
     forceExitMember, mainBirth);
   assert(await ownedStillAlive(forceExitOwnedLauncher),

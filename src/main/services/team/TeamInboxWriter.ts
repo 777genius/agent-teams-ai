@@ -209,6 +209,7 @@ export class TeamInboxWriter {
     let resultMessageId = messageId;
     let resultDeduplicated = false;
     let rejectedByPrecondition = false;
+    let hasCommittedWrite = false;
 
     await withFileLock(inboxPath, async () => {
       await withInboxLock(inboxPath, async () => {
@@ -229,6 +230,7 @@ export class TeamInboxWriter {
                 }
               },
             });
+            hasCommittedWrite = true;
             return 'written';
           } catch (error) {
             if (error instanceof TeamInboxWriteAbortedError) {
@@ -243,9 +245,8 @@ export class TeamInboxWriter {
         for (let attempt = 0; attempt < INBOX_WRITE_ATTEMPTS; attempt++) {
           try {
             const list = await this.readInbox(inboxPath);
-            if (await shouldAbortWrite()) {
-              return;
-            }
+            // Reconcile an already-committed message even after ownership changes.
+            if (!hasCommittedWrite && (await shouldAbortWrite())) return;
             const messageIdIndex = this.findMessageIdDuplicateIndex(list, messageId);
             const matchedMessageId = messageIdIndex >= 0;
             const duplicateIndex = matchedMessageId
@@ -288,6 +289,8 @@ export class TeamInboxWriter {
               return;
             }
             list.push(payload);
+            resultMessageId = messageId;
+            resultDeduplicated = false;
             if (await shouldAbortWrite()) {
               return;
             }
