@@ -1,0 +1,1297 @@
+{
+  "schemaVersion": 1,
+  "kind": "INDEPENDENT_ACTUAL_P11_B_QUALIFICATION_R2",
+  "reviewer": "/root/qualification_audit",
+  "createdAt": "2026-11-16 13:21:05 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "pr": 1192,
+  "head": "852d9bd3f9142603340f71ca998739e69da00084",
+  "tree": "f2fe271032a3280acfd5e604d6536c40607986b4",
+  "result": "GO_FOR_BOUNDED_B_REQUIRED_SOURCE_AND_QUALIFICATION_GATES_ONLY",
+  "scope": "The two published post-observation deadline assertions and original complete prerequisite, Runtime/Team, full workspace/focused backend types, original typed lint and Team UI controls. This is not a whole-PR/release certificate or permission to supersede useful active jobs.",
+  "source": {
+    "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+    "a": {
+      "kind": "A",
+      "head": "72e6ec04444969d343d73834c70bc4e261100fc9",
+      "bytes": 45707,
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+      "gitBlobFromPriorIndependentSourceR2": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+    },
+    "b": {
+      "kind": "B",
+      "head": "852d9bd3f9142603340f71ca998739e69da00084",
+      "bytes": 45795,
+      "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b",
+      "gitBlobFromPriorIndependentSourceR2": "5026f0ec6165bb092717ddc989043848a25081dc"
+    },
+    "independentlyReconstructedDiff": {
+      "additions": [
+        {
+          "bLine": 91,
+          "exactLine": "    assert.ok(Date.now() < cutoff, label);",
+          "before": [
+            "  let ui = createDesktopUiControls(cdp, { assertOwnedRenderer: current, step });",
+            "  const poll = async <T>(observe: () => Promise<T>, accepts: (value: T) => boolean, label: string) => {",
+            "    const cutoff = Date.now() + 90_000; let value = await observe();"
+          ],
+          "after": [
+            "    while (!accepts(value) && Date.now() < cutoff) {",
+            "      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();",
+            "      assert.ok(Date.now() < cutoff, label);"
+          ]
+        },
+        {
+          "bLine": 94,
+          "exactLine": "      assert.ok(Date.now() < cutoff, label);",
+          "before": [
+            "    assert.ok(Date.now() < cutoff, label);",
+            "    while (!accepts(value) && Date.now() < cutoff) {",
+            "      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();"
+          ],
+          "after": [
+            "    }",
+            "    assert.ok(accepts(value), label); return value;",
+            "  };"
+          ]
+        }
+      ],
+      "mismatch": [],
+      "reconstructedExactA": true,
+      "aLineCount": 571,
+      "bLineCount": 573
+    },
+    "interpretation": "Exactly two assert.ok(Date.now() < cutoff, label) insertions after the first awaited observation and each later awaited observation. Removing just these lines reconstructs A byte-for-byte. The original90-second cutoff,100ms cadence, currentness check, acceptance predicate and all other actions/source remain unchanged."
+  },
+  "primaryEvidence": {
+    "run": 43856040329,
+    "job": 133260433205,
+    "url": "https://github.com/777genius/agent-teams-ai/actions/runs/43856040329/job/133260433205",
+    "raw": {
+      "job": 133260433205,
+      "sourceHead": "852d9bd3f9142603340f71ca998739e69da00084",
+      "bytes": 2710729,
+      "sha256": "72dd3eac8b14d27a4e7799ac2608a52adc76925347bc589aab89a4c9167cb855"
+    },
+    "rawComplete": true,
+    "checkoutLine": "2026-11-16T12:58:21.3110977Z 852d9bd3f9142603340f71ca998739e69da00084",
+    "metadataSourceHead": "852d9bd3f9142603340f71ca998739e69da00084",
+    "jobStatus": "completed",
+    "jobConclusion": "success",
+    "toolchain": {
+      "node": "24.21.0",
+      "pnpm": "11.22.0",
+      "electron": "44.10.1",
+      "electronEvidence": "Original strict package version assertion and native rebuild completed in the original job"
+    },
+    "artifact": {
+      "id": 14228464282,
+      "bytes": 651236,
+      "reportedZipSha256": "f4267379b8e9d7f65f27e3763b2a83a657012da4240b6a3d2eb2350582749f30",
+      "downloadVerificationBy": "/root",
+      "members": 14,
+      "originalReceiptBytes": 701747,
+      "originalReceiptSha256": "529280b99c861db5b3f7211cbd5a4741394e739b080fb10f4c86b83bd6de171a"
+    }
+  },
+  "originalPrerequisite": {
+    "exactCommand": "2026-11-16T13:00:15.8388197Z node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "baselineA": {
+      "head": "72e6ec04444969d343d73834c70bc4e261100fc9",
+      "run": 43831885807,
+      "job": 133178913364,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/43831885807/job/133178913364",
+      "bytes": 95536,
+      "sha256": "2091b79602e5ee3fa595e89c99f2bac1942efc9ff5ee4dd16f912e2f5ec0aaa0"
+    },
+    "a": {
+      "total": 123,
+      "pass": 120,
+      "fail": 3,
+      "skip": 0,
+      "cancel": 0
+    },
+    "b": {
+      "total": 123,
+      "pass": 123,
+      "fail": 0,
+      "skip": 0,
+      "cancel": 0
+    },
+    "completeCaseJoin": [
+      {
+        "name": "offline Desktop admission refuses inherited native selections before preparing a fixture",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "TEST management admission retains only the exact direct detached Host peer without signaling",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "Linux zero-group rows remain observable without becoming owned app groups; malformed census stays an error",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "the same original-root oracle uses each existing caller deadline after a long provider phase, without renewing reads",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "read-only discovery survives navigation during the actual IPC read, then reads the new context",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "unregistered initial discovery waits, but owner failures are never hidden as navigation",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "initial discovery passes only its remaining captured budget to the IPC await",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "exhausted initial observation never dispatches the backend IPC",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "other discovery callers retain the default CDP budget",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "an explicit IPC observation budget lets the same read settle after30s within60s",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "default CDP evaluations still reject at30s without a resend",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "macOS original Node zombie is the same unreaped harness child, never a changed live command",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "live stat can become original defunct before the guard; only original child reap and whole-group absence settle it",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "changed command/start, wrong child/group and initial descendants never authorize a recovery observation",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "an already observed original natural exit still requires fresh group and captured Host absence",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original crash/signal and process-table failures remain debt",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "the original deadline is not renewed after initial settlement consumed it",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "numeric group absence without this original child exit observation expires within the remaining original budget",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "a process-table read that crosses the original deadline cannot qualify natural exit",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "an already reaped original child waits for actual descendant and original Host absence",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "an orphan descendant, moved captured descendant or original Host cannot be cleared by an expired budget",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "absent leader observation rejects wrong child, live/crashed/signaled child and invalid captured identities",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "a reused leader PID and unavailable full process census retain debt without signaling",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "absent leader observation never renews the original deadline or accepts a late census",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original peer observation accepts later-row only with its retained launch row",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original peer observation accepts exit only with its retained launch row",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original peer observation refuses reuse without admitting the census PID",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original peer observation refuses reparent without admitting the census PID",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original peer observation refuses argv without admitting the census PID",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original peer observation refuses duplicate without admitting the census PID",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original peer observation refuses missing without admitting the census PID",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original peer observation refuses late without admitting the census PID",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original peer observation accepts a valid empty journal with no current children",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original peer observation validates no-child-failure before returning without children",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original peer observation validates no-child-malformed before returning without children",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original peer observation validates no-child-late before returning without children",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "empty peer census refuses no-child-provider-mismatch through the original journal oracle",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "empty peer census refuses zero-host-failure through the original journal oracle",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "empty peer census validates its journal with no current Host before the first Team read",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "requested Quit lets the original child report its natural exit before the cleanup census",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "finite Codex exact native MCP catalog exits with empty inventory without allocating a Runtime",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "finite Codex catalog refuses changed argv, Runtime authority and nonempty selected configuration",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "finite Codex answers the original D managed config before connecting its selected Team on thread start",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "finite managed Codex policy refuses alternate syntax, extra servers and enabled apps before connection",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "runtime-derived Codex ordinary model probe (default) completes through original Host/D once",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "runtime-derived Codex ordinary model probe (low) completes through original Host/D once",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "finite Codex standalone retains empty MCP readiness and completes only its original ephemeral thread",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "finite Codex standalone refuses Team authority, persistent threads and unselected thread work",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "extensions Settings peer exposes only isolated auth status through original custody",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "saved-import Settings peer exposes only isolated auth status through original custody",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "finite extension status uses the original Host auth command and retains its exact private namespace",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "finite extensions run through original Host ownership, persist four commands and survive inventory reload without replay",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "finite extension CLI refuses changed names/scopes and does not overwrite selected config",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "saved-import finite metadata and actual original probe receipt preserve model/effort with no extra input on lookup",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "saved-import peer refuses a business input without producing a probe or touching Host receipts",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "receipt summaries retain only the original nested mixed Settings owner",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "retained c226 original rejected-key receipt joins its published seed and exact observed native probe",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "V2 receipt binding rejects foreign revisions, scope, seed owner, engine and executable",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "V2 publication rejects an internally rehashed foreign descriptor grant or replacement executable",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "V2 source history accounts for every publication and the exact retained current chain",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original Host rejects old other-project cwd and accepts only its separate exact private-account seed",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "archived V2 tuple isolation restores the real runner and preserves foreign-platform refusal",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original V2 default intent joins its selected saving row within the same receipt deadline",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "published receipt reads survive the real controller writer before its atomic rename",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "receipt reads reject foreign staging names, directories and symbolic links",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "captured UI discovery waits for Main admission and actual mount while early diagnostics remain active",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "the original remaining startup deadline rejects a pending snapshot without late discovery or a reset",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "isolated shell fixture emits the actual framed environment and refuses shell effects",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original in-progress Task comment prerequisite requires its exact stage without an assignment control",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "Task attachment comment waits for its original focused owner after one click before inserting text",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original Task assignment prerequisite refuses receipt-only, pending and stale renderer state",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original desktop click waits for stable target geometry, without repeating input",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original Task hover waits through layout and unavailability before its one physical move",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original desktop click refuses a constantly moving target before dispatch",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original owner-qualified click rereads its full expression through unavailability at unchanged coordinates",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "login failure facts retain only bounded original attempts and confirmed milestones",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "finite readiness failure summaries keep only bounded states and never private snapshot data",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "Taskboard failure summaries compare retained identities without exposing private snapshot values",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "installer failure summaries preserve original wait sites and attempts without inferring installation effects",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "installer failure projection does not invoke input getters and leaves oversized observations unknown",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "installer CDP and cleanup projection retains only exact finite observations",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "Selection target summaries retain the exact original phase and six closed facts",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "Selection target projection rejects unknown or malformed facts without exposing text or invoking getters",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original desktop click refuses a target unavailable during the final ownership check",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original desktop click refuses a target moved during the final ownership check",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original default scroll preserves a disabled control before its readiness wait",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original scroll opt-in reveals a covered checkbox with one bounded wheel",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original desktop click rechecks owner after its pending final target read",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original desktop click rechecks cutoff after its pending final target read",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original clarification lookup admits its retained read without completing the assignment prerequisite",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original clarification lookup refuses changed owner, revision, refresh and retained-read joins",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original owner availability admits three captured A Teams through its actual first DOM read",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original owner availability retains singleton, subset and duplicate-row cardinality semantics",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original owner availability refuses foreign identities and preserves its existing aggregate guards",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original owner availability refuses invalid captured discovery before navigation",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "owner availability admits every captured A Team through the actual first observation",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "owner availability refuses healthy B in unavailable A rows",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "owner availability refuses captured foreign owner in unavailable A rows",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "owner availability refuses unknown Team in unavailable A rows",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "owner availability refuses malformed Team in unavailable A rows",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "owner availability refuses missing selected A before original navigation",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "owner availability refuses non-string A handle before original navigation",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "owner availability refuses empty A handle before original navigation",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "owner availability refuses duplicate A handle before original navigation",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "owner availability refuses over-bound capture before original navigation",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "original Selection final Stop joins physical absence with its exact stopped UI within the same poll budget",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "Selection stopped convergence refuses wrong identity, unaccepted progress, visible progress and exhausted observation budget",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "the existing passive click recorder distinguishes the actual Team from later navigation without new actions",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "a": "FAIL",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "a": "FAIL",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+        "a": "FAIL",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "ordinary Node imports and synchronous observations remain inert",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "constructor subscription observes the original async child after pid assignment",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "the observer preserves an actual unhandled child-process error",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "failed reads, writes and unknown child fields cannot change the original operation",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "the original TEST helper path exposes only its closed requested target class",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      },
+      {
+        "name": "event and pending-child bounds explicitly preserve incomplete coverage",
+        "a": "PASS",
+        "b": "PASS",
+        "sameName": true
+      }
+    ],
+    "interpretation": "All123 unique names, order and multiplicity preserved. Exactly the three named at-cutoff/after-cutoff/after-polled-cutoff failures become PASS. All120 previous PASS cases, including the fourth timely/currentness/read-error control, remain PASS.",
+    "retrySuite": {
+      "command": "node --test test/scripts/installDependenciesWithRetry.test.mjs",
+      "total": 7,
+      "pass": 7,
+      "fail": 0,
+      "skip": 0,
+      "cancel": 0
+    }
+  },
+  "runtimeTeam": {
+    "exactCommand": "2026-11-16T13:00:31.7063116Z node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+    "total": 179,
+    "pass": 179,
+    "fail": 0,
+    "skip": 0,
+    "cancel": 0,
+    "uniqueNames": 179,
+    "completeCaseRows": [
+      "✔ the original finite captured child retains sanitized stderr and excludes its stdout protocol (15.465035ms)",
+      "✔ original Claude SDK child stderr reaches the member observer before failed startup and flushes its final tail (67.550395ms)",
+      "✔ original standalone claude child retains startup stderr and its closing tail without an endpoint (30.28406ms)",
+      "✔ original standalone codex child retains startup stderr and its closing tail without an endpoint (44.956335ms)",
+      "✔ captured native executable is pinned again at launch and sealing forbids late allocation (2.189153ms)",
+      "✔ captured launch rejects exact inode changes hidden by numeric file metadata before spawning (2.381121ms)",
+      "✔ captured launch rejects exact mtime changes hidden by numeric file metadata before spawning (1.368387ms)",
+      "✔ captured launch rejects exact ctime changes hidden by numeric file metadata before spawning (1.505407ms)",
+      "✔ custody closes its live original process group, preserving a neighboring process (1592.62059ms)",
+      "✔ custody holds an unverified group after parent exit until TEST descendants leave naturally (3618.61713ms)",
+      "✔ an exited original cannot signal a positively probed replacement group (3539.796002ms)",
+      "✔ captured launch revalidates selected cwd before any process allocation (1.953692ms)",
+      "✔ Codex observes only original stderr before initialization completes and retains the final tail (35.641509ms)",
+      "✔ Codex profile is a finite private union and requires captured namespace paths (11.525975ms)",
+      "✔ Codex profile enforces native 1 MiB ceiling before allocation and preserves Claude bounds (6.688163ms)",
+      "✔ Codex 0.162.0 enforces tuple eligibility before selected-config tools, attributed inputs and exact interrupt (18.378659ms)",
+      "✔ Codex 0.169.0 enforces tuple eligibility before selected-config tools, attributed inputs and exact interrupt (4.068732ms)",
+      "✔ Codex missingTools setup failure cleans captured handles before throwing (10.966442ms)",
+      "✔ Codex failInitialize setup failure cleans captured handles before throwing (11.206485ms)",
+      "✔ Codex checkpoint setup failure cleans captured handles before throwing (10.02592ms)",
+      "✔ seal or lost allocation authority prevents a Codex process allocation (19.919935ms)",
+      "✔ Host Codex adapter awaits its captured original-input baseline and terminal observer through real public D (10.20304ms)",
+      "✔ captured Codex options preserve none across each input and true-only Fast config (8.337267ms)",
+      "✔ captured Codex options preserve minimal across each input and true-only Fast config (8.236439ms)",
+      "✔ captured Codex options preserve ultra across each input and true-only Fast config (8.688924ms)",
+      "✔ captured Codex options preserve TEST-future-native-effort across each input and true-only Fast config (11.434951ms)",
+      "✔ Codex Default/absent options preserve the captured recipe; explicit false adds no native Fast override (16.328606ms)",
+      "✔ managed Codex 0.162.0 appOnly enforces tuple eligibility and retained-thread restore across Host endpoint rotation (29.865927ms)",
+      "✔ managed Codex 0.162.0 inherited enforces tuple eligibility and retained-thread restore across Host endpoint rotation (23.43299ms)",
+      "✔ managed Codex 0.169.0 appOnly enforces tuple eligibility and retained-thread restore across Host endpoint rotation (2.337667ms)",
+      "✔ managed Codex 0.169.0 inherited enforces tuple eligibility and retained-thread restore across Host endpoint rotation (2.36768ms)",
+      "✔ captured appOnly launches veto original plugin names and exact native gate precedes thread allocation (20.388665ms)",
+      "✔ changed original native census refuses before app-server allocation and without a thread (3.542659ms)",
+      "✔ new captured selection without original native census refuses before process custody (1.236468ms)",
+      "✔ captured Codex argv reaches only the selected app-server launch, preserving managed flags (6.010196ms)",
+      "✔ captured Codex managed aliases and positional prompts refuse before custody allocation (5.43483ms)",
+      "✔ original stderr captures startup and tail while redacting selected values across UTF-8 chunks (9.734531ms)",
+      "✔ standalone stderr uses selected private values without a Team endpoint (1.241325ms)",
+      "✔ invalid UTF-8 and NUL are readable diagnostics, including a final incomplete sequence (0.850851ms)",
+      "✔ decoded UTF-8 and NUL expansion cannot exceed the retained text byte limit (2.930018ms)",
+      "✔ oversized lines discard their complete suffix and preserve a multiline dump opener (0.91802ms)",
+      "✔ dump continuations stay suppressed through ordinary newlines and oversized fragments (0.692608ms)",
+      "✔ observer errors and reentrant close cannot change stream outcomes or duplicate a tail (0.652669ms)",
+      "✔ a bounded escape-heavy line remains subject to the existing serialized journal limit (1.444554ms)",
+      "✔ held escaped, URI and whitespace-normalized values and quoted assignments cannot leave secret suffixes (1.376323ms)",
+      "✔ overlapping held values are masked in one pass: ABABAB (0.757754ms)",
+      "✔ overlapping held values are masked in one pass: a (1.404435ms)",
+      "✔ long split ANSI does not lose a dump opener before flush (0.841207ms)",
+      "✔ long split ANSI does not lose a dump opener before discard (1.239392ms)",
+      "✔ dump detection continues through already discarded oversized fragments (0.940803ms)",
+      "✔ a short held value cannot destroy sensitive syntax before classification: s (0.547945ms)",
+      "✔ a short held value cannot destroy sensitive syntax before classification: a (0.404575ms)",
+      "✔ a short held value cannot destroy sensitive syntax before classification: h (0.444433ms)",
+      "✔ syntax redaction cannot expose fragments of a transformed held value (0.872223ms)",
+      "✔ an ANSI prefix larger than the line budget remains fail-closed (false) (1.237049ms)",
+      "✔ an ANSI prefix larger than the line budget remains fail-closed (true) (0.980752ms)",
+      "✔ held whitespace values cannot leak after contextual syntax redaction (space) (0.568716ms)",
+      "✔ held whitespace values cannot leak after contextual syntax redaction (tab) (0.439126ms)",
+      "✔ held whitespace values cannot leak after contextual syntax redaction (mixed) (0.533544ms)",
+      "✔ safe diagnostics and unambiguous held-value context remain readable (0.540315ms)",
+      "✔ closed provider authority reads one fresh state with three namespace traversals and keeps original refusals (105.419149ms)",
+      "✔ restored provider authority binds the complete open request and keeps current fences (72.957629ms)",
+      "✔ restored native input keeps the full checkpoint-bearing request identity (52.381193ms)",
+      "✔ only validated legacy roster applicability can fall back after all common authority checks (76.997259ms)",
+      "✔ both live workAllowed reads remain independent and final namespace validation refuses a late alias (54.590377ms)",
+      "✔ closed currentness follows an original additive roster receipt without replacing an existing member (38.244241ms)",
+      "✔ immutable provider entries and denied or unexpected aggregate results cannot enter fallback (59.401169ms)",
+      "✔ a prepared original lifecycle command refuses currentness before its state publication (122.395301ms)",
+      "✔ original factory stderr survives failed opening and cold read but cannot follow revoked or replaced sources (115.643395ms)",
+      "✔ early SDK write and EOF wait for native owner installation and resume, with backpressure (6.52315ms)",
+      "✔ abort-during-prepare never resumes native code or flushes queued input (2.461038ms)",
+      "✔ authority-loss-during-install never resumes native code or flushes queued input (1.024005ms)",
+      "✔ target exit before resume acknowledgement preserves its native code and final stdout/stderr (3.41809ms)",
+      "✔ prepare/control failure requests original cleanup once and never invents target termination (1.800808ms)",
+      "✔ conversation materialization keeps 150 distinct original replies across mixed-ring eviction without nontext or poll IO (3191.547204ms)",
+      "✔ conversation failure never rewrites terminal facts or accepts an older publication as current (41.721447ms)",
+      "✔ legacy conversation reads use only dated original input events and never migrate or invent timestamps (19.350037ms)",
+      "✔ conversation corrupt, missing, oversized and foreign derived records hold under the original member read grant (68.416653ms)",
+      "✔ conversation missing original state refuses retained observations without decoding large files or resetting authority (20.815082ms)",
+      "✔ conversation rows require the original input, operation and delivery fingerprint after cold read (16.779309ms)",
+      "✔ conversation finite FD read refuses symlink without adopting replacement bytes (15.550853ms)",
+      "✔ conversation finite FD read refuses before-open without adopting replacement bytes (18.780661ms)",
+      "✔ conversation finite FD read refuses after-open without adopting replacement bytes (17.164445ms)",
+      "✔ conversation finite FD read refuses symlink-before-open without adopting replacement bytes (15.5359ms)",
+      "✔ conversation finite FD read refuses disappeared-before-open without adopting replacement bytes (15.3521ms)",
+      "✔ conversation fresh empty marker refuses a nonempty retained file instead of adopting it (14.851625ms)",
+      "✔ conversation equal text remains input-distinct, existing blocks may clear, and 65 blocks survive count retention (1507.131157ms)",
+      "✔ conversation partial storage ports remain explicitly unsupported and cannot publish an unchecked marker (15.90047ms)",
+      "✔ conversation exact reserved-envelope budget retains the reply and one extra byte reports loss without evicting it (994.472134ms)",
+      "✔ snapshot and replay share a fence/cursor; persisted text/tools/usage/interaction state survives restart with explicit incarnation gap (32.004429ms)",
+      "✔ bounded retention/paging gives explicit gap and cannot return a future or another member cursor (52.995771ms)",
+      "✔ wrong native/session/input/operation attribution is never assigned to this member or a neighboring input (29.127721ms)",
+      "✔ oversized/unsupported projection data cannot abort later permission and terminal/control persistence (32.507718ms)",
+      "✔ projection write failure exposes a gap while observer continues to durable terminal and later observations (17.011553ms)",
+      "✔ projection corrupt is HOLD rather than a reset cursor and cannot stop terminal persistence (13.749038ms)",
+      "✔ projection digest is HOLD rather than a reset cursor and cannot stop terminal persistence (14.213421ms)",
+      "✔ projection missing is HOLD rather than a reset cursor and cannot stop terminal persistence (14.953238ms)",
+      "✔ projection symlink is HOLD rather than a reset cursor and cannot stop terminal persistence (13.826247ms)",
+      "✔ projection oversize is HOLD rather than a reset cursor and cannot stop terminal persistence (14.498585ms)",
+      "✔ current read grant gates snapshots/replay and a consumer without event storage stays explicitly unsupported (17.937643ms)",
+      "✔ bounded feed pages replay each retained event once and snapshot marks a truncated latest view (783.299729ms)",
+      "✔ open/checkpoint/control/seal/reconcile state mutations advance the same cursor without a second business log (43.78578ms)",
+      "✔ event namespace symlink is rejected without touching external files or blocking terminal facts (12.816461ms)",
+      "✔ enabling projections on an existing unprojected session preserves an explicit historical gap (9.737833ms)",
+      "✔ private child activity shares the original Runtime input/fence and snapshot without settling root control or accepting foreign provenance (21.301268ms)",
+      "✔ original process diagnostics keep config and incarnation fences and survive only unreleased closing (24.19398ms)",
+      "✔ process diagnostics use the existing serialized event budget and storage degradation without changing control (17.645314ms)",
+      "✔ typed thinking survives the original bounded journal cold read and projection without a provider (3.614933ms)",
+      "✔ distinct Thinking retains original attribution without becoming text, conversation or state (19.22063ms)",
+      "✔ scheduled log projection is one read of original Thinking identities and unattributed stderr, including cold recovery (36.635972ms)",
+      "✔ auxiliary log trimming shares the existing byte budget without changing original groups or their completeness (132.210634ms)",
+      "✔ ordinary lead replies replace their original signed conversation row without inbox writes or product feed churn (488.564011ms)",
+      "✔ never-opened lead and an original no-allocation Skip retain an empty conversation without creating Runtime state (98.166487ms)",
+      "✔ ordinary long replies preserve 30 KiB snapshots and 300 KiB Unicode through signed fragments and cold reads (707.903864ms)",
+      "✔ task recovery never returns a prior receipt for a changed command with unavailable attachments (165.863292ms)",
+      "✔ mixed Host boots V2 Session SPI profile without invoking V1 management registration (1298.938053ms)",
+      "✔ two captured teams may share an original run ID without sharing launch ownership (164.198147ms)",
+      "✔ cold unavailable Team history retains original resources while an independent Team still captures and runs (858.080264ms)",
+      "✔ a superseded unstarted capture cannot inject its prompt into a newer launch with the same product revision (191.146058ms)",
+      "✔ saved configuration captures fresh native identities, preserves historical launches and replays after cold restart (608.381569ms)",
+      "✔ capture rejects stale product sources, missing recipes and protected args before native allocation (72.675147ms)",
+      "✔ NDJSON saved roster edits preserve product APIs across stale runtime capture/restart without allocation (136.655511ms)",
+      "✔ NDJSON roster replacement refuses live allocation, then saves only after confirmed stop (3519.838953ms)",
+      "✔ captured-run OpenCode live Add reaches its original model probe and preserves failed-probe refusal (1422.74271ms)",
+      "✔ NDJSON unknown native cleanup keeps the saved roster and its original grants bound (625.288423ms)",
+      "✔ stopped fresh capture admits its exact probe profile and cold replay retains the original check (434.587882ms)",
+      "✔ Team model preflight requires current control authority and exact launch selection before any provider allocation (149.528525ms)",
+      "✔ NDJSON human messages auto-admit once and terminal events pump the next input without dispatch RPC (341.956247ms)",
+      "✔ member HTTP MCP and Desktop transport share canonical Tasks and enforce member/scope authority (266.989368ms)",
+      "✔ runtime projections redact private provider identities; missing human control and revoked member grants refuse allocation (252.92548ms)",
+      "✔ dispose seals a pending provider open before late allocation and retains unknown custody as cleanup debt (94.850859ms)",
+      "✔ pending open cleanup precedes readiness: late-driver (76.605534ms)",
+      "✔ pending open cleanup precedes readiness: unknown-driver (103.662815ms)",
+      "✔ pending open cleanup precedes readiness: factory-rejection (71.178808ms)",
+      "✔ pending provider cleanup survives stop before dispose (105.28781ms)",
+      "✔ pending provider cleanup survives reconcile before dispose (84.687214ms)",
+      "✔ allocated driver checkpoint and close precede captured process cleanup (120.668439ms)",
+      "✔ expired MCP proof holds the next admitted input; disposing a never-opened profile performs no allocation (269.296387ms)",
+      "✔ Codex Host cost reports retained usage once without native dispatch or private snapshot leakage (1146.153238ms)",
+      "✔ composed original stderr survives failed startup before Runtime installs a native session (94.439326ms)",
+      "✔ composed original stderr accepts closing diagnostics without settling Runtime state or inputs (132.580376ms)",
+      "✔ composed original stderr rejects changed member authority, revocation and a sealed Host (128.46851ms)",
+      "✔ activity RPC pages normalized native observations with opaque cursor, bounded snapshots and explicit gaps (643.332715ms)",
+      "✔ activity snapshot/feed recheck current human read grants and reject authority overrides (108.884549ms)",
+      "✔ production aggregate launch RPC preserves configured and missing roster members and idempotent scoped progress (159.520617ms)",
+      "✔ launch options are durably selected before provider creation and replay survives Host restart without new allocation (307.836809ms)",
+      "✔ launch options refuse allocated state and compile every selected provider before any publication or allocation (345.746205ms)",
+      "✔ selected checkpoint resumes through a new Host/generation, retains Team delivery ownership and fences stale controls (1464.002303ms)",
+      "✔ Runtime projection privately observes only evaluated readiness operands and preserves the original view and errors (1.504313ms)",
+      "✔ the original passive Runtime projection receiver writes only bounded exit facts and keeps ambiguous evidence unknown (17.535438ms)",
+      "✔ source Codex readiness refuses an expired absolute deadline before its first read after the poll handoff (1.945712ms)",
+      "✔ source Codex readiness refuses a ready result delivered after its original deadline despite a handoff pause (1.422402ms)",
+      "✔ source readiness keeps its timely success, other original budgets, 25ms cadence and exact read errors (6.121332ms)",
+      "✔ source standalone refuses expiry during the poll handoff after its original post-ACK 15s budget (1.976587ms)",
+      "✔ source standalone refuses a completed result delivered after its original post-ACK absolute deadline (1.95162ms)",
+      "✔ source codex standalone preserves the original fresh capture check after successful completion (1.922096ms)",
+      "✔ source claude standalone preserves the original fresh capture check after successful completion (1.764585ms)",
+      "✔ source standalone keeps captured authority, original relative defaults, cleanup refusals and exact read errors (16.102951ms)",
+      "✔ actual normalized content/tool/usage/compaction facts remain scoped to original task after reassignment (103.56706ms)",
+      "✔ cold thinking and member stderr retain their exact scope without changing message, usage or preview counts (75.642943ms)",
+      "✔ unknown usage stays unknown; foreign operation/input cannot borrow task scope; finite page cap is visible (38.297577ms)",
+      "✔ unattributed usage cannot be added to per-input token totals (0.237009ms)",
+      "✔ large retained facts produce a partial bounded log rather than losing the entire selection (44.508926ms)",
+      "✔ retained thinking keeps original task and child identities without duplicating messages or inventing usage (53.924253ms)",
+      "✔ snapshot cursor replays only later invalidations, with stable IDs and explicit restart/retention gaps (1.61846ms)",
+      "✔ a recovery publication observed before its completion hook is still ordered under the snapshot fence (0.264099ms)",
+      "✔ private conversation reads leave the original Team fence and recheck full grant and lead identity (44.574352ms)",
+      "✔ ordinary stream revisions expire only ordinary cursors while original group pages never read conversation (19.913125ms)",
+      "✔ the original Team read boundary refuses a sparse private conversation gap array (7.564885ms)",
+      "✔ snapshot reads persisted authority/roster/tasks/kanban and only permitted inboxes (44.897057ms)",
+      "✔ one task with large nested history retains all task parts, order and signed continuations (37.398179ms)",
+      "✔ a 420 KiB Unicode message remains readable through signed Desktop and MCP pages (209.796874ms)",
+      "✔ real committed task mutation keeps an under-1-MiB Host acknowledgement with full durable history (38227.594071ms)",
+      "✔ large retained task inventory stays readable through all bounded original Owner pages (3668.143752ms)",
+      "✔ Kanban entries and column ordering survive both Desktop and MCP page budgets (78.894815ms)",
+      "✔ large legitimate inbox history preserves bounded snapshots and authorized change feed (62.580978ms)",
+      "✔ owner-side pages retain every message beyond 512 KiB under revision and principal fences (70.559621ms)",
+      "✔ removed teammate inbox remains readable for admin only after a persisted owner restart (10.570832ms)",
+      "✔ one valid Unicode comment larger than either Owner page remains lossless and signed (293.129367ms)"
+    ],
+    "completedAt": "2026-11-16T13:01:52Z"
+  },
+  "fullTypesAndTypedLint": {
+    "originalStep": {
+      "started": "2026-11-16T13:01:52Z",
+      "completed": "2026-11-16T13:12:51Z",
+      "conclusion": "success"
+    },
+    "actualExpandedCommands": [
+      "2026-11-16T13:00:17.8892420Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json",
+      "2026-11-16T13:00:18.2319947Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json",
+      "2026-11-16T13:01:53.2276857Z $ eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content -- packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts packages/legacy-agent-host/tests/opencode-configuration-source.test.ts scripts/e2e/opencode-diagnostics/platform.mjs scripts/e2e/opencode-diagnostics/platform.test.mjs scripts/legacy-agent-host/desktop-backend-fixture.ts scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-captured-app.ts scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts scripts/legacy-agent-host/desktop-emulated-selection-ui.ts scripts/legacy-agent-host/desktop-native-process-ui.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts scripts/legacy-agent-host/desktop-task-comment-input-target.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts scripts/legacy-agent-host/qualify-linux-process-sdk.ts scripts/legacy-agent-host/run-packaged-opencode-v2.ts src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts src/features/agent-backend/renderer/createHostMemberSpawnStatuses.ts src/features/agent-backend/renderer/createHostTeamChanges.ts src/features/agent-backend/renderer/createHostTeamProvisioning.ts src/features/agent-backend/renderer/index.ts src/renderer/store/slices/teamSlice.ts src/renderer/store/team/teamRuntimeRunAdoption.ts test/features/agent-backend/capturedWindowsSelection.test.ts test/features/agent-backend/hostMemberSpawnStatuses.test.ts test/features/agent-backend/runtimeActivityFacade.test.ts test/renderer/store/teamRuntimeRunAdoption.test.ts test/renderer/store/teamSlice.test.ts tools/owned-process-broker/nativeWindowsAppGate.mjs packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts packages/legacy-agent-host/src/composition/HostScheduledRuns.ts packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts packages/legacy-agent-host/src/composition/readTeamActivity.ts packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts packages/legacy-agent-host/src/composition/scheduledRunProjection.ts packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts packages/legacy-agent-host/src/runtime/RuntimeOwner.ts packages/legacy-agent-host/src/runtime/activityContracts.ts packages/legacy-agent-host/src/runtime/normalizeActivity.ts packages/legacy-agent-host/src/runtime/providerActivityContracts.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts packages/legacy-agent-host/tests/management-model-probe.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/native-claude-host.native.ts packages/legacy-agent-host/tests/native-codex-team.native.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/scheduled-run-host.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts scripts/legacy-agent-host/desktop-activity-ui-smoke.ts src/features/agent-backend/contracts/operations.ts src/features/agent-backend/main/adapters/output/projectBackendResult.ts src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts src/features/agent-backend/renderer/createHostTaskActivityApi.ts src/renderer/components/team/ClaudeLogsPanel.tsx src/renderer/components/team/ClaudeLogsSection.tsx src/renderer/components/team/members/HostMemberActivityLog.tsx src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx src/renderer/components/team/members/MemberLogsTab.tsx src/shared/types/teamActivity.ts src/shared/utils/diagnosticsRedaction.ts src/shared/utils/redactDiagnosticAssignments.ts src/shared/utils/runtimeDiagnosticText.ts test/features/agent-backend/hostTaskActivity.test.ts test/renderer/components/team/ClaudeLogsSection.test.ts test/renderer/components/team/members/MemberLogsPolling.test.ts test/renderer/components/team/members/hostLogStatsTabs.test.tsx test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx tools/owned-process-broker/fixtures/claudeProviderPeer.mjs tools/owned-process-broker/fixtures/providerDesktopPeer.mjs tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "2026-11-16T13:02:01.2248887Z $ pnpm typecheck && pnpm typecheck:legacy-host-scripts && pnpm --filter @agent-teams/legacy-agent-host typecheck:test && pnpm --filter agent-teams-mcp typecheck && pnpm --filter agent-teams-mcp typecheck:test",
+      "2026-11-16T13:02:02.3868481Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json",
+      "2026-11-16T13:02:02.7484403Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json",
+      "2026-11-16T13:02:05.2457366Z $ node ./node_modules/@typescript/native/bin/tsc --noEmit && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.updater-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.release-tooling.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-preload.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-renderer.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.desktop-e2e.json",
+      "2026-11-16T13:02:43.2382486Z $ node node_modules/@typescript/native/bin/tsc --project tsconfig.legacy-agent-host-scripts.json",
+      "2026-11-16T13:02:45.1704095Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json",
+      "2026-11-16T13:02:49.5619610Z $ tsc --noEmit",
+      "2026-11-16T13:02:51.2134730Z $ tsc --noEmit -p tsconfig.test.json",
+      "2026-11-16T13:03:00.5321778Z $ node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --cache-strategy content src/main src/preload src/shared src/types --cache-location .eslintcache-main",
+      "2026-11-16T13:05:58.0316772Z $ node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --cache-strategy content src/renderer --cache-location .eslintcache-renderer",
+      "2026-11-16T13:10:37.4190541Z $ node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --cache-strategy content src/features --cache-location .eslintcache-features",
+      "2026-11-16T13:12:48.2809380Z $ pnpm --filter agent-teams-mcp lint",
+      "2026-11-16T13:12:48.6659164Z $ eslint \"src/**/*.ts\""
+    ],
+    "workspaceTypes": "PASS: original root and all configured script tsconfigs,legacy Host scripts,Host TEST,MCP source and MCP TEST",
+    "focusedBackendTestTypes": {
+      "command": "node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json",
+      "result": "PASS",
+      "evidence": "Silent direct command is in the original set-euo-pipefail shell; subsequent lint commands ran and the original whole step/job returned success. No separately printed compiler result is invented."
+    },
+    "typeScriptErrorDiagnostics": 0,
+    "githubErrorAnnotations": 0,
+    "originalLintResults": {
+      "fast": {
+        "errors": 0,
+        "warnings": 5
+      },
+      "main": {
+        "errors": 0,
+        "warnings": 3338
+      },
+      "renderer": {
+        "errors": 0,
+        "warnings": 1416
+      },
+      "features": {
+        "errors": 0,
+        "warnings": 1483
+      },
+      "mcp": {
+        "errors": 0,
+        "warnings": 4
+      }
+    },
+    "note": "Warnings are retained explicitly; passing original lint gates is not described as warning-free."
+  },
+  "originalTeamUi": {
+    "status": "PASS",
+    "observedAt": "2026-11-16T13:14:12.2090815Z",
+    "finalSourceScreenshotsReceiptsCleanupValidation": "SUCCESS",
+    "independentFullArtifactReviewOwner": "/root",
+    "receiptSha256": "529280b99c861db5b3f7211cbd5a4741394e739b080fb10f4c86b83bd6de171a"
+  },
+  "preservedOriginalNegativeGates": [
+    {
+      "run": 43856040134,
+      "job": 133260431137,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/43856040134/job/133260431137",
+      "status": "FAILURE_RETAINED_OPEN",
+      "description": "Windows x64 Process: original OpenCode Team-A readiness deadline/current reference refusal",
+      "raw": {
+        "job": 133260431137,
+        "sourceHead": "852d9bd3f9142603340f71ca998739e69da00084",
+        "bytes": 427566,
+        "sha256": "62ba3b6a1f811845bc81aa69deb35791b9e85d648d8923a0d1198c7f3194b19c"
+      }
+    },
+    {
+      "run": 43856040134,
+      "job": 133260430861,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/43856040134/job/133260430861",
+      "status": "FAILURE_RETAINED_OPEN",
+      "description": "Windows ARM Process: original Codex Team-A readiness deadline; native first refusal unknown/empty",
+      "raw": {
+        "job": 133260430861,
+        "sourceHead": "852d9bd3f9142603340f71ca998739e69da00084",
+        "bytes": 366996,
+        "sha256": "aa57abfc420b1c529a94454ffd067478a734c0ce1b82677114db15158ba37b79"
+      }
+    },
+    {
+      "run": 43856040366,
+      "job": 133260432289,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/43856040366/job/133260432289",
+      "status": "FAILURE_RETAINED_OPEN",
+      "description": "Linux V2 credentials: Host close exit1, driver-close unconfirmed; inner cleanup origin unresolved",
+      "raw": {
+        "job": 133260432289,
+        "sourceHead": "852d9bd3f9142603340f71ca998739e69da00084",
+        "bytes": 323119,
+        "sha256": "56a639bc2263b2b7c3934aaf7cc78c042c95af5311b23f67cf8de190a7d01c1f"
+      }
+    },
+    {
+      "run": 43856040366,
+      "job": 133260432272,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/43856040366/job/133260432272",
+      "status": "FAILURE_RETAINED_OPEN",
+      "description": "Darwin x64 strict P09 executable validity and mutation contract failures",
+      "raw": {
+        "job": 133260432272,
+        "sourceHead": "852d9bd3f9142603340f71ca998739e69da00084",
+        "bytes": 119251,
+        "sha256": "db646f83269f847a0af86a49aedfc4dd43b7ff4814c245ef013bcb3de7bf50f3"
+      }
+    },
+    {
+      "run": 43856040366,
+      "job": 133260433175,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/43856040366/job/133260433175",
+      "status": "FAILURE_RETAINED_OPEN",
+      "description": "Darwin ARM strict P09 after-check/writer-open mutation contract failures",
+      "raw": {
+        "job": 133260433175,
+        "sourceHead": "852d9bd3f9142603340f71ca998739e69da00084",
+        "bytes": 108605,
+        "sha256": "f35986312bb661f55dd60c20f4a6e25367b926c441792d5cc0ffc6cd7902afda"
+      }
+    },
+    {
+      "run": 43856040329,
+      "job": 133260433155,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/43856040329/job/133260433155",
+      "status": "FAILURE_RETAINED_OPEN",
+      "description": "Installer: post-B-launch lead hover exact point changed; final next-runtime/Stop proof incomplete",
+      "raw": {
+        "job": 133260433155,
+        "sourceHead": "852d9bd3f9142603340f71ca998739e69da00084",
+        "bytes": 183142,
+        "sha256": "b2a8450e0e01a2d8f817cfd5f200bc3d3c0875f326497d5f5f575a092d77d92e"
+      }
+    },
+    {
+      "run": 43856040329,
+      "job": 133260433038,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/43856040329/job/133260433038",
+      "status": "FAILURE_RETAINED_OPEN",
+      "description": "Cross-team: later ReviewCycle correction Comment target absent; earlier board PASS separate",
+      "raw": {
+        "job": 133260433038,
+        "sourceHead": "852d9bd3f9142603340f71ca998739e69da00084",
+        "bytes": 187981,
+        "sha256": "e02d573b36e560cbfe2941a1e15786a03e8c0e36ef2649bd388dc1c5a2752495"
+      }
+    },
+    {
+      "run": 43856040329,
+      "job": 133260433218,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/43856040329/job/133260433218",
+      "status": "FAILURE_RETAINED_OPEN",
+      "description": "V2 Management UI: original default inheritance wait timeout",
+      "raw": {
+        "job": 133260433218,
+        "sourceHead": "852d9bd3f9142603340f71ca998739e69da00084",
+        "bytes": 115193,
+        "sha256": "991d9a05005e40e9d245376299a57298a1e655dca23ca9c38215f56efef94560"
+      }
+    },
+    {
+      "run": 43856040242,
+      "job": 133295289447,
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/43856040242/job/133295289447",
+      "status": "FAILURE_RETAINED_OPEN",
+      "description": "Windows x64 packaged P08: missing native settle receipt assertion; prior native qualification PASS separate",
+      "raw": {
+        "job": 133295289447,
+        "sourceHead": "852d9bd3f9142603340f71ca998739e69da00084",
+        "bytes": 336025,
+        "sha256": "a5c1cbbe2652a0d83fd9a9a2d941a22cb25210bf3b707d7b2f5055910b04e871"
+      }
+    }
+  ],
+  "remainingGateState": {
+    "protectedPackagedActiveJobs": [
+      133295289376,
+      133295289524,
+      133295289525
+    ],
+    "hostEmulatedQueuedJobs": [
+      {
+        "id": 133260433222,
+        "name": "Offline Host Desktop (linux-x64, import)",
+        "runner_id": 0
+      },
+      {
+        "id": 133260433241,
+        "name": "Offline Host Desktop (linux-x64, codex-login)",
+        "runner_id": 0
+      },
+      {
+        "id": 133260433606,
+        "name": "Offline Host Desktop (linux-x64, processes)",
+        "runner_id": 0
+      },
+      {
+        "id": 133260433848,
+        "name": "Offline frontend tests (2/4)",
+        "runner_id": 0
+      }
+    ],
+    "canonicalQueuedJobs": [
+      {
+        "id": 133295645942,
+        "name": "Fast feedback",
+        "runner_id": 0
+      },
+      {
+        "id": 133295646965,
+        "name": "Full qualification",
+        "runner_id": 0
+      }
+    ],
+    "queueIsPass": false,
+    "skippedIsPass": false,
+    "oldHeadEvidenceTransferred": false,
+    "wholePrQualified": false,
+    "releaseQualified": false,
+    "primaryAdvanceAuthorizedByThisReview": false,
+    "observedAtByCohort": {
+      "packaged": "2026-11-16T13:19:15Z",
+      "hostEmulated": "2026-11-16T13:21:38Z",
+      "canonical": "2026-11-16T13:21:38Z"
+    }
+  },
+  "mutationStatement": "Read-only GitHub raw/source/job audit plus this inert JSON artifact only. No source/test/workflow/ref edits, new executions, reruns, cancellations or real Claude/Codex invocation by this reviewer."
+}
