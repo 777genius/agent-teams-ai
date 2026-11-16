@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "kind": "Cross Close exact GREEN binding docs-only publication manifest",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "parent": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+  "parentTree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+  "files": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-independent-publication-readback-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66",
+      "bytes": 31670,
+      "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-green-binding-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "020f6efa5dce4a1a5fe269836136ce554d76792c",
+      "bytes": 1800456,
+      "sha256": "5a37cf5a6bff3ca5da30f7813da3d73f75852f6c7ab670dd234599f4b9a6c2e2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-green-binding-guard-r2-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1261b8cf5a840c9ed6587e71e9bf6f638732e28c",
+      "bytes": 164607,
+      "sha256": "c14dc42e3796c80a819d8a8dde4341acd41cd9d8669bb20ae1e4a9b21088b758"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-green-binding-parity-r2-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fc86450c86f02117b9d8e180b1b35293ebea384e",
+      "bytes": 152607,
+      "sha256": "9696a5215de4076afabe21f348f2241aa373ce82d00526f12af6df5ce419fe7f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-green-binding-root-composition-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d2349cc4b4ae8ee8c2eae5be6bd29c8c06088285",
+      "bytes": 10341,
+      "sha256": "afcdb5095c5d3d7571f06549f8a0b24337fb66c781178f56e003f4e65ba3f4b9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-green-binding-reviewed-outcome-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cf469167277d756d7b242c855892712d94003f61",
+      "bytes": 8831,
+      "sha256": "bfcf096097279fd82bf1248c66d1909a79c0c3d8e2ea13f59d935f5f52ccbfe1"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d75d90e41b98e2ffca9e348b1154e14762e2ef7e",
+      "bytes": 2518897,
+      "sha256": "53c47d72837fed16c3992ad31e1d58364dabffcc4684261e424f98c746cccaa0",
+      "beforeSha": "a040f883eae48d28ecf996ceb701a0253170014c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e7e18f393bfac94a3f0430477b2b60d9452ba4f9",
+      "bytes": 30908,
+      "sha256": "9f088a88c8514c5df440322cc7fb0aed06d39321b815593f816cedf00ff4bf5f",
+      "beforeSha": "78a9dd3a2100553580571154672eec57993ab48c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8fa85ac35f4851e049ab4c119f83a6967257f181",
+      "bytes": 60982,
+      "sha256": "ff26175cff86af38fc667f50c48f4a2c1a3a15ffa1ad4f8fc9551bcaa3da03cb",
+      "beforeSha": "c9978c0453e019872dbc1fb56f13c598b8f5ce15"
+    }
+  ],
+  "manifestDoesNotListItself": true,
+  "expectedTreeLeaves": 11731,
+  "sourceNonDocLeaves": 8798,
+  "sourceChanges": 0,
+  "workflowLeaves": 42,
+  "workflowChanges": 0,
+  "sourceRootUnchangedFrom": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+  "planAppend": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "bytes": 2833,
+    "sha256": "28295f24c7ffa615f4fa060adbf7d8623a3d7a598c1ee524ab4436212c2943a7",
+    "gitBlob": "04679d42b6702c21e01934e8571c99e6b6b2482a",
+    "completeParentPrefixRequired": true
+  },
+  "statusAppend": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+    "bytes": 1110,
+    "sha256": "8a9cdfe8c4fdb8b6ad149d86ea61091b46bd5031fec03a207ba5ad52b93408c3",
+    "gitBlob": "b05f9662a9e8f77ccbbaa1d5a56faa288c1cd5c1",
+    "completeParentPrefixRequired": true
+  },
+  "actualLocalBindingStaging": false,
+  "actualLocalProducerApplication": false,
+  "actualGreenExecutions": 0,
+  "remainingGates": [
+    "Complete exact e6a776 source publication readback is accepted by root and independent42db",
+    "Exact final GREEN binding full independent R2 and immediate-push publication with complete actual readback before local binding staging",
+    "One source-and-supervisor-metadata-only producer materialization must fully verify current8798 source/head/tree/index/tools/pnpm/env/controls and captured metadata sessions; runtime deps/compiled/providers/cache explicitly UNINSPECTED/null preservation",
+    "Independent full actual metadata materialization and separately observed outer0 acceptance beforeGREEN",
+    "BeforeGREEN and before the validation package, separately perform the unchanged complete fresh current runtime preflight; failure spends that invocation with primaryUNREACHED",
+    "Only independently accepted actual133GREEN full source/input/lifetime/outer0 admits the one ordered3-command validation package"
+  ]
+}

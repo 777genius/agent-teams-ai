@@ -1,0 +1,265 @@
+{
+  "schemaVersion": 1,
+  "kind": "Root complete exact GREEN binding acceptance before docs-only publication",
+  "accepted": true,
+  "at": "2026-11-16 17:58:25 UTC",
+  "binding": {
+    "bytes": 1800456,
+    "sha256": "5a37cf5a6bff3ca5da30f7813da3d73f75852f6c7ab670dd234599f4b9a6c2e2",
+    "gitBlob": "020f6efa5dce4a1a5fe269836136ce554d76792c"
+  },
+  "runner": {
+    "bytes": 48838,
+    "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+    "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+  },
+  "publishedSource": {
+    "commit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+    "tree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+    "qualification": "Exact published two-source helper3c7b/driver4700 under8abeR1, unchanged0aec whole133 test and fixeded57/cf93. Local C5 index plus five exact source overlays; remote documentation is not claimed locally materialized."
+  },
+  "sourceActualReadback": {
+    "bytes": 31670,
+    "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+    "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+  },
+  "composition": {
+    "accepted": true,
+    "kind": "Root complete GREEN-binding composition audit; prospective until independentR2/publication",
+    "binding": {
+      "bytes": 1800456,
+      "sha256": "5a37cf5a6bff3ca5da30f7813da3d73f75852f6c7ab670dd234599f4b9a6c2e2",
+      "gitBlob": "020f6efa5dce4a1a5fe269836136ce554d76792c"
+    },
+    "runner": {
+      "bytes": 48838,
+      "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+      "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+    },
+    "sourcePublished": {
+      "commit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+      "tree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+      "independent": {
+        "bytes": 31670,
+        "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+        "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+      }
+    },
+    "completeEmbeddedReviewBodies": [
+      {
+        "role": "freshBootstrapGuardActualReview",
+        "bytes": 32514,
+        "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+        "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075"
+      },
+      {
+        "role": "freshSdkIndependentReview",
+        "bytes": 84719,
+        "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+        "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6"
+      },
+      {
+        "role": "freshMcpIndependentReview",
+        "bytes": 155439,
+        "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+        "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239"
+      },
+      {
+        "role": "crossR1ActualPublicationReadback",
+        "bytes": 24775,
+        "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+        "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+      },
+      {
+        "role": "crossTestGuardR2",
+        "bytes": 35700,
+        "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+        "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+      },
+      {
+        "role": "crossTestParityR2",
+        "bytes": 98112,
+        "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+        "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+      },
+      {
+        "role": "crossTestActualPublicationReadback",
+        "bytes": 56894,
+        "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+        "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+      },
+      {
+        "role": "crossActualRedGuard",
+        "bytes": 140038,
+        "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+        "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+      },
+      {
+        "role": "crossActualRedPrimarySemantic",
+        "bytes": 190694,
+        "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+        "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+      },
+      {
+        "role": "crossActualRedSemanticClosure",
+        "bytes": 86249,
+        "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+        "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+      },
+      {
+        "role": "crossProducerGuardR2",
+        "bytes": 121044,
+        "sha256": "438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339",
+        "gitBlob": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637"
+      },
+      {
+        "role": "crossProducerParityR2",
+        "bytes": 109607,
+        "sha256": "da402e2bc50d090cc5b2a57ff1eac0dc5d6767b77876d97f301937db7197536b",
+        "gitBlob": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f"
+      },
+      {
+        "role": "crossProducerActualPublicationReadback",
+        "bytes": 31670,
+        "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+        "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+      }
+    ],
+    "completeReviewBytes": 1167455,
+    "inputFiles": 8,
+    "allOriginalInputCommandEnvironmentTimingMaterializationScopeExact": true,
+    "beforeOverlays": 3,
+    "afterOverlays": 5,
+    "sourceRows": 8798,
+    "allRowsMatchPublishedNonDocs": true,
+    "onlyTwoChangedRows": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      }
+    ],
+    "unchangedOtherSourceRows": 8796,
+    "workflows42Exact": true,
+    "wholeTest0aecUnchanged": true,
+    "actualRED118P15FJoined": true,
+    "expectedGreenSource": {
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+    },
+    "actualPostSource": null,
+    "greenExecuted": false,
+    "sourceApplied": false,
+    "limits": "This is a static composition/R2 candidate, not actual GREEN or metadata source application."
+  },
+  "fullEmbeddedReviewBodies": [
+    {
+      "role": "freshBootstrapGuardActualReview",
+      "bytes": 32514,
+      "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+      "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075"
+    },
+    {
+      "role": "freshSdkIndependentReview",
+      "bytes": 84719,
+      "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+      "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6"
+    },
+    {
+      "role": "freshMcpIndependentReview",
+      "bytes": 155439,
+      "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+      "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239"
+    },
+    {
+      "role": "crossR1ActualPublicationReadback",
+      "bytes": 24775,
+      "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+      "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+    },
+    {
+      "role": "crossTestGuardR2",
+      "bytes": 35700,
+      "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+      "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+    },
+    {
+      "role": "crossTestParityR2",
+      "bytes": 98112,
+      "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+      "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+    },
+    {
+      "role": "crossTestActualPublicationReadback",
+      "bytes": 56894,
+      "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+      "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+    },
+    {
+      "role": "crossActualRedGuard",
+      "bytes": 140038,
+      "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+      "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+    },
+    {
+      "role": "crossActualRedPrimarySemantic",
+      "bytes": 190694,
+      "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+      "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+    },
+    {
+      "role": "crossActualRedSemanticClosure",
+      "bytes": 86249,
+      "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+      "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+    },
+    {
+      "role": "crossProducerGuardR2",
+      "bytes": 121044,
+      "sha256": "438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339",
+      "gitBlob": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637"
+    },
+    {
+      "role": "crossProducerParityR2",
+      "bytes": 109607,
+      "sha256": "da402e2bc50d090cc5b2a57ff1eac0dc5d6767b77876d97f301937db7197536b",
+      "gitBlob": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f"
+    },
+    {
+      "role": "crossProducerActualPublicationReadback",
+      "bytes": 31670,
+      "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+      "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+    }
+  ],
+  "independentR2": {
+    "guard": {
+      "bytes": 164607,
+      "sha256": "c14dc42e3796c80a819d8a8dde4341acd41cd9d8669bb20ae1e4a9b21088b758",
+      "gitBlob": "1261b8cf5a840c9ed6587e71e9bf6f638732e28c"
+    },
+    "parity": {
+      "bytes": 152607,
+      "sha256": "9696a5215de4076afabe21f348f2241aa373ce82d00526f12af6df5ce419fe7f",
+      "gitBlob": "fc86450c86f02117b9d8e180b1b35293ebea384e"
+    },
+    "bothFullBodiesReadAndRehashed": true,
+    "bothAcceptedExactBinding": true,
+    "blockers": []
+  },
+  "currentBranchLease": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+  "localStaging": false,
+  "localSourceApplication": false,
+  "actualGreenExecutions": 0,
+  "scope": "Only exact GREEN binding publication. Complete actual publication readback precedes local binding staging; metadata-only materialization and independently accepted actual outer0 precede runtime GREEN. No RED/old-guard replay."
+}

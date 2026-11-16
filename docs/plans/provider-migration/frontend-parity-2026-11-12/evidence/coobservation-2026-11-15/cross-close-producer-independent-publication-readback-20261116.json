@@ -1,0 +1,864 @@
+{
+  "schemaVersion": 1,
+  "kind": "complete-independent-actual-Cross-producer-publication-readback",
+  "reviewer": "/root/pr_graph",
+  "repository": "777genius/agent-teams-ai",
+  "reviewedDate": "2026-11-16",
+  "verdict": "COMPLETE_ACCEPTED_ACTUAL_PUBLICATION",
+  "acceptanceSentBeforeBareRecord": true,
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "publication": {
+    "accepted": true,
+    "commit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+    "tree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+    "parent": "a5b9483180434214fa3946a56d44ef67ef48f6ae",
+    "files": 29,
+    "bytes": 8127488,
+    "sourceChanges": 2,
+    "unchangedOtherNonDocs": 8796,
+    "workflowLeaves": 42,
+    "planPrefix": true,
+    "statusPrefix": true,
+    "catalog27Preserved": true,
+    "greenNotExecuted": true,
+    "scope": "Actual publication only; next separate GREEN binding remains required."
+  },
+  "manifest": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-publication-manifest-20261116.json",
+    "bytes": 13621,
+    "sha256": "7d3b05403bb4a6b25c86aa850ae6bbbd2080c1ae1e7031d6e8d578f3175d6f28",
+    "gitBlob": "8eac4c6cfe9f96775b97a3bd7f99610c3a02a003",
+    "listedOtherFiles": 28,
+    "doesNotListItself": true
+  },
+  "method": {
+    "actualReads": [
+      "Fresh branch ref before review and again at completion",
+      "Actual immutable commit and sole-parent commit",
+      "Complete nonrecursive current root54",
+      "Complete nontruncated current docs subtree3332entries/2926leaves",
+      "Complete nontruncated current scripts subtree634entries/600leaves",
+      "All29 changed blob bodies, including manifest, fetched entirely and rehashed",
+      "Full original parent catalog fetched; full previously verified parent Plan/status bodies reused for exact prefix comparison"
+    ],
+    "immutableUnchangedSubtreeProof": "Current and independently verified a5 roots have identical52 entries other than docs/scripts, including type/mode/SHA. Reuse complete verified a5 descendants for those immutable entries. Replace all scripts/docs descendants with freshly complete current subtrees. This reconstructs the whole tree without truncated compare or head/tail inference.",
+    "parentRoot": "ab1b94c6cd1fa02a75b7a19c18148ac364920e25",
+    "parentDocs": "44323d594bf3f41c80ebfb127d0354f75f971864",
+    "currentRoot": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+    "currentDocs": "df0f75d50380a3e0796fbc04d7c2e7f27337acf4",
+    "currentScripts": "24b93023dde0aa5f543547ddf3289527c5e7689c",
+    "priorCompleteSourceInventoryReview": "4bcdca3a01d5ccb8027254fdbbca61c8bb8f8dc7",
+    "checks": "Every listed path/mode/type/Git blob/UTF8 byte count equals the actual tree and the full fetched body. SHA256 is recalculated from complete UTF8; Git SHA1 uses exact blob framing. No inner accepted RED/bootstrap/source review is re-executed or requalified.",
+    "apiBodies": [
+      {
+        "role": "ref",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/ref/heads/fix/frontend-parity-coobservation-c714-20261115",
+        "fullReturnedUtf8Bytes": 492,
+        "returnedBodySha256": "d3410c4ab4e3a9cb0d740f17dba41d14c2903a5100f2f80392c41051634e5814"
+      },
+      {
+        "role": "commit",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+        "fullReturnedUtf8Bytes": 1172,
+        "returnedBodySha256": "5d6259f58725e9aa5e3e3565ef2f250ab83b30bd005d8b6b82692ce9813b26eb"
+      },
+      {
+        "role": "parent",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/a5b9483180434214fa3946a56d44ef67ef48f6ae",
+        "fullReturnedUtf8Bytes": 1180,
+        "returnedBodySha256": "8783ec75c963a3f737bc67810676c22bb385b9f9df7c7a2469d70f85fabf90f4"
+      },
+      {
+        "role": "root",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+        "fullReturnedUtf8Bytes": 12410,
+        "returnedBodySha256": "cf7c22c1fa3ce90cf960809ff19e224d7d2c2ccbf3998dd0f99294c576a9001e"
+      },
+      {
+        "role": "docs",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/df0f75d50380a3e0796fbc04d7c2e7f27337acf4?recursive=1",
+        "fullReturnedUtf8Bytes": 1132740,
+        "returnedBodySha256": "53b935170aeaed4f41b5c62747101de95b77aa1a67e80ebb4cba48528050a87f"
+      },
+      {
+        "role": "scripts",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/24b93023dde0aa5f543547ddf3289527c5e7689c?recursive=1",
+        "fullReturnedUtf8Bytes": 162740,
+        "returnedBodySha256": "395231ff116121a3eb9bdc068fa9591a8d4ee358e6c438712703ded1523a2091"
+      },
+      {
+        "role": "finalRef",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/ref/heads/fix/frontend-parity-coobservation-c714-20261115",
+        "fullReturnedUtf8Bytes": 492,
+        "returnedBodySha256": "d3410c4ab4e3a9cb0d740f17dba41d14c2903a5100f2f80392c41051634e5814"
+      }
+    ]
+  },
+  "treeProof": {
+    "parentLeaves": 11700,
+    "currentLeaves": 11724,
+    "rootEntries": 54,
+    "unchangedRootEntries": 52,
+    "docsEntries": 3332,
+    "docsLeaves": 2926,
+    "scriptsEntries": 634,
+    "scriptsLeaves": 600,
+    "changed": 29,
+    "added": 24,
+    "modified": 5,
+    "deleted": 0,
+    "modeChanges": 0,
+    "sourceNonDocs": 8798,
+    "unchangedOtherNonDocs": 8796,
+    "workflowLeaves": 42,
+    "sourceChanges": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "before": "3f1ce46fce847a861850ef874017f84227c62b0c",
+        "after": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "before": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+        "after": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      }
+    ],
+    "allManifestPathIdentityAndSizesMatch": true
+  },
+  "fullTreeLedgerDigest": {
+    "serialization": "JSON.stringify(sorted leaf rows of path/mode/type/sha/bytes)+LF; sort uses path.localeCompare",
+    "rows": 11724,
+    "sha256": "e5a675bd96811979deff05d637333fdfbd7bcfaeb9745fc95de9011c7694a2a4"
+  },
+  "fullRootEntries": [
+    {
+      "path": ".coderabbit.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cfdf47bf5d5759599f5383222ebfb8a385f09668"
+    },
+    {
+      "path": ".dockerignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c2d844c25fc61f06640f362de761e3f8d310c3b5"
+    },
+    {
+      "path": ".gitattributes",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "924c7377f9ae4c068d106e74e17e964297d61e6e"
+    },
+    {
+      "path": ".github",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "d95091ab0edb488d6e418ffa789d0f07c447ecda"
+    },
+    {
+      "path": ".gitignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "777569b186effad3a2bcbcb09cd770180c8c5e2c"
+    },
+    {
+      "path": ".husky",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "665211222b358904b557bd356a129f1ff938ca7e"
+    },
+    {
+      "path": ".mcp.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "da61a538a43375404483bd1f810b6377da5cc72f"
+    },
+    {
+      "path": ".node-version",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+    },
+    {
+      "path": ".npmrc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad"
+    },
+    {
+      "path": ".nvmrc",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+    },
+    {
+      "path": ".oxfmtrc.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b003c531d6e548a5939ceb0694f15296c92e5060"
+    },
+    {
+      "path": ".oxlintrc.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cc0d2441ebfedc93354e081b0cf61b6a2109dcc9"
+    },
+    {
+      "path": ".prettierignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2"
+    },
+    {
+      "path": ".prettierrc.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c96ec48e897a4ec478beb34716723e13d29068ed"
+    },
+    {
+      "path": "AGENTS.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0c8a4a63abf24c1510c934990a025ebc99c9e435"
+    },
+    {
+      "path": "AGENT_CRITICAL_GUARDRAILS.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a9a087fa5216ede29c5900b3a10638fc1ec3e2f3"
+    },
+    {
+      "path": "CLAUDE.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "88df8ee5ef8d951139b2a8eb9b518996babbcb3e"
+    },
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "929839bc0872222df278f9e53f15e1268ff4e0ec"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "dbf976c3418f0dee7ef84e4458e49af39110bdd5"
+    },
+    {
+      "path": "agent-teams-controller",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "1ef9482608cbaa5b7f28dc42812820cba96b953e"
+    },
+    {
+      "path": "bin",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "e6b29ba2f2fda222d5831b3c672e88b72f5f7383"
+    },
+    {
+      "path": "docker",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "7e4007a72bc3fdba8d94e8f5eebc3586f110c16e"
+    },
+    {
+      "path": "docs",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "df0f75d50380a3e0796fbc04d7c2e7f27337acf4"
+    },
+    {
+      "path": "electron.vite.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9045260aab02891055e324607b83e1bb39c7110a"
+    },
+    {
+      "path": "eslint.config.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c"
+    },
+    {
+      "path": "eslint.fast.config.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb"
+    },
+    {
+      "path": "eslint.feature-overrides.mts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9c6450d54b87ce33f7d799f900226c316e367937"
+    },
+    {
+      "path": "eslint.gateway-boundaries.mts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4975b20df1353a9687fd479ab043beb025e967ba"
+    },
+    {
+      "path": "i18next.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5"
+    },
+    {
+      "path": "landing",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "193513230f45a135704f1b34dbfa0792e6823e26"
+    },
+    {
+      "path": "legacy-host.lock.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6916f66ea9e4a7e8299c3ffd328e226d009ebd79"
+    },
+    {
+      "path": "managed-git.lock.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2099dfe6b1e1c0ff0d64f45d6c8565b498af4333"
+    },
+    {
+      "path": "mcp-server",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5"
+    },
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+    },
+    {
+      "path": "packages",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "3934729cd387940917b79992f2579bf6269d157c"
+    },
+    {
+      "path": "patches",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "8eb2e6aaa216638cbe6c072d79802733d43f500d"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9d2ce04a1bbf743e49403d2520873134b08b68de"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a049a862742a85ba77faafea329fc221b3e500e4"
+    },
+    {
+      "path": "postcss.config.cjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "85f717cc09ecb1153d6a4c0962284e09e4b8d6a9"
+    },
+    {
+      "path": "resources",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "69acacf60db94f62dbe4a99ed308aab59310e905"
+    },
+    {
+      "path": "runtime.lock.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1757d79786da78e739a322e8bba81cd3dc88dcaa"
+    },
+    {
+      "path": "scripts",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "24b93023dde0aa5f543547ddf3289527c5e7689c"
+    },
+    {
+      "path": "src",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "ed69e62618e57d88c2e5237f98074a1ff8853e6f"
+    },
+    {
+      "path": "tailwind.config.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a52ebb338468d8fcef92837aa27aebd48c7206d7"
+    },
+    {
+      "path": "terminal-platform.lock.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "039a8a2a7b959b44bf3d483e37335fdc6774e8cb"
+    },
+    {
+      "path": "test",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "c771c2bb9ec6d147d4974361cb5730897f7653d6"
+    },
+    {
+      "path": "tools",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "9356c03e96405eb578158f06d6fdcbc89d105bd6"
+    },
+    {
+      "path": "tsconfig.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "568952f5025a88c16b0568c7279d8e85a4288b43"
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "538fdfe23d7aa6bac6f18a483d5d364aef644a39"
+    },
+    {
+      "path": "tsconfig.node.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c94c942012bef62695dc3b22b1a2b7229d047f59"
+    },
+    {
+      "path": "vendor",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f"
+    },
+    {
+      "path": "vitest.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c57faa53a1bb869b4379bf888194806ef7e228e3"
+    },
+    {
+      "path": "vitest.critical.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c32070bf9e1724892aa8cb695152e8f49f1293f0"
+    },
+    {
+      "path": "vitest.opencode-proof.config.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "274de1c0955ad4f98d220857a94576ce6a50864b"
+    }
+  ],
+  "changedBodyCensus": {
+    "files": 29,
+    "bytes": 8127488,
+    "everyFullBodyReadAndGitSha256Verified": true
+  },
+  "changedBodies": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2516064,
+      "sha256": "11a524b3751f1723b619901f2f8def923ca69dc9fc6a0937fc71491883386591",
+      "gitBlob": "a040f883eae48d28ecf996ceb701a0253170014c",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": "db774240d2bd3233b46fef361591a00a2c668464"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 29798,
+      "sha256": "c68e85d8a2dd459588101cdd0cf777eefa38c4009123c1ed38b9a42283548d87",
+      "gitBlob": "78a9dd3a2100553580571154672eec57993ab48c",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": "eef4ea5f92e8715cc2c12ab12a1ea5b51115f203"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-guard-r2-20261116.json",
+      "bytes": 121044,
+      "sha256": "438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339",
+      "gitBlob": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-parity-r2-20261116.json",
+      "bytes": 109607,
+      "sha256": "da402e2bc50d090cc5b2a57ff1eac0dc5d6767b77876d97f301937db7197536b",
+      "gitBlob": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-publication-manifest-20261116.json",
+      "bytes": 13621,
+      "sha256": "7d3b05403bb4a6b25c86aa850ae6bbbd2080c1ae1e7031d6e8d578f3175d6f28",
+      "gitBlob": "8eac4c6cfe9f96775b97a3bd7f99610c3a02a003",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-reviewed-outcome-20261116.json",
+      "bytes": 16491,
+      "sha256": "058e17a76d4540dfdbcd49f891a8b21c12ce176a6c549dbe513a9faddfa0152a",
+      "gitBlob": "ab664ba6eef5de28c83154955bebec0c9338b7a7",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-root-inverse-review-20261116.json",
+      "bytes": 8119,
+      "sha256": "eec8303692c8ba0f019939580e76fc77ab22cb764f852b95bafe0a2699343f05",
+      "gitBlob": "6cf280cdf07fe299eb452a6eb61bba3dd53114a4",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-actual-20261116.json",
+      "bytes": 185267,
+      "sha256": "2b8eb5338ddeaa291d6747b07dcaf31168b9b1fc3d576b7ea487823333aa02f7",
+      "gitBlob": "7db3b53fab91d32d18c8dd95b34242e515b50634",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-controls-independent-publication-readback-20261116.json",
+      "bytes": 119995,
+      "sha256": "38c611f8b098f23435165cc2bcbb77ba705ec944ead119d2672702c3e2726da8",
+      "gitBlob": "70d62d67ac2b26830075190948bf47983b57a47a",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-independent-lifetime-review-20261116.json",
+      "bytes": 140038,
+      "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+      "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-independent-semantic-closure-20261116.json",
+      "bytes": 86249,
+      "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+      "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-independent-semantic-review-20261116.json",
+      "bytes": 190694,
+      "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+      "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-output-20261116.log",
+      "bytes": 37314,
+      "sha256": "0ccd67564fbfaace5061e59fc0e1b29632294746aef13ae2e38131659db0e116",
+      "gitBlob": "d38f2ae2851555b35970a892ce38674221147437",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-primary-receipt-20261116.json",
+      "bytes": 883,
+      "sha256": "740b006d5edd0141186145f6d551cbe3940d024a54b88d5456619f8bfac415b3",
+      "gitBlob": "62abf6c38e2f22cdf38987b431b53ffae096a667",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-receipt-20261116.json",
+      "bytes": 33946,
+      "sha256": "e86f3ff0ed102ec68ccb2fbe69f279247bd0eb56eaba50c8e96921b3f2619772",
+      "gitBlob": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-source-before-and-after-20261116.json",
+      "bytes": 2478516,
+      "sha256": "006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f",
+      "gitBlob": "77516ddaecaa6d0f485825e250a8106db599f781",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-materialization-actual-20261116.json",
+      "bytes": 127003,
+      "sha256": "197ffc6245a2af0f0727c6ad629a731177bb8f0eaddbee1aea65b29ec404e221",
+      "gitBlob": "5766c12541ed5cf6cfb77ff92539fba5b68869d3",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-materialization-independent-review-20261116.json",
+      "bytes": 79583,
+      "sha256": "5a2decfc6c4f5e55ecf7ea3cb19ea91fd1b3249a8770bb57c5854f3663b43066",
+      "gitBlob": "c562c5ab0e2e3e8df58ff9201a89ff2c7152dffa",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-materialization-receipt-20261116.json",
+      "bytes": 25616,
+      "sha256": "1412099d6a34b90fb9b9d84ec383781b14a0de6d76b7e59043b4b09fff53a7b7",
+      "gitBlob": "20892f422d59196165a75fdac37a8e668e4e561a",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-a07-full-integration-assessment-20261116.json",
+      "bytes": 352944,
+      "sha256": "2804e29cfaa4f1c32ef5abf4ca88339e573421f0f75bf98c2a0b4c6248c5aeea",
+      "gitBlob": "4bcdca3a01d5ccb8027254fdbbca61c8bb8f8dc7",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-a07-full-ui-133-69-census-20261116.json",
+      "bytes": 276318,
+      "sha256": "7cbdf8e82eb9fade2265ed1bfeec65e21f3ec44104c9a152fb2b7349acdb0bd4",
+      "gitBlob": "9637374969dea23c0fdc9ee2f5cc305f110049d1",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-c930-provider-pair-original-byte-comparison-20261116.json",
+      "bytes": 457173,
+      "sha256": "e805ba019ffdcb7ee0899e909a256fdf55afb78fbf5e92926ddc9ee6fd4d7e87",
+      "gitBlob": "6e1073e124c05331e582b27582f25b4e6d0c1bd8",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-integration-priorities-and-c930-byte-review-20261116.json",
+      "bytes": 65513,
+      "sha256": "5f00811d3916986548389aca86b29653495284fce67b1603d197e2913dd47a1b",
+      "gitBlob": "209ae3a0c2e4b5c538cc6e6e79889fb85a174417",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-windows-arm-final-cleanup-independent-review-20261116.json",
+      "bytes": 177963,
+      "sha256": "8c6db085d88bd3c4b9bf7b7bf707ceb14a47d649d5163b19925c9dba0239f8c5",
+      "gitBlob": "1ed8a09252170fcfc2b31525d4a7061f7d7de95a",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-windows-arm-final-cleanup-receipt-20261116.json",
+      "bytes": 22790,
+      "sha256": "6f34d07150d904bfd7554011d8d11ac22dcb01ecf9c8553bce1a32e26b2d9f3a",
+      "gitBlob": "3aeccb43654adadf90c38a06e4ffeaa650e63321",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-windows-arm-original-cleanup-artifact-20261116.json",
+      "bytes": 355085,
+      "sha256": "cef51689f252ba3a097002ed5fd760f0ff970e277757dfa6d93b16f3c70db22c",
+      "gitBlob": "d41b495d03866d9611b449dd159bd836189c7021",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 55137,
+      "sha256": "b933ded4be08a78374e776600561208079d6776a9a40fa6963951d983ec33530",
+      "gitBlob": "c9978c0453e019872dbc1fb56f13c598b8f5ce15",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": "7057b260ea9c5216f7b533130dd4d7adea22da84"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "bytes": 36260,
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": "3f1ce46fce847a861850ef874017f84227c62b0c"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "bytes": 8457,
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+      "fullReadback": true,
+      "mode": "100644",
+      "type": "blob",
+      "beforeSha": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+    }
+  ],
+  "prefixes": [
+    {
+      "key": "plan",
+      "prefixComplete": true,
+      "prefixBytes": 2512476,
+      "appendBytes": 3588,
+      "appendSha256": "b284a66b8745aefaa1fb9f4ed1a1bad7a1562d3e60eb438e66666ad41a5875ec"
+    },
+    {
+      "key": "status",
+      "prefixComplete": true,
+      "prefixBytes": 28687,
+      "appendBytes": 1111,
+      "appendSha256": "a373553859f34c0152dd5e2187f91815213dfd4c66ecbac44cce13a5e109b04d"
+    }
+  ],
+  "historicalCatalog": {
+    "before": "7057b260ea9c5216f7b533130dd4d7adea22da84",
+    "after": "c9978c0453e019872dbc1fb56f13c598b8f5ce15",
+    "priorFullBody": {
+      "bytes": 47235,
+      "sha256": "f15f02cc7ec4de70fbe0b347993f87629a02898e31c953a3e8c04077661723df",
+      "gitBlob": "7057b260ea9c5216f7b533130dd4d7adea22da84"
+    },
+    "changedKeys": [
+      "currentCrossCloseStage",
+      "priorCrossCloseStageAtRedControlsPublication"
+    ],
+    "removedKeys": [],
+    "totalsIdentical": true,
+    "bundlesIdentical": true,
+    "originalCiFinalIdentical": true,
+    "priorCrossStagePreserved": true,
+    "unchangedTotals": {
+      "bundles": 27,
+      "outerBytes": 17894693,
+      "payloadInstances": 219,
+      "payloadBytes": 15911913
+    }
+  },
+  "selectedSource": {
+    "helper": {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "before": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+      "after": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+      "bytes": 8457,
+      "physicalLines": 123,
+      "cap": 200
+    },
+    "driver": {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "before": "3f1ce46fce847a861850ef874017f84227c62b0c",
+      "after": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+      "bytes": 36260,
+      "physicalLines": 799,
+      "cap": 800
+    },
+    "acceptedSourceR2": {
+      "guard": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637",
+      "parity": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f",
+      "rootInverse": "6cf280cdf07fe299eb452a6eb61bba3dd53114a4"
+    },
+    "protectedExact": {
+      "test133": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+      "controls": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "selection": "cf93da72a198dac636658e512093eef7828b5927",
+      "otherNonDocs": 8796,
+      "allWorkflowDefinitions": 42
+    }
+  },
+  "claimsReadAndQualified": {
+    "actualRed": {
+      "tests": 133,
+      "pass": 118,
+      "designatedSemanticFail": 15,
+      "skip": 0,
+      "cancel": 0,
+      "todo": 0,
+      "allPrior97Pass": true,
+      "targetVariants": {
+        "total": 13,
+        "reached": 8,
+        "unreached": 5
+      },
+      "primaryExit": 1,
+      "outerExit": 0,
+      "scope": "Published exact original RED with separately accepted semantic and lifetime reviews. This publication readback does not execute/repeat the test or independently repeat the accepted67-file inner reconstruction."
+    },
+    "sourceOnlyMaterialization": "Prior5766/c562 retained UNINSPECTED/null runtime-preservation scope; not promoted to behavioral PASS.",
+    "producerR2": "Exact two source proposals and their full accepted reviews are now published. Static133 prediction remains unexecuted.",
+    "applicationAndGreen": "Published outcome/catalog/Plan/status explicitly say no local producer application, no GREEN binding authored at this checkpoint and no GREEN execution. These are checkpoint claims, not a child local runtime inspection.",
+    "windowsCleanup": "Later direct original ARM receipt closes7/7 post-wait stopped/drained/released/handle-absence facts and cleanuptrue. Original15s readiness remains INCOMPLETE; old pre-wait false flags were not leaks.",
+    "incoming": "Pinned a5-versus-a07 inventory81 and133/69 census158 union are historical prospective evidence. They do not adopt c930 or incoming source, and their81 count is not transferred to the new Cross source.",
+    "open": "Canonical typing/build, fresh own GUI/platform, Windows15s/10s, strictP09, laterP11/genuineM16 and wholeE2E remain open.",
+    "gates": "This acceptance closes only actual publication. Separate exact GREEN data binding R2/publication/readback is required before any root two-file application and subsequent whole133 GREEN/ordered validation."
+  },
+  "actions": {
+    "githubReadOnly": true,
+    "bareReviewRetentionOnly": true,
+    "localExecution": false,
+    "tests": false,
+    "sourceMutation": false,
+    "refs": false,
+    "prs": false,
+    "ciQueries": false,
+    "ciActions": false,
+    "archiveDownload": false
+  }
+}

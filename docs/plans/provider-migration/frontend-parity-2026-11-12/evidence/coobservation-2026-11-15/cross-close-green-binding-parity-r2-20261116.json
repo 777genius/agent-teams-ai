@@ -1,0 +1,4040 @@
+{
+  "schemaVersion": 1,
+  "kind": "complete-independent-Cross133-GREEN-binding-source-composition-R2",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/parity_audit",
+  "reviewedAtUtc": "2026-11-16 17:55:30 UTC",
+  "accepted": true,
+  "verdict": "ACCEPTED_EXACT_GREEN_BINDING_FOR_PUBLICATION_ONLY",
+  "acceptanceSentToRootBeforeBareRetention": true,
+  "blockers": [],
+  "subject": {
+    "binding": {
+      "bytes": 1800456,
+      "sha256": "5a37cf5a6bff3ca5da30f7813da3d73f75852f6c7ab670dd234599f4b9a6c2e2",
+      "gitBlob": "020f6efa5dce4a1a5fe269836136ce554d76792c"
+    },
+    "runner": {
+      "bytes": 48838,
+      "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+      "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+    },
+    "phase": "green",
+    "bindingLocalPath": "/tmp/c714-cross-close-review/binding-green.json",
+    "runnerLocalPath": "/tmp/c714-cross-close-review/runner.py",
+    "publishedSubject": {
+      "commit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+      "tree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+      "qualification": "Exact published two-source helper3c7b/driver4700 under8abeR1, unchanged0aec whole133 test and fixeded57/cf93. Local C5 index plus five exact source overlays; remote documentation is not claimed locally materialized."
+    }
+  },
+  "scope": "Complete exact binding data, all13 whole embedded review identities, fresh immutable publication/source joins, complete prospective8798-row composition, unchanged inputs/commands/test/import boundary and actualRED versus staticGREEN separation. No staging, source application, test, target source evaluation or CI action.",
+  "prerequisites": {
+    "publishedR1": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+    "crossR1Identity": {
+      "bytes": 23142,
+      "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+      "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+    },
+    "fullR1BodyByteExactToPriorAccepted8abe": true,
+    "publishedRecoveryR1": "7e6f32741ccdb470e7688cec9de9481fd05827a1",
+    "publishedTransportAmendment": "0042eec33e3bcf145de25db96f5fc7c5b026a1fe",
+    "actualSourcePublicationIndependentReview": {
+      "bytes": 31670,
+      "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+      "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+    },
+    "authorshipGate": "2026-11-16 17:47:21 UTC",
+    "actualRed": {
+      "identity": {
+        "bytes": 33946,
+        "sha256": "e86f3ff0ed102ec68ccb2fbe69f279247bd0eb56eaba50c8e96921b3f2619772",
+        "gitBlob": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a"
+      },
+      "independentReviewAccepted": true,
+      "observedOuterSupervisorExit": 0,
+      "actualOuterSession": 27541,
+      "expectedPrimaryExit": 1,
+      "raw": {
+        "bytes": 37314,
+        "sha256": "0ccd67564fbfaace5061e59fc0e1b29632294746aef13ae2e38131659db0e116",
+        "gitBlob": "d38f2ae2851555b35970a892ce38674221147437"
+      },
+      "primaryReceipt": {
+        "bytes": 883,
+        "sha256": "740b006d5edd0141186145f6d551cbe3940d024a54b88d5456619f8bfac415b3",
+        "gitBlob": "62abf6c38e2f22cdf38987b431b53ffae096a667"
+      },
+      "envelope": {
+        "bytes": 185267,
+        "sha256": "2b8eb5338ddeaa291d6747b07dcaf31168b9b1fc3d576b7ea487823333aa02f7",
+        "gitBlob": "7db3b53fab91d32d18c8dd95b34242e515b50634"
+      },
+      "guard": {
+        "bytes": 140038,
+        "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+        "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+      },
+      "semantic": {
+        "bytes": 190694,
+        "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+        "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+      },
+      "semanticClosure": {
+        "bytes": 86249,
+        "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+        "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+      },
+      "source": {
+        "bytes": 2478516,
+        "sha256": "006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f",
+        "gitBlob": "77516ddaecaa6d0f485825e250a8106db599f781"
+      },
+      "wholeTest": {
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      "wholeCases": 133,
+      "pass": 118,
+      "semanticFail": 15,
+      "old97AllPass": true,
+      "zeroSkipsCancellationsTodos": true,
+      "fullCurrentRuntimeInputsInspectedAndPreserved": true,
+      "noCleanupDebt": true,
+      "qualification": "Exact valid semanticRED remains15FAIL with5unreached target variants. No actualGREEN or blanketPASS is inferred."
+    }
+  },
+  "exactBindingDelta": {
+    "from": {
+      "bytes": 840295,
+      "sha256": "d8fd4d1e33f666f64a7e8512a63a92aedd27bf105fc248eaa13494599e468fc2",
+      "gitBlob": "cb12381b46948c807d443fc41581a9a48d18e051"
+    },
+    "to": {
+      "bytes": 1800456,
+      "sha256": "5a37cf5a6bff3ca5da30f7813da3d73f75852f6c7ab670dd234599f4b9a6c2e2",
+      "gitBlob": "020f6efa5dce4a1a5fe269836136ce554d76792c"
+    },
+    "equalKeys": [
+      "schemaVersion",
+      "publishedR1",
+      "publishedRecoveryR1",
+      "publishedTransportAmendment",
+      "runnerLocalPath",
+      "runnerIdentity",
+      "actualPublishedSubjectReadbackAccepted",
+      "inputFiles",
+      "commandVectors",
+      "timing",
+      "environment",
+      "crossR1Identity",
+      "crossR1Body",
+      "materializationReceiptScope"
+    ],
+    "changes": [
+      "kind",
+      "phase",
+      "bindingLocalPath",
+      "publishedSubject",
+      "actualPublishedSubjectReadbackEvidence",
+      "combinedInputImportAdmission",
+      "acceptedReviewBodies",
+      "beforeSourceOverlay",
+      "sourceOverlay",
+      "sourcePins",
+      "behavioralAttempts",
+      "reviewedTestCensus",
+      "executionScope",
+      "preimageSourcePins",
+      "materializePaths",
+      "acceptedSemanticRed",
+      "expectedSourceSnapshots",
+      "authorshipGate"
+    ],
+    "removed": [],
+    "removedKeys": [],
+    "oldSevenReviewRecordsWholeByteExact": true,
+    "inputFilesWholeExact": true,
+    "commandVectorsWholeExact": true,
+    "timingWholeExact": true,
+    "environmentWholeExact": true,
+    "materializationReceiptScopeWholeExact": true,
+    "runnerWholeByteIdentityUnchanged": true
+  },
+  "embeddedBodyClosure": {
+    "records": 13,
+    "totalUtf8Bytes": 1167455,
+    "allFullBodyBytesSha256AndGitFramingRecomputed": true,
+    "oldSevenExactlyEqualPriorAcceptedBinding": true,
+    "newSixExactlyEqualRetainedCompleteBodies": true,
+    "ledger": [
+      {
+        "role": "freshBootstrapGuardActualReview",
+        "bytes": 32514,
+        "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+        "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075",
+        "oldBodyExact": true,
+        "cachedOriginal": null,
+        "cachedOriginalExact": null
+      },
+      {
+        "role": "freshSdkIndependentReview",
+        "bytes": 84719,
+        "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+        "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6",
+        "oldBodyExact": true,
+        "cachedOriginal": null,
+        "cachedOriginalExact": null
+      },
+      {
+        "role": "freshMcpIndependentReview",
+        "bytes": 155439,
+        "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+        "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239",
+        "oldBodyExact": true,
+        "cachedOriginal": null,
+        "cachedOriginalExact": null
+      },
+      {
+        "role": "crossR1ActualPublicationReadback",
+        "bytes": 24775,
+        "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+        "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34",
+        "oldBodyExact": true,
+        "cachedOriginal": null,
+        "cachedOriginalExact": null
+      },
+      {
+        "role": "crossTestGuardR2",
+        "bytes": 35700,
+        "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+        "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7",
+        "oldBodyExact": true,
+        "cachedOriginal": null,
+        "cachedOriginalExact": null
+      },
+      {
+        "role": "crossTestParityR2",
+        "bytes": 98112,
+        "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+        "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884",
+        "oldBodyExact": true,
+        "cachedOriginal": null,
+        "cachedOriginalExact": null
+      },
+      {
+        "role": "crossTestActualPublicationReadback",
+        "bytes": 56894,
+        "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+        "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48",
+        "oldBodyExact": true,
+        "cachedOriginal": null,
+        "cachedOriginalExact": null
+      },
+      {
+        "role": "crossActualRedGuard",
+        "bytes": 140038,
+        "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+        "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a",
+        "oldBodyExact": null,
+        "cachedOriginal": "cross133-producer-guardActualRed-body",
+        "cachedOriginalExact": true
+      },
+      {
+        "role": "crossActualRedPrimarySemantic",
+        "bytes": 190694,
+        "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+        "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838",
+        "oldBodyExact": null,
+        "cachedOriginal": "cross133-actual-red-semantic-report-body",
+        "cachedOriginalExact": true
+      },
+      {
+        "role": "crossActualRedSemanticClosure",
+        "bytes": 86249,
+        "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+        "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db",
+        "oldBodyExact": null,
+        "cachedOriginal": "cross133-actual-red-final-closure-body",
+        "cachedOriginalExact": true
+      },
+      {
+        "role": "crossProducerGuardR2",
+        "bytes": 121044,
+        "sha256": "438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339",
+        "gitBlob": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637",
+        "oldBodyExact": null,
+        "cachedOriginal": "cross133-green-r2-producerGuard-body",
+        "cachedOriginalExact": true
+      },
+      {
+        "role": "crossProducerParityR2",
+        "bytes": 109607,
+        "sha256": "da402e2bc50d090cc5b2a57ff1eac0dc5d6767b77876d97f301937db7197536b",
+        "gitBlob": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f",
+        "oldBodyExact": null,
+        "cachedOriginal": "cross133-producer-r2-body",
+        "cachedOriginalExact": true
+      },
+      {
+        "role": "crossProducerActualPublicationReadback",
+        "bytes": 31670,
+        "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+        "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66",
+        "oldBodyExact": null,
+        "cachedOriginal": "cross133-green-r2-publication-body",
+        "cachedOriginalExact": true
+      }
+    ],
+    "qualification": "Whole body identities were checked, and complete existing accepted review bodies were joined exactly. This does not claim a second execution or repeated native/archive/runtime reconstruction."
+  },
+  "freshPublishedSourceProof": {
+    "actualCommit": {
+      "sha": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+      "node_id": "C_kwDORVTEtNoAKGU2YTc3NjRkMDFhZmMzMjYzMWQ2YjRkZDBmOThmYTljZDdjNDkwY2I",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+      "html_url": "https://github.com/777genius/agent-teams-ai/commit/e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+      "author": {
+        "name": "Илия",
+        "email": "iliyazelenkog@gmail.com",
+        "date": "2026-11-16T17:42:52Z"
+      },
+      "committer": {
+        "name": "Илия",
+        "email": "iliyazelenkog@gmail.com",
+        "date": "2026-11-16T17:42:52Z"
+      },
+      "tree": {
+        "sha": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e9bb2f34a94f5d936ff4145056d0ccce16ae8a58"
+      },
+      "message": "fix: wait for current Task readiness before closing details",
+      "parents": [
+        {
+          "sha": "a5b9483180434214fa3946a56d44ef67ef48f6ae",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/a5b9483180434214fa3946a56d44ef67ef48f6ae",
+          "html_url": "https://github.com/777genius/agent-teams-ai/commit/a5b9483180434214fa3946a56d44ef67ef48f6ae"
+        }
+      ],
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "actualRef": {
+      "ref": "refs/heads/fix/frontend-parity-coobservation-c714-20261115",
+      "node_id": "REF_kwDORVTEtNoAOnJlZnMvaGVhZHMvZml4L2Zyb250ZW5kLXBhcml0eS1jb29ic2VydmF0aW9uLWM3MTQtMjAyNjExMTU",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs/heads/fix/frontend-parity-coobservation-c714-20261115",
+      "object": {
+        "sha": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+        "type": "commit",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb"
+      }
+    },
+    "actualCurrentRoot": {
+      "sha": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+      "tree": [
+        {
+          "path": ".coderabbit.yaml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "cfdf47bf5d5759599f5383222ebfb8a385f09668",
+          "size": 669,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cfdf47bf5d5759599f5383222ebfb8a385f09668"
+        },
+        {
+          "path": ".dockerignore",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c2d844c25fc61f06640f362de761e3f8d310c3b5",
+          "size": 694,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c2d844c25fc61f06640f362de761e3f8d310c3b5"
+        },
+        {
+          "path": ".gitattributes",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "924c7377f9ae4c068d106e74e17e964297d61e6e",
+          "size": 180,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/924c7377f9ae4c068d106e74e17e964297d61e6e"
+        },
+        {
+          "path": ".github",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/d95091ab0edb488d6e418ffa789d0f07c447ecda"
+        },
+        {
+          "path": ".gitignore",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "777569b186effad3a2bcbcb09cd770180c8c5e2c",
+          "size": 2867,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/777569b186effad3a2bcbcb09cd770180c8c5e2c"
+        },
+        {
+          "path": ".husky",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "665211222b358904b557bd356a129f1ff938ca7e",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/665211222b358904b557bd356a129f1ff938ca7e"
+        },
+        {
+          "path": ".mcp.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "da61a538a43375404483bd1f810b6377da5cc72f",
+          "size": 296,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/da61a538a43375404483bd1f810b6377da5cc72f"
+        },
+        {
+          "path": ".node-version",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+          "size": 8,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+        },
+        {
+          "path": ".npmrc",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad",
+          "size": 19,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad"
+        },
+        {
+          "path": ".nvmrc",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+          "size": 8,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+        },
+        {
+          "path": ".oxfmtrc.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b003c531d6e548a5939ceb0694f15296c92e5060",
+          "size": 847,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b003c531d6e548a5939ceb0694f15296c92e5060"
+        },
+        {
+          "path": ".oxlintrc.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "cc0d2441ebfedc93354e081b0cf61b6a2109dcc9",
+          "size": 596,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cc0d2441ebfedc93354e081b0cf61b6a2109dcc9"
+        },
+        {
+          "path": ".prettierignore",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2",
+          "size": 297,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2"
+        },
+        {
+          "path": ".prettierrc.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c96ec48e897a4ec478beb34716723e13d29068ed",
+          "size": 563,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c96ec48e897a4ec478beb34716723e13d29068ed"
+        },
+        {
+          "path": "AGENTS.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "0c8a4a63abf24c1510c934990a025ebc99c9e435",
+          "size": 8999,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0c8a4a63abf24c1510c934990a025ebc99c9e435"
+        },
+        {
+          "path": "AGENT_CRITICAL_GUARDRAILS.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a9a087fa5216ede29c5900b3a10638fc1ec3e2f3",
+          "size": 2236,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a9a087fa5216ede29c5900b3a10638fc1ec3e2f3"
+        },
+        {
+          "path": "CLAUDE.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "88df8ee5ef8d951139b2a8eb9b518996babbcb3e",
+          "size": 16756,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/88df8ee5ef8d951139b2a8eb9b518996babbcb3e"
+        },
+        {
+          "path": "LICENSE",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "929839bc0872222df278f9e53f15e1268ff4e0ec",
+          "size": 32433,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/929839bc0872222df278f9e53f15e1268ff4e0ec"
+        },
+        {
+          "path": "README.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "dbf976c3418f0dee7ef84e4458e49af39110bdd5",
+          "size": 48099,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/dbf976c3418f0dee7ef84e4458e49af39110bdd5"
+        },
+        {
+          "path": "agent-teams-controller",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "1ef9482608cbaa5b7f28dc42812820cba96b953e",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/1ef9482608cbaa5b7f28dc42812820cba96b953e"
+        },
+        {
+          "path": "bin",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "e6b29ba2f2fda222d5831b3c672e88b72f5f7383",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e6b29ba2f2fda222d5831b3c672e88b72f5f7383"
+        },
+        {
+          "path": "docker",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "7e4007a72bc3fdba8d94e8f5eebc3586f110c16e",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/7e4007a72bc3fdba8d94e8f5eebc3586f110c16e"
+        },
+        {
+          "path": "docs",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "df0f75d50380a3e0796fbc04d7c2e7f27337acf4",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/df0f75d50380a3e0796fbc04d7c2e7f27337acf4"
+        },
+        {
+          "path": "electron.vite.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9045260aab02891055e324607b83e1bb39c7110a",
+          "size": 13238,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9045260aab02891055e324607b83e1bb39c7110a"
+        },
+        {
+          "path": "eslint.config.js",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+          "size": 37840,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/7ca4b71fe3a357c00c110c9b75d3034e06e4b22c"
+        },
+        {
+          "path": "eslint.fast.config.js",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+          "size": 7268,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb"
+        },
+        {
+          "path": "eslint.feature-overrides.mts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9c6450d54b87ce33f7d799f900226c316e367937",
+          "size": 657,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9c6450d54b87ce33f7d799f900226c316e367937"
+        },
+        {
+          "path": "eslint.gateway-boundaries.mts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "4975b20df1353a9687fd479ab043beb025e967ba",
+          "size": 3786,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/4975b20df1353a9687fd479ab043beb025e967ba"
+        },
+        {
+          "path": "i18next.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5",
+          "size": 1051,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5"
+        },
+        {
+          "path": "landing",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "193513230f45a135704f1b34dbfa0792e6823e26",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/193513230f45a135704f1b34dbfa0792e6823e26"
+        },
+        {
+          "path": "legacy-host.lock.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "6916f66ea9e4a7e8299c3ffd328e226d009ebd79",
+          "size": 947,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6916f66ea9e4a7e8299c3ffd328e226d009ebd79"
+        },
+        {
+          "path": "managed-git.lock.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "2099dfe6b1e1c0ff0d64f45d6c8565b498af4333",
+          "size": 1026,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2099dfe6b1e1c0ff0d64f45d6c8565b498af4333"
+        },
+        {
+          "path": "mcp-server",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5"
+        },
+        {
+          "path": "package.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+          "size": 26839,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        {
+          "path": "packages",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "3934729cd387940917b79992f2579bf6269d157c",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/3934729cd387940917b79992f2579bf6269d157c"
+        },
+        {
+          "path": "patches",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "8eb2e6aaa216638cbe6c072d79802733d43f500d",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/8eb2e6aaa216638cbe6c072d79802733d43f500d"
+        },
+        {
+          "path": "pnpm-lock.yaml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+          "size": 956788,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9d2ce04a1bbf743e49403d2520873134b08b68de"
+        },
+        {
+          "path": "pnpm-workspace.yaml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a049a862742a85ba77faafea329fc221b3e500e4",
+          "size": 6946,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a049a862742a85ba77faafea329fc221b3e500e4"
+        },
+        {
+          "path": "postcss.config.cjs",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "85f717cc09ecb1153d6a4c0962284e09e4b8d6a9",
+          "size": 80,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/85f717cc09ecb1153d6a4c0962284e09e4b8d6a9"
+        },
+        {
+          "path": "resources",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "69acacf60db94f62dbe4a99ed308aab59310e905",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/69acacf60db94f62dbe4a99ed308aab59310e905"
+        },
+        {
+          "path": "runtime.lock.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+          "size": 6127,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1757d79786da78e739a322e8bba81cd3dc88dcaa"
+        },
+        {
+          "path": "scripts",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "24b93023dde0aa5f543547ddf3289527c5e7689c",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/24b93023dde0aa5f543547ddf3289527c5e7689c"
+        },
+        {
+          "path": "src",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "ed69e62618e57d88c2e5237f98074a1ff8853e6f",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/ed69e62618e57d88c2e5237f98074a1ff8853e6f"
+        },
+        {
+          "path": "tailwind.config.js",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a52ebb338468d8fcef92837aa27aebd48c7206d7",
+          "size": 2941,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a52ebb338468d8fcef92837aa27aebd48c7206d7"
+        },
+        {
+          "path": "terminal-platform.lock.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "039a8a2a7b959b44bf3d483e37335fdc6774e8cb",
+          "size": 1914,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/039a8a2a7b959b44bf3d483e37335fdc6774e8cb"
+        },
+        {
+          "path": "test",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "c771c2bb9ec6d147d4974361cb5730897f7653d6",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/c771c2bb9ec6d147d4974361cb5730897f7653d6"
+        },
+        {
+          "path": "tools",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/9356c03e96405eb578158f06d6fdcbc89d105bd6"
+        },
+        {
+          "path": "tsconfig.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "568952f5025a88c16b0568c7279d8e85a4288b43",
+          "size": 1235,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/568952f5025a88c16b0568c7279d8e85a4288b43"
+        },
+        {
+          "path": "tsconfig.legacy-agent-host-scripts.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+          "size": 646,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/538fdfe23d7aa6bac6f18a483d5d364aef644a39"
+        },
+        {
+          "path": "tsconfig.node.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c94c942012bef62695dc3b22b1a2b7229d047f59",
+          "size": 824,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c94c942012bef62695dc3b22b1a2b7229d047f59"
+        },
+        {
+          "path": "vendor",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f"
+        },
+        {
+          "path": "vitest.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+          "size": 1187,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c57faa53a1bb869b4379bf888194806ef7e228e3"
+        },
+        {
+          "path": "vitest.critical.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c32070bf9e1724892aa8cb695152e8f49f1293f0",
+          "size": 852,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c32070bf9e1724892aa8cb695152e8f49f1293f0"
+        },
+        {
+          "path": "vitest.opencode-proof.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "274de1c0955ad4f98d220857a94576ce6a50864b",
+          "size": 601,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/274de1c0955ad4f98d220857a94576ce6a50864b"
+        }
+      ],
+      "truncated": false
+    },
+    "actualParentRoot": {
+      "sha": "ab1b94c6cd1fa02a75b7a19c18148ac364920e25",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/ab1b94c6cd1fa02a75b7a19c18148ac364920e25",
+      "tree": [
+        {
+          "path": ".coderabbit.yaml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "cfdf47bf5d5759599f5383222ebfb8a385f09668",
+          "size": 669,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cfdf47bf5d5759599f5383222ebfb8a385f09668"
+        },
+        {
+          "path": ".dockerignore",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c2d844c25fc61f06640f362de761e3f8d310c3b5",
+          "size": 694,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c2d844c25fc61f06640f362de761e3f8d310c3b5"
+        },
+        {
+          "path": ".gitattributes",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "924c7377f9ae4c068d106e74e17e964297d61e6e",
+          "size": 180,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/924c7377f9ae4c068d106e74e17e964297d61e6e"
+        },
+        {
+          "path": ".github",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/d95091ab0edb488d6e418ffa789d0f07c447ecda"
+        },
+        {
+          "path": ".gitignore",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "777569b186effad3a2bcbcb09cd770180c8c5e2c",
+          "size": 2867,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/777569b186effad3a2bcbcb09cd770180c8c5e2c"
+        },
+        {
+          "path": ".husky",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "665211222b358904b557bd356a129f1ff938ca7e",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/665211222b358904b557bd356a129f1ff938ca7e"
+        },
+        {
+          "path": ".mcp.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "da61a538a43375404483bd1f810b6377da5cc72f",
+          "size": 296,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/da61a538a43375404483bd1f810b6377da5cc72f"
+        },
+        {
+          "path": ".node-version",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+          "size": 8,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+        },
+        {
+          "path": ".npmrc",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad",
+          "size": 19,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad"
+        },
+        {
+          "path": ".nvmrc",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+          "size": 8,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+        },
+        {
+          "path": ".oxfmtrc.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b003c531d6e548a5939ceb0694f15296c92e5060",
+          "size": 847,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b003c531d6e548a5939ceb0694f15296c92e5060"
+        },
+        {
+          "path": ".oxlintrc.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "cc0d2441ebfedc93354e081b0cf61b6a2109dcc9",
+          "size": 596,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cc0d2441ebfedc93354e081b0cf61b6a2109dcc9"
+        },
+        {
+          "path": ".prettierignore",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2",
+          "size": 297,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2"
+        },
+        {
+          "path": ".prettierrc.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c96ec48e897a4ec478beb34716723e13d29068ed",
+          "size": 563,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c96ec48e897a4ec478beb34716723e13d29068ed"
+        },
+        {
+          "path": "AGENTS.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "0c8a4a63abf24c1510c934990a025ebc99c9e435",
+          "size": 8999,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0c8a4a63abf24c1510c934990a025ebc99c9e435"
+        },
+        {
+          "path": "AGENT_CRITICAL_GUARDRAILS.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a9a087fa5216ede29c5900b3a10638fc1ec3e2f3",
+          "size": 2236,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a9a087fa5216ede29c5900b3a10638fc1ec3e2f3"
+        },
+        {
+          "path": "CLAUDE.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "88df8ee5ef8d951139b2a8eb9b518996babbcb3e",
+          "size": 16756,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/88df8ee5ef8d951139b2a8eb9b518996babbcb3e"
+        },
+        {
+          "path": "LICENSE",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "929839bc0872222df278f9e53f15e1268ff4e0ec",
+          "size": 32433,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/929839bc0872222df278f9e53f15e1268ff4e0ec"
+        },
+        {
+          "path": "README.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "dbf976c3418f0dee7ef84e4458e49af39110bdd5",
+          "size": 48099,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/dbf976c3418f0dee7ef84e4458e49af39110bdd5"
+        },
+        {
+          "path": "agent-teams-controller",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "1ef9482608cbaa5b7f28dc42812820cba96b953e",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/1ef9482608cbaa5b7f28dc42812820cba96b953e"
+        },
+        {
+          "path": "bin",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "e6b29ba2f2fda222d5831b3c672e88b72f5f7383",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e6b29ba2f2fda222d5831b3c672e88b72f5f7383"
+        },
+        {
+          "path": "docker",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "7e4007a72bc3fdba8d94e8f5eebc3586f110c16e",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/7e4007a72bc3fdba8d94e8f5eebc3586f110c16e"
+        },
+        {
+          "path": "docs",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "44323d594bf3f41c80ebfb127d0354f75f971864",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/44323d594bf3f41c80ebfb127d0354f75f971864"
+        },
+        {
+          "path": "electron.vite.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9045260aab02891055e324607b83e1bb39c7110a",
+          "size": 13238,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9045260aab02891055e324607b83e1bb39c7110a"
+        },
+        {
+          "path": "eslint.config.js",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+          "size": 37840,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/7ca4b71fe3a357c00c110c9b75d3034e06e4b22c"
+        },
+        {
+          "path": "eslint.fast.config.js",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+          "size": 7268,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb"
+        },
+        {
+          "path": "eslint.feature-overrides.mts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9c6450d54b87ce33f7d799f900226c316e367937",
+          "size": 657,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9c6450d54b87ce33f7d799f900226c316e367937"
+        },
+        {
+          "path": "eslint.gateway-boundaries.mts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "4975b20df1353a9687fd479ab043beb025e967ba",
+          "size": 3786,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/4975b20df1353a9687fd479ab043beb025e967ba"
+        },
+        {
+          "path": "i18next.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5",
+          "size": 1051,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5"
+        },
+        {
+          "path": "landing",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "193513230f45a135704f1b34dbfa0792e6823e26",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/193513230f45a135704f1b34dbfa0792e6823e26"
+        },
+        {
+          "path": "legacy-host.lock.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "6916f66ea9e4a7e8299c3ffd328e226d009ebd79",
+          "size": 947,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6916f66ea9e4a7e8299c3ffd328e226d009ebd79"
+        },
+        {
+          "path": "managed-git.lock.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "2099dfe6b1e1c0ff0d64f45d6c8565b498af4333",
+          "size": 1026,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2099dfe6b1e1c0ff0d64f45d6c8565b498af4333"
+        },
+        {
+          "path": "mcp-server",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5"
+        },
+        {
+          "path": "package.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+          "size": 26839,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+        },
+        {
+          "path": "packages",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "3934729cd387940917b79992f2579bf6269d157c",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/3934729cd387940917b79992f2579bf6269d157c"
+        },
+        {
+          "path": "patches",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "8eb2e6aaa216638cbe6c072d79802733d43f500d",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/8eb2e6aaa216638cbe6c072d79802733d43f500d"
+        },
+        {
+          "path": "pnpm-lock.yaml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+          "size": 956788,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9d2ce04a1bbf743e49403d2520873134b08b68de"
+        },
+        {
+          "path": "pnpm-workspace.yaml",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a049a862742a85ba77faafea329fc221b3e500e4",
+          "size": 6946,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a049a862742a85ba77faafea329fc221b3e500e4"
+        },
+        {
+          "path": "postcss.config.cjs",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "85f717cc09ecb1153d6a4c0962284e09e4b8d6a9",
+          "size": 80,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/85f717cc09ecb1153d6a4c0962284e09e4b8d6a9"
+        },
+        {
+          "path": "resources",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "69acacf60db94f62dbe4a99ed308aab59310e905",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/69acacf60db94f62dbe4a99ed308aab59310e905"
+        },
+        {
+          "path": "runtime.lock.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+          "size": 6127,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1757d79786da78e739a322e8bba81cd3dc88dcaa"
+        },
+        {
+          "path": "scripts",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "80b227a2d1ce22f75571d84438a837778caa1f19",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/80b227a2d1ce22f75571d84438a837778caa1f19"
+        },
+        {
+          "path": "src",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "ed69e62618e57d88c2e5237f98074a1ff8853e6f",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/ed69e62618e57d88c2e5237f98074a1ff8853e6f"
+        },
+        {
+          "path": "tailwind.config.js",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "a52ebb338468d8fcef92837aa27aebd48c7206d7",
+          "size": 2941,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a52ebb338468d8fcef92837aa27aebd48c7206d7"
+        },
+        {
+          "path": "terminal-platform.lock.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "039a8a2a7b959b44bf3d483e37335fdc6774e8cb",
+          "size": 1914,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/039a8a2a7b959b44bf3d483e37335fdc6774e8cb"
+        },
+        {
+          "path": "test",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "c771c2bb9ec6d147d4974361cb5730897f7653d6",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/c771c2bb9ec6d147d4974361cb5730897f7653d6"
+        },
+        {
+          "path": "tools",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/9356c03e96405eb578158f06d6fdcbc89d105bd6"
+        },
+        {
+          "path": "tsconfig.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "568952f5025a88c16b0568c7279d8e85a4288b43",
+          "size": 1235,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/568952f5025a88c16b0568c7279d8e85a4288b43"
+        },
+        {
+          "path": "tsconfig.legacy-agent-host-scripts.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+          "size": 646,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/538fdfe23d7aa6bac6f18a483d5d364aef644a39"
+        },
+        {
+          "path": "tsconfig.node.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c94c942012bef62695dc3b22b1a2b7229d047f59",
+          "size": 824,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c94c942012bef62695dc3b22b1a2b7229d047f59"
+        },
+        {
+          "path": "vendor",
+          "mode": "040000",
+          "type": "tree",
+          "sha": "bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f",
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f"
+        },
+        {
+          "path": "vitest.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+          "size": 1187,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c57faa53a1bb869b4379bf888194806ef7e228e3"
+        },
+        {
+          "path": "vitest.critical.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "c32070bf9e1724892aa8cb695152e8f49f1293f0",
+          "size": 852,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c32070bf9e1724892aa8cb695152e8f49f1293f0"
+        },
+        {
+          "path": "vitest.opencode-proof.config.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "274de1c0955ad4f98d220857a94576ce6a50864b",
+          "size": 601,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/274de1c0955ad4f98d220857a94576ce6a50864b"
+        }
+      ],
+      "truncated": false
+    },
+    "apiBodies": [
+      {
+        "role": "commit",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+        "bytes": 1172,
+        "sha256": "5d6259f58725e9aa5e3e3565ef2f250ab83b30bd005d8b6b82692ce9813b26eb",
+        "computedUtf8GitBlob": "d17814719aeb90c16e1175f65a7bcfe6e33bb25d",
+        "gitBlobStoredSeparately": false
+      },
+      {
+        "role": "root",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+        "bytes": 12410,
+        "sha256": "cf7c22c1fa3ce90cf960809ff19e224d7d2c2ccbf3998dd0f99294c576a9001e",
+        "computedUtf8GitBlob": "531c872392eb224e21ee9a25e553120eec63c356",
+        "gitBlobStoredSeparately": false
+      },
+      {
+        "role": "parentRoot",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/ab1b94c6cd1fa02a75b7a19c18148ac364920e25",
+        "bytes": 12410,
+        "sha256": "d8a0f83b492a4688ce8f693d89d0da598b02695fdd5e72ca6aa5b33e22b7968e",
+        "computedUtf8GitBlob": "2e852955451edf6845df2df40d40946228571930",
+        "gitBlobStoredSeparately": false
+      },
+      {
+        "role": "scripts",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/24b93023dde0aa5f543547ddf3289527c5e7689c?recursive=1",
+        "bytes": 162740,
+        "sha256": "395231ff116121a3eb9bdc068fa9591a8d4ee358e6c438712703ded1523a2091",
+        "computedUtf8GitBlob": "dd479fa1e9bc526ebee53f88a2ee560198a73d39",
+        "gitBlobStoredSeparately": false
+      },
+      {
+        "role": "ref",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/ref/heads/fix/frontend-parity-coobservation-c714-20261115",
+        "bytes": 492,
+        "sha256": "d3410c4ab4e3a9cb0d740f17dba41d14c2903a5100f2f80392c41051634e5814",
+        "computedUtf8GitBlob": "0928822613699a7fd12ab5c2101342d0857428b6",
+        "gitBlobStoredSeparately": false
+      }
+    ],
+    "priorCompleteLeafset": {
+      "commit": "a5b9483180434214fa3946a56d44ef67ef48f6ae",
+      "tree": "ab1b94c6cd1fa02a75b7a19c18148ac364920e25",
+      "leaves": 11700,
+      "independentCompleteReadback": {
+        "gitBlob": "70d62d67ac2b26830075190948bf47983b57a47a",
+        "bytes": 119995,
+        "sha256": "38c611f8b098f23435165cc2bcbb77ba705ec944ead119d2672702c3e2726da8"
+      }
+    },
+    "method": "Fresh actual e6 commit/soleparent/ref/current54-root/parent54-root and complete nontruncated current scripts634-entry/600-leaf tree. Reuse all exact immutable52 other root descendants from own complete a5 readback; exclude docs, replace entire scripts subtree. Every resulting8798 non-doc path/mode/blob/size matches prospective886. SHA256 values of unchanged source rows retain the already independently verified actual775 identities; new two body SHA256s were rehashed from complete overlay text.",
+    "result": {
+      "rootUnchanged52": true,
+      "rootEntries": 54,
+      "scriptEntries": 634,
+      "scriptLeaves": 600,
+      "scriptTruncated": false,
+      "fullSourceLeaves": 8798,
+      "all8798RowsEqual": true,
+      "sourceMismatches": [],
+      "rowDifferences": [
+        {
+          "before": {
+            "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+            "mode": "100644",
+            "bytes": 36207,
+            "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+            "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c"
+          },
+          "after": {
+            "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+            "mode": "100644",
+            "bytes": 36260,
+            "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+            "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+          }
+        },
+        {
+          "before": {
+            "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+            "mode": "100644",
+            "bytes": 6433,
+            "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+            "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+          },
+          "after": {
+            "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+            "mode": "100644",
+            "bytes": 8457,
+            "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+            "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+          }
+        }
+      ],
+      "other8796RowsIdentical": true,
+      "workflows": 42,
+      "workflowsExact": true,
+      "allNonRowMetadataUnchanged": true,
+      "exactWholeSourceReconstruction": true,
+      "reconstructedIdentity": {
+        "bytes": 2478650,
+        "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+        "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+      },
+      "beforeIdentity": {
+        "bytes": 2478516,
+        "sha256": "006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f",
+        "gitBlob": "77516ddaecaa6d0f485825e250a8106db599f781"
+      },
+      "noSourceAddsDeletes": true
+    },
+    "independentFullPublicationAttribution": {
+      "review": {
+        "bytes": 31670,
+        "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+        "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+      },
+      "reviewer": "/root/pr_graph",
+      "verdict": "COMPLETE_ACCEPTED_ACTUAL_PUBLICATION",
+      "publication": {
+        "accepted": true,
+        "commit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+        "tree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+        "parent": "a5b9483180434214fa3946a56d44ef67ef48f6ae",
+        "files": 29,
+        "bytes": 8127488,
+        "sourceChanges": 2,
+        "unchangedOtherNonDocs": 8796,
+        "workflowLeaves": 42,
+        "planPrefix": true,
+        "statusPrefix": true,
+        "catalog27Preserved": true,
+        "greenNotExecuted": true,
+        "scope": "Actual publication only; next separate GREEN binding remains required."
+      },
+      "treeProof": {
+        "parentLeaves": 11700,
+        "currentLeaves": 11724,
+        "rootEntries": 54,
+        "unchangedRootEntries": 52,
+        "docsEntries": 3332,
+        "docsLeaves": 2926,
+        "scriptsEntries": 634,
+        "scriptsLeaves": 600,
+        "changed": 29,
+        "added": 24,
+        "modified": 5,
+        "deleted": 0,
+        "modeChanges": 0,
+        "sourceNonDocs": 8798,
+        "unchangedOtherNonDocs": 8796,
+        "workflowLeaves": 42,
+        "sourceChanges": [
+          {
+            "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+            "before": "3f1ce46fce847a861850ef874017f84227c62b0c",
+            "after": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+            "before": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+            "after": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+          }
+        ],
+        "allManifestPathIdentityAndSizesMatch": true
+      },
+      "changedBodyCensus": {
+        "files": 29,
+        "bytes": 8127488,
+        "everyFullBodyReadAndGitSha256Verified": true
+      },
+      "selectedSource": {
+        "helper": {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "before": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+          "after": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+          "bytes": 8457,
+          "physicalLines": 123,
+          "cap": 200
+        },
+        "driver": {
+          "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "before": "3f1ce46fce847a861850ef874017f84227c62b0c",
+          "after": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+          "bytes": 36260,
+          "physicalLines": 799,
+          "cap": 800
+        },
+        "acceptedSourceR2": {
+          "guard": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637",
+          "parity": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f",
+          "rootInverse": "6cf280cdf07fe299eb452a6eb61bba3dd53114a4"
+        },
+        "protectedExact": {
+          "test133": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+          "controls": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+          "selection": "cf93da72a198dac636658e512093eef7828b5927",
+          "otherNonDocs": 8796,
+          "allWorkflowDefinitions": 42
+        }
+      },
+      "fullRootRowsEqualOurFreshRoot": true,
+      "limitation": "The peer's complete29-body/docs publication readback is joined, not claimed as newly repeated here. This lane freshly reconstructed all8798 non-docs and actual commit/ref/root/source subtree."
+    },
+    "fullSourceTreeLedger": {
+      "serialization": "JSON.stringify(non-doc leaf objects {path,mode,type,sha,size} sorted by codepoint path)+LF",
+      "rows": 8798,
+      "sha256": "8ba0fa10dde90c44f04ac6e7a6f1b7f2a10b7a44e9f1547418678966b0a5b983"
+    }
+  },
+  "completeProspectiveSource": {
+    "before": {
+      "bytes": 2478516,
+      "sha256": "006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f",
+      "gitBlob": "77516ddaecaa6d0f485825e250a8106db599f781"
+    },
+    "after": {
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+    },
+    "sourceProof": {
+      "rootUnchanged52": true,
+      "rootEntries": 54,
+      "scriptEntries": 634,
+      "scriptLeaves": 600,
+      "scriptTruncated": false,
+      "fullSourceLeaves": 8798,
+      "all8798RowsEqual": true,
+      "sourceMismatches": [],
+      "rowDifferences": [
+        {
+          "before": {
+            "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+            "mode": "100644",
+            "bytes": 36207,
+            "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+            "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c"
+          },
+          "after": {
+            "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+            "mode": "100644",
+            "bytes": 36260,
+            "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+            "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+          }
+        },
+        {
+          "before": {
+            "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+            "mode": "100644",
+            "bytes": 6433,
+            "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+            "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+          },
+          "after": {
+            "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+            "mode": "100644",
+            "bytes": 8457,
+            "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+            "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+          }
+        }
+      ],
+      "other8796RowsIdentical": true,
+      "workflows": 42,
+      "workflowsExact": true,
+      "allNonRowMetadataUnchanged": true,
+      "exactWholeSourceReconstruction": true,
+      "reconstructedIdentity": {
+        "bytes": 2478650,
+        "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+        "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+      },
+      "beforeIdentity": {
+        "bytes": 2478516,
+        "sha256": "006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f",
+        "gitBlob": "77516ddaecaa6d0f485825e250a8106db599f781"
+      },
+      "noSourceAddsDeletes": true
+    },
+    "overlayProof": {
+      "beforeOverlayEqualsAcceptedRedAfter": true,
+      "first3AfterByteIdentical": true,
+      "materializationExactTwo": true,
+      "preimagePinsMatchBefore": true,
+      "sourcePinsMatchAfter": true,
+      "sourcePinsAreFullSorted5": true,
+      "runnerExact": {
+        "bytes": 48838,
+        "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+        "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+      },
+      "r1Exact": {
+        "bytes": 23142,
+        "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+        "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+      },
+      "testExact": true,
+      "old97PrefixExact": true
+    },
+    "completeAfterBodyReconstructedBy": "Clone entire actual775 JSON preserving key order; replace only two helper/driver rows with exact materializePaths postimages; set sorted changedTrackedPaths to five overlays; JSON.stringify(indent2)+LF. Result is byte-for-byte entire886.",
+    "allFiveOverlayIdentities": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      }
+    ],
+    "materializePaths": [
+      "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts"
+    ],
+    "preimageSourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36207,
+        "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+        "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 6433,
+        "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+        "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      }
+    ],
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      }
+    ],
+    "localMetadataUnchanged": {
+      "head": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+      "tree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+      "indexLeaves": 11567,
+      "remoteDocumentationLocallyMaterialized": false
+    },
+    "qualification": "886 is prospective metadata only, not an actual source application. Both actual materialization and full runtime GREEN remain unexecuted by this review."
+  },
+  "unchangedInputsAndImports": {
+    "inputFiles": {
+      "setupBinding": {
+        "path": "/tmp/c714-fresh-bootstrap-review/binding.json",
+        "bytes": 2790411,
+        "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+        "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+      },
+      "sourceFull": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/source-restore-source-after.json",
+        "bytes": 3451167,
+        "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+        "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+      },
+      "sourceNonDoc": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-source-after.json",
+        "bytes": 2478318,
+        "sha256": "59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751",
+        "gitBlob": "51bf0d0962e07fcc7843fcd65c3202ec9133a607"
+      },
+      "dependencies": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json",
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "compiled": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-compiled-after.json",
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      },
+      "pnpm": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/pnpm-inventory.json",
+        "bytes": 253936,
+        "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+        "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c"
+      },
+      "currentBoundary": {
+        "path": "/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json",
+        "bytes": 3654,
+        "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+        "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+      },
+      "providers": {
+        "path": "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json",
+        "bytes": 789090,
+        "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+        "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+      }
+    },
+    "exactEightSameAsRed": true,
+    "dependencyRows": 122773,
+    "compiledRows": 1454,
+    "providerRegularMembers": [
+      253,
+      12
+    ],
+    "sourceAdmission": {
+      "accepted": true,
+      "reviewer": "/root",
+      "sourceCommit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+      "sourceTree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+      "baseStaticImportAdmission": {
+        "accepted": true,
+        "reviewer": "/root",
+        "sourceCommit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+        "sourceTree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+        "bootstrapReview": {
+          "bytes": 32514,
+          "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+          "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075"
+        },
+        "sdkReview": {
+          "bytes": 84719,
+          "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+          "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6"
+        },
+        "mcpReview": {
+          "bytes": 155439,
+          "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+          "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239"
+        },
+        "allBodiesFetchedAndRehashed": true,
+        "scope": "Static source admission of exact fresh upstream provider/SDK/MCP/Zod import closure for the already published finite whole97 test, after complete fresh input verification. This permits only replacement runner/binding authorship now; exact R2 and actual publication/readback still precede execution. No producer before accepted actual semantic RED.",
+        "packageImportsExecuted": 0,
+        "testExecutions": 0,
+        "providerExecutions": 0,
+        "producerPostimages": 0,
+        "cacheRequirement": "Strip inherited NODE_COMPILE_CACHE and NODE_COMPILE_CACHE_PORTABLE; force NODE_DISABLE_COMPILE_CACHE=1; bind and preserve existing seven bootstrap cache files.",
+        "crossAppendAdmission": {
+          "accepted": true,
+          "test": {
+            "bytes": 155423,
+            "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+            "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+          },
+          "guard": {
+            "bytes": 35700,
+            "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+            "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+          },
+          "parity": {
+            "bytes": 98112,
+            "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+            "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+          },
+          "whole133": true,
+          "completeOldPrefixExact": true,
+          "newProviderNativeOrExternalImportPaths": 0,
+          "newChildExecutionSites": 0,
+          "readOnlyBrowserFixtureImports": [
+            "/store/slices/teamSlice.ts",
+            "/store/team/taskDetailReadAuthority.ts"
+          ],
+          "qualification": "Extends the retained whole97 static import admission only with the reviewed finite36-case append. No dependency/compiled/provider/incoming-head source changed."
+        }
+      },
+      "scope": "The complete previously independently reviewed provider/SDK/MCP/Zod import closure remains unchanged. The same finite whole133 test now imports only the exact published two pure helper/driver postimages accepted by full R2, with no new source import path, eager operation or child site. Historical base admission activity counts are confined to the embedded preceding static review; they are not current execution counts.",
+      "crossProducerAdmission": {
+        "accepted": true,
+        "sourceCommit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+        "sourceTree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+        "sourcePostimages": {
+          "taskTarget": {
+            "bytes": 8457,
+            "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+            "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+          },
+          "taskDriver": {
+            "bytes": 36260,
+            "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+            "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+          }
+        },
+        "guard": {
+          "bytes": 121044,
+          "sha256": "438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339",
+          "gitBlob": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637"
+        },
+        "parity": {
+          "bytes": 109607,
+          "sha256": "da402e2bc50d090cc5b2a57ff1eac0dc5d6767b77876d97f301937db7197536b",
+          "gitBlob": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f"
+        },
+        "newProviderNativeExternalImports": 0,
+        "newChildSites": 0,
+        "newEagerExecutableEffects": 0,
+        "unchangedOriginalBrowserImports": 2,
+        "wholeTestUnchanged": {
+          "bytes": 155423,
+          "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+          "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+        },
+        "controlsUnchanged": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        "selectionUnchanged": {
+          "bytes": 24759,
+          "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+          "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+        }
+      },
+      "actualRed": {
+        "envelope": {
+          "bytes": 185267,
+          "sha256": "2b8eb5338ddeaa291d6747b07dcaf31168b9b1fc3d576b7ea487823333aa02f7",
+          "gitBlob": "7db3b53fab91d32d18c8dd95b34242e515b50634"
+        },
+        "guard": {
+          "bytes": 140038,
+          "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+          "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+        },
+        "semantic": {
+          "bytes": 190694,
+          "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+          "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+        },
+        "closure": {
+          "bytes": 86249,
+          "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+          "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+        },
+        "observedOuterExit": 0,
+        "wholeCases": 133,
+        "pass": 118,
+        "semanticFail": 15
+      },
+      "currentReviewActivity": {
+        "packageOrSourceExecutions": 0,
+        "staticReviewOnly": true
+      },
+      "cacheRequirement": "Strip inherited NODE_COMPILE_CACHE and NODE_COMPILE_CACHE_PORTABLE; force NODE_DISABLE_COMPILE_CACHE=1; bind and preserve existing seven bootstrap cache files."
+    },
+    "noNewChildOrExternalProviderImportSite": true,
+    "wholeTestLiteralExactly0aec": true,
+    "original97FullEfdPrefixExact": true,
+    "retainedProducerTypeAndSourceSupport": {
+      "guard": {
+        "bytes": 121044,
+        "sha256": "438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339",
+        "gitBlob": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637"
+      },
+      "allSevenFullNestedEvidenceBodiesRehashed": [
+        {
+          "role": "candidate-helper",
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "bytes": 8457,
+          "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+          "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+          "publishedSourceRowJoined": true
+        },
+        {
+          "role": "candidate-driver",
+          "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "bytes": 36260,
+          "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+          "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+          "publishedSourceRowJoined": true
+        },
+        {
+          "role": "root-exact-inverse-and-authoring-gate",
+          "path": null,
+          "bytes": 8119,
+          "sha256": "eec8303692c8ba0f019939580e76fc77ab22cb764f852b95bafe0a2699343f05",
+          "gitBlob": "6cf280cdf07fe299eb452a6eb61bba3dd53114a4",
+          "publishedSourceRowJoined": null
+        },
+        {
+          "role": "unchanged-current-task-detail-source",
+          "path": "src/features/team-task-detail/core/domain/taskDetailReadModel.ts",
+          "bytes": 6884,
+          "sha256": "bdc52e3e59c1a2db72e89011afd82c5802d8ab839a8752cac2a64b47a0a78fcf",
+          "gitBlob": "0a1ede79d40bc05af35b67fcf27ed7594d71abb2",
+          "publishedSourceRowJoined": true
+        },
+        {
+          "role": "unchanged-current-task-detail-source",
+          "path": "src/renderer/store/slices/teamTaskDetailSlice.ts",
+          "bytes": 27966,
+          "sha256": "7c1b2091311e921fc244e8d8d8814cd03451bd31327a91492fdf4f8730aa8fdf",
+          "gitBlob": "5d5da9534eeacf34d554b2df2ed5573876c3a09c",
+          "publishedSourceRowJoined": true
+        },
+        {
+          "role": "unchanged-current-task-detail-source",
+          "path": "src/features/team-task-detail/core/index.ts",
+          "bytes": 148,
+          "sha256": "e6c8c8dd25c4d9a6fd1c21d5c91cf313044d944cebbf6db9826d1bf313109624",
+          "gitBlob": "b79a465097935f286e58e3bcf1fc54f2fbd8b1e4",
+          "publishedSourceRowJoined": true
+        },
+        {
+          "role": "unchanged-current-task-detail-source",
+          "path": "src/features/team-task-detail/core/domain/index.ts",
+          "bytes": 158,
+          "sha256": "5bc9dcd069ee5acfb1a71a6085f9ed3bb8c7150421118aadc2a58cd3b5cc7317",
+          "gitBlob": "ba0a3f2e0048684f12a44386f01d8474123e4107",
+          "publishedSourceRowJoined": true
+        }
+      ],
+      "sourceClause": "Required current-session owner revision/surface plus loading===false/refreshPending===false have actual current readModel/store initialization and commit support. This new-stage-only interpretation remains the exact accepted producer code; no typecheck is claimed."
+    },
+    "historicalCounts": "Zero-execution counts inside the earlier base import record remain historical; accepted actualRED is separately bound. No extra install/build/provider/SDK execution is authorized."
+  },
+  "testSemanticSource": {
+    "test": {
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    },
+    "old97Prefix": {
+      "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985",
+      "bytes": 136700
+    },
+    "fullTestR2": {
+      "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884",
+      "bytes": 98112,
+      "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156"
+    },
+    "producerR2": {
+      "bytes": 109607,
+      "sha256": "da402e2bc50d090cc5b2a57ff1eac0dc5d6767b77876d97f301937db7197536b",
+      "gitBlob": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f"
+    },
+    "proof": {
+      "cases": 133,
+      "uniqueNames": 133,
+      "old97ActualRedAllPass": true,
+      "new36": 36,
+      "newReadiness28": 28,
+      "newDriver8": 8,
+      "actualRed": {
+        "pass": 118,
+        "fail": 15,
+        "failureOrdinals": [
+          98,
+          99,
+          100,
+          101,
+          104,
+          105,
+          106,
+          107,
+          114,
+          115,
+          116,
+          126,
+          127,
+          128,
+          131
+        ]
+      },
+      "greenPrediction": {
+        "all133Pass": true,
+        "observed": false,
+        "all13VariantsExpectedComplete": true
+      },
+      "caseLedgerSha256": "091ddc8a198c3a4f4563b929df072ea904708a87a177e09c59a14cc1962bea42",
+      "sourceEvidence": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+      "allNamesOrderMatched": true,
+      "requiredActualGreen": "The identical complete0aec file must report all133 names/order/multiplicity exactly once,133PASS and0fail/skip/cancel/todo, with all13 target variants completing their assertions. Require primary0, separately observed supervisor0, complete current input/source pre/post, no interruption/timeout/kill/cleanup debt, independent full semantics and lifetime acceptance. No filters/retries/fixture changes."
+    },
+    "complete133NameOrderMultiplicityLedger": [
+      {
+        "ordinal": 1,
+        "name": "captured UI discovery waits for Main admission and actual mount while early diagnostics remain active",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 63,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 2,
+        "name": "the original remaining startup deadline rejects a pending snapshot without late discovery or a reset",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 79,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 3,
+        "name": "packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 124,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 4,
+        "name": "HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 139,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 5,
+        "name": "isolated shell fixture emits the actual framed environment and refuses shell effects",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 149,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 6,
+        "name": "original in-progress Task comment prerequisite requires its exact stage without an assignment control",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 337,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 7,
+        "name": "Task attachment comment waits for its original focused owner after one click before inserting text",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 372,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 8,
+        "name": "original Task assignment prerequisite refuses receipt-only, pending and stale renderer state",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 546,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 9,
+        "name": "original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 583,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 10,
+        "name": "original desktop click waits for stable target geometry, without repeating input",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 613,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 11,
+        "name": "original Task hover waits through layout and unavailability before its one physical move",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 641,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 12,
+        "name": "original desktop click refuses a constantly moving target before dispatch",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 667,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 13,
+        "name": "original owner-qualified click rereads its full expression through unavailability at unchanged coordinates",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 685,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 14,
+        "name": "login failure facts retain only bounded original attempts and confirmed milestones",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 715,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 15,
+        "name": "finite readiness failure summaries keep only bounded states and never private snapshot data",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 770,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 16,
+        "name": "Taskboard failure summaries compare retained identities without exposing private snapshot values",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 808,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 17,
+        "name": "installer failure summaries preserve original wait sites and attempts without inferring installation effects",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 896,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 18,
+        "name": "installer failure projection does not invoke input getters and leaves oversized observations unknown",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 952,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 19,
+        "name": "installer CDP and cleanup projection retains only exact finite observations",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 985,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 20,
+        "name": "Selection target summaries retain the exact original phase and six closed facts",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1038,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 21,
+        "name": "Selection target projection rejects unknown or malformed facts without exposing text or invoking getters",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1073,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 22,
+        "name": "Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1102,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 23,
+        "name": "original desktop click refuses a target unavailable during the final ownership check",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1198,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 24,
+        "name": "original desktop click refuses a target moved during the final ownership check",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1198,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 25,
+        "name": "original default scroll preserves a disabled control before its readiness wait",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1228,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 26,
+        "name": "original scroll opt-in reveals a covered checkbox with one bounded wheel",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1228,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 27,
+        "name": "original desktop click rechecks owner after its pending final target read",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1280,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 28,
+        "name": "original desktop click rechecks cutoff after its pending final target read",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1280,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 29,
+        "name": "original clarification lookup admits its retained read without completing the assignment prerequisite",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1324,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 30,
+        "name": "original clarification lookup refuses changed owner, revision, refresh and retained-read joins",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1347,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 31,
+        "name": "original owner availability admits three captured A Teams through its actual first DOM read",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1464,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 32,
+        "name": "original owner availability retains singleton, subset and duplicate-row cardinality semantics",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1480,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 33,
+        "name": "original owner availability refuses foreign identities and preserves its existing aggregate guards",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1494,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 34,
+        "name": "original owner availability refuses invalid captured discovery before navigation",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1541,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 35,
+        "name": "owner availability admits every captured A Team through the actual first observation",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1610,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 36,
+        "name": "owner availability refuses healthy B in unavailable A rows",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1628,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 37,
+        "name": "owner availability refuses captured foreign owner in unavailable A rows",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1628,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 38,
+        "name": "owner availability refuses unknown Team in unavailable A rows",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1628,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 39,
+        "name": "owner availability refuses malformed Team in unavailable A rows",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1628,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 40,
+        "name": "owner availability refuses missing selected A before original navigation",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1638,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 41,
+        "name": "owner availability refuses non-string A handle before original navigation",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1638,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 42,
+        "name": "owner availability refuses empty A handle before original navigation",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1638,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 43,
+        "name": "owner availability refuses duplicate A handle before original navigation",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1638,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 44,
+        "name": "owner availability refuses over-bound capture before original navigation",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1638,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 45,
+        "name": "passive input keeps its actual Team target and three separate original navigation samples",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1722,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 46,
+        "name": "passive navigation preserves non-card events, the original ring bounds and null or non-Team state",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1747,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 47,
+        "name": "passive navigation refuses malformed target and store facts without losing original callbacks",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1767,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 48,
+        "name": "passive navigation remains bounded and cannot interrupt original writes on diagnostic failure",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1813,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 49,
+        "name": "passive navigation uses only the callable store own method and ignores unrelated card surfaces",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1835,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 50,
+        "name": "the selected provider receipt digest matches the actual manifest-selected archive bytes",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1853,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 51,
+        "name": "provider receipt legacy, current and equal-dual implementation digests preserve manifest authority",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1866,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 52,
+        "name": "every present provider implementation digest must be valid and both recognized fields must agree",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1890,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 53,
+        "name": "provider receipt shape, package selection and original file or JSON errors remain strict",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 1916,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 54,
+        "name": "saved Launch uses three stable actual DOM samples before its original settings action",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2042,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 55,
+        "name": "saved Launch resets exact geometry when the original button shifts by a quarter pixel",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2047,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 56,
+        "name": "saved Launch restarts its three samples after changed identity",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2060,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 57,
+        "name": "saved Launch restarts its three samples after changed expanded state",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2060,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 58,
+        "name": "saved Launch restarts its three samples after changed horizontal position",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2060,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 59,
+        "name": "saved Launch restarts its three samples after changed width",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2060,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 60,
+        "name": "saved Launch restarts its three samples after changed height",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2060,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 61,
+        "name": "saved Launch resets its original readiness after absent target",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2077,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 62,
+        "name": "saved Launch resets its original readiness after ambiguous target",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2077,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 63,
+        "name": "saved Launch resets its original readiness after wrong model",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2077,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 64,
+        "name": "saved Launch resets its original readiness after absent identity",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2077,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 65,
+        "name": "saved Launch resets its original readiness after empty identity",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2077,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 66,
+        "name": "saved Launch resets its original readiness after invalid expansion",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2077,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 67,
+        "name": "saved Launch resets its original readiness after missing owning dialog",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2077,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 68,
+        "name": "saved Launch resets its original readiness after nonfinite x",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2077,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 69,
+        "name": "saved Launch resets its original readiness after nonfinite y",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2077,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 70,
+        "name": "saved Launch resets its original readiness after zero width",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2077,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 71,
+        "name": "saved Launch resets its original readiness after negative height",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2077,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 72,
+        "name": "saved Launch resets its original readiness after running own animation",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2077,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 73,
+        "name": "saved Launch resets its original readiness after paused own animation",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2077,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 74,
+        "name": "saved Launch resets its original readiness after pending own animation",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2077,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 75,
+        "name": "saved Launch allows finished own animation without inspecting descendant spinners or model status",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2083,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 76,
+        "name": "saved Launch allows idle own animation without inspecting descendant spinners or model status",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2083,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 77,
+        "name": "saved Launch exhausts its one original deadline with no matching model and no settings action",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2092,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 78,
+        "name": "saved Launch exhausts its one original deadline with unsettled own dialog and no settings action",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2092,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 79,
+        "name": "original conversation waits for its own reply before one click at the hydrated coordinates",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2146,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 80,
+        "name": "default conversation click retains its original final geometry refusal without a preview predicate",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2158,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 81,
+        "name": "original conversation refuses body-only reply within its unchanged first read deadline",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2173,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 82,
+        "name": "original conversation refuses neighbor-only reply within its unchanged first read deadline",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2173,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 83,
+        "name": "original conversation refuses different required reply within its unchanged first read deadline",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2173,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 84,
+        "name": "original conversation refuses empty preview within its unchanged first read deadline",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2173,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 85,
+        "name": "original conversation refuses missing target within its unchanged first read deadline",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2173,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 86,
+        "name": "original conversation refuses zero-size target within its unchanged first read deadline",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2173,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 87,
+        "name": "original conversation refuses disabled target within its unchanged first read deadline",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2173,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 88,
+        "name": "original conversation refuses covered target within its unchanged first read deadline",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2173,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 89,
+        "name": "original conversation refuses two eligible rows with only the second ready within its unchanged first read deadline",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2173,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 90,
+        "name": "original conversation serializes its required preview as literal data",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2182,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 91,
+        "name": "original conversation rereads a revoked preview at unchanged final coordinates before input",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2189,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 92,
+        "name": "original conversation still refuses final owner despite a ready preview",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2200,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 93,
+        "name": "original conversation still refuses final movement despite a ready preview",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2200,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 94,
+        "name": "actual openChat forwards TEST boot ready for alice",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2219,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 95,
+        "name": "actual openChat forwards TEST stream partial for alice",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2219,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 96,
+        "name": "actual openChat forwards TEST boot ready for team-lead",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2219,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 97,
+        "name": "actual openChat forwards TEST stream partial for team-lead",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2219,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 98,
+        "name": "original Cross Close target admits the ready cleared Task when canResolveClarification is false",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2417,
+        "actualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 99,
+        "name": "original Cross Close target refuses retained user clarification",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 100,
+        "name": "original Cross Close target refuses retained external clarification",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 101,
+        "name": "original Cross Close target refuses null clarification",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 102,
+        "name": "original Cross Close target refuses full-detail refreshPending",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 103,
+        "name": "original Cross Close target refuses full-detail loading",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 104,
+        "name": "original Cross Close target refuses current detail error",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 105,
+        "name": "original Cross Close target refuses current deletionIntent",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 106,
+        "name": "original Cross Close target refuses full Task deletedAt",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 107,
+        "name": "original Cross Close target refuses full Task deleted status",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 108,
+        "name": "original Cross Close target refuses non-ready full-detail phase",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 109,
+        "name": "original Cross Close target refuses foreign full Task ID",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 110,
+        "name": "original Cross Close target refuses foreign detail identity",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 111,
+        "name": "original Cross Close target refuses changed active context",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 112,
+        "name": "original Cross Close target refuses different selected Team",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 113,
+        "name": "original Cross Close target refuses rebound controller surface",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 114,
+        "name": "original Cross Close target refuses missing stored session",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 115,
+        "name": "original Cross Close target refuses different stored session owner surface",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 116,
+        "name": "original Cross Close target refuses changed stored owner revision",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 117,
+        "name": "original Cross Close target refuses current canEditNow false",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 118,
+        "name": "original Cross Close target refuses non-owning controller",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 119,
+        "name": "original Cross Close target refuses scoped Team refresh",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 120,
+        "name": "original Cross Close target refuses unavailable accepted Team metadata",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 121,
+        "name": "original Cross Close target refuses disabled assignment control",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 122,
+        "name": "original Cross Close target refuses expanded assignment control",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 123,
+        "name": "original Cross Close target refuses another assignee",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 124,
+        "name": "original Cross Close target refuses missing assignment control",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 125,
+        "name": "original Cross Close target refuses duplicate assignment controls",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2456,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 126,
+        "name": "actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2462,
+        "actualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 127,
+        "name": "actual original Cross Close retains the first-read deadline while renderer readiness is pending",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2490,
+        "actualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 128,
+        "name": "actual original Cross Close cannot use a foreign dialog or an absent ineligible own control",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2496,
+        "actualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 129,
+        "name": "actual original Cross Close refuses duplicate eligible controls before disabled or hit narrowing",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2507,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 130,
+        "name": "actual original Cross Close refuses disabled covered and absent-hit controls",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2517,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 131,
+        "name": "actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2527,
+        "actualRed": "FAIL",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 132,
+        "name": "actual original Cross Close preserves final renderer ownership refusal without a press",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2536,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      },
+      {
+        "ordinal": 133,
+        "name": "actual original Cross Close preserves final exact geometry refusal without replay",
+        "multiplicity": 1,
+        "sourceDefinitionLine": 2545,
+        "actualRed": "PASS",
+        "predictedGreen": "PASS",
+        "observed": false,
+        "sourceNameJoins": true,
+        "ordinalExact": true
+      }
+    ],
+    "all13TargetVariantPredictions": [
+      {
+        "registration": 126,
+        "variant": 1,
+        "name": "positive exact button hit",
+        "fixture": {
+          "descendantHit": false
+        },
+        "actualRed": {
+          "reached": true,
+          "completedAssertions": false,
+          "outcome": "FAIL at original final geometry assertion before successful one-pair/count checks"
+        },
+        "predictedGreen": {
+          "reached": true,
+          "completeAssertions": true,
+          "result": "PASS",
+          "observed": false,
+          "counts": {
+            "now": 700,
+            "owned": 12,
+            "reads": 10,
+            "front": 1
+          },
+          "waits": {
+            "count": 7,
+            "eachMs": 100
+          },
+          "input": "Exactly one hover+press+release pair at1121,171.125"
+        }
+      },
+      {
+        "registration": 126,
+        "variant": 2,
+        "name": "positive descendant hit",
+        "fixture": {
+          "descendantHit": true
+        },
+        "actualRed": {
+          "reached": false,
+          "completedAssertions": false,
+          "outcome": "UNREACHED because the first loop iteration failed"
+        },
+        "predictedGreen": {
+          "reached": true,
+          "completeAssertions": true,
+          "result": "PASS",
+          "observed": false,
+          "counts": {
+            "now": 700,
+            "owned": 12,
+            "reads": 10,
+            "front": 1
+          },
+          "waits": {
+            "count": 7,
+            "eachMs": 100
+          },
+          "input": "Exactly one hover+press+release pair at1121,171.125"
+        }
+      },
+      {
+        "registration": 128,
+        "variant": 1,
+        "name": "foreign dialog Close with no own Close",
+        "fixture": {
+          "count": 0,
+          "foreignClose": true
+        },
+        "actualRed": {
+          "reached": true,
+          "completedAssertions": false,
+          "outcome": "FAIL: generic source resolved; assert.rejects at2502 reports Missing expected rejection"
+        },
+        "predictedGreen": {
+          "reached": true,
+          "completeAssertions": true,
+          "result": "PASS",
+          "observed": false,
+          "counts": {
+            "now": 30000,
+            "owned": 300,
+            "reads": 300,
+            "front": 1
+          },
+          "waits": {
+            "count": 300,
+            "eachMs": 100
+          },
+          "input": "No hover/press/release"
+        }
+      },
+      {
+        "registration": 128,
+        "variant": 2,
+        "name": "missing own Close",
+        "fixture": {
+          "count": 0
+        },
+        "actualRed": {
+          "reached": false,
+          "completedAssertions": false,
+          "outcome": "UNREACHED after first iteration failure"
+        },
+        "predictedGreen": {
+          "reached": true,
+          "completeAssertions": true,
+          "result": "PASS",
+          "observed": false,
+          "counts": {
+            "now": 30000,
+            "owned": 300,
+            "reads": 300,
+            "front": 1
+          },
+          "waits": {
+            "count": 300,
+            "eachMs": 100
+          },
+          "input": "No hover/press/release"
+        }
+      },
+      {
+        "registration": 128,
+        "variant": 3,
+        "name": "wrong own text",
+        "fixture": {
+          "text": "Close another task"
+        },
+        "actualRed": {
+          "reached": false,
+          "completedAssertions": false,
+          "outcome": "UNREACHED after first iteration failure"
+        },
+        "predictedGreen": {
+          "reached": true,
+          "completeAssertions": true,
+          "result": "PASS",
+          "observed": false,
+          "counts": {
+            "now": 30000,
+            "owned": 300,
+            "reads": 300,
+            "front": 1
+          },
+          "waits": {
+            "count": 300,
+            "eachMs": 100
+          },
+          "input": "No hover/press/release"
+        }
+      },
+      {
+        "registration": 128,
+        "variant": 4,
+        "name": "zero width own Close",
+        "fixture": {
+          "width": 0
+        },
+        "actualRed": {
+          "reached": false,
+          "completedAssertions": false,
+          "outcome": "UNREACHED after first iteration failure"
+        },
+        "predictedGreen": {
+          "reached": true,
+          "completeAssertions": true,
+          "result": "PASS",
+          "observed": false,
+          "counts": {
+            "now": 30000,
+            "owned": 300,
+            "reads": 300,
+            "front": 1
+          },
+          "waits": {
+            "count": 300,
+            "eachMs": 100
+          },
+          "input": "No hover/press/release"
+        }
+      },
+      {
+        "registration": 128,
+        "variant": 5,
+        "name": "zero height own Close",
+        "fixture": {
+          "height": 0
+        },
+        "actualRed": {
+          "reached": false,
+          "completedAssertions": false,
+          "outcome": "UNREACHED after first iteration failure"
+        },
+        "predictedGreen": {
+          "reached": true,
+          "completeAssertions": true,
+          "result": "PASS",
+          "observed": false,
+          "counts": {
+            "now": 30000,
+            "owned": 300,
+            "reads": 300,
+            "front": 1
+          },
+          "waits": {
+            "count": 300,
+            "eachMs": 100
+          },
+          "input": "No hover/press/release"
+        }
+      },
+      {
+        "registration": 129,
+        "variant": 1,
+        "name": "two eligible own controls",
+        "fixture": {
+          "count": 2
+        },
+        "actualRed": {
+          "reached": true,
+          "completedAssertions": true,
+          "outcome": "PASS including original deadline,300 reads/ownership checks,100ms cadence,30,000ms fake-clock,no input"
+        },
+        "predictedGreen": {
+          "reached": true,
+          "completeAssertions": true,
+          "result": "PASS",
+          "observed": false,
+          "counts": {
+            "now": 30000,
+            "owned": 300,
+            "reads": 300,
+            "front": 1
+          },
+          "waits": {
+            "count": 300,
+            "eachMs": 100
+          },
+          "input": "No hover/press/release"
+        }
+      },
+      {
+        "registration": 129,
+        "variant": 2,
+        "name": "duplicate with only first enabled",
+        "fixture": {
+          "count": 2,
+          "secondDisabled": true
+        },
+        "actualRed": {
+          "reached": true,
+          "completedAssertions": true,
+          "outcome": "PASS including unchanged deadline and no input; singleton precedes disabled narrowing"
+        },
+        "predictedGreen": {
+          "reached": true,
+          "completeAssertions": true,
+          "result": "PASS",
+          "observed": false,
+          "counts": {
+            "now": 30000,
+            "owned": 300,
+            "reads": 300,
+            "front": 1
+          },
+          "waits": {
+            "count": 300,
+            "eachMs": 100
+          },
+          "input": "No hover/press/release"
+        }
+      },
+      {
+        "registration": 129,
+        "variant": 3,
+        "name": "duplicate with descendant hit",
+        "fixture": {
+          "count": 2,
+          "descendantHit": true
+        },
+        "actualRed": {
+          "reached": true,
+          "completedAssertions": true,
+          "outcome": "PASS including unchanged deadline and no input; singleton precedes hit narrowing"
+        },
+        "predictedGreen": {
+          "reached": true,
+          "completeAssertions": true,
+          "result": "PASS",
+          "observed": false,
+          "counts": {
+            "now": 30000,
+            "owned": 300,
+            "reads": 300,
+            "front": 1
+          },
+          "waits": {
+            "count": 300,
+            "eachMs": 100
+          },
+          "input": "No hover/press/release"
+        }
+      },
+      {
+        "registration": 130,
+        "variant": 1,
+        "name": "disabled own Close",
+        "fixture": {
+          "disabled": true
+        },
+        "actualRed": {
+          "reached": true,
+          "completedAssertions": true,
+          "outcome": "PASS including original deadline and no input"
+        },
+        "predictedGreen": {
+          "reached": true,
+          "completeAssertions": true,
+          "result": "PASS",
+          "observed": false,
+          "counts": {
+            "now": 30000,
+            "owned": 300,
+            "reads": 300,
+            "front": 1
+          },
+          "waits": {
+            "count": 300,
+            "eachMs": 100
+          },
+          "input": "No hover/press/release"
+        }
+      },
+      {
+        "registration": 130,
+        "variant": 2,
+        "name": "covered own Close",
+        "fixture": {
+          "covered": true
+        },
+        "actualRed": {
+          "reached": true,
+          "completedAssertions": true,
+          "outcome": "PASS including original deadline and no input"
+        },
+        "predictedGreen": {
+          "reached": true,
+          "completeAssertions": true,
+          "result": "PASS",
+          "observed": false,
+          "counts": {
+            "now": 30000,
+            "owned": 300,
+            "reads": 300,
+            "front": 1
+          },
+          "waits": {
+            "count": 300,
+            "eachMs": 100
+          },
+          "input": "No hover/press/release"
+        }
+      },
+      {
+        "registration": 130,
+        "variant": 3,
+        "name": "absent hit",
+        "fixture": {
+          "noHit": true
+        },
+        "actualRed": {
+          "reached": true,
+          "completedAssertions": true,
+          "outcome": "PASS including original deadline and no input"
+        },
+        "predictedGreen": {
+          "reached": true,
+          "completeAssertions": true,
+          "result": "PASS",
+          "observed": false,
+          "counts": {
+            "now": 30000,
+            "owned": 300,
+            "reads": 300,
+            "front": 1
+          },
+          "waits": {
+            "count": 300,
+            "eachMs": 100
+          },
+          "input": "No hover/press/release"
+        }
+      }
+    ],
+    "limits": "All133 PASS and all13 target variants completing are static predictions only. ActualRED remains118PASS/15semanticFAIL with8 reached/5 unreached variants. RuntimeGREEN must independently establish every assertion without filtering/retry/fixture modification; missing or unreached assertions are never PASS."
+  },
+  "executionBoundary": {
+    "commandVectors": {
+      "red": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "green": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "lint": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "lint:fast:files",
+        "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "source-size": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "guard:source-file-size"
+      ],
+      "diff-check": [
+        "/usr/local/bin/git",
+        "diff",
+        "--check",
+        "--",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ]
+    },
+    "timing": {
+      "commandSeconds": 180,
+      "placement": "After full preflight and initial receipt save; before command start record/raw/Popen. Child gets the remainder of that same absolute clock. No reset after spawn.",
+      "postflight": "Input hashing is outside the original command deadline. Separate preflight/command/postflight/whole-invocation timings are mandatory; whole invocation is not claimed under180s.",
+      "gitMetadata": "Read-only metadata calls retain captured-process supervision and a30-second per-read refusal cap; these do not grant behavioral retries."
+    },
+    "environment": {
+      "inheritSameAdmittedTransportPerInvocation": true,
+      "homeAndCodexHomePreserved": true,
+      "cache": "Strip NODE_COMPILE_CACHE/NODE_COMPILE_CACHE_PORTABLE and force NODE_DISABLE_COMPILE_CACHE=1. Preserve and rehash seven bootstrap residue files.",
+      "testTmp": "/tmp/c714-cross-close-evidence/test-tmp",
+      "nodeChildSeam": "The six existing test-created children use process.execPath with explicit TEST_ONLY_VALUE-only env. AGENT_BACKEND_TEST_NODE remains bound to the same Node but is not the selector used by those six calls."
+    },
+    "remainingAttempts": {
+      "materializeTest": 0,
+      "red": 0,
+      "materializeProducer": 1,
+      "green": 1,
+      "validationPackage": 1,
+      "previousCrossWholeFileExecutions": 1,
+      "previousCrossMetadataMaterializations": 1,
+      "interpretation": "Only remaining selected attempts; successful earlier materialize-red and semanticRED are spent and cannot be replayed."
+    },
+    "materializationReceiptScope": {
+      "scope": "source-and-supervisor-metadata-only",
+      "fullRuntimeInputsInspected": false,
+      "fullRuntimeInputsPreserved": null,
+      "dependencies": "UNINSPECTED",
+      "compiled": "UNINSPECTED",
+      "providerArchivesAndInstalledMembers": "UNINSPECTED",
+      "bootstrapNodeCache": "UNINSPECTED",
+      "required": "Complete actual source/control/tool/config and captured metadata/session lifecycle before/after plus independent observed outer0. Source preservation is stated separately with exactly authorized written paths. This is not a behavioral or all-input result."
+    },
+    "executionScope": {
+      "action": "One metadata-only materialize-green changing only two selected producers, then one unchanged whole133 GREEN; only after complete independent actualGREEN acceptance, one ordered validation-package",
+      "commands": "green or validation-package only; red is unavailable in this binding phase",
+      "requiredBeforeExecution": [
+        "Complete exact e6a776 source publication readback is accepted by root and independent42db",
+        "Exact final GREEN binding full independent R2 and immediate-push publication with complete actual readback before local binding staging",
+        "One source-and-supervisor-metadata-only producer materialization must fully verify current8798 source/head/tree/index/tools/pnpm/env/controls and captured metadata sessions; runtime deps/compiled/providers/cache explicitly UNINSPECTED/null preservation",
+        "Independent full actual metadata materialization and separately observed outer0 acceptance beforeGREEN",
+        "BeforeGREEN and before the validation package, separately perform the unchanged complete fresh current runtime preflight; failure spends that invocation with primaryUNREACHED",
+        "Only independently accepted actual133GREEN full source/input/lifetime/outer0 admits the one ordered3-command validation package"
+      ],
+      "requiresObservedSupervisorExitZeroForContinuation": true,
+      "signalReceiptBoundary": "The receipt covers managed signals captured or pending at its explicitly recorded blocked-mask cutoff. Root must separately observe actual supervisor exit0 before any continuation, and join that outcome into independent actual semantic RED/GREEN acceptance; a successful receipt alone does not cover later signals.",
+      "plannedSourceChanges": 2,
+      "localApplication": false,
+      "newGreenExecutions": 0,
+      "producerAuthored": true,
+      "acceptedActualSemanticRedBeforeAuthorship": {
+        "accepted": true,
+        "at": "2026-11-16 17:31:19 UTC",
+        "publishedR1": {
+          "commit": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+          "identity": {
+            "bytes": 23142,
+            "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+            "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+          },
+          "actualIndependentReadback": {
+            "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34",
+            "bytes": 24775,
+            "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1"
+          }
+        },
+        "actualRed": {
+          "envelope": {
+            "bytes": 185267,
+            "sha256": "2b8eb5338ddeaa291d6747b07dcaf31168b9b1fc3d576b7ea487823333aa02f7",
+            "gitBlob": "7db3b53fab91d32d18c8dd95b34242e515b50634"
+          },
+          "receipt": {
+            "bytes": 33946,
+            "sha256": "e86f3ff0ed102ec68ccb2fbe69f279247bd0eb56eaba50c8e96921b3f2619772",
+            "gitBlob": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a"
+          },
+          "raw": {
+            "bytes": 37314,
+            "sha256": "0ccd67564fbfaace5061e59fc0e1b29632294746aef13ae2e38131659db0e116",
+            "gitBlob": "d38f2ae2851555b35970a892ce38674221147437"
+          },
+          "outerSession": 27541,
+          "outerExit": 0
+        },
+        "semantic": {
+          "bytes": 190694,
+          "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+          "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+        },
+        "semanticFinalClosure": {
+          "bytes": 86249,
+          "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+          "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+        },
+        "guard": {
+          "acceptanceReceivedBeforeAuthorship": true,
+          "reviewer": "/root/guard_review",
+          "acceptance": "COMPLETE actual133 RED independently ACCEPTED; all67files90226849B/42unique,full current beforeafterinputs/lifetime/outer0; only existing8abe two-path producer AUTHORING gate released. ExactR2/publication/readback/GREEN/guards remain.",
+          "exactEnvelope": "7db3b53fab91d32d18c8dd95b34242e515b50634",
+          "exactReceipt": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a",
+          "bareReviewRetentionPendingAtGate": true,
+          "retainedReview": {
+            "bytes": 140038,
+            "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+            "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+          },
+          "fullRootReadbackAfterInitialAuthorshipAt": "2026-11-16 17:32:25 UTC",
+          "bareReviewRetentionNowComplete": true
+        },
+        "permittedPaths": [
+          "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts"
+        ],
+        "producerAuthoredBeforeThisGate": false,
+        "scope": "Root may now author only the two selected Cross producer postimages. No source application/runtime or GREEN binding yet."
+      },
+      "validationPackage": {
+        "selectedCommands": [
+          "lint",
+          "source-size",
+          "diff-check"
+        ],
+        "sameOneCapturedEnvironmentAndFullWholePackagePrePost": true,
+        "eachChildOwnCapturedSessionAndOriginal180SecondPrelaunchClock": true,
+        "requirePriorZeroFinalizedRawAndReceiptNoTimeoutNoErrorNoSignalEmptySessionBeforeNext": true,
+        "laterCommandsUnreachedAfterFailure": true,
+        "noRetryOrPartialResume": true,
+        "notCanonicalTypecheckOrBuild": true
+      },
+      "remainingQualification": "Canonical typecheck/build and full GUI/platform acceptance remain explicit open gates for a later concrete integration/CI action scope; no assertion that these three fast checks replace them."
+    },
+    "sourceFinalGuard": "Existing controlsed57 and Selectioncf93 are unchanged. Exact original clickExpression final currentness/geometry/no-replay remains; only same-task synchronous readiness admission in helper3c7b/driver4700 is selected. Original per-primary180 and per-read30 caps remain, with full hashing separately timed.",
+    "phaseSeparation": "Unchanged registry contains RED vector, but phasegreen rejects RED. Only metadata materializegreen, one whole133 GREEN, and conditional single three-child validation package are selected. The earlier RED and test materialization are spent.",
+    "noGreenClaim": true
+  },
+  "independentLifetimeLane": {
+    "reviewer": "/root/guard_review",
+    "review": {
+      "bytes": 164607,
+      "sha256": "c14dc42e3796c80a819d8a8dde4341acd41cd9d8669bb20ae1e4a9b21088b758",
+      "gitBlob": "1261b8cf5a840c9ed6587e71e9bf6f638732e28c"
+    },
+    "fullBodyFetchedAndRehashed": true,
+    "disposition": "ACCEPTED_EXACT_GREEN_BINDING_WITH_UNCHANGED_REVIEWED_RUNNER",
+    "blockers": [],
+    "subject": {
+      "binding": {
+        "bytes": 1800456,
+        "sha256": "5a37cf5a6bff3ca5da30f7813da3d73f75852f6c7ab670dd234599f4b9a6c2e2",
+        "gitBlob": "020f6efa5dce4a1a5fe269836136ce554d76792c"
+      },
+      "runner": {
+        "bytes": 48838,
+        "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+        "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+      },
+      "bindingLocalPath": "/tmp/c714-cross-close-review/binding-green.json",
+      "runnerLocalPath": "/tmp/c714-cross-close-review/runner.py",
+      "publishedSubject": {
+        "commit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+        "tree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+        "qualification": "Exact published two-source helper3c7b/driver4700 under8abeR1, unchanged0aec whole133 test and fixeded57/cf93. Local C5 index plus five exact source overlays; remote documentation is not claimed locally materialized."
+      }
+    },
+    "remainingGates": [
+      "Publish this exact GREEN binding with its reviews, immediately push and independently read back the complete actual publication before staging.",
+      "Execute only the selected metadata application once and independently qualify its complete actual source/metadata/lifetime and outer0 evidence.",
+      "Execute the unchanged whole133 GREEN once only after a fresh full runtime preflight and the preceding independent materialization gate.",
+      "Independently qualify actual whole133 semantic/source/current-input/lifetime evidence and separately observed outer0 before the single validation package.",
+      "Preserve unexecuted/failed/unknown and metadata-only limits; do not transfer this finite review to canonical typing/build, new CI, native GUI, real providers or incoming source."
+    ],
+    "attribution": "Guard independently closes exact runner/schema/negative-path/lifetime/materialization/validation enforcement. This record binds its complete immutable body and accepted exact subject; it does not substitute metadata-only proof for runtime verification."
+  },
+  "remainingGates": [
+    "Publish this exact GREEN binding with its reviews, immediately push and independently read back the complete actual publication before staging.",
+    "Execute only the selected metadata application once and independently qualify its complete actual source/metadata/lifetime and outer0 evidence.",
+    "Execute the unchanged whole133 GREEN once only after a fresh full runtime preflight and the preceding independent materialization gate.",
+    "Independently qualify actual whole133 semantic/source/current-input/lifetime evidence and separately observed outer0 before the single validation package.",
+    "Preserve unexecuted/failed/unknown and metadata-only limits; do not transfer this finite review to canonical typing/build, new CI, native GUI, real providers or incoming source."
+  ],
+  "reviewerActions": {
+    "immutableGitReads": true,
+    "pureTextHashAndDataComposition": true,
+    "bareEvidenceRetentionOnly": true,
+    "targetModuleEvaluation": false,
+    "VMExecution": false,
+    "shellOrRuntime": false,
+    "sourceOrTestOrRunnerPostimages": false,
+    "localStaging": false,
+    "sourceApplication": false,
+    "tests": false,
+    "compilers": false,
+    "providerOrGui": false,
+    "refsOrCommits": false,
+    "PRorCI": false
+  },
+  "auditErrors": []
+}

@@ -982,6 +982,259 @@
     }
   },
   "currentCrossCloseStage": {
+    "phase": "Exact GREEN binding R2 accepted and published; actual application/GREEN/validation pending",
+    "sourceCommit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+    "sourceTree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+    "sourceActualReadback": {
+      "bytes": 31670,
+      "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+      "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+    },
+    "binding": {
+      "bytes": 1800456,
+      "sha256": "5a37cf5a6bff3ca5da30f7813da3d73f75852f6c7ab670dd234599f4b9a6c2e2",
+      "gitBlob": "020f6efa5dce4a1a5fe269836136ce554d76792c"
+    },
+    "runner": {
+      "bytes": 48838,
+      "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+      "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+    },
+    "independentR2": {
+      "guard": {
+        "bytes": 164607,
+        "sha256": "c14dc42e3796c80a819d8a8dde4341acd41cd9d8669bb20ae1e4a9b21088b758",
+        "gitBlob": "1261b8cf5a840c9ed6587e71e9bf6f638732e28c"
+      },
+      "parity": {
+        "bytes": 152607,
+        "sha256": "9696a5215de4076afabe21f348f2241aa373ce82d00526f12af6df5ce419fe7f",
+        "gitBlob": "fc86450c86f02117b9d8e180b1b35293ebea384e"
+      },
+      "bothFullBodiesReadAndRehashed": true,
+      "bothAcceptedExactBinding": true,
+      "blockers": []
+    },
+    "rootComposition": {
+      "bytes": 10341,
+      "sha256": "afcdb5095c5d3d7571f06549f8a0b24337fb66c781178f56e003f4e65ba3f4b9",
+      "gitBlob": "d2349cc4b4ae8ee8c2eae5be6bd29c8c06088285"
+    },
+    "outcome": {
+      "bytes": 8831,
+      "sha256": "bfcf096097279fd82bf1248c66d1909a79c0c3d8e2ea13f59d935f5f52ccbfe1",
+      "gitBlob": "cf469167277d756d7b242c855892712d94003f61"
+    },
+    "actualRed": {
+      "identity": {
+        "bytes": 33946,
+        "sha256": "e86f3ff0ed102ec68ccb2fbe69f279247bd0eb56eaba50c8e96921b3f2619772",
+        "gitBlob": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a"
+      },
+      "independentReviewAccepted": true,
+      "observedOuterSupervisorExit": 0,
+      "actualOuterSession": 27541,
+      "expectedPrimaryExit": 1,
+      "raw": {
+        "bytes": 37314,
+        "sha256": "0ccd67564fbfaace5061e59fc0e1b29632294746aef13ae2e38131659db0e116",
+        "gitBlob": "d38f2ae2851555b35970a892ce38674221147437"
+      },
+      "primaryReceipt": {
+        "bytes": 883,
+        "sha256": "740b006d5edd0141186145f6d551cbe3940d024a54b88d5456619f8bfac415b3",
+        "gitBlob": "62abf6c38e2f22cdf38987b431b53ffae096a667"
+      },
+      "envelope": {
+        "bytes": 185267,
+        "sha256": "2b8eb5338ddeaa291d6747b07dcaf31168b9b1fc3d576b7ea487823333aa02f7",
+        "gitBlob": "7db3b53fab91d32d18c8dd95b34242e515b50634"
+      },
+      "guard": {
+        "bytes": 140038,
+        "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+        "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+      },
+      "semantic": {
+        "bytes": 190694,
+        "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+        "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+      },
+      "semanticClosure": {
+        "bytes": 86249,
+        "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+        "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+      },
+      "source": {
+        "bytes": 2478516,
+        "sha256": "006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f",
+        "gitBlob": "77516ddaecaa6d0f485825e250a8106db599f781"
+      },
+      "wholeTest": {
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      "wholeCases": 133,
+      "pass": 118,
+      "semanticFail": 15,
+      "old97AllPass": true,
+      "zeroSkipsCancellationsTodos": true,
+      "fullCurrentRuntimeInputsInspectedAndPreserved": true,
+      "noCleanupDebt": true,
+      "qualification": "Exact valid semanticRED remains15FAIL with5unreached target variants. No actualGREEN or blanketPASS is inferred."
+    },
+    "remainingAttempts": {
+      "materializeTest": 0,
+      "red": 0,
+      "materializeProducer": 1,
+      "green": 1,
+      "validationPackage": 1,
+      "previousCrossWholeFileExecutions": 1,
+      "previousCrossMetadataMaterializations": 1,
+      "interpretation": "Only remaining selected attempts; successful earlier materialize-red and semanticRED are spent and cannot be replayed."
+    },
+    "wholeTest": {
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    },
+    "prospectiveGreenSource": {
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+    },
+    "prospectiveNotActual": true,
+    "metadataMaterializationScope": {
+      "scope": "source-and-supervisor-metadata-only",
+      "fullRuntimeInputsInspected": false,
+      "fullRuntimeInputsPreserved": null,
+      "dependencies": "UNINSPECTED",
+      "compiled": "UNINSPECTED",
+      "providerArchivesAndInstalledMembers": "UNINSPECTED",
+      "bootstrapNodeCache": "UNINSPECTED",
+      "required": "Complete actual source/control/tool/config and captured metadata/session lifecycle before/after plus independent observed outer0. Source preservation is stated separately with exactly authorized written paths. This is not a behavioral or all-input result."
+    },
+    "sourceApplied": false,
+    "greenExecuted": false,
+    "validationExecuted": false,
+    "qualification": "Complete actual publication readback is required before staging; no fullE2E/typecheck/build/GUI qualification."
+  },
+  "priorCrossCloseStageAtTestPublication": {
+    "stage": "test-only-R2-published-runtime-pending",
+    "outcome": {
+      "bytes": 4332,
+      "sha256": "f004dad9be5904649c25c78d890e621e609d399f1c827a4d5c88566639deb853",
+      "gitBlob": "d96c2ab50639168cca3f7673ef219c3f1a16b701",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-reviewed-outcome-20261116.json"
+    },
+    "r1ActualReadback": {
+      "bytes": 24775,
+      "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+      "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+    },
+    "test": {
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    },
+    "guard": {
+      "bytes": 35700,
+      "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+      "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+    },
+    "parity": {
+      "bytes": 98112,
+      "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+      "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+    },
+    "census": {
+      "preserved": 97,
+      "addedReadiness": 28,
+      "addedDriver": 8,
+      "whole": 133,
+      "targetSubcases": 13
+    },
+    "actualNewExecutions": 0,
+    "producerAuthored": false,
+    "attemptsRemaining": {
+      "materializeTest": 1,
+      "red": 1,
+      "materializeProducer": 1,
+      "green": 1,
+      "validationPackage": 1
+    }
+  },
+  "priorCrossCloseStageAtRedControlsPublication": {
+    "stage": "exact-RED-controls-R2-published-actual-readback-and-runtime-pending",
+    "runner": {
+      "bytes": 48838,
+      "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+      "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+    },
+    "binding": {
+      "bytes": 840295,
+      "sha256": "d8fd4d1e33f666f64a7e8512a63a92aedd27bf105fc248eaa13494599e468fc2",
+      "gitBlob": "cb12381b46948c807d443fc41581a9a48d18e051"
+    },
+    "independentR2": {
+      "runnerGuard": {
+        "bytes": 85343,
+        "sha256": "68b71ed76d405006a4b125750e00902848a5713c3198655518208b2a89919c03",
+        "gitBlob": "d0c875cc0d5a9fd4c25f246e90137bc1babd0ee9"
+      },
+      "bindingGuard": {
+        "bytes": 22539,
+        "sha256": "c05935baf86694bbf89d4652fcd570745cc011b48560589732843a285e908ba8",
+        "gitBlob": "1bc41522c3af0b9301a847a765a68be0adcf17db"
+      },
+      "bindingParity": {
+        "bytes": 119166,
+        "sha256": "6aa08dbfbfdb6ee38a71e995ed7d2285974acd11796f9a31deb8649f9b988194",
+        "gitBlob": "3f75fb4e2740c7ba0af81b3b60870bcbc3cb98e9"
+      }
+    },
+    "publishedTest": {
+      "commit": "c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+      "tree": "31554d5e9f57d07c4dff4514f494126633a3d934",
+      "test": {
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      "independentActualReadback": {
+        "bytes": 56894,
+        "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+        "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+      }
+    },
+    "outcome": {
+      "bytes": 9619,
+      "sha256": "bd75eeea3bfd99ac0916a6c621ecf718d22eb82421d8a1cdcf48d2cef1630975",
+      "gitBlob": "0c218630d93afb5e2e48ce111ab870a5bd896d00",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-controls-reviewed-outcome-20261116.json"
+    },
+    "actualNewExecutions": 0,
+    "producerAuthored": false,
+    "attemptsRemaining": {
+      "materializeTest": 1,
+      "red": 1,
+      "materializeProducer": 1,
+      "green": 1,
+      "validationPackage": 1
+    },
+    "canonicalTypingBuildAssessment": {
+      "bytes": 263003,
+      "sha256": "bd5c643af2008546a081eae8f00eb6f0ba2dcaaabe8de68a1c3a169aa7d85f57",
+      "gitBlob": "37e5cf0c63700b4a33d91e8c929fd9c6f551e8ff"
+    },
+    "windowsCleanupInterpretationCorrection": {
+      "bytes": 1014,
+      "sha256": "6b2aa0fb3b6dc589a45c66d4e1448617e183359c0021277234b0ccb993859bf2",
+      "gitBlob": "74320612a117ff935bb9dbcb046c6b03facb1161"
+    }
+  },
+  "priorCrossCloseStageAtGreenBindingPublication": {
     "stage": "actual133-semanticRED-and-two-source-producerR2-published-local-application-GREEN-pending",
     "outcome": {
       "bytes": 16491,
@@ -1187,120 +1440,6 @@
         "readiness": "Still INCOMPLETE at original15s; cleanup alone only qualified"
       },
       "qualification": "Pinned a5/incominga07 81-difference analysis precedes these two Cross edits; its inventory must be refreshed before a later integration scope.158-name union and c930 adoption remain unselected."
-    }
-  },
-  "priorCrossCloseStageAtTestPublication": {
-    "stage": "test-only-R2-published-runtime-pending",
-    "outcome": {
-      "bytes": 4332,
-      "sha256": "f004dad9be5904649c25c78d890e621e609d399f1c827a4d5c88566639deb853",
-      "gitBlob": "d96c2ab50639168cca3f7673ef219c3f1a16b701",
-      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-reviewed-outcome-20261116.json"
-    },
-    "r1ActualReadback": {
-      "bytes": 24775,
-      "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
-      "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
-    },
-    "test": {
-      "bytes": 155423,
-      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
-      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
-    },
-    "guard": {
-      "bytes": 35700,
-      "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
-      "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
-    },
-    "parity": {
-      "bytes": 98112,
-      "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
-      "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
-    },
-    "census": {
-      "preserved": 97,
-      "addedReadiness": 28,
-      "addedDriver": 8,
-      "whole": 133,
-      "targetSubcases": 13
-    },
-    "actualNewExecutions": 0,
-    "producerAuthored": false,
-    "attemptsRemaining": {
-      "materializeTest": 1,
-      "red": 1,
-      "materializeProducer": 1,
-      "green": 1,
-      "validationPackage": 1
-    }
-  },
-  "priorCrossCloseStageAtRedControlsPublication": {
-    "stage": "exact-RED-controls-R2-published-actual-readback-and-runtime-pending",
-    "runner": {
-      "bytes": 48838,
-      "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
-      "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
-    },
-    "binding": {
-      "bytes": 840295,
-      "sha256": "d8fd4d1e33f666f64a7e8512a63a92aedd27bf105fc248eaa13494599e468fc2",
-      "gitBlob": "cb12381b46948c807d443fc41581a9a48d18e051"
-    },
-    "independentR2": {
-      "runnerGuard": {
-        "bytes": 85343,
-        "sha256": "68b71ed76d405006a4b125750e00902848a5713c3198655518208b2a89919c03",
-        "gitBlob": "d0c875cc0d5a9fd4c25f246e90137bc1babd0ee9"
-      },
-      "bindingGuard": {
-        "bytes": 22539,
-        "sha256": "c05935baf86694bbf89d4652fcd570745cc011b48560589732843a285e908ba8",
-        "gitBlob": "1bc41522c3af0b9301a847a765a68be0adcf17db"
-      },
-      "bindingParity": {
-        "bytes": 119166,
-        "sha256": "6aa08dbfbfdb6ee38a71e995ed7d2285974acd11796f9a31deb8649f9b988194",
-        "gitBlob": "3f75fb4e2740c7ba0af81b3b60870bcbc3cb98e9"
-      }
-    },
-    "publishedTest": {
-      "commit": "c0ead43f21d5ed90776d4080fa372f48cf8270d5",
-      "tree": "31554d5e9f57d07c4dff4514f494126633a3d934",
-      "test": {
-        "bytes": 155423,
-        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
-        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
-      },
-      "independentActualReadback": {
-        "bytes": 56894,
-        "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
-        "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
-      }
-    },
-    "outcome": {
-      "bytes": 9619,
-      "sha256": "bd75eeea3bfd99ac0916a6c621ecf718d22eb82421d8a1cdcf48d2cef1630975",
-      "gitBlob": "0c218630d93afb5e2e48ce111ab870a5bd896d00",
-      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-controls-reviewed-outcome-20261116.json"
-    },
-    "actualNewExecutions": 0,
-    "producerAuthored": false,
-    "attemptsRemaining": {
-      "materializeTest": 1,
-      "red": 1,
-      "materializeProducer": 1,
-      "green": 1,
-      "validationPackage": 1
-    },
-    "canonicalTypingBuildAssessment": {
-      "bytes": 263003,
-      "sha256": "bd5c643af2008546a081eae8f00eb6f0ba2dcaaabe8de68a1c3a169aa7d85f57",
-      "gitBlob": "37e5cf0c63700b4a33d91e8c929fd9c6f551e8ff"
-    },
-    "windowsCleanupInterpretationCorrection": {
-      "bytes": 1014,
-      "sha256": "6b2aa0fb3b6dc589a45c66d4e1448617e183359c0021277234b0ccb993859bf2",
-      "gitBlob": "74320612a117ff935bb9dbcb046c6b03facb1161"
     }
   }
 }

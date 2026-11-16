@@ -1,0 +1,2276 @@
+{
+  "schema": "c714-cross-close-green-binding-independent-lifetime-r2",
+  "schemaVersion": 1,
+  "preparedAtUtc": "2026-11-16 17:53:00 UTC",
+  "reviewer": "/root/guard_review",
+  "repository": "777genius/agent-teams-ai",
+  "disposition": "ACCEPTED_EXACT_GREEN_BINDING_WITH_UNCHANGED_REVIEWED_RUNNER",
+  "acceptanceSentBeforeBareRecordRetention": true,
+  "blockers": [],
+  "reviewScope": "Full exact binding body, delta, embedded body and source-composition joins, followed by static phase/schema/admission/materialization/runtime/lifetime/negative-path review against the unchanged fully reviewed165f runner. No local staging, application or execution.",
+  "subject": {
+    "binding": {
+      "bytes": 1800456,
+      "sha256": "5a37cf5a6bff3ca5da30f7813da3d73f75852f6c7ab670dd234599f4b9a6c2e2",
+      "gitBlob": "020f6efa5dce4a1a5fe269836136ce554d76792c"
+    },
+    "runner": {
+      "bytes": 48838,
+      "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+      "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+    },
+    "bindingLocalPath": "/tmp/c714-cross-close-review/binding-green.json",
+    "runnerLocalPath": "/tmp/c714-cross-close-review/runner.py",
+    "publishedSubject": {
+      "commit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+      "tree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+      "qualification": "Exact published two-source helper3c7b/driver4700 under8abeR1, unchanged0aec whole133 test and fixeded57/cf93. Local C5 index plus five exact source overlays; remote documentation is not claimed locally materialized."
+    }
+  },
+  "priorReviews": {
+    "unchangedRunnerR2": {
+      "bytes": 85343,
+      "sha256": "68b71ed76d405006a4b125750e00902848a5713c3198655518208b2a89919c03",
+      "gitBlob": "d0c875cc0d5a9fd4c25f246e90137bc1babd0ee9"
+    },
+    "acceptedRedBinding": {
+      "bytes": 840295,
+      "sha256": "d8fd4d1e33f666f64a7e8512a63a92aedd27bf105fc248eaa13494599e468fc2",
+      "gitBlob": "cb12381b46948c807d443fc41581a9a48d18e051"
+    },
+    "acceptedActualRed": {
+      "bytes": 140038,
+      "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+      "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+    },
+    "acceptedExactProducers": {
+      "bytes": 121044,
+      "sha256": "438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339",
+      "gitBlob": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637"
+    },
+    "actualProducerPublication": {
+      "bytes": 31670,
+      "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+      "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+    }
+  },
+  "completeDelta": [
+    {
+      "key": "schemaVersion",
+      "status": "unchanged",
+      "oldType": "number",
+      "newType": "number",
+      "oldSize": 1,
+      "newSize": 1
+    },
+    {
+      "key": "kind",
+      "status": "changed",
+      "oldType": "string",
+      "newType": "string",
+      "oldSize": 89,
+      "newSize": 145
+    },
+    {
+      "key": "publishedR1",
+      "status": "unchanged",
+      "oldType": "string",
+      "newType": "string",
+      "oldSize": 42,
+      "newSize": 42
+    },
+    {
+      "key": "publishedRecoveryR1",
+      "status": "unchanged",
+      "oldType": "string",
+      "newType": "string",
+      "oldSize": 42,
+      "newSize": 42
+    },
+    {
+      "key": "publishedTransportAmendment",
+      "status": "unchanged",
+      "oldType": "string",
+      "newType": "string",
+      "oldSize": 42,
+      "newSize": 42
+    },
+    {
+      "key": "phase",
+      "status": "changed",
+      "oldType": "string",
+      "newType": "string",
+      "oldSize": 5,
+      "newSize": 7
+    },
+    {
+      "key": "runnerLocalPath",
+      "status": "unchanged",
+      "oldType": "string",
+      "newType": "string",
+      "oldSize": 40,
+      "newSize": 40
+    },
+    {
+      "key": "bindingLocalPath",
+      "status": "changed",
+      "oldType": "string",
+      "newType": "string",
+      "oldSize": 47,
+      "newSize": 49
+    },
+    {
+      "key": "runnerIdentity",
+      "status": "unchanged",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 144,
+      "newSize": 144
+    },
+    {
+      "key": "actualPublishedSubjectReadbackAccepted",
+      "status": "unchanged",
+      "oldType": "boolean",
+      "newType": "boolean",
+      "oldSize": 4,
+      "newSize": 4
+    },
+    {
+      "key": "publishedSubject",
+      "status": "changed",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 346,
+      "newSize": 337
+    },
+    {
+      "key": "actualPublishedSubjectReadbackEvidence",
+      "status": "changed",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 4712,
+      "newSize": 12306
+    },
+    {
+      "key": "combinedInputImportAdmission",
+      "status": "changed",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 2193,
+      "newSize": 5191
+    },
+    {
+      "key": "acceptedReviewBodies",
+      "status": "changed",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 525129,
+      "newSize": 1254579
+    },
+    {
+      "key": "inputFiles",
+      "status": "unchanged",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 1918,
+      "newSize": 1918
+    },
+    {
+      "key": "beforeSourceOverlay",
+      "status": "changed",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 55101,
+      "newSize": 213459
+    },
+    {
+      "key": "sourceOverlay",
+      "status": "changed",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 213459,
+      "newSize": 259686
+    },
+    {
+      "key": "commandVectors",
+      "status": "unchanged",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 1379,
+      "newSize": 1379
+    },
+    {
+      "key": "sourcePins",
+      "status": "changed",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 1135,
+      "newSize": 1135
+    },
+    {
+      "key": "behavioralAttempts",
+      "status": "changed",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 122,
+      "newSize": 302
+    },
+    {
+      "key": "reviewedTestCensus",
+      "status": "changed",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 929,
+      "newSize": 2960
+    },
+    {
+      "key": "timing",
+      "status": "unchanged",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 543,
+      "newSize": 543
+    },
+    {
+      "key": "environment",
+      "status": "unchanged",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 511,
+      "newSize": 511
+    },
+    {
+      "key": "executionScope",
+      "status": "changed",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 1298,
+      "newSize": 4742
+    },
+    {
+      "key": "preimageSourcePins",
+      "status": "changed",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 1135,
+      "newSize": 1135
+    },
+    {
+      "key": "crossR1Identity",
+      "status": "unchanged",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 144,
+      "newSize": 144
+    },
+    {
+      "key": "crossR1Body",
+      "status": "unchanged",
+      "oldType": "string",
+      "newType": "string",
+      "oldSize": 24014,
+      "newSize": 24014
+    },
+    {
+      "key": "materializePaths",
+      "status": "changed",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 59,
+      "newSize": 125
+    },
+    {
+      "key": "materializationReceiptScope",
+      "status": "unchanged",
+      "oldType": "object",
+      "newType": "object",
+      "oldSize": 526,
+      "newSize": 526
+    },
+    {
+      "key": "acceptedSemanticRed",
+      "status": "added",
+      "oldType": "undefined",
+      "newType": "object",
+      "oldSize": 0,
+      "newSize": 1835
+    },
+    {
+      "key": "expectedSourceSnapshots",
+      "status": "added",
+      "oldType": "undefined",
+      "newType": "object",
+      "oldSize": 0,
+      "newSize": 1418
+    },
+    {
+      "key": "authorshipGate",
+      "status": "added",
+      "oldType": "undefined",
+      "newType": "string",
+      "oldSize": 0,
+      "newSize": 25
+    }
+  ],
+  "completeDataAudit": {
+    "errors": [],
+    "fullBinding": {
+      "bytes": 1800456,
+      "sha256": "5a37cf5a6bff3ca5da30f7813da3d73f75852f6c7ab670dd234599f4b9a6c2e2",
+      "gitBlob": "020f6efa5dce4a1a5fe269836136ce554d76792c"
+    },
+    "baselineBinding": {
+      "bytes": 840295,
+      "sha256": "d8fd4d1e33f666f64a7e8512a63a92aedd27bf105fc248eaa13494599e468fc2",
+      "gitBlob": "cb12381b46948c807d443fc41581a9a48d18e051"
+    },
+    "unchangedFields": [
+      "schemaVersion",
+      "publishedR1",
+      "publishedRecoveryR1",
+      "publishedTransportAmendment",
+      "runnerLocalPath",
+      "runnerIdentity",
+      "actualPublishedSubjectReadbackAccepted",
+      "inputFiles",
+      "commandVectors",
+      "timing",
+      "environment",
+      "crossR1Identity",
+      "crossR1Body",
+      "materializationReceiptScope"
+    ],
+    "originalImportAdmissionExact": true,
+    "acceptedReviewBodies": [
+      {
+        "role": "freshBootstrapGuardActualReview",
+        "identity": {
+          "bytes": 32514,
+          "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+          "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075"
+        },
+        "wholeBodyHashExact": true,
+        "originalSevenByteEqual": true,
+        "retainedOriginalBodyEqual": null
+      },
+      {
+        "role": "freshSdkIndependentReview",
+        "identity": {
+          "bytes": 84719,
+          "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+          "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6"
+        },
+        "wholeBodyHashExact": true,
+        "originalSevenByteEqual": true,
+        "retainedOriginalBodyEqual": null
+      },
+      {
+        "role": "freshMcpIndependentReview",
+        "identity": {
+          "bytes": 155439,
+          "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+          "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239"
+        },
+        "wholeBodyHashExact": true,
+        "originalSevenByteEqual": true,
+        "retainedOriginalBodyEqual": null
+      },
+      {
+        "role": "crossR1ActualPublicationReadback",
+        "identity": {
+          "bytes": 24775,
+          "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+          "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+        },
+        "wholeBodyHashExact": true,
+        "originalSevenByteEqual": true,
+        "retainedOriginalBodyEqual": null
+      },
+      {
+        "role": "crossTestGuardR2",
+        "identity": {
+          "bytes": 35700,
+          "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+          "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+        },
+        "wholeBodyHashExact": true,
+        "originalSevenByteEqual": true,
+        "retainedOriginalBodyEqual": null
+      },
+      {
+        "role": "crossTestParityR2",
+        "identity": {
+          "bytes": 98112,
+          "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+          "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+        },
+        "wholeBodyHashExact": true,
+        "originalSevenByteEqual": true,
+        "retainedOriginalBodyEqual": null
+      },
+      {
+        "role": "crossTestActualPublicationReadback",
+        "identity": {
+          "bytes": 56894,
+          "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+          "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+        },
+        "wholeBodyHashExact": true,
+        "originalSevenByteEqual": true,
+        "retainedOriginalBodyEqual": null
+      },
+      {
+        "role": "crossActualRedGuard",
+        "identity": {
+          "bytes": 140038,
+          "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+          "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+        },
+        "wholeBodyHashExact": true,
+        "originalSevenByteEqual": false,
+        "retainedOriginalBodyEqual": true
+      },
+      {
+        "role": "crossActualRedPrimarySemantic",
+        "identity": {
+          "bytes": 190694,
+          "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+          "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+        },
+        "wholeBodyHashExact": true,
+        "originalSevenByteEqual": false,
+        "retainedOriginalBodyEqual": true
+      },
+      {
+        "role": "crossActualRedSemanticClosure",
+        "identity": {
+          "bytes": 86249,
+          "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+          "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+        },
+        "wholeBodyHashExact": true,
+        "originalSevenByteEqual": false,
+        "retainedOriginalBodyEqual": true
+      },
+      {
+        "role": "crossProducerGuardR2",
+        "identity": {
+          "bytes": 121044,
+          "sha256": "438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339",
+          "gitBlob": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637"
+        },
+        "wholeBodyHashExact": true,
+        "originalSevenByteEqual": false,
+        "retainedOriginalBodyEqual": true
+      },
+      {
+        "role": "crossProducerParityR2",
+        "identity": {
+          "bytes": 109607,
+          "sha256": "da402e2bc50d090cc5b2a57ff1eac0dc5d6767b77876d97f301937db7197536b",
+          "gitBlob": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f"
+        },
+        "wholeBodyHashExact": true,
+        "originalSevenByteEqual": false,
+        "retainedOriginalBodyEqual": null
+      },
+      {
+        "role": "crossProducerActualPublicationReadback",
+        "identity": {
+          "bytes": 31670,
+          "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+          "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+        },
+        "wholeBodyHashExact": true,
+        "originalSevenByteEqual": false,
+        "retainedOriginalBodyEqual": true
+      }
+    ],
+    "acceptedReviewBodyTotalBytes": 1167455,
+    "sourceOverlayBodies": [
+      {
+        "role": "before",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "identity": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        "mode": "100644"
+      },
+      {
+        "role": "before",
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "identity": {
+          "bytes": 24759,
+          "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+          "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+        },
+        "mode": "100644"
+      },
+      {
+        "role": "before",
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "identity": {
+          "bytes": 155423,
+          "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+          "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+        },
+        "mode": "100644"
+      },
+      {
+        "role": "after",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "identity": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        "mode": "100644"
+      },
+      {
+        "role": "after",
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "identity": {
+          "bytes": 24759,
+          "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+          "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+        },
+        "mode": "100644"
+      },
+      {
+        "role": "after",
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "identity": {
+          "bytes": 155423,
+          "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+          "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+        },
+        "mode": "100644"
+      },
+      {
+        "role": "after",
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "identity": {
+          "bytes": 8457,
+          "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+          "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+        },
+        "mode": "100644"
+      },
+      {
+        "role": "after",
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "identity": {
+          "bytes": 36260,
+          "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+          "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+        },
+        "mode": "100644"
+      }
+    ],
+    "sourceComposition": {
+      "before": {
+        "bytes": 2478516,
+        "sha256": "006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f",
+        "gitBlob": "77516ddaecaa6d0f485825e250a8106db599f781"
+      },
+      "after": {
+        "bytes": 2478650,
+        "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+        "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+      },
+      "prospective": true,
+      "fullRows": 8798,
+      "onlyChangedPaths": [
+        "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts"
+      ],
+      "unchangedRows": 8796,
+      "workflows": 42,
+      "completeBodyEquality": true,
+      "wholeBodyIdentity": {
+        "bytes": 2478650,
+        "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+        "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+      },
+      "otherMetadataPreserved": true
+    },
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      }
+    ],
+    "preimageSourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36207,
+        "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+        "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 6433,
+        "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+        "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      }
+    ],
+    "consumedRedUnavailable": true
+  },
+  "completeAdmissionAudit": {
+    "errors": [],
+    "acceptedRedReceipt": {
+      "bytes": 33946,
+      "sha256": "e86f3ff0ed102ec68ccb2fbe69f279247bd0eb56eaba50c8e96921b3f2619772",
+      "gitBlob": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a"
+    },
+    "actualOuter": {
+      "session": 27541,
+      "exitCode": 0,
+      "fromPreviouslyAcceptedFullActualEvidence": true
+    },
+    "receiptConditions": {
+      "command": "red",
+      "exitCode": 1,
+      "inputsPreserved": true,
+      "fullRuntimeInputsInspected": true,
+      "fullRuntimeInputsPreserved": true,
+      "commandCompletedNormally": true,
+      "scopeCompleted": true,
+      "interruptions": [],
+      "cleanup": {
+        "unknownPrimaryLaunches": [],
+        "capturedSessionMembersAfter": [],
+        "newTestTempsRemaining": [],
+        "scope": "All captured primary sessions/groups and TEST-prefixed task temps; metadata sessions are checked individually. No universal escaped-child/native custody proof."
+      }
+    },
+    "publicationRecord": {
+      "bytes": 31670,
+      "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+      "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+    },
+    "publication": {
+      "accepted": true,
+      "commit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+      "tree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+      "parent": "a5b9483180434214fa3946a56d44ef67ef48f6ae",
+      "files": 29,
+      "bytes": 8127488,
+      "sourceChanges": 2,
+      "unchangedOtherNonDocs": 8796,
+      "workflowLeaves": 42,
+      "planPrefix": true,
+      "statusPrefix": true,
+      "catalog27Preserved": true,
+      "greenNotExecuted": true,
+      "scope": "Actual publication only; next separate GREEN binding remains required."
+    },
+    "fullPublicationRecordRead": true,
+    "sourcePinsJoinedToCompleteProspectiveRows": true
+  },
+  "all29PublicationRowJoins": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-controls-independent-publication-readback-20261116.json",
+      "gitBlob": "70d62d67ac2b26830075190948bf47983b57a47a",
+      "bytes": 119995,
+      "sha256": "38c611f8b098f23435165cc2bcbb77ba705ec944ead119d2672702c3e2726da8",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-materialization-actual-20261116.json",
+      "gitBlob": "5766c12541ed5cf6cfb77ff92539fba5b68869d3",
+      "bytes": 127003,
+      "sha256": "197ffc6245a2af0f0727c6ad629a731177bb8f0eaddbee1aea65b29ec404e221",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-materialization-receipt-20261116.json",
+      "gitBlob": "20892f422d59196165a75fdac37a8e668e4e561a",
+      "bytes": 25616,
+      "sha256": "1412099d6a34b90fb9b9d84ec383781b14a0de6d76b7e59043b4b09fff53a7b7",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-materialization-independent-review-20261116.json",
+      "gitBlob": "c562c5ab0e2e3e8df58ff9201a89ff2c7152dffa",
+      "bytes": 79583,
+      "sha256": "5a2decfc6c4f5e55ecf7ea3cb19ea91fd1b3249a8770bb57c5854f3663b43066",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-source-before-and-after-20261116.json",
+      "gitBlob": "77516ddaecaa6d0f485825e250a8106db599f781",
+      "bytes": 2478516,
+      "sha256": "006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-actual-20261116.json",
+      "gitBlob": "7db3b53fab91d32d18c8dd95b34242e515b50634",
+      "bytes": 185267,
+      "sha256": "2b8eb5338ddeaa291d6747b07dcaf31168b9b1fc3d576b7ea487823333aa02f7",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-receipt-20261116.json",
+      "gitBlob": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a",
+      "bytes": 33946,
+      "sha256": "e86f3ff0ed102ec68ccb2fbe69f279247bd0eb56eaba50c8e96921b3f2619772",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-primary-receipt-20261116.json",
+      "gitBlob": "62abf6c38e2f22cdf38987b431b53ffae096a667",
+      "bytes": 883,
+      "sha256": "740b006d5edd0141186145f6d551cbe3940d024a54b88d5456619f8bfac415b3",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-output-20261116.log",
+      "gitBlob": "d38f2ae2851555b35970a892ce38674221147437",
+      "bytes": 37314,
+      "sha256": "0ccd67564fbfaace5061e59fc0e1b29632294746aef13ae2e38131659db0e116",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-independent-semantic-review-20261116.json",
+      "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838",
+      "bytes": 190694,
+      "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-independent-semantic-closure-20261116.json",
+      "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db",
+      "bytes": 86249,
+      "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-independent-lifetime-review-20261116.json",
+      "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a",
+      "bytes": 140038,
+      "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-root-inverse-review-20261116.json",
+      "gitBlob": "6cf280cdf07fe299eb452a6eb61bba3dd53114a4",
+      "bytes": 8119,
+      "sha256": "eec8303692c8ba0f019939580e76fc77ab22cb764f852b95bafe0a2699343f05",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-windows-arm-original-cleanup-artifact-20261116.json",
+      "gitBlob": "d41b495d03866d9611b449dd159bd836189c7021",
+      "bytes": 355085,
+      "sha256": "cef51689f252ba3a097002ed5fd760f0ff970e277757dfa6d93b16f3c70db22c",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-windows-arm-final-cleanup-receipt-20261116.json",
+      "gitBlob": "3aeccb43654adadf90c38a06e4ffeaa650e63321",
+      "bytes": 22790,
+      "sha256": "6f34d07150d904bfd7554011d8d11ac22dcb01ecf9c8553bce1a32e26b2d9f3a",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-windows-arm-final-cleanup-independent-review-20261116.json",
+      "gitBlob": "1ed8a09252170fcfc2b31525d4a7061f7d7de95a",
+      "bytes": 177963,
+      "sha256": "8c6db085d88bd3c4b9bf7b7bf707ceb14a47d649d5163b19925c9dba0239f8c5",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-c930-provider-pair-original-byte-comparison-20261116.json",
+      "gitBlob": "6e1073e124c05331e582b27582f25b4e6d0c1bd8",
+      "bytes": 457173,
+      "sha256": "e805ba019ffdcb7ee0899e909a256fdf55afb78fbf5e92926ddc9ee6fd4d7e87",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-a07-full-integration-assessment-20261116.json",
+      "gitBlob": "4bcdca3a01d5ccb8027254fdbbca61c8bb8f8dc7",
+      "bytes": 352944,
+      "sha256": "2804e29cfaa4f1c32ef5abf4ca88339e573421f0f75bf98c2a0b4c6248c5aeea",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-a07-full-ui-133-69-census-20261116.json",
+      "gitBlob": "9637374969dea23c0fdc9ee2f5cc305f110049d1",
+      "bytes": 276318,
+      "sha256": "7cbdf8e82eb9fade2265ed1bfeec65e21f3ec44104c9a152fb2b7349acdb0bd4",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-integration-priorities-and-c930-byte-review-20261116.json",
+      "gitBlob": "209ae3a0c2e4b5c538cc6e6e79889fb85a174417",
+      "bytes": 65513,
+      "sha256": "5f00811d3916986548389aca86b29653495284fce67b1603d197e2913dd47a1b",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-guard-r2-20261116.json",
+      "gitBlob": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637",
+      "bytes": 121044,
+      "sha256": "438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-parity-r2-20261116.json",
+      "gitBlob": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f",
+      "bytes": 109607,
+      "sha256": "da402e2bc50d090cc5b2a57ff1eac0dc5d6767b77876d97f301937db7197536b",
+      "exact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+      "bytes": 8457,
+      "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+      "exact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+      "bytes": 36260,
+      "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-reviewed-outcome-20261116.json",
+      "gitBlob": "ab664ba6eef5de28c83154955bebec0c9338b7a7",
+      "bytes": 16491,
+      "sha256": "058e17a76d4540dfdbcd49f891a8b21c12ce176a6c549dbe513a9faddfa0152a",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "gitBlob": "a040f883eae48d28ecf996ceb701a0253170014c",
+      "bytes": 2516064,
+      "sha256": "11a524b3751f1723b619901f2f8def923ca69dc9fc6a0937fc71491883386591",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "gitBlob": "78a9dd3a2100553580571154672eec57993ab48c",
+      "bytes": 29798,
+      "sha256": "c68e85d8a2dd459588101cdd0cf777eefa38c4009123c1ed38b9a42283548d87",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "gitBlob": "c9978c0453e019872dbc1fb56f13c598b8f5ce15",
+      "bytes": 55137,
+      "sha256": "b933ded4be08a78374e776600561208079d6776a9a40fa6963951d983ec33530",
+      "exact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-publication-manifest-20261116.json",
+      "gitBlob": "8eac4c6cfe9f96775b97a3bd7f99610c3a02a003",
+      "bytes": 13621,
+      "sha256": "7d3b05403bb4a6b25c86aa850ae6bbbd2080c1ae1e7031d6e8d578f3175d6f28",
+      "exact": true
+    }
+  ],
+  "lifecycleReview": {
+    "phaseAndDispatch": {
+      "phase": "green",
+      "allowed": [
+        {
+          "action": "materialize",
+          "command": "green"
+        },
+        {
+          "action": "run",
+          "command": "green"
+        },
+        {
+          "action": "run",
+          "command": "validation-package"
+        }
+      ],
+      "refused": [
+        "red in the green phase",
+        "materialize validation-package",
+        "unknown action or command",
+        "changed exact runner or binding bytes/path"
+      ],
+      "registryQualification": "The unchanged command registry still contains the RED vector, but the actual phase/command assertion rejects selecting it in this binding.",
+      "attempts": {
+        "materializeTest": 0,
+        "red": 0,
+        "materializeProducer": 1,
+        "green": 1,
+        "validationPackage": 1
+      },
+      "priorAttempts": "Original materialize-red and actual semantic RED remain spent, not replenished by this data binding.",
+      "attemptEnforcement": "Each selected invocation exclusively creates its own phase-prefix .attempt file before snapshots or primary execution. A failed invocation remains spent; later validation commands stay permanently UNREACHED."
+    },
+    "actualRedPrerequisite": {
+      "exactReceipt": {
+        "bytes": 33946,
+        "sha256": "e86f3ff0ed102ec68ccb2fbe69f279247bd0eb56eaba50c8e96921b3f2619772",
+        "gitBlob": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a"
+      },
+      "exactLocalReadPath": "/tmp/c714-cross-close-evidence/red-receipt.json",
+      "requiredFacts": [
+        "Exact full receipt identity",
+        "Independent actual review accepted and separately observed outer supervisor exit0",
+        "command red and expected primary exit1",
+        "fullRuntimeInputsInspected and fullRuntimeInputsPreserved true",
+        "inputsPreserved true",
+        "commandCompletedNormally and scopeCompleted true",
+        "No interruptions/execution/postflight errors",
+        "Empty captured sessions and new TEST temp remainder",
+        "Exact unchanged whole133 test identity"
+      ],
+      "allFactsJoinedToAcceptedActualEvidence": true,
+      "interpretation": "The fifteen expected semantic failures and five unreached target variants remain RED evidence. The prior receipt is not relabelled as GREEN."
+    },
+    "materialization": {
+      "exactWriteOrder": [
+        "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts"
+      ],
+      "beforeOverlays": 3,
+      "afterOverlays": 5,
+      "exactSourceComposition": {
+        "before": {
+          "bytes": 2478516,
+          "sha256": "006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f",
+          "gitBlob": "77516ddaecaa6d0f485825e250a8106db599f781"
+        },
+        "after": {
+          "bytes": 2478650,
+          "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+          "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+        },
+        "prospective": true,
+        "fullRows": 8798,
+        "onlyChangedPaths": [
+          "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts"
+        ],
+        "unchangedRows": 8796,
+        "workflows": 42,
+        "completeBodyEquality": true,
+        "wholeBodyIdentity": {
+          "bytes": 2478650,
+          "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+          "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+        },
+        "otherMetadataPreserved": true
+      },
+      "sourceEvidence": "Both complete8798 source snapshots independently check every row against the expected overlay state; complete C5 HEAD/tree11567 leaves/stage0 index and42 workflows remain pinned.",
+      "metadataEvidence": "Before/after pinned Python/Node/Git/dash, full staged pnpm census/launcher, ten control files, admitted captured environment/config, process census and TEST-temp census.",
+      "runtimeInspected": false,
+      "runtimePreserved": null,
+      "inputsPreserved": null,
+      "uninspected": [
+        "dependencies",
+        "compiled",
+        "provider archives and installed members",
+        "bootstrap Node cache"
+      ],
+      "partialWriteFailure": "Each write appends its path only after successful write_bytes. Any interruption, write failure, wrong after-source, failed snapshot or missing finalization prevents scopeCompleted. No automatic rollback, partial resume or silent retry is authorized.",
+      "noPrimary": true,
+      "requiredBeforeGreen": "Independent full actual metadata-stage evidence and separate observed supervisor exit0. The local materialization receipt must match this exact binding identity, published subject, action/command/written paths and clear lifecycle state."
+    },
+    "green": {
+      "exactCommand": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "noFilterOrFixtureChange": true,
+      "requiredCompleteCaseCensus": 133,
+      "requiredPass": 133,
+      "requiredFail": 0,
+      "requiredSkip": 0,
+      "requiredCancel": 0,
+      "requiredTodo": 0,
+      "targetVariantsRequired": 13,
+      "mandatoryFreshRuntimePreflight": true,
+      "primaryClock": "One absolute180-second clock starts immediately before command start recording/Popen after the complete preflight; run_child receives its remaining time, without resetting at spawn.",
+      "postflight": "Complete source/runtime inputs re-read independently after the primary, including error paths. Hashing time is outside the original primary clock and is reported separately.",
+      "outerAdmission": "Actual observed supervisor exit0 and independent full semantics/input/lifetime acceptance remain mandatory before validation."
+    },
+    "runtimeInputChecks": {
+      "sameEightInputFilePinsAsRed": true,
+      "completeSources": 8798,
+      "completeC5TreeAndIndex": 11567,
+      "workflows": 42,
+      "dependencyRows": 122773,
+      "compiledRows": 1454,
+      "providerMembers": [
+        253,
+        12
+      ],
+      "checks": [
+        "Fresh complete source bytes",
+        "Fresh complete dependency paths/modes/bytes/hash/symlink inventory",
+        "Fresh compiled inventory",
+        "Full exact provider archive safe-member and installed-member equality",
+        "Pinned four tools and complete pnpm tree/launcher",
+        "All ten control file identities",
+        "Same per-invocation admitted transport/config",
+        "All seven retained bootstrap cache files",
+        "Process and TEST temp census"
+      ],
+      "cache": "Inherited Node compile-cache variables removed; NODE_DISABLE_COMPILE_CACHE=1; old cache residue is preserved and rehashed.",
+      "requestedVersusCompleted": "fullRuntimeInputsRequested is distinct. Both before and after boundaries must reach COMPLETE before fullRuntimeInputsInspected becomes true. Failed/partial snapshots cannot claim full inspection or preservation.",
+      "noRuntimeClaimFromMaterialization": true
+    },
+    "validationPackage": {
+      "commands": [
+        "lint",
+        "source-size",
+        "diff-check"
+      ],
+      "exactVectors": {
+        "red": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "--test",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ],
+        "green": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "--test",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ],
+        "lint": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+          "--config.pm-on-fail=error",
+          "--config.verify-deps-before-run=false",
+          "--config.engine-strict=true",
+          "lint:fast:files",
+          "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ],
+        "source-size": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+          "--config.pm-on-fail=error",
+          "--config.verify-deps-before-run=false",
+          "--config.engine-strict=true",
+          "guard:source-file-size"
+        ],
+        "diff-check": [
+          "/usr/local/bin/git",
+          "diff",
+          "--check",
+          "--",
+          "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ]
+      },
+      "oneCapturedEnvironment": true,
+      "oneCompleteFullPreflight": true,
+      "oneCompleteFullPostflight": true,
+      "distinctCapturedPrimarySessions": 3,
+      "perPrimaryDeadlineSeconds": 180,
+      "admissionBeforeEachNext": [
+        "Prior primary ordinary successful exit0",
+        "Retained final primary receipt identity exact",
+        "Retained raw output identity exact",
+        "No execution/finalization/timeout/deadline/interruption/abnormal cleanup state",
+        "Empty captured session",
+        "No pending supervisor interruption"
+      ],
+      "failureBehavior": "The first refusal or failed child stops the sequence; later entries retain UNREACHED, the exclusive package attempt is spent and no partial resume is available.",
+      "metadataPerReadSeconds": 30,
+      "qualification": "These scoped guards are not the canonical typecheck/build or fresh native/platform/GUI qualification."
+    },
+    "supervisionAndFinalization": {
+      "unchangedRunChild": true,
+      "priorFullRunnerReview": {
+        "bytes": 85343,
+        "sha256": "68b71ed76d405006a4b125750e00902848a5713c3198655518208b2a89919c03",
+        "gitBlob": "d0c875cc0d5a9fd4c25f246e90137bc1babd0ee9"
+      },
+      "primaryTracker": "Exists before start-record write; retains attempted spawn, captured PID, actual record and finalReceiptPersisted, including exceptions.",
+      "unknownSpawn": "A launch with unknown PID leaves capturedSessionMembersAfter null and records unknownPrimaryLaunches; it cannot be reported as empty cleanup.",
+      "cleanup": "Captured process groups/sessions are terminated/reaped when required; raw hashing follows quiescence; primary cleanup duration is separately retained as a subset of the command phase.",
+      "metadata": "Each Git metadata child uses the same captured supervision and an independent30-second read cap; failure blocks the boundary without creating a behavioral retry.",
+      "finalCutoff": "The existing signal mask captures pending and collected managed signals at the explicit cutoff before writing the first successful final receipt. Handlers are restored while blocked, then the previous mask is restored.",
+      "postCutoffLimit": "A receipt does not certify signals after its cutoff. Root must separately observe actual outer supervisor exit0; no downstream continuation may rely on the receipt alone.",
+      "finalScope": "Requires expected command outcome, all selected input proofs, finalized primary records, no execution/postflight errors or interruptions, no unreached validation commands, empty new TEST temps and captured sessions."
+    },
+    "enforcementBoundary": {
+      "codeChecks": "Exact binding/runner paths and identities, phase/command/action restrictions, prior local receipt hashes and lifecycle fields, expected source maps, exclusive attempts, clocks, raw/receipt finalization and cleanup.",
+      "externalReviewGates": "Independent actual publication readback, independent actual materialization acceptance, and independent actual GREEN semantic/input/lifetime acceptance plus separately observed outer0 are root orchestration gates. This report does not pretend the inner receipt alone enforces those independent reviews.",
+      "currentState": "The GREEN binding and prospective source snapshot have been reviewed as immutable data. No source application or GREEN/validation execution is claimed."
+    }
+  },
+  "bindingGoverningProjection": {
+    "schemaVersion": 1,
+    "kind": "Exact Cross Close GREEN and conditional validation-package data binding after independently accepted actual133 RED and two-producer publication",
+    "publishedR1": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+    "publishedRecoveryR1": "7e6f32741ccdb470e7688cec9de9481fd05827a1",
+    "publishedTransportAmendment": "0042eec33e3bcf145de25db96f5fc7c5b026a1fe",
+    "phase": "green",
+    "runnerLocalPath": "/tmp/c714-cross-close-review/runner.py",
+    "bindingLocalPath": "/tmp/c714-cross-close-review/binding-green.json",
+    "runnerIdentity": {
+      "bytes": 48838,
+      "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+      "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+    },
+    "actualPublishedSubjectReadbackAccepted": true,
+    "publishedSubject": {
+      "commit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+      "tree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+      "qualification": "Exact published two-source helper3c7b/driver4700 under8abeR1, unchanged0aec whole133 test and fixeded57/cf93. Local C5 index plus five exact source overlays; remote documentation is not claimed locally materialized."
+    },
+    "actualPublishedSubjectReadbackEvidence": {
+      "root": {
+        "accepted": true,
+        "reviewer": "/root",
+        "commit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+        "tree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+        "parent": "a5b9483180434214fa3946a56d44ef67ef48f6ae",
+        "refExact": true,
+        "leaves": 11724,
+        "changedBodies": 29,
+        "changedBytes": 8127488,
+        "sourceChanges": 2,
+        "sourcePostimages": {
+          "taskTarget": {
+            "bytes": 8457,
+            "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+            "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+          },
+          "taskDriver": {
+            "bytes": 36260,
+            "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+            "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+          }
+        },
+        "otherNonDocUnchanged": 8796,
+        "workflowLeavesUnchanged": 42,
+        "planStatusPrefixesExact": true,
+        "completeRootAndChangedSubtrees": true,
+        "unchanged52RootEntriesExact": true,
+        "fullBodies": [
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-controls-independent-publication-readback-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "70d62d67ac2b26830075190948bf47983b57a47a",
+            "bytes": 119995,
+            "sha256": "38c611f8b098f23435165cc2bcbb77ba705ec944ead119d2672702c3e2726da8",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-materialization-actual-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "5766c12541ed5cf6cfb77ff92539fba5b68869d3",
+            "bytes": 127003,
+            "sha256": "197ffc6245a2af0f0727c6ad629a731177bb8f0eaddbee1aea65b29ec404e221",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-materialization-receipt-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "20892f422d59196165a75fdac37a8e668e4e561a",
+            "bytes": 25616,
+            "sha256": "1412099d6a34b90fb9b9d84ec383781b14a0de6d76b7e59043b4b09fff53a7b7",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-materialization-independent-review-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "c562c5ab0e2e3e8df58ff9201a89ff2c7152dffa",
+            "bytes": 79583,
+            "sha256": "5a2decfc6c4f5e55ecf7ea3cb19ea91fd1b3249a8770bb57c5854f3663b43066",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-source-before-and-after-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "77516ddaecaa6d0f485825e250a8106db599f781",
+            "bytes": 2478516,
+            "sha256": "006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-actual-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "7db3b53fab91d32d18c8dd95b34242e515b50634",
+            "bytes": 185267,
+            "sha256": "2b8eb5338ddeaa291d6747b07dcaf31168b9b1fc3d576b7ea487823333aa02f7",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-receipt-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a",
+            "bytes": 33946,
+            "sha256": "e86f3ff0ed102ec68ccb2fbe69f279247bd0eb56eaba50c8e96921b3f2619772",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-primary-receipt-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "62abf6c38e2f22cdf38987b431b53ffae096a667",
+            "bytes": 883,
+            "sha256": "740b006d5edd0141186145f6d551cbe3940d024a54b88d5456619f8bfac415b3",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-output-20261116.log",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "d38f2ae2851555b35970a892ce38674221147437",
+            "bytes": 37314,
+            "sha256": "0ccd67564fbfaace5061e59fc0e1b29632294746aef13ae2e38131659db0e116",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-independent-semantic-review-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "b1d7d6c148d0f2b11e72aa728a03a64091590838",
+            "bytes": 190694,
+            "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-independent-semantic-closure-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "ffc5a83973da41cd9e9b9e780b302b0cb16704db",
+            "bytes": 86249,
+            "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-independent-lifetime-review-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "2456b180544745287f7dd6dcf497d068816d9d4a",
+            "bytes": 140038,
+            "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-root-inverse-review-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "6cf280cdf07fe299eb452a6eb61bba3dd53114a4",
+            "bytes": 8119,
+            "sha256": "eec8303692c8ba0f019939580e76fc77ab22cb764f852b95bafe0a2699343f05",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-windows-arm-original-cleanup-artifact-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "d41b495d03866d9611b449dd159bd836189c7021",
+            "bytes": 355085,
+            "sha256": "cef51689f252ba3a097002ed5fd760f0ff970e277757dfa6d93b16f3c70db22c",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-windows-arm-final-cleanup-receipt-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "3aeccb43654adadf90c38a06e4ffeaa650e63321",
+            "bytes": 22790,
+            "sha256": "6f34d07150d904bfd7554011d8d11ac22dcb01ecf9c8553bce1a32e26b2d9f3a",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-windows-arm-final-cleanup-independent-review-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "1ed8a09252170fcfc2b31525d4a7061f7d7de95a",
+            "bytes": 177963,
+            "sha256": "8c6db085d88bd3c4b9bf7b7bf707ceb14a47d649d5163b19925c9dba0239f8c5",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-c930-provider-pair-original-byte-comparison-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "6e1073e124c05331e582b27582f25b4e6d0c1bd8",
+            "bytes": 457173,
+            "sha256": "e805ba019ffdcb7ee0899e909a256fdf55afb78fbf5e92926ddc9ee6fd4d7e87",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-a07-full-integration-assessment-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "4bcdca3a01d5ccb8027254fdbbca61c8bb8f8dc7",
+            "bytes": 352944,
+            "sha256": "2804e29cfaa4f1c32ef5abf4ca88339e573421f0f75bf98c2a0b4c6248c5aeea",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-a07-full-ui-133-69-census-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "9637374969dea23c0fdc9ee2f5cc305f110049d1",
+            "bytes": 276318,
+            "sha256": "7cbdf8e82eb9fade2265ed1bfeec65e21f3ec44104c9a152fb2b7349acdb0bd4",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-integration-priorities-and-c930-byte-review-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "209ae3a0c2e4b5c538cc6e6e79889fb85a174417",
+            "bytes": 65513,
+            "sha256": "5f00811d3916986548389aca86b29653495284fce67b1603d197e2913dd47a1b",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-guard-r2-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637",
+            "bytes": 121044,
+            "sha256": "438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-parity-r2-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f",
+            "bytes": 109607,
+            "sha256": "da402e2bc50d090cc5b2a57ff1eac0dc5d6767b77876d97f301937db7197536b",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+            "bytes": 8457,
+            "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+            "beforeSha": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+            "bytes": 36260,
+            "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+            "beforeSha": "3f1ce46fce847a861850ef874017f84227c62b0c",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-reviewed-outcome-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "ab664ba6eef5de28c83154955bebec0c9338b7a7",
+            "bytes": 16491,
+            "sha256": "058e17a76d4540dfdbcd49f891a8b21c12ce176a6c549dbe513a9faddfa0152a",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "a040f883eae48d28ecf996ceb701a0253170014c",
+            "bytes": 2516064,
+            "sha256": "11a524b3751f1723b619901f2f8def923ca69dc9fc6a0937fc71491883386591",
+            "beforeSha": "db774240d2bd3233b46fef361591a00a2c668464",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "78a9dd3a2100553580571154672eec57993ab48c",
+            "bytes": 29798,
+            "sha256": "c68e85d8a2dd459588101cdd0cf777eefa38c4009123c1ed38b9a42283548d87",
+            "beforeSha": "eef4ea5f92e8715cc2c12ab12a1ea5b51115f203",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "c9978c0453e019872dbc1fb56f13c598b8f5ce15",
+            "bytes": 55137,
+            "sha256": "b933ded4be08a78374e776600561208079d6776a9a40fa6963951d983ec33530",
+            "beforeSha": "7057b260ea9c5216f7b533130dd4d7adea22da84",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          },
+          {
+            "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-publication-manifest-20261116.json",
+            "mode": "100644",
+            "type": "blob",
+            "sha": "8eac4c6cfe9f96775b97a3bd7f99610c3a02a003",
+            "bytes": 13621,
+            "sha256": "7d3b05403bb4a6b25c86aa850ae6bbbd2080c1ae1e7031d6e8d578f3175d6f28",
+            "fullBodyRead": true,
+            "exactWholeBody": true
+          }
+        ],
+        "localProducerApplication": false,
+        "greenExecuted": false,
+        "independentActualReadbackPending": false,
+        "independentActualReadback": {
+          "bytes": 31670,
+          "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+          "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+        }
+      },
+      "independent": {
+        "accepted": true,
+        "reviewer": "/root/pr_graph",
+        "commit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+        "tree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+        "parent": "a5b9483180434214fa3946a56d44ef67ef48f6ae",
+        "leaves": 11724,
+        "changedBodies": 29,
+        "changedBytes": 8127488,
+        "sourceChanges": 2,
+        "otherNonDocUnchanged": 8796,
+        "workflowLeavesUnchanged": 42,
+        "completeAcceptance": true,
+        "review": {
+          "bytes": 31670,
+          "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+          "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+        }
+      }
+    },
+    "combinedInputImportAdmission": {
+      "accepted": true,
+      "reviewer": "/root",
+      "sourceCommit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+      "sourceTree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+      "baseStaticImportAdmission": {
+        "accepted": true,
+        "reviewer": "/root",
+        "sourceCommit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+        "sourceTree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+        "bootstrapReview": {
+          "bytes": 32514,
+          "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+          "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075"
+        },
+        "sdkReview": {
+          "bytes": 84719,
+          "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+          "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6"
+        },
+        "mcpReview": {
+          "bytes": 155439,
+          "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+          "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239"
+        },
+        "allBodiesFetchedAndRehashed": true,
+        "scope": "Static source admission of exact fresh upstream provider/SDK/MCP/Zod import closure for the already published finite whole97 test, after complete fresh input verification. This permits only replacement runner/binding authorship now; exact R2 and actual publication/readback still precede execution. No producer before accepted actual semantic RED.",
+        "packageImportsExecuted": 0,
+        "testExecutions": 0,
+        "providerExecutions": 0,
+        "producerPostimages": 0,
+        "cacheRequirement": "Strip inherited NODE_COMPILE_CACHE and NODE_COMPILE_CACHE_PORTABLE; force NODE_DISABLE_COMPILE_CACHE=1; bind and preserve existing seven bootstrap cache files.",
+        "crossAppendAdmission": {
+          "accepted": true,
+          "test": {
+            "bytes": 155423,
+            "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+            "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+          },
+          "guard": {
+            "bytes": 35700,
+            "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+            "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+          },
+          "parity": {
+            "bytes": 98112,
+            "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+            "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+          },
+          "whole133": true,
+          "completeOldPrefixExact": true,
+          "newProviderNativeOrExternalImportPaths": 0,
+          "newChildExecutionSites": 0,
+          "readOnlyBrowserFixtureImports": [
+            "/store/slices/teamSlice.ts",
+            "/store/team/taskDetailReadAuthority.ts"
+          ],
+          "qualification": "Extends the retained whole97 static import admission only with the reviewed finite36-case append. No dependency/compiled/provider/incoming-head source changed."
+        }
+      },
+      "scope": "The complete previously independently reviewed provider/SDK/MCP/Zod import closure remains unchanged. The same finite whole133 test now imports only the exact published two pure helper/driver postimages accepted by full R2, with no new source import path, eager operation or child site. Historical base admission activity counts are confined to the embedded preceding static review; they are not current execution counts.",
+      "crossProducerAdmission": {
+        "accepted": true,
+        "sourceCommit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+        "sourceTree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+        "sourcePostimages": {
+          "taskTarget": {
+            "bytes": 8457,
+            "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+            "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+          },
+          "taskDriver": {
+            "bytes": 36260,
+            "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+            "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+          }
+        },
+        "guard": {
+          "bytes": 121044,
+          "sha256": "438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339",
+          "gitBlob": "e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637"
+        },
+        "parity": {
+          "bytes": 109607,
+          "sha256": "da402e2bc50d090cc5b2a57ff1eac0dc5d6767b77876d97f301937db7197536b",
+          "gitBlob": "fb8220fb8c074cf7225cadc4fba9b6568d45fe2f"
+        },
+        "newProviderNativeExternalImports": 0,
+        "newChildSites": 0,
+        "newEagerExecutableEffects": 0,
+        "unchangedOriginalBrowserImports": 2,
+        "wholeTestUnchanged": {
+          "bytes": 155423,
+          "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+          "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+        },
+        "controlsUnchanged": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        "selectionUnchanged": {
+          "bytes": 24759,
+          "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+          "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+        }
+      },
+      "actualRed": {
+        "envelope": {
+          "bytes": 185267,
+          "sha256": "2b8eb5338ddeaa291d6747b07dcaf31168b9b1fc3d576b7ea487823333aa02f7",
+          "gitBlob": "7db3b53fab91d32d18c8dd95b34242e515b50634"
+        },
+        "guard": {
+          "bytes": 140038,
+          "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+          "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+        },
+        "semantic": {
+          "bytes": 190694,
+          "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+          "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+        },
+        "closure": {
+          "bytes": 86249,
+          "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+          "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+        },
+        "observedOuterExit": 0,
+        "wholeCases": 133,
+        "pass": 118,
+        "semanticFail": 15
+      },
+      "currentReviewActivity": {
+        "packageOrSourceExecutions": 0,
+        "staticReviewOnly": true
+      },
+      "cacheRequirement": "Strip inherited NODE_COMPILE_CACHE and NODE_COMPILE_CACHE_PORTABLE; force NODE_DISABLE_COMPILE_CACHE=1; bind and preserve existing seven bootstrap cache files."
+    },
+    "inputFiles": {
+      "setupBinding": {
+        "path": "/tmp/c714-fresh-bootstrap-review/binding.json",
+        "bytes": 2790411,
+        "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+        "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+      },
+      "sourceFull": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/source-restore-source-after.json",
+        "bytes": 3451167,
+        "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+        "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+      },
+      "sourceNonDoc": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-source-after.json",
+        "bytes": 2478318,
+        "sha256": "59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751",
+        "gitBlob": "51bf0d0962e07fcc7843fcd65c3202ec9133a607"
+      },
+      "dependencies": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json",
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "compiled": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-compiled-after.json",
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      },
+      "pnpm": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/pnpm-inventory.json",
+        "bytes": 253936,
+        "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+        "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c"
+      },
+      "currentBoundary": {
+        "path": "/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json",
+        "bytes": 3654,
+        "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+        "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+      },
+      "providers": {
+        "path": "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json",
+        "bytes": 789090,
+        "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+        "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+      }
+    },
+    "commandVectors": {
+      "red": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "green": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "lint": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "lint:fast:files",
+        "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "source-size": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "guard:source-file-size"
+      ],
+      "diff-check": [
+        "/usr/local/bin/git",
+        "diff",
+        "--check",
+        "--",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ]
+    },
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      }
+    ],
+    "behavioralAttempts": {
+      "materializeTest": 0,
+      "red": 0,
+      "materializeProducer": 1,
+      "green": 1,
+      "validationPackage": 1,
+      "previousCrossWholeFileExecutions": 1,
+      "previousCrossMetadataMaterializations": 1,
+      "interpretation": "Only remaining selected attempts; successful earlier materialize-red and semanticRED are spent and cannot be replayed."
+    },
+    "reviewedTestCensus": {
+      "wholeRuntimeCases": 133,
+      "oldRuntimeCases": 97,
+      "addedRuntimeCases": 36,
+      "addedReadiness": 28,
+      "addedDriver": 8,
+      "targetVariants": 13,
+      "oldSourceExactPrefix": true,
+      "wholeTest": {
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      "historicalRedPrediction": {
+        "pass": 118,
+        "semanticFail": 15,
+        "failureOrdinals": [
+          98,
+          99,
+          100,
+          101,
+          104,
+          105,
+          106,
+          107,
+          114,
+          115,
+          116,
+          126,
+          127,
+          128,
+          131
+        ],
+        "observed": false,
+        "targetVariantsExpectedReached": 8,
+        "targetVariantsExpectedUnreached": 5
+      },
+      "actualAcceptedRed": {
+        "identity": {
+          "bytes": 33946,
+          "sha256": "e86f3ff0ed102ec68ccb2fbe69f279247bd0eb56eaba50c8e96921b3f2619772",
+          "gitBlob": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a"
+        },
+        "independentReviewAccepted": true,
+        "observedOuterSupervisorExit": 0,
+        "actualOuterSession": 27541,
+        "expectedPrimaryExit": 1,
+        "raw": {
+          "bytes": 37314,
+          "sha256": "0ccd67564fbfaace5061e59fc0e1b29632294746aef13ae2e38131659db0e116",
+          "gitBlob": "d38f2ae2851555b35970a892ce38674221147437"
+        },
+        "primaryReceipt": {
+          "bytes": 883,
+          "sha256": "740b006d5edd0141186145f6d551cbe3940d024a54b88d5456619f8bfac415b3",
+          "gitBlob": "62abf6c38e2f22cdf38987b431b53ffae096a667"
+        },
+        "envelope": {
+          "bytes": 185267,
+          "sha256": "2b8eb5338ddeaa291d6747b07dcaf31168b9b1fc3d576b7ea487823333aa02f7",
+          "gitBlob": "7db3b53fab91d32d18c8dd95b34242e515b50634"
+        },
+        "guard": {
+          "bytes": 140038,
+          "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+          "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+        },
+        "semantic": {
+          "bytes": 190694,
+          "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+          "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+        },
+        "semanticClosure": {
+          "bytes": 86249,
+          "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+          "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+        },
+        "source": {
+          "bytes": 2478516,
+          "sha256": "006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f",
+          "gitBlob": "77516ddaecaa6d0f485825e250a8106db599f781"
+        },
+        "wholeTest": {
+          "bytes": 155423,
+          "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+          "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+        },
+        "wholeCases": 133,
+        "pass": 118,
+        "semanticFail": 15,
+        "old97AllPass": true,
+        "zeroSkipsCancellationsTodos": true,
+        "fullCurrentRuntimeInputsInspectedAndPreserved": true,
+        "noCleanupDebt": true,
+        "qualification": "Exact valid semanticRED remains15FAIL with5unreached target variants. No actualGREEN or blanketPASS is inferred."
+      },
+      "staticPrediction": {
+        "phase": "green",
+        "pass": 133,
+        "fail": 0,
+        "observed": false,
+        "targetVariantsExpectedReached": 13,
+        "targetVariantsExpectedUnreached": 0
+      },
+      "requiredActualGreen": "The identical complete0aec file must report all133 names/order/multiplicity exactly once,133PASS and0fail/skip/cancel/todo, with all13 target variants completing their assertions. Require primary0, separately observed supervisor0, complete current input/source pre/post, no interruption/timeout/kill/cleanup debt, independent full semantics and lifetime acceptance. No filters/retries/fixture changes."
+    },
+    "timing": {
+      "commandSeconds": 180,
+      "placement": "After full preflight and initial receipt save; before command start record/raw/Popen. Child gets the remainder of that same absolute clock. No reset after spawn.",
+      "postflight": "Input hashing is outside the original command deadline. Separate preflight/command/postflight/whole-invocation timings are mandatory; whole invocation is not claimed under180s.",
+      "gitMetadata": "Read-only metadata calls retain captured-process supervision and a30-second per-read refusal cap; these do not grant behavioral retries."
+    },
+    "environment": {
+      "inheritSameAdmittedTransportPerInvocation": true,
+      "homeAndCodexHomePreserved": true,
+      "cache": "Strip NODE_COMPILE_CACHE/NODE_COMPILE_CACHE_PORTABLE and force NODE_DISABLE_COMPILE_CACHE=1. Preserve and rehash seven bootstrap residue files.",
+      "testTmp": "/tmp/c714-cross-close-evidence/test-tmp",
+      "nodeChildSeam": "The six existing test-created children use process.execPath with explicit TEST_ONLY_VALUE-only env. AGENT_BACKEND_TEST_NODE remains bound to the same Node but is not the selector used by those six calls."
+    },
+    "executionScope": {
+      "action": "One metadata-only materialize-green changing only two selected producers, then one unchanged whole133 GREEN; only after complete independent actualGREEN acceptance, one ordered validation-package",
+      "commands": "green or validation-package only; red is unavailable in this binding phase",
+      "requiredBeforeExecution": [
+        "Complete exact e6a776 source publication readback is accepted by root and independent42db",
+        "Exact final GREEN binding full independent R2 and immediate-push publication with complete actual readback before local binding staging",
+        "One source-and-supervisor-metadata-only producer materialization must fully verify current8798 source/head/tree/index/tools/pnpm/env/controls and captured metadata sessions; runtime deps/compiled/providers/cache explicitly UNINSPECTED/null preservation",
+        "Independent full actual metadata materialization and separately observed outer0 acceptance beforeGREEN",
+        "BeforeGREEN and before the validation package, separately perform the unchanged complete fresh current runtime preflight; failure spends that invocation with primaryUNREACHED",
+        "Only independently accepted actual133GREEN full source/input/lifetime/outer0 admits the one ordered3-command validation package"
+      ],
+      "requiresObservedSupervisorExitZeroForContinuation": true,
+      "signalReceiptBoundary": "The receipt covers managed signals captured or pending at its explicitly recorded blocked-mask cutoff. Root must separately observe actual supervisor exit0 before any continuation, and join that outcome into independent actual semantic RED/GREEN acceptance; a successful receipt alone does not cover later signals.",
+      "plannedSourceChanges": 2,
+      "localApplication": false,
+      "newGreenExecutions": 0,
+      "producerAuthored": true,
+      "acceptedActualSemanticRedBeforeAuthorship": {
+        "accepted": true,
+        "at": "2026-11-16 17:31:19 UTC",
+        "publishedR1": {
+          "commit": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+          "identity": {
+            "bytes": 23142,
+            "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+            "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+          },
+          "actualIndependentReadback": {
+            "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34",
+            "bytes": 24775,
+            "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1"
+          }
+        },
+        "actualRed": {
+          "envelope": {
+            "bytes": 185267,
+            "sha256": "2b8eb5338ddeaa291d6747b07dcaf31168b9b1fc3d576b7ea487823333aa02f7",
+            "gitBlob": "7db3b53fab91d32d18c8dd95b34242e515b50634"
+          },
+          "receipt": {
+            "bytes": 33946,
+            "sha256": "e86f3ff0ed102ec68ccb2fbe69f279247bd0eb56eaba50c8e96921b3f2619772",
+            "gitBlob": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a"
+          },
+          "raw": {
+            "bytes": 37314,
+            "sha256": "0ccd67564fbfaace5061e59fc0e1b29632294746aef13ae2e38131659db0e116",
+            "gitBlob": "d38f2ae2851555b35970a892ce38674221147437"
+          },
+          "outerSession": 27541,
+          "outerExit": 0
+        },
+        "semantic": {
+          "bytes": 190694,
+          "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+          "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+        },
+        "semanticFinalClosure": {
+          "bytes": 86249,
+          "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+          "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+        },
+        "guard": {
+          "acceptanceReceivedBeforeAuthorship": true,
+          "reviewer": "/root/guard_review",
+          "acceptance": "COMPLETE actual133 RED independently ACCEPTED; all67files90226849B/42unique,full current beforeafterinputs/lifetime/outer0; only existing8abe two-path producer AUTHORING gate released. ExactR2/publication/readback/GREEN/guards remain.",
+          "exactEnvelope": "7db3b53fab91d32d18c8dd95b34242e515b50634",
+          "exactReceipt": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a",
+          "bareReviewRetentionPendingAtGate": true,
+          "retainedReview": {
+            "bytes": 140038,
+            "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+            "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+          },
+          "fullRootReadbackAfterInitialAuthorshipAt": "2026-11-16 17:32:25 UTC",
+          "bareReviewRetentionNowComplete": true
+        },
+        "permittedPaths": [
+          "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts"
+        ],
+        "producerAuthoredBeforeThisGate": false,
+        "scope": "Root may now author only the two selected Cross producer postimages. No source application/runtime or GREEN binding yet."
+      },
+      "validationPackage": {
+        "selectedCommands": [
+          "lint",
+          "source-size",
+          "diff-check"
+        ],
+        "sameOneCapturedEnvironmentAndFullWholePackagePrePost": true,
+        "eachChildOwnCapturedSessionAndOriginal180SecondPrelaunchClock": true,
+        "requirePriorZeroFinalizedRawAndReceiptNoTimeoutNoErrorNoSignalEmptySessionBeforeNext": true,
+        "laterCommandsUnreachedAfterFailure": true,
+        "noRetryOrPartialResume": true,
+        "notCanonicalTypecheckOrBuild": true
+      },
+      "remainingQualification": "Canonical typecheck/build and full GUI/platform acceptance remain explicit open gates for a later concrete integration/CI action scope; no assertion that these three fast checks replace them."
+    },
+    "preimageSourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36207,
+        "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+        "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 6433,
+        "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+        "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      }
+    ],
+    "crossR1Identity": {
+      "bytes": 23142,
+      "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+      "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+    },
+    "materializePaths": [
+      "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts"
+    ],
+    "materializationReceiptScope": {
+      "scope": "source-and-supervisor-metadata-only",
+      "fullRuntimeInputsInspected": false,
+      "fullRuntimeInputsPreserved": null,
+      "dependencies": "UNINSPECTED",
+      "compiled": "UNINSPECTED",
+      "providerArchivesAndInstalledMembers": "UNINSPECTED",
+      "bootstrapNodeCache": "UNINSPECTED",
+      "required": "Complete actual source/control/tool/config and captured metadata/session lifecycle before/after plus independent observed outer0. Source preservation is stated separately with exactly authorized written paths. This is not a behavioral or all-input result."
+    },
+    "acceptedSemanticRed": {
+      "identity": {
+        "bytes": 33946,
+        "sha256": "e86f3ff0ed102ec68ccb2fbe69f279247bd0eb56eaba50c8e96921b3f2619772",
+        "gitBlob": "e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a"
+      },
+      "independentReviewAccepted": true,
+      "observedOuterSupervisorExit": 0,
+      "actualOuterSession": 27541,
+      "expectedPrimaryExit": 1,
+      "raw": {
+        "bytes": 37314,
+        "sha256": "0ccd67564fbfaace5061e59fc0e1b29632294746aef13ae2e38131659db0e116",
+        "gitBlob": "d38f2ae2851555b35970a892ce38674221147437"
+      },
+      "primaryReceipt": {
+        "bytes": 883,
+        "sha256": "740b006d5edd0141186145f6d551cbe3940d024a54b88d5456619f8bfac415b3",
+        "gitBlob": "62abf6c38e2f22cdf38987b431b53ffae096a667"
+      },
+      "envelope": {
+        "bytes": 185267,
+        "sha256": "2b8eb5338ddeaa291d6747b07dcaf31168b9b1fc3d576b7ea487823333aa02f7",
+        "gitBlob": "7db3b53fab91d32d18c8dd95b34242e515b50634"
+      },
+      "guard": {
+        "bytes": 140038,
+        "sha256": "4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774",
+        "gitBlob": "2456b180544745287f7dd6dcf497d068816d9d4a"
+      },
+      "semantic": {
+        "bytes": 190694,
+        "sha256": "9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c",
+        "gitBlob": "b1d7d6c148d0f2b11e72aa728a03a64091590838"
+      },
+      "semanticClosure": {
+        "bytes": 86249,
+        "sha256": "b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb",
+        "gitBlob": "ffc5a83973da41cd9e9b9e780b302b0cb16704db"
+      },
+      "source": {
+        "bytes": 2478516,
+        "sha256": "006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f",
+        "gitBlob": "77516ddaecaa6d0f485825e250a8106db599f781"
+      },
+      "wholeTest": {
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      "wholeCases": 133,
+      "pass": 118,
+      "semanticFail": 15,
+      "old97AllPass": true,
+      "zeroSkipsCancellationsTodos": true,
+      "fullCurrentRuntimeInputsInspectedAndPreserved": true,
+      "noCleanupDebt": true,
+      "qualification": "Exact valid semanticRED remains15FAIL with5unreached target variants. No actualGREEN or blanketPASS is inferred."
+    },
+    "expectedSourceSnapshots": {
+      "before": {
+        "bytes": 2478516,
+        "sha256": "006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f",
+        "gitBlob": "77516ddaecaa6d0f485825e250a8106db599f781"
+      },
+      "after": {
+        "bytes": 2478650,
+        "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+        "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+      },
+      "scope": "Complete expected materialization3-to5-overlay source composition, all8798 rows matching published e6a non-docs. After identity is prospective until actual source materialization independently matches; no local application claimed.",
+      "rootComposition": {
+        "accepted": true,
+        "kind": "Expected source metadata only; not actual local application",
+        "publishedCommit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+        "publishedTree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+        "beforeSource": {
+          "bytes": 2478516,
+          "sha256": "006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f",
+          "gitBlob": "77516ddaecaa6d0f485825e250a8106db599f781"
+        },
+        "expectedAfterSource": {
+          "bytes": 2478650,
+          "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+          "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+        },
+        "completeRows": 8798,
+        "allRowsEqualPublishedNonDocs": true,
+        "onlyTwoSourceRowSubstitutions": [
+          "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts"
+        ],
+        "localHeadAndFullIndexTreeRemainC5": true,
+        "workflows42Unchanged": true,
+        "localApplication": false
+      }
+    },
+    "authorshipGate": "2026-11-16 17:47:21 UTC"
+  },
+  "sourceCompositionProof": {
+    "before": {
+      "bytes": 2478516,
+      "sha256": "006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f",
+      "gitBlob": "77516ddaecaa6d0f485825e250a8106db599f781"
+    },
+    "prospectiveAfter": {
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+    },
+    "reconstruction": "Parse the previously accepted whole77516 source snapshot; replace only helper and driver rows using the exact sourceOverlay metadata; retain all other rows and fields; sort the five changedTrackedPaths. JSON.stringify(...,null,2)+LF independently reproduced every byte of8860893e.",
+    "fullBodyBytes": 2478650,
+    "rows": 8798,
+    "unchangedRows": 8796,
+    "workflowsUnchanged": 42,
+    "prospectiveUntilApplication": true
+  },
+  "fullEvidence": {
+    "actualProducerPublication": {
+      "identity": {
+        "bytes": 31670,
+        "sha256": "5b50bfd38e108852888c3e5bb0f41fd2f3d07340c30a4cf3fcb0340b7890b0b4",
+        "gitBlob": "42db2a5f8e3d4d6fbaf7921ce9fd07ef24678e66"
+      },
+      "body": "{\n  \"schemaVersion\": 1,\n  \"kind\": \"complete-independent-actual-Cross-producer-publication-readback\",\n  \"reviewer\": \"/root/pr_graph\",\n  \"repository\": \"777genius/agent-teams-ai\",\n  \"reviewedDate\": \"2026-11-16\",\n  \"verdict\": \"COMPLETE_ACCEPTED_ACTUAL_PUBLICATION\",\n  \"acceptanceSentBeforeBareRecord\": true,\n  \"branch\": \"fix/frontend-parity-coobservation-c714-20261115\",\n  \"publication\": {\n    \"accepted\": true,\n    \"commit\": \"e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb\",\n    \"tree\": \"e9bb2f34a94f5d936ff4145056d0ccce16ae8a58\",\n    \"parent\": \"a5b9483180434214fa3946a56d44ef67ef48f6ae\",\n    \"files\": 29,\n    \"bytes\": 8127488,\n    \"sourceChanges\": 2,\n    \"unchangedOtherNonDocs\": 8796,\n    \"workflowLeaves\": 42,\n    \"planPrefix\": true,\n    \"statusPrefix\": true,\n    \"catalog27Preserved\": true,\n    \"greenNotExecuted\": true,\n    \"scope\": \"Actual publication only; next separate GREEN binding remains required.\"\n  },\n  \"manifest\": {\n    \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-publication-manifest-20261116.json\",\n    \"bytes\": 13621,\n    \"sha256\": \"7d3b05403bb4a6b25c86aa850ae6bbbd2080c1ae1e7031d6e8d578f3175d6f28\",\n    \"gitBlob\": \"8eac4c6cfe9f96775b97a3bd7f99610c3a02a003\",\n    \"listedOtherFiles\": 28,\n    \"doesNotListItself\": true\n  },\n  \"method\": {\n    \"actualReads\": [\n      \"Fresh branch ref before review and again at completion\",\n      \"Actual immutable commit and sole-parent commit\",\n      \"Complete nonrecursive current root54\",\n      \"Complete nontruncated current docs subtree3332entries/2926leaves\",\n      \"Complete nontruncated current scripts subtree634entries/600leaves\",\n      \"All29 changed blob bodies, including manifest, fetched entirely and rehashed\",\n      \"Full original parent catalog fetched; full previously verified parent Plan/status bodies reused for exact prefix comparison\"\n    ],\n    \"immutableUnchangedSubtreeProof\": \"Current and independently verified a5 roots have identical52 entries other than docs/scripts, including type/mode/SHA. Reuse complete verified a5 descendants for those immutable entries. Replace all scripts/docs descendants with freshly complete current subtrees. This reconstructs the whole tree without truncated compare or head/tail inference.\",\n    \"parentRoot\": \"ab1b94c6cd1fa02a75b7a19c18148ac364920e25\",\n    \"parentDocs\": \"44323d594bf3f41c80ebfb127d0354f75f971864\",\n    \"currentRoot\": \"e9bb2f34a94f5d936ff4145056d0ccce16ae8a58\",\n    \"currentDocs\": \"df0f75d50380a3e0796fbc04d7c2e7f27337acf4\",\n    \"currentScripts\": \"24b93023dde0aa5f543547ddf3289527c5e7689c\",\n    \"priorCompleteSourceInventoryReview\": \"4bcdca3a01d5ccb8027254fdbbca61c8bb8f8dc7\",\n    \"checks\": \"Every listed path/mode/type/Git blob/UTF8 byte count equals the actual tree and the full fetched body. SHA256 is recalculated from complete UTF8; Git SHA1 uses exact blob framing. No inner accepted RED/bootstrap/source review is re-executed or requalified.\",\n    \"apiBodies\": [\n      {\n        \"role\": \"ref\",\n        \"url\": \"https://api.github.com/repos/777genius/agent-teams-ai/git/ref/heads/fix/frontend-parity-coobservation-c714-20261115\",\n        \"fullReturnedUtf8Bytes\": 492,\n        \"returnedBodySha256\": \"d3410c4ab4e3a9cb0d740f17dba41d14c2903a5100f2f80392c41051634e5814\"\n      },\n      {\n        \"role\": \"commit\",\n        \"url\": \"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb\",\n        \"fullReturnedUtf8Bytes\": 1172,\n        \"returnedBodySha256\": \"5d6259f58725e9aa5e3e3565ef2f250ab83b30bd005d8b6b82692ce9813b26eb\"\n      },\n      {\n        \"role\": \"parent\",\n        \"url\": \"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/a5b9483180434214fa3946a56d44ef67ef48f6ae\",\n        \"fullReturnedUtf8Bytes\": 1180,\n        \"returnedBodySha256\": \"8783ec75c963a3f737bc67810676c22bb385b9f9df7c7a2469d70f85fabf90f4\"\n      },\n      {\n        \"role\": \"root\",\n        \"url\": \"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e9bb2f34a94f5d936ff4145056d0ccce16ae8a58\",\n        \"fullReturnedUtf8Bytes\": 12410,\n        \"returnedBodySha256\": \"cf7c22c1fa3ce90cf960809ff19e224d7d2c2ccbf3998dd0f99294c576a9001e\"\n      },\n      {\n        \"role\": \"docs\",\n        \"url\": \"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/df0f75d50380a3e0796fbc04d7c2e7f27337acf4?recursive=1\",\n        \"fullReturnedUtf8Bytes\": 1132740,\n        \"returnedBodySha256\": \"53b935170aeaed4f41b5c62747101de95b77aa1a67e80ebb4cba48528050a87f\"\n      },\n      {\n        \"role\": \"scripts\",\n        \"url\": \"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/24b93023dde0aa5f543547ddf3289527c5e7689c?recursive=1\",\n        \"fullReturnedUtf8Bytes\": 162740,\n        \"returnedBodySha256\": \"395231ff116121a3eb9bdc068fa9591a8d4ee358e6c438712703ded1523a2091\"\n      },\n      {\n        \"role\": \"finalRef\",\n        \"url\": \"https://api.github.com/repos/777genius/agent-teams-ai/git/ref/heads/fix/frontend-parity-coobservation-c714-20261115\",\n        \"fullReturnedUtf8Bytes\": 492,\n        \"returnedBodySha256\": \"d3410c4ab4e3a9cb0d740f17dba41d14c2903a5100f2f80392c41051634e5814\"\n      }\n    ]\n  },\n  \"treeProof\": {\n    \"parentLeaves\": 11700,\n    \"currentLeaves\": 11724,\n    \"rootEntries\": 54,\n    \"unchangedRootEntries\": 52,\n    \"docsEntries\": 3332,\n    \"docsLeaves\": 2926,\n    \"scriptsEntries\": 634,\n    \"scriptsLeaves\": 600,\n    \"changed\": 29,\n    \"added\": 24,\n    \"modified\": 5,\n    \"deleted\": 0,\n    \"modeChanges\": 0,\n    \"sourceNonDocs\": 8798,\n    \"unchangedOtherNonDocs\": 8796,\n    \"workflowLeaves\": 42,\n    \"sourceChanges\": [\n      {\n        \"path\": \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n        \"before\": \"3f1ce46fce847a861850ef874017f84227c62b0c\",\n        \"after\": \"4700a0052d3c58a2b3d9bc66e6803220688050fd\"\n      },\n      {\n        \"path\": \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n        \"before\": \"3703e649040020d7ed6b21ff3ccffcb7d1d35b2f\",\n        \"after\": \"3c7b4bb53f4259ac0795d3f92fb715887acb554f\"\n      }\n    ],\n    \"allManifestPathIdentityAndSizesMatch\": true\n  },\n  \"fullTreeLedgerDigest\": {\n    \"serialization\": \"JSON.stringify(sorted leaf rows of path/mode/type/sha/bytes)+LF; sort uses path.localeCompare\",\n    \"rows\": 11724,\n    \"sha256\": \"e5a675bd96811979deff05d637333fdfbd7bcfaeb9745fc95de9011c7694a2a4\"\n  },\n  \"fullRootEntries\": [\n    {\n      \"path\": \".coderabbit.yaml\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"cfdf47bf5d5759599f5383222ebfb8a385f09668\"\n    },\n    {\n      \"path\": \".dockerignore\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"c2d844c25fc61f06640f362de761e3f8d310c3b5\"\n    },\n    {\n      \"path\": \".gitattributes\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"924c7377f9ae4c068d106e74e17e964297d61e6e\"\n    },\n    {\n      \"path\": \".github\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"d95091ab0edb488d6e418ffa789d0f07c447ecda\"\n    },\n    {\n      \"path\": \".gitignore\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"777569b186effad3a2bcbcb09cd770180c8c5e2c\"\n    },\n    {\n      \"path\": \".husky\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"665211222b358904b557bd356a129f1ff938ca7e\"\n    },\n    {\n      \"path\": \".mcp.json\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"da61a538a43375404483bd1f810b6377da5cc72f\"\n    },\n    {\n      \"path\": \".node-version\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff\"\n    },\n    {\n      \"path\": \".npmrc\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad\"\n    },\n    {\n      \"path\": \".nvmrc\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff\"\n    },\n    {\n      \"path\": \".oxfmtrc.json\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"b003c531d6e548a5939ceb0694f15296c92e5060\"\n    },\n    {\n      \"path\": \".oxlintrc.json\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"cc0d2441ebfedc93354e081b0cf61b6a2109dcc9\"\n    },\n    {\n      \"path\": \".prettierignore\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2\"\n    },\n    {\n      \"path\": \".prettierrc.json\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"c96ec48e897a4ec478beb34716723e13d29068ed\"\n    },\n    {\n      \"path\": \"AGENTS.md\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"0c8a4a63abf24c1510c934990a025ebc99c9e435\"\n    },\n    {\n      \"path\": \"AGENT_CRITICAL_GUARDRAILS.md\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"a9a087fa5216ede29c5900b3a10638fc1ec3e2f3\"\n    },\n    {\n      \"path\": \"CLAUDE.md\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"88df8ee5ef8d951139b2a8eb9b518996babbcb3e\"\n    },\n    {\n      \"path\": \"LICENSE\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"929839bc0872222df278f9e53f15e1268ff4e0ec\"\n    },\n    {\n      \"path\": \"README.md\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"dbf976c3418f0dee7ef84e4458e49af39110bdd5\"\n    },\n    {\n      \"path\": \"agent-teams-controller\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"1ef9482608cbaa5b7f28dc42812820cba96b953e\"\n    },\n    {\n      \"path\": \"bin\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"e6b29ba2f2fda222d5831b3c672e88b72f5f7383\"\n    },\n    {\n      \"path\": \"docker\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"7e4007a72bc3fdba8d94e8f5eebc3586f110c16e\"\n    },\n    {\n      \"path\": \"docs\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"df0f75d50380a3e0796fbc04d7c2e7f27337acf4\"\n    },\n    {\n      \"path\": \"electron.vite.config.ts\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"9045260aab02891055e324607b83e1bb39c7110a\"\n    },\n    {\n      \"path\": \"eslint.config.js\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"7ca4b71fe3a357c00c110c9b75d3034e06e4b22c\"\n    },\n    {\n      \"path\": \"eslint.fast.config.js\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb\"\n    },\n    {\n      \"path\": \"eslint.feature-overrides.mts\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"9c6450d54b87ce33f7d799f900226c316e367937\"\n    },\n    {\n      \"path\": \"eslint.gateway-boundaries.mts\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"4975b20df1353a9687fd479ab043beb025e967ba\"\n    },\n    {\n      \"path\": \"i18next.config.ts\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5\"\n    },\n    {\n      \"path\": \"landing\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"193513230f45a135704f1b34dbfa0792e6823e26\"\n    },\n    {\n      \"path\": \"legacy-host.lock.json\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"6916f66ea9e4a7e8299c3ffd328e226d009ebd79\"\n    },\n    {\n      \"path\": \"managed-git.lock.json\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"2099dfe6b1e1c0ff0d64f45d6c8565b498af4333\"\n    },\n    {\n      \"path\": \"mcp-server\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5\"\n    },\n    {\n      \"path\": \"package.json\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"f80ec83172d0aec0dec8a8ab055426b4fca4a1f7\"\n    },\n    {\n      \"path\": \"packages\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"3934729cd387940917b79992f2579bf6269d157c\"\n    },\n    {\n      \"path\": \"patches\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"8eb2e6aaa216638cbe6c072d79802733d43f500d\"\n    },\n    {\n      \"path\": \"pnpm-lock.yaml\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"9d2ce04a1bbf743e49403d2520873134b08b68de\"\n    },\n    {\n      \"path\": \"pnpm-workspace.yaml\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"a049a862742a85ba77faafea329fc221b3e500e4\"\n    },\n    {\n      \"path\": \"postcss.config.cjs\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"85f717cc09ecb1153d6a4c0962284e09e4b8d6a9\"\n    },\n    {\n      \"path\": \"resources\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"69acacf60db94f62dbe4a99ed308aab59310e905\"\n    },\n    {\n      \"path\": \"runtime.lock.json\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"1757d79786da78e739a322e8bba81cd3dc88dcaa\"\n    },\n    {\n      \"path\": \"scripts\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"24b93023dde0aa5f543547ddf3289527c5e7689c\"\n    },\n    {\n      \"path\": \"src\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"ed69e62618e57d88c2e5237f98074a1ff8853e6f\"\n    },\n    {\n      \"path\": \"tailwind.config.js\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"a52ebb338468d8fcef92837aa27aebd48c7206d7\"\n    },\n    {\n      \"path\": \"terminal-platform.lock.json\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"039a8a2a7b959b44bf3d483e37335fdc6774e8cb\"\n    },\n    {\n      \"path\": \"test\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"c771c2bb9ec6d147d4974361cb5730897f7653d6\"\n    },\n    {\n      \"path\": \"tools\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"9356c03e96405eb578158f06d6fdcbc89d105bd6\"\n    },\n    {\n      \"path\": \"tsconfig.json\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"568952f5025a88c16b0568c7279d8e85a4288b43\"\n    },\n    {\n      \"path\": \"tsconfig.legacy-agent-host-scripts.json\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"538fdfe23d7aa6bac6f18a483d5d364aef644a39\"\n    },\n    {\n      \"path\": \"tsconfig.node.json\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"c94c942012bef62695dc3b22b1a2b7229d047f59\"\n    },\n    {\n      \"path\": \"vendor\",\n      \"mode\": \"040000\",\n      \"type\": \"tree\",\n      \"sha\": \"bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f\"\n    },\n    {\n      \"path\": \"vitest.config.ts\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"c57faa53a1bb869b4379bf888194806ef7e228e3\"\n    },\n    {\n      \"path\": \"vitest.critical.config.ts\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"c32070bf9e1724892aa8cb695152e8f49f1293f0\"\n    },\n    {\n      \"path\": \"vitest.opencode-proof.config.ts\",\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"sha\": \"274de1c0955ad4f98d220857a94576ce6a50864b\"\n    }\n  ],\n  \"changedBodyCensus\": {\n    \"files\": 29,\n    \"bytes\": 8127488,\n    \"everyFullBodyReadAndGitSha256Verified\": true\n  },\n  \"changedBodies\": [\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md\",\n      \"bytes\": 2516064,\n      \"sha256\": \"11a524b3751f1723b619901f2f8def923ca69dc9fc6a0937fc71491883386591\",\n      \"gitBlob\": \"a040f883eae48d28ecf996ceb701a0253170014c\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": \"db774240d2bd3233b46fef361591a00a2c668464\"\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md\",\n      \"bytes\": 29798,\n      \"sha256\": \"c68e85d8a2dd459588101cdd0cf777eefa38c4009123c1ed38b9a42283548d87\",\n      \"gitBlob\": \"78a9dd3a2100553580571154672eec57993ab48c\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": \"eef4ea5f92e8715cc2c12ab12a1ea5b51115f203\"\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-guard-r2-20261116.json\",\n      \"bytes\": 121044,\n      \"sha256\": \"438d5bafc103e0525fca049b64cf8d4b02c2216188e4321784487195ce481339\",\n      \"gitBlob\": \"e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-parity-r2-20261116.json\",\n      \"bytes\": 109607,\n      \"sha256\": \"da402e2bc50d090cc5b2a57ff1eac0dc5d6767b77876d97f301937db7197536b\",\n      \"gitBlob\": \"fb8220fb8c074cf7225cadc4fba9b6568d45fe2f\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-publication-manifest-20261116.json\",\n      \"bytes\": 13621,\n      \"sha256\": \"7d3b05403bb4a6b25c86aa850ae6bbbd2080c1ae1e7031d6e8d578f3175d6f28\",\n      \"gitBlob\": \"8eac4c6cfe9f96775b97a3bd7f99610c3a02a003\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-reviewed-outcome-20261116.json\",\n      \"bytes\": 16491,\n      \"sha256\": \"058e17a76d4540dfdbcd49f891a8b21c12ce176a6c549dbe513a9faddfa0152a\",\n      \"gitBlob\": \"ab664ba6eef5de28c83154955bebec0c9338b7a7\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-root-inverse-review-20261116.json\",\n      \"bytes\": 8119,\n      \"sha256\": \"eec8303692c8ba0f019939580e76fc77ab22cb764f852b95bafe0a2699343f05\",\n      \"gitBlob\": \"6cf280cdf07fe299eb452a6eb61bba3dd53114a4\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-actual-20261116.json\",\n      \"bytes\": 185267,\n      \"sha256\": \"2b8eb5338ddeaa291d6747b07dcaf31168b9b1fc3d576b7ea487823333aa02f7\",\n      \"gitBlob\": \"7db3b53fab91d32d18c8dd95b34242e515b50634\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-controls-independent-publication-readback-20261116.json\",\n      \"bytes\": 119995,\n      \"sha256\": \"38c611f8b098f23435165cc2bcbb77ba705ec944ead119d2672702c3e2726da8\",\n      \"gitBlob\": \"70d62d67ac2b26830075190948bf47983b57a47a\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-independent-lifetime-review-20261116.json\",\n      \"bytes\": 140038,\n      \"sha256\": \"4c7461b5f39deaa940c1022f6452463242e504512039d272b193e996324d7774\",\n      \"gitBlob\": \"2456b180544745287f7dd6dcf497d068816d9d4a\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-independent-semantic-closure-20261116.json\",\n      \"bytes\": 86249,\n      \"sha256\": \"b43ed4a88bc5b714d67e857407448267617875c88e3441612d88c013d85d6aeb\",\n      \"gitBlob\": \"ffc5a83973da41cd9e9b9e780b302b0cb16704db\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-independent-semantic-review-20261116.json\",\n      \"bytes\": 190694,\n      \"sha256\": \"9258ff64a8be1e3723c4309a8fe4ff1b807c2a2b45f98756bb29cb773039c25c\",\n      \"gitBlob\": \"b1d7d6c148d0f2b11e72aa728a03a64091590838\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-output-20261116.log\",\n      \"bytes\": 37314,\n      \"sha256\": \"0ccd67564fbfaace5061e59fc0e1b29632294746aef13ae2e38131659db0e116\",\n      \"gitBlob\": \"d38f2ae2851555b35970a892ce38674221147437\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-primary-receipt-20261116.json\",\n      \"bytes\": 883,\n      \"sha256\": \"740b006d5edd0141186145f6d551cbe3940d024a54b88d5456619f8bfac415b3\",\n      \"gitBlob\": \"62abf6c38e2f22cdf38987b431b53ffae096a667\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-receipt-20261116.json\",\n      \"bytes\": 33946,\n      \"sha256\": \"e86f3ff0ed102ec68ccb2fbe69f279247bd0eb56eaba50c8e96921b3f2619772\",\n      \"gitBlob\": \"e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-source-before-and-after-20261116.json\",\n      \"bytes\": 2478516,\n      \"sha256\": \"006af6aea6da0c958f7cef7755a66bfeeb52bb88fbb27cbd64d5708f1d95e84f\",\n      \"gitBlob\": \"77516ddaecaa6d0f485825e250a8106db599f781\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-materialization-actual-20261116.json\",\n      \"bytes\": 127003,\n      \"sha256\": \"197ffc6245a2af0f0727c6ad629a731177bb8f0eaddbee1aea65b29ec404e221\",\n      \"gitBlob\": \"5766c12541ed5cf6cfb77ff92539fba5b68869d3\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-materialization-independent-review-20261116.json\",\n      \"bytes\": 79583,\n      \"sha256\": \"5a2decfc6c4f5e55ecf7ea3cb19ea91fd1b3249a8770bb57c5854f3663b43066\",\n      \"gitBlob\": \"c562c5ab0e2e3e8df58ff9201a89ff2c7152dffa\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-materialization-receipt-20261116.json\",\n      \"bytes\": 25616,\n      \"sha256\": \"1412099d6a34b90fb9b9d84ec383781b14a0de6d76b7e59043b4b09fff53a7b7\",\n      \"gitBlob\": \"20892f422d59196165a75fdac37a8e668e4e561a\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-a07-full-integration-assessment-20261116.json\",\n      \"bytes\": 352944,\n      \"sha256\": \"2804e29cfaa4f1c32ef5abf4ca88339e573421f0f75bf98c2a0b4c6248c5aeea\",\n      \"gitBlob\": \"4bcdca3a01d5ccb8027254fdbbca61c8bb8f8dc7\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-a07-full-ui-133-69-census-20261116.json\",\n      \"bytes\": 276318,\n      \"sha256\": \"7cbdf8e82eb9fade2265ed1bfeec65e21f3ec44104c9a152fb2b7349acdb0bd4\",\n      \"gitBlob\": \"9637374969dea23c0fdc9ee2f5cc305f110049d1\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-c930-provider-pair-original-byte-comparison-20261116.json\",\n      \"bytes\": 457173,\n      \"sha256\": \"e805ba019ffdcb7ee0899e909a256fdf55afb78fbf5e92926ddc9ee6fd4d7e87\",\n      \"gitBlob\": \"6e1073e124c05331e582b27582f25b4e6d0c1bd8\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-integration-priorities-and-c930-byte-review-20261116.json\",\n      \"bytes\": 65513,\n      \"sha256\": \"5f00811d3916986548389aca86b29653495284fce67b1603d197e2913dd47a1b\",\n      \"gitBlob\": \"209ae3a0c2e4b5c538cc6e6e79889fb85a174417\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-windows-arm-final-cleanup-independent-review-20261116.json\",\n      \"bytes\": 177963,\n      \"sha256\": \"8c6db085d88bd3c4b9bf7b7bf707ceb14a47d649d5163b19925c9dba0239f8c5\",\n      \"gitBlob\": \"1ed8a09252170fcfc2b31525d4a7061f7d7de95a\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-windows-arm-final-cleanup-receipt-20261116.json\",\n      \"bytes\": 22790,\n      \"sha256\": \"6f34d07150d904bfd7554011d8d11ac22dcb01ecf9c8553bce1a32e26b2d9f3a\",\n      \"gitBlob\": \"3aeccb43654adadf90c38a06e4ffeaa650e63321\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-windows-arm-original-cleanup-artifact-20261116.json\",\n      \"bytes\": 355085,\n      \"sha256\": \"cef51689f252ba3a097002ed5fd760f0ff970e277757dfa6d93b16f3c70db22c\",\n      \"gitBlob\": \"d41b495d03866d9611b449dd159bd836189c7021\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": null\n    },\n    {\n      \"path\": \"docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json\",\n      \"bytes\": 55137,\n      \"sha256\": \"b933ded4be08a78374e776600561208079d6776a9a40fa6963951d983ec33530\",\n      \"gitBlob\": \"c9978c0453e019872dbc1fb56f13c598b8f5ce15\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": \"7057b260ea9c5216f7b533130dd4d7adea22da84\"\n    },\n    {\n      \"path\": \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n      \"bytes\": 36260,\n      \"sha256\": \"26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38\",\n      \"gitBlob\": \"4700a0052d3c58a2b3d9bc66e6803220688050fd\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": \"3f1ce46fce847a861850ef874017f84227c62b0c\"\n    },\n    {\n      \"path\": \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n      \"bytes\": 8457,\n      \"sha256\": \"2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b\",\n      \"gitBlob\": \"3c7b4bb53f4259ac0795d3f92fb715887acb554f\",\n      \"fullReadback\": true,\n      \"mode\": \"100644\",\n      \"type\": \"blob\",\n      \"beforeSha\": \"3703e649040020d7ed6b21ff3ccffcb7d1d35b2f\"\n    }\n  ],\n  \"prefixes\": [\n    {\n      \"key\": \"plan\",\n      \"prefixComplete\": true,\n      \"prefixBytes\": 2512476,\n      \"appendBytes\": 3588,\n      \"appendSha256\": \"b284a66b8745aefaa1fb9f4ed1a1bad7a1562d3e60eb438e66666ad41a5875ec\"\n    },\n    {\n      \"key\": \"status\",\n      \"prefixComplete\": true,\n      \"prefixBytes\": 28687,\n      \"appendBytes\": 1111,\n      \"appendSha256\": \"a373553859f34c0152dd5e2187f91815213dfd4c66ecbac44cce13a5e109b04d\"\n    }\n  ],\n  \"historicalCatalog\": {\n    \"before\": \"7057b260ea9c5216f7b533130dd4d7adea22da84\",\n    \"after\": \"c9978c0453e019872dbc1fb56f13c598b8f5ce15\",\n    \"priorFullBody\": {\n      \"bytes\": 47235,\n      \"sha256\": \"f15f02cc7ec4de70fbe0b347993f87629a02898e31c953a3e8c04077661723df\",\n      \"gitBlob\": \"7057b260ea9c5216f7b533130dd4d7adea22da84\"\n    },\n    \"changedKeys\": [\n      \"currentCrossCloseStage\",\n      \"priorCrossCloseStageAtRedControlsPublication\"\n    ],\n    \"removedKeys\": [],\n    \"totalsIdentical\": true,\n    \"bundlesIdentical\": true,\n    \"originalCiFinalIdentical\": true,\n    \"priorCrossStagePreserved\": true,\n    \"unchangedTotals\": {\n      \"bundles\": 27,\n      \"outerBytes\": 17894693,\n      \"payloadInstances\": 219,\n      \"payloadBytes\": 15911913\n    }\n  },\n  \"selectedSource\": {\n    \"helper\": {\n      \"path\": \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n      \"before\": \"3703e649040020d7ed6b21ff3ccffcb7d1d35b2f\",\n      \"after\": \"3c7b4bb53f4259ac0795d3f92fb715887acb554f\",\n      \"bytes\": 8457,\n      \"physicalLines\": 123,\n      \"cap\": 200\n    },\n    \"driver\": {\n      \"path\": \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n      \"before\": \"3f1ce46fce847a861850ef874017f84227c62b0c\",\n      \"after\": \"4700a0052d3c58a2b3d9bc66e6803220688050fd\",\n      \"bytes\": 36260,\n      \"physicalLines\": 799,\n      \"cap\": 800\n    },\n    \"acceptedSourceR2\": {\n      \"guard\": \"e60f5b0ecb7b5aa4b86b0dc528745ed9f5d41637\",\n      \"parity\": \"fb8220fb8c074cf7225cadc4fba9b6568d45fe2f\",\n      \"rootInverse\": \"6cf280cdf07fe299eb452a6eb61bba3dd53114a4\"\n    },\n    \"protectedExact\": {\n      \"test133\": \"0aec698e88cc3af8d12c48f6d93b038efcc84900\",\n      \"controls\": \"ed57cb0fe7d57ef076a591621289eb77667c63ad\",\n      \"selection\": \"cf93da72a198dac636658e512093eef7828b5927\",\n      \"otherNonDocs\": 8796,\n      \"allWorkflowDefinitions\": 42\n    }\n  },\n  \"claimsReadAndQualified\": {\n    \"actualRed\": {\n      \"tests\": 133,\n      \"pass\": 118,\n      \"designatedSemanticFail\": 15,\n      \"skip\": 0,\n      \"cancel\": 0,\n      \"todo\": 0,\n      \"allPrior97Pass\": true,\n      \"targetVariants\": {\n        \"total\": 13,\n        \"reached\": 8,\n        \"unreached\": 5\n      },\n      \"primaryExit\": 1,\n      \"outerExit\": 0,\n      \"scope\": \"Published exact original RED with separately accepted semantic and lifetime reviews. This publication readback does not execute/repeat the test or independently repeat the accepted67-file inner reconstruction.\"\n    },\n    \"sourceOnlyMaterialization\": \"Prior5766/c562 retained UNINSPECTED/null runtime-preservation scope; not promoted to behavioral PASS.\",\n    \"producerR2\": \"Exact two source proposals and their full accepted reviews are now published. Static133 prediction remains unexecuted.\",\n    \"applicationAndGreen\": \"Published outcome/catalog/Plan/status explicitly say no local producer application, no GREEN binding authored at this checkpoint and no GREEN execution. These are checkpoint claims, not a child local runtime inspection.\",\n    \"windowsCleanup\": \"Later direct original ARM receipt closes7/7 post-wait stopped/drained/released/handle-absence facts and cleanuptrue. Original15s readiness remains INCOMPLETE; old pre-wait false flags were not leaks.\",\n    \"incoming\": \"Pinned a5-versus-a07 inventory81 and133/69 census158 union are historical prospective evidence. They do not adopt c930 or incoming source, and their81 count is not transferred to the new Cross source.\",\n    \"open\": \"Canonical typing/build, fresh own GUI/platform, Windows15s/10s, strictP09, laterP11/genuineM16 and wholeE2E remain open.\",\n    \"gates\": \"This acceptance closes only actual publication. Separate exact GREEN data binding R2/publication/readback is required before any root two-file application and subsequent whole133 GREEN/ordered validation.\"\n  },\n  \"actions\": {\n    \"githubReadOnly\": true,\n    \"bareReviewRetentionOnly\": true,\n    \"localExecution\": false,\n    \"tests\": false,\n    \"sourceMutation\": false,\n    \"refs\": false,\n    \"prs\": false,\n    \"ciQueries\": false,\n    \"ciActions\": false,\n    \"archiveDownload\": false\n  }\n}\n"
+    },
+    "reviewedUnchangedRunnerSections": [
+      {
+        "name": "current source and metadata/runtime snapshot contracts",
+        "first": 348,
+        "last": 516,
+        "identity": {
+          "bytes": 9909,
+          "sha256": "33dbf19974c2c3b87909b5a4c0a9047d60398bf174d7b7a6e7ba3f0ee83c83e4",
+          "gitBlob": "0a3370970eec7e45f284f97658d18966da84e5cf"
+        },
+        "content": "def git_read(*arguments):\n    global metadata_counter\n    metadata_counter += 1\n    stage = {'id': prefix + '-' + boundary + '-metadata', 'cwd': str(REPO)}\n    pointer, record = run_child(stage, metadata_counter, [r1['tools']['git']['path'], *arguments],\n                                time.monotonic() + 30, metadata=True)\n    assert record['successful'], 'Git metadata failed; retained ' + pointer['path']\n    data = pathlib.Path(record['raw']['path']).read_bytes()\n    assert identity(data) == {key: record['raw'][key] for key in ['bytes', 'sha256', 'gitBlob']}\n    return data\n\n\ndef source_snapshot(overlays):\n    assert git_read('rev-parse', 'HEAD').decode().strip() == SOURCE_COMMIT\n    assert git_read('rev-parse', 'HEAD^{tree}').decode().strip() == SOURCE_TREE\n    leaves = []\n    for raw in git_read('ls-tree', '-rz', '--full-tree', 'HEAD').split(b'\\0'):\n        if raw:\n            metadata, path = raw.split(b'\\t', 1)\n            mode, kind, blob = metadata.decode().split()\n            leaves.append({'path': path.decode(), 'mode': mode, 'type': kind, 'gitBlob': blob})\n    expected_leaves = [{key: row[key] for key in ['path', 'mode', 'type', 'gitBlob']}\n                       for row in setup['sourceTreeRows']]\n    assert sorted(leaves, key=lambda row: row['path']) == sorted(expected_leaves, key=lambda row: row['path'])\n    assert len(leaves) == 11567, 'complete source tree changed'\n    assert git_read('diff', '--cached', '--name-only', '-z') == b'', 'staged changes'\n    assert git_read('ls-files', '--others', '--exclude-standard', '-z') == b'', 'untracked files'\n    base = {row['path']: row for row in inputs['sourceNonDoc']['rows']}\n    index = {}\n    for raw in git_read('ls-files', '--stage', '-z').split(b'\\0'):\n        if raw:\n            metadata, path = raw.split(b'\\t', 1)\n            mode, blob, stage = metadata.decode().split()\n            assert stage == '0', 'unmerged index'\n            index[path.decode()] = {'mode': mode, 'gitBlob': blob}\n    assert index == {row['path']: {key: row[key] for key in ['mode', 'gitBlob']}\n                     for row in expected_leaves}, 'complete stage0 index changed'\n    expected = dict(base)\n    for row in overlays:\n        assert row['path'] in OVERLAY_PATHS and row['mode'] == '100644'\n        assert identity(row['content'].encode()) == {key: row[key] for key in ['bytes', 'sha256', 'gitBlob']}\n        expected[row['path']] = {key: row[key] for key in ['path', 'mode', 'bytes', 'sha256', 'gitBlob']}\n    assert len(base) == len(expected) == 8798 and len({x['path'] for x in overlays}) == len(overlays)\n    changed = {path for path in expected if expected[path] != base[path]}\n    actual_changed = {p.decode() for p in git_read('diff', '--name-only', '-z', 'HEAD').split(b'\\0') if p}\n    assert actual_changed == changed, 'tracked source change set differs'\n    rows = [file_row(REPO / path, path) for path in sorted(expected)]\n    actual = {'actualLocalHead': SOURCE_COMMIT, 'tree': SOURCE_TREE, 'rows': rows,\n              'changedTrackedPaths': sorted(changed), 'allTreeLeaves': len(leaves),\n              'workflowLeaves': sum(x['path'].startswith('.github/workflows/') for x in leaves),\n              'localGitConfig': identity((REPO / '.git/config').read_bytes())}\n    pointer = write_new(prefix + '-' + boundary + '-source.json', actual)\n    assert rows == [expected[path] for path in sorted(expected)], 'source bytes differ; ' + pointer['path']\n    assert actual['localGitConfig'] == inputs['sourceFull']['localGitConfig'], 'local Git configuration changed'\n    assert actual['workflowLeaves'] == 42\n    return pointer\n\n\ndef provider_archives():\n    values = []\n    for pin in inputs['providers']['providers']:\n        archive = REPO / pin['archivePath']\n        assert identity(archive.read_bytes()) == pin['archiveIdentity']\n        installed = REPO / pin['installedRoot']\n        assert installed.is_dir() and not installed.is_symlink()\n        rows, seen = [], set()\n        with tarfile.open(archive, 'r:gz') as handle:\n            for member in handle.getmembers():\n                path = pathlib.PurePosixPath(member.name)\n                assert not path.is_absolute() and '..' not in path.parts and path.parts[0] == 'package'\n                assert member.name not in seen\n                seen.add(member.name)\n                if member.isdir():\n                    continue\n                assert member.isfile(), 'provider archive special/link member'\n                relative = path.relative_to('package').as_posix()\n                data = handle.extractfile(member).read()\n                actual = file_row(installed / relative, relative)\n                mode = '100755' if member.mode & stat.S_IXUSR else '100644'\n                assert actual == {'path': relative, 'mode': mode, **identity(data)}\n                rows.append({'path': relative, 'archiveMode': oct(member.mode), 'mode': mode,\n                             **identity(data), 'installedMatch': True})\n        assert rows == pin['regularMembers'], 'provider archive member census changed'\n        values.append({'name': pin['name'], 'archive': pin['archiveIdentity'],\n                       'regularMembers': len(rows), 'allRegularMembersEqual': True})\n    return values\n\n\ndef control_snapshot():\n    rows = []\n    for path, pin in control_pins:\n        assert path.is_file() and not path.is_symlink(), 'control path alias'\n        actual = identity(path.read_bytes())\n        assert actual == pin, 'exact admission control changed: ' + str(path)\n        rows.append({'path': str(path), **actual})\n    return rows\n\n\ndef source_metadata_snapshot(overlays):\n    result = {'source': source_snapshot(overlays), 'tools': tooling(),\n              'environment': environment_check(), 'controls': control_snapshot(),\n              'fullRuntimeInputsInspected': False, 'dependencies': 'UNINSPECTED',\n              'compiled': 'UNINSPECTED', 'providers': 'UNINSPECTED', 'bootstrapCache': 'UNINSPECTED',\n              'pnpm': identity((json.dumps(verify_pnpm(), indent=2) + '\\n').encode())}\n    assert env['AGENT_BACKEND_TEST_NODE'] == r1['tools']['node']['path']\n    assert env['TMPDIR'] == str(TASK_TMP) and env['NODE_DISABLE_COMPILE_CACHE'] == '1'\n    assert all(key not in env for key in ['NODE_COMPILE_CACHE', 'NODE_COMPILE_CACHE_PORTABLE'])\n    result['processCensus'] = process_rows()\n    result['testTemps'] = sorted([{'name': path.name, 'device': path.lstat().st_dev,\n                                  'inode': path.lstat().st_ino, 'mode': stat.S_IFMT(path.lstat().st_mode)}\n                                 for path in TASK_TMP.iterdir() if path.name.startswith('TEST-')],\n                                key=lambda row: row['name'])\n    result['taskTmpTopEntries'] = sorted(path.name for path in TASK_TMP.iterdir())\n    return result\n\n\ndef input_snapshot(overlays):\n    result = {'source': source_snapshot(overlays), 'controls': control_snapshot(),\n              'fullRuntimeInputsInspected': True}\n    checks = [('dependencies', dependencies, inputs['dependencies']),\n              ('compiled', compiled, inputs['compiled'])]\n    for name, read, expected in checks:\n        actual = read()\n        pointer = write_new(prefix + '-' + boundary + '-' + name + '.json', actual)\n        result[name] = pointer\n        assert actual == expected, name + ' changed; retained ' + pointer['path']\n    result['providers'] = provider_archives()\n    result['tools'] = tooling()\n    result['pnpm'] = identity((json.dumps(verify_pnpm(), indent=2) + '\\n').encode())\n    result['environment'] = environment_check()\n    assert env['AGENT_BACKEND_TEST_NODE'] == r1['tools']['node']['path']\n    assert env['TMPDIR'] == str(TASK_TMP) and env['NODE_DISABLE_COMPILE_CACHE'] == '1'\n    assert all(key not in env for key in ['NODE_COMPILE_CACHE', 'NODE_COMPILE_CACHE_PORTABLE'])\n    cache = []\n    for folder, directories, files in os.walk(ROOT / 'tmp', followlinks=False):\n        for name in sorted(directories + files):\n            path = pathlib.Path(folder) / name\n            if stat.S_ISDIR(path.lstat().st_mode):\n                continue\n            cache.append(file_row(path, path.relative_to(ROOT).as_posix()))\n    result['bootstrapCache'] = sorted(cache, key=lambda row: row['path'])\n    assert result['bootstrapCache'] == inputs['currentBoundary']['taskTempInventory'], 'bootstrap tmp changed'\n    result['processCensus'] = process_rows()\n    result['testTemps'] = sorted([{'name': path.name, 'device': path.lstat().st_dev,\n                                  'inode': path.lstat().st_ino, 'mode': stat.S_IFMT(path.lstat().st_mode)}\n                                 for path in TASK_TMP.iterdir() if path.name.startswith('TEST-')],\n                                key=lambda row: row['name'])\n    result['taskTmpTopEntries'] = sorted(path.name for path in TASK_TMP.iterdir())\n    return result\n\n\ndef preserved(before, after, include_source=True):\n    pointer_keys = ['dependencies', 'compiled'] + (['source'] if include_source else [])\n    return all(before[key]['sha256'] == after[key]['sha256'] for key in pointer_keys) and all(\n        before[key] == after[key] for key in ['providers', 'tools', 'pnpm', 'environment', 'bootstrapCache', 'controls'])\n\n\ndef ordinary_completion(record):\n    return bool(record and record['exitCode'] in [0, 1] and record['exitSignal'] is None\n                and not record['timedOut'] and not record.get('executionError')\n                and not record.get('finalizationError') and not record.get('abnormalCleanup')\n                and not record['interruptions'] and not record['deadlineExceeded']\n                and record['remainingCapturedSession'] == [])\n\n\ndef primary_cleanup_seconds(trackers):\n    values = [row['record'].get('cleanupSeconds', 0 if not row['spawnAttempted'] else None)\n              for row in trackers]\n    return sum(values) if all(isinstance(value, (int, float)) for value in values) else None\n"
+      },
+      {
+        "name": "exact binding and prerequisite admission",
+        "first": 519,
+        "last": 656,
+        "identity": {
+          "bytes": 9265,
+          "sha256": "85ec9a7d2469481a8b03edf2c02501efff0f3c73e7ee8871a81778359559f73c",
+          "gitBlob": "54b2120c8416b8fa24dd691513ad9ac290c3386f"
+        },
+        "content": "assert len(sys.argv) == 5, 'binding path, binding SHA256, action and command required'\nbinding_path, binding_sha, action, command = sys.argv[1:]\nbinding_bytes = pathlib.Path(binding_path).read_bytes()\nassert hashlib.sha256(binding_bytes).hexdigest() == binding_sha\ncfg = json.loads(binding_bytes)\nassert pathlib.Path(__file__).resolve() == pathlib.Path(cfg['runnerLocalPath'])\nassert pathlib.Path(binding_path).resolve() == pathlib.Path(cfg['bindingLocalPath'])\nassert identity(pathlib.Path(__file__).read_bytes()) == cfg['runnerIdentity']\nassert cfg['publishedR1'] == R1 and cfg['phase'] in ['red', 'green']\nassert identity(cfg['crossR1Body'].encode()) == cfg['crossR1Identity']\nassert cfg['crossR1Identity']['gitBlob'] == R1_BLOB\ncross_r1 = json.loads(cfg['crossR1Body'])\nassert cfg['actualPublishedSubjectReadbackAccepted'] and cfg['combinedInputImportAdmission']['accepted']\nassert cfg['combinedInputImportAdmission']['sourceCommit'] == SOURCE_COMMIT\nassert command in (['red'] if cfg['phase'] == 'red' else ['green', 'validation-package'])\nassert action in ['run', 'materialize']\nassert action != 'materialize' or command == cfg['phase']\nassert set(cfg['inputFiles']) == set(INPUT_PATHS)\nassert ROOT.is_dir() and not ROOT.is_symlink() and REPO.is_dir() and not REPO.is_symlink()\nfor name in ['toolchain', 'bin', 'evidence', 'tmp', 'store', 'cache', 'state', 'config', 'data']:\n    assert (ROOT / name).is_dir() and not (ROOT / name).is_symlink(), name + ' root alias'\ncontrol_pins = [(pathlib.Path(__file__), cfg['runnerIdentity']),\n                (pathlib.Path(binding_path), identity(binding_bytes))]\ninputs = {}\nfor name, path in INPUT_PATHS.items():\n    pin = cfg['inputFiles'][name]\n    assert str(path) == pin['path'] and path.is_file() and not path.is_symlink()\n    data = path.read_bytes()\n    expected = {key: pin[key] for key in ['bytes', 'sha256', 'gitBlob']}\n    assert identity(data) == expected, name\n    control_pins.append((path, expected))\n    inputs[name] = json.loads(data)\nsetup = inputs['setupBinding']\nr1, amendment = json.loads(setup['r1Body']), json.loads(setup['amendmentBody'])\nassert identity(setup['r1Body'].encode()) == setup['r1Identity']\nassert identity(setup['amendmentBody'].encode()) == setup['amendmentIdentity']\nassert setup['publishedR1'] == '7e6f32741ccdb470e7688cec9de9481fd05827a1'\nassert setup['publishedAmendment'] == '0042eec33e3bcf145de25db96f5fc7c5b026a1fe'\nfor review in cfg['acceptedReviewBodies']:\n    assert identity(review['body'].encode()) == review['identity']\nassert len(inputs['sourceFull']['rows']) == 11567 and len(inputs['sourceNonDoc']['rows']) == 8798\nassert len(inputs['dependencies']) == 122773 and len(inputs['compiled']) == 1454\nassert inputs['sourceFull']['head'] == inputs['sourceNonDoc']['head'] == SOURCE_COMMIT\nassert inputs['sourceFull']['tree'] == inputs['sourceNonDoc']['tree'] == SOURCE_TREE\nexpected_before = BASE_PATHS if cfg['phase'] == 'red' else [*BASE_PATHS, PATHS[2]]\nexpected_after = [*BASE_PATHS, PATHS[2]] if cfg['phase'] == 'red' else OVERLAY_PATHS\nassert sorted(x['path'] for x in cfg['beforeSourceOverlay']) == sorted(expected_before)\nassert sorted(x['path'] for x in cfg['sourceOverlay']) == sorted(expected_after)\nfor overlays in [cfg['beforeSourceOverlay'], cfg['sourceOverlay']]:\n    for pin in cross_r1['preservedBaseline']['currentTwoOverlays']:\n        row = next(x for x in overlays if x['path'] == pin['path'])\n        assert {key: row[key] for key in pin} == pin, 'previous conversation producer changed'\n    for row in overlays:\n        assert row['mode'] == '100644'\n        assert identity(row['content'].encode()) == {key: row[key] for key in ['bytes', 'sha256', 'gitBlob']}\n        if row['path'] == PATHS[2]:\n            assert identity(row['content'].encode()) == TEST_IDENTITY\n        elif row['path'] in PATHS[:2]:\n            cap = 200 if row['path'] == PATHS[0] else 800\n            assert len(row['content'].splitlines()) <= cap\nbase_source = {row['path']: row for row in inputs['sourceNonDoc']['rows']}\nexpected_source = dict(base_source)\nfor row in cfg['sourceOverlay']:\n    expected_source[row['path']] = {key: row[key] for key in ['path', 'mode', 'bytes', 'sha256', 'gitBlob']}\nassert cfg['sourcePins'] == [expected_source[path] for path in sorted(OVERLAY_PATHS)]\nassert cfg['reviewedTestCensus']['wholeRuntimeCases'] == 133\nassert cfg['reviewedTestCensus']['wholeTest'] == TEST_IDENTITY\nwritten_paths = [PATHS[2]] if cfg['phase'] == 'red' else PATHS[:2]\nassert cfg['materializePaths'] == written_paths\nbefore_source = dict(base_source)\nfor row in cfg['beforeSourceOverlay']:\n    before_source[row['path']] = {key: row[key] for key in ['path', 'mode', 'bytes', 'sha256', 'gitBlob']}\nassert sorted(path for path in expected_source if expected_source[path] != before_source[path]) == sorted(written_paths)\npnpm_inventory = inputs['pnpm']\noriginal_environment = os.environ.copy()\nenv, captured_transport = admit_environment(original_environment)\nfor key in ['NODE_COMPILE_CACHE', 'NODE_COMPILE_CACHE_PORTABLE']:\n    env.pop(key, None)\nenv.update({'NODE_DISABLE_COMPILE_CACHE': '1', 'AGENT_BACKEND_TEST_NODE': r1['tools']['node']['path'],\n            'TMPDIR': str(TASK_TMP)})\ntempfile.tempdir = str(TASK_TMP)\nabsent_configs = [*r1['environment']['absentConfigFiles'], amendment['admission']['additionalAbsentConfig']['path']]\nnormalized_prefix = next(value for key, value in captured_transport.items() if key.lower() == 'npm_config_prefix')\nNODE = r1['tools']['node']['path']\nPNPM = [NODE, r1['tools']['pnpm']['executable'], '--config.pm-on-fail=error',\n        '--config.verify-deps-before-run=false', '--config.engine-strict=true']\nCOMMANDS = {'red': [NODE, '--test', PATHS[2]], 'green': [NODE, '--test', PATHS[2]],\n            'lint': [*PNPM, 'lint:fast:files', *PATHS],\n            'source-size': [*PNPM, 'guard:source-file-size'],\n            'diff-check': [r1['tools']['git']['path'], 'diff', '--check', '--', *OVERLAY_PATHS]}\nassert cfg['commandVectors'] == COMMANDS\nassert cfg['executionScope']['requiresObservedSupervisorExitZeroForContinuation'] is True\nowner = {'kind': 'c714-cross-close-evidence', 'base': SOURCE_COMMIT, 'publishedR1': R1,\n         'runner': cfg['runnerIdentity'], 'test': TEST_IDENTITY}\nif action == 'materialize' and cfg['phase'] == 'red':\n    OUT.mkdir(mode=0o700, exist_ok=False)\n    write_new('owner.json', owner)\nelse:\n    assert OUT.is_dir() and not OUT.is_symlink()\n    assert json.loads((OUT / 'owner.json').read_text()) == owner\nif cfg['phase'] == 'green':\n    red_pin = cfg['acceptedSemanticRed']\n    assert red_pin['independentReviewAccepted'] is True and red_pin['observedOuterSupervisorExit'] == 0\n    red_bytes = (OUT / 'red-receipt.json').read_bytes()\n    assert identity(red_bytes) == red_pin['identity']\n    red = json.loads(red_bytes)\n    assert red['command'] == 'red' and red['exitCode'] == 1 and red['inputsPreserved']\n    assert red['fullRuntimeInputsInspected'] and red['fullRuntimeInputsPreserved']\n    assert red['commandCompletedNormally'] and red['cleanup']['newTestTempsRemaining'] == []\n    assert red['scopeCompleted'] is True and red['interruptions'] == []\n    assert red['cleanup']['capturedSessionMembersAfter'] == []\n    assert not red.get('executionError') and not red.get('postflightError')\n    assert red['testIdentity'] == TEST_IDENTITY\nif action == 'run' and command in ['red', 'green']:\n    materialized = json.loads((OUT / ('materialize-' + command + '-receipt.json')).read_text())\n    assert materialized['action'] == 'materialize' and materialized['command'] == command\n    assert materialized['bindingIdentity'] == identity(binding_bytes)\n    assert materialized['publishedSubject'] == cfg['publishedSubject']\n    assert materialized['scopeCompleted'] and materialized['sourceAndSupervisorMetadataPreserved']\n    assert materialized['fullRuntimeInputsInspected'] is False\n    assert materialized['fullRuntimeInputsPreserved'] is None and materialized['inputsPreserved'] is None\n    assert materialized['writtenPaths'] == written_paths and materialized['interruptions'] == []\n    assert materialized['cleanup']['capturedSessionMembersAfter'] == []\n    assert materialized['cleanup']['newTestTempsRemaining'] == []\n    assert not materialized.get('executionError') and not materialized.get('postflightError')\nif command == 'validation-package':\n    green = json.loads((OUT / 'green-receipt.json').read_text())\n    assert green['command'] == 'green' and green['exitCode'] == 0 and green['inputsPreserved']\n    assert green['fullRuntimeInputsInspected'] and green['fullRuntimeInputsPreserved']\n    assert green['commandCompletedNormally'] and green['cleanup']['newTestTempsRemaining'] == []\n    assert green['scopeCompleted'] is True and green['interruptions'] == []\n    assert green['cleanup']['capturedSessionMembersAfter'] == []\n    assert green['publishedSubject'] == cfg['publishedSubject'] and green['bindingIdentity'] == identity(binding_bytes)\n    assert not green.get('executionError') and not green.get('postflightError')\nassert OUT.is_dir() and not OUT.is_symlink()\nTASK_TMP.mkdir(mode=0o700, exist_ok=True)\nassert TASK_TMP.is_dir() and not TASK_TMP.is_symlink()\nassert shutil.disk_usage(REPO).free >= 8 * 1024 * 1024 and shutil.disk_usage(OUT).free >= 64 * 1024 * 1024\n"
+      },
+      {
+        "name": "attempt, action, validation, postflight and protected finalization",
+        "first": 657,
+        "last": 832,
+        "identity": {
+          "bytes": 12214,
+          "sha256": "d443b9623e17951ffc4c8054cc98c6dd716c891bc0ab316926b61bc3a3820733",
+          "gitBlob": "ad17cbe11826ecec01d64d207b0c1a391c3767ee"
+        },
+        "content": "prefix = command if action == 'run' else 'materialize-' + cfg['phase']\nwith (OUT / (prefix + '.attempt')).open('x') as handle:\n    handle.write(utc() + '\\n')\nruntime_inputs = action == 'run'\nreceipt = {'kind': 'cross-close-test-first-bounded-invocation', 'command': command,\n           'action': action, 'attempt': 1, 'startedAt': utc(), 'publishedR1': R1,\n           'publishedSubject': cfg['publishedSubject'], 'actualLocalHead': SOURCE_COMMIT,\n           'runnerIdentity': cfg['runnerIdentity'], 'bindingIdentity': identity(binding_bytes),\n           'testIdentity': TEST_IDENTITY, 'sourcePins': cfg['sourcePins'],\n           'argv': COMMANDS.get(command) if action == 'run' else None, 'cwd': str(REPO),\n           'perPrimaryCommandLimitSeconds': 180, 'metadataCommandLimitSeconds': 30,\n           'fullRuntimeInputsRequested': runtime_inputs, 'fullRuntimeInputsInspected': False,\n           'fullRuntimeInputBoundaries': {key: 'UNREACHED' if runtime_inputs else 'UNINSPECTED' for key in ['before', 'after']},\n           'fullRuntimeInputsPreserved': False if runtime_inputs else None,\n           'inputsPreserved': False if runtime_inputs else None, 'sourceAndSupervisorMetadataPreserved': False,\n           'commandCompletedNormally': False, 'exitCode': None, 'exitSignal': None, 'timedOut': False,\n           'cleanupSeconds': 0, 'commandPhaseSeconds': 0,\n           'cleanupTimeAccounting': 'Captured termination/reap time is a subset of each commandPhaseSeconds.',\n           'snapshotScope': 'whole invocation; validation children share one full preflight and postflight' if runtime_inputs else 'source-and-supervisor-metadata-only',\n           'qualification': 'Finite actual-source cases/scoped guards only. Metadata materialization is not a behavioral or all-input result. No GUI/native/vendor or whole-E2E claim.'}\nif not runtime_inputs:\n    receipt['uninspectedRuntimeInputs'] = {key: 'UNINSPECTED' for key in\n        ['dependencies', 'compiled', 'providerArchivesAndInstalledMembers', 'bootstrapNodeCache']}\nif command == 'validation-package':\n    receipt['validationCommands'] = [{'command': name, 'argv': COMMANDS[name], 'status': 'UNREACHED'}\n                                     for name in ['lint', 'source-size', 'diff-check']]\nreceipt_path = OUT / (prefix + '-receipt.json')\nreceipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')\nmetadata_counter = 0\nphase_signals = []\ncleaning = finalizing = launching = False\nprevious_handlers = {sig: signal.signal(sig, interrupt) for sig in [signal.SIGINT, signal.SIGTERM]}\ninvocation_start = time.monotonic()\nbefore = after = primary = None\nprimaries = []\nprimary_invocations = []\nreceipt['primaryInvocations'] = primary_invocations\nexpected_command_outcome = False\nboundary = 'before'\nsnapshot = input_snapshot if runtime_inputs else source_metadata_snapshot\ntry:\n    preflight_start = time.monotonic()\n    overlays = cfg['beforeSourceOverlay'] if action == 'materialize' else cfg['sourceOverlay']\n    if runtime_inputs:\n        receipt['fullRuntimeInputBoundaries']['before'] = 'STARTED'\n    before = snapshot(overlays)\n    if runtime_inputs:\n        receipt['fullRuntimeInputBoundaries']['before'] = 'COMPLETE'\n    receipt['before'] = before\n    receipt['preflightSeconds'] = time.monotonic() - preflight_start\n    receipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')\n    if action == 'materialize':\n        receipt['writtenPaths'] = []\n        for path in written_paths:\n            assert not phase_signals\n            row = next(x for x in cfg['sourceOverlay'] if x['path'] == path)\n            (REPO / path).write_bytes(row['content'].encode())\n            receipt['writtenPaths'].append(path)\n        expected_command_outcome = True\n    elif command == 'validation-package':\n        package_start = time.monotonic()\n        try:\n            for entry in receipt['validationCommands']:\n                assert not phase_signals, 'supervisor interruption before next validation child'\n                command_start = time.monotonic()\n                entry['status'] = 'STARTED'\n                stage = {'id': prefix + '-' + entry['command'], 'cwd': str(REPO)}\n                invocation_offset = len(primary_invocations)\n                try:\n                    pointer, primary = run_child(stage, 1, entry['argv'], command_start + 180)\n                    primaries.append(primary)\n                    entry.update({'status': 'EXECUTED', 'primaryReceipt': pointer, 'record': primary})\n                finally:\n                    entry['commandPhaseSeconds'] = time.monotonic() - command_start\n                    entry['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations[invocation_offset:])\n                    entry['invocationRecords'] = primary_invocations[invocation_offset:]\n                assert identity(pathlib.Path(pointer['path']).read_bytes()) == {key: pointer[key] for key in ['bytes', 'sha256', 'gitBlob']}\n                assert primary.get('raw')\n                assert identity(pathlib.Path(primary['raw']['path']).read_bytes()) == {key: primary['raw'][key] for key in ['bytes', 'sha256', 'gitBlob']}\n                assert ordinary_completion(primary) and primary['successful'] and primary['exitCode'] == 0\n                assert primary['remainingCapturedSession'] == [] and not phase_signals\n                entry['nextCommandAdmitted'] = True\n            receipt['commandCompletedNormally'] = True\n            expected_command_outcome = True\n        finally:\n            receipt['commandPhaseSeconds'] = time.monotonic() - package_start\n            receipt['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations)\n            if primary:\n                for key in ['exitCode', 'exitSignal', 'timedOut']:\n                    receipt[key] = primary[key]\n    else:\n        command_start = time.monotonic()\n        stage = {'id': prefix + '-command', 'cwd': str(REPO)}\n        try:\n            pointer, primary = run_child(stage, 1, COMMANDS[command], command_start + 180)\n            primaries.append(primary)\n            receipt['primaryReceipt'] = pointer\n            for key in ['exitCode', 'exitSignal', 'timedOut']:\n                receipt[key] = primary[key]\n            receipt['commandCompletedNormally'] = ordinary_completion(primary)\n            receipt['rawCombinedOutput'] = primary.get('raw')\n            expected_command_outcome = receipt['commandCompletedNormally'] and primary['exitCode'] == (1 if command == 'red' else 0)\n        finally:\n            receipt['commandPhaseSeconds'] = time.monotonic() - command_start\n            receipt['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations)\nexcept BaseException as error:\n    receipt['executionError'] = type(error).__name__ + ': ' + str(error)\n    if 'preflightSeconds' not in receipt:\n        receipt['preflightSeconds'] = time.monotonic() - preflight_start\nfinally:\n    finalizing = True\n    postflight_start = time.monotonic()\n    try:\n        boundary = 'after'\n        if runtime_inputs:\n            receipt['fullRuntimeInputBoundaries']['after'] = 'STARTED'\n        after = snapshot(cfg['sourceOverlay'])\n        if runtime_inputs:\n            receipt['fullRuntimeInputBoundaries']['after'] = 'COMPLETE'\n        receipt['after'] = after\n        metadata_preserved = bool(before and all(before[key] == after[key] for key in ['tools', 'pnpm', 'environment', 'controls']))\n        receipt['sourceAndSupervisorMetadataPreserved'] = metadata_preserved\n        if runtime_inputs:\n            receipt['inputsPreserved'] = bool(before and preserved(before, after))\n            receipt['fullRuntimeInputsPreserved'] = receipt['inputsPreserved']\n        unknown_launches = [row['id'] for row in primary_invocations if row['spawnAttempted'] and row['capturedPid'] is None]\n        receipt['cleanup'] = {'unknownPrimaryLaunches': unknown_launches,\n                              'capturedSessionMembersAfter': None if unknown_launches else [member for row in primary_invocations if row.get('capturedPid')\n                                                              for member in group_members(row['capturedPid'])],\n                              'newTestTempsRemaining': [x for x in after['testTemps'] if before and x not in before['testTemps']],\n                              'scope': 'All captured primary sessions/groups and TEST-prefixed task temps; metadata sessions are checked individually. No universal escaped-child/native custody proof.'}\n    except BaseException as error:\n        receipt['postflightError'] = type(error).__name__ + ': ' + str(error)\n        if runtime_inputs:\n            receipt['inputsPreserved'] = receipt['fullRuntimeInputsPreserved'] = False\n        receipt['sourceAndSupervisorMetadataPreserved'] = False\n    finally:\n        managed_signals = set(previous_handlers)\n        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, managed_signals)\n        try:\n            pending_signals = sorted(int(sig) for sig in signal.sigpending() & managed_signals)\n            receipt['signalAdmissionCutoff'] = {\n                'at': utc(), 'pendingSignals': pending_signals, 'supervisorExitZeroRequired': True,\n                'scope': 'Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.'}\n            receipt['postflightSeconds'] = time.monotonic() - postflight_start\n            receipt['finishedAt'] = utc()\n            receipt['totalInvocationSeconds'] = time.monotonic() - invocation_start\n            receipt['interruptions'] = [*phase_signals, *pending_signals]\n            receipt['metadataCommands'] = metadata_counter\n            receipt['fullRuntimeInputsInspected'] = runtime_inputs and all(\n                value == 'COMPLETE' for value in receipt['fullRuntimeInputBoundaries'].values())\n            receipt['primaryUnreached'] = action == 'run' and not primary_invocations\n            receipt['primaryFinalizationComplete'] = all(row['finalReceiptPersisted'] for row in primary_invocations)\n            receipt['primaryInvocationsWithoutFinalReceipt'] = [row['id'] for row in primary_invocations\n                                                               if not row['finalReceiptPersisted']]\n            receipt['unreachedValidationCommands'] = [x['command'] for x in receipt.get('validationCommands', [])\n                                                       if x['status'] == 'UNREACHED']\n            selected_inputs_preserved = receipt['inputsPreserved'] if runtime_inputs else receipt['sourceAndSupervisorMetadataPreserved']\n            receipt['scopeCompleted'] = bool(selected_inputs_preserved and expected_command_outcome\n                                             and (not runtime_inputs or receipt['fullRuntimeInputsInspected'])\n                                             and receipt['primaryFinalizationComplete']\n                                             and not receipt.get('executionError') and not receipt.get('postflightError')\n                                             and not receipt['interruptions'] and not receipt['unreachedValidationCommands']\n                                             and receipt.get('cleanup', {}).get('newTestTempsRemaining') == []\n                                             and receipt.get('cleanup', {}).get('capturedSessionMembersAfter') == [])\n            receipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')\n        finally:\n            for sig, previous in previous_handlers.items():\n                signal.signal(sig, previous)\n            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)\nprint(json.dumps({key: receipt.get(key) for key in ['command', 'action', 'exitCode', 'exitSignal',\n      'timedOut', 'executionError', 'postflightError', 'inputsPreserved', 'fullRuntimeInputsInspected',\n      'fullRuntimeInputsPreserved', 'sourceAndSupervisorMetadataPreserved', 'commandCompletedNormally',\n      'scopeCompleted', 'preflightSeconds', 'commandPhaseSeconds', 'cleanupSeconds', 'postflightSeconds',\n      'totalInvocationSeconds', 'unreachedValidationCommands', 'rawCombinedOutput', 'cleanup', 'signalAdmissionCutoff']}), flush=True)\nsys.exit(0 if receipt['scopeCompleted'] and not phase_signals else 2)\n"
+      }
+    ]
+  },
+  "remainingGates": [
+    "Publish this exact GREEN binding with its reviews, immediately push and independently read back the complete actual publication before staging.",
+    "Execute only the selected metadata application once and independently qualify its complete actual source/metadata/lifetime and outer0 evidence.",
+    "Execute the unchanged whole133 GREEN once only after a fresh full runtime preflight and the preceding independent materialization gate.",
+    "Independently qualify actual whole133 semantic/source/current-input/lifetime evidence and separately observed outer0 before the single validation package.",
+    "Preserve unexecuted/failed/unknown and metadata-only limits; do not transfer this finite review to canonical typing/build, new CI, native GUI, real providers or incoming source."
+  ],
+  "actions": {
+    "githubDataReads": true,
+    "pureDataHashAndComposition": true,
+    "targetSourceEvaluation": false,
+    "localStaging": false,
+    "sourceApplication": false,
+    "tests": false,
+    "compilers": false,
+    "providerOrGuiActions": false,
+    "refsOrCommits": false,
+    "ciActions": false,
+    "bareEvidenceRetentionOnly": true
+  }
+}
