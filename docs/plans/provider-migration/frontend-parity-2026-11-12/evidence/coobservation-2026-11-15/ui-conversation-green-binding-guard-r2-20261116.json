@@ -1,0 +1,455 @@
+{
+  "schemaVersion": 1,
+  "kind": "c714-published-producer-GREEN-binding-independent-lifetime-R2",
+  "reviewer": "/root/guard_review",
+  "reviewedAt": "2026-11-16T15:14:33.608Z",
+  "repository": "777genius/agent-teams-ai",
+  "verdict": "ACCEPTED for the exact GREEN binding. This is static binding acceptance, not materialization, GREEN, guard, native/GUI/provider or full-E2E success.",
+  "exactBinding": {
+    "bytes": 375818,
+    "sha256": "744167b87c840de28f17b86fd8b801caec5c71d695cc49c9f037dab964176cfd",
+    "gitBlob": "21878f51fd1b7bfca5bab18ff71c7c1beca5aaef"
+  },
+  "unchangedRunner": {
+    "bytes": 35916,
+    "sha256": "495fac79660eb36f0795f74ff14bd665d79ac3e43534349c2f65234bda89d0f5",
+    "gitBlob": "6af0ac85f09ef02488ce15331828713882a73d13"
+  },
+  "previousRedBinding": {
+    "bytes": 306274,
+    "sha256": "b118c22fea2bc63c402fa4e6e86e9244d8ee7ec1a54f8ac965e9cafa05cca77f",
+    "gitBlob": "04d501260b4ac275bf52d6381d6d2e7d93bb973e"
+  },
+  "sourceSubject": {
+    "commit": "bc6594c3ff0a1061870612a8f688400123575754",
+    "tree": "3b30530f411c66ceaec24666b728ecaf842f8212",
+    "qualification": "Exact published reviewed controls/Selection postimages and unchanged97-case test. Local detached HEAD/index remain c5 with exactly these two source overlays; current documentation is not claimed locally materialized."
+  },
+  "sourcePublicationReadback": {
+    "identity": {
+      "bytes": 32556,
+      "sha256": "ac12236efc423bc3a018814712bbfcb887b6b63a4ca6bb46eae3db8fc5a455d4",
+      "gitBlob": "8567f1214ce91e97c83e82fe4438361803f8a07a"
+    },
+    "commit": "bc6594c3ff0a1061870612a8f688400123575754",
+    "tree": "3b30530f411c66ceaec24666b728ecaf842f8212",
+    "parent": "87e10f42ddfe9d426ad64d26d93a15e525e4b2e1",
+    "completePublishedBodies": 22,
+    "completePublishedBytes": 7336919,
+    "sourceLeaves": 8798,
+    "exactSourceChanges": 2,
+    "otherSourceLeavesUnchanged": 8796,
+    "workflowsUnchanged": 42,
+    "attribution": "The complete32,556-byte independent actual-readback record was freshly fetched and rehashed here. The underlying complete actual ref/tree/22-body publication readback belongs to /root/pr_graph and root; it is joined without claiming a duplicate fresh publication scan by this reviewer.",
+    "selectedOverlayIdentitiesJoinedToPublishedSource": true,
+    "unchangedWholeTest": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+  },
+  "fullBodyAndDelta": {
+    "complete375818BytesFetched": true,
+    "sha256AndGitBlobRecomputed": true,
+    "changedTopLevelKeys": [
+      "kind",
+      "phase",
+      "bindingLocalPath",
+      "publishedSubject",
+      "actualPublishedSubjectReadbackEvidence",
+      "sourceOverlay",
+      "sourcePins",
+      "behavioralAttempts",
+      "reviewedTestCensus",
+      "executionScope",
+      "acceptedSemanticRed",
+      "preimageSourcePins"
+    ],
+    "unchangedTopLevelKeys": [
+      "schemaVersion",
+      "publishedR1",
+      "publishedRecoveryR1",
+      "publishedTransportAmendment",
+      "runnerLocalPath",
+      "runnerIdentity",
+      "actualPublishedSubjectReadbackAccepted",
+      "combinedInputImportAdmission",
+      "acceptedReviewBodies",
+      "inputFiles",
+      "beforeSourceOverlay",
+      "commandVectors",
+      "timing",
+      "environment"
+    ],
+    "wholePreviousRedBindingReconstructedByteExactly": true,
+    "allThreeEmbeddedImportReviewBodiesRehashed": true,
+    "exactEightInputPinsUnchanged": true,
+    "exactCommandVectorsUnchanged": true,
+    "noRunnerOrNewTestSourceBody": true,
+    "beforeSourceOverlay": [],
+    "exactSourceOverlayPaths": [
+      "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts"
+    ],
+    "exactSourceOverlayBytes": 53733,
+    "eachCompleteOverlayEqualsPublishedAndAcceptedProducerBody": true,
+    "originalPreimagePinsExactlyEqualRedBindingSourcePins": true
+  },
+  "localAndPublishedIdentity": {
+    "localDetachedHead": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+    "localIndexTree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+    "fullLocalTreeLeaves": 11567,
+    "afterMaterialization": "The local HEAD and stage0 index stay at c5. Exactly the two published source bodies form the permitted working-tree overlay; all remaining source rows stay at the accepted base.",
+    "documentation": "Current published documentation is explicitly not claimed to be materialized in the local c5 checkout.",
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 136700,
+        "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+        "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      }
+    ],
+    "preimageSourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24630,
+        "sha256": "20163a0e2b654c5ff3c778ffe4a3cd2138716172eb90e6aa5aa4fe6550864c43",
+        "gitBlob": "dcd0cc29a73a46a24126ec3552714fa1b057aaf4"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 136700,
+        "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+        "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28741,
+        "sha256": "9d5233b82df6a7dfa0d735b27c11f39f130824f3947c38896a0d052ca549cba4",
+        "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78"
+      }
+    ],
+    "eightInputPins": {
+      "setupBinding": {
+        "path": "/tmp/c714-fresh-bootstrap-review/binding.json",
+        "bytes": 2790411,
+        "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+        "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+      },
+      "sourceFull": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/source-restore-source-after.json",
+        "bytes": 3451167,
+        "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+        "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+      },
+      "sourceNonDoc": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-source-after.json",
+        "bytes": 2478318,
+        "sha256": "59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751",
+        "gitBlob": "51bf0d0962e07fcc7843fcd65c3202ec9133a607"
+      },
+      "dependencies": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json",
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "compiled": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-compiled-after.json",
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      },
+      "pnpm": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/pnpm-inventory.json",
+        "bytes": 253936,
+        "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+        "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c"
+      },
+      "currentBoundary": {
+        "path": "/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json",
+        "bytes": 3654,
+        "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+        "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+      },
+      "providers": {
+        "path": "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json",
+        "bytes": 789090,
+        "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+        "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+      }
+    },
+    "fullFutureCensusRequired": "Every actual materialize/test/guard boundary still re-enumerates and hashes all8,798 source rows,122,773 dependency rows,1,454 compiled rows, complete pnpm inventory, provider members, tools/config and seven retained cache files. This static binding review is not a substitute for those actual checks."
+  },
+  "acceptedRed": {
+    "identity": {
+      "bytes": 24560,
+      "sha256": "49a6904e03440f258031f3bf751c6d00399de46f7a21a32536433bef6bc12ae4",
+      "gitBlob": "51ded8a75f03a28669dad09ff66a1f7b2f1ec278"
+    },
+    "independentReviewAccepted": true,
+    "observedOuterSupervisorExit": 0,
+    "actualEvidence": {
+      "bytes": 127239,
+      "sha256": "579adc7808c0b2631812a55dff1adc22490ad0e38d9bded299640aab1d00e57f",
+      "gitBlob": "8b5c5cc552d03984cdb9507dd205c181d64abbd8"
+    },
+    "semanticReview": {
+      "bytes": 82638,
+      "sha256": "34246564207ef1bb1654440c6e446d9ab55792f91f6232da94339875331efc5b",
+      "gitBlob": "5f316e969bc382cb7ed49fa824955fb939b989ef"
+    },
+    "parityClosure": {
+      "bytes": 11211,
+      "sha256": "03b9c2a3061a49b68a43b2c7a3b2566bb65c4cc31f8b98601449a206260c0e2e",
+      "gitBlob": "4cda111a657915dbf0c61662a4b07f66a8cd22cd"
+    },
+    "guardReview": {
+      "bytes": 37920,
+      "sha256": "d6540f6d76342894028c3d5624e382ecb88aa6dc08ad65c7e98286118d7850ec",
+      "gitBlob": "f2695e2c8ae5381a6175127fa240eef7b289c390"
+    },
+    "actualResult": {
+      "cases": 97,
+      "pass": 87,
+      "fail": 10,
+      "old78pass": 78,
+      "newPositivePass": 9,
+      "designatedSemanticFail": 10,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0,
+      "outerSupervisorExit": 0,
+      "innerTestExit": 1
+    },
+    "rootAcceptanceBeforeProducerAuthorship": "2026-11-16 14:57:12 UTC",
+    "receiptBodyMatchesIndependentlyAcceptedActualResult": true,
+    "receiptScopeCompleted": true,
+    "receiptInterruptions": [],
+    "capturedSessionMembersAfter": [],
+    "newTestTempsRemaining": [],
+    "expectedInnerExit": 1,
+    "observedOuterExit": 0,
+    "semanticReviewFullIdentityMatched": true,
+    "finalParityClosureFullBodyFetchedAndRehashed": true,
+    "finalGuardActualReviewFullIdentityMatched": true,
+    "rootAcceptanceBeforeProducerAuthorshipPreserved": true,
+    "admission": "Actual87PASS/10 designated semantic failures with old78 and nine positive controls passing is the closed RED prerequisite. No expected RED result is relabelled as GREEN."
+  },
+  "pathsAndAttempts": {
+    "runnerLocalPath": "/tmp/c714-conversation-fresh-review/runner.py",
+    "bindingLocalPath": "/tmp/c714-conversation-fresh-review/binding-green.json",
+    "priorRedBindingLocalPath": "/tmp/c714-conversation-fresh-review/binding-red.json",
+    "greenBindingHasDistinctExclusivePath": true,
+    "existingEvidenceOwnerStillMatchesSameRunnerAndBase": true,
+    "noEvidenceDirectoryReplacementOrReset": true,
+    "attempts": {
+      "red": 0,
+      "green": 1,
+      "lint": 1,
+      "sourceSize": 1,
+      "diffCheck": 1,
+      "previousWholeFileExecutions": 1,
+      "materializeGreen": 1
+    },
+    "exactRedAttemptSpent": true,
+    "noRetryAuthority": true,
+    "expectedAttemptFiles": [
+      "materialize-green.attempt",
+      "green.attempt",
+      "lint.attempt",
+      "source-size.attempt",
+      "diff-check.attempt"
+    ],
+    "publicationRequirement": "The new binding remains a bare candidate at this review. Its immediate-push documentary publication and complete actual root/independent readback must close before root materializes the new binding or applies producers."
+  },
+  "materializationGate": {
+    "invocationAction": "materialize",
+    "invocationCommand": "green",
+    "existingRunnerOnly": true,
+    "requiredPriorRed": "Exact accepted51ded receipt identity, independent acceptance, expected inner exit1, complete scope/input/cleanup, no interruption or execution/postflight error.",
+    "preflightOverlay": [],
+    "permittedWrites": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      }
+    ],
+    "postflightOverlay": "Exactly the two complete published postimages, with every other source/input preserved.",
+    "requiredActualAcceptance": [
+      "Exact materialize-green attempt and receipt, action materialize / command green.",
+      "writtenPaths equals exactly the two selected source paths and no other source change exists.",
+      "Full before/after source overlay and non-source input preservation, complete metadata child/raw joins, and empty new TEST-temp/captured-session debt.",
+      "scopeCompleted=true with no interruption, pending cutoff signal, execution or postflight error.",
+      "Separately observed actual supervisor exit0 before starting GREEN."
+    ],
+    "primaryResultQualification": "Materialization intentionally launches no primary behavioral command. commandCompletedNormally remains false and primary exitCode is null; these are not a failed GREEN or a successful test. Its14 finite read-only Git metadata calls remain supervised and must be reviewed as metadata.",
+    "failureHandling": "A partial write, input mismatch, exception or interruption fails scope and retains written paths/evidence. It does not grant an automatic rollback, retry, alternate application route or GREEN launch."
+  },
+  "greenGate": {
+    "invocationAction": "run",
+    "invocationCommand": "green",
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--test",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+    ],
+    "source": "All8,798 source rows must match the c5 baseline plus the two exact published overlays. The136,700-byte97-case test remains unchanged.",
+    "requiredActualResult": "All97 unchanged cases execute and pass, with zero failed/skipped/cancelled/todo, normal primary exit0, complete input/cleanup acceptance and separately observed supervisor exit0 before any subsequent guard.",
+    "requiredCases": 97,
+    "requiredPass": 97,
+    "requiredFail": 0,
+    "requiredSkipped": 0,
+    "requiredCancelled": 0,
+    "requiredTodo": 0,
+    "primaryExit": 0,
+    "supervisorExit": 0,
+    "ordinaryCompletionAndInputsPreservedAndScopeCompletedRequired": true,
+    "noProducerSuccessInferenceBeforeActualRawReview": true,
+    "actualGreenMustBeIndependentlyAcceptedBeforeAnyGuard": true
+  },
+  "conditionalGuards": {
+    "commands": {
+      "lint": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "lint:fast:files",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "sourceSize": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "guard:source-file-size"
+      ],
+      "diffCheck": [
+        "/usr/local/bin/git",
+        "diff",
+        "--check",
+        "--",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ]
+    },
+    "priorGate": "Complete independently accepted actual97-case GREEN, same published subject, full input/captured cleanup, and separately observed supervisor exit0.",
+    "innerRunnerPrerequisites": [
+      "green command",
+      "primary exit0",
+      "inputsPreserved",
+      "commandCompletedNormally",
+      "scopeCompleted",
+      "interruptions=[]",
+      "capturedSessionMembersAfter=[]",
+      "newTestTempsRemaining=[]",
+      "same publishedSubject",
+      "no execution/postflight error"
+    ],
+    "oneAttemptEach": true,
+    "eachRetainsItsOwnFullInputsRawLifetimeAndOuterOutcome": true,
+    "successQualification": "For each guard, PASS requires its own primary exit0 and qualifying complete raw output. The generic shared runner permits ordinary primary exit1 to preserve RED/failure evidence; scopeCompleted or supervisor exit0 alone must never be treated as guard PASS.",
+    "noNewGuardCommandOrBroadCheck": true
+  },
+  "unchangedLifetimeAndConfiguration": {
+    "priorExactRunnerR2": "9f6a9d6000ec14aa750c7eb1fb11b4b9f785eec5",
+    "originalCommandSeconds": 180,
+    "commandClock": "Begins after full preflight and its save, before start record/raw/Popen, with one remaining absolute deadline and no reset after spawn.",
+    "metadataCapSecondsPerRead": 30,
+    "cleanupSeconds": "Measured separately as a subset of commandPhaseSeconds.",
+    "preflightAndPostflightSeparate": true,
+    "sameCapturedChildSessionSupervisionAndQuiescenceBeforeRawHashes": true,
+    "sameProtectedManagedSignalCutoff": true,
+    "separatelyObservedSupervisorExitZeroRequiredForEveryContinuation": true,
+    "noPostCutoffSignalCoverageClaim": true,
+    "environmentAndTransport": "Same published fixed config and task isolation; one admitted transport snapshot per invocation, with only published ephemeral-port variability. No transport recapture or bypass inside an invocation.",
+    "compileCache": "NODE_DISABLE_COMPILE_CACHE=1, inherited compile-cache selectors removed, seven existing residue files preserved and rehashed.",
+    "sourceAndInputFailureStateRetained": true,
+    "noInstallBuildCompilerProviderGuiOrCiRouteAdded": true
+  },
+  "staticCaseCensus": {
+    "whole": 97,
+    "old": 78,
+    "added": 19,
+    "oldPrefixAndAllDefinitionsUnchanged": true,
+    "historicalPrediction": {
+      "pass": 87,
+      "semanticFail": 10,
+      "observed": false,
+      "phase": "historical RED preimage prediction"
+    },
+    "actualAcceptedRed": {
+      "pass": 87,
+      "semanticFail": 10,
+      "cases": 97,
+      "oldPassed": 78,
+      "newControlsPassed": 9,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0
+    },
+    "postimageGreenRunsAtReview": 0,
+    "sourcePredictionNotPromotedToObservedResult": true
+  },
+  "executionScope": {
+    "action": "one materialize-green action, one whole97 GREEN, then three separately conditional scoped guards",
+    "command": "green; lint, source-size and diff-check only after accepted actual GREEN",
+    "materialization": "After exact GREEN-binding R2 and complete actual publication readback, write only the two exact published producer bodies via the unchanged runner materialize action. Source HEAD/index stay c5. Root separately requires completed materialization receipt and actual supervisor exit0 before GREEN.",
+    "executions": 0,
+    "sourceChanges": 0,
+    "providers": 0,
+    "gui": 0,
+    "requiredBeforeExecution": [
+      "Source bc6594 complete root and independent actual readback (already accepted)",
+      "Exact GREEN binding independent R2",
+      "Immediate-push binding publication and complete root/independent actual readback",
+      "For GREEN: accepted exact materialization receipt plus observed supervisor exit0",
+      "For each scoped guard: accepted complete actual97 GREEN plus observed supervisor exit0"
+    ],
+    "noProducerBeforeActualSemanticRed": true,
+    "requiresObservedSupervisorExitZeroForContinuation": true,
+    "signalReceiptBoundary": "The receipt covers managed signals captured or pending at its explicitly recorded blocked-mask cutoff. Root must separately observe actual supervisor exit0 before any continuation, and join that outcome into independent actual semantic RED/GREEN acceptance; a successful receipt alone does not cover later signals.",
+    "plannedSourceChanges": 2
+  },
+  "reviewerActions": {
+    "immutableGitBodyReads": true,
+    "pureDataHashingJsonAndTextComparisons": true,
+    "shellCommands": 0,
+    "sourceEvaluations": 0,
+    "sourceApplications": 0,
+    "testsOrGuards": 0,
+    "refCommitPrCiChanges": 0,
+    "soleAuthoredObject": "This bare R2 evidence JSON."
+  },
+  "remainingIssues": []
+}
