@@ -1,0 +1,173 @@
+{
+  "kind": "bounded-png-failure-source-r1",
+  "sourceHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "runId": 43959134362,
+  "jobId": 133621515593,
+  "artifactId": 14275365531,
+  "status": "FAILURE_LOCALIZED_CAUSE_NOT_PROVEN",
+  "failingCommand": "team.launch.start",
+  "commandId": "TEST-explicit-sandbox-setup-launch",
+  "failure": "CDP command timed out: Runtime.evaluate",
+  "originalCdpTimeoutMs": 30000,
+  "receiptStatus": "INCOMPLETE",
+  "sourceArrayCount": 1777,
+  "sourceArraysUnchanged": true,
+  "sources": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "local": "frontend-proposal/stage1-gap-review-447a/source/scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 55757,
+      "gitBlob": "9c724c3895e467bc1db062e5015ded70c30e65e4",
+      "sha256": "bbd6647969c1ab0ae125b6a5e0685ca0f112dca05661a6c04b37c4fbee56a33e",
+      "receiptSha256": "bbd6647969c1ab0ae125b6a5e0685ca0f112dca05661a6c04b37c4fbee56a33e",
+      "receiptBound": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-mode.ts",
+      "local": "frontend-proposal/stage1-gap-review-447a/source/scripts/legacy-agent-host/desktop-proof-mode.ts",
+      "bytes": 26007,
+      "gitBlob": "e2e7029c56de6343eb4ad2a2395044efd009ae0b",
+      "sha256": "e96f15e68a59f991034d68ca37b0125d4c798cd06eb34d58ceeb2f3e537966de",
+      "receiptSha256": "e96f15e68a59f991034d68ca37b0125d4c798cd06eb34d58ceeb2f3e537966de",
+      "receiptBound": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "local": "frontend-proposal/v2-four-rows-r1/source/scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "bytes": 29580,
+      "gitBlob": "d2f58f7dd6ce6b05ff6200fabe67a4945f94a506",
+      "sha256": "2b954cec0846e30f530ae615e63ac05ae9a3969e0338e5d2ab03ec80a62a0f0d",
+      "receiptSha256": "2b954cec0846e30f530ae615e63ac05ae9a3969e0338e5d2ab03ec80a62a0f0d",
+      "receiptBound": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "local": "incoming-plan56/after/packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "bytes": 48528,
+      "gitBlob": "3de70853104e4c49685d870fc4977458f529bfea",
+      "sha256": "7a7419587a39e8f7473aea264903e0bb02bee694a79a5a3bfe2151953cf2b95c",
+      "receiptSha256": "7a7419587a39e8f7473aea264903e0bb02bee694a79a5a3bfe2151953cf2b95c",
+      "receiptBound": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "local": "retained-provider-proposal/current-c5d-source/packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "bytes": 30721,
+      "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+      "sha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+      "receiptSha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+      "receiptBound": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/ProviderModelProbePreparation.ts",
+      "local": "retained-provider-proposal/current-c5d-source/packages/legacy-agent-host/src/composition/ProviderModelProbePreparation.ts",
+      "bytes": 8891,
+      "gitBlob": "e55795dcfd065139c0e798fa4e062f4e3ffcc6c6",
+      "sha256": "299bc0e774ab00d38271c652ad04e76843ac8886c0ac256fadd793aef7f4d137",
+      "receiptSha256": "299bc0e774ab00d38271c652ad04e76843ac8886c0ac256fadd793aef7f4d137",
+      "receiptBound": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeLocalModelReadiness.ts",
+      "local": "frontend-proposal/windows-environment-map/source/packages/legacy-agent-host/src/adapters/providers/OpenCodeLocalModelReadiness.ts",
+      "bytes": 24922,
+      "gitBlob": "7dbf688520e735df192d7294d17e5db8685830ab",
+      "sha256": "fbee08ad638234c735816b419e2dcd94610cc978f28dfda3351ffdf9947efaeb",
+      "receiptSha256": "fbee08ad638234c735816b419e2dcd94610cc978f28dfda3351ffdf9947efaeb",
+      "receiptBound": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "local": "linux-observation-feasibility/current/packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ModelProbe.ts",
+      "bytes": 22177,
+      "gitBlob": "195dabe664b14a2fe5c231e137690db6126c0e05",
+      "sha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+      "receiptSha256": "ad199b03b2db60cee1035762e3d13b8cdfe6c02bfa53bb78dc84e0543739435a",
+      "receiptBound": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "local": "retained-provider-proposal/current-c5d-source/packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "bytes": 38584,
+      "gitBlob": "ff0aeba42e3a4e845428146969360dff91c25de8",
+      "sha256": "f25659fe4c89e30072e9c2bc923fcdf6f1a3dd2efdca81387659e485170c74c3",
+      "receiptSha256": "f25659fe4c89e30072e9c2bc923fcdf6f1a3dd2efdca81387659e485170c74c3",
+      "receiptBound": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model-probe.ts",
+      "local": "frontend-proposal/png-75cf/source/packages/legacy-agent-host/tests/fixtures/native-opencode-team/model-probe.ts",
+      "bytes": 6579,
+      "gitBlob": "3a74b1a1e8aaacebc6b19ee7196e8c72ba93342d",
+      "sha256": "c0c25903a71601d7fac8037088a705b025c3edfde35591a743161714f24d53b9",
+      "receiptSha256": "c0c25903a71601d7fac8037088a705b025c3edfde35591a743161714f24d53b9",
+      "receiptBound": true
+    },
+    {
+      "path": "scripts/e2e/comment-notification/cdp.mjs",
+      "local": "frontend-proposal/png-75cf/source/scripts/e2e/comment-notification/cdp.mjs",
+      "bytes": 3704,
+      "gitBlob": "9397505b7889db88ef103dca62287e3d02a88cc9",
+      "sha256": "8e70fecbb1f2107abffa91d78644ee74f8e34546c8117587661f8376c27998aa",
+      "receiptSha256": null,
+      "receiptBound": false
+    }
+  ],
+  "files": [
+    {
+      "path": "desktop-v2-png-75cf/artifact-audit.json",
+      "bytes": 4673,
+      "sha256": "333dbce73cbd1c8016a90672d024fa02290d5d1fcbc5d0627b9b7d9a7d5331c6"
+    },
+    {
+      "path": "desktop-v2-png-75cf/original-job.log",
+      "bytes": 145288,
+      "sha256": "67a26cd36cf74b2bec4dff4d96ce3675e9073379bf5baf2a383088b90068549b"
+    },
+    {
+      "path": "desktop-v2-png-75cf/extracted/TEST-desktop-backend-bGmJek/desktop-backend-receipt.json",
+      "bytes": 713869,
+      "sha256": "96bfebb48d6d8209c67cb8aebc091e0ad7a1455f636f9ca9d366fdb6cfbb539f"
+    },
+    {
+      "path": "desktop-v2-png-75cf/extracted/TEST-desktop-backend-bGmJek/userData/logs/app-errors.ndjson",
+      "bytes": 29892,
+      "sha256": "fc6f75656440d34d66fb5a2672bb9ac5b274b1c6fb7fae03d340875a9bfc65db"
+    },
+    {
+      "path": "frontend-proposal/png-75cf/r1.md",
+      "bytes": 5555,
+      "sha256": "f460d1a406afffbdfd630caf4e22597a8ceaf2ddb3d9c7053ff28eb76efe3bc1"
+    },
+    {
+      "path": "frontend-proposal/png-75cf/official-source-readbacks.json",
+      "bytes": 15035,
+      "sha256": "2b8dfe853b49315173499fba52f3a101a7b8160bcbd09606ea00442cded10e57"
+    }
+  ],
+  "findings": [
+    {
+      "kind": "pending_original_native_readiness",
+      "repairSelected": false,
+      "unknownBoundary": [
+        "ordinary native terminal/result",
+        "original ordinary close/release"
+      ]
+    },
+    {
+      "kind": "missing_direct_source_pin",
+      "path": "scripts/e2e/comment-notification/cdp.mjs",
+      "behaviorRepair": false
+    }
+  ],
+  "executed": {
+    "project": false,
+    "provider": false,
+    "gui": false,
+    "compiler": false,
+    "test": false,
+    "ci": false
+  },
+  "remoteMutations": false,
+  "sourceAfterimages": false
+}

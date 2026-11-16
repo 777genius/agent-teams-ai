@@ -1,0 +1,333 @@
+{
+  "kind": "Plan63-prospective-source-r2",
+  "decision": "ACCEPT_PROSPECTIVE_SOURCE_SCOPE",
+  "plan": {
+    "path": "cdp-pin-proposal/plan.md",
+    "bytes": 4193,
+    "lines": 23,
+    "gitBlob": "aef084b3deb99f3d010db3a6d7bc1c452c77499d",
+    "sha256": "a9e22c9fb64c6befb3b0c95e1c8a35715d4cc53f7c2adda336451f0687952164"
+  },
+  "base": "946488197cf45a9012e84c7a45b402c4eef17a90",
+  "priorFinding": {
+    "status": "resolved_by_documentary_correction",
+    "summary": "One-list append pins CDP bytes; existing failure frame prefix still excludes scripts/e2e and remains unchanged."
+  },
+  "preimages": [
+    {
+      "path": "cdp-pin-proposal/before/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "bytes": 22320,
+      "lines": 343,
+      "gitBlob": "a41bff15e351d829d9cbb0197a7026ad09d6dc18",
+      "sha256": "e649994d2311bc5fdc308c24167593d0c387ce4fef3a170f04b8e20c9402ffe1"
+    },
+    {
+      "path": "cdp-pin-proposal/before/scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "bytes": 52632,
+      "lines": 800,
+      "gitBlob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+      "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a"
+    },
+    {
+      "path": "cdp-pin-proposal/before/scripts/e2e/comment-notification/cdp.mjs",
+      "bytes": 3704,
+      "lines": 119,
+      "gitBlob": "9397505b7889db88ef103dca62287e3d02a88cc9",
+      "sha256": "8e70fecbb1f2107abffa91d78644ee74f8e34546c8117587661f8376c27998aa"
+    }
+  ],
+  "arrays": {
+    "desktopProofProcessSources": {
+      "entries": 27,
+      "bodySha256": "b8265d289029741ea4736b41b3025505fc2e7d66cba0053b96595af12eceb4de"
+    },
+    "desktopProofSupplementarySources": {
+      "entries": 255,
+      "bodySha256": "11e2b8c9ce6c6aa4810467f7d1eac58e9748a9ea7ae2886d5e73976d6cc3fbc5"
+    },
+    "desktopProofWindowsRetrySources": {
+      "entries": 46,
+      "bodySha256": "afda4032ad0ace5540d3ecb7963c07e1e2ef08c462ba2b80b7fe1c45299dca74"
+    }
+  },
+  "readers": [
+    {
+      "path": "frontend-proposal/plan63-prospective-r2/source/scripts/legacy-agent-host/desktop-source-freeze.ts",
+      "bytes": 3208,
+      "lines": 68,
+      "gitBlob": "4ef2cc07ede3172aa594e0eac614a1d473a5f705",
+      "sha256": "b7db02503f45ee10136de234f96d4a0999d2dfbbfb421fefb499dfe7a27ec8f9"
+    },
+    {
+      "path": "frontend-proposal/plan63-prospective-r2/source/scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "bytes": 33173,
+      "lines": 690,
+      "gitBlob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+      "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23"
+    },
+    {
+      "path": "frontend-proposal/plan63-prospective-r2/source/scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 55757,
+      "lines": 798,
+      "gitBlob": "9c724c3895e467bc1db062e5015ded70c30e65e4",
+      "sha256": "bbd6647969c1ab0ae125b6a5e0685ca0f112dca05661a6c04b37c4fbee56a33e"
+    },
+    {
+      "path": "frontend-proposal/plan63-prospective-r2/source/scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "bytes": 13285,
+      "lines": 180,
+      "gitBlob": "dd53c5b6c019dbe034dcde5375f03123b9b3e10a",
+      "sha256": "d9c331cfc2aed9a7aeaa7c815ce39de662a3b491cc31013df1e5f16ee029b514"
+    },
+    {
+      "path": "frontend-proposal/plan63-prospective-r2/source/tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "bytes": 38528,
+      "lines": 666,
+      "gitBlob": "40d7c19142de2cafdb0a7b433bbedddc216e99da",
+      "sha256": "feccb3979905fb65ee65d9d925d6d50496c9123c6d6b9fadec3ea11a7f0654ea"
+    },
+    {
+      "path": "frontend-proposal/plan63-prospective-r2/source/scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+      "bytes": 12371,
+      "lines": 169,
+      "gitBlob": "ba950ee03787427aaa837a0b77608c6a8760cab9",
+      "sha256": "3e221532ec7b77b71f2f55a847a2de9a0363f48af0b813119c73ed5a5db1fc58"
+    },
+    {
+      "path": "frontend-proposal/plan63-prospective-r2/source/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts",
+      "bytes": 14036,
+      "lines": 154,
+      "gitBlob": "f6aa6fa7140a0145f2671fba942a6f65f1f98c54",
+      "sha256": "0ba90adfed504782d1abd44500803ed50ee89a69ca0d6e7951055676d29e9b47"
+    },
+    {
+      "path": "frontend-proposal/plan63-prospective-r2/source/scripts/legacy-agent-host/verify-desktop-v2-management-receipt.ts",
+      "bytes": 18828,
+      "lines": 219,
+      "gitBlob": "b7d447d7acea4c55fcb578b922194a528440e3b1",
+      "sha256": "1693e23f265b2d1e4024c5553e1577827ebe8e98c8a7e347346e6aa229bb7e72"
+    },
+    {
+      "path": "frontend-proposal/plan63-prospective-r2/source/scripts/legacy-agent-host/desktop-backend-failures.ts",
+      "bytes": 32872,
+      "lines": 459,
+      "gitBlob": "55cbfa9ab573b41a7903360f0539ac0f137fc7d8",
+      "sha256": "af840a158f0d765fd4ebd9ba9d8b7e378e5f5a5c7ed9ecd0659101fe7834849f"
+    }
+  ],
+  "workflow": {
+    "path": "v2-lifecycle-proposal/source/after/.github/workflows/host-emulated-acceptance.yml",
+    "bytes": 141809,
+    "lines": 1767,
+    "gitBlob": "458a88ff6b3b197282f9144951aeb79074cc8d5b",
+    "sha256": "e8bafc0f5bc8016a6a7f55591436edf470f2e0eb259a6a85cc5a986d9f956d88"
+  },
+  "checks": [
+    {
+      "check": "final_plan_SHA256",
+      "passed": true
+    },
+    {
+      "check": "revision1_preserved",
+      "passed": true
+    },
+    {
+      "check": "single_documentary_paragraph_correction",
+      "passed": true
+    },
+    {
+      "check": "current_preimage_scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "passed": true
+    },
+    {
+      "check": "current_preimage_scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "passed": true
+    },
+    {
+      "check": "current_preimage_scripts/e2e/comment-notification/cdp.mjs",
+      "passed": true
+    },
+    {
+      "check": "old_natural_size343",
+      "passed": true
+    },
+    {
+      "check": "pin_absent_from_three_existing_arrays",
+      "passed": true
+    },
+    {
+      "check": "separate_array_desktopProofProcessSources",
+      "passed": true
+    },
+    {
+      "check": "separate_array_desktopProofSupplementarySources",
+      "passed": true
+    },
+    {
+      "check": "separate_array_desktopProofWindowsRetrySources",
+      "passed": true
+    },
+    {
+      "check": "common_Set_spreads_supplementary",
+      "passed": true
+    },
+    {
+      "check": "common_Set_preserves_existing_order",
+      "passed": true
+    },
+    {
+      "check": "existing_main_file_not_changed",
+      "passed": true
+    },
+    {
+      "check": "original_source_arrays_equal",
+      "passed": true
+    },
+    {
+      "check": "original_1777_entries",
+      "passed": true
+    },
+    {
+      "check": "original_CDPlibrary_unpinned",
+      "passed": true
+    },
+    {
+      "check": "current_supplementary_matches_failed_head_pin",
+      "passed": true
+    },
+    {
+      "check": "official_ref_official-readers.json",
+      "passed": true
+    },
+    {
+      "check": "reader_binding_scripts/legacy-agent-host/desktop-source-freeze.ts",
+      "passed": true
+    },
+    {
+      "check": "reader_binding_scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "passed": true
+    },
+    {
+      "check": "reader_binding_scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "passed": true
+    },
+    {
+      "check": "reader_binding_scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "passed": true
+    },
+    {
+      "check": "reader_binding_tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "passed": true
+    },
+    {
+      "check": "reader_binding_scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+      "passed": true
+    },
+    {
+      "check": "reader_binding_scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts",
+      "passed": true
+    },
+    {
+      "check": "reader_binding_scripts/legacy-agent-host/verify-desktop-v2-management-receipt.ts",
+      "passed": true
+    },
+    {
+      "check": "official_ref_official-failure-projector.json",
+      "passed": true
+    },
+    {
+      "check": "reader_binding_scripts/legacy-agent-host/desktop-backend-failures.ts",
+      "passed": true
+    },
+    {
+      "check": "readers_have_no_fixed1777_contract",
+      "passed": true
+    },
+    {
+      "check": "freeze_maps_actual_sources",
+      "passed": true
+    },
+    {
+      "check": "actual_CDP_import",
+      "passed": true
+    },
+    {
+      "check": "ordinary_before_and_finally_same_roster",
+      "passed": true
+    },
+    {
+      "check": "packaged_union_has_common_roster",
+      "passed": true
+    },
+    {
+      "check": "same_Main_union_has_common_and_separate_retry",
+      "passed": true
+    },
+    {
+      "check": "V2_management_runner_and_validator_derive_common",
+      "passed": true
+    },
+    {
+      "check": "C8_validator_compares_full_dynamic_roster",
+      "passed": true
+    },
+    {
+      "check": "failure_projection_excludes_e2e_by_existing_prefix",
+      "passed": true
+    },
+    {
+      "check": "current_workflow458a",
+      "passed": true
+    },
+    {
+      "check": "workflow_uses_dynamic_capture_no1777",
+      "passed": true
+    },
+    {
+      "check": "corrected_scope_says_projection_unchanged",
+      "passed": true
+    },
+    {
+      "check": "single_existing_literal_append_only",
+      "passed": true,
+      "basis": "independent source/manual review",
+      "detail": "One supplementary list entry, no code, workflow, helper, action or timeout change is selected."
+    },
+    {
+      "check": "all_old_lists_preserved",
+      "passed": true,
+      "basis": "independent source/manual review",
+      "detail": "Actual source R2 must verify full inverse and all prior relative order; process and WindowsRetry list byte equality required."
+    },
+    {
+      "check": "source_not_runtime_qualification",
+      "passed": true,
+      "basis": "independent source/manual review",
+      "detail": "No native PNG repair, PASS, source execution or vendor qualification inferred."
+    },
+    {
+      "check": "no_test_for_data_only_change",
+      "passed": true,
+      "basis": "independent source/manual review",
+      "detail": "Existing original compiler/lint/Desktop CI retained; no redundant local/unit run selected."
+    },
+    {
+      "check": "publication_authority",
+      "passed": true,
+      "basis": "independent source/manual review",
+      "detail": "Plan/review first; root sole publisher; useful current primary jobs preserved."
+    }
+  ],
+  "checkCount": 46,
+  "findings": [],
+  "limits": [
+    "Prospective review only; no source afterimage exists or was reviewed.",
+    "Exact source-only child still requires independent final diff/inverse review.",
+    "No PNG readiness repair or runtime qualification."
+  ],
+  "projectExecution": false,
+  "providerExecution": false,
+  "ciPolling": false,
+  "remoteMutation": false,
+  "sourceAfterimages": false
+}
