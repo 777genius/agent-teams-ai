@@ -76,8 +76,8 @@ import {
 } from './useComposerDraftAddressRequest';
 import { useComposerSubmissionFeedback } from './useComposerSubmissionFeedback';
 import { useComposerFocus, useComposerTextarea } from './useComposerTextarea';
-import { useFloatingComposerWidth } from './useFloatingComposerWidth';
 import { useFileRestrictionNotice } from './useFileRestrictionNotice';
+import { useFloatingComposerWidth } from './useFloatingComposerWidth';
 import { useMessageComposerDraft } from './useMessageComposerDraft';
 import { useMessageComposerRevisionCancel } from './useMessageComposerRevisionCancel';
 
