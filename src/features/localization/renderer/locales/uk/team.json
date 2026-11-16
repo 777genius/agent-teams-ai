@@ -1198,12 +1198,15 @@
       "ownerChanged": "Власника змінено",
       "reviewRequested": "Запитано перегляд",
       "reviewStarted": "Перегляд розпочато",
+      "reviewCompleted": "ШІ-перевірку завершено",
+      "humanApproved": "Затверджено користувачем",
       "changesRequested": "Запитано зміни",
       "approved": "Затверджено",
       "unknownEvent": "Невідома подія"
     },
     "reviewStates": {
       "approved": "Затверджено",
+      "reviewed": "Перевірено",
       "needsFix": "Потребує виправлення",
       "inReview": "На перегляді"
     }

@@ -1315,12 +1315,15 @@
       "ownerChanged": "Owner changed",
       "reviewRequested": "Review requested",
       "reviewStarted": "Review started",
+      "reviewCompleted": "AI review completed",
+      "humanApproved": "Approved by user",
       "changesRequested": "Changes requested",
       "approved": "Approved",
       "unknownEvent": "Unknown event"
     },
     "reviewStates": {
       "approved": "Approved",
+      "reviewed": "Reviewed",
       "needsFix": "Needs fix",
       "inReview": "In review"
     }

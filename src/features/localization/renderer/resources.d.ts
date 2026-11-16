@@ -6694,7 +6694,8 @@ export default interface Resources {
       "reviewStates": {
         "approved": "Approved",
         "inReview": "In review",
-        "needsFix": "Needs fix"
+        "needsFix": "Needs fix",
+        "reviewed": "Reviewed"
       },
       "sections": {
         "attachments": "Attachments",
@@ -6722,6 +6723,8 @@ export default interface Resources {
         "reassigned": "Reassigned",
         "reviewRequested": "Review requested",
         "reviewStarted": "Review started",
+        "reviewCompleted": "AI review completed",
+        "humanApproved": "Approved by user",
         "runningPrefix": "running ",
         "unassignedFrom": "Unassigned from",
         "unknownEvent": "Unknown event"

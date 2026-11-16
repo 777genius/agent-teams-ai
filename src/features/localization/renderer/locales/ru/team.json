@@ -1270,12 +1270,15 @@
       "ownerChanged": "Владелец изменён",
       "reviewRequested": "Запрошен review",
       "reviewStarted": "Review начат",
+      "reviewCompleted": "ИИ-проверка завершена",
+      "humanApproved": "Одобрено пользователем",
       "changesRequested": "Запрошены изменения",
       "approved": "Одобрено",
       "unknownEvent": "Неизвестное событие"
     },
     "reviewStates": {
       "approved": "Одобрено",
+      "reviewed": "Проверено",
       "needsFix": "Нужны правки",
       "inReview": "На review"
     }
