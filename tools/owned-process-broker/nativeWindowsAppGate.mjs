@@ -38,6 +38,57 @@ const object = value => {
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const hash = path => sha(readFileSync(path));
 const errorText = error => error instanceof Error ? (error.stack ?? error.message).slice(0,4000) : String(error).slice(0,1000);
+// Preserve already-observed failure facts before outer custody can terminate cleanup.
+const windowsUiFailureLine = (phase, error, retryUi, censusReads, censusReadsTruncated) => {
+  const original = { kind: 'TEST_WINDOWS_PACKAGED_UI_FAILURE', phase, error: error.slice(0, 128) };
+  const fallback = JSON.stringify(original) + '\n';
+  try {
+    const rounded = value => {
+      assert.ok(typeof value === 'number' && Number.isFinite(value) && value >= 0);
+      const result = Math.round(value);
+      assert.ok(Number.isSafeInteger(result));
+      return result;
+    };
+    let retry = null;
+    if (retryUi !== undefined) {
+      assert.ok(retryUi && typeof retryUi === 'object' && !Array.isArray(retryUi));
+      assert.ok(retryUi.stages && typeof retryUi.stages === 'object' && !Array.isArray(retryUi.stages));
+      const stages = {};
+      for (const key of ['clickReturnedMs', 'writerObservedMs', 'hostCheckedMs', 'uiReadyMs']) {
+        const value = retryUi.stages[key];
+        stages[key] = value === null ? null : rounded(value);
+      }
+      assert.ok(Number.isSafeInteger(retryUi.returnedReads) && retryUi.returnedReads >= 0 && retryUi.returnedReads <= 500);
+      assert.equal(typeof retryUi.countTruncated, 'boolean');
+      let last = null;
+      if (retryUi.last !== null) {
+        assert.ok(retryUi.last && typeof retryUi.last === 'object' && !Array.isArray(retryUi.last));
+        assert.ok(['surface-missing', 'refresh-not-enabled', 'retry-present', 'alert-present', 'ready', 'invalid'].includes(retryUi.last.result));
+        last = { atMs: retryUi.last.atMs === null ? null : rounded(retryUi.last.atMs), result: retryUi.last.result };
+      }
+      retry = { stages, returnedReads: retryUi.returnedReads, countTruncated: retryUi.countTruncated, last };
+    }
+    assert.ok(Array.isArray(censusReads) && censusReads.length <= 512);
+    assert.equal(typeof censusReadsTruncated, 'boolean');
+    const census = { counts: { 'process-census': 0, 'process-listener-snapshot': 0 },
+      totalMs: 0, maxMs: 0, lastMs: null, failedReads: 0, truncated: censusReadsTruncated };
+    for (const row of censusReads) {
+      assert.ok(row && typeof row === 'object' && !Array.isArray(row) && typeof row.phase === 'string');
+      if (row.phase !== phase) continue;
+      assert.ok(row.operation === 'process-census' || row.operation === 'process-listener-snapshot');
+      rounded(row.startMs); rounded(row.endMs);
+      assert.ok(row.endMs >= row.startMs);
+      assert.equal(typeof row.returned, 'boolean');
+      const elapsed = rounded(row.endMs - row.startMs);
+      census.counts[row.operation]++;
+      census.totalMs = rounded(census.totalMs + elapsed);
+      census.maxMs = Math.max(census.maxMs, elapsed); census.lastMs = elapsed;
+      if (!row.returned) census.failedReads++;
+    }
+    const line = JSON.stringify({ ...original, retryUi: retry, census }) + '\n';
+    return Buffer.byteLength(line, 'utf8') <= 1024 ? line : fallback;
+  } catch { return fallback; }
+};
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const args = process.argv.slice(2);
 assert.equal(args.length, 6, 'Four finite inputs plus the original controller sandbox pair');
@@ -531,8 +582,8 @@ try {
   primaryError = error;
   proof.error = errorText(error);
   try {
-    const line = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_UI_FAILURE', phase: activePhase,
-      error: proof.error.slice(0, 128) }) + '\n';
+    const line = windowsUiFailureLine(activePhase, proof.error, proof.retryUi,
+      proof.censusReads, proof.censusReadsTruncated);
     if (Buffer.byteLength(line, 'utf8') <= 1024) writeSync(1, line);
   } catch { /* Keep the original failure and continue original cleanup after a diagnostic write error. */ }
 } finally {
