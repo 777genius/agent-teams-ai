@@ -1,0 +1,30 @@
+{
+  "schema": "immutable-native-bundle-build-audit/v1",
+  "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "archive": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-M0660-completed-evidence-bundle/M0660-native-evidence.zip",
+    "bytes": 664690,
+    "blob": "04a9ee0dbf3364352cf9af2fa7b4d77b882ed284",
+    "sha256": "f8c4afcd9ca7137022f103eb8474af319c214fec2b9ec2e82d8987ba3e65c801"
+  },
+  "inventory": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-M0660-completed-evidence-bundle/M0660-inventory.json",
+    "bytes": 20880,
+    "blob": "a61ec4204807982864575588113ac3302948ce17",
+    "sha256": "1931797646e79076c3e0525e7a9c6a6a7fe5ed9e0399a38376ab627c3f484937"
+  },
+  "readme": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-M0660-completed-evidence-bundle/M0660-README.md",
+    "bytes": 1071,
+    "blob": "8246cb6e3140bbb8b19f0c99fedfed7f6dbf6909",
+    "sha256": "874044b2da4a3aa4dd455415e1670551945e5054097597cb1b7e2bf074947968"
+  },
+  "outerMembers": 59,
+  "payloadCount": 57,
+  "payloadBytes": 2578346,
+  "officialNestedArchiveCount": 8,
+  "officialNestedMembers": 66,
+  "outerCRC": true,
+  "roundtripAllBytesExact": true,
+  "signedTransportUrlsSelected": false
+}

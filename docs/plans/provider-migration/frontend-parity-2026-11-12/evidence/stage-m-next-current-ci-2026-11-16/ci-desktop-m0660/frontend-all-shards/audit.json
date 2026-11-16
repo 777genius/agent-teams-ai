@@ -1,0 +1,936 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "sourceTree": "e70ccffc6d55ad42c2249518bf142e2ed32ddf91",
+  "runId": 43780997237,
+  "status": "PASS_WITH_38_ORIGINAL_SKIPS",
+  "review": "Full original4JSON assertion-array and default-reporter count audit; original byte/source/runtime joins only, no project execution.",
+  "counts": {
+    "uniqueFiles": 2162,
+    "defaultReporterFilesPassed": 2155,
+    "defaultReporterFilesSkipped": 7,
+    "defaultReporterFilesFailed": 0,
+    "assertionsPassed": 25822,
+    "assertionsSkipped": 38,
+    "assertionsFailed": 0,
+    "assertionsTodo": 0,
+    "totalAssertions": 25860
+  },
+  "jsonFileStatusLimitation": "Vitest JSON labels all2162 testResults passed, including7files where every assertion is skipped. The audited file-level qualification uses original default reporter and actual assertion status, not that label.",
+  "shards": [
+    {
+      "shard": 1,
+      "job": {
+        "id": 133017915679,
+        "name": "Offline frontend tests (1/4)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43780997237,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Verify source and capture the original Host test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Prepare original test prerequisites",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run the complete safe frontend shard",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Preserve original test results, including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Post Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19
+          }
+        ]
+      },
+      "artifactId": 14190745426,
+      "artifact": {
+        "path": "frontend-shard1/artifact-14190745426.zip",
+        "bytes": 295485,
+        "blob": "5ff6dad00241cbc8318d65def521bde3f4ba69e9",
+        "sha256": "b310349827f441e893c1a01b8dc8e08f48117c34ab3bc054e03ed75a612ad836"
+      },
+      "jobLog": {
+        "path": "frontend-shard1/job-133017915679.log",
+        "bytes": 170100,
+        "blob": "abace879b7e556e4896c9d56dc401a668d950bdc",
+        "sha256": "33a9b8f1e2d98b91c674706d3531264c9588cb4f3cc97958de7b1ce41251bc45"
+      },
+      "originalJson": {
+        "path": "frontend-shard1/extracted/host-offline-tests-1.json",
+        "bytes": 2167252,
+        "blob": "cd9b794837702c216c77b04497b59426842f9f7e",
+        "sha256": "54fc14e8564883df77038e79ea91fc3779244aae8ce25fd1e68b03e47de9612c"
+      },
+      "originalTeeLog": {
+        "path": "frontend-shard1/extracted/host-offline-tests-1.log",
+        "bytes": 99629,
+        "blob": "c79d23415d24e557b0bd944872bb260e05fac9be",
+        "sha256": "3ac1e92b6e11b2b0e310a78faad99b7f1bc3e6ca9a46c4cca38f6ebcf22e6472"
+      },
+      "archiveAudit": {
+        "path": "frontend-shard1/archive-audit.json",
+        "bytes": 811,
+        "blob": "3e3c11679dbb75c5e4b257ddc448bb85a496ccdb",
+        "sha256": "ca3adff69fe03d16f6c106b949b0fc2879e94b0552e5a6bdb7523bb07ede25b7"
+      },
+      "archiveApiDigestMatchesOriginalUploadAndZip": true,
+      "teeExactlyInJobAfterTimestampRemoval": true,
+      "counts": {
+        "fileResults": 541,
+        "defaultReporterFilesPassed": 541,
+        "defaultReporterFilesSkipped": 0,
+        "assertionsPassed": 6222,
+        "assertionsSkipped": 6,
+        "assertionsFailed": 0,
+        "assertionsTodo": 0,
+        "totalAssertions": 6228,
+        "jsonDescribeSuiteCount": 1356
+      },
+      "defaultFileSummary": "Test Files  541 passed (541)",
+      "defaultAssertionSummary": "Tests  6222 passed | 6 skipped (6228)",
+      "durationSeconds": 352.82,
+      "startAt": "Start at  01:16:13",
+      "runtime": {
+        "frontendNode": "26.12.1",
+        "capturedHostNode": "24.21.0",
+        "pnpm": "11.22.0",
+        "vitest": "3.2.6"
+      },
+      "success": true
+    },
+    {
+      "shard": 2,
+      "job": {
+        "id": 133017915909,
+        "name": "Offline frontend tests (2/4)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43780997237,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Verify source and capture the original Host test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Prepare original test prerequisites",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run the complete safe frontend shard",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Preserve original test results, including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Post Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19
+          }
+        ]
+      },
+      "artifactId": 14190518295,
+      "artifact": {
+        "path": "frontend-shard2/artifact-14190518295.zip",
+        "bytes": 312130,
+        "blob": "03cdaed16c1a6ce12be53e703d0b4c9a8b3207a6",
+        "sha256": "e8fdc6a88b5bcb5074ea5514ff7bdf1bfc6d0d6ae451cbd45c4452bc3a4a9941"
+      },
+      "jobLog": {
+        "path": "frontend-shard2/job-133017915909.log",
+        "bytes": 180180,
+        "blob": "be68dbe956fb04582ecf2ecb7422a91b059cd2ea",
+        "sha256": "e33202ccdd0eebd46129fa353a2e40192e040e0fe457ab4457fcfe6ebc1788cb"
+      },
+      "originalJson": {
+        "path": "frontend-shard2/extracted/host-offline-tests-2.json",
+        "bytes": 2385119,
+        "blob": "39c3c0294ad1060136bcff7de3cf998ec774ddaa",
+        "sha256": "bb0b7bc28cbb68f59e6878f5a5f73d7206aa05a1ef91d0036c8b946672524c76"
+      },
+      "originalTeeLog": {
+        "path": "frontend-shard2/extracted/host-offline-tests-2.log",
+        "bytes": 107616,
+        "blob": "39b018d536b69db9c7d8a1060393dc721a95ce76",
+        "sha256": "59c7edbb4df9da5414f8d0ddb81ba1d8570e78ed6ee7449700ae87e12dd63cd9"
+      },
+      "archiveAudit": {
+        "path": "frontend-shard2/archive-audit.json",
+        "bytes": 812,
+        "blob": "fe1769beab4870be2f5aa8437e2d47ac8a6ec5fe",
+        "sha256": "5391062d5ebbbf23e5954461525a5010a0df2e80f841112b98e8da415f833e28"
+      },
+      "archiveApiDigestMatchesOriginalUploadAndZip": true,
+      "teeExactlyInJobAfterTimestampRemoval": true,
+      "counts": {
+        "fileResults": 541,
+        "defaultReporterFilesPassed": 539,
+        "defaultReporterFilesSkipped": 2,
+        "assertionsPassed": 6730,
+        "assertionsSkipped": 18,
+        "assertionsFailed": 0,
+        "assertionsTodo": 0,
+        "totalAssertions": 6748,
+        "jsonDescribeSuiteCount": 1292
+      },
+      "defaultFileSummary": "Test Files  539 passed | 2 skipped (541)",
+      "defaultAssertionSummary": "Tests  6730 passed | 18 skipped (6748)",
+      "durationSeconds": 318.63,
+      "startAt": "Start at  01:29:03",
+      "runtime": {
+        "frontendNode": "26.12.1",
+        "capturedHostNode": "24.21.0",
+        "pnpm": "11.22.0",
+        "vitest": "3.2.6"
+      },
+      "success": true
+    },
+    {
+      "shard": 3,
+      "job": {
+        "id": 133017915890,
+        "name": "Offline frontend tests (3/4)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43780997237,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Verify source and capture the original Host test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Prepare original test prerequisites",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run the complete safe frontend shard",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Preserve original test results, including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Post Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19
+          }
+        ]
+      },
+      "artifactId": 14191090316,
+      "artifact": {
+        "path": "frontend-shard3/artifact-14191090316.zip",
+        "bytes": 296995,
+        "blob": "44ee292e19dc38d2d12458fe0bd865182668b27c",
+        "sha256": "777dedd9ef4ba8d66b6bb8be585a4e9e5ce23946e34fe6f7d83e48e7c7908193"
+      },
+      "jobLog": {
+        "path": "frontend-shard3/job-133017915890.log",
+        "bytes": 162556,
+        "blob": "b701d82da57a7537f4c2912bf96c71281b2ebb70",
+        "sha256": "95ea3de3360be310e1f00ed5734f245c59b1b8a0604cde1a881126edad8d9086"
+      },
+      "originalJson": {
+        "path": "frontend-shard3/extracted/host-offline-tests-3.json",
+        "bytes": 2189244,
+        "blob": "9f242b417c58e5defe256a3d693894e3439fdb17",
+        "sha256": "7e3eec85e0d8f9745c137d04276d8f1729019a0c6120756ee2bf567a2ffbc495"
+      },
+      "originalTeeLog": {
+        "path": "frontend-shard3/extracted/host-offline-tests-3.log",
+        "bytes": 93238,
+        "blob": "10ecfe833f4f8c12add91e45bf72f8e666e6c9d6",
+        "sha256": "c5f9dcb99b015961ce1a60c44d281fb2aa32bd2912b2b50c565ca78e3fe91b2d"
+      },
+      "archiveAudit": {
+        "path": "frontend-shard3/archive-audit.json",
+        "bytes": 811,
+        "blob": "ca3e26c515ad75d312486a71d8d174b7b84679e5",
+        "sha256": "52724a58da0ab60852e9f177f91136d7ed43b1e5999e0e47b077beb445554f18"
+      },
+      "archiveApiDigestMatchesOriginalUploadAndZip": true,
+      "teeExactlyInJobAfterTimestampRemoval": true,
+      "counts": {
+        "fileResults": 541,
+        "defaultReporterFilesPassed": 538,
+        "defaultReporterFilesSkipped": 3,
+        "assertionsPassed": 6256,
+        "assertionsSkipped": 7,
+        "assertionsFailed": 0,
+        "assertionsTodo": 0,
+        "totalAssertions": 6263,
+        "jsonDescribeSuiteCount": 1316
+      },
+      "defaultFileSummary": "Test Files  538 passed | 3 skipped (541)",
+      "defaultAssertionSummary": "Tests  6256 passed | 7 skipped (6263)",
+      "durationSeconds": 368.36,
+      "startAt": "Start at  01:26:51",
+      "runtime": {
+        "frontendNode": "26.12.1",
+        "capturedHostNode": "24.21.0",
+        "pnpm": "11.22.0",
+        "vitest": "3.2.6"
+      },
+      "success": true
+    },
+    {
+      "shard": 4,
+      "job": {
+        "id": 133017915894,
+        "name": "Offline frontend tests (4/4)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43780997237,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Verify source and capture the original Host test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Prepare original test prerequisites",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run the complete safe frontend shard",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Preserve original test results, including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Post Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19
+          }
+        ]
+      },
+      "artifactId": 14191065996,
+      "artifact": {
+        "path": "frontend-shard4/artifact-14191065996.zip",
+        "bytes": 317929,
+        "blob": "a532edf74714fb354e2799aa104fbdeb1fe7e397",
+        "sha256": "5757d302b9f90918ab6f7d4e2a521fba6a92afaa99cdf7713f59fd6c3d788fff"
+      },
+      "jobLog": {
+        "path": "frontend-shard4/job-133017915894.log",
+        "bytes": 190645,
+        "blob": "68d1d51b510dacaf1ac8c363de598a1c0bf6470c",
+        "sha256": "f590a01d1e62ee122ca7ba9dd730a89e653876bf85c9a95d7366be5d857ffb84"
+      },
+      "originalJson": {
+        "path": "frontend-shard4/extracted/host-offline-tests-4.json",
+        "bytes": 2329337,
+        "blob": "90a3e6ecf054189ae6f2e66f6eeaf5eeea5b59f0",
+        "sha256": "081c8e3a2421f3762e7c77905ba7edabfc32ae24f50b8984686d33ec0a922a9d"
+      },
+      "originalTeeLog": {
+        "path": "frontend-shard4/extracted/host-offline-tests-4.log",
+        "bytes": 116652,
+        "blob": "01d99f1e22916e0477747d48b99bb75c30d4bd6f",
+        "sha256": "5ecdab1e6ef28180801b4a82a26d61864a70ba543fcc74423f6c9d484eb7f9d1"
+      },
+      "archiveAudit": {
+        "path": "frontend-shard4/archive-audit.json",
+        "bytes": 812,
+        "blob": "100ccc0b1c41d94cdc0c741ba6bd8d5b36e0341c",
+        "sha256": "d01907119498776a40a1f4ada6545dca68038ea822e1219bc42610c5bcce7016"
+      },
+      "archiveApiDigestMatchesOriginalUploadAndZip": true,
+      "teeExactlyInJobAfterTimestampRemoval": true,
+      "counts": {
+        "fileResults": 539,
+        "defaultReporterFilesPassed": 537,
+        "defaultReporterFilesSkipped": 2,
+        "assertionsPassed": 6614,
+        "assertionsSkipped": 7,
+        "assertionsFailed": 0,
+        "assertionsTodo": 0,
+        "totalAssertions": 6621,
+        "jsonDescribeSuiteCount": 1349
+      },
+      "defaultFileSummary": "Test Files  537 passed | 2 skipped (539)",
+      "defaultAssertionSummary": "Tests  6614 passed | 7 skipped (6621)",
+      "durationSeconds": 375.48,
+      "startAt": "Start at  01:27:06",
+      "runtime": {
+        "frontendNode": "26.12.1",
+        "capturedHostNode": "24.21.0",
+        "pnpm": "11.22.0",
+        "vitest": "3.2.6"
+      },
+      "success": true
+    }
+  ],
+  "all38SkippedAssertions": [
+    {
+      "shard": 1,
+      "path": "test/scripts/opencodeNativeTestNode.test.ts",
+      "fullName": "TEST Node dependency staging without execution accepts a real inherited-ACL-style Windows metadata transition on the owned fake copy",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 1,
+      "path": "test/main/ipc/review.test.ts",
+      "fullName": "review IPC path confinement authorizes a saved case-only rename path through its published transaction target",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 1,
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "fullName": "actual app client / packaged Windows runtime (Unavailable: actual Windows execution is required) backfills empty, attributed history, and duplicate replay: ascii",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 1,
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "fullName": "actual app client / packaged Windows runtime (Unavailable: actual Windows execution is required) backfills empty, attributed history, and duplicate replay: spaces",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 1,
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "fullName": "actual app client / packaged Windows runtime (Unavailable: actual Windows execution is required) backfills empty, attributed history, and duplicate replay: unicode",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 1,
+      "path": "test/main/services/team/OpenCodeTaskLogStreamSource.fixture-e2e.test.ts",
+      "fullName": "OpenCodeTaskLogStreamSource real OpenCode fixture e2e reads native persistence through the actual SDK read-only reader and projector without preparing a profile",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/scripts/opencodeNativeRealTaskPrompt.test.ts",
+      "fullName": "cross-shell Windows verifier invocation executes the unchanged verifier in PowerShell and cmd",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "fullName": "applyElectronDevPathOverrides uses absolute APPDATA when Electron cannot return appData before ready on Windows",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "fullName": "applyElectronDevPathOverrides uses regular APPDATA when userData is unavailable before Windows Electron ready",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "fullName": "applyElectronDevPathOverrides rejects a case-only alias of a nonexistent legacy profile",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/ReviewFileTransaction.safe-e2e.test.ts",
+      "fullName": "review file transaction safe E2E classifies a published equal-content case-only Undo using its owned inode",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "fullName": "Windows CLI shell fallback round trip preserves adversarial argv through execCli for a spaced non-ASCII executable path",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "fullName": "Windows CLI shell fallback round trip preserves adversarial argv through spawnCli for a spaced non-ASCII executable path",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "fullName": "Windows CLI shell fallback round trip preserves adversarial argv through a batch launcher that forwards %*",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "fullName": "Windows CLI shell fallback round trip preserves safe argv through batch parameter modifiers",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "fullName": "Windows CLI shell fallback round trip rejects shell syntax before a batch launcher can reparse positional arguments",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "fullName": "shellEnv actual installed shells zsh reads real login and interactive startup exports with exact edge values",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "fullName": "shellEnv actual installed shells zsh ignores startup banners and accepts a completed dump before a failing real logout",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "fullName": "shellEnv actual installed shells zsh falls back from a failing real login profile to the real interactive rc",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "fullName": "shellEnv actual installed shells zsh keeps its framing independent of an rc-defined printf function",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "fullName": "shellEnv actual installed shells zsh keeps its framing independent of an rc-defined printf alias",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts",
+      "fullName": "OpenCode nvm-windows runtime resolution safe e2e selects the native OpenCode executable behind an nvm cmd shim",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+      "fullName": "Team runtime memory safe e2e reports RSS for a bootstrap-confirmed Anthropic teammate discovered from the real process table",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+      "fullName": "Team runtime memory safe e2e reports RSS for a real Anthropic teammate CLI process",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "test/main/utils/windowsProcessProbe.integration.test.ts",
+      "fullName": "real Windows process identity readers observes this Node process through both table transports and its birth reader",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "test/features/member-work-sync/main/JsonMemberWorkSyncReportJournal.test.ts",
+      "fullName": "strict JSON report journal returns commit_unknown if a Windows retry cannot sync the existing journal file",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "test/main/services/runtime/AnthropicAutoShellEnv.safe-e2e.test.ts",
+      "fullName": "Anthropic Auto GUI shell safe e2e uses the native runtime to authenticate a cold shell configuration and infer with both models",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "test/main/services/team/OpenCodeReviewPickup.live.tmp.test.ts",
+      "fullName": "OpenCode review pickup live e2e delivers review pickup when the current unread review request is still in the foreground inbox",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "test/main/services/team/ReviewApplierService.test.ts",
+      "fullName": "ReviewApplierService ledger canonical-equivalent rename keeps the sole inode on a real temporary filesystem",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.ollama-live.test.ts",
+      "fullName": "OpenCodeLocalProviderConnector live Ollama probes, configures into a sandbox, and keeps the catalog model after an empty overlay",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "src/main/services/infrastructure/codexAppServer/__tests__/CodexBinaryResolver.real.test.ts",
+      "fullName": "CodexBinaryResolver live local Codex smoke resolves and versions the current local Codex binary",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/scripts/fixtures/opencodeProofBoundary.test.ts",
+      "fullName": "preserves wrapper ownership across real Vitest setup",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e resolves the current host as native macOS",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e chooses Homebrew as the macOS install strategy on this machine",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e finds the real tmux binary on this macOS host",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e reports tmux as runtime-ready for the live macOS host path",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e keeps the current platform on the tmux runtime path",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e runs a real isolated tmux session on macOS and executes a shell command in it",
+      "status": "skipped",
+      "failureMessages": []
+    }
+  ],
+  "sourceConfigReview": {
+    "path": "frontend-shard1/source-identities.json",
+    "bytes": 1921,
+    "blob": "024dd0edb59966e87031e8e9808ccfd014622967",
+    "sha256": "153bdd1170a80538ec07656b9a6c2350b0f2bdc6047b9987a0072fb261ccf59c"
+  },
+  "originalCliExclusions": [
+    "**/*.live.test.*",
+    "**/*.live-e2e.test.*",
+    "**/*.native.test.*"
+  ],
+  "testTimeoutMs": 15000,
+  "inputFiles": {
+    "terminalApi": {
+      "path": "full-api-jobs-0135.json",
+      "bytes": 80872,
+      "blob": "183b3edd9c69a111e634a8405da05240b0f80916",
+      "sha256": "11c3dc036cbd05c520845a7546fef711a8f0672ee47ae76ad96ec0ab9695c0e5"
+    },
+    "officialArtifactApi": {
+      "path": "terminal-artifacts-0135.json",
+      "bytes": 8035,
+      "blob": "0643c77ab28f7b587a3238c565b5c82a2106a10d",
+      "sha256": "60c2bbadcdb5376f7ff468cc7533f58b3caf362b00661f9e3c562ac44ff94c97"
+    },
+    "initialRunApi": {
+      "path": "initial-api-runs-jobs-0038.json",
+      "bytes": 58753,
+      "blob": "8689e935e0ae5041a5bdc3c2d4e6b2169b529f5b",
+      "sha256": "6ed2698023541fec692ef81f93ee4bd4cd12a44f3decdde234284c4a1b4e6d4a"
+    }
+  },
+  "limits": [
+    "All38 skips and3 configured excluded filename patterns remain unqualified. Included files with differently suffixed live names can still be skipped by their original guards.",
+    "Only the original root Vitest frontend set, not the Team10-file Node contracts or the24 stderr privacy canaries.",
+    "No full worktree source census, reproducible output rebuild, native/provider/Desktop actions or physical cleanup qualification is inferred from this four-shard result.",
+    "Original engine warnings remain in raw prerequisite logs; original builds completed before tests, with no independent output inventory claim."
+  ]
+}

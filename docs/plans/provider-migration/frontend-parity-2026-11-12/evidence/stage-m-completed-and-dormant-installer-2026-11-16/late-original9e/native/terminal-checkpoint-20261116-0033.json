@@ -1,0 +1,160 @@
+{
+  "schema": "original-native-terminal-checkpoint/v1",
+  "source": "9e542899f36c47598a88c764c9e6745589fea3e1",
+  "observedJobsAt": "2026-11-16T00:33:24Z",
+  "priorCompletedCheckpoint": {
+    "path": "checkpoint-20261116-0017.json",
+    "bytes": 21502,
+    "blob": "09fab681c2aa99962c1503656443cc428a583fe8",
+    "sha256": "afa91121dc690daf5555ef2dfb330ecc2ecf123478cd862809531d042953edd5"
+  },
+  "jobs": [
+    {
+      "lane": "process",
+      "job": 133005206129,
+      "status": "completed",
+      "conclusion": "success",
+      "completedAt": "2026-11-16T00:08:04Z",
+      "steps": 27
+    },
+    {
+      "lane": "process",
+      "job": 133005206374,
+      "status": "completed",
+      "conclusion": "success",
+      "completedAt": "2026-11-15T23:58:48Z",
+      "steps": 27
+    },
+    {
+      "lane": "process",
+      "job": 133005206377,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "completedAt": "2026-11-16T00:32:42Z",
+      "steps": 0
+    },
+    {
+      "lane": "process",
+      "job": 133005206417,
+      "status": "completed",
+      "conclusion": "success",
+      "completedAt": "2026-11-16T00:11:01Z",
+      "steps": 27
+    },
+    {
+      "lane": "process",
+      "job": 133005206525,
+      "status": "completed",
+      "conclusion": "success",
+      "completedAt": "2026-11-16T00:04:00Z",
+      "steps": 27
+    },
+    {
+      "lane": "v2",
+      "job": 133005207826,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "completedAt": "2026-11-16T00:32:42Z",
+      "steps": 0
+    },
+    {
+      "lane": "v2",
+      "job": 133005207978,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "completedAt": "2026-11-16T00:32:42Z",
+      "steps": 0
+    },
+    {
+      "lane": "v2",
+      "job": 133005208182,
+      "status": "completed",
+      "conclusion": "failure",
+      "completedAt": "2026-11-16T00:03:18Z",
+      "steps": 29
+    },
+    {
+      "lane": "v2",
+      "job": 133005208185,
+      "status": "completed",
+      "conclusion": "success",
+      "completedAt": "2026-11-15T23:59:54Z",
+      "steps": 21
+    },
+    {
+      "lane": "v2",
+      "job": 133005208229,
+      "status": "completed",
+      "conclusion": "failure",
+      "completedAt": "2026-11-16T00:00:38Z",
+      "steps": 29
+    },
+    {
+      "lane": "v2",
+      "job": 133005208247,
+      "status": "completed",
+      "conclusion": "success",
+      "completedAt": "2026-11-16T00:17:34Z",
+      "steps": 29
+    },
+    {
+      "lane": "v2",
+      "job": 133005208251,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "completedAt": "2026-11-16T00:32:42Z",
+      "steps": 0
+    },
+    {
+      "lane": "v2",
+      "job": 133005208303,
+      "status": "completed",
+      "conclusion": "success",
+      "completedAt": "2026-11-16T00:02:15Z",
+      "steps": 29
+    },
+    {
+      "lane": "v2",
+      "job": 133005208337,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "completedAt": "2026-11-16T00:32:42Z",
+      "steps": 0
+    }
+  ],
+  "selectedFiles": [
+    {
+      "path": "process-jobs-api-terminal-0033.json",
+      "bytes": 25267,
+      "blob": "1dc403153665cbd80c4bc81688269144527366fa",
+      "sha256": "b3b3bce3537ad80df8dfdcfd57cb3da42696b685273591222035e7f5d653e604"
+    },
+    {
+      "path": "v2-jobs-api-terminal-0033.json",
+      "bytes": 34940,
+      "blob": "b22d392e3338263a50aabd4a99522195d3281e7f",
+      "sha256": "7b8d430056670f075d44ae1906f44625fdda4f2769613d4db76ae7a53e9e6502"
+    },
+    {
+      "path": "process-run-api-terminal-0033.json",
+      "bytes": 13831,
+      "blob": "69b740c9ec2279451f2a4b8455fd1cbb57e5ab68",
+      "sha256": "6aaeea47b09b0c791b60b4dfee3186b04095925e39facd8802cd9d0f07b5b36a"
+    },
+    {
+      "path": "v2-run-api-terminal-0033.json",
+      "bytes": 13853,
+      "blob": "315dbea21ac505eb5b54b92ba19ae955b38a2268",
+      "sha256": "c4ec313ffcc7afe275afbe3beaff03650fef918be5e103db769f3fb911f46adf"
+    },
+    {
+      "path": "Plan29-terminal-status-addendum-0033.md",
+      "bytes": 1481,
+      "blob": "daca171c83d6d6abc66e6d2c371fb843b80656ac",
+      "sha256": "d9de4bbffc914820d24f72e8da9ca602f107978137d07c8985691e7996bdbe68"
+    }
+  ],
+  "selectedFileCount": 5,
+  "selectedBytes": 89372,
+  "terminalCohortsNoFurtherPolling": true
+}

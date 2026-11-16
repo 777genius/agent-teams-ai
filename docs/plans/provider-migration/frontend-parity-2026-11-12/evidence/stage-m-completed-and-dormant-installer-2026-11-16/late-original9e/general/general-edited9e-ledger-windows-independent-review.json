@@ -1,0 +1,879 @@
+{
+  "schema": "independent-original-ci-log-review/v1",
+  "verdict": "APPROVE source-bound original result only",
+  "reviewedAtUtc": "2026-11-16T01:14:40.366002+00:00",
+  "repository": "777genius/agent-teams-ai",
+  "runId": 43776996041,
+  "jobId": 133026000685,
+  "jobName": "Task change ledger Windows smoke",
+  "jobConclusion": "success",
+  "inputs": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-ledger-windows-original.log",
+      "bytes": 91159,
+      "gitBlob": "db49cdd2027e66acde0fa94690d692b26009a15c",
+      "sha256": "20ae41133ea277499b557f611bdd930e4a2e55c9d19275fe0c0ab31ae869da7c"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-ledger-windows-original-log-response.json",
+      "bytes": 98479,
+      "gitBlob": "229e9a72a3be355d7e1d7649451dcf813fa0a06e",
+      "sha256": "94d0eb6aac2f50adb39fc3ada21ccf375474ae8dc2bd0355c5b77fe11d758f41"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-jobs-0112.json",
+      "bytes": 9718,
+      "gitBlob": "f45dbbe11dcdb25fd961ef496faa3c7b384d93ca",
+      "sha256": "9f8603e367fdf8a95d787392069923726b17aef33911610a9dc9ceb62174ccb6"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-merge-commit-original.json",
+      "bytes": 2653,
+      "gitBlob": "ef866594aca5b5e1508c45eac8372ecb09f93cdd",
+      "sha256": "fca04f15e204a0dfde01b6896c97b26f093fbca514b8fbe0370f80cc379a97f6"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-plan-original-log-response.json",
+      "bytes": 118835,
+      "gitBlob": "9353fdabfb829c4b1dbaf04ce0b84444706bc232",
+      "sha256": "5e6c2db2ee034130ca01129d59a0ebd109edbd2c9d7f528fdc6d9832d234816a"
+    }
+  ],
+  "originalLogReadbackExact": true,
+  "checkout": {
+    "recordedMergeCommit": "7d5c2e0b8b541eaae9e94495a76e67db0c0cafcf",
+    "recordedCheckoutRef": "refs/remotes/pull/1192/merge",
+    "parents": [
+      "def734338f13bcc3209e78079a0cedbc48f05a5b",
+      "9e542899f36c47598a88c764c9e6745589fea3e1"
+    ],
+    "tree": "dc7e07838cef3f0b6bf83ffce8b5a34f6e7484e4",
+    "headSource": "9e542899f36c47598a88c764c9e6745589fea3e1",
+    "wholeTreeMatchesFrozenHead": true,
+    "method": "Original log lines104,218,221; immutable Git commit API tree and parents; local frozen9e git tree SHA equality. No assumption from a latest PR head."
+  },
+  "runtime": {
+    "os": "Microsoft Windows Server2025 10.0.26100 Datacenter",
+    "runnerImage": "windows-2025-vs2026@20261103.298.1",
+    "runnerArch": "x64",
+    "node": "26.12.1",
+    "pnpm": "11.22.0",
+    "vitest": "3.2.6",
+    "installProfile": "node-ci",
+    "electronSkipBinaryDownload": "1",
+    "reuse": false,
+    "engineWarnings": [
+      "packages/legacy-agent-host and packages/task-change-ledger declare >=24.21.0 <25 but this original General command actually ran Node26.12.1."
+    ],
+    "install": "Original node ./scripts/ci/install-dependencies-with-retry.mjs selects pnpm.cmd install --frozen-lockfile on Windows; supplied no child-concurrency flag. Log shows one installation completion and no retry notice. Original dependency-store cache was restored; this is not a clean-network install claim.",
+    "compiler": "Host package prebuild invokes ledger build; both declared node node_modules/@typescript/native/bin/tsc -p tsconfig.json commands logged and step12 success. Package metadata pins @typescript/native alias typescript@7.0.2; no emitted-output digest captured by this job."
+  },
+  "commands": [
+    {
+      "line": 37,
+      "command": "echo 'Runner identity recorded in job metadata'"
+    },
+    {
+      "line": 46,
+      "command": "actions/checkout@v6"
+    },
+    {
+      "line": 222,
+      "command": "git config --global core.longpaths true"
+    },
+    {
+      "line": 230,
+      "command": "actions/setup-node@v6"
+    },
+    {
+      "line": 252,
+      "command": "node scripts/ci/ci-feedback.mts image"
+    },
+    {
+      "line": 260,
+      "command": "echo 'Runner image identity recorded in job metadata'"
+    },
+    {
+      "line": 269,
+      "command": "node scripts/ci/ci-feedback.mts windows"
+    },
+    {
+      "line": 284,
+      "command": "pnpm/action-setup@v6"
+    },
+    {
+      "line": 317,
+      "command": "actions/setup-node@v6"
+    },
+    {
+      "line": 350,
+      "command": "node ./scripts/ci/install-dependencies-with-retry.mjs"
+    },
+    {
+      "line": 722,
+      "command": "pnpm --filter @agent-teams/legacy-agent-host build"
+    },
+    {
+      "line": 738,
+      "command": "pnpm exec vitest run --environment node test/main/services/team/fileLock.test.ts test/main/services/team/fileLock.publication.test.ts"
+    },
+    {
+      "line": 762,
+      "command": "pnpm --dir agent-teams-controller exec vitest run test/fileLock.test.js"
+    },
+    {
+      "line": 781,
+      "command": "pnpm exec vitest run --maxWorkers=1 test/main/services/team/TaskChangeLedgerReader.test.ts test/features/member-work-sync/main/JsonMemberWorkSyncReportJournal.test.ts test/main/services/team/TeamInboxReader.test.ts test/main/utils/childProcess.windows.test.ts test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts test/main/utils/processStartTime.test.ts test/main/utils/windowsProcessTable.test.ts test/main/services/team/OpenCodeManagedHostProcessCleanup.test.ts src/main/services/team/contracts/__tests__/TeamProvisioningStartupCleanupBusy.test.ts src/main/services/team/contracts/__tests__/TeamProvisioningApis.test.ts test/main/ipc/teams.test.ts test/renderer/store/teamSlice.test.ts test/main/services/team/OpenCodeStartupCleanupBudget.test.ts test/main/services/team/OpenCodeStartupCleanupRecovery.test.ts test/main/services/team/OpenCodeBridgeCommandClient.test.ts test/main/services/team/OpenCodeHostStartupLockCleanup.test.ts test/main/utils/processKill.test.ts test/main/services/runtime/ProviderSummaryTimeout.safe-e2e.test.ts src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.test.ts test/main/features/runtime-provider-management/catalogDiagnostics.test.ts test/main/features/runtime-provider-management/AgentTeamsRuntimeProviderManagementCliClient.test.ts src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.test.ts test/renderer/features/runtime-provider-management/OpenCodeCatalogErrorAlert.test.ts test/renderer/features/runtime-provider-management/RuntimeProviderErrorAlert.test.ts test/main/services/team/taskChangeLedgerFixtures.integration.test.ts test/main/services/team/ReviewApplierService.test.ts test/main/services/team/FileContentResolver.test.ts test/main/services/team/ChangeExtractorService.test.ts test/renderer/store/changeReviewSlice.test.ts test/renderer/utils/reviewKey.test.ts test/main/services/team/TeamLogSourceTracker.test.ts test/main/services/team/stallMonitor/TeamTaskLogFreshnessReader.test.ts"
+    },
+    {
+      "line": 855,
+      "command": "node --import tsx --test test/main/services/team/startup-cleanup/startup-cleanup.node.mjs"
+    }
+  ],
+  "testCommands": [
+    {
+      "line": 738,
+      "command": "pnpm exec vitest run --environment node test/main/services/team/fileLock.test.ts test/main/services/team/fileLock.publication.test.ts"
+    },
+    {
+      "line": 762,
+      "command": "pnpm --dir agent-teams-controller exec vitest run test/fileLock.test.js"
+    },
+    {
+      "line": 781,
+      "command": "pnpm exec vitest run --maxWorkers=1 test/main/services/team/TaskChangeLedgerReader.test.ts test/features/member-work-sync/main/JsonMemberWorkSyncReportJournal.test.ts test/main/services/team/TeamInboxReader.test.ts test/main/utils/childProcess.windows.test.ts test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts test/main/utils/processStartTime.test.ts test/main/utils/windowsProcessTable.test.ts test/main/services/team/OpenCodeManagedHostProcessCleanup.test.ts src/main/services/team/contracts/__tests__/TeamProvisioningStartupCleanupBusy.test.ts src/main/services/team/contracts/__tests__/TeamProvisioningApis.test.ts test/main/ipc/teams.test.ts test/renderer/store/teamSlice.test.ts test/main/services/team/OpenCodeStartupCleanupBudget.test.ts test/main/services/team/OpenCodeStartupCleanupRecovery.test.ts test/main/services/team/OpenCodeBridgeCommandClient.test.ts test/main/services/team/OpenCodeHostStartupLockCleanup.test.ts test/main/utils/processKill.test.ts test/main/services/runtime/ProviderSummaryTimeout.safe-e2e.test.ts src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.test.ts test/main/features/runtime-provider-management/catalogDiagnostics.test.ts test/main/features/runtime-provider-management/AgentTeamsRuntimeProviderManagementCliClient.test.ts src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.test.ts test/renderer/features/runtime-provider-management/OpenCodeCatalogErrorAlert.test.ts test/renderer/features/runtime-provider-management/RuntimeProviderErrorAlert.test.ts test/main/services/team/taskChangeLedgerFixtures.integration.test.ts test/main/services/team/ReviewApplierService.test.ts test/main/services/team/FileContentResolver.test.ts test/main/services/team/ChangeExtractorService.test.ts test/renderer/store/changeReviewSlice.test.ts test/renderer/utils/reviewKey.test.ts test/main/services/team/TeamLogSourceTracker.test.ts test/main/services/team/stallMonitor/TeamTaskLogFreshnessReader.test.ts"
+    },
+    {
+      "line": 855,
+      "command": "node --import tsx --test test/main/services/team/startup-cleanup/startup-cleanup.node.mjs"
+    }
+  ],
+  "testResults": {
+    "appLock": {
+      "files": 2,
+      "passed": 110,
+      "skipped": 1
+    },
+    "controllerLock": {
+      "files": 1,
+      "passed": 11,
+      "skipped": 0
+    },
+    "mainWindows": {
+      "files": 32,
+      "passed": 1377,
+      "skipped": 6
+    },
+    "startupCleanupNode": {
+      "entryFiles": 1,
+      "tests": 25,
+      "passed": 25,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0
+    },
+    "aggregate": {
+      "passed": 1523,
+      "skipped": 7,
+      "failed": 0,
+      "vitestFiles": 35,
+      "nodeEntryFiles": 1
+    }
+  },
+  "actualVitestFiles": [
+    {
+      "path": "test/main/services/team/fileLock.test.ts",
+      "cases": 41,
+      "skipped": 1,
+      "passed": 40,
+      "line": 750
+    },
+    {
+      "path": "test/main/services/team/fileLock.publication.test.ts",
+      "cases": 70,
+      "skipped": 0,
+      "passed": 70,
+      "line": 751
+    },
+    {
+      "path": "agent-teams-controller/test/fileLock.test.js",
+      "cases": 11,
+      "skipped": 0,
+      "passed": 11,
+      "line": 774
+    },
+    {
+      "path": "test/renderer/store/teamSlice.test.ts",
+      "cases": 276,
+      "skipped": 0,
+      "passed": 276,
+      "line": 793
+    },
+    {
+      "path": "test/main/ipc/teams.test.ts",
+      "cases": 297,
+      "skipped": 0,
+      "passed": 297,
+      "line": 797
+    },
+    {
+      "path": "test/main/features/runtime-provider-management/AgentTeamsRuntimeProviderManagementCliClient.test.ts",
+      "cases": 102,
+      "skipped": 0,
+      "passed": 102,
+      "line": 801
+    },
+    {
+      "path": "test/renderer/store/changeReviewSlice.test.ts",
+      "cases": 88,
+      "skipped": 0,
+      "passed": 88,
+      "line": 802
+    },
+    {
+      "path": "test/main/services/team/ReviewApplierService.test.ts",
+      "cases": 61,
+      "skipped": 1,
+      "passed": 60,
+      "line": 803
+    },
+    {
+      "path": "test/main/services/team/ChangeExtractorService.test.ts",
+      "cases": 53,
+      "skipped": 0,
+      "passed": 53,
+      "line": 804
+    },
+    {
+      "path": "test/main/services/team/TaskChangeLedgerReader.test.ts",
+      "cases": 30,
+      "skipped": 3,
+      "passed": 27,
+      "line": 806
+    },
+    {
+      "path": "test/main/services/team/OpenCodeBridgeCommandClient.test.ts",
+      "cases": 84,
+      "skipped": 0,
+      "passed": 84,
+      "line": 807
+    },
+    {
+      "path": "src/main/services/team/contracts/__tests__/TeamProvisioningApis.test.ts",
+      "cases": 27,
+      "skipped": 0,
+      "passed": 27,
+      "line": 811
+    },
+    {
+      "path": "test/main/services/team/TeamInboxReader.test.ts",
+      "cases": 36,
+      "skipped": 0,
+      "passed": 36,
+      "line": 812
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.test.tsx",
+      "cases": 41,
+      "skipped": 0,
+      "passed": 41,
+      "line": 813
+    },
+    {
+      "path": "test/main/services/team/taskChangeLedgerFixtures.integration.test.ts",
+      "cases": 17,
+      "skipped": 0,
+      "passed": 17,
+      "line": 814
+    },
+    {
+      "path": "test/main/services/team/TeamLogSourceTracker.test.ts",
+      "cases": 19,
+      "skipped": 0,
+      "passed": 19,
+      "line": 815
+    },
+    {
+      "path": "test/main/services/team/FileContentResolver.test.ts",
+      "cases": 17,
+      "skipped": 0,
+      "passed": 17,
+      "line": 826
+    },
+    {
+      "path": "test/features/member-work-sync/main/JsonMemberWorkSyncReportJournal.test.ts",
+      "cases": 22,
+      "skipped": 1,
+      "passed": 21,
+      "line": 827
+    },
+    {
+      "path": "test/main/services/team/OpenCodeStartupCleanupRecovery.test.tsx",
+      "cases": 6,
+      "skipped": 0,
+      "passed": 6,
+      "line": 828
+    },
+    {
+      "path": "test/main/services/team/OpenCodeHostStartupLockCleanup.test.ts",
+      "cases": 22,
+      "skipped": 0,
+      "passed": 22,
+      "line": 829
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/OpenCodeCatalogErrorAlert.test.ts",
+      "cases": 12,
+      "skipped": 0,
+      "passed": 12,
+      "line": 830
+    },
+    {
+      "path": "test/main/utils/windowsProcessTable.test.ts",
+      "cases": 12,
+      "skipped": 0,
+      "passed": 12,
+      "line": 831
+    },
+    {
+      "path": "test/main/features/runtime-provider-management/catalogDiagnostics.test.ts",
+      "cases": 7,
+      "skipped": 0,
+      "passed": 7,
+      "line": 832
+    },
+    {
+      "path": "src/main/services/team/contracts/__tests__/TeamProvisioningStartupCleanupBusy.test.ts",
+      "cases": 11,
+      "skipped": 0,
+      "passed": 11,
+      "line": 833
+    },
+    {
+      "path": "test/renderer/utils/reviewKey.test.ts",
+      "cases": 10,
+      "skipped": 0,
+      "passed": 10,
+      "line": 834
+    },
+    {
+      "path": "test/main/services/team/stallMonitor/TeamTaskLogFreshnessReader.test.ts",
+      "cases": 4,
+      "skipped": 0,
+      "passed": 4,
+      "line": 835
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/RuntimeProviderErrorAlert.test.ts",
+      "cases": 7,
+      "skipped": 0,
+      "passed": 7,
+      "line": 836
+    },
+    {
+      "path": "test/main/services/team/OpenCodeManagedHostProcessCleanup.test.ts",
+      "cases": 61,
+      "skipped": 0,
+      "passed": 61,
+      "line": 837
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.test.ts",
+      "cases": 29,
+      "skipped": 0,
+      "passed": 29,
+      "line": 839
+    },
+    {
+      "path": "test/main/utils/processStartTime.test.ts",
+      "cases": 17,
+      "skipped": 0,
+      "passed": 17,
+      "line": 840
+    },
+    {
+      "path": "test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts",
+      "cases": 2,
+      "skipped": 1,
+      "passed": 1,
+      "line": 841
+    },
+    {
+      "path": "test/main/services/runtime/ProviderSummaryTimeout.safe-e2e.test.ts",
+      "cases": 2,
+      "skipped": 0,
+      "passed": 2,
+      "line": 843
+    },
+    {
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "cases": 5,
+      "skipped": 0,
+      "passed": 5,
+      "line": 846
+    },
+    {
+      "path": "test/main/utils/processKill.test.ts",
+      "cases": 3,
+      "skipped": 0,
+      "passed": 3,
+      "line": 847
+    },
+    {
+      "path": "test/main/services/team/OpenCodeStartupCleanupBudget.test.ts",
+      "cases": 3,
+      "skipped": 0,
+      "passed": 3,
+      "line": 848
+    }
+  ],
+  "nodeCaseNames": [
+    {
+      "line": 864,
+      "name": "deadline validation, monotonic clock and nonzero clamped timeouts (1.6414ms)"
+    },
+    {
+      "line": 865,
+      "name": "12s enumeration and repeated 4s native identities use startup caps; no dispose (2.3031ms)"
+    },
+    {
+      "line": 866,
+      "name": "exhaustion after awaited identity prevents mutation and retains multiple candidates (0.9684ms)"
+    },
+    {
+      "line": 867,
+      "name": "legacy enumeration and identity defaults stay unchanged (0.3237ms)"
+    },
+    {
+      "line": 868,
+      "name": "taskkill callback drainage is awaited; root gone does not erase tree error in startup (1.2758ms)"
+    },
+    {
+      "line": 869,
+      "name": "PID reuse and budget exhaustion after fallback identity never directly signal (0.9044ms)"
+    },
+    {
+      "line": 870,
+      "name": "new bridge dispatch preserves timeout uncertainty without legacy fallback (0.4823ms)"
+    },
+    {
+      "line": 871,
+      "name": "gate precedes preflight; drained partial exclusions, bounded manual retry and no queued launch (4.6017ms)"
+    },
+    {
+      "line": 872,
+      "name": "unsupported command releases; timeout and invalid acknowledgement retain gate (1.0318ms)"
+    },
+    {
+      "line": 873,
+      "name": "deadline leaves a live helper gated while unrelated initialization can resume; retry does not queue work (1.2491ms)"
+    },
+    {
+      "line": 874,
+      "name": "startup-only option leaves Unix and shutdown disposal behavior unchanged (0.7482ms)"
+    },
+    {
+      "line": 875,
+      "name": "startup sweep retains terminal tree failure even when root died (0.3365ms)"
+    },
+    {
+      "line": 876,
+      "name": "read-only initialization expiry releases gate without dispatching late cleanup (0.3799ms)"
+    },
+    {
+      "line": 877,
+      "name": "shutdown during registry observes current work without later sweep or maintenance (0.3903ms)"
+    },
+    {
+      "line": 878,
+      "name": "shutdown during settle observes current work without later sweep or maintenance (0.2291ms)"
+    },
+    {
+      "line": 879,
+      "name": "shutdown after awaited identity prevents startup mutation (0.2811ms)"
+    },
+    {
+      "line": 880,
+      "name": "unsupported/pre-mutation failure performs independent maintenance exactly once, no host fallback (0.4784ms)"
+    },
+    {
+      "line": 881,
+      "name": "registry response after deadline releases only on original terminal drainage; checks never resubmit (0.5272ms)"
+    },
+    {
+      "line": 882,
+      "name": "shutdown continues observing a started local helper and skips later force work (0.3805ms)"
+    },
+    {
+      "line": 883,
+      "name": "strict actual runtime records accept complete/partial, retained OAuth and non-equal registry counts (0.5099ms)"
+    },
+    {
+      "line": 884,
+      "name": "actual retained runtime hosts preserve exclusions and coverage (late=false) (1.0518ms)"
+    },
+    {
+      "line": 885,
+      "name": "actual retained runtime hosts preserve exclusions and coverage (late=true) (0.4087ms)"
+    },
+    {
+      "line": 886,
+      "name": "malformed terminal evidence stays unknown/protected without resubmission (late=false) (4.4051ms)"
+    },
+    {
+      "line": 887,
+      "name": "malformed terminal evidence stays unknown/protected without resubmission (late=true) (3.0735ms)"
+    },
+    {
+      "line": 888,
+      "name": "shutdown hook closes current owner during identity and also fences later construction (0.7254ms)"
+    }
+  ],
+  "sourceInputs": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 175238,
+      "gitBlob": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+      "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce"
+    },
+    {
+      "path": ".node-version",
+      "bytes": 8,
+      "gitBlob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5"
+    },
+    {
+      "path": "agent-teams-controller/package.json",
+      "bytes": 526,
+      "gitBlob": "293fb7e08df5e9cc00663e0e5454dfde6ecfb103",
+      "sha256": "7da9c6dae6931016efbdd571ed858529851268a5b965d955a9d4c76ed1395a2e"
+    },
+    {
+      "path": "agent-teams-controller/test/fileLock.test.js",
+      "bytes": 6197,
+      "gitBlob": "235e8fd3cca562cbd2d1561bf8e78afc0d4d3fe0",
+      "sha256": "04b243e0cf94f81e3e639d67cf8b965d37a0864cfec70393444e31c6ca1ab56f"
+    },
+    {
+      "path": "package.json",
+      "bytes": 26839,
+      "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "bytes": 12355,
+      "gitBlob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "bytes": 456,
+      "gitBlob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab"
+    },
+    {
+      "path": "packages/task-change-ledger/package.json",
+      "bytes": 2714,
+      "gitBlob": "0fac5843889e1b28d53712f353bce1b0bae855a4",
+      "sha256": "a0db21117b905b414e825862d8bc93cfe9280975c8b91e1afa6cca2e1570a132"
+    },
+    {
+      "path": "packages/task-change-ledger/tsconfig.json",
+      "bytes": 378,
+      "gitBlob": "ff7683dc99c69dbf8c884ba138382468c9c86314",
+      "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "gitBlob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "bytes": 6946,
+      "gitBlob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea"
+    },
+    {
+      "path": "scripts/ci/ci-feedback.mts",
+      "bytes": 19265,
+      "gitBlob": "9d734783b4e273a4e4fbad27d4e51984646d436d",
+      "sha256": "c89f9b195d5efb183db154f87f3fee0c4e30345e4f24c6797b9a99e09311e40e"
+    },
+    {
+      "path": "scripts/ci/enforce-pnpm-install.mjs",
+      "bytes": 312,
+      "gitBlob": "fb33357b9d8b38c2d133593791153aa2fe0bdcf0",
+      "sha256": "79b147e33807a5d236bda58f6fd4c401c54015b09684e66b054497d08a4f9bed"
+    },
+    {
+      "path": "scripts/ci/install-dependencies-with-retry.mjs",
+      "bytes": 5259,
+      "gitBlob": "cbf2463eb47d22c3d87d9eec001edad26dd68ff0",
+      "sha256": "c8dc0b63fc490fd5a9a1b4abf0631b66c30e1ccda2199094c86e49a6e250d01e"
+    },
+    {
+      "path": "scripts/postinstall-electron.cjs",
+      "bytes": 1841,
+      "gitBlob": "71d2e9fc938c082bac2b6f5f0d66b6cc4eb9e78b",
+      "sha256": "28e967a5ebc00448d1c79ef388344e822ba893a6ec6fdc4e78cfdbaab7411dae"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.test.ts",
+      "bytes": 29176,
+      "gitBlob": "a342ac02d7431a29ae0a956e7a1c52d025642b2b",
+      "sha256": "004bd429e06ab340b35ca911665d8ebecb318b116a02e5eb800e1fbee27f29da"
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useOpenCodeConnectedModelCatalog.test.tsx",
+      "bytes": 29937,
+      "gitBlob": "5125c41e5a2132a060091c978335fdcb4108d404",
+      "sha256": "0eef35fb36824511c19897aec461aae18fecf7ab68cc23af7e682e83ec9f2858"
+    },
+    {
+      "path": "src/main/services/team/contracts/__tests__/TeamProvisioningApis.test.ts",
+      "bytes": 46798,
+      "gitBlob": "0464089140d3da259086e6003941c9dce271a226",
+      "sha256": "a9b502cf05f9d28b50a408838491ab3df109ee87a5fd3f0bd56575e32694c015"
+    },
+    {
+      "path": "src/main/services/team/contracts/__tests__/TeamProvisioningStartupCleanupBusy.test.ts",
+      "bytes": 6843,
+      "gitBlob": "37e0542b97352ba740b6823c8852d7243457621e",
+      "sha256": "736902f6c228a9e8bb8f3cd6d116b78a34131192348a226dd3c7d92739c64697"
+    },
+    {
+      "path": "test/features/member-work-sync/main/JsonMemberWorkSyncReportJournal.test.ts",
+      "bytes": 18671,
+      "gitBlob": "7c4341d26d8e3328ea8807dfd845a608eaf2586a",
+      "sha256": "b31daa14c5d5dc9ee910581f9cb44bc0f1ca99bffdbe0cb1f5b8a113bd9629e1"
+    },
+    {
+      "path": "test/main/features/runtime-provider-management/AgentTeamsRuntimeProviderManagementCliClient.test.ts",
+      "bytes": 144117,
+      "gitBlob": "2b7044353a8ff177facd1613c557e2a84ec50361",
+      "sha256": "5baa9d67eb896d601357f8d19aa5de9488b9e9bf7717747fd8be1fb4dba4b59d"
+    },
+    {
+      "path": "test/main/features/runtime-provider-management/catalogDiagnostics.test.ts",
+      "bytes": 7019,
+      "gitBlob": "98dd23ad8035719bcb15a460126661acdc44e96d",
+      "sha256": "6ce4d8a558ce9c8b13a2cc981ab3ca01d584b2238353d06b027675bf7b0ffb27"
+    },
+    {
+      "path": "test/main/ipc/teams.test.ts",
+      "bytes": 324655,
+      "gitBlob": "06aa3a4c97a8484e5a0fe0b423609d151b8a610c",
+      "sha256": "b6cc8719340ae672b7f48dbaea89f78f78aa7d4549f734e2f37528a698c96191"
+    },
+    {
+      "path": "test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts",
+      "bytes": 10516,
+      "gitBlob": "6a124efaccfb0b876640ac0076d343acd1946639",
+      "sha256": "f421cbfacc5c74f43aacabf1a0b9afd340fcda8235a86d1b8a02d00a42b39553"
+    },
+    {
+      "path": "test/main/services/runtime/ProviderSummaryTimeout.safe-e2e.test.ts",
+      "bytes": 5932,
+      "gitBlob": "5f9eb4a4577b75aac5344fcfe1c1f145a26ed2f7",
+      "sha256": "131f211917684241e5ad4276c20e268743085d9369ff66e3654fac2d5908e07c"
+    },
+    {
+      "path": "test/main/services/team/ChangeExtractorService.test.ts",
+      "bytes": 102222,
+      "gitBlob": "296c59db87ebed6082f9a5e4aa73571ad9bf2ff4",
+      "sha256": "b9cfacfeb5be27b66ace2bfc5ef7e2430196f3da1c4b943cc29836282673f844"
+    },
+    {
+      "path": "test/main/services/team/FileContentResolver.test.ts",
+      "bytes": 22012,
+      "gitBlob": "efe977f10bba0912a56291bd4bd5718b99d3fa47",
+      "sha256": "6e715919a87250e7d74aab271f36a88a14a1d47fc99e631c32536f815f2da476"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeBridgeCommandClient.test.ts",
+      "bytes": 54929,
+      "gitBlob": "9f4db4e812dae48160d704f38c699ee54b31f26d",
+      "sha256": "61ebc33e42963683c9fa32642f83cfd9c8185e70115bb1286ca787c45f7fe48e"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeHostStartupLockCleanup.test.ts",
+      "bytes": 11901,
+      "gitBlob": "41b165051308df25ec08e9daf26a2a9499ef4ec6",
+      "sha256": "e1306c9e1935e6f8a9ebb084c7fcf957dfbb2d8657284c1656ff18ff14ca467b"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeManagedHostProcessCleanup.test.ts",
+      "bytes": 53564,
+      "gitBlob": "ca099878a05c01b8965b09af9c57ef10e5c3b2b2",
+      "sha256": "e40ec7aabaa06fab262ca20f39782faba02284eea262d02765abbf76492ad0f7"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeStartupCleanupBudget.test.ts",
+      "bytes": 2071,
+      "gitBlob": "2aa3974dcf3f6fb68034af8e85a8493d167a3591",
+      "sha256": "3674350bf54e43ace2331e4bbc55c2a6482ea6b234a124f02495d2dde8f2a5ac"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeStartupCleanupRecovery.test.tsx",
+      "bytes": 13103,
+      "gitBlob": "6877bb7b2a20d59a6c26fe499afac28ec739c559",
+      "sha256": "6004287e661e7fce62b99678a9fbf8664a09e95094bb3c0b883f2ef22684f1d3"
+    },
+    {
+      "path": "test/main/services/team/ReviewApplierService.test.ts",
+      "bytes": 118855,
+      "gitBlob": "f60d3dfbe2f9fdb9774cd010e7ede2b27081b121",
+      "sha256": "7435d0a3e0fab3657d2b3b52a9cc669a77cc5c0f83f9b7ddb77d3820f3b0f650"
+    },
+    {
+      "path": "test/main/services/team/TaskChangeLedgerReader.test.ts",
+      "bytes": 62874,
+      "gitBlob": "ebd5a492c2cf26cac9e3bb2ccf9603f6f8a5dcb4",
+      "sha256": "1090fab67feac5bb3f82c29d50fe9b788b5fa6ae02e25e48b98b23ae46334e05"
+    },
+    {
+      "path": "test/main/services/team/TeamInboxReader.test.ts",
+      "bytes": 38191,
+      "gitBlob": "9d3e4feec441afb88ca2b71fa3fb593cd0a65734",
+      "sha256": "24ae8a6bc0ae9536f923975590b27562f194a872d59cef9cc26710348b5b21cc"
+    },
+    {
+      "path": "test/main/services/team/TeamLogSourceTracker.test.ts",
+      "bytes": 27248,
+      "gitBlob": "6209f64c00679dc862c6a9a91bf6593d2e22d74e",
+      "sha256": "e46fe9f447c20d604dba70ab919dc9356a6367c082ddec35d67dbb7a130644b5"
+    },
+    {
+      "path": "test/main/services/team/fileLock.publication.test.ts",
+      "bytes": 13593,
+      "gitBlob": "3fe9361dba3b77a76ef7bd547ba517c8142da90b",
+      "sha256": "6aa992b8c87ced785ad7f4da0b65e97281923680a3e46d79e8bc43789123338b"
+    },
+    {
+      "path": "test/main/services/team/fileLock.test.ts",
+      "bytes": 14338,
+      "gitBlob": "79ed6e153bc85175a1c56ef10a79d2d019bf2e49",
+      "sha256": "bdcfe83e462339d5add9ed337b92b4c2588364c37301a125036845cad211a028"
+    },
+    {
+      "path": "test/main/services/team/stallMonitor/TeamTaskLogFreshnessReader.test.ts",
+      "bytes": 4868,
+      "gitBlob": "a11f4e5db054c1feb7721e4b7a03318d75db2c95",
+      "sha256": "c6b447fd129817c8cb7a7870a762bd54f27fd844960b7d17cd874d9372d5b89f"
+    },
+    {
+      "path": "test/main/services/team/startup-cleanup/startup-cleanup.node.mjs",
+      "bytes": 23732,
+      "gitBlob": "14170589834b1a529d807320c6f56fd9d6d93951",
+      "sha256": "34064d2c9eae93825b7572484a3009c19bd70e393c93c121e3a76412693f7231"
+    },
+    {
+      "path": "test/main/services/team/taskChangeLedgerFixtures.integration.test.ts",
+      "bytes": 27300,
+      "gitBlob": "df386e457d4ff4b0f153159562692351ae37bdb8",
+      "sha256": "829e6c9befc27f46761733c24c0fc745d7f83277bacae58d1a6ec2bc29d08968"
+    },
+    {
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "bytes": 5876,
+      "gitBlob": "1ac15d2da663de52b3ff6f7a300fec99fb7570ff",
+      "sha256": "ce1945d9a69349cb5920129d946b7d6cc4db6958ff739b5b21fa731e0d9f7695"
+    },
+    {
+      "path": "test/main/utils/processKill.test.ts",
+      "bytes": 3290,
+      "gitBlob": "2cd96b477931038af6dde0eeb8c12b1d0a93aedc",
+      "sha256": "1d607d62f00fe1c49c412a0447ffc0720c3805066654d1f728036f8b9e113c2e"
+    },
+    {
+      "path": "test/main/utils/processStartTime.test.ts",
+      "bytes": 11160,
+      "gitBlob": "c660d7f262c63ed6d8ccaf9515aa978714bc6eef",
+      "sha256": "135e41fbe64b4435b6552c7851df37345bc67191379c296ddb16b2a87ba4676e"
+    },
+    {
+      "path": "test/main/utils/windowsProcessTable.test.ts",
+      "bytes": 11075,
+      "gitBlob": "a53e209350beba884ba7a23e5862e4ba0815cf6a",
+      "sha256": "2f6da394a3c7c7951c8619dec17ca1aa896baedb2f4b11c9c55e156089e567c6"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/OpenCodeCatalogErrorAlert.test.ts",
+      "bytes": 11668,
+      "gitBlob": "f05f09c941ca27a58cdd5167749fdcccaa17dda8",
+      "sha256": "1724a2a723ff96254909711abe1ff47093ae8859b44fca50fdd4dbdb996ee77c"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/RuntimeProviderErrorAlert.test.ts",
+      "bytes": 4258,
+      "gitBlob": "481dd1ef46f887517a4da591b64f5ccaa224ea78",
+      "sha256": "2c1f48da4c371fdf4a79c07857fa693eaa557657e7665df0b1c7034b10be9820"
+    },
+    {
+      "path": "test/renderer/store/changeReviewSlice.test.ts",
+      "bytes": 126913,
+      "gitBlob": "759c580f05646b51714baef1a59c15facee515e1",
+      "sha256": "9740a7fdbd28c63050927f76c516ece1655c75a8b3229b5bffdf888517ddd252"
+    },
+    {
+      "path": "test/renderer/store/teamSlice.test.ts",
+      "bytes": 363086,
+      "gitBlob": "08fbd081d1a1cb4cac9a026d11313c165e776d17",
+      "sha256": "808eb5c6c6222daf474fe872d30d39828ce7cb75e1fe7faa2daeb8fe969bca8e"
+    },
+    {
+      "path": "test/renderer/utils/reviewKey.test.ts",
+      "bytes": 6539,
+      "gitBlob": "2036a85b9eb4563029770450d55c43332636678d",
+      "sha256": "500b166907403a5fb63209ba6117dbda62385973d486bcb8e3147df2794d1eb0"
+    },
+    {
+      "path": "test/scripts/ciOptionalWorkflows.test.mts",
+      "bytes": 8284,
+      "gitBlob": "20fcd7ae72fc5ca98d4693a2ddf59326ff8afd4d",
+      "sha256": "477e9b4bf56104f868874d6ea2e8e81dfa8318566f98895a25e24af0d33c92b6"
+    },
+    {
+      "path": "vitest.config.ts",
+      "bytes": 1187,
+      "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc"
+    }
+  ],
+  "sourceInputCount": 52,
+  "sourceInputCoverage": "Exact command/config/package/install and actual discovered test leaves, not a transitive imported-source/dependency census. Vitest .ts filter operands correctly discovered two .tsx test files; actual paths are retained separately. Whole repository tree matches frozen9e independently.",
+  "metadataPlanSeparateObservation": {
+    "response": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-plan-original-log-response.json",
+      "bytes": 118835,
+      "gitBlob": "9353fdabfb829c4b1dbaf04ce0b84444706bc232",
+      "sha256": "5e6c2db2ee034130ca01129d59a0ebd109edbd2c9d7f528fdc6d9832d234816a"
+    },
+    "decodedOriginalLog": {
+      "bytes": 117646,
+      "gitBlob": "a97b54613c6c95bcf4b9d663a81ea8029a2ed4f9",
+      "sha256": "c60aef2d978d1d1def2b4107783b50bb5ea501b9bf07204fc1f3fb62dc631f71"
+    },
+    "policyCommand": "node --test test/scripts/ciOptionalWorkflows.test.mts",
+    "policyTests": 17,
+    "policyPass": 17,
+    "policyFail": 0,
+    "policySkipped": 0,
+    "planMessage": "Full qualification for .github/workflows/announcements-content.yml; no reusable producer: Current PR inputs changed",
+    "includedInLedgerAggregate": false,
+    "limit": "These are separate original planning observations, not proof the entire General workflow passed or M source executed."
+  },
+  "negativeScope": [
+    "This is old9e source, proven through its identical-tree merge checkout; it does not qualify M0660, its new held-value privacy canaries, the original full10 Team Node command, or the93-operand lint command.",
+    "It is not a retry or repair of the local K SIGKILL and does not establish a successful local Node24 build. Node26 engine warnings are retained; no Node24/Node26 equivalence is inferred.",
+    "All seven original skipped tests remain skipped. The 17 planning tests are not silently added to the ledger job total.",
+    "These commands do not run native Host Process/V2/P08/P09 qualification, packaged desktop journeys, or full frontend/backend typechecking. No full native/source custody or complete provider-delivery claim follows.",
+    "The two named safe subprocess suites were source-read: provider summaries execute disposable Node programs with exact arguments/private emptyPATH environments, and Windows OpenCode resolution compiles a finite C# --version fixture with controlled registry metadata. Neither is evidence of real Claude/Codex qualification. Other test internals were not exhaustively re-audited.",
+    "The original raw log reports Electron binary downloading text in one IPC test despite the install profile; no absence of all dependency/network activity is asserted.",
+    "Original runner cleanup terminates vctip as an orphan. That is runner cleanup, not a provider Host/Job custody receipt.",
+    "No project execution, dependency installation, CI action, source/ref mutation or repeated job poll was performed by this review."
+  ]
+}

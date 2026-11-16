@@ -1,0 +1,85 @@
+{
+  "schema": "current-M-completed-UI-evidence-bundle/v1",
+  "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "name": "M0660-Creation-Ubuntu",
+  "completedJobs": [
+    133017913708
+  ],
+  "payloadCount": 9,
+  "payloadBytes": 3078474,
+  "officialArchives": 1,
+  "officialArchiveMembers": 41,
+  "originalPNG": 40,
+  "actuallyViewedPNG": 3,
+  "rows": [
+    {
+      "bundlePath": "ci-desktop-m0660/creation-official-artifacts-0115.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-official-artifacts-0115.json",
+      "bytes": 2709,
+      "blob": "1a8af8a454c09029dd8f1aa59df48a68f23a3b91",
+      "sha256": "d8b1ee39fb817f27055216871330d778671334eebe9d01d42e0807e64a728506"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/creation-ubuntu/Plan29-creation-ubuntu-appendix.md",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-ubuntu/Plan29-creation-ubuntu-appendix.md",
+      "bytes": 3955,
+      "blob": "4fba3738842ae7c34a76ddcc99bcf1b5623a2646",
+      "sha256": "e28b8b12d9b503a90efb80d168dfe901b74563743a05af7d0e9d5566725ff2a5"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/creation-ubuntu/archive-integrity.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-ubuntu/archive-integrity.json",
+      "bytes": 10959,
+      "blob": "0ff6a84b70717eb8751d3f3c41d92923445cbeb1",
+      "sha256": "1a695a7a066523d279b496f40bf581093fb0cd0131c433958f9c7607ea65ecd9"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/creation-ubuntu/creation-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-ubuntu/creation-audit.json",
+      "bytes": 18543,
+      "blob": "43ca926c3ac3ede9eb9ddd8c027a7acc425b590c",
+      "sha256": "722ba43d892f4b542db7b8d73138159bee4081d6ecd08fb4aca4304b25772168"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/creation-ubuntu/independent-creation-ubuntu-review.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-ubuntu/independent-creation-ubuntu-review.json",
+      "bytes": 31396,
+      "blob": "b407f6a5c3046b229838bedcdb588ca62894fe5e",
+      "sha256": "8940c8726ba1d00a36f057ffeb0181e1b8a50c643367d1b3cdda896e82cd6067"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/creation-ubuntu/job-133017913708.log",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-ubuntu/job-133017913708.log",
+      "bytes": 75500,
+      "blob": "112b4cd66389e4e607e214c15818c3c10f99f983",
+      "sha256": "55a4144418e17dbd7081def329ea536d3e35b5a47dfbb8938cbaff4ab847565a"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/creation-ubuntu/original-artifact-14189723419.zip",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-ubuntu/original-artifact-14189723419.zip",
+      "bytes": 2846798,
+      "blob": "291d985889293a45afd014a5782075153bac5de6",
+      "sha256": "7461958f913bae4fd3c40c32d24d4785facde4a1bd5f1e28b4c14a6cd2cf0026"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/full-api-jobs-0114.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0114.json",
+      "bytes": 29861,
+      "blob": "23655b2566ab6a7ae529dc365852771fd8336ae3",
+      "sha256": "d6423ed27b1c04c14ab85d5736108de254e0ab126b359a44f3d7153badbc14ec"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/initial-api-runs-jobs-0038.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/initial-api-runs-jobs-0038.json",
+      "bytes": 58753,
+      "blob": "8689e935e0ae5041a5bdc3c2d4e6b2169b529f5b",
+      "sha256": "6ed2698023541fec692ef81f93ee4bd4cd12a44f3decdde234284c4a1b4e6d4a"
+    }
+  ],
+  "limits": [
+    "Original source-bound evidence only; Installer remains FAILURE where included.",
+    "No transfer to privacy Team10 RED/GREEN, other UI/native lanes, full workspace/backend types, release or a later source.",
+    "Frozen earlier checkpoints remain unchanged; new independent reviews are separately retained payloads.",
+    "Original raw ZIPs recover all derivative members; extracted duplicates are not separately bundled."
+  ]
+}

@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "reviewer": "/root/ui_failures",
+  "observedAtUTC": "2026-11-16 02:00:13 UTC",
+  "verdict": "APPROVE exact prospective source/R1; no source application or runtime GREEN claimed.",
+  "scope": "Independent review of root's fresh current-M one-helper R1, published preimages, exact candidate/inverse and preservation closure. The underlying bounded redaction design was previously proposed by this reviewer and independently reviewed by Native; this record does not relabel its authorship or replace independent actual-RED review.",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "documentationBranchBase": "85355e11fcd08ffe87f96be5003675305458a354",
+  "exactObjects": {
+    "R1": {
+      "path": "R1-appendix.md",
+      "bytes": 8897,
+      "lines": 44,
+      "blob": "10c30b4146f8bd63152e9ba9533fb9d12fa6bc4f",
+      "sha256": "0b1e0b4482bd08bd86418c92a2d533f7c476ed28ee63716fd7205aa62f8e5495"
+    },
+    "metadata": {
+      "path": "candidate-metadata.json",
+      "bytes": 3918,
+      "lines": 91,
+      "blob": "a1511df8732b4776ed8b5afffb5505d624b11028",
+      "sha256": "eab54b9b329d4f96f5a70dc57adb7a14b3fb7f971609d568f497385c02f3a9d4"
+    },
+    "patch": {
+      "path": "candidate.patch",
+      "bytes": 1081,
+      "lines": 18,
+      "blob": "958de68314a85da4ef85237c3af79d72d3d623d1",
+      "sha256": "1de755555f8fa3963abab4f0dd744456b96f4db3191e0f40eac19093ab555196"
+    },
+    "preimage": {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "bytes": 7855,
+      "lines": 165,
+      "blob": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+      "sha256": "df315063bd119870f52b932daf72880ac4ea40340e023049a236fed79e505c37"
+    },
+    "candidate": {
+      "path": "observeMemberProcessStderr.ts",
+      "bytes": 8310,
+      "lines": 172,
+      "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7"
+    },
+    "unchangedTest": {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "bytes": 16103,
+      "lines": 277,
+      "blob": "0727339627757c3a96d54da2933eb7c1b60685f7",
+      "sha256": "2a738fca4120ae3361483abd948f7746d2025f32012b189e695085845bc3e191"
+    }
+  },
+  "byteVerification": {
+    "fullR1MetadataPatchCandidateRead": true,
+    "allHashesRecomputed": true,
+    "preimagesAtBothPublishedHeadsEqual": true,
+    "exactDiff": {
+      "added": 8,
+      "removed": 1,
+      "onlyOneExistingStatementReplaced": true
+    },
+    "inverse": "Replacing the exact eight-line insertion with the original one line reconstructs all 7,855 preimage bytes. No other helper byte changes.",
+    "preservedDurablePreview": "Candidate equals the complete already-published 0660 docs/evidence/stage-m-reconciliation-2026-11-16/future-green/observeMemberProcessStderr.ts.txt byte-for-byte.",
+    "currentMVersus9eNonDocumentationDeltas": 12,
+    "all12MReconciliationsPreserved": true,
+    "nonDocumentationLeafMap": {
+      "leafCount": 8798,
+      "serialization": "UTF8 compact sort_keys JSON array of path/mode/type/sha, sorted by path and excluding docs/ only",
+      "baseSha256": "bc2cf7b3aba4eb3b6d14f3a8c41bd173150a77cf3a1035fc65a4fbd5839e8a7a",
+      "candidateSha256": "d3ed00695b2d09d3bcd38d41830ddde5670908c858a600bae03c757dc00bc397",
+      "bothIndependentlyRecomputed": true,
+      "unchangedOtherLeaves": 8797
+    }
+  },
+  "semantics": {
+    "actualCounterexample": "Each actual original space/tab/mixed case first failed retained.includes(TEST_HELD_SUFFIX) at line258, proving suffix presence. Later prefix/exact-marker assertions remain unexecuted.",
+    "syntaxOrder": "The raw normalized value remains immutable. Existing redactSyntax still receives the original bounded value before any destructive exact-value masking; new whitespace normalization is only a comparison string.",
+    "ambiguousAdmission": "Only when existing syntax rewriting changes the whitespace-folded normalized original AND the existing held-value masker changes raw or folded input does the observer emit one [redacted] marker. Otherwise the original exact-value masker runs on the sanitized line.",
+    "caseReasoning": [
+      "Space case: raw held complete value is detected before Bearer rewriting can destroy its match.",
+      "Tab and mixed cases: the whitespace-folded input detects the held complete value without guessing any surviving token fragment.",
+      "No syntax rewrite: original safe/public context remains on the old exact-mask branch.",
+      "Syntax rewrite without a held-value match: original sanitized public context remains on the old branch.",
+      "Short exact values cannot alter syntax before classification. Existing short/overlap/quoted/URI/dump tests remain complete and unchanged."
+    ],
+    "conservativeCost": "Whole diagnostic context can be suppressed even when syntax rewriting and a held match occur in unrelated parts of the same line. One extra normalization and at most two extra existing-mask calls allocate bounded temporary strings/masks; zero-overhead is not claimed.",
+    "unchangedBoundaries": [
+      "Optional endpoint type and conditional collection; endpoint-absent standalone support.",
+      "All existing private form collection, normalization, exact overlap masking and existing sanitizer modules/APIs.",
+      "Original stream framing, 24KiB input/output checks, UTF-8/NUL/ANSI handling and 512-character dump scan tail.",
+      "No new filesystem/process/network/authority read, clock, deadline, timer, retry, provider action, listener or ownership.",
+      "Original data/finish catches, protected observer call, reentrant close behavior, tail flush and listener removal."
+    ],
+    "genericSecretGuarantee": "No new guarantee for arbitrary unrecognized secrets/encodings is established; this source correction is bounded by the existing held-value selection and syntax policy.",
+    "caps": {
+      "helperLines": 172,
+      "originalCap": 800,
+      "teamSliceActualLines": 5017,
+      "teamSliceExistingCap": 5020,
+      "exceptionTableUnchanged": true
+    }
+  },
+  "validation": {
+    "actualRed": {
+      "job": 133017916079,
+      "run": 43780997237,
+      "rawLogBytes": 123603,
+      "rawLogBlob": "a077622804d499d0a8ca20465aa6d7eba62b2b5c",
+      "rawLogSha256": "8a07b50c59d8d8a7507c9b5279cae5cfe50f28895f90474a12518eddc8f7b27b",
+      "whole10": {
+        "tests": 177,
+        "pass": 174,
+        "fail": 3,
+        "skip": 0
+      },
+      "stderr": {
+        "tests": 24,
+        "pass": 21,
+        "fail": 3,
+        "skip": 0
+      },
+      "qualification": "Author full raw audit is frozen; root's independent actual RED R2 is a separate mandatory gate."
+    },
+    "exactCommandJoinedToSourceWorkflowAndRaw": true,
+    "all10CompleteOriginalFileOperandsPreserved": true,
+    "currentFastLint": {
+      "operands": 93,
+      "unique": 93,
+      "helperIncluded": true,
+      "unchanged": true,
+      "comesAfterContractStep": true
+    },
+    "downstream": "Original workspace and dedicated backend-project checks, typed lint and original guards remain required. Their prior skipped state is not a PASS.",
+    "onlyVenue": "Existing original CI; no local project/test/compiler/lint/install/Node/bootstrap or manual CI action.",
+    "futurePredictionOnly": {
+      "stderrPass": 24,
+      "whole10Pass": 177,
+      "noActualGreen": true
+    },
+    "qualificationLimits": "No native/provider/Desktop/whole-goal qualification or automatic combined Installer/OpenCode/P11 implementation follows from this source review."
+  },
+  "publicationGate": "Durably publish complete raw RED plus independent actual R2 and this fresh exact R1/source R2 before the separate one-helper child. Require fresh actual tree/readback and useful-cohort disposition before the normal primary advance; no forced refs or new workflow.",
+  "concerns": [],
+  "changesRequested": [],
+  "reviewerActions": {
+    "readOnlyGitAndScratchInspection": true,
+    "pureHashJsonDiffAudit": true,
+    "reviewArtifactWrittenOnly": true,
+    "projectExecution": false,
+    "sourceEdits": false,
+    "ciActions": false,
+    "refChanges": false,
+    "testsExecuted": false
+  }
+}

@@ -1,0 +1,285 @@
+{
+  "schemaVersion": 1,
+  "kind": "source-and-original-retained-UI-phase-review",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997349,
+  "jobId": 133040244339,
+  "originalLog": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/job-133040244339.log",
+    "bytes": 312815,
+    "blob": "54d03abce960911fabeea18886c7d307591245ef",
+    "sha256": "88401bfac2583e744b54b65d39593cb773e4de2c7b54bce90dbdea1d90d7d1fc"
+  },
+  "originalZip": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/artifact-14192765823.zip",
+    "bytes": 625025,
+    "blob": "ed207c9bf138be138427abcd2f93066716e439b0",
+    "sha256": "d84e424a053851aaab9c98e58fd3d2683632e8ad068b950bce926003cdd5f076"
+  },
+  "archiveAudit": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/archive-audit.json",
+    "bytes": 2456,
+    "blob": "1e1abb1589aaf3f421b2cd1fe61711a7de1679f9",
+    "sha256": "921e66ee396cb714990b981e052a5976fc6dd79cc8629d8e007bbcab219e43d1"
+  },
+  "originalReceipt": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/extracted/_temp/windows-same-main-process-ui.json",
+    "bytes": 750601,
+    "blob": "13f00f66b65073fe972abd96c78f464d73023f2b",
+    "sha256": "b7201be98fe33679e7e6a5c8ee3366e942bde08a32090d39344a911cd342d2ae"
+  },
+  "sameBeforeAfterSourceCount": 1798,
+  "limitedRehashedGitToWindowsSourceLeaves": [
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "gitBlob": "034d2253e0649bdeb5db0b12244656446150c31c",
+      "gitLfBytes": 34285,
+      "gitLfSha256": "a7057b647c13852fbabdebbb0d8da775a24d55382637d5947d06c733317213bc",
+      "recordedWindowsCrlfSha256": "eb4f7debc190c7840dcd562649c7df153dbb1a9744d6312483ab5c0639f21a75"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+      "gitLfBytes": 31223,
+      "gitLfSha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+      "recordedWindowsCrlfSha256": "9be5af55b58539523c03194b62ebb68f5b1b5363c8c3994deee833d91fed7499"
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+      "gitLfBytes": 12335,
+      "gitLfSha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+      "recordedWindowsCrlfSha256": "8b44f15d068ebda80de79947b58cd41ef0c8e7f86006ca2897d0b046394b9bdf"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "gitBlob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+      "gitLfBytes": 25052,
+      "gitLfSha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7",
+      "recordedWindowsCrlfSha256": "d66be68fdd7972145f4b807f32a44f3dd750a1c02f67e8fea423bcd5bb03f309"
+    }
+  ],
+  "full1798GitSourceAuditNotClaimedHere": true,
+  "originalFirstError": "AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: one-explicit-same-Main-Retry\n    at remaining (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:123:10)\n    at validateCensus (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:179:3)\n    at Object.assertOwnedRenderer (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:207:20)\n    at Object.waitRead (D:\\a\\agent-teams-ai\\agent-teams-ai\\scripts\\legacy-agent-host\\desktop-ui-controls.ts:157:15)\n    at file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:502:35",
+  "originalCounts": {
+    "mainStarts": 1,
+    "initialRuntimeOpen": 1,
+    "businessInput": 1,
+    "refreshClicks": 1,
+    "retryClicks": 1,
+    "uiStops": 0,
+    "quit": 1
+  },
+  "phases": [
+    {
+      "phase": "packaged-App-startup",
+      "atMs": 0.05400000000008731,
+      "budgetMs": 120000
+    },
+    {
+      "phase": "one-initial-Runtime-Open",
+      "atMs": 4436.473099999999,
+      "budgetMs": 45000
+    },
+    {
+      "phase": "one-original-business-input-and-UI",
+      "atMs": 8805.960899999998,
+      "budgetMs": 35000
+    },
+    {
+      "phase": "actual-Host-A-exit-and-metadata-Refresh",
+      "atMs": 28405.971299999997,
+      "budgetMs": 10000
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "atMs": 37301.0172,
+      "budgetMs": 10000
+    },
+    {
+      "phase": "original-product-Quit",
+      "atMs": 47983.038199999995,
+      "budgetMs": 30000
+    }
+  ],
+  "retryUi": {
+    "stages": {
+      "clickReturnedMs": 5380,
+      "writerObservedMs": 6819,
+      "hostCheckedMs": 7162,
+      "uiReadyMs": 8748
+    },
+    "returnedReads": 2,
+    "countTruncated": false,
+    "last": {
+      "atMs": 8748,
+      "result": "ready"
+    }
+  },
+  "originalRetryCensusRows": [
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 37303.3451,
+      "endMs": 38057.960999999996,
+      "returned": true
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 38062.6497,
+      "endMs": 38797.0705,
+      "returned": true
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 38804.3304,
+      "endMs": 39538.890699999996,
+      "returned": true
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 39643.6165,
+      "endMs": 40382.4886,
+      "returned": true
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 40487.127499999995,
+      "endMs": 41201.8875,
+      "returned": true
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 41206.901099999995,
+      "endMs": 41948.0272,
+      "returned": true
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 41951.9743,
+      "endMs": 42672.164899999996,
+      "returned": true
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-census",
+      "startMs": 44120.732299999996,
+      "endMs": 44461.771799999995,
+      "returned": true
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 44463.2763,
+      "endMs": 45201.641899999995,
+      "returned": true
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 45306.5878,
+      "endMs": 46045.7382,
+      "returned": true
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 46049.7838,
+      "endMs": 46923.560099999995,
+      "returned": true
+    },
+    {
+      "phase": "one-explicit-same-Main-Retry",
+      "operation": "process-listener-snapshot",
+      "startMs": 47206.771,
+      "endMs": 47979.6743,
+      "returned": true
+    }
+  ],
+  "retryCensusTotals": {
+    "count": 12,
+    "sumReturnedDurationMs": 8603.780899999983,
+    "lastStartedFromPhaseMs": 9905.753799999999,
+    "lastReturnedFromPhaseMs": 10678.657099999997,
+    "all57RowsTruncated": false
+  },
+  "afterRetryPublic": {
+    "processes": [
+      {
+        "id": "a90564f8-eb00-48bd-b654-c9e504a14d82",
+        "pid": 3160,
+        "label": "TEST-primary",
+        "registeredAt": "2026-11-16T02:14:38.946Z",
+        "processRef": "p1:a90564f8-eb00-48bd-b654-c9e504a14d82:ce144f375bb8c1fa183894beb2ac1d6c648803701118e26cdfa91dc600435fca",
+        "canTerminate": true,
+        "observation": "same-live",
+        "registeredBy": "alice"
+      },
+      {
+        "id": "f82b3342-93dd-431c-a2d1-f2fab09dc51f",
+        "pid": 7004,
+        "label": "TEST-neighbor",
+        "registeredAt": "2026-11-16T02:14:39.592Z",
+        "processRef": "p1:f82b3342-93dd-431c-a2d1-f2fab09dc51f:bf755dc69df461f8f18ad156bb7c21bd70c765ec2ae5f9076c5dae6c2d74dec6",
+        "canTerminate": true,
+        "observation": "same-live",
+        "registeredBy": "alice"
+      }
+    ],
+    "readRoute": "packaged-public-process-list"
+  },
+  "successorHost": {
+    "identity": {
+      "pid": 3748,
+      "parent": 6948,
+      "birth": "2026-11-16T02:15:10.0835570Z",
+      "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe"
+    },
+    "writer": {
+      "pid": 3748,
+      "token": "15283698-24b0-4bc4-be9d-2585b35221a2",
+      "publishedAtMs": 1794795311176,
+      "sha256": "04435ecc45fb607ba3a21a6eed755f4997825871fee517d089e29785e4b05a5e",
+      "dev": "2695480082",
+      "ino": "1407374884883384"
+    }
+  },
+  "appExit": {
+    "code": 0,
+    "signal": null
+  },
+  "cleanupFailure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 2\n\n    at Object.afterQuit (D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeWindowsAppFixture.ts:467:16)\n    at file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:548:56\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async within (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:141:20)\n    at async file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:548:29",
+  "finalCensusSummary": {
+    "ownedRemaining": [],
+    "listenerPids": [],
+    "drained": true
+  },
+  "actualSourceBoundary": [
+    "Original explicit Retry harness ui.click returned at retained5380ms, actual successor writer6819ms and Hostbirthcheck7162ms. The UI recovery predicate returned ready at8748ms. Those rounded diagnostic marks are observation times, not product internal start/completion clocks.",
+    "Original source then awaits originalBinding, fixture.afterRetry and readProcesses; retained afterRetryPublic establishes this source prefix returned. fixture.afterRetry retains the original provider/primary/neighbor HANDLE alive checks, saved process receipt equality, input pins, peer and Runtime identity checks. This source-path evidence is not a new external native certificate.",
+    "Error originates in remaining123 after validateCensus179 during assertOwnedRenderer207, before the failing waitRead DOM evaluation at source502. The exact loop-row index and any earlier process-owner DOM samples are not serialized.",
+    "The last already-required process/listener snapshot began about94.2462ms before the same10s phase deadline and returned about678.6571ms after it; the retained post-read guard then refused. This locates observed budget expenditure without diagnosing Windows scheduling, a product latch or a safe permission to remove any guard.",
+    "The later sameMainAfterRetry capture, after-retry screenshot, both original UI Kill actions/receipts and success cleanup acceptance remain unreached. Original Quit occurred; afterQuit refused first on0!==2 original Stops. App0/null and final contained census do not convert the scenario to PASS."
+  ],
+  "visual": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/extracted/_temp/windows-same-main-process-ui.before-crash.png",
+    "bytes": 79896,
+    "blob": "1c16d610142abf298c038fba12d9ef1553f039b9",
+    "sha256": "347f6b6883726b0ccaebfb5c181cdeea0c85005cf7ec957360a61dc551404221",
+    "actuallyViewed": true,
+    "scope": "Only before-crash image exists: original Team running, lead online, registered-services reply. It does not visualize the failed after-Retry owner read."
+  },
+  "qualificationLimits": [
+    "This new failure is beyond the historical failed recovery-ready predicate; no old cause is reused.",
+    "Original10s phase, three-HANDLE witnesses, original actions, currentness/ownership/cleanup predicates remain unchanged. No timeout expansion, co-observation change, retry or repair is proposed.",
+    "The protected first-catch stdout diagnostic retains phase and original truncated error; the full receipt retains the exact stack. Neither a missing stage nor a successful diagnostic grants authority.",
+    "The packaged V2 substrate PASS in the same job is separate from failed full P08 UI path; real-vendor/desktop/release flags remain separately bounded.",
+    "This review reads saved data, four exact source leaves and one original PNG only. No project/test/provider/native query, install/build, CI or source/ref action."
+  ]
+}

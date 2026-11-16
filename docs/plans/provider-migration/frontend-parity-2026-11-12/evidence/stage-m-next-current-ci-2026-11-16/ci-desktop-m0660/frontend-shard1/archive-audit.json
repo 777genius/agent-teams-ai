@@ -1,0 +1,27 @@
+{
+  "artifactId": 14190745426,
+  "officialDigestVerified": true,
+  "safeUniquePaths": true,
+  "crcAllPassed": true,
+  "originalZip": {
+    "bytes": 295485,
+    "blob": "5ff6dad00241cbc8318d65def521bde3f4ba69e9",
+    "sha256": "b310349827f441e893c1a01b8dc8e08f48117c34ab3bc054e03ed75a612ad836"
+  },
+  "entries": [
+    {
+      "path": "host-offline-tests-1.json",
+      "crc32": "efed8693",
+      "bytes": 2167252,
+      "blob": "cd9b794837702c216c77b04497b59426842f9f7e",
+      "sha256": "54fc14e8564883df77038e79ea91fc3779244aae8ce25fd1e68b03e47de9612c"
+    },
+    {
+      "path": "host-offline-tests-1.log",
+      "crc32": "86f6a0af",
+      "bytes": 99629,
+      "blob": "c79d23415d24e557b0bd944872bb260e05fac9be",
+      "sha256": "3ac1e92b6e11b2b0e310a78faad99b7f1bc3e6ca9a46c4cca38f6ebcf22e6472"
+    }
+  ]
+}
