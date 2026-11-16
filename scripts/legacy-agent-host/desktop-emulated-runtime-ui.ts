@@ -5,6 +5,7 @@ import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/ide
 import { readNativeHostCostProof } from '../../packages/legacy-agent-host/tests/fixtures/native-host-cost.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { processTable } from './desktop-backend-observations.ts';
+import { openDesktopEmulatedBootChat } from './desktop-emulated-boot-chat.ts';
 import { readDesktopEmulatedRuntimeEffects, verifyDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { sendDesktopNativeCommandFromComposer } from './desktop-native-commands-ui-proof.ts';
@@ -111,8 +112,10 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     assert.ok(value, 'Previously observed original Runtime session remains present');
     return value;
   };
-  await ui.click('button[aria-label^="alice,"]', 'open original lead conversation');
-  await visible('TEST boot ready'); proof.launchScreenshot = await screenshot('launch'); proof.capture = capture;
+  await openDesktopEmulatedBootChat(cdp, { selector: 'button[aria-label^="alice,"]', timeoutMs: 60_000,
+    replyLabel: 'original visible reply TEST boot ready', assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value),
+    open: controls => controls.click('button[aria-label^="alice,"]', 'open original lead conversation') });
+  proof.launchScreenshot = await screenshot('launch'); proof.capture = capture;
   const observeSent = async (before: Set<unknown>, text: string) => {
     const entries = await poll(commandRows, values => values.some(row => !before.has(row.commandId) &&
       record(row.command).operation === 'message.send' && record(record(row.command).payload).text === text && row.phase === 'completed'), 'original message receipt');

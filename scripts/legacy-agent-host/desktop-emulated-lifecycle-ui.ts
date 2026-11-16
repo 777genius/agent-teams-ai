@@ -3,6 +3,7 @@ import { lstat, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { groupMembers, processTable } from './desktop-backend-observations.ts';
+import { openDesktopEmulatedBootChat } from './desktop-emulated-boot-chat.ts';
 import { observeDesktopEmulatedRuntimeCleanup, readDesktopEmulatedRuntimeEffects, verifyDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
 import { lifecycleRows, readEmulatedClaudeCheckpoint, readEmulatedLifecycleProduct, readEmulatedLifecycleSessions } from './desktop-emulated-lifecycle-records.ts';
 import { json, jsonDigest, record, rows } from './desktop-resume-records.ts';
@@ -96,8 +97,9 @@ export async function runDesktopEmulatedLifecycleUi(initialCdp: UiCdpPort, optio
     lifecycleRows(values[0]!.inputs)[0]!.terminal === 'succeeded', 'one original boot input terminal');
   assert.equal(record(saved.savedSettings).prompt, 'TEST_UI_BOOT');
   const sourceBinding = record(ready[0]!.binding);
-  await ui.click('button[aria-label^="alice,"]', 'original lifecycle lead chat');
-  await ui.waitRead(`document.body.innerText.includes('TEST boot ready')`, 'original lifecycle boot reply');
+  await openDesktopEmulatedBootChat(cdp, { selector: 'button[aria-label^="alice,"]', timeoutMs: 30_000,
+    replyLabel: 'original lifecycle boot reply', assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value),
+    open: controls => controls.click('button[aria-label^="alice,"]', 'original lifecycle lead chat') });
   proof.launchScreenshot = await screenshot('launch');
   await ui.scrollTo('button[aria-label="Stop"]', 'original lifecycle Team Stop');
   await ui.click('button[aria-label="Stop"]', 'original lifecycle Stop once', 'Stop');

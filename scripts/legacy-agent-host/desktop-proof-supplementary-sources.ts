@@ -34,6 +34,7 @@ export const desktopProofSupplementarySources = [
   'scripts/legacy-agent-host/desktop-emulated-codex-login-fixture.ts',
   'packages/legacy-agent-host/tests/fixtures/codex-metadata-peer.ts',
   'scripts/legacy-agent-host/desktop-emulated-selection-ui.ts',
+  'scripts/legacy-agent-host/desktop-emulated-boot-chat.ts',
   'scripts/legacy-agent-host/desktop-emulated-lifecycle-boundary.ts',
   'scripts/legacy-agent-host/desktop-emulated-lifecycle-records.ts',
   'scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts',

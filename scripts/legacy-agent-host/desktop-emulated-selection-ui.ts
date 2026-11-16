@@ -6,6 +6,7 @@ import { hostTeamRunId } from '../../src/features/agent-backend/contracts/teamRu
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { processTable } from './desktop-backend-observations.ts';
 import { openOriginalCreateForm } from './desktop-create-config-ui-smoke.ts';
+import { openDesktopEmulatedBootChat } from './desktop-emulated-boot-chat.ts';
 import { readDesktopEmulatedRuntimeEffects, verifyDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
 import { readDesktopEmulatedCodexInstallerLog, readDesktopEmulatedCodexInstallation } from './desktop-emulated-codex-installer-fixture.ts';
 import { readDesktopEmulatedCodexInstallerSettingsUi, runDesktopEmulatedCodexInstallerUi } from './desktop-emulated-codex-installer-ui.ts';
@@ -133,25 +134,11 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
     const selector = leadSelector(live);
     await controls.scrollTo(selector, 'original lead conversation'); await controls.click(selector, 'open original lead conversation');
   };
-  const openInitialChat = async (live: Live) => {
-    const deadline = Date.now() + 60_000;
-    const current = () => {
-      options.assertOwnedRenderer();
-      assert.ok(Date.now() < deadline, 'original initial conversation deadline');
-    };
-    const controls = createDesktopUiControls(cdp, { assertOwnedRenderer: current, step: value => steps.push(value) });
-    // Native BOOT completion precedes the rendered inbox preview. Keep its
-    // hydration and the original click/reply check within one existing budget.
-    await controls.waitRead(`(() => { const rows = [...document.querySelectorAll(${literal(leadSelector(live))})];
-      return rows.length === 1 && [...rows[0].querySelectorAll('span')]
-        .filter(span => span.textContent.trim() === 'TEST boot ready').length === 1; })()`,
-      'original lead BOOT preview', deadline - Date.now());
-    current();
-    await openChat(live, controls);
-    await controls.waitRead(`document.body.innerText.includes('TEST boot ready')`,
-      'original visible reply TEST boot ready', deadline - Date.now());
-    current();
-  };
+  const openInitialChat = (live: Live) => openDesktopEmulatedBootChat(cdp, {
+    selector: leadSelector(live), timeoutMs: 60_000, replyLabel: 'original visible reply TEST boot ready',
+    assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value),
+    open: controls => openChat(live, controls),
+  });
   const assertSameLive = async (live: Live, phase: string, originalInputs: boolean) => {
     assert.deepEqual(array((await live.owner()).runtimeCaptures), [live.capture]);
     const stored = await json(join(live.root, '.host-owner/launches', jsonDigest(live.capture.launchId) + '.json'));

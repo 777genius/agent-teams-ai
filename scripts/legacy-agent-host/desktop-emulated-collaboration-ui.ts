@@ -6,6 +6,7 @@ import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts
 import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/identity.js';
 import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
+import { openDesktopEmulatedBootChat } from './desktop-emulated-boot-chat.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';
 import { json, record, rows } from './desktop-resume-records.ts';
 import { prepareNativeChatAttachments, verifyNativeChatAttachmentMessage } from './desktop-native-chat-attachments-ui.ts';
@@ -64,16 +65,21 @@ export async function runDesktopEmulatedCollaborationUi(cdp: UiCdpPort, options:
     await writeFile(path, Buffer.from(String(image.data), 'base64'), { mode: 0o600, flag: 'wx' });
     return { path, sha256: await fileDigest(path) };
   };
-  const back = async () => {
+  const back = async (controls = ui) => {
     if (await cdp.evaluate(`Boolean(document.querySelector('button[aria-label="Back to chats"]'))`)) {
-      await ui.scrollTo('button[aria-label="Back to chats"]', 'original Back to chats');
-      await ui.click('button[aria-label="Back to chats"]', 'original Back to chats');
+      await controls.scrollTo('button[aria-label="Back to chats"]', 'original Back to chats');
+      await controls.click('button[aria-label="Back to chats"]', 'original Back to chats');
     }
   };
-  const openMember = async (member: string) => {
-    assert.ok(['alice', 'bob', 'carol'].includes(member)); await back();
+  const openMember = async (member: string, boot = false) => {
+    assert.ok(['alice', 'bob', 'carol'].includes(member));
     const selector = `button[aria-label^=${literal(member + ',')}]`;
-    await ui.scrollTo(selector, 'original ' + member + ' conversation'); await ui.click(selector, 'open original ' + member + ' conversation');
+    const open = async (controls = ui) => {
+      await controls.scrollTo(selector, 'original ' + member + ' conversation'); await controls.click(selector, 'open original ' + member + ' conversation');
+    };
+    if (boot) await openDesktopEmulatedBootChat(cdp, { selector, timeoutMs: 60_000, replyLabel: 'original visible TEST boot ready',
+      assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value), beforePreview: back, open });
+    else { await back(); await open(); }
   };
   const commandText = (row: Row) => row.command && record(row.command).operation === 'message.send'
     ? record(record(row.command).payload).text : undefined;
@@ -123,7 +129,7 @@ export async function runDesktopEmulatedCollaborationUi(cdp: UiCdpPort, options:
     completedInputs(byMember(values, 'alice-id'), 1) && completedInputs(byMember(values, 'bob-id'), 0), 'initial original ready sessions');
   const initialPhysical = await observeCollaborationPeers(fixture, ['claude', 'codex']);
   const initialPrincipals = Object.fromEntries(array(capture.members).map(row => [String(row.memberId), row.principalId]));
-  await openMember('alice'); await visible('TEST boot ready');
+  await openMember('alice', true);
   proof.initial = { capture, sessions: initial, physical: [...initialPhysical], screenshot: await screenshot('launch') };
   const unchangedPeers = async (snapshot: Row[], physical: Awaited<ReturnType<typeof observeCollaborationPeers>>) => {
     const current = await sessions();

@@ -2369,22 +2369,32 @@ test('original review correction admits current authority with one original inse
   assert.deepEqual(refused.budgets, [30_000]); assert.equal(refused.reads(), 1);
 });
 
-async function originalSelectionInitialChat(fixture: {
+async function originalEmulatedBootChat(fixture: {
   clock: { now: number }; modes: string[]; expireAfter?: 'preview' | 'final-target' | 'reply'; memberName?: string;
+  scenario?: 'selection' | 'lifecycle' | 'runtime' | 'collaboration'; backShown?: boolean;
 }) {
   const { stripTypeScriptTypes } = await import('node:module');
   const { desktopJsLiteral: literal } = await import('./desktop-ui-controls.ts');
-  const source = (await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
-  const begin = '  const leadSelector = (live: Live) => {', end = '  const assertSameLive = async (';
+  const scenario = fixture.scenario ?? 'selection', timeoutMs = scenario === 'lifecycle' ? 30_000 : 60_000;
+  const source = (await readFile(new URL(`./desktop-emulated-${scenario}-ui.ts`, import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const [begin, end] = scenario === 'selection' ? ['  const leadSelector = (live: Live) => {', '  const assertSameLive = async (']
+    : scenario === 'collaboration' ? ['  const back = async (', '  const commandText = (row: Row) =>']
+      : ['  await openDesktopEmulatedBootChat(cdp, {', '  proof.launchScreenshot ='];
   for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original initial conversation boundary');
-  for (const live of ['liveA', 'liveB']) assert.equal(source.split(`await openInitialChat(${live});`).length, 2);
+  if (scenario === 'selection') for (const live of ['liveA', 'liveB']) assert.equal(source.split(`await openInitialChat(${live});`).length, 2);
+  if (scenario === 'collaboration') assert.equal(source.split("await openMember('alice', true);").length, 2);
   const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));
-  const memberName = fixture.memberName ?? 'team-lead', name = memberName === 'team-lead' ? 'lead' : memberName;
+  const shared = await readFile(new URL('./desktop-emulated-boot-chat.ts', import.meta.url), 'utf8');
+  const sharedBegin = 'export async function openDesktopEmulatedBootChat(';
+  assert.equal(shared.split(sharedBegin).length, 2, 'one actual shared BOOT gate');
+  const sharedActual = stripTypeScriptTypes(shared.slice(shared.indexOf(sharedBegin)).replace(/^export /u, ''));
+  const memberName = fixture.memberName ?? (scenario === 'selection' ? 'team-lead' : 'alice');
+  const name = memberName === 'team-lead' ? 'lead' : memberName;
   const selector = `button[aria-label^=${literal(name + ',')}]`;
   const commands: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [];
   const budgets: { label: string; ms: number }[] = [], values: boolean[] = [], trace: string[] = [];
   const refusal = new Error('TEST original preview observation failed');
-  let previews = 0, targets = 0, opened = false;
+  let previews = 0, targets = 0, opened = false, backShown = fixture.backShown === true;
   const rect = { x: 20, y: 40, width: 100, height: 30, top: 40, bottom: 70 };
   const button = (label: string, texts: string[]) => ({
     label, tagName: 'BUTTON', parentElement: null,
@@ -2395,8 +2405,11 @@ async function originalSelectionInitialChat(fixture: {
     querySelectorAll(actual: string) { assert.equal(actual, 'span'); return texts.map(textContent => ({ textContent })); },
   });
   let buttons = [button(name + ', conversation', ['TEST pending'])];
+  const backSelector = 'button[aria-label="Back to chats"]', backButton = button('Back to chats', ['Back to chats']);
+  let pointedButton = buttons[0];
   const cdp = {
     async evaluate(expression: string) {
+      const back = expression.startsWith('Boolean(document.querySelector(');
       const preview = expression.includes('TEST boot ready') && !expression.startsWith('document.body.');
       const reply = expression.startsWith('document.body.');
       if (preview) {
@@ -2413,10 +2426,13 @@ async function originalSelectionInitialChat(fixture: {
         innerWidth: 1000, innerHeight: 720, getComputedStyle: () => ({ pointerEvents: 'auto' }),
         document: {
           querySelectorAll(actual: string) {
+            if (actual === backSelector) { pointedButton = backButton; return backShown ? [backButton] : []; }
             assert.equal(actual, selector, 'the original captured lead selector is unchanged');
+            pointedButton = buttons[0];
             return buttons.filter(row => row.label.startsWith(name + ','));
           },
-          elementFromPoint: () => buttons[0], fonts: { status: 'loaded' },
+          querySelector(actual: string) { assert.equal(actual, backSelector); return backShown ? backButton : null; },
+          elementFromPoint: () => pointedButton, fonts: { status: 'loaded' },
           documentElement: { getBoundingClientRect: () => ({ x: 0, width: 1000, top: 0, bottom: 720 }) },
           body: { innerText: opened ? 'TEST boot ready' : '' },
         },
@@ -2425,13 +2441,15 @@ async function originalSelectionInitialChat(fixture: {
       if (preview) {
         assert.equal(typeof value, 'boolean'); values.push(value); trace.push('preview');
         fixture.clock.now += 10_000;
-        if (fixture.expireAfter === 'preview') fixture.clock.now = 60_000;
+        if (fixture.expireAfter === 'preview') fixture.clock.now = timeoutMs;
       } else if (reply) {
         trace.push('reply'); fixture.clock.now += 1000;
-        if (fixture.expireAfter === 'reply') fixture.clock.now = 60_000;
+        if (fixture.expireAfter === 'reply') fixture.clock.now = timeoutMs;
+      } else if (back) {
+        trace.push('back'); fixture.clock.now += 1000;
       } else if (expression.includes('const elements =')) {
         targets++; trace.push('target'); fixture.clock.now += 500;
-        if (fixture.expireAfter === 'final-target' && targets === 5) fixture.clock.now = 60_000;
+        if (fixture.expireAfter === 'final-target' && targets === 5) fixture.clock.now = timeoutMs;
       } else {
         assert.ok(expression.includes('const top=Math.max')); trace.push('scroll'); fixture.clock.now += 1000;
       }
@@ -2440,15 +2458,20 @@ async function originalSelectionInitialChat(fixture: {
     async send(method: string, params: Record<string, unknown> = {}) {
       assert.ok(method === 'Page.bringToFront' || method === 'Input.dispatchMouseEvent');
       commands.push({ method, ...params }); trace.push(String(params.type ?? method));
-      if (params.type === 'mouseReleased') opened = true;
+      if (params.type === 'mouseReleased') {
+        if (pointedButton === backButton) backShown = false;
+        else opened = true;
+      }
       return {};
     },
   };
   const make = Function('environment', `'use strict';
-    const {assert,literal,ui,createDesktopUiControls,cdp,options,steps}=environment;
-    ${actual}
-    return openInitialChat;`) as (environment: Record<string, unknown>) => (live: unknown) => Promise<void>;
-  const run = make({ assert, literal, ui: undefined, cdp, steps, options: { assertOwnedRenderer() {} },
+    const {assert,literal,ui,createDesktopUiControls,cdp,options,steps,memberName}=environment;
+    ${sharedActual}
+    ${scenario === 'selection' || scenario === 'collaboration' ? actual : ''}
+    return ${scenario === 'selection' ? '() => openInitialChat({memberName})' : scenario === 'collaboration'
+      ? "() => openMember('alice', true)" : `async () => {${actual}}`};`) as (environment: Record<string, unknown>) => () => Promise<void>;
+  const run = make({ assert, literal, ui: undefined, cdp, steps, memberName, options: { assertOwnedRenderer() {} },
     createDesktopUiControls(port: typeof cdp, options: Parameters<typeof createDesktopUiControls>[1]) {
       const controls = createDesktopUiControls(port, options);
       return { ...controls, waitRead: ((expression: string, label: string, timeoutMs = 30_000,
@@ -2457,14 +2480,14 @@ async function originalSelectionInitialChat(fixture: {
       }) as typeof controls.waitRead };
     },
   });
-  return { run: () => run({ memberName }), commands, steps, budgets, values, trace, refusal };
+  return { run, commands, steps, budgets, values, trace, refusal };
 }
 
 test('original first A and B conversation waits for its exact preview before one physical click in the shared budget', { timeout: 5000 }, async t => {
   const clock = { now: 0 }; t.mock.method(Date, 'now', () => clock.now);
   for (const memberName of ['team-lead', 'TEST-captured-lead']) {
     clock.now = 0;
-    const f = await originalSelectionInitialChat({ clock, memberName, modes: ['pending', 'current'] });
+    const f = await originalEmulatedBootChat({ clock, memberName, modes: ['pending', 'current'] });
     await f.run();
     assert.deepEqual(f.values, [false, true]);
     assert.deepEqual(f.budgets, [{ label: 'original lead BOOT preview', ms: 60_000 },
@@ -2484,7 +2507,7 @@ test('original initial conversation rejects observations crossing the same cutof
   const clock = { now: 0 }; t.mock.method(Date, 'now', () => clock.now);
   for (const expireAfter of ['preview', 'final-target', 'reply'] as const) {
     clock.now = 0;
-    const f = await originalSelectionInitialChat({ clock, modes: ['current'], expireAfter });
+    const f = await originalEmulatedBootChat({ clock, modes: ['current'], expireAfter });
     await assert.rejects(f.run(), /original initial conversation deadline/);
     assert.equal(f.commands.filter(row => row.type === 'mousePressed').length, expireAfter === 'reply' ? 1 : 0);
     assert.equal(f.commands.filter(row => row.type === 'mouseReleased').length, expireAfter === 'reply' ? 1 : 0);
@@ -2498,11 +2521,40 @@ test('original initial conversation refuses missing wrong or duplicate terminal 
   const clock = { now: 0 }; t.mock.method(Date, 'now', () => clock.now);
   for (const mode of ['missing', 'pending', 'wrong-row', 'user-prefix', 'substring', 'duplicate-row', 'duplicate-span']) {
     clock.now = 0;
-    const f = await originalSelectionInitialChat({ clock, modes: [mode] });
+    const f = await originalEmulatedBootChat({ clock, modes: [mode] });
     await assert.rejects(f.run(), error => error === f.refusal);
     assert.deepEqual(f.values, [false], mode); assert.deepEqual(f.commands, [], mode);
     assert.deepEqual(f.steps, [], mode); assert.deepEqual(f.trace, ['preview'], mode);
     assert.deepEqual(f.budgets, [{ label: 'original lead BOOT preview', ms: 60_000 }]);
+  }
+});
+
+test('original lifecycle runtime and collaboration retain their boot budgets and navigation before one chat click', { timeout: 5000 }, async t => {
+  const clock = { now: 0 }; t.mock.method(Date, 'now', () => clock.now);
+  for (const [scenario, backShown, previewBudget, replyBudget, replyLabel] of [
+    ['lifecycle', false, 30_000, 7500, 'original lifecycle boot reply'],
+    ['runtime', false, 60_000, 37_500, 'original visible reply TEST boot ready'],
+    ['collaboration', false, 59_000, 35_500, 'original visible TEST boot ready'],
+    ['collaboration', true, 55_500, 32_000, 'original visible TEST boot ready'],
+  ] as const) {
+    clock.now = 0;
+    const f = await originalEmulatedBootChat({ clock, scenario, backShown, modes: ['pending', 'current'] });
+    await f.run();
+    assert.deepEqual(f.values, [false, true]);
+    assert.deepEqual(f.budgets, [{ label: 'original lead BOOT preview', ms: previewBudget }, { label: replyLabel, ms: replyBudget }]);
+    assert.equal(f.trace.filter(value => value === 'back').length, scenario === 'collaboration' ? 1 : 0);
+    assert.equal(f.trace.filter(value => value === 'scroll').length, scenario === 'collaboration' ? backShown ? 2 : 1 : 0);
+    const clicks = f.steps.filter(row => row.action === 'mouseClick');
+    assert.deepEqual(clicks.map(row => row.label), [...(backShown ? ['original Back to chats'] : []),
+      scenario === 'lifecycle' ? 'original lifecycle lead chat' : scenario === 'runtime' ? 'open original lead conversation' : 'open original alice conversation']);
+    assert.equal(f.commands.filter(row => row.type === 'mousePressed').length, backShown ? 2 : 1);
+    assert.equal(f.commands.filter(row => row.type === 'mouseReleased').length, backShown ? 2 : 1);
+    assert.ok(f.trace.indexOf('preview') < f.trace.lastIndexOf('mousePressed'));
+    clock.now = 0;
+    const expired = await originalEmulatedBootChat({ clock, scenario, backShown, modes: ['current'], expireAfter: 'preview' });
+    await assert.rejects(expired.run(), /original initial conversation deadline/);
+    assert.equal(expired.commands.filter(row => row.type === 'mousePressed').length, backShown ? 1 : 0);
+    assert.equal(expired.commands.filter(row => row.type === 'mouseReleased').length, backShown ? 1 : 0);
   }
 });
 

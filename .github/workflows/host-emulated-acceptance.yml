@@ -128,6 +128,7 @@ jobs:
             scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts \
             scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts \
             scripts/legacy-agent-host/desktop-emulated-selection-ui.ts \
+            scripts/legacy-agent-host/desktop-emulated-boot-chat.ts \
             scripts/legacy-agent-host/desktop-native-process-ui.test.ts \
             scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts \
             scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts \
