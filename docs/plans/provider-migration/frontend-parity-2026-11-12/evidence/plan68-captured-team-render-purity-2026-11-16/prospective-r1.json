@@ -1,0 +1,234 @@
+{
+  "status": "PROSPECTIVE_R1_ONLY",
+  "intendedPlan": "68-captured-team-readiness-render-purity-2026-11-16.md",
+  "head": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+  "observedFailure": "Sole typed renderer react-hooks/purity error at Strip168:59",
+  "sourceInventory": [
+    {
+      "repositoryPath": "src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "path": "frontend-proposal/team-purity-75cf/source/src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "bytes": 13822,
+      "lines": 396,
+      "sha256": "b0f3a9ede1f0bb08f75f11c2742d0fdb14b281b1ea63da5509e50b38d9d98cac",
+      "gitBlob": "c1d31ee945c28cfe1f1339d914d0d1be7fc5e928"
+    },
+    {
+      "repositoryPath": "test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "path": "frontend-proposal/team-purity-75cf/source/test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "bytes": 28286,
+      "lines": 844,
+      "sha256": "375ab28dfb1aaf9506b0c852fc97dc48ae612d38edf5fad3099dcf9e420de286",
+      "gitBlob": "c1ab11f043ea5bcfb5325cb8fb6f147541076f38"
+    }
+  ],
+  "dependencies": [
+    {
+      "repositoryPath": "src/renderer/components/team/dialogs/useCapturedTeamLaunchReadiness.ts",
+      "path": "frontend-proposal/team-purity-75cf/source/src/renderer/components/team/dialogs/useCapturedTeamLaunchReadiness.ts",
+      "bytes": 5710,
+      "lines": 149,
+      "sha256": "7327fb6ed0504e412dcdafe4989c91625c2ef0712edf0705c767c5bfc52775af",
+      "gitBlob": "e8f5137ea0b7b69f4c098203d797780be99a5c01"
+    },
+    {
+      "repositoryPath": "src/renderer/components/team/dialogs/capturedTeamLaunchReadiness.ts",
+      "path": "frontend-proposal/team-purity-75cf/source/src/renderer/components/team/dialogs/capturedTeamLaunchReadiness.ts",
+      "bytes": 1376,
+      "lines": 45,
+      "sha256": "5a3e24af0a051afe0e8736e4d79e21239ef23b3aeb7a972c59fe5e79655db09e",
+      "gitBlob": "7a78f0791a54d09bcdda9c466b4df9c8b3b569d1"
+    },
+    {
+      "repositoryPath": "src/renderer/components/team/dialogs/providerLaunchAuthority.ts",
+      "path": "frontend-proposal/team-purity-75cf/source/src/renderer/components/team/dialogs/providerLaunchAuthority.ts",
+      "bytes": 8286,
+      "lines": 223,
+      "sha256": "7c122f43c764f438d9c9d78413f5e3912e83f29a3c30f72631333dc34d6e44d0",
+      "gitBlob": "a6dbcf114109c75f5a0dfad9ca20e71884956f31"
+    },
+    {
+      "repositoryPath": "src/renderer/components/team/dialogs/optionalProviderPreflight.ts",
+      "path": "frontend-proposal/team-purity-75cf/source/src/renderer/components/team/dialogs/optionalProviderPreflight.ts",
+      "bytes": 11013,
+      "lines": 291,
+      "sha256": "a3d491d4569b2ab696981bd4b3312a51778ce494919c0534ed889f2f0edb7f1b",
+      "gitBlob": "a57bb61faac6657400e60cefd39ff9dd4995c5c3"
+    }
+  ],
+  "existingCaller": {
+    "path": "frontend-proposal/plan49-source-review/after/src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+    "bytes": 132386,
+    "lines": 3220,
+    "sha256": "70f0a8dac05a8031d191de97c3e9ab7bc60ed21ca87b4dfcea167e32478ea66e",
+    "gitBlob": "832ed8f713a1bc34b2eaa78858180af19eda6862"
+  },
+  "originalLog": {
+    "path": "desktop-team-75cf/job.log",
+    "bytes": 2268881,
+    "lines": 13825,
+    "sha256": "89b1bb256c9bc46dc9258f715e7ecf82917b4c78c5937f87f309ad2f17667d67",
+    "gitBlob": "51812f35d1644029b5f1b09ae4d0d2c355a15da9"
+  },
+  "closureJoin": {
+    "receipt": {
+      "path": "desktop-taskboard-75cf/extracted/TEST-desktop-backend-p6JQJh/desktop-backend-receipt.json",
+      "bytes": 968210,
+      "lines": 25041,
+      "sha256": "39a8125ebd1db403bad8c5ff640748d46159df0a5c33ed851b1e613ce9711ef9",
+      "gitBlob": "8300fadbac3db8149a2619ed0bf404c0e98e49e2"
+    },
+    "role": "Exact original75cf source pin evidence only; Task Board result does not qualify Team lint."
+  },
+  "documents": [
+    {
+      "path": "frontend-proposal/team-purity-75cf/r1.md",
+      "bytes": 4372,
+      "lines": 19,
+      "sha256": "58770812134afe0ec77e8a9f77f24ca3b1c8776c5f99039a5e6fc0a76fb0b1b7",
+      "gitBlob": "f1e1aa00e64524b51387317f926ead626f33e0e7"
+    },
+    {
+      "path": "frontend-proposal/team-purity-75cf/plan.md",
+      "bytes": 7804,
+      "lines": 46,
+      "sha256": "c859c7342a74681636c3d10ee39778a483d5272632c93c5b73d2f4120bd31422",
+      "gitBlob": "bc75c16dc6db634df125bfb5faf8665975febdac"
+    }
+  ],
+  "checks": [
+    {
+      "name": "Exact official source src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "passed": true
+    },
+    {
+      "name": "Existing original source pin src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "passed": true
+    },
+    {
+      "name": "Exact official source test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Existing original source pin test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact official source src/renderer/components/team/dialogs/useCapturedTeamLaunchReadiness.ts",
+      "passed": true
+    },
+    {
+      "name": "Existing original source pin src/renderer/components/team/dialogs/useCapturedTeamLaunchReadiness.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact official source src/renderer/components/team/dialogs/capturedTeamLaunchReadiness.ts",
+      "passed": true
+    },
+    {
+      "name": "Existing original source pin src/renderer/components/team/dialogs/capturedTeamLaunchReadiness.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact official source src/renderer/components/team/dialogs/providerLaunchAuthority.ts",
+      "passed": true
+    },
+    {
+      "name": "Existing original source pin src/renderer/components/team/dialogs/providerLaunchAuthority.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact official source src/renderer/components/team/dialogs/optionalProviderPreflight.ts",
+      "passed": true
+    },
+    {
+      "name": "Existing original source pin src/renderer/components/team/dialogs/optionalProviderPreflight.ts",
+      "passed": true
+    },
+    {
+      "name": "Existing Launch source equals original75cf pin",
+      "passed": true
+    },
+    {
+      "name": "Launch exact existing predicate caller",
+      "passed": true
+    },
+    {
+      "name": "Exact original log digest",
+      "passed": true
+    },
+    {
+      "name": "Actual purity diagnostic retained",
+      "passed": true
+    },
+    {
+      "name": "Direct render-time clock call is exact source",
+      "passed": true
+    },
+    {
+      "name": "Predicate existing memo dependency retained",
+      "passed": true
+    },
+    {
+      "name": "Original expiry owner has exact clipped timer",
+      "passed": true
+    },
+    {
+      "name": "Original permits freshly created each hook render",
+      "passed": true
+    },
+    {
+      "name": "Pure predicate no clock read",
+      "passed": true
+    },
+    {
+      "name": "Action guard still samples current clock",
+      "passed": true
+    },
+    {
+      "name": "Original captureForSubmit current-time guard",
+      "passed": true
+    },
+    {
+      "name": "Nine original real predicate/guard scenarios present",
+      "passed": true
+    },
+    {
+      "name": "Both changed paths already explicit lint operands",
+      "passed": true
+    },
+    {
+      "name": "No source afterimage",
+      "passed": true
+    },
+    {
+      "name": "Regression must force provider-state memo recalculation with unchanged parent predicate",
+      "passed": true
+    }
+  ],
+  "checkCount": 27,
+  "selectedShape": "Two existing paths; commit-time layout-effect timestamp snapshot paired to exact current predicate identity; unchanged action-time guards and existing expiry owner.",
+  "tests": "Retain every old case/mock; added actual-owner regression forces providerStates memo via fresh equivalent cliProviderStatusLoading while parent permits identity stays exact. Delegating wrapper observes presentation timestamps separately from real action-time guard.",
+  "limitations": [
+    "No afterimages or execution",
+    "Relies on current sole caller fresh predicate identity",
+    "One bounded layout synchronization render per identity change",
+    "Original resulting-source lint/frontend/Installer gates remain required"
+  ],
+  "revision": 2,
+  "priorRevision": {
+    "plan": {
+      "path": "frontend-proposal/team-purity-75cf/revision1/plan.md",
+      "bytes": 7415,
+      "lines": 46,
+      "sha256": "5495480dbf338adc59892adf58be92a4053dec84eb277961a4926002d69d76c4",
+      "gitBlob": "9d9026fb89f454e88dda1afae19e215f364738f9"
+    },
+    "review": {
+      "path": "frontend-proposal/team-purity-75cf/revision1/review.json",
+      "bytes": 8026,
+      "lines": 213,
+      "sha256": "2dffce66dd52bb14607ecb8c36b638eb612799f47c1df3c22b9c89e56773a6c3",
+      "gitBlob": "9ce87b045d21d347cce0d56210aee2e37bf859a3"
+    }
+  }
+}

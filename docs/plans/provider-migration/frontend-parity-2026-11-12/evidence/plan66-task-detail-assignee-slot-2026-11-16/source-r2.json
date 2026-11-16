@@ -1,0 +1,341 @@
+{
+  "kind": "PLAN66_EXACT_TWO_PATH_ACTUAL_SOURCE_R2",
+  "status": "ACCEPT_SOURCE_ONLY",
+  "reviewer": "installer_review",
+  "selectedPlanCommit": "cbe788af73bfd7101a8e00da88cac54ea95813c5",
+  "expectedPublicationParent": "cbe788af73bfd7101a8e00da88cac54ea95813c5",
+  "selectedPlan": {
+    "path": "frontend-proposal/taskboard-75cf/integration/plan.md",
+    "bytes": 7884,
+    "lines": 50,
+    "sha256": "c31df909b5eb6f27e6a83aaa7b83c18f681fe7c75fc2d9558905b31c9be7b4e1",
+    "gitBlob": "10d13481f2f870382770e566ec3dca5d5a052cab"
+  },
+  "manifest": {
+    "path": "frontend-proposal/taskboard-75cf/source-cut/manifest.json",
+    "bytes": 1612,
+    "lines": 48,
+    "sha256": "1946bb13d244d33cea8e628376e681ee5b012e16ebca5c2e58192572dbbe5141",
+    "gitBlob": "5f766b97c5be0a8ef411eb8902f19c38560fc9c3"
+  },
+  "authorR1": {
+    "path": "frontend-proposal/taskboard-75cf/source-cut/source-r1.json",
+    "bytes": 3737,
+    "lines": 96,
+    "sha256": "6b4f04680e9808bae6014065d1f18941fe71b8d95d566ea51fab23c7c7454e77",
+    "gitBlob": "1e784f15c1bb646fb8589e7c2ecd65cb3a4a4627"
+  },
+  "sourceInventory": [
+    {
+      "path": "src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "before": {
+        "path": "frontend-proposal/taskboard-75cf/source-cut/before/src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+        "bytes": 17067,
+        "lines": 465,
+        "sha256": "9aa3aabc0d50852af7010fc9dfd1834905c6c078ac4bfe691e789f002ac05bd1",
+        "gitBlob": "68499fd50746417a48883f73ca1d25592c644089"
+      },
+      "after": {
+        "path": "frontend-proposal/taskboard-75cf/source-cut/after/src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+        "bytes": 17075,
+        "lines": 465,
+        "sha256": "8d32dd960c841554fd59180308fc36e5b60def8e813803b087a5d44044072070",
+        "gitBlob": "e9d5580a90239d0748f6b5f374d04fd827b40dce"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "before": {
+        "path": "frontend-proposal/taskboard-75cf/source-cut/before/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "bytes": 22366,
+        "lines": 344,
+        "sha256": "aa3f5a3d846570be1066db23b657fda483216dcef15c1581903d007b6540e34f",
+        "gitBlob": "fc47d6a0a2c38b33e8a5a6439dbddc9ee240ce10"
+      },
+      "after": {
+        "path": "frontend-proposal/taskboard-75cf/source-cut/after/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "bytes": 22434,
+        "lines": 345,
+        "sha256": "651be27777eba7280304a791e52a088cec616e94b15d88734043c29c1adf234b",
+        "gitBlob": "e191694db8ccd8bbd2e05bcdbcacd8cb1703e23c"
+      }
+    }
+  ],
+  "forwardPatch": {
+    "path": "frontend-proposal/taskboard-75cf/source-cut/source.patch",
+    "bytes": 960,
+    "lines": 21,
+    "sha256": "b9afb9c50c05efd0d6ff9b86bf236d9690a0eaa32dbc8354e83520e6f267bc00",
+    "gitBlob": "1961af588aa3a8c471bb20820027a819d8864dba"
+  },
+  "inversePatch": {
+    "path": "frontend-proposal/taskboard-75cf/source-cut/inverse.patch",
+    "bytes": 960,
+    "lines": 21,
+    "sha256": "968ba761834f2b47e6886aacca5345f475899368e31bf3ea5941e6087d3b3962",
+    "gitBlob": "5921ffa0c60fac6d234e91d83c83aa9966080824"
+  },
+  "priorDocumentR2": {
+    "path": "installer-proposal/plan66-prospective-r2/integration-r2.json",
+    "bytes": 9847,
+    "lines": 224,
+    "sha256": "bc78e5606901c546a9dde0bde32b9e8e5141f3b6b93136eeeaaf2eb25c77cbc7",
+    "gitBlob": "8c868d00dcb4bc217fc2d81c3908d72ad6703951"
+  },
+  "arrayCounts": {
+    "process": {
+      "before": 27,
+      "after": 27,
+      "entireBodyIdentical": true
+    },
+    "common": {
+      "before": 256,
+      "after": 257,
+      "oldOrderedPrefixExact": true,
+      "newTail": "src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx"
+    },
+    "windowsRetry": {
+      "before": 46,
+      "after": 46,
+      "entireBodyIdentical": true
+    }
+  },
+  "blockingFindings": [],
+  "reasoning": [
+    "The complete Header afterimage adds only min-h-8 to the existing assignee container. The exact canReassign/onOwnerChange branch, select and badge props, owner callback, disabled state, call-time guard and all other bytes are preserved.",
+    "The minimum matches the existing small select height and permits growth. It is the selected local layout reservation, with no stale-authority retention, new wrapper, fixed modal height or action semantics.",
+    "The supplementary roster appends the changed Header once after the pre-existing CDP tail. All256 old common entries remain an exact ordered prefix; the entire process27 and WindowsRetry46 arrays remain byte-identical.",
+    "Independent whole-file forward and inverse transforms, canonical diff regeneration and retained patch application as inert line data all match the four complete source bodies.",
+    "The actual cut has no Task Board caller, shared control, workflow, deadline or action changes. It cannot overwrite the separately selected Plan65 readiness condition; root must preserve all other leaves in the publication tree."
+  ],
+  "limits": [
+    "Actual source R2 does not establish E2E success, exact historical owner invalidation, complete frontend parity or another provider/platform tuple.",
+    "Original Task Board receipt remains INCOMPLETE and its later assertions remain unqualified until resulting-source ordinary CI executes them.",
+    "Fresh publication-parent/ref and complete-tree preservation are root-owned; this review binds the supplied exact preimages, postimages and published-plan body.",
+    "Readonly/unassigned content receives a minimum-height reservation; no universal maximum delta for arbitrary wrapped/unassigned layouts is asserted.",
+    "No new tests are selected for this reversible one-token layout change. Existing resulting-source types/lint/frontend and original Task Board E2E gates remain required."
+  ],
+  "checks": [
+    {
+      "name": "Exact frozen manifest SHA",
+      "passed": true
+    },
+    {
+      "name": "Exact frozen source R1 SHA",
+      "passed": true
+    },
+    {
+      "name": "Exactly two selected inventory paths",
+      "passed": true
+    },
+    {
+      "name": "R1 and manifest inventory identical",
+      "passed": true
+    },
+    {
+      "name": "Selected document and expected parent match root publication",
+      "passed": true
+    },
+    {
+      "name": "Selected full document bytes match prior appendix R2",
+      "passed": true
+    },
+    {
+      "name": "before contains exactly the selected two source leaves",
+      "passed": true
+    },
+    {
+      "name": "before complete hash/size/line binding src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "passed": true
+    },
+    {
+      "name": "before original <=800 physical-line cap src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "passed": true
+    },
+    {
+      "name": "before original LF termination retained src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "passed": true
+    },
+    {
+      "name": "before complete hash/size/line binding scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "passed": true
+    },
+    {
+      "name": "before original <=800 physical-line cap scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "passed": true
+    },
+    {
+      "name": "before original LF termination retained scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "passed": true
+    },
+    {
+      "name": "after contains exactly the selected two source leaves",
+      "passed": true
+    },
+    {
+      "name": "after complete hash/size/line binding src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "passed": true
+    },
+    {
+      "name": "after original <=800 physical-line cap src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "passed": true
+    },
+    {
+      "name": "after original LF termination retained src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "passed": true
+    },
+    {
+      "name": "after complete hash/size/line binding scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "passed": true
+    },
+    {
+      "name": "after original <=800 physical-line cap scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "passed": true
+    },
+    {
+      "name": "after original LF termination retained scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "passed": true
+    },
+    {
+      "name": "Unique original assignee slot",
+      "passed": true
+    },
+    {
+      "name": "Unique amended assignee slot",
+      "passed": true
+    },
+    {
+      "name": "Complete Header forward transform is exactly one class token",
+      "passed": true
+    },
+    {
+      "name": "Complete Header inverse restores every original byte",
+      "passed": true
+    },
+    {
+      "name": "Full Header prefix unchanged",
+      "passed": true
+    },
+    {
+      "name": "Full Header suffix including all callbacks unchanged",
+      "passed": true
+    },
+    {
+      "name": "Header line count unchanged at 465",
+      "passed": true
+    },
+    {
+      "name": "Header introduces no class in other branch",
+      "passed": true
+    },
+    {
+      "name": "Owner/read-only condition retained in unchanged suffix",
+      "passed": true
+    },
+    {
+      "name": "Select callback and size retained in unchanged suffix",
+      "passed": true
+    },
+    {
+      "name": "Read-only badge and unassigned branch retained",
+      "passed": true
+    },
+    {
+      "name": "Call-time mutation guard retained in unchanged suffix",
+      "passed": true
+    },
+    {
+      "name": "New roster row absent in original whole file",
+      "passed": true
+    },
+    {
+      "name": "Unique original CDP row",
+      "passed": true
+    },
+    {
+      "name": "Complete roster forward transform is one appended row",
+      "passed": true
+    },
+    {
+      "name": "Complete roster inverse restores every original byte",
+      "passed": true
+    },
+    {
+      "name": "Exactly original three array declarations/order",
+      "passed": true
+    },
+    {
+      "name": "Process entire array body byte-identical and count27",
+      "passed": true
+    },
+    {
+      "name": "WindowsRetry entire array body byte-identical and count46",
+      "passed": true
+    },
+    {
+      "name": "Common original256 entries exact ordered prefix",
+      "passed": true
+    },
+    {
+      "name": "Common sole new tail is Header after prior CDP tail",
+      "passed": true
+    },
+    {
+      "name": "New Header entry unique in common and whole roster",
+      "passed": true
+    },
+    {
+      "name": "Roster natural line count344 to345",
+      "passed": true
+    },
+    {
+      "name": "source.patch exact manifest binding",
+      "passed": true
+    },
+    {
+      "name": "inverse.patch exact manifest binding",
+      "passed": true
+    },
+    {
+      "name": "Independently regenerated full forward patch exactly matches frozen patch",
+      "passed": true
+    },
+    {
+      "name": "Independently regenerated full inverse patch exactly matches frozen inverse",
+      "passed": true
+    },
+    {
+      "name": "Frozen forward patch applied in memory yields both exact postimages",
+      "passed": true
+    },
+    {
+      "name": "Frozen inverse patch applied in memory yields both exact preimages",
+      "passed": true
+    },
+    {
+      "name": "Exactly two patch hunks and selected paths",
+      "passed": true
+    },
+    {
+      "name": "No harness/workflow/guard/timer file in actual cut",
+      "passed": true
+    },
+    {
+      "name": "Prior integrated-document R2 immutable",
+      "passed": true
+    }
+  ],
+  "checkCount": 52,
+  "execution": {
+    "project": false,
+    "compiler": false,
+    "tests": false,
+    "linter": false,
+    "providers": false,
+    "native": false,
+    "gui": false,
+    "ciPollOrMutation": false,
+    "remoteMutation": false
+  },
+  "sourceAfterimagesEditedByReviewer": false
+}

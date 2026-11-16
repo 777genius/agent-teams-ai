@@ -1,0 +1,328 @@
+{
+  "status": "SOURCE_ONLY_INERT_PRESERVATION",
+  "selectedParent": "c6d127cc0a3736774b1d577ca37aa26730c48dd1",
+  "checks": [
+    {
+      "name": "All original Restore bytes restored after explicit binding/type substitutions",
+      "passed": true
+    },
+    {
+      "name": "Complete Scenario inverse equals original exact bytes",
+      "passed": true
+    },
+    {
+      "name": "Generic cold source/publication/probe/no-replay block byte exact",
+      "passed": true
+    },
+    {
+      "name": "Original boot action and deadline byte exact",
+      "passed": true
+    },
+    {
+      "name": "Original cold close and full cleanup/diagnostic/final PASS tail byte exact",
+      "passed": true
+    },
+    {
+      "name": "Original live checkpoint and warm Stop prefix byte exact",
+      "passed": true
+    },
+    {
+      "name": "New read after warm Stops and before first close",
+      "passed": true
+    },
+    {
+      "name": "One new checkpoint read and no new capture",
+      "passed": true
+    },
+    {
+      "name": "Fresh suffix has one launch one boot one Stop",
+      "passed": true
+    },
+    {
+      "name": "No loop timer or deadline in new helper",
+      "passed": true
+    },
+    {
+      "name": "Scenario import type only",
+      "passed": true
+    },
+    {
+      "name": "Native input UUID not equated with Runtime deliveryId",
+      "passed": true
+    },
+    {
+      "name": "Source files naturally below800",
+      "passed": true
+    },
+    {
+      "name": "Profile source pin append-only inverse",
+      "passed": true
+    },
+    {
+      "name": "Low-level exclusion append-only inverse",
+      "passed": true
+    },
+    {
+      "name": "Before binding .github/workflows/host-emulated-acceptance.yml",
+      "passed": true
+    },
+    {
+      "name": "No CRLF/trailing-space mutation .github/workflows/host-emulated-acceptance.yml",
+      "passed": true
+    },
+    {
+      "name": "Patch forward .github/workflows/host-emulated-acceptance.yml",
+      "passed": true
+    },
+    {
+      "name": "Patch reverse .github/workflows/host-emulated-acceptance.yml",
+      "passed": true
+    },
+    {
+      "name": "Before binding tools/owned-process-broker/nativeEmulatedSourceCold.ts",
+      "passed": true
+    },
+    {
+      "name": "No CRLF/trailing-space mutation tools/owned-process-broker/nativeEmulatedSourceCold.ts",
+      "passed": true
+    },
+    {
+      "name": "Patch forward tools/owned-process-broker/nativeEmulatedSourceCold.ts",
+      "passed": true
+    },
+    {
+      "name": "Patch reverse tools/owned-process-broker/nativeEmulatedSourceCold.ts",
+      "passed": true
+    },
+    {
+      "name": "Before binding tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "passed": true
+    },
+    {
+      "name": "No CRLF/trailing-space mutation tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "passed": true
+    },
+    {
+      "name": "Patch forward tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "passed": true
+    },
+    {
+      "name": "Patch reverse tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "passed": true
+    },
+    {
+      "name": "Before binding tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "passed": true
+    },
+    {
+      "name": "No CRLF/trailing-space mutation tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "passed": true
+    },
+    {
+      "name": "Patch forward tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "passed": true
+    },
+    {
+      "name": "Patch reverse tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "passed": true
+    },
+    {
+      "name": "Before binding tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "name": "No CRLF/trailing-space mutation tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "name": "Patch forward tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "name": "Patch reverse tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "name": "Full workflow inverse exact",
+      "passed": true
+    },
+    {
+      "name": "138 original lint operands exact prefix",
+      "passed": true
+    },
+    {
+      "name": "One unique helper operand139",
+      "passed": true
+    },
+    {
+      "name": "Original Plan64 is exact amended prefix",
+      "passed": true
+    },
+    {
+      "name": "Selected integration hash exact",
+      "passed": true
+    },
+    {
+      "name": "Exactly five afterimage paths",
+      "passed": true
+    }
+  ],
+  "checkCount": 41,
+  "lint": {
+    "before": 138,
+    "after": 139,
+    "originalPrefix": [
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts",
+      "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "packages/legacy-agent-host/tests/opencode-configuration-source.test.ts",
+      "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-boot-chat.ts",
+      "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts",
+      "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+      "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+      "scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+      "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+      "src/features/agent-backend/renderer/createHostMemberSpawnStatuses.ts",
+      "src/features/agent-backend/renderer/createHostTeamChanges.ts",
+      "src/features/agent-backend/renderer/createHostTeamProvisioning.ts",
+      "src/features/agent-backend/renderer/index.ts",
+      "src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "src/renderer/store/slices/teamSlice.ts",
+      "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "test/features/agent-backend/capturedWindowsSelection.test.ts",
+      "test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts",
+      "test/features/agent-backend/hostMemberSpawnStatuses.test.ts",
+      "test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "test/renderer/store/teamRuntimeRunAdoption.test.ts",
+      "test/renderer/store/teamSlice.test.ts",
+      "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts",
+      "packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "packages/legacy-agent-host/src/composition/HostScheduledRuns.ts",
+      "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "packages/legacy-agent-host/src/composition/readTeamActivity.ts",
+      "packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts",
+      "packages/legacy-agent-host/src/composition/scheduledRunProjection.ts",
+      "packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts",
+      "packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+      "packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts",
+      "packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+      "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "packages/legacy-agent-host/src/runtime/activityContracts.ts",
+      "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+      "packages/legacy-agent-host/src/runtime/providerActivityContracts.ts",
+      "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+      "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+      "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+      "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+      "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+      "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+      "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+      "src/features/agent-backend/contracts/operations.ts",
+      "src/features/agent-backend/main/adapters/output/projectBackendResult.ts",
+      "src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts",
+      "src/features/agent-backend/renderer/createHostTaskActivityApi.ts",
+      "src/renderer/components/team/ClaudeLogsPanel.tsx",
+      "src/renderer/components/team/ClaudeLogsSection.tsx",
+      "src/renderer/components/team/members/HostMemberActivityLog.tsx",
+      "src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx",
+      "src/renderer/components/team/members/MemberLogsTab.tsx",
+      "src/shared/types/teamActivity.ts",
+      "src/shared/utils/diagnosticsRedaction.ts",
+      "src/shared/utils/redactDiagnosticAssignments.ts",
+      "src/shared/utils/runtimeDiagnosticText.ts",
+      "test/features/agent-backend/hostTaskActivity.test.ts",
+      "test/renderer/components/team/ClaudeLogsSection.test.ts",
+      "test/renderer/components/team/members/MemberLogsPolling.test.ts",
+      "test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+      "test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx",
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "scripts/e2e/teams-create-page-desktop.mjs",
+      "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+      "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "scripts/legacy-agent-host/desktop-live-membership-controlled.ts",
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-mixed-native-fixture.ts",
+      "scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts",
+      "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "tools/owned-process-broker/nativeGate.ts",
+      "tools/owned-process-broker/nativeGateDiagnostics.ts",
+      "tools/owned-process-broker/nativeGateEvents.test.ts",
+      "packages/legacy-agent-host/src/adapters/providers/nativeLaunchEnvironment.ts",
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeManagementHost.ts",
+      "packages/legacy-agent-host/src/owned-process/index.ts",
+      "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+      "tools/owned-process-broker/fixtures/providerPeer.mjs",
+      "test/renderer/hooks/useMentionDetection.test.ts",
+      "src/renderer/components/team/useTeamProvisioningPresentation.ts",
+      "test/renderer/components/team/TeamProvisioningBanner.test.ts",
+      "test/features/runtime-provider-management/capturedManagementClient.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts",
+      "packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts",
+      "test/features/agent-backend/claudeCloseDiagnostics.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+      "test/renderer/components/cli/CliStatusVisibility.test.ts",
+      "tools/owned-process-broker/nativeVendorInputs.ts",
+      "tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+      "tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+      "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts"
+    ],
+    "appended": [
+      "tools/owned-process-broker/nativeEmulatedSourceCold.ts"
+    ]
+  },
+  "movedOriginalRestoreLines": 25,
+  "sourceSize": {
+    "scenario": 797,
+    "helper": 102
+  },
+  "notes": [
+    "No compiler/provider/project/GUI/test/CI execution.",
+    "Full text inverse is not a runtime acceptance claim.",
+    "Old native input UUIDs and Runtime delivery IDs are separate identity domains."
+  ]
+}

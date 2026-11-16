@@ -1,0 +1,96 @@
+{
+  "kind": "PLAN66_EXACT_TWO_PATH_SOURCE_R1",
+  "author": "root",
+  "status": "INERT_SOURCE_PREPARED_PENDING_INDEPENDENT_R2",
+  "selectedPlanCommit": "cbe788af73bfd7101a8e00da88cac54ea95813c5",
+  "selectedPlanSha256": "c31df909b5eb6f27e6a83aaa7b83c18f681fe7c75fc2d9558905b31c9be7b4e1",
+  "expectedParent": "cbe788af73bfd7101a8e00da88cac54ea95813c5",
+  "inventory": [
+    {
+      "path": "src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "before": {
+        "bytes": 17067,
+        "lines": 465,
+        "sha256": "9aa3aabc0d50852af7010fc9dfd1834905c6c078ac4bfe691e789f002ac05bd1",
+        "gitBlob": "68499fd50746417a48883f73ca1d25592c644089"
+      },
+      "after": {
+        "bytes": 17075,
+        "lines": 465,
+        "sha256": "8d32dd960c841554fd59180308fc36e5b60def8e813803b087a5d44044072070",
+        "gitBlob": "e9d5580a90239d0748f6b5f374d04fd827b40dce"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "before": {
+        "bytes": 22366,
+        "lines": 344,
+        "sha256": "aa3f5a3d846570be1066db23b657fda483216dcef15c1581903d007b6540e34f",
+        "gitBlob": "fc47d6a0a2c38b33e8a5a6439dbddc9ee240ce10"
+      },
+      "after": {
+        "bytes": 22434,
+        "lines": 345,
+        "sha256": "651be27777eba7280304a791e52a088cec616e94b15d88734043c29c1adf234b",
+        "gitBlob": "e191694db8ccd8bbd2e05bcdbcacd8cb1703e23c"
+      }
+    }
+  ],
+  "patch": {
+    "bytes": 960,
+    "lines": 21,
+    "sha256": "b9afb9c50c05efd0d6ff9b86bf236d9690a0eaa32dbc8354e83520e6f267bc00",
+    "gitBlob": "1961af588aa3a8c471bb20820027a819d8864dba"
+  },
+  "inverse": {
+    "bytes": 960,
+    "lines": 21,
+    "sha256": "968ba761834f2b47e6886aacca5345f475899368e31bf3ea5941e6087d3b3962",
+    "gitBlob": "5921ffa0c60fac6d234e91d83c83aa9966080824"
+  },
+  "checks": [
+    {
+      "check": "Exact selected preimage src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "passed": true
+    },
+    {
+      "check": "Only selected one-token/one-entry replacement src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "passed": true
+    },
+    {
+      "check": "Whole-file inverse exact src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "passed": true
+    },
+    {
+      "check": "Existing source cap retained src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "passed": true
+    },
+    {
+      "check": "Exact selected preimage scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "passed": true
+    },
+    {
+      "check": "Only selected one-token/one-entry replacement scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "passed": true
+    },
+    {
+      "check": "Whole-file inverse exact scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "passed": true
+    },
+    {
+      "check": "Existing source cap retained scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "passed": true
+    }
+  ],
+  "checkCount": 8,
+  "scope": [
+    "Only minimum height of the existing assignee slot changes.",
+    "Only the directly changed Header path is appended after all256 common entries.",
+    "Every other byte in each source file is identical after inverse; all authority branches, callback logic, process27 and WindowsRetry46 lists remain.",
+    "No helper, harness, workflow, deadline, action, or existing observation predicate changes in this cut.",
+    "Independent Plan65 clarification wait changes must be retained if they land before publication."
+  ],
+  "execution": "NONE; exact text/hash/diff only",
+  "qualification": "Original Taskboard failure remains INCOMPLETE. Resulting-source original CI required."
+}

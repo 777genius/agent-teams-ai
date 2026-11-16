@@ -1,0 +1,201 @@
+{
+  "status": "ACCEPT_SOURCE_ONLY",
+  "reviewer": "/root/native_gaps",
+  "task": "Plan64 / W07 actual five-path source R2",
+  "selectedIntegrationCommit": "c6d127cc0a3736774b1d577ca37aa26730c48dd1",
+  "selectedPlan": {
+    "path": "w07-cold-fresh-proposal/integration/plan.md",
+    "sha256": "268ffa4acd591d89af90f9bb703f688c2a9fbba7229dba36f8087ab7dc41d02e",
+    "gitBlob": "66094d8c61b3aa49bfa777b550ca6d4bae69e703"
+  },
+  "candidate": {
+    "manifest": "w07-cold-fresh-proposal/source/manifest.json",
+    "manifestSha256": "efb80b682df6611174237d9cab9ebb4447f494e66530f05cde57e254330b9488",
+    "patch": "w07-cold-fresh-proposal/source/source.patch",
+    "patchSha256": "42e3a7fee30f92e8e0f5c7d9866e902f977840c72c9623acfa8c26c94cc1bcc4",
+    "preservationProofSha256": "5d5c86a42fa6b3ae25ab89d78a8be869aec9f8bd834cc0550321c35cf92148cb"
+  },
+  "inventory": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "gitBlob": "889332aafb86855e891b03f268bc33e49bd87597",
+        "sha256": "df050a35c76dfd64c74d66dfd5871cfff5459aed1e61eedc5e5d50b548edd1a9",
+        "bytes": 142256,
+        "lines": 1773
+      },
+      "after": {
+        "gitBlob": "f7d9534ccc58aa8b77fe7a424ff3d652873c0a15",
+        "sha256": "348d5a5c093e0608b6d16fe53d6136bf6c7f86c335287f979bb88e56be4d2979",
+        "bytes": 142325,
+        "lines": 1774
+      },
+      "additions": 2,
+      "deletions": 1
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceCold.ts",
+      "before": null,
+      "after": {
+        "gitBlob": "c5bf79733969eeb61e9a555818a2d966e8bb4672",
+        "sha256": "ec9017824c70a384d3b42a53f2b836d2d28ebb66129237770d33da52aec7555c",
+        "bytes": 5973,
+        "lines": 102
+      },
+      "additions": 102,
+      "deletions": 0
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "before": {
+        "gitBlob": "e0a107ffb1f57b62396c725cef57e9cadb78c5b1",
+        "sha256": "ece91a5b47fb81afe2f271a2ec627e577615eca256f309c2a51dcce291d41767",
+        "bytes": 25025,
+        "lines": 291
+      },
+      "after": {
+        "gitBlob": "0df0e08a0180c48a74aaca8d79cebe7fbe06d032",
+        "sha256": "c4a9d2d5cca3f7d86c83bb41f1aa8fc56ad779ae9acbbaa376033aee5a45335a",
+        "bytes": 25056,
+        "lines": 291
+      },
+      "additions": 1,
+      "deletions": 1
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "before": {
+        "gitBlob": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+        "sha256": "0a23987a84677fc2fc20f44f565cd20150ee6108111dc5793d52bcc9e01ff436",
+        "bytes": 59461,
+        "lines": 800
+      },
+      "after": {
+        "gitBlob": "7fa754daff8b6d538b0a186955edffb6b97d4ca0",
+        "sha256": "b6d30e2dc1a6f1fe2e2081f87a24d4dd6c31028f6f6ea002f1d9aafd8ab0a3e3",
+        "bytes": 59211,
+        "lines": 797
+      },
+      "additions": 40,
+      "deletions": 43
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "before": {
+        "gitBlob": "2d0a94f85c2d23232f9ce1a7375e7765f552ebb9",
+        "sha256": "d503beb57a0e2e41d81c89a73349acbecd1f7e1c958b3d732db4500bd532fb21",
+        "bytes": 593,
+        "lines": 6
+      },
+      "after": {
+        "gitBlob": "6336605c2aa95ebd830b079c9e23c316231471c4",
+        "sha256": "f6e40050d1892a2f1f867a11906fb123c56df2626b2ca2b0359abce58fcf5661",
+        "bytes": 624,
+        "lines": 6
+      },
+      "additions": 1,
+      "deletions": 1
+    }
+  ],
+  "diff": {
+    "additions": 146,
+    "deletions": 46,
+    "net": 100
+  },
+  "hunks": 18,
+  "independentDataChecks": {
+    "path": "native-proposal/w07-source-r2/data-checks.json",
+    "sha256": "cd428591d5f22f91e674a5d0564d9675f356dbc0fadde6ce4fca2adc3888e041",
+    "count": 54,
+    "allPassed": true
+  },
+  "manualSourceChecks": [
+    {
+      "id": "post-stop-checkpoint",
+      "passed": true,
+      "finding": "The new read follows both original warm Stops and precedes first.close. It selects the original generation and checkpoint id/reference, requires owner-eligible/native-backing-unverified, and does not introduce another checkpoint capture. The existing read route and CheckpointCoordinator stop-owned publication support this call."
+    },
+    {
+      "id": "restore-preservation",
+      "passed": true,
+      "finding": "The complete old Restore/replay/continuation/Stop body is preserved under bound parameters. In-memory inverse comparison proves the moved block, including original native session equality, zero replay allocation/input checks, current source B, one continuation and closed/released Stop."
+    },
+    {
+      "id": "fresh-current-source",
+      "passed": true,
+      "finding": "Fresh Launch invokes the same ordinary roster/capture/start/readiness routine using the cold epoch, Team A, current source B and distinct B-fresh command ids. Original source/recipe/Team/native readiness guards remain in that routine."
+    },
+    {
+      "id": "fresh-root-and-session",
+      "passed": true,
+      "finding": "After restored Stop the helper requires exactly one additional Job, the precise returned array entry, a capability distinct from the restored Job, one new initialized event for its actual peer pid, restored=false, and a nonempty native session different from original A."
+    },
+    {
+      "id": "separate-id-domains",
+      "passed": true,
+      "finding": "The existing boot helper returns Runtime deliveryId; c930 Claude SDK separately generates a native UUID. The new helper checks each domain independently. It never asserts equality between the native peer UUID and Runtime deliveryId."
+    },
+    {
+      "id": "one-new-input",
+      "passed": true,
+      "finding": "Before the fresh business input the complete native input ledger must be unchanged. Exactly one existing boot call then adds one row for the selected fresh pid/session and TEST_UI_BOOT marker, with the old prefix byte-equivalent and a new native UUID; its Runtime deliveryId differs from both prior deliveries."
+    },
+    {
+      "id": "same-run-vs-fresh-run",
+      "passed": true,
+      "finding": "Restore still requires a changed generation within the original run. Fresh Launch requires a different launchId and capability; it does not wrongly require numeric generation inequality across independent runs."
+    },
+    {
+      "id": "physical-owner-and-cleanup",
+      "passed": true,
+      "finding": "Epoch creation, physical ownership, strict resumed-job cleanup predicate, original HANDLE witness waits, sentinel checks and final pin checks remain with the original SourceScenario. The helper creates no owner and cannot turn incomplete physical cleanup into PASS."
+    },
+    {
+      "id": "original-budgets",
+      "passed": true,
+      "finding": "Original poll pre/post-await cutoff, 15-second defaults, 25 ms cadence, terminal observation, Host request budgets and outer 120-second controller are untouched. The new helper has no timer or retry loop. Whether the added work fits remains an actual CI gate."
+    },
+    {
+      "id": "bounded-types",
+      "passed": true,
+      "finding": "The new helper uses a narrow callback/data interface and a type-only Job import from Scenario. No runtime cycle, provider API, ownership registry or production path is introduced."
+    },
+    {
+      "id": "closure",
+      "passed": true,
+      "finding": "The new helper is appended to the existing source hash list and low-level compiler exclusion. The original retained-host include/import graph still follows Gate/Scenario into the helper. Existing Plan62 exclusion is retained."
+    },
+    {
+      "id": "lint-prefix",
+      "passed": true,
+      "finding": "The exact incoming 138-operand lint prefix, including the six Plan62 operands, is preserved; only nativeEmulatedSourceCold.ts is appended as operand 139. The rest of the full workflow is byte-identical."
+    },
+    {
+      "id": "natural-source-size",
+      "passed": true,
+      "finding": "The changed Scenario has 797 physical lines and the cohesive cold-journey helper 102. No cap raise, baseline exception or formatting-only compaction is used."
+    },
+    {
+      "id": "finite-scope",
+      "passed": true,
+      "finding": "The added branch is reached only with the existing finite Claude SDK checkpoint. No genuine Claude/Codex execution, runtime pin change, new CI row, Draft activation or provider protocol implementation is added."
+    }
+  ],
+  "totalReviewChecks": 68,
+  "providerIdentityEvidence": {
+    "archive": "native-proposal/c930-archives/agent-teams-provider-implementations-0.0.0.tgz",
+    "archiveSha256": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41",
+    "member": "package/dist/features/provider-session-implementation/adapters/claude-sdk/session.js",
+    "memberSha256": "ce8ab463d180cc319e91c344b716c705fa1be1420b5782c0d1211d199e00bd94",
+    "sourceFact": "nativeRef=randomUUID(); receipt inputId comes from pending.input.inputId while native user uuid comes from pending.nativeRef. Data-only archive read, no module execution."
+  },
+  "existingSourceEvidence": "native-proposal/w07-prospective-r2/review.json and its exact source bindings; current five preimages independently checked against selected integration packet.",
+  "findings": [],
+  "limits": [
+    "This is a source review, not TypeScript/lint/test/native execution acceptance.",
+    "Original and future CI receipts remain bound to their exact heads; no old PASS is transferred to this candidate.",
+    "The original total controller and per-action deadlines may expose runtime failures; no performance result is claimed.",
+    "Parent must recheck the current publication lease and preserve unrelated files."
+  ],
+  "execution": "Only inert file reads, hashes, JSON checks and complete in-memory forward/reverse patch application. No project/compiler/test/provider/native/GUI/CI/Git execution or mutation."
+}

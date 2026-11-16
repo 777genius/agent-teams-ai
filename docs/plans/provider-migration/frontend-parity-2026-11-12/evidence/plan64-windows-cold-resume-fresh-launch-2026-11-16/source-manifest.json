@@ -1,0 +1,120 @@
+{
+  "status": "FROZEN_SOURCE_ONLY_R1",
+  "selectedPlanCommit": "2a03bbf362abb224fa53519a248fb0ead59b8902",
+  "selectedIntegrationParent": "c6d127cc0a3736774b1d577ca37aa26730c48dd1",
+  "selectedPlan": {
+    "gitBlob": "66094d8c61b3aa49bfa777b550ca6d4bae69e703",
+    "sha256": "268ffa4acd591d89af90f9bb703f688c2a9fbba7229dba36f8087ab7dc41d02e",
+    "bytes": 20867,
+    "lines": 93
+  },
+  "inventory": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "gitBlob": "889332aafb86855e891b03f268bc33e49bd87597",
+        "sha256": "df050a35c76dfd64c74d66dfd5871cfff5459aed1e61eedc5e5d50b548edd1a9",
+        "bytes": 142256,
+        "lines": 1773
+      },
+      "after": {
+        "gitBlob": "f7d9534ccc58aa8b77fe7a424ff3d652873c0a15",
+        "sha256": "348d5a5c093e0608b6d16fe53d6136bf6c7f86c335287f979bb88e56be4d2979",
+        "bytes": 142325,
+        "lines": 1774
+      },
+      "additions": 2,
+      "deletions": 1
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceCold.ts",
+      "before": null,
+      "after": {
+        "gitBlob": "c5bf79733969eeb61e9a555818a2d966e8bb4672",
+        "sha256": "ec9017824c70a384d3b42a53f2b836d2d28ebb66129237770d33da52aec7555c",
+        "bytes": 5973,
+        "lines": 102
+      },
+      "additions": 102,
+      "deletions": 0
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "before": {
+        "gitBlob": "e0a107ffb1f57b62396c725cef57e9cadb78c5b1",
+        "sha256": "ece91a5b47fb81afe2f271a2ec627e577615eca256f309c2a51dcce291d41767",
+        "bytes": 25025,
+        "lines": 291
+      },
+      "after": {
+        "gitBlob": "0df0e08a0180c48a74aaca8d79cebe7fbe06d032",
+        "sha256": "c4a9d2d5cca3f7d86c83bb41f1aa8fc56ad779ae9acbbaa376033aee5a45335a",
+        "bytes": 25056,
+        "lines": 291
+      },
+      "additions": 1,
+      "deletions": 1
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "before": {
+        "gitBlob": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+        "sha256": "0a23987a84677fc2fc20f44f565cd20150ee6108111dc5793d52bcc9e01ff436",
+        "bytes": 59461,
+        "lines": 800
+      },
+      "after": {
+        "gitBlob": "7fa754daff8b6d538b0a186955edffb6b97d4ca0",
+        "sha256": "b6d30e2dc1a6f1fe2e2081f87a24d4dd6c31028f6f6ea002f1d9aafd8ab0a3e3",
+        "bytes": 59211,
+        "lines": 797
+      },
+      "additions": 40,
+      "deletions": 43
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "before": {
+        "gitBlob": "2d0a94f85c2d23232f9ce1a7375e7765f552ebb9",
+        "sha256": "d503beb57a0e2e41d81c89a73349acbecd1f7e1c958b3d732db4500bd532fb21",
+        "bytes": 593,
+        "lines": 6
+      },
+      "after": {
+        "gitBlob": "6336605c2aa95ebd830b079c9e23c316231471c4",
+        "sha256": "f6e40050d1892a2f1f867a11906fb123c56df2626b2ca2b0359abce58fcf5661",
+        "bytes": 624,
+        "lines": 6
+      },
+      "additions": 1,
+      "deletions": 1
+    }
+  ],
+  "diff": {
+    "files": 5,
+    "additions": 146,
+    "deletions": 46,
+    "net": 100
+  },
+  "patch": {
+    "gitBlob": "2774671658c256f7a39667250c5603a788a482f2",
+    "sha256": "42e3a7fee30f92e8e0f5c7d9866e902f977840c72c9623acfa8c26c94cc1bcc4",
+    "bytes": 24839,
+    "lines": 334
+  },
+  "preservation": {
+    "gitBlob": "d1dedd6557b3657129bb953839cd0f705ee848ed",
+    "sha256": "5d5c86a42fa6b3ae25ab89d78a8be869aec9f8bd834cc0550321c35cf92148cb",
+    "bytes": 14792,
+    "lines": 328
+  },
+  "sourceR1": {
+    "gitBlob": "51e1f5bb525f16ef9f25b726e9130853e17066a2",
+    "sha256": "a82112ec9463c33fddd7e07bdedbe0cffec1541cfee020d4b9a4d419455bb26c",
+    "bytes": 6444,
+    "lines": 33
+  },
+  "beforeBinding": "Exact selected production preimages and helper absence supplied by root full-tree rebind; workflow independently reread at selected integration parent; root must fresh-rebind before publication.",
+  "execution": "NONE; inert data/text/hash operations only",
+  "qualification": "Finite Windows TEST engineering composition only; original exact-source CI remains mandatory."
+}

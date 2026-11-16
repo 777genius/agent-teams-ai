@@ -1,0 +1,431 @@
+{
+  "kind": "PLAN68_REVISION2_PROSPECTIVE_RENDER_PURITY_R2",
+  "status": "ACCEPT_EXACT_PROSPECTIVE_TWO_PATH_SCOPE",
+  "reviewer": "installer_review",
+  "plan": {
+    "path": "frontend-proposal/team-purity-75cf/plan.md",
+    "bytes": 7804,
+    "lines": 46,
+    "sha256": "c859c7342a74681636c3d10ee39778a483d5272632c93c5b73d2f4120bd31422",
+    "gitBlob": "bc75c16dc6db634df125bfb5faf8665975febdac"
+  },
+  "priorPlan": {
+    "path": "frontend-proposal/team-purity-75cf/revision1/plan.md",
+    "bytes": 7415,
+    "lines": 46,
+    "sha256": "5495480dbf338adc59892adf58be92a4053dec84eb277961a4926002d69d76c4",
+    "gitBlob": "9d9026fb89f454e88dda1afae19e215f364738f9"
+  },
+  "authorR1": {
+    "path": "frontend-proposal/team-purity-75cf/r1.md",
+    "bytes": 4372,
+    "lines": 19,
+    "sha256": "58770812134afe0ec77e8a9f77f24ca3b1c8776c5f99039a5e6fc0a76fb0b1b7",
+    "gitBlob": "f1e1aa00e64524b51387317f926ead626f33e0e7"
+  },
+  "authorReview": {
+    "path": "frontend-proposal/team-purity-75cf/review.json",
+    "bytes": 8877,
+    "lines": 234,
+    "sha256": "50931cd52058c4b859e021a3339d74b969679b9959fce131c8d6db496490377f",
+    "gitBlob": "6f49d66edbcb3651e6edce9dccc8851ae3a623b7"
+  },
+  "sourceBindings": [
+    {
+      "path": "frontend-proposal/team-purity-75cf/source/src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "bytes": 13822,
+      "lines": 396,
+      "sha256": "b0f3a9ede1f0bb08f75f11c2742d0fdb14b281b1ea63da5509e50b38d9d98cac",
+      "gitBlob": "c1d31ee945c28cfe1f1339d914d0d1be7fc5e928"
+    },
+    {
+      "path": "frontend-proposal/team-purity-75cf/source/test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "bytes": 28286,
+      "lines": 844,
+      "sha256": "375ab28dfb1aaf9506b0c852fc97dc48ae612d38edf5fad3099dcf9e420de286",
+      "gitBlob": "c1ab11f043ea5bcfb5325cb8fb6f147541076f38"
+    },
+    {
+      "path": "frontend-proposal/team-purity-75cf/source/src/renderer/components/team/dialogs/useCapturedTeamLaunchReadiness.ts",
+      "bytes": 5710,
+      "lines": 149,
+      "sha256": "7327fb6ed0504e412dcdafe4989c91625c2ef0712edf0705c767c5bfc52775af",
+      "gitBlob": "e8f5137ea0b7b69f4c098203d797780be99a5c01"
+    },
+    {
+      "path": "frontend-proposal/team-purity-75cf/source/src/renderer/components/team/dialogs/capturedTeamLaunchReadiness.ts",
+      "bytes": 1376,
+      "lines": 45,
+      "sha256": "5a3e24af0a051afe0e8736e4d79e21239ef23b3aeb7a972c59fe5e79655db09e",
+      "gitBlob": "7a78f0791a54d09bcdda9c466b4df9c8b3b569d1"
+    },
+    {
+      "path": "frontend-proposal/team-purity-75cf/source/src/renderer/components/team/dialogs/providerLaunchAuthority.ts",
+      "bytes": 8286,
+      "lines": 223,
+      "sha256": "7c122f43c764f438d9c9d78413f5e3912e83f29a3c30f72631333dc34d6e44d0",
+      "gitBlob": "a6dbcf114109c75f5a0dfad9ca20e71884956f31"
+    },
+    {
+      "path": "frontend-proposal/team-purity-75cf/source/src/renderer/components/team/dialogs/optionalProviderPreflight.ts",
+      "bytes": 11013,
+      "lines": 291,
+      "sha256": "a3d491d4569b2ab696981bd4b3312a51778ce494919c0534ed889f2f0edb7f1b",
+      "gitBlob": "a57bb61faac6657400e60cefd39ff9dd4995c5c3"
+    }
+  ],
+  "existingLaunchCaller": {
+    "path": "frontend-proposal/plan49-source-review/after/src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+    "bytes": 132386,
+    "lines": 3220,
+    "sha256": "70f0a8dac05a8031d191de97c3e9ab7bc60ed21ca87b4dfcea167e32478ea66e",
+    "gitBlob": "832ed8f713a1bc34b2eaa78858180af19eda6862"
+  },
+  "originalTeamLog": {
+    "path": "desktop-team-75cf/job.log",
+    "bytes": 2268881,
+    "lines": 13825,
+    "sha256": "89b1bb256c9bc46dc9258f715e7ecf82917b4c78c5937f87f309ad2f17667d67",
+    "gitBlob": "51812f35d1644029b5f1b09ae4d0d2c355a15da9"
+  },
+  "sourceVectorReceipt": {
+    "path": "desktop-taskboard-75cf/extracted/TEST-desktop-backend-p6JQJh/desktop-backend-receipt.json",
+    "bytes": 968210,
+    "lines": 25041,
+    "sha256": "39a8125ebd1db403bad8c5ff640748d46159df0a5c33ed851b1e613ce9711ef9",
+    "gitBlob": "8300fadbac3db8149a2619ed0bf404c0e98e49e2"
+  },
+  "originalValidationWorkflow": {
+    "path": "v2-lifecycle-proposal/source/after/.github/workflows/host-emulated-acceptance.yml",
+    "bytes": 141809,
+    "lines": 1767,
+    "sha256": "e8bafc0f5bc8016a6a7f55591436edf470f2e0eb259a6a85cc5a986d9f956d88",
+    "gitBlob": "458a88ff6b3b197282f9144951aeb79074cc8d5b"
+  },
+  "immutableEslintConfig": {
+    "path": "installer-proposal/plan68-prospective-r2/eslint.config.js",
+    "bytes": 37840,
+    "lines": 1166,
+    "sha256": "d9f0cf7c33672b9304fc524bbc028e07939bcab4583bb1e7c94b99fd773eb597",
+    "gitBlob": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c"
+  },
+  "blockingFindings": [],
+  "resolvedFinding": {
+    "issue": "A label-only child update can leave providerStates memo cached, so an old render-time Date.now implementation could pass the intended timestamp-reuse regression.",
+    "revision2Resolution": "Require memo recomputation through a fresh equivalent loading-map object while preserving parent predicate identity; observe a delegating actual permits wrapper and separate presentation timestamps from guard current-time calls.",
+    "documentChanges": 1,
+    "sourceChanges": 0
+  },
+  "designReview": [
+    "Moving the actual Date.now read into a layout effect samples commit-time state rather than concealing an impure render call behind another function. A nullable snapshot stores only current predicate identity and timestamp; render remains deterministic for that snapshot.",
+    "The identity comparison must reject the previous scope during the render preceding the new layout effect. Absent predicate clears the snapshot without reading time. Existing loading and scoped-OpenCode guards must short-circuit before predicate evaluation.",
+    "The exact existing Launch owner constructs a fresh permits function on every parent hook render. Its unchanged expiry+1 timer invalidates that owner. A child snapshot state update alone does not recreate the parent prop, preventing a self-sustaining update cycle.",
+    "A child-only memo recomputation with stable predicate intentionally reuses the original observation time. That time is display evidence only. Original createLaunchGuard and captureForSubmit independently sample actual current time at action boundaries.",
+    "The proposed real-owner regression is feasible without any provider/API/preflight operation. A finite read-only source-selector fixture supplies the six already-required context values; construct the actual fence, seed exact proof after obtaining actual draft/selection identities, and retain the hook timer and pure predicate.",
+    "The test must check the actual parent predicate identity and observed timestamp, force child memo recomputation, reject via the original guard at strict expiry before processing the scheduled callback, then process only the original expiry owner and observe the chip leave Ready. No manually manufactured expiry render/timer may substitute.",
+    "The nine direct tests and three parameterized declarations, including the nine captured-readiness scenarios and original module mocks, remain immutable source-review obligations.",
+    "Both selected paths and the four direct readiness/guard/fence owners are already original source pins; both paths are existing explicit fast-lint operands. No source-roster or workflow expansion is indicated."
+  ],
+  "qualificationLimits": [
+    "Prospective document/source diagnosis only; there are no source afterimages and no lint/compiler/frontend/E2E execution results.",
+    "The strategy relies on the existing caller fresh-identity/expiry-owner contract; it does not promise independent clock updates for arbitrary stable callbacks or change the existing expiry scheduling policy.",
+    "The current immutable ESLint config treats set-state-in-effect as warning. The selected bounded synchronization render can still produce that warning; no warning-free or compiler acceptance is asserted and no rule change is selected.",
+    "Commit-time sampling adds a local observation even if readiness evaluation is currently short-circuited; it adds no timer, recurring cadence, provider operation or mutation authority.",
+    "StrictMode development replay may repeat effect setup; the essential invariant is bounded synchronization without a parent-identity feedback loop, not a globally exact render count.",
+    "The equal1777 source vectors are source-pin evidence only. This review does not independently rehash all1777 repository bodies or transfer the failed Task Board/Team result into acceptance.",
+    "Root must rebind the immediate publication parent; preserve all incoming leaves, original size baseline/exclusions, every old test body and unchanged production authority regions in actual-source R2."
+  ],
+  "testDeclarationInventory": {
+    "directIt": 9,
+    "itEachDeclarations": 3,
+    "capturedScenarios": 9,
+    "executedCases": null
+  },
+  "checks": [
+    {
+      "name": "Exact final revision2 plan",
+      "passed": true
+    },
+    {
+      "name": "Exact retained revision1 plan",
+      "passed": true
+    },
+    {
+      "name": "Exact revision2 R1 manifest",
+      "passed": true
+    },
+    {
+      "name": "Only the selected one test paragraph changes in revision2",
+      "passed": true
+    },
+    {
+      "name": "Revised regression forces providerStates memo recomputation",
+      "passed": true
+    },
+    {
+      "name": "Revised regression delegates actual predicate and separates guard",
+      "passed": true
+    },
+    {
+      "name": "Exactly two selected existing source paths",
+      "passed": true
+    },
+    {
+      "name": "Complete original source binding src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "passed": true
+    },
+    {
+      "name": "Complete original source binding test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete original source binding src/renderer/components/team/dialogs/useCapturedTeamLaunchReadiness.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete original source binding src/renderer/components/team/dialogs/capturedTeamLaunchReadiness.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete original source binding src/renderer/components/team/dialogs/providerLaunchAuthority.ts",
+      "passed": true
+    },
+    {
+      "name": "Complete original source binding src/renderer/components/team/dialogs/optionalProviderPreflight.ts",
+      "passed": true
+    },
+    {
+      "name": "Immutable beforeimage equals retained official source src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "passed": true
+    },
+    {
+      "name": "Immutable beforeimage equals retained official source test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "passed": true
+    },
+    {
+      "name": "No author source afterimage exists",
+      "passed": true
+    },
+    {
+      "name": "Exact original direct render-time Date.now defect",
+      "passed": true
+    },
+    {
+      "name": "Original captured predicate occurs within provider-state memo",
+      "passed": true
+    },
+    {
+      "name": "Original loading/scoped-readiness short circuit precedes captured proof",
+      "passed": true
+    },
+    {
+      "name": "Original captured predicate is already a memo dependency",
+      "passed": true
+    },
+    {
+      "name": "Selected actual commit-time clock and identity pairing",
+      "passed": true
+    },
+    {
+      "name": "No absent-prop clock sample selected",
+      "passed": true
+    },
+    {
+      "name": "No new timer/cadence/subscription or policy whitelist selected",
+      "passed": true
+    },
+    {
+      "name": "Existing owner original expiry callback uses state invalidation",
+      "passed": true
+    },
+    {
+      "name": "Existing owner retains exact clipped expiry+1 delay",
+      "passed": true
+    },
+    {
+      "name": "Existing owner retains cleanup and expiry dependency",
+      "passed": true
+    },
+    {
+      "name": "Existing permits is fresh function per owner render",
+      "passed": true
+    },
+    {
+      "name": "Existing permits delegates original pure predicate with explicit time",
+      "passed": true
+    },
+    {
+      "name": "Pure readiness predicate performs no Date.now read",
+      "passed": true
+    },
+    {
+      "name": "Original pure readiness binding retained !scope.open",
+      "passed": true
+    },
+    {
+      "name": "Original pure readiness binding retained check?.status === 'ready'",
+      "passed": true
+    },
+    {
+      "name": "Original pure readiness binding retained check.capturedTeamDraftSignature === scope.draftSignature",
+      "passed": true
+    },
+    {
+      "name": "Original pure readiness binding retained proof.handleId === handleId",
+      "passed": true
+    },
+    {
+      "name": "Original pure readiness binding retained proof.preparationId === scope.preparationId",
+      "passed": true
+    },
+    {
+      "name": "Original pure readiness binding retained proof.selectionSignature === scope.selectionSignature",
+      "passed": true
+    },
+    {
+      "name": "Original pure readiness binding retained proof.launchId",
+      "passed": true
+    },
+    {
+      "name": "Original pure readiness binding retained proof.rosterRevision",
+      "passed": true
+    },
+    {
+      "name": "Original action guard independently samples current time",
+      "passed": true
+    },
+    {
+      "name": "Original captureForSubmit separately samples actual current time",
+      "passed": true
+    },
+    {
+      "name": "Real existing fence can be constructed without preflight execution",
+      "passed": true
+    },
+    {
+      "name": "Nine original captured proof scenarios present",
+      "passed": true
+    },
+    {
+      "name": "Existing captured tests use real predicate and guard",
+      "passed": true
+    },
+    {
+      "name": "Original sibling and global-object/guard assertions present",
+      "passed": true
+    },
+    {
+      "name": "Existing API and logo mocks retain original closed seam",
+      "passed": true
+    },
+    {
+      "name": "Original declaration inventory nine direct and three parameterized",
+      "passed": true
+    },
+    {
+      "name": "Selected new test uses real owner/predicate/fence/guard",
+      "passed": true
+    },
+    {
+      "name": "Selected test observes expiry before processing existing callback",
+      "passed": true
+    },
+    {
+      "name": "Selected test preserves unmount and clock restoration",
+      "passed": true
+    },
+    {
+      "name": "Exact original Launch caller binding",
+      "passed": true
+    },
+    {
+      "name": "Actual Launch passes the freshly owned permits prop",
+      "passed": true
+    },
+    {
+      "name": "Exact original Team log binding",
+      "passed": true
+    },
+    {
+      "name": "Original typed lint names exact direct clock and purity rule",
+      "passed": true
+    },
+    {
+      "name": "Original source-vector receipt exact binding",
+      "passed": true
+    },
+    {
+      "name": "Retained original before/after1777 vectors equal",
+      "passed": true
+    },
+    {
+      "name": "Exact retained source vector pin src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "passed": true
+    },
+    {
+      "name": "Exact retained source vector pin test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact retained source vector pin src/renderer/components/team/dialogs/useCapturedTeamLaunchReadiness.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact retained source vector pin src/renderer/components/team/dialogs/capturedTeamLaunchReadiness.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact retained source vector pin src/renderer/components/team/dialogs/providerLaunchAuthority.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact retained source vector pin src/renderer/components/team/dialogs/optionalProviderPreflight.ts",
+      "passed": true
+    },
+    {
+      "name": "Actual Launch caller also pinned",
+      "passed": true
+    },
+    {
+      "name": "Original75cf workflow exact458a binding",
+      "passed": true
+    },
+    {
+      "name": "Existing explicit fast-lint operand src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "passed": true
+    },
+    {
+      "name": "Existing explicit fast-lint operand test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "passed": true
+    },
+    {
+      "name": "Exact immutable75cf ESLint body",
+      "passed": true
+    },
+    {
+      "name": "Current renderer inherits React recommended rules",
+      "passed": true
+    },
+    {
+      "name": "Current set-state-in-effect policy remains warning",
+      "passed": true
+    },
+    {
+      "name": "Plan forbids any lint suppression or policy/workflow change",
+      "passed": true
+    }
+  ],
+  "checkCount": 68,
+  "execution": {
+    "project": false,
+    "compiler": false,
+    "tests": false,
+    "linter": false,
+    "providers": false,
+    "native": false,
+    "gui": false,
+    "ciPollOrMutation": false,
+    "remoteMutation": false
+  },
+  "sourceAfterimagesCreated": false
+}
