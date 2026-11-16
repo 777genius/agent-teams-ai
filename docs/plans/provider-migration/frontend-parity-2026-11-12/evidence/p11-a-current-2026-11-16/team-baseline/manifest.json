@@ -1,0 +1,41 @@
+{
+  "status": "FINAL_READ_ONLY_CURRENT_TEAM_BASELINE_AUDIT",
+  "source": "57885c055a18b27c180c304762643eac632513ad",
+  "runId": 43823212577,
+  "jobId": 133150851331,
+  "artifacts": [
+    {
+      "path": "team-578-original/job-133150851331.log",
+      "gitBlob": "f8710649393df89727eedf54ac54e59b61c0ace0",
+      "bytes": 2709748,
+      "sha256": "aa428b27236f3867f1cdf13c32494a61ec4fa4ffef02cce2a57794ae2024fa81"
+    },
+    {
+      "path": "team-578-original/source-binding.json",
+      "gitBlob": "e9f57a6f00c2ad5e4d27b9bb7c42cd3b66834ad2",
+      "bytes": 23742,
+      "sha256": "0570e0742162ca529bd5661368a3e07c0644936d26558747136a5d8d1d7c6756"
+    },
+    {
+      "path": "team-578-original/audit.json",
+      "gitBlob": "b497c97469838cf44e6ee59379598564fc09b2ba",
+      "bytes": 25144,
+      "sha256": "e85ae390c790412602e6000ca2820f2c1f7bf0e996c9518f1e64e888a627ad13"
+    },
+    {
+      "path": "team-578-original/review.md",
+      "gitBlob": "95904a6caa8e48e3b151fac1786775ee343ec3c0",
+      "bytes": 3124,
+      "sha256": "d817d5afb4a2f917b9803a5a1bf3d22f350cc0909a45fd32ae48dd54eef4277f"
+    }
+  ],
+  "terminalMetadata": {
+    "path": "cohort-578-preservation-0807/snapshot.json",
+    "gitBlob": "2addbb6f2985a52252e21d0861dfe838fcef2c45",
+    "bytes": 188491,
+    "sha256": "02a19d0ca40bc190b2b75348d7b2568319ec6d6f96d0ff150e12654a24df79dd"
+  },
+  "localProjectExecution": false,
+  "gitOrIndexWrites": false,
+  "additionalApiRequests": 0
+}

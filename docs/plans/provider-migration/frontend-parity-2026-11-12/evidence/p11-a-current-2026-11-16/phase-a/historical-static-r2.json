@@ -1,0 +1,67 @@
+{
+  "status": "APPROVE_STATIC_ONLY_NOT_SELECTION_OR_EXECUTION_GO",
+  "reviewedAtUtc": "2026-11-16T05:59:45.696974+00:00",
+  "reviewer": "frontend_failures",
+  "baseCommit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "baseTree": "d9f28b5c732167943607d251f258444f9d2f2d8d",
+  "manifest": {
+    "bytes": 14720,
+    "lines": 364,
+    "gitBlob": "f74084e8e236d9b5dfe6ecae84000d2957200458",
+    "sha256": "cc216a766ef8db0cf227eb181fb53ff46fe6317b74201995bb5ebde1611ad912"
+  },
+  "prose": {
+    "bytes": 10323,
+    "lines": 49,
+    "gitBlob": "0914c6acf7e7882785ad8c5af95bc970ea710efd",
+    "sha256": "1f32cbf094b732e75ce4536656f13015607b8a3d84826417b50deba9b474fc75"
+  },
+  "candidate": {
+    "bytes": 115936,
+    "lines": 1958,
+    "gitBlob": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+    "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076"
+  },
+  "patch": {
+    "bytes": 4709,
+    "lines": 68,
+    "gitBlob": "adda40c296f1b88f2f0a5e20cccb3444e4e8887d",
+    "sha256": "bc09f9098c3206ffc50ab80f452719f838a735586e19a732bc083676861d777a"
+  },
+  "exactPreservation": {
+    "wholeCurrent1896LinePrefix": true,
+    "wholeFrozen1766LinePrefix": true,
+    "current130LineDesktopAppendBeforeAuthored62Lines": true,
+    "only4264ByteSuffixAdded": true,
+    "allFrozenInputsRehashed": true
+  },
+  "actualSourceSeam": {
+    "driver": {
+      "bytes": 45707,
+      "lines": 570,
+      "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+    },
+    "uniqueBeginEndMarkers": true,
+    "twoOriginalAwaitedObservations": true,
+    "original90000CutoffAnd100Cadence": true,
+    "noDriverModuleImport": true,
+    "finiteEnvironmentOnly": true
+  },
+  "testSemantics": {
+    "expectedSemanticRed": 3,
+    "expectedControlPass": 1,
+    "predictionsOnly": true,
+    "afterFailingRejectAssertionsUnreachedInRed": true,
+    "errorIdentityAndCurrentnessPreservedByControl": true,
+    "noNativeProviderGuiInvocationInAddedCases": true,
+    "noNewParameterPropertyOrTransformOnlyTsSyntax": true
+  },
+  "boundaries": [
+    "No phaseA selected/applied/executed; no result count is transferred from953 to e1d.",
+    "Root must retain actual e1d original full-types/typed-renderer outcome and publish/read back a fresh phase/order R1 before application.",
+    "A changes only existing test; B/C remain unselected future references requiring their own actual gates and current-source review.",
+    "No local project or workflow action authorized; original full8-file CI venue remains unchanged.",
+    "Existing owner/clock/guard/cleanup behavior is not changed by this test-only candidate."
+  ]
+}
