@@ -1,0 +1,288 @@
+{
+  "schema": "independent-native-provider-source-review/v1",
+  "reviewer": "/root/native_failures",
+  "reviewedAt": "2026-11-16T00:00:00Z",
+  "repository": "777genius/agent-teams-ai",
+  "base": "1f9242563bec2641b25077c3aa83a999bd7f4871",
+  "incoming": "9e542899f36c47598a88c764c9e6745589fea3e1",
+  "verdict": "APPROVE bounded seven-path source adoption and exact M test composition; known held-value confidentiality defect remains pending genuine RED and separate reviewed correction",
+  "scope": "Full contents and exact Git/API identities of the seven assigned paths; prior published Plan32/33 relevant amendments; fixed provider9423 Claude normalizer; no approval of other incoming production or UI paths by this record.",
+  "paths": [
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts",
+      "preimage": {
+        "bytes": 25660,
+        "lines": 454,
+        "blob": "ed25bfd57ff19730328fd13c4d338e8a3649e2a3",
+        "sha256": "2e988f1529b49a11c41a8678a964f0a38d4951a89a0dac3db18ab3e149b49958"
+      },
+      "incoming": {
+        "bytes": 25689,
+        "lines": 454,
+        "blob": "186171f456cc99a18e12f0b87c4bd508936d6243",
+        "sha256": "895d895fb8b28e4007240389055e1b6405fc4d02093fe7eff1f95cdb51835a05"
+      },
+      "added": 1,
+      "deleted": 1
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts",
+      "preimage": {
+        "bytes": 9613,
+        "lines": 158,
+        "blob": "85929131823d19197651cc5f984096cde9b1fd6e",
+        "sha256": "e4e048ad5880cedd77ac7f105152322d26fa3bc60473b28a4a9d562a7c666dcc"
+      },
+      "incoming": {
+        "bytes": 10051,
+        "lines": 166,
+        "blob": "e6861511417070c9202458253a16a3ffb20216ae",
+        "sha256": "77cb82d6c1938b3f858b4b65484c9ab123ec6b0c8e4bab2c20793b6708f51c08"
+      },
+      "added": 12,
+      "deleted": 4
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "preimage": {
+        "bytes": 7826,
+        "lines": 164,
+        "blob": "3b2b960722f878cf60ba94bae27176fb9e7d0bba",
+        "sha256": "c30d9a9d7357275864ede578ec9a4c66e335ffb1a613a5d916c6aced9061e1bc"
+      },
+      "incoming": {
+        "bytes": 7855,
+        "lines": 165,
+        "blob": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+        "sha256": "df315063bd119870f52b932daf72880ac4ea40340e023049a236fed79e505c37"
+      },
+      "added": 3,
+      "deleted": 2
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "preimage": {
+        "bytes": 14002,
+        "lines": 314,
+        "blob": "f84153e49a9ace1f07a5d1f7bb9cea486f5617af",
+        "sha256": "30c863da3e66b2d2e4be13e8a3394d09e75ade9e84ee38a7775806cd60acc868"
+      },
+      "incoming": {
+        "bytes": 17005,
+        "lines": 366,
+        "blob": "d2b952c9e6ac2281a14a00665cf4689d9c7d4b5c",
+        "sha256": "12be8f565712c09537d99ba75b63aa6e01774708ad1967c7ee2fdd964d747712"
+      },
+      "added": 52,
+      "deleted": 0
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "preimage": {
+        "bytes": 45583,
+        "lines": 822,
+        "blob": "06bdfb8243c035f10f82b6025fbe98e171716831",
+        "sha256": "e0703be3ad202f8f1b6e358e32cc5fdc18bc2d71297019ac26ca903ea571bf89"
+      },
+      "incoming": {
+        "bytes": 47440,
+        "lines": 850,
+        "blob": "d13aa0c846dbf97aff99786e1165aa214aab93c7",
+        "sha256": "5a1e781f3d910b97cb3e4bfdc8592897bce69861b6200421355ed9f047f85f89"
+      },
+      "added": 32,
+      "deleted": 4
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "preimage": {
+        "bytes": 12742,
+        "lines": 226,
+        "blob": "c073ab7b8c6025313747f75e50e8b0a14985d589",
+        "sha256": "f2c89ada2f51d13e42af390229cc6b2fc58e2c82a48bf64154c006c5feedc573"
+      },
+      "incoming": {
+        "bytes": 14242,
+        "lines": 247,
+        "blob": "e52785444caebdc8c698d87ac122f4a13742b5cc",
+        "sha256": "e6f1a2d049117442bbdc26ad2c525b0f95d1080740bd5caec59a50930e0de45c"
+      },
+      "added": 21,
+      "deleted": 0
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "preimage": {
+        "bytes": 31783,
+        "lines": 458,
+        "blob": "6cdba0b52141348d97c593bf2ae6c224cdce5d73",
+        "sha256": "03f92320d8646353540bcea7a3626a0a35634b803a6af1599d23c1d882a6d962"
+      },
+      "incoming": {
+        "bytes": 32221,
+        "lines": 463,
+        "blob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+        "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87"
+      },
+      "added": 9,
+      "deleted": 4
+    }
+  ],
+  "plans": [
+    {
+      "path": "32-host-log-view-parity-2026-11-15.md",
+      "published1f": {
+        "bytes": 36690,
+        "lines": 507,
+        "blob": "2305bbd7b340418f82b39e5bdb28f302735f7237",
+        "sha256": "4ed58ea26bab62673809a5c123a85492355671b58803b273a7d9757fa83d59b1"
+      },
+      "incoming9e": {
+        "bytes": 49788,
+        "lines": 694,
+        "blob": "27f455b058d999213277e396343016789163660f",
+        "sha256": "32cb9313cd505b9576662fc0453d2349f522b2ce0bb42092a2369b82b7539c05"
+      },
+      "publishedPrefixPreserved": true
+    },
+    {
+      "path": "33-member-stderr-log-parity-2026-11-15.md",
+      "published1f": {
+        "bytes": 26918,
+        "lines": 435,
+        "blob": "f5176d68c3e9fa81472d0a81f0cb324a210a4854",
+        "sha256": "37b6f1e4e05970db1acd1cb8c1edbc0ba99e087bd48f96a80b712d99280efbb5"
+      },
+      "incoming9e": {
+        "bytes": 28750,
+        "lines": 464,
+        "blob": "77cb678aef27ac3b744258e856deba479ea8c414",
+        "sha256": "1678842870b90126aef267c0bdb2e834254420d59d77c3c813dea310dd23b00f"
+      },
+      "publishedPrefixPreserved": true
+    }
+  ],
+  "priorAuthority": [
+    "Plan32 published on71 and retained in1f authorizes the one coordination expression only after original provenance/currentness/deadline/128-event/32KiB checks, with seven synthetic variants and the original two MCP effects plus real text/result.",
+    "Plan32/33 source-free1f published standalone Thinking/stderr amendments precede9e source. Their exact full prefixes survive9e;9e completion prose is later author-reported execution, not a substitute for independent raw-log qualification.",
+    "The seven incoming paths fit those bounded changes. This source review does not rerun or independently verify author129/66 controlled inventories, builds,240-second timeout or reported RED."
+  ],
+  "findings": [
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts",
+      "status": "approve",
+      "facts": [
+        "Thinking reaches the ignore arm only after original currentness/deadline, serialized-byte/count and session/input/operation checks.",
+        "It cannot set hasText, complete a tool, change MCP/tool identity, supply the required answer, or change any original terminal classification.",
+        "The one-expression delta changes no input, request, cleanup operation, timing budget or persisted record."
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts",
+      "status": "approve",
+      "facts": [
+        "Claude wraps the same original custody.launch and synchronously attaches before returning its actual child; Codex computes the same argument array and synchronously attaches to the same original app-server child before codexByteTransport.",
+        "No await or second child is inserted between original launch and attachment. Catalog-helper processes remain outside this hook; selected/current checks, one allocation latch, ephemeral settings, limits and original failure/cleanup path are unchanged.",
+        "The optional RuntimeProcessOutput callback records only original process facts. No endpoint or Session/input/outcome is manufactured. Observation and sanitation work consumes ordinary execution time; no free-work or latency guarantee is claimed."
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "status": "approve-with-existing-known-defect",
+      "facts": [
+        "Only the endpoint input becomes optional and its values are selected conditionally. With a present endpoint, the same bearer/URL values are retained; absent schedules still select held profile/environment/argv/MCP forms.",
+        "The entire framing/redaction/suppression/24KiB checks/final-tail/listener cleanup body is unchanged. Original callbacks are contained and no stdout or stdin is observed.",
+        "The existing contextual held-value suffix defect is still present at6b6c. Endpoint absence is not a privacy repair and does not authorize discarding the L regression or applying old21aa wholesale."
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "status": "approve",
+      "facts": [
+        "Exactly one import and two parameterized finite Node-child cases are added; deleting these additions recreates the full314-line preimage.",
+        "Each actual scheduled provider factory fails before readiness, retains startup/redacted private value/final tail, has no endpoint or progress-produced Session observation, and confirms original physical cleanup.",
+        "The pinned temporary executable is process.execPath via the existing setup, never a real Claude/Codex executable. Existing Windows skips remain, including the two new POSIX-only cases; no cross-platform native qualification follows."
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "status": "approve",
+      "facts": [
+        "One added top-level test iterates seven typed variants through the actual production coordination function and existing inert MCP endpoint. Existing original variants still take their old paths.",
+        "The positive case includes snapshot+complete Thinking before original tools, answer and result. Foreign provenance and independent event/byte overflows refuse before effects complete.",
+        "Thinking-only deliberately completes the original MCP sequence, then omits only the actual answer and must still refuse; endpoint.completed true in this negative is not proof success. Existing finally awaits original client and endpoint close."
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "status": "approve",
+      "facts": [
+        "Exactly21 lines add one no-endpoint callback/PassThrough test. All226 old lines preserve byte order unchanged.",
+        "It retains selected environment/argv/MCP canary masking, ordinary startup/final-tail once and listener detach; stdout protocol stays excluded. It does not cover or repair the separate contextual held-value flaw."
+      ]
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "status": "approve",
+      "facts": [
+        "Existing TEST_UI_STREAM adds content_block_stop(0) before Thinking starts; only successful nonlocal/uninterrupted finish adds stop(1) before its final assistant wrapper.",
+        "Existing TEST_UI_STANDALONE_DONE adds one benign stderr line and one final Thinking block to the same admitted input, preserving original answer/result/cost/effects and single-input standalone restriction.",
+        "Exact provider9423 Normalizer.partial returns no fact for stop frames; final assistant Thinking is a typed fact and its signature is not copied. Original guard/argv/environment/counters/authority/interrupt/cleanup code remains.",
+        "These are explicit additional wire/log facts under unchanged frame/byte budgets; there is no added business turn, provider request or real vendor invocation. Native/Desktop qualification remains pending original CI."
+      ]
+    }
+  ],
+  "MRedTestComposition": {
+    "candidate": {
+      "path": "stage-m-adoption/candidate/packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "bytes": 16103,
+      "lines": 277,
+      "blob": "0727339627757c3a96d54da2933eb7c1b60685f7",
+      "sha256": "2a738fca4120ae3361483abd948f7746d2025f32012b189e695085845bc3e191"
+    },
+    "incomingPrefixExact": true,
+    "preservedLAppendix": {
+      "bytes": 1861,
+      "lines": 30,
+      "blob": "b75535f081cca499ec858db4b705f9595cf06d63",
+      "sha256": "8f19e15d728ed345aaa037b7acd862c958b1f85a0baf0ce17b6ac8bf75b86a1a"
+    },
+    "LTestBlob": "d1b52658270cc53a9e1ec345de55f840e7549011",
+    "staticCaseCount": 24,
+    "predictedOnly": {
+      "pass": 21,
+      "fail": 3,
+      "skip": 0,
+      "cancelled": 0
+    },
+    "meaningfulFailure": "Each of the three original7-character chunked space/tab/mixed cases must fail at the held suffix assertion on current6b6c, not setup/import/prerequisite failure.",
+    "venue": "Only future original complete10-file Team CI command after its original fresh build; no local execution or manual CI action authorized by this review."
+  },
+  "FutureGreenComposition": {
+    "reviewedOldFix": "21aa3590f82939778a3fd657bbafa2d64c23d923",
+    "newPreimage": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+    "exactCommutes": true,
+    "computedOnlyIdentity": {
+      "bytes": 8310,
+      "lines": 172,
+      "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7"
+    },
+    "applied": false,
+    "limits": "Only the reviewed+8/-1 redaction replacement can be carried onto6b6c after the actual RED and a new exact published/reviewed resulting source; never replace6b6c with old21aa or claim this computed blob is applied/qualified."
+  },
+  "execution": {
+    "projectCommandsRun": false,
+    "providerOrNativeRun": false,
+    "sourceOrRefMutation": false,
+    "ciActions": false,
+    "artifactsPromoted": false,
+    "checksPerformed": "Read exact source/plan files; compare seven Git/API blobs, prior plan prefixes and finite composition identities. Pure Python parsing/hashing/text comparison only."
+  },
+  "limits": [
+    "Other scheduled composition/activity projection and UI/roster paths have separate reviewers.",
+    "No author reported test/build result is independently reclassified here.",
+    "Prior1f native/Windows successes and Darwin P09 failures retain original source; none qualifies9e or composed M.",
+    "The held-value three-canary RED has not executed; predicted counts are not actual results."
+  ]
+}

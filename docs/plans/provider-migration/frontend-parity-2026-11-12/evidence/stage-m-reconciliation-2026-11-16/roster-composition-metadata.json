@@ -1,0 +1,33 @@
+{
+  "kind": "Proposed M common roster composition; no application",
+  "before": {
+    "bytes": 20778,
+    "blob": "d8222627fd9f5ba303d1a2116246d63ba0d67516",
+    "sha256": "bfcc571e2c742ff2eb957bcc525c6a596ca9999e6d3d087cc2ca9dfab9e94681"
+  },
+  "incoming": {
+    "bytes": 20996,
+    "blob": "b52876e3215910eba3a3a24756f61c289a0965f9",
+    "sha256": "cc5fa1a4c6a2f841145b0e4f33709fd1b2d8c405dae7151477a8a8aac5fce02e"
+  },
+  "selected": {
+    "bytes": 20996,
+    "blob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+    "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b"
+  },
+  "added": [
+    "packages/legacy-agent-host/src/composition/scheduledRunProjection.ts",
+    "packages/legacy-agent-host/src/composition/scheduledRunCapture.ts",
+    "packages/legacy-agent-host/src/composition/scheduledRunContracts.ts"
+  ],
+  "commonBefore": 232,
+  "commonSelected": 235,
+  "process": 27,
+  "windows": 46,
+  "commonPriorPrefixExact": true,
+  "everyIncomingArraySetExact": true,
+  "otherArraysExact": true,
+  "commonOrderDifferenceFromIncoming": "Retains all prior L232 common paths in their original order and appends only incoming three schedule paths; incoming9e places its existing52 Logs block after its five35+three9e paths. Sets and within-block order are identical.",
+  "sourceApplied": false,
+  "projectExecution": false
+}
