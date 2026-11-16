@@ -1,0 +1,288 @@
+{
+  "schemaVersion": 1,
+  "kind": "Bounded read-only Windows census substitution assessment",
+  "reviewer": "/root/pr_graph",
+  "repository": "777genius/agent-teams-ai",
+  "verdict": "No existing bounded equivalent native substitution established; no producer, R1 or new architecture selected.",
+  "review": {
+    "conclusion": "No existing bounded native process/listener census substitution is established in the reviewed current call chain.",
+    "source": {
+      "E": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "currentReviewed": "bc6594c3ff0a1061870612a8f688400123575754",
+      "sourceJoins": [
+        {
+          "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+          "mode": "100644",
+          "bytes": 12335,
+          "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+          "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+          "exactEAndBc659": true
+        },
+        {
+          "path": "tools/owned-process-broker/nativeFixture.cpp",
+          "mode": "100644",
+          "bytes": 15038,
+          "sha256": "42749224f0194fd70f4b3df50f5fc64fbb2e11c58801c629463387cb4a4a1e25",
+          "gitBlob": "a42f7513e9a5d2732c5c9f65fa1cc6cf1c970062",
+          "exactEAndBc659": true
+        },
+        {
+          "path": "tools/owned-process-broker/serviceScopes.h",
+          "mode": "100644",
+          "bytes": 15888,
+          "sha256": "cc6b60ac08081c1d14201391e912b1062967dadc25d4633b5329e9524550fb06",
+          "gitBlob": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+          "exactEAndBc659": true
+        },
+        {
+          "path": "tools/owned-process-broker/protocol.h",
+          "mode": "100644",
+          "bytes": 11700,
+          "sha256": "f33e5f48373336dee460a5829c38f51ae0238f92477b7c26c528ab1e91598289",
+          "gitBlob": "8301cd73299220be2c5c9d95d87745f2937dc715",
+          "exactEAndBc659": true
+        },
+        {
+          "path": "tools/owned-process-broker/broker.cpp",
+          "mode": "100644",
+          "bytes": 25929,
+          "sha256": "c9b35397e4beb534a9a4298b6a6b7c8c8745571381b69b3301ab3b60fccd6dc3",
+          "gitBlob": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e",
+          "exactEAndBc659": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/owned-process/windowsBroker.ts",
+          "mode": "100644",
+          "bytes": 28794,
+          "sha256": "751df6b6e8e07b717a8ade1c88b064dbe8a099e2b07ce328a9f052530dd78b79",
+          "gitBlob": "32b3315f04d91ae6da375bcca710e16948e09ad3",
+          "exactEAndBc659": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/process/WindowsTeamProcessCommands.ts",
+          "mode": "100644",
+          "bytes": 29443,
+          "sha256": "4edbb21876753230e69a0c603061dd6493e9c48d4d2014df79150c37f24a772f",
+          "gitBlob": "b41629b7ed483f1ab9f42e2e234933999647e7bd",
+          "exactEAndBc659": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+          "mode": "100644",
+          "bytes": 22714,
+          "sha256": "1f525b8dab2b9df0d40d2e76b7810c2c4bc576e53da920c59fbc3784c2afe97e",
+          "gitBlob": "febc16323b68c0e66d6fd55baaa9a020b451f0fc",
+          "exactEAndBc659": true
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+          "mode": "100644",
+          "bytes": 60524,
+          "sha256": "07007c2c67a27fbab6bd4906982b9460a634928ca80f7349abd47fa7eb747447",
+          "gitBlob": "f2af726dd2f352a1ecc0fa40753b76e72d008e14",
+          "exactEAndBc659": true
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+          "mode": "100644",
+          "bytes": 27229,
+          "sha256": "964c9b512a8cdb81053ddbd316cb74fb230bf57730541ad9550b102733c82f8a",
+          "gitBlob": "740f654c9c04318779fb4fd9f15b79b76711e53f",
+          "exactEAndBc659": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+          "mode": "100644",
+          "bytes": 15423,
+          "sha256": "189b8a98f8708d22b1ffabc84ef235efd320a910bf7a9ee19c266846ccd3f1ac",
+          "gitBlob": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d",
+          "exactEAndBc659": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/capturedNativeProcessFactory.ts",
+          "mode": "100644",
+          "bytes": 1288,
+          "sha256": "f0479cc89a9cfc9ab144e50382c41b3146caececb01a8489be3fb9417d49dee3",
+          "gitBlob": "6eed54e3253a8e714cdc984835c74474d7edb054",
+          "exactEAndBc659": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeReadinessOrigin.ts",
+          "mode": "100644",
+          "bytes": 15156,
+          "sha256": "4a69730c64df215c36666ee529af93067baaf8e369caee333e688b343c71b8e6",
+          "gitBlob": "57c68f58a158bc4c6e9f0ea93c349b7abf8daeaa",
+          "exactEAndBc659": true
+        },
+        {
+          "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+          "mode": "100644",
+          "bytes": 37692,
+          "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+          "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+          "exactEAndBc659": true
+        },
+        {
+          "path": "src/main/utils/windowsProcessTable.ts",
+          "mode": "100644",
+          "bytes": 6537,
+          "sha256": "ca5c92046e5486a1a26b50620d435489e0feee0414eb121c895ccc39a305c81f",
+          "gitBlob": "5309d3e1ee64e9838fdc29d787817f1ece2fb9ae",
+          "exactEAndBc659": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/owned-process/HostWindowsServices.ts",
+          "mode": "100644",
+          "bytes": 6225,
+          "sha256": "e94972f6a2eaccc6b734ae5d3dc4ab99af4c648d2f9b0ea0147af7e52fa5a86c",
+          "gitBlob": "c2f10e7f1302895dc96686cef362c6537757cb6a",
+          "exactEAndBc659": true
+        }
+      ]
+    },
+    "retainedReviews": {
+      "windowsProcess": "b655c300449165d1421cbff770628b6021cebe28",
+      "packaged": "8210fce15c46bc5f67991442703fb82234240180"
+    },
+    "existingBackend": {
+      "entry": "nativeWindowsAppGate.mjs assertOwnedRenderer -> observeCensus -> windowsProcessListenerSnapshot -> one powershell execFileSync -> ordered CIM process query then TCP listener owner query -> both parsers -> validateCensus -> listener membership -> remaining",
+      "requiredProcessFields": [
+        "pid",
+        "parent",
+        "birth",
+        "executable when present"
+      ],
+      "freshness": "Every existing call is fresh; the combined result is ordered, not atomic.",
+      "requiredCoverage": "Complete process census, original controller/driver/Main identity and ancestry/orphan coverage, plus every CDP listener PID joined to retained original birth/lineage."
+    },
+    "nativeAlternatives": [
+      {
+        "path": "tools/owned-process-broker/nativeFixture.cpp",
+        "operation": "query-wait-gated Q/W",
+        "coverage": "One already captured PID+birth HANDLE; at most four Q observations followed by W; no parent/executable census or listener ownership."
+      },
+      {
+        "path": "tools/owned-process-broker/serviceScopes.h",
+        "operation": "registerCurrent/registerExact and retained scope query",
+        "coverage": "Original broker-captured scopes and Job accounting; no OS-wide process discovery or TCP listener owner table."
+      },
+      {
+        "path": "tools/owned-process-broker/protocol.h",
+        "operation": "Launch/Resume/Stop/Release and ServiceCapture/Query/Stop/Settle/CaptureCurrent",
+        "coverage": "Closed existing wire surface has no full process/listener census operation."
+      },
+      {
+        "path": "src/main/utils/windowsProcessTable.ts",
+        "operation": "listWindowsProcessTable / Sync",
+        "coverage": "Still PowerShell/CIM; returns pid/ppid/command, omits birth and listener table. Default TTL/in-flight sharing disallowed for this authority; bypassCache restores fresh querying but not the missing schema or backend change."
+      }
+    ],
+    "measuredPackagedX64": {
+      "retryReads": 13,
+      "combinedReads": 12,
+      "combinedTotalMs": 8422.735899999985,
+      "processOnlyReads": 1,
+      "processOnlyTotalMs": 331.44570000001113,
+      "totalMs": 8754.181599999996,
+      "last": {
+        "index": 13,
+        "operation": "process-listener-snapshot",
+        "startFromPhase": 9893.157899999991,
+        "endFromPhase": 10559.91859999999,
+        "durationMs": 666.7606999999989,
+        "returned": true
+      },
+      "limit": "Full helper duration only; no separate PowerShell startup/CIM/TCP/parsing cost; original post-read cutoff refusal preserved."
+    },
+    "process15s": {
+      "predicate": "runtime.read -> projected nativeReady === true, with original pre/post-await deadline checks",
+      "limit": "The retained ARM Codex and x64 OpenCode failures are distinct readiness/currentness boundaries. No common PowerShell/CIM cause or benefit from substituting the packaged census is demonstrated."
+    },
+    "minimumDiagnostic": {
+      "alreadyAvailable": "Existing bounded censusReads establishes x64 whole-call cost. Retain its closed summary in the existing <=8192-byte failure output to avoid losing ARM data when no final receipt is written; no additional query or clock is needed for that retention.",
+      "ifInternalCostMustBeResolved": "A separate explicit scope would need monotonic timing around the two unchanged queries within the one existing PowerShell invocation, and separate bounded Node-side parsing time if required. Preserve exact queries, ordering, returned authority, per-call sample count and deadlines. The outer-minus-inner residual includes startup/serialization/transfer/teardown; it is not a pure startup measurement.",
+      "notSelected": true
+    },
+    "invariants": [
+      "No cached authority or returned-result reuse",
+      "No removed sample or changed process/listener scope",
+      "No wider Process15s or Packaged10s deadline",
+      "No weaker PID/birth/lineage/final-geometry check",
+      "No retry/replay or extra physical action",
+      "No new helper/protocol architecture selected",
+      "No production R1/source/test postimage authored",
+      "No shell/native/runtime or CI query"
+    ]
+  },
+  "provenance": {
+    "processReview": {
+      "gitBlob": "b655c300449165d1421cbff770628b6021cebe28",
+      "bytes": 34430,
+      "sha256": "9345f46f277853d0dddfa9f20fb99e64ba13e48438c4ae7258f3b848446dac52"
+    },
+    "packagedReview": {
+      "gitBlob": "8210fce15c46bc5f67991442703fb82234240180",
+      "bytes": 119538,
+      "sha256": "e849a166f56480ecef2bd7d85d86bf68357a4849755870269d656cd8a7a0a0c3"
+    },
+    "currentSourceSubject": "bc6594c3ff0a1061870612a8f688400123575754",
+    "exactScopedSourceContinuityThrough": "3db7943ae2b70232e926474e09fac20b609d10c8",
+    "allSourceUnchangedInBindingPublication": true
+  },
+  "preciseLimits": [
+    "The conclusion is bounded to the inspected existing call chain and closed native wire surface; it is not a claim that Windows provides no other APIs.",
+    "The packaged helper already combines the two original queries into one fresh PowerShell invocation. No second startup can simply be removed from that owner observation.",
+    "Retained HANDLE/Job observations cannot replace full process discovery, parent/birth lineage and foreign TCP listener coverage.",
+    "The product process-table helper is only an examined alternative, not the exact packaged gate call site. Its default TTL/in-flight reuse is not eligible here.",
+    "Original Packaged x64 census durations cover startup, ordered queries and parsing together. No internal component is assigned the total cost as a proven cause.",
+    "The last-read offsets are relative to the retained phase marker, not a newly recorded authoritative cutoff.",
+    "ARM has no retained final same-Main receipt; no x64 timing result transfers to ARM.",
+    "No common CIM cause is established for Process15s and Packaged10s. Attached is not nativeReady.",
+    "Possible timing instrumentation is only a scope boundary for a separately reviewed proposal. This review authors or selects no such proposal.",
+    "No shell, native invocation, test, source/R1/workflow postimage, CI query, ref/PR mutation, retry or timer change occurred."
+  ],
+  "anchors": [
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+      "lines": "8-25, 27-40, 53-59, 67-90, 118-149",
+      "purpose": "Exact source query fields, fresh execution, identity/lineage and one-invocation ordered observation"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+      "lines": "121-163, 164-212, 575-587",
+      "purpose": "Original phase cutoff, fresh census validation/owner guard and existing failure sink"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "gitBlob": "a42f7513e9a5d2732c5c9f65fa1cc6cf1c970062",
+      "lines": "97-129",
+      "purpose": "One PID/birth-bound HANDLE, maximum four Q samples and original W"
+    },
+    {
+      "path": "tools/owned-process-broker/serviceScopes.h",
+      "gitBlob": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+      "lines": "18-45, 253-285",
+      "purpose": "Original captured scope identity and registry-only admission"
+    },
+    {
+      "path": "tools/owned-process-broker/protocol.h",
+      "gitBlob": "8301cd73299220be2c5c9d95d87745f2937dc715",
+      "lines": "14-20",
+      "purpose": "Closed operation surface has no process/listener census"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "gitBlob": "f2af726dd2f352a1ecc0fa40753b76e72d008e14",
+      "lines": "59-67, 492-507",
+      "purpose": "Separate Process15s absolute poll and nativeReady predicate"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "gitBlob": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d",
+      "lines": "110-143",
+      "purpose": "Original provider authority and opening OpenCode readiness-currentness guard"
+    }
+  ]
+}

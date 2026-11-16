@@ -1,0 +1,469 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-prospective-Cross-Close-R1-scope-currentness-lifetime-review",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/guard_review",
+  "reviewedAtUtc": "2026-11-16T15:55:39.516Z",
+  "accepted": true,
+  "reviewedR1": {
+    "bytes": 23142,
+    "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+    "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+  },
+  "supersededUnpublishedDraft": {
+    "bytes": 18471,
+    "sha256": "33d49bb9e141767bc44a842a4d5be7b6cdb4b9e3e26126b17b7b9cd210a82192",
+    "gitBlob": "41e85b8b23d52b747c12fb6da6873530ee818ab7"
+  },
+  "exactWholePriorDraftReconstructedByInverse": true,
+  "scope": "Prospective source/test/runner scope only. This record does not qualify a future133-case result, approve an unreviewed postimage, launch a child or change a reference. Current97 actual guards and the R1 docs publication/readback remain prerequisites.",
+  "publicationBoundary": {
+    "preparedFromCommit": "3db7943ae2b70232e926474e09fac20b609d10c8",
+    "preparedFromTree": "7d4877188dd68d1033dd2736feb59405568ba746",
+    "required": "Publish this exact reviewed R1 only after current97 GREEN and all three original guards are independently retained. It may share their docs-only checkpoint. Root and an independent reviewer must fetch the actual published commit/parent/tree, full changed bodies, unchanged8798 non-doc/42workflow census and Plan/status append-only prefixes. Complete actual readback acceptance is required before any new test, producer or runner postimage is authored or selected.",
+    "current97Green": {
+      "bytes": 95744,
+      "sha256": "845e5cfc6e317c63380f949d6e816782d28ba81d96aae8170a5d724c9dbc632c",
+      "gitBlob": "bb67ad6d1ab86403356267ac28becaa067be958f"
+    },
+    "current97Guards": "Root reports progress; this R1 review does not independently close those three actual command receipts. Their complete acceptance remains separate."
+  },
+  "sourcePreimages": {
+    "complete3PinsMatchAll8798CurrentSourceRows": true,
+    "actualCurrentSource": {
+      "bytes": 2478453,
+      "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+      "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+    },
+    "helper": {
+      "bytes": 6433,
+      "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+      "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+    },
+    "driver": {
+      "bytes": 36207,
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+      "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c"
+    },
+    "test": {
+      "bytes": 136700,
+      "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+      "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+    },
+    "sourceScope": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 6433,
+        "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+        "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+        "physicalLines": 90,
+        "postimagePhysicalLineCap": 200,
+        "permitted": "Extend only the existing readiness-expression builder with a clarification-cleared/Close-specific stage and a narrow helper executing that expression via the existing clickExpression port. Existing undefined, clarification and in-progress-comment generated expressions and behavior remain byte-identical. The new stage may return the exact eligible same-dialog Close target tuple after its current read/session conditions, within the same synchronous section after the original two observer-module imports."
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36207,
+        "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+        "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c",
+        "physicalLines": 798,
+        "postimagePhysicalLineCap": 800,
+        "permitted": "Only the exact original generic Close call after clarificationReceipt may change to the narrow same-Task Close helper, plus its one named import in the existing helper import block. Forward the already captured original handleId/taskId/contextId/surfaceId. Keep its label, selector/text diagnostic context, preceding actions/receipts and following closed-dialog read byte-identical. No extraction/reformat/rewrite of unrelated taskboard flow."
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 136700,
+        "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+        "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985",
+        "postimageByteCap": 180000,
+        "permitted": "Append only the36 specified finite actual-source cases and their bounded fixtures. Preserve the complete136700-byte efd preimage as a literal prefix, all97 existing case bodies/names/order and imports. No rename/filter/skip or existing fixture rewrite. Add28 readiness-target cases and8 actual-driver Close cases, total133 registered cases. Additional subcase loops must be explicitly recorded rather than inflating registered counts."
+      }
+    ],
+    "preservedExistingOverlays": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      }
+    ],
+    "sourceNonDocs": 8798,
+    "unchangedWorkflows": 42,
+    "qualification": "Both full helper/driver bodies were fetched and read; unchanged efd whole test body was rehashed and remains the previously fully reviewed97-case prefix. Future exact generated expressions, source prefixes and changed-path sets must be checked on actual postimages at R2."
+  },
+  "actualHistoricalEvidence": {
+    "wholeOriginalReceipt": {
+      "bytes": 902855,
+      "sha256": "31627f800809b7571a1bb98e0b173a960b28b77405c305f752a72ed8f859f1a2",
+      "gitBlob": "88c036dee168ec241a479de765b844bd59249abe"
+    },
+    "diagnosis": {
+      "bytes": 39183,
+      "sha256": "afab3b66f16c8a100d444f5f990c432c5981cd31a36decd5f09251ea9e92607e",
+      "gitBlob": "e1708fb5f076b2a03d81be0971c663a29599bbaa"
+    },
+    "readiness": {
+      "bytes": 90087,
+      "sha256": "b0cbe7f713f648bb6a6399a713175f44ec57e0a3e145341d15d328c27cc30624",
+      "gitBlob": "8278c953ca81e24f9d0a0ab96068d2e9a08d9c2d"
+    },
+    "nestedDiagnosisWholeBodyEqual": true,
+    "all17RetainedSourcePassagesRehashed": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "start": 392,
+        "end": 400,
+        "bytes": 375,
+        "sha256": "0e56bdd1562b39aa91d51d0558300a4e59f52395541663f150bd8507f27f98f2",
+        "gitBlob": "ffa3322ad47ed699c3ca4a4a57b640011e1803ca"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "start": 437,
+        "end": 474,
+        "bytes": 1811,
+        "sha256": "4e8b87db8a0628f4727eeb592bf7ad8055810fc6f412aa702d1223a51dbb9771",
+        "gitBlob": "ab3bdbfc637dad01c9fb49986d1d547a71f818fb"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "start": 1,
+        "end": 90,
+        "bytes": 6432,
+        "sha256": "f929a78160ef0bd2bb36c1aeb7e569611c3254da407e6f135a381fe98e65129d",
+        "gitBlob": "981f55276eabd40003b423093f73f0a6623511f8"
+      },
+      {
+        "path": "src/renderer/components/team/dialogs/TaskDetailDialog.tsx",
+        "start": 199,
+        "end": 225,
+        "bytes": 858,
+        "sha256": "f58418a566a26e9c56212c2e1bf34b10f807e730f851f8093348d4bfbc0ac090",
+        "gitBlob": "3d0858db9b1705e4366554ead67412be7c28c040"
+      },
+      {
+        "path": "src/renderer/components/team/dialogs/TaskDetailDialog.tsx",
+        "start": 248,
+        "end": 304,
+        "bytes": 2164,
+        "sha256": "f59bcc4ac7915da9ee983e08527ee644190d0900c3413e84491b6068faf01b0a",
+        "gitBlob": "3f88342a7504c6d932d85ff91fe29771dfc12478"
+      },
+      {
+        "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailSession.ts",
+        "start": 135,
+        "end": 155,
+        "bytes": 730,
+        "sha256": "ad1aafc62c63eaff2e535e0682263238b4411d3187d7d55bbb0e7806c5d7d53d",
+        "gitBlob": "23435bf6b42f5b7fd17c593f74022a2a931aa975"
+      },
+      {
+        "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailSession.ts",
+        "start": 240,
+        "end": 255,
+        "bytes": 794,
+        "sha256": "7a77b805f5f3bcaefbea5d702f95ed74da7e661bf2eafd6472cff11884df4f56",
+        "gitBlob": "a931c95efbea96f50412da0980e5c2731692d417"
+      },
+      {
+        "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailSession.ts",
+        "start": 257,
+        "end": 367,
+        "bytes": 5396,
+        "sha256": "8dd0c0b1a722df057e973c7e5180dbc20ef9c44dfbf91dab1dd22cc53314e2f0",
+        "gitBlob": "5916f83c254cfa0c6a311af2c6d750b87c370806"
+      },
+      {
+        "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailSession.ts",
+        "start": 665,
+        "end": 712,
+        "bytes": 1247,
+        "sha256": "4ac5cbfc7701f8906c23657689b2acd5ef8715e4eaddde54d5dbd9a70d4bfa8b",
+        "gitBlob": "27498c3300f3e8bc9390d683eaf952e84a4daaeb"
+      },
+      {
+        "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailPresentation.ts",
+        "start": 266,
+        "end": 288,
+        "bytes": 962,
+        "sha256": "469549b77957fdbecd1da214ae550b42fb06eb7ca5f91521bb6d3d9b432cfe15",
+        "gitBlob": "659a6093c25a396d81354fec5614137f42ca2756"
+      },
+      {
+        "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailPresentation.ts",
+        "start": 315,
+        "end": 331,
+        "bytes": 695,
+        "sha256": "37da752d7d93afce8965537737b90d7326803057f6c30224c8d1827e0bf04418",
+        "gitBlob": "f946d545ba62068a85a55b716ef81a5a0cfcba99"
+      },
+      {
+        "path": "src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+        "start": 248,
+        "end": 355,
+        "bytes": 4182,
+        "sha256": "91abd5461b02563c9becd9122f195cede39fd2f10f29b224b47782091b12292e",
+        "gitBlob": "aa82434627284c8271e6ca2ed4b768ee721eaf35"
+      },
+      {
+        "path": "src/renderer/store/team/taskDetailReadAuthority.ts",
+        "start": 192,
+        "end": 210,
+        "bytes": 736,
+        "sha256": "1dce9a1e17a9978a4a6745e1f30d5bdb34784e8ebb3c499bd7572cf2568d58a0",
+        "gitBlob": "7d8b3360e6d0b93c8861b0ea33f10667f1f5b643"
+      },
+      {
+        "path": "src/renderer/store/team/taskDetailReadAuthority.ts",
+        "start": 267,
+        "end": 313,
+        "bytes": 1193,
+        "sha256": "9eeaa61dedf233a5bb4262d4fe3b85519210fd44649c00078933f30fa273b646",
+        "gitBlob": "717f9a155639e9a02f541198379f003f177fd5e5"
+      },
+      {
+        "path": "src/renderer/store/team/taskDetailReadAuthority.ts",
+        "start": 348,
+        "end": 372,
+        "bytes": 818,
+        "sha256": "e070fea4945cef3aed12a397bf871bf59b89968158b70682a8d2bac5a5a0f70a",
+        "gitBlob": "d9d9b917b937892fc3b887b0c45bba57efd8d899"
+      },
+      {
+        "path": "src/renderer/store/slices/teamSlice.ts",
+        "start": 492,
+        "end": 494,
+        "bytes": 180,
+        "sha256": "ce643e0dd05d5afc78658b17c348cdf9eeb329d7db94ead812f60ab906c50835",
+        "gitBlob": "81ee176ec4e90de3d844928d0438a9e6b7f04798"
+      },
+      {
+        "path": "src/renderer/store/slices/teamSlice.ts",
+        "start": 3872,
+        "end": 3883,
+        "bytes": 659,
+        "sha256": "b9faae301e772269561dc98ead63296d237c5fe7dfbf83a8f4cb1ffb85d52f06",
+        "gitBlob": "70389cf0b638d058b4cff86e9cbfb93590b30c72"
+      }
+    ],
+    "sourceEvidencePinsMatchCurrentSource": true,
+    "facts": {
+      "assignmentCompleted": true,
+      "clarificationCompleted": true,
+      "sameTask": true,
+      "clarificationAbsent": true,
+      "lastStep": {
+        "monotonicMs": 68530,
+        "action": "mouseMoved",
+        "label": "hover close original Task detail",
+        "selector": "[role=\"dialog\"] button",
+        "target": {
+          "x": 1121,
+          "y": 167.125,
+          "text": "Close",
+          "tag": "BUTTON"
+        }
+      },
+      "failure": "Original UI target moved after ownership check\n+ actual - expected\n\n  [\n    1121,\n+   171.125,\n-   167.125,\n    'BUTTON'\n  ]\n",
+      "steps": 41
+    },
+    "interpretation": "Recovered artifact receipt proves task.assign and task.clarification phases completed on the same Task, beyond the earlier raw-only terminal-completed-or-rejected source boundary. Exact expected y167.125 versus final y171.125 and last hover are retained. No causal layout mechanism, callback invocation or later successful GUI journey is inferred.",
+    "artifactAndVisualBoundary": "Root original ZIP/image attribution is retained; this reviewer performed immutable JSON/source analysis only and does not claim a new artifact download, extraction or visual inspection."
+  },
+  "currentnessAndTargetReview": {
+    "acceptedContract": [
+      "Use the existing captured handle/Task identity, original contextId/surfaceId and current React-root/controller discovery. No selection from generic document body, a foreign dialog, a freshly substituted Task or another surface.",
+      "Require current canEditNow and original owner, exact active context/selected Team/detail identity/full Task, phase=ready, loading=false and refreshPending=false, no scoped Team refresh, and current accepted live Team metadata through the same existing two observer modules.",
+      "Require the current stored Task session ownerSurfaceId equal the observed/captured surface and ownerRevision equal the current controller observation; detail error and deletionIntent must both be null, full Task must not be deleted, and needsClarification must be absent (undefined). False canResolveClarification is neither a refusal nor a sufficient readiness oracle.",
+      "Preserve the existing assignment-stage alice control observation: exactly one enabled, collapsed alice combobox. This specific Close follows that original assignment/clarification flow. Do not generalize to another Task lifecycle stage.",
+      "Within the same target expression, get the actual input from its observed ID and its owning dialog, then select Close only from that dialog. Retain original positive-size/exact trimmed Close eligibility, singleton cardinality, native disabled and actual center hit testing. Return the original x/y/text/tag semantics, bounded unavailableTarget shape where applicable, and no private raw diagnostics.",
+      "Do not introduce an await, extra module import, timer, poller, mutation, CDP request or callback between the completed own-Task state/owner observation and target geometry/hit evaluation. The existing expression has exactly its two original readonly module imports; new stage-specific work afterward is synchronous.",
+      "Drive the unchanged complete expression through the existing shared clickExpression for every original read/settling phase and final direct read. Leave controls ed57 entirely unchanged: Page.bringToFront, original30s reads,100ms spacing,15 settling samples/two equal samples, external owner checks, final exact[x,y,tag] equality and one mousePressed/mouseReleased pair remain intact.",
+      "Readiness revoked at unchanged final coordinates must refuse physical input. Failed final geometry/ownership/unavailable reads never retry or replay any click. A successful earlier readiness observation does not qualify a later one.",
+      "Only the narrow Taskboard callsite changes. No product store/session/UI production behavior, provider implementation, runtime scope/custody/deadline, frontend policy, package, lock, baseline exception or workflow changes."
+    ],
+    "reasoning": [
+      "Existing owner discovery uses the current React root/controller and its actual textarea ID, exact Task/team/context and captured surface; the new admission must preserve those joins.",
+      "After the two original readonly dynamic imports complete, the new owner/session/detail and own-dialog target observations are synchronous. No extra await or new observer callback may split the state and target evaluation.",
+      "Require canEditNow, current owner surface/revision and live accepted Team scope, ready/nonloading/nonrefreshing nondeleted exact full Task with null error/deletionIntent and absent needsClarification. canResolveClarification=false is compatible with cleared or unavailable state and is not the oracle.",
+      "The existing one enabled collapsed alice assignment control remains stage-specific. The proposal does not generalize Close to unrelated Task phases.",
+      "Own-dialog positive-size and exact trimmed Close candidates must reach singleton cardinality before disabled/hit filtering. A disabled or covered second matching candidate cannot be discarded to manufacture a unique target.",
+      "The same complete new expression goes through every unchanged clickExpression phase and final direct reread; final ownership, exact x/y/tag equality and one physical press/release remain unchanged. An earlier ready sample never licenses a later stale one.",
+      "The final geometry refusal is retained for movement after admission. This proposal is a readiness improvement, not proof of the original four-pixel cause or guaranteed GUI repair."
+    ],
+    "existingControls": {
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+    },
+    "controlsPostimageAuthorized": false,
+    "existingTargetSemantics": "Positive width/height and exact text form the candidate set; singleton first, then native :disabled and actual center hit (element or descendant). aria-disabled/pointer/viewport facts remain original diagnostic facts, without silently adding or removing original rejection rules."
+  },
+  "testFirstReview": {
+    "registeredCounts": {
+      "preserved": 97,
+      "added": 36,
+      "total": 133
+    },
+    "readinessDefinitions": 28,
+    "driverDefinitions": 8,
+    "exact133Census": true,
+    "targetSubcases": {
+      "registeredCountUnchanged": 36,
+      "subcasesDoNotInflateCaseCount": true,
+      "actualDriverForeignDialogCase": [
+        "only a foreign dialog has Close",
+        "own dialog has no Close",
+        "own text is not exact trimmed Close",
+        "own Close has zero width",
+        "own Close has zero height"
+      ],
+      "actualDriverDuplicateCase": [
+        "two eligible same-dialog Close buttons",
+        "two positive-size exact-text Close buttons with only one natively enabled",
+        "two positive-size exact-text Close buttons with only one center-hit candidate"
+      ],
+      "actualDriverDisabledCase": [
+        "native disabled Close",
+        "covered center",
+        "absent center hit"
+      ],
+      "actualDriverPositiveCase": [
+        "center hit is the button itself",
+        "center hit is a descendant contained by that same button"
+      ],
+      "oracle": "All refusal subcases execute the actual helper/actual source-extracted driver statement against bounded DOM/store facts. Assert zero hover/press/release, original300 reads and100ms waits to the first30000ms cutoff when admission remains unavailable. Singleton decision precedes disabled/hit narrowing. Each positive variant preserves exactly one hover and one press/release pair at the accepted own target coordinates, original final reread and e.contains(hit) semantics. Do not recreate the producer predicate in fixture code."
+    },
+    "negativeTargetSubcases": 11,
+    "positiveTargetVariants": 2,
+    "strictActualSourceFixture": "Use finite in-memory React/DOM/store facts and the actual source-exported expression builder, actual createDesktopUiControls and the strict exact source-extracted original Close statement. The original statement is obtained between unique retained clarificationReceipt/closed-dialog boundaries and bound to actual current helper-module exports, never a copied prospective implementation or fallback producer. Missing/ambiguous extraction, unknown import or unexpected expression/method is a test failure. The old generic statement remains executable before the producer exists and must produce semantic failures, not module/export/setup errors.",
+    "clockContract": "The new driver fixtures may use the same node:test scoped Date.now/setTimeout mocks already accepted in the conversation fixtures: record every exact100ms wait, advance the virtual clock, use queueMicrotask, and let test-scoped mocks restore automatically. Assert the unchanged300-read/300-wait/30000ms refusal where applicable. The real outer Node command still has its own unchanged180s captured supervisor limit; mocked time never affects it.",
+    "importBoundary": "No new provider/native/real CLI entrypoint. New source cases reuse the already audited helper, controls and node:vm/readFile/test primitives; original six finite process.execPath Node peer executions remain the only child-execution cases. Evaluate the helper's two browser import paths only against the exact finite readonly TEST module fixtures, as existing tests already do.",
+    "redAcceptance": "One complete133-case RED at exact test-first source. All97 existing cases must pass, and new failures must be the independently predicted semantic missing-admission/missing-driver-wiring assertions. Inspect every case name/order/result, failure site and unreached assertion; zero skips/cancellations/todos/import/setup errors/timeouts/kills. Do not author/select either producer postimage until an independent reviewer accepts the full actual semantic RED plus complete source/input/lifetime/outer0 evidence.",
+    "greenAcceptance": "After exact two producer postimages pass independent R2, publication and complete actual readback, apply only them and run the same unchanged whole133-case file once. Require133PASS and0fail/skip/cancel/todo, primary0 and separately observed supervisor0, complete unchanged actual input/cleanup receipts and independent semantic/lifetime review.",
+    "qualifications": [
+      "The old generic Close statement must remain executable in RED. Missing future exports or fixture setup errors cannot substitute for designated semantic failures.",
+      "All97 existing cases, names/order/imports and complete136700-byte prefix remain unchanged. New36 registrations plus declared finite subcases must be independently inventoried.",
+      "RED must record which assertions are reached or fail. A future producer is prohibited until actual complete RED semantics, inputs, cleanup and observed outer0 are independently accepted.",
+      "Six old finite process.execPath peer invocations remain the only child-execution cases. No new provider/native entrypoint, real CLI or SDK query is selected.",
+      "Virtual Date/setTimeout assertions establish finite harness behavior only; they do not measure a real30-second GUI journey."
+    ]
+  },
+  "executionReview": {
+    "runnerGate": "A root-authored narrowly adapted descendant of published6af0 runner and explicit data binding require independent full R2 and a published complete actual readback before materialization/execution. Preserve captured child/session lifetime, metadata30s bounds,180s per primary command clock before spawn, interruption recording, blocked terminal signal cutoff and separate actual outer-exit admission. No unreviewed script/source launch, arbitrary local discovery, new install/build/provider command or external executable.",
+    "newOutputRoot": "/tmp/c714-cross-close-evidence",
+    "newControlRoot": "/tmp/c714-cross-close-review",
+    "attempts": {
+      "materializeTest": 1,
+      "red": 1,
+      "materializeProducer": 1,
+      "green": 1,
+      "validationPackage": 1
+    },
+    "materialization": "First source/metadata-only stage changes only efd test to reviewed append-only133-case postimage, preserving ed57/cf93 and the two unchanged Cross preimages. After accepted actualRED and published/read-back producerR2, second source/metadata-only stage changes only the two approved Cross producers, preserving the exact test and all other source rows. Neither phase consumes Node, dependency, compiled or provider code. Both fully read/hash all8798 source rows and HEAD/tree/index/42workflows, exact Python/Git/tools, runner/binding/admission control files, config/environment boundary and captured metadata child sessions before/after; require no managed interruption/error/deadline/cleanup debt and actual outer0. Runtime dependency/compiled/provider/cache inputs are explicitly UNINSPECTED in these metadata-only stages. Never report a blanket all-input preservation/PASS there. Every next RED/GREEN preflight independently performs all original full current runtime input/provider/cache checks before any primary/eager import, regardless of successful materialization.",
+    "materializationReceipt": {
+      "scope": "source-and-supervisor-metadata-only",
+      "fullRuntimeInputsInspected": false,
+      "fullRuntimeInputsPreserved": null,
+      "dependencies": "UNINSPECTED",
+      "compiled": "UNINSPECTED",
+      "providerArchivesAndInstalledMembers": "UNINSPECTED",
+      "bootstrapNodeCache": "UNINSPECTED",
+      "required": "Complete actual source/control/tool/config and captured metadata/session lifecycle before/after plus independent observed outer0. Source preservation is stated separately with exactly authorized written paths. This is not a behavioral or all-input result."
+    },
+    "fullPreflightFailure": "Any failed full current-input preflight is a spent attempted invocation with the primary UNREACHED and later commands unrun. It never licenses a retry/automatic resume, source substitution, cached/earlier input evidence, skipped verification or relaxed admission.",
+    "validationPackage": "Only after complete independently accepted133 GREEN, one captured validation invocation uses one shared captured environment and complete full current input/source preflight, then exactly once each in order: pinned pnpm lint:fast:files for the three Cross paths, pinned pnpm guard:source-file-size, pinned git diff --check for all five approved overlay paths. Each child gets a distinct captured session/group, its own absolute180s clock started before its spawn/start/raw work (never reset afterward), full start/raw/final receipt and cleanup accounting. Admit each next child only after prior primary exit0, successful raw/receipt finalization, no timeout/deadline/execution/cleanup error, empty captured session, no managed interruption in that child and still-clear supervisor interruption state. Otherwise mark every later command permanently UNREACHED and spend the single package attempt; no partial-resume/retry path. Full exact input/source snapshots surround the whole package, not each child; do not claim per-check snapshots. Preflight, each command/cleanup subset, and postflight timing are separately reported. Actual supervisor exit0 is an independent required continuation condition. No broad lint/format, benchmark, new test/install/build/provider command or source mutation is selected.",
+    "reasoning": [
+      "The two future metadata materializations consume pinned Python/Git and control/source data only; their proof can omit runtime dependency/compiled/provider/cache hashing if every omitted category is explicitly UNINSPECTED and fullRuntimeInputsPreserved stays null.",
+      "Metadata-only success requires complete source8798/HEAD/tree/index/workflows42 and exact runner/binding/control/tool/config/session before/after checks, plus separate actual supervisor exit0. It is not a behavioral or full-runtime-input PASS.",
+      "The next RED/GREEN independently performs every original complete current runtime preflight before any primary/eager package evaluation. A materialization receipt or old input digest cannot bypass it. Failed preflight consumes the attempted invocation with primaryUNREACHED and grants no retry.",
+      "One validation supervisor captures one environment, then owns three separately captured primary sessions. Each180-second absolute launch clock begins before start/raw/spawn work and is never reset; metadata children retain30-second bounds.",
+      "Next guard admission requires prior primary0, successful complete raw/receipt finalization, empty captured session and no child/supervisor timeout/error/cleanup debt/managed interruption. All later guards become permanentlyUNREACHED when admission fails, and the single package attempt cannot resume.",
+      "Complete source/runtime snapshots surround the package as a whole; no per-check snapshot claim is permitted. Preflight, individual command/cleanup-subset and postflight timing remain separate. Managed-signal receipt cutoff and separately observed outer0 are both required.",
+      "Existing97 actual materialization, RED/GREEN and current three guard receipts are unchanged. This optimization is an explicit future scope, not a retroactive weakening."
+    ],
+    "futureRunnerR2StillRequired": true,
+    "futureRunnerLocalMaterializationOrExecutionByReviewer": false
+  },
+  "boundaries": {
+    "incomingHeads": "APPa07e2d68 and Dc930d3 are read-only prospective material. Their exact full source deltas/test-name census are retained separately. Do not import their BOOT helper/geometry diagnostics/view refresh/P11/Windows/I386/package changes into this R1. Preserve current providerc79/SPI archives. Future reconciliation needs its own concrete review.",
+    "originalCi": "All original9 runs terminal. Frozen PR1206/1207/1208/1211/1212/1213 remain untouched; no rerun/cancel/dispatch/ref/metadata action or further polling. This R1 opens no PR and launches no CI.",
+    "forbidden": [
+      "real Claude/Codex even --version",
+      "real user projects",
+      "default/main merge or Ready",
+      "release/default activation or Stage2",
+      "blanket native/vendor qualification",
+      "deadline/currentness/census/cleanup/no-replay weakening",
+      "source-size cap800/exception141/sourcecount5020 changes",
+      "new workflow/package/source imports beyond listed exact paths"
+    ],
+    "open": [
+      "Windows Process15s",
+      "Windows Packaged10s",
+      "strictDarwinP09",
+      "laterP11/genuineM16",
+      "new-head reconciliation",
+      "canonical typecheck/build",
+      "actual fresh GUI/platform acceptance",
+      "whole E2E completion"
+    ]
+  },
+  "amendmentsClosed": {
+    "wholeOldDraftInverseExact": true,
+    "sourceScopeUnchanged": true,
+    "readinessCases": 28,
+    "driverCases": 8,
+    "total": 133,
+    "negativeTargetSubcases": 11,
+    "positiveTargetVariants": 2,
+    "sourceOnlyMaterializations": {
+      "scope": "source-and-supervisor-metadata-only",
+      "fullRuntimeInputsInspected": false,
+      "fullRuntimeInputsPreserved": null,
+      "dependencies": "UNINSPECTED",
+      "compiled": "UNINSPECTED",
+      "providerArchivesAndInstalledMembers": "UNINSPECTED",
+      "bootstrapNodeCache": "UNINSPECTED",
+      "required": "Complete actual source/control/tool/config and captured metadata/session lifecycle before/after plus independent observed outer0. Source preservation is stated separately with exactly authorized written paths. This is not a behavioral or all-input result."
+    },
+    "attempts": {
+      "materializeTest": 1,
+      "red": 1,
+      "materializeProducer": 1,
+      "green": 1,
+      "validationPackage": 1
+    },
+    "originalSourceStaticErrors": []
+  },
+  "remainingGates": [
+    "Independently accept all current97 actual three guard receipts.",
+    "Publish exact R1 docs and independently read back actual ref/commit/parent/tree/full bodies/source preservation.",
+    "Only then author and review exact append-only test and narrow runner/bindings; publish/read back before execution.",
+    "Source-only test materialization and complete runtime-input RED preflight; one whole133 RED; independent semantic/lifetime/outer-exit acceptance before either producer.",
+    "Exact two producer R2/publication/readback, source-only application, full runtime-input GREEN preflight, one whole133 GREEN and independent actual acceptance.",
+    "Only then the one sequential validation package, with exact original selected checks and its own full evidence.",
+    "Canonical typecheck/build, incoming-head reconciliation and actual fresh platform/GUI/overall E2E remain separate open work."
+  ],
+  "reviewerActions": {
+    "immutableReads": true,
+    "pureDataHashAndComparison": true,
+    "bareReviewRetention": true,
+    "sourcePostimages": 0,
+    "testPostimages": 0,
+    "runnerPostimages": 0,
+    "runtime": 0,
+    "refOrCiActions": 0
+  },
+  "errors": []
+}

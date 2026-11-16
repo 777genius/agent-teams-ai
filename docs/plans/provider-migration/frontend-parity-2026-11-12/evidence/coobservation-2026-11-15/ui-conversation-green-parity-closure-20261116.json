@@ -1,0 +1,383 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-final-actual-whole97-GREEN-continuation-closure-and-documentary-correction",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/parity_audit",
+  "closedAtUtc": "2026-11-16T15:37:32.314Z",
+  "verdict": "ACCEPTED: actual whole97 GREEN gate is complete. Only the three previously authorized one-shot scoped guards may continue under the unchanged published runner/binding; no other execution or source permission is created.",
+  "priorSemanticReview": {
+    "gitBlob": "1f1ef935177c9453bdf330ae14b0e3b319a45311",
+    "bytes": 123411,
+    "sha256": "5dcab89bd07be83778ce7b40084960a26a9b17b22327d7fc150a2a0e3f867b07"
+  },
+  "correctedEvidence": {
+    "bytes": 124846,
+    "sha256": "62ebe8480892a5e8e6d2ed58f0ed0fe3052eba0edfecfadf36ef9ffbf3b7d4c3",
+    "gitBlob": "d039b8d061439c6e61a71a37535a4f7cc76a6093"
+  },
+  "supersededEnvelope": {
+    "bytes": 123957,
+    "sha256": "ba1990c5baac6d119925e2c928053ca7331a294c81f304c336ad32d45e2f547d",
+    "gitBlob": "852af17eef75cfefe5117276c42a960f20ff9ddf"
+  },
+  "documentaryCorrectionProof": {
+    "correctedEnvelope": {
+      "bytes": 124846,
+      "sha256": "62ebe8480892a5e8e6d2ed58f0ed0fe3052eba0edfecfadf36ef9ffbf3b7d4c3",
+      "gitBlob": "d039b8d061439c6e61a71a37535a4f7cc76a6093"
+    },
+    "supersededEnvelope": {
+      "bytes": 123957,
+      "sha256": "ba1990c5baac6d119925e2c928053ca7331a294c81f304c336ad32d45e2f547d",
+      "gitBlob": "852af17eef75cfefe5117276c42a960f20ff9ddf"
+    },
+    "delta": [
+      {
+        "path": "fullLargeBodyResolution.newlyRetained.0.role",
+        "before": "Complete materialized8798-source snapshot with exactly reviewed two postimages",
+        "after": "Complete8798-source67a postimage from materialization, used identically for BOTH actual GREEN boundaries"
+      },
+      {
+        "path": "fullLargeBodyResolution.priorCompleteBodies.0.role",
+        "before": "Both complete actual8798-source snapshots",
+        "after": "Historical complete actual RED source454b preimage, retained solely for the materialization before-state and comparison; neither GREEN boundary"
+      },
+      {
+        "path": "fullLargeBodyResolution.priorCompleteBodies.1.role",
+        "before": "Both complete actual11567-index stage0 listings, NUL separated",
+        "after": "Complete actual11567-index stage0 listing, NUL-separated, identical for both GREEN boundaries"
+      },
+      {
+        "path": "fullLargeBodyResolution.sourceReconstruction",
+        "before": "Before is exact whole published actual RED source454b. After substitutes exactly ed57 controls/cf93 Selection rows and changedTrackedPaths into the same full actual source JSON; all8796 other rows, localC5HEAD/tree/config and42workflow leaves are unchanged. Entire actual file was read and hashed; entire reconstructed body rehashed equal before bare retention. No metadata-only count substitute.",
+        "after": "BOTH complete actual GREEN before/after source snapshots are the exact2478453-byte67a014a69edb6c0e1379fff08bff15ce95e6ec9a body retained after materialization. Materialization derived it from historical RED454b by only ed57 controls/cf93 Selection row substitutions and the two changedTrackedPaths; all8796 other rows, localC5HEAD/tree/config and42workflow leaves remain unchanged. Root read and whole-hashed each actual GREEN file and resolved it to the complete rehashed67a body. No new source reconstruction or input mutation occurred during GREEN."
+      },
+      {
+        "path": "documentaryCorrection",
+        "before": "<absent>",
+        "after": {
+          "supersedes": {
+            "bytes": 123957,
+            "sha256": "ba1990c5baac6d119925e2c928053ca7331a294c81f304c336ad32d45e2f547d",
+            "gitBlob": "852af17eef75cfefe5117276c42a960f20ff9ddf"
+          },
+          "scope": "Correct only copied large-body resolution descriptions. Actual command, raw, source snapshots, file census, input identities, primary/final receipts and outer executor evidence remain byte-identical.",
+          "reason": "The materialization before-source was RED454b, but both GREEN source boundaries are the materialized67a postimage."
+        }
+      }
+    ],
+    "inverseWholeBodyHash": {
+      "bytes": 123957,
+      "sha256": "ba1990c5baac6d119925e2c928053ca7331a294c81f304c336ad32d45e2f547d",
+      "gitBlob": "852af17eef75cfefe5117276c42a960f20ff9ddf"
+    },
+    "inverseWholeBodyExact": true,
+    "unchangedTopLevelFields": [
+      {
+        "key": "schemaVersion",
+        "byteEquivalentSerializedValue": true
+      },
+      {
+        "key": "kind",
+        "byteEquivalentSerializedValue": true
+      },
+      {
+        "key": "repository",
+        "byteEquivalentSerializedValue": true
+      },
+      {
+        "key": "recordedAfterObservedSupervisorExit",
+        "byteEquivalentSerializedValue": true
+      },
+      {
+        "key": "source",
+        "byteEquivalentSerializedValue": true
+      },
+      {
+        "key": "runner",
+        "byteEquivalentSerializedValue": true
+      },
+      {
+        "key": "binding",
+        "byteEquivalentSerializedValue": true
+      },
+      {
+        "key": "publishedExecutionCheckpoint",
+        "byteEquivalentSerializedValue": true
+      },
+      {
+        "key": "priorMaterialization",
+        "byteEquivalentSerializedValue": true
+      },
+      {
+        "key": "acceptedActualRed",
+        "byteEquivalentSerializedValue": true
+      },
+      {
+        "key": "actualOuterExecutor",
+        "byteEquivalentSerializedValue": true
+      },
+      {
+        "key": "rootCompleteDataAudit",
+        "byteEquivalentSerializedValue": true
+      },
+      {
+        "key": "completeCensus",
+        "byteEquivalentSerializedValue": true
+      },
+      {
+        "key": "literalActualSmallBodies",
+        "byteEquivalentSerializedValue": true
+      },
+      {
+        "key": "caseLedger",
+        "byteEquivalentSerializedValue": true
+      },
+      {
+        "key": "outcome",
+        "byteEquivalentSerializedValue": true
+      },
+      {
+        "key": "remainingAttempts",
+        "byteEquivalentSerializedValue": true
+      },
+      {
+        "key": "qualifications",
+        "byteEquivalentSerializedValue": true
+      }
+    ],
+    "all57ActualLiteralBodiesByteExact": true,
+    "all67CensusEntriesExact": true,
+    "all97CaseRowsExact": true,
+    "actualOuterOutputByteExact": true,
+    "sourceBeforeAndAfter": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a",
+    "historicalRedSourceOnly": "454b6d6c6141a3926635d46b63aa6c3ac62ec551",
+    "priorSemanticRecord": {
+      "gitBlob": "1f1ef935177c9453bdf330ae14b0e3b319a45311",
+      "bytes": 123411,
+      "sha256": "5dcab89bd07be83778ce7b40084960a26a9b17b22327d7fc150a2a0e3f867b07"
+    }
+  },
+  "independentlyClosedSemanticAndDirectEvidence": {
+    "actualRaw": {
+      "bytes": 9861,
+      "sha256": "f7d1a1a3c88a0993e7c8c638944182ed632d19862b2143f5f8d9b053cdbc9f50",
+      "gitBlob": "30a91e061f29b7605c1ab8e3d90b4b910626154c"
+    },
+    "primary": {
+      "bytes": 887,
+      "sha256": "1671d41f919b2ea5e69fbf44e46f774767340d42c3d064670214924a3dc52521",
+      "gitBlob": "c19cfcd3150ebc7f5a43ab43f944a1828a7271a6"
+    },
+    "finalReceipt": {
+      "bytes": 24625,
+      "sha256": "191557a7c37e46f6d7f0f6360e3e70cb1519292f959e9727cebdff2f494f1ca3",
+      "gitBlob": "e01ba171191344314babe0d6ea16cacdaf452cf3"
+    },
+    "tests": 97,
+    "pass": 97,
+    "fail": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "todo": 0,
+    "old78pass": 78,
+    "added19pass": 19,
+    "formerSemanticRedOrdinalsNowPass": [
+      79,
+      81,
+      82,
+      83,
+      84,
+      91,
+      94,
+      95,
+      96,
+      97
+    ],
+    "all97NamesOrderMultiplicityExact": true,
+    "all57LiteralBodiesRehashed": true,
+    "completeActual8798SourceFetchedAndRehashed": {
+      "bytes": 2478453,
+      "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+      "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+    },
+    "bothGreenBoundariesExactly67a": true,
+    "onlyTwoPublishedProducerRowsDifferentFromRed": true,
+    "other8796RowsUnchanged": true,
+    "workflows42Unchanged": true,
+    "testEfdUnchanged": true,
+    "old78PrefixVerbatim": true,
+    "primaryExit": 0,
+    "outerExecutor": {
+      "start": {
+        "chunk_id": "195b14",
+        "wall_time_seconds": 1.000579366,
+        "session_id": 49931,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "completion": {
+        "chunk_id": "22f5d3",
+        "wall_time_seconds": 0.000025124,
+        "exit_code": 0,
+        "original_token_count": 279,
+        "output": "{\"command\": \"green\", \"action\": \"run\", \"exitCode\": 0, \"exitSignal\": null, \"timedOut\": false, \"executionError\": null, \"postflightError\": null, \"inputsPreserved\": true, \"commandCompletedNormally\": true, \"scopeCompleted\": true, \"preflightSeconds\": 89.9162496099998, \"commandPhaseSeconds\": 17.453824198000802, \"cleanupSeconds\": 0, \"postflightSeconds\": 54.97094560599726, \"totalInvocationSeconds\": 162.34200213800068, \"rawCombinedOutput\": {\"path\": \"/tmp/c714-ui-conversation-evidence/green-command-1.log\", \"bytes\": 9861, \"sha256\": \"f7d1a1a3c88a0993e7c8c638944182ed632d19862b2143f5f8d9b053cdbc9f50\", \"gitBlob\": \"30a91e061f29b7605c1ab8e3d90b4b910626154c\"}, \"cleanup\": {\"capturedSessionMembersAfter\": [], \"newTestTempsRemaining\": [], \"scope\": \"Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof.\"}, \"signalAdmissionCutoff\": {\"at\": \"2026-11-16T15:30:26.063179+00:00\", \"pendingSignals\": [], \"supervisorExitZeroRequired\": true, \"scope\": \"Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.\"}}\n"
+      }
+    },
+    "actualOuterExit": 0,
+    "scopeCompleted": true,
+    "inputsPreserved": true,
+    "commandCompletedNormally": true,
+    "interruptions": [],
+    "cleanup": {
+      "capturedSessionMembersAfter": [],
+      "newTestTempsRemaining": [],
+      "scope": "Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof."
+    },
+    "signalAdmissionCutoff": {
+      "at": "2026-11-16T15:30:26.063179+00:00",
+      "pendingSignals": [],
+      "supervisorExitZeroRequired": true,
+      "scope": "Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission."
+    },
+    "metadataChildren": 14,
+    "metadataExit0AndEmptyCapturedSessions": true
+  },
+  "guardIndependentAcceptance": {
+    "reviewer": "/root/guard_review",
+    "accepted": true,
+    "actualPeerAcceptanceReceived": true,
+    "exactReceivedMessage": "COMPLETE GREEN input/lifetime/outer0 acceptance just sent root. Full67-file/90,190,019B/42unique census and57 literal hashes closed;10 large instances join exact whole source67a/dependencies/compiled/tree/index; all14 metadata, primary0 and actual outer49931 exit0 clean. Corrected d039 inverse is documentary-only. Your1f1ef full semantic record rehashed/joined. Bare final guard review follows; original three scoped guards may proceed under existing binding.",
+    "completeFiles": 67,
+    "fullBytes": 90190019,
+    "uniqueBodies": 42,
+    "literalBodies": 57,
+    "largeBodyInstances": 10,
+    "qualification": "The complete large unchanged dependency/compiled/tree/index reconstruction and negative-path/lifetime acceptance are attributed to guard_review. This lane additionally directly verified complete source67a and final receipt/raw/outer evidence, as retained in1f1ef.",
+    "bareRecordStatus": "Peer's complete acceptance was received before this record; its separately retained bare record was not yet supplied at this freeze. No unobserved identity is asserted."
+  },
+  "sourceAndExecutionBinding": {
+    "source": {
+      "commit": "bc6594c3ff0a1061870612a8f688400123575754",
+      "tree": "3b30530f411c66ceaec24666b728ecaf842f8212",
+      "qualification": "Exact published reviewed controls/Selection postimages and unchanged97-case test. Local detached HEAD/index remain c5 with exactly these two source overlays; current documentation is not claimed locally materialized."
+    },
+    "runner": {
+      "bytes": 35916,
+      "sha256": "495fac79660eb36f0795f74ff14bd665d79ac3e43534349c2f65234bda89d0f5",
+      "gitBlob": "6af0ac85f09ef02488ce15331828713882a73d13"
+    },
+    "binding": {
+      "bytes": 375818,
+      "sha256": "744167b87c840de28f17b86fd8b801caec5c71d695cc49c9f037dab964176cfd",
+      "gitBlob": "21878f51fd1b7bfca5bab18ff71c7c1beca5aaef"
+    },
+    "executionCheckpoint": {
+      "accepted": true,
+      "reviewer": "/root/pr_graph",
+      "commit": "3db7943ae2b70232e926474e09fac20b609d10c8",
+      "tree": "7d4877188dd68d1033dd2736feb59405568ba746",
+      "parent": "bc6594c3ff0a1061870612a8f688400123575754",
+      "leaves": 11657,
+      "changedBodies": 7,
+      "changedBytes": 2995655,
+      "sourceUnchanged": 8798,
+      "workflowsUnchanged": 42,
+      "planStatusPrefixesExact": true,
+      "completeAcceptanceReceivedBeforeApplication": true,
+      "bareReviewPending": false,
+      "bareReview": {
+        "bytes": 19767,
+        "sha256": "d0a48cf3b9058fd5c371d7c4ae40726522f0b65eba3dbb50882c1ec116fd76c5",
+        "gitBlob": "a491da84ce4ff17e841863b4646b93845b1bf5a8"
+      }
+    },
+    "materialization": {
+      "envelope": {
+        "bytes": 94844,
+        "sha256": "6f85618d26cd98ef8e382d97a83bae80211dd8a289a2c8f928048e0115580ee8",
+        "gitBlob": "006450583e21651539f5c0584b117fd5b081962c"
+      },
+      "receipt": {
+        "bytes": 24136,
+        "sha256": "98ccdbe86e80bb73ebb6cda60b199436785bd32349afebe052e035397ce55e82",
+        "gitBlob": "c0dcc04c0db61ea6712cbee6d4dcf02e1a7ab998"
+      },
+      "rootAdmission": {
+        "accepted": true,
+        "at": "2026-11-16 15:27:40 UTC",
+        "scope": "Root continuation gate for one exact GREEN; metadata-only materialization is not a test PASS.",
+        "receipt": {
+          "bytes": 24136,
+          "sha256": "98ccdbe86e80bb73ebb6cda60b199436785bd32349afebe052e035397ce55e82",
+          "gitBlob": "c0dcc04c0db61ea6712cbee6d4dcf02e1a7ab998"
+        },
+        "outerExit": 0,
+        "files": 64,
+        "bytes": 90178489,
+        "allFullBodiesResolved": true,
+        "metadata": 14,
+        "allMetadataExitZeroAndClean": true,
+        "sourceRows": 8798,
+        "sourceChanges": 2,
+        "otherSourceRowsUnchanged": 8796,
+        "workflowLeaves": 42,
+        "dependencyRows": 122773,
+        "compiledRows": 1454,
+        "noPrimaryCommand": true,
+        "sourceBefore": {
+          "path": "/tmp/c714-ui-conversation-evidence/materialize-green-before-source.json",
+          "bytes": 2478329,
+          "sha256": "abbf2b325ec7c0b40fd4c37bd6f7ee65ce69273723230032e150f3e8e0af3089",
+          "gitBlob": "454b6d6c6141a3926635d46b63aa6c3ac62ec551"
+        },
+        "sourceAfter": {
+          "path": "/tmp/c714-ui-conversation-evidence/materialize-green-after-source.json",
+          "bytes": 2478453,
+          "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+          "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+        },
+        "completePublishedGreenBindingReadback": {
+          "accepted": true,
+          "reviewer": "/root/pr_graph",
+          "commit": "3db7943ae2b70232e926474e09fac20b609d10c8",
+          "tree": "7d4877188dd68d1033dd2736feb59405568ba746",
+          "parent": "bc6594c3ff0a1061870612a8f688400123575754",
+          "leaves": 11657,
+          "changedBodies": 7,
+          "changedBytes": 2995655,
+          "sourceUnchanged": 8798,
+          "workflowsUnchanged": 42,
+          "planStatusPrefixesExact": true,
+          "completeAcceptanceReceivedBeforeApplication": true,
+          "bareReviewPending": false,
+          "bareReview": {
+            "bytes": 19767,
+            "sha256": "d0a48cf3b9058fd5c371d7c4ae40726522f0b65eba3dbb50882c1ec116fd76c5",
+            "gitBlob": "a491da84ce4ff17e841863b4646b93845b1bf5a8"
+          }
+        }
+      }
+    }
+  },
+  "remainingAttempts": {
+    "red": 0,
+    "green": 0,
+    "lint": 1,
+    "sourceSize": 1,
+    "diffCheck": 1
+  },
+  "continuationConditions": [
+    "Use the exact unchanged published21878 binding and6af0 runner; no additional test, compiler, install/build, native/GUI/provider or CI attempt is admitted.",
+    "Each scoped guard needs its own primary exit0, full raw semantics, input-preservation/cleanup receipt and separately observed supervisor exit0.",
+    "A normal supervisor return or completed GREEN does not imply a failing guard passed.",
+    "No new source or test postimage is selected by this documentary supplement."
+  ],
+  "qualificationLimits": [
+    "Finite actual-source whole-file Node suite only; no platform, GUI, packaged, native, real provider/auth or whole-E2E success.",
+    "Original historical failure outcomes and unqualified parity work remain unchanged.",
+    "BothGREEN snapshots already equaled67a in the original actual files and in1f1ef. The d039 correction repairs explanatory text, not observed source, receipt or test data.",
+    "The signal-admission cutoff is explicit; later signals are addressed only by the separate observed outer-exit gate. No universal child/native custody claim.",
+    "Reviewer performed Git immutable reads, hashing and pure data analysis only; no runtime/source/ref/PR/CI mutation."
+  ]
+}

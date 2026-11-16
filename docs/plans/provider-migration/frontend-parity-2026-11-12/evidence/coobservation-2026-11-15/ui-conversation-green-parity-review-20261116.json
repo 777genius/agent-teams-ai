@@ -1,0 +1,2366 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-actual-whole97-GREEN-semantic-and-final-receipt-source-review",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/parity_audit",
+  "reviewedAtUtc": "2026-11-16T15:34:04.030Z",
+  "acceptance": {
+    "semanticPrimary": true,
+    "complete97NameOrderMultiplicityJoin": true,
+    "all78PreservedCasesPass": true,
+    "all19AddedCasesPass": true,
+    "all10FormerSemanticRedNowPass": true,
+    "directFinalReceiptOuterExitAndSourceJoin": true,
+    "overallContinuationGate": "Pending independent guard_review full input/lifetime acceptance; this semantic record itself does not spend or qualify the three guards."
+  },
+  "subject": {
+    "publishedSource": {
+      "commit": "bc6594c3ff0a1061870612a8f688400123575754",
+      "tree": "3b30530f411c66ceaec24666b728ecaf842f8212",
+      "qualification": "Exact published reviewed controls/Selection postimages and unchanged97-case test. Local detached HEAD/index remain c5 with exactly these two source overlays; current documentation is not claimed locally materialized."
+    },
+    "executionCheckpoint": {
+      "accepted": true,
+      "reviewer": "/root/pr_graph",
+      "commit": "3db7943ae2b70232e926474e09fac20b609d10c8",
+      "tree": "7d4877188dd68d1033dd2736feb59405568ba746",
+      "parent": "bc6594c3ff0a1061870612a8f688400123575754",
+      "leaves": 11657,
+      "changedBodies": 7,
+      "changedBytes": 2995655,
+      "sourceUnchanged": 8798,
+      "workflowsUnchanged": 42,
+      "planStatusPrefixesExact": true,
+      "completeAcceptanceReceivedBeforeApplication": true,
+      "bareReviewPending": false,
+      "bareReview": {
+        "bytes": 19767,
+        "sha256": "d0a48cf3b9058fd5c371d7c4ae40726522f0b65eba3dbb50882c1ec116fd76c5",
+        "gitBlob": "a491da84ce4ff17e841863b4646b93845b1bf5a8"
+      }
+    },
+    "runner": {
+      "bytes": 35916,
+      "sha256": "495fac79660eb36f0795f74ff14bd665d79ac3e43534349c2f65234bda89d0f5",
+      "gitBlob": "6af0ac85f09ef02488ce15331828713882a73d13"
+    },
+    "binding": {
+      "bytes": 375818,
+      "sha256": "744167b87c840de28f17b86fd8b801caec5c71d695cc49c9f037dab964176cfd",
+      "gitBlob": "21878f51fd1b7bfca5bab18ff71c7c1beca5aaef"
+    },
+    "test": {
+      "bytes": 136700,
+      "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+      "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+    },
+    "preserved78Prefix": {
+      "bytes": 127790,
+      "sha256": "10803ce752a05140acbfa8270e97e782c452213f39589d52991a503e29db5c17",
+      "gitBlob": "3e5d5a5a765b503943bd72f68b2877311ee34479"
+    },
+    "prefixVerbatim": true,
+    "new19Suffix": {
+      "bytes": 8910,
+      "sha256": "e1c52971337871d30c53a93c6f7a537f529fc1297a330edb150c3a3f1ec10f95",
+      "gitBlob": "74a180307f8d0cd975903de54d4fcb2ba264fa76",
+      "originalContent": "\ntype ConversationPreviewState = {\n  content: string; centerY: number; count: number; width: number; disabled: boolean;\n  covered: boolean; duplicateHit: boolean; bodyText: string; neighborText: string;\n};\nfunction conversationPreviewFixture(t: import('node:test').TestContext,\n  onOwned: (state: ConversationPreviewState, check: number) => void = () => undefined) {\n  const selector = 'button[aria-label^=\"alice,\"]', label = 'TEST original conversation';\n  const state: ConversationPreviewState = { content: 'alice TEST boot ready', centerY: 178, count: 1,\n    width: 200, disabled: false, covered: false, duplicateHit: false, bodyText: '', neighborText: '' };\n  let now = 0, owned = 0, reads = 0, bodyReads = 0, front = 0;\n  const waits: number[] = [], expressions: string[] = [], events: Record<string, unknown>[] = [];\n  t.mock.method(Date, 'now', () => now);\n  t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {\n    assert.equal(delay, 100); waits.push(delay); now += delay; queueMicrotask(callback);\n    return 1 as unknown as NodeJS.Timeout;\n  });\n  const row = { get textContent() { return state.content; }, tagName: 'BUTTON',\n    getBoundingClientRect: () => ({ x: 69.5, y: state.centerY - 16, width: state.width, height: 32 }),\n    matches(actual: string) { assert.equal(actual, ':disabled'); return state.disabled; },\n    contains: () => false, getAttribute: () => null };\n  const duplicate = { ...row, textContent: 'alice TEST boot ready' };\n  const document = {\n    get body() { bodyReads++; return { textContent: state.content + state.bodyText + state.neighborText }; },\n    querySelectorAll(actual: string) {\n      assert.equal(actual, selector); return Array.from({ length: state.count }, (_, i) => i ? duplicate : row);\n    },\n    elementFromPoint: () => state.covered ? {} : state.duplicateHit ? duplicate : row,\n  };\n  const ui = createDesktopUiControls({\n    async evaluate(expression: string) {\n      reads++; expressions.push(expression);\n      return runInNewContext(expression, { document, innerWidth: 1000, innerHeight: 800,\n        getComputedStyle: () => ({ pointerEvents: 'auto' }) });\n    },\n    async send(method: string, params: Record<string, unknown> = {}) {\n      assert.ok(method === 'Page.bringToFront' || method === 'Input.dispatchMouseEvent');\n      if (method === 'Page.bringToFront') front++; else events.push({ ...params });\n      return {};\n    },\n  }, { assertOwnedRenderer() { onOwned(state, ++owned); }, step() {} });\n  return { state, events, expressions, waits,\n    run: (marker?: string) => Reflect.apply(ui.click, undefined, [selector, label, undefined, marker]) as Promise<void>,\n    counts: () => ({ now, owned, reads, bodyReads, front }) };\n}\n\ntest('original conversation waits for its own reply before one click at the hydrated coordinates', async t => {\n  const f = conversationPreviewFixture(t, (state, check) => {\n    if (check === 6) { state.content = 'alice TEST boot ready'; state.centerY = 186.5; }\n  });\n  f.state.content = 'alice You: TEST_UI_BOOT'; await f.run('TEST boot ready');\n  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]),\n    [['mouseMoved', 169.5, 186.5], ['mousePressed', 169.5, 186.5], ['mouseReleased', 169.5, 186.5]]);\n  assert.deepEqual(f.counts(), { now: 700, owned: 12, reads: 10, bodyReads: 0, front: 1 });\n  assert.deepEqual(f.waits, Array.from({ length: 7 }, () => 100));\n  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'same full predicate in every original phase');\n});\n\ntest('default conversation click retains its original final geometry refusal without a preview predicate', async t => {\n  const f = conversationPreviewFixture(t, (state, check) => { if (check === 6) state.centerY = 186.5; });\n  await assert.rejects(f.run(), /Original UI target moved after ownership check/);\n  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);\n  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, bodyReads: 0, front: 1 });\n});\n\nfor (const [label, invalid] of [\n  ['body-only reply', { content: 'alice You: TEST_UI_BOOT', bodyText: 'TEST boot ready' }],\n  ['neighbor-only reply', { content: 'alice You: TEST_UI_BOOT', neighborText: 'bob TEST boot ready' }],\n  ['different required reply', { content: 'alice TEST stream partial' }],\n  ['empty preview', { content: '' }], ['missing target', { count: 0 }], ['zero-size target', { width: 0 }],\n  ['disabled target', { disabled: true }], ['covered target', { covered: true }],\n  ['two eligible rows with only the second ready', { content: 'alice You: TEST_UI_BOOT', count: 2, duplicateHit: true }],\n] satisfies readonly (readonly [string, Partial<ConversationPreviewState>])[])\ntest('original conversation refuses ' + label + ' within its unchanged first read deadline', async t => {\n  const f = conversationPreviewFixture(t); Object.assign(f.state, invalid);\n  await assert.rejects(f.run('TEST boot ready'), /UI target read failed: TEST original conversation/);\n  assert.deepEqual(f.events, [], 'no hover or physical click on an ineligible original target');\n  assert.deepEqual(f.counts(), { now: 30_000, owned: 300, reads: 300, bodyReads: 0, front: 1 });\n  assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));\n  assert.ok(f.expressions.every(value => value === f.expressions[0]));\n});\n\ntest('original conversation serializes its required preview as literal data', async t => {\n  const marker = 'TEST \"quoted\" \\\\ \\u2028 </script> $' + '{notCode} ready';\n  const f = conversationPreviewFixture(t); f.state.content = 'alice ' + marker; await f.run(marker);\n  assert.deepEqual(f.events.map(({ type }) => type), ['mouseMoved', 'mousePressed', 'mouseReleased']);\n  assert.deepEqual(f.counts(), { now: 200, owned: 7, reads: 5, bodyReads: 0, front: 1 });\n});\n\ntest('original conversation rereads a revoked preview at unchanged final coordinates before input', async t => {\n  const f = conversationPreviewFixture(t, (state, check) => {\n    if (check === 6) state.content = 'alice You: TEST_UI_BOOT';\n  });\n  await assert.rejects(f.run('TEST boot ready'), /Original UI target unavailable after ownership check/);\n  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);\n  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, bodyReads: 0, front: 1 });\n  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'final direct read includes the readiness literal');\n});\n\nfor (const kind of ['owner', 'movement'] as const)\ntest('original conversation still refuses final ' + kind + ' despite a ready preview', async t => {\n  const refusal = new Error('TEST original renderer owner lost');\n  const f = conversationPreviewFixture(t, (state, check) => {\n    if (check !== 6) return;\n    if (kind === 'owner') throw refusal;\n    state.centerY = 186.5;\n  });\n  await assert.rejects(f.run('TEST boot ready'), error => {\n    if (kind === 'owner') assert.equal(error, refusal);\n    else assert.match(String(error), /Original UI target moved after ownership check/);\n    return true;\n  });\n  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);\n  assert.equal(f.counts().reads, kind === 'owner' ? 4 : 5);\n  assert.equal(f.counts().owned, 6);\n});\n\nfor (const memberName of ['alice', 'team-lead'])\nfor (const expectedReply of ['TEST boot ready', 'TEST stream partial'])\ntest('actual openChat forwards ' + expectedReply + ' for ' + memberName, async () => {\n  const { desktopJsLiteral } = await import('./desktop-ui-controls.ts');\n  const source = await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8');\n  const first = 'const openChat =', last = 'const assertSameLive =';\n  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);\n  const begin = source.indexOf(first), end = source.indexOf(last, begin); assert.ok(end > begin);\n  const actual = source.slice(begin, end).replace(/: Live\\b/g, '').replace(/: string\\b/g, '');\n  const calls: { method: string; args: unknown[] }[] = [];\n  const run = runInNewContext('(async () => { ' + actual + ' return openChat(live, expectedReply); })',\n    { live: { memberName }, expectedReply, literal: desktopJsLiteral, ui: {\n      async scrollTo(...args: unknown[]) { calls.push({ method: 'scrollTo', args }); },\n      async click(...args: unknown[]) { calls.push({ method: 'click', args }); },\n    } }) as () => Promise<void>;\n  await run();\n  const selector = 'button[aria-label^=' + desktopJsLiteral((memberName === 'team-lead' ? 'lead' : memberName) + ',') + ']';\n  assert.deepEqual(calls, [\n    { method: 'scrollTo', args: [selector, 'original lead conversation'] },\n    { method: 'click', args: [selector, 'open original lead conversation', undefined, expectedReply] },\n  ], 'one original scroll and one original click carrying the expected reply as data');\n});\n"
+    },
+    "localMaterializationQualification": "Actual local detached C5 HEAD/index retained with only exact published ed57/cf93 overlays. Documentation from the later publication is not claimed locally materialized."
+  },
+  "primaryEvidence": {
+    "raw": {
+      "bytes": 9861,
+      "sha256": "f7d1a1a3c88a0993e7c8c638944182ed632d19862b2143f5f8d9b053cdbc9f50",
+      "gitBlob": "30a91e061f29b7605c1ab8e3d90b4b910626154c",
+      "originalContent": "✔ captured UI discovery waits for Main admission and actual mount while early diagnostics remain active (214.974939ms)\n✔ the original remaining startup deadline rejects a pending snapshot without late discovery or a reset (505.445717ms)\n✔ packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin (30.219574ms)\n✔ HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted (9.751109ms)\n✔ isolated shell fixture emits the actual framed environment and refuses shell effects (1037.427995ms)\n✔ original in-progress Task comment prerequisite requires its exact stage without an assignment control (28.994787ms)\n✔ Task attachment comment waits for its original focused owner after one click before inserting text (226.300542ms)\n✔ original Task assignment prerequisite refuses receipt-only, pending and stale renderer state (8.917597ms)\n✔ original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface (8.896846ms)\n✔ original desktop click waits for stable target geometry, without repeating input (304.166113ms)\n✔ original Task hover waits through layout and unavailability before its one physical move (605.003494ms)\n✔ original desktop click refuses a constantly moving target before dispatch (1615.034901ms)\n✔ original owner-qualified click rereads its full expression through unavailability at unchanged coordinates (318.188395ms)\n✔ login failure facts retain only bounded original attempts and confirmed milestones (18.288569ms)\n✔ finite readiness failure summaries keep only bounded states and never private snapshot data (17.845388ms)\n✔ Taskboard failure summaries compare retained identities without exposing private snapshot values (9.932884ms)\n✔ installer failure summaries preserve original wait sites and attempts without inferring installation effects (9.624044ms)\n✔ installer failure projection does not invoke input getters and leaves oversized observations unknown (2.88353ms)\n✔ installer CDP and cleanup projection retains only exact finite observations (4.467008ms)\n✔ Selection target summaries retain the exact original phase and six closed facts (1.650897ms)\n✔ Selection target projection rejects unknown or malformed facts without exposing text or invoking getters (1.312499ms)\n✔ Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input (3.78155ms)\n✔ original desktop click refuses a target unavailable during the final ownership check (203.720344ms)\n✔ original desktop click refuses a target moved during the final ownership check (239.954328ms)\n✔ original default scroll preserves a disabled control before its readiness wait (10.225434ms)\n✔ original scroll opt-in reveals a covered checkbox with one bounded wheel (106.8707ms)\n✔ original desktop click rechecks owner after its pending final target read (206.46389ms)\n✔ original desktop click rechecks cutoff after its pending final target read (211.13808ms)\n✔ original clarification lookup admits its retained read without completing the assignment prerequisite (12.412685ms)\n✔ original clarification lookup refuses changed owner, revision, refresh and retained-read joins (136.12928ms)\n✔ original owner availability admits three captured A Teams through its actual first DOM read (26.979873ms)\n✔ original owner availability retains singleton, subset and duplicate-row cardinality semantics (20.077915ms)\n✔ original owner availability refuses foreign identities and preserves its existing aggregate guards (268.815754ms)\n✔ original owner availability refuses invalid captured discovery before navigation (9.134025ms)\n✔ owner availability admits every captured A Team through the actual first observation (5.269357ms)\n✔ owner availability refuses healthy B in unavailable A rows (4.456782ms)\n✔ owner availability refuses captured foreign owner in unavailable A rows (5.884537ms)\n✔ owner availability refuses unknown Team in unavailable A rows (4.030691ms)\n✔ owner availability refuses malformed Team in unavailable A rows (3.305621ms)\n✔ owner availability refuses missing selected A before original navigation (1.512264ms)\n✔ owner availability refuses non-string A handle before original navigation (1.322755ms)\n✔ owner availability refuses empty A handle before original navigation (9.11381ms)\n✔ owner availability refuses duplicate A handle before original navigation (1.279271ms)\n✔ owner availability refuses over-bound capture before original navigation (0.568086ms)\n✔ passive input keeps its actual Team target and three separate original navigation samples (33.683645ms)\n✔ passive navigation preserves non-card events, the original ring bounds and null or non-Team state (27.339066ms)\n✔ passive navigation refuses malformed target and store facts without losing original callbacks (251.544093ms)\n✔ passive navigation remains bounded and cannot interrupt original writes on diagnostic failure (71.011518ms)\n✔ passive navigation uses only the callable store own method and ignores unrelated card surfaces (38.750905ms)\n✔ the selected provider receipt digest matches the actual manifest-selected archive bytes (224.780193ms)\n✔ provider receipt legacy, current and equal-dual implementation digests preserve manifest authority (148.248918ms)\n✔ every present provider implementation digest must be valid and both recognized fields must agree (1051.85772ms)\n✔ provider receipt shape, package selection and original file or JSON errors remain strict (1043.497704ms)\n✔ saved Launch uses three stable actual DOM samples before its original settings action (20.744436ms)\n✔ saved Launch resets exact geometry when the original button shifts by a quarter pixel (14.754515ms)\n✔ saved Launch restarts its three samples after changed identity (11.255319ms)\n✔ saved Launch restarts its three samples after changed expanded state (17.518317ms)\n✔ saved Launch restarts its three samples after changed horizontal position (13.477611ms)\n✔ saved Launch restarts its three samples after changed width (6.659521ms)\n✔ saved Launch restarts its three samples after changed height (8.45359ms)\n✔ saved Launch resets its original readiness after absent target (19.357529ms)\n✔ saved Launch resets its original readiness after ambiguous target (19.036846ms)\n✔ saved Launch resets its original readiness after wrong model (21.729417ms)\n✔ saved Launch resets its original readiness after absent identity (19.446493ms)\n✔ saved Launch resets its original readiness after empty identity (66.905239ms)\n✔ saved Launch resets its original readiness after invalid expansion (22.680584ms)\n✔ saved Launch resets its original readiness after missing owning dialog (16.282762ms)\n✔ saved Launch resets its original readiness after nonfinite x (13.130086ms)\n✔ saved Launch resets its original readiness after nonfinite y (13.464799ms)\n✔ saved Launch resets its original readiness after zero width (11.67033ms)\n✔ saved Launch resets its original readiness after negative height (20.306774ms)\n✔ saved Launch resets its original readiness after running own animation (17.384191ms)\n✔ saved Launch resets its original readiness after paused own animation (22.524635ms)\n✔ saved Launch resets its original readiness after pending own animation (26.075ms)\n✔ saved Launch allows finished own animation without inspecting descendant spinners or model status (8.189367ms)\n✔ saved Launch allows idle own animation without inspecting descendant spinners or model status (16.799652ms)\n✔ saved Launch exhausts its one original deadline with no matching model and no settings action (430.101758ms)\n✔ saved Launch exhausts its one original deadline with unsettled own dialog and no settings action (258.124179ms)\n✔ original conversation waits for its own reply before one click at the hydrated coordinates (8.664801ms)\n✔ default conversation click retains its original final geometry refusal without a preview predicate (7.423235ms)\n✔ original conversation refuses body-only reply within its unchanged first read deadline (388.450675ms)\n✔ original conversation refuses neighbor-only reply within its unchanged first read deadline (242.843865ms)\n✔ original conversation refuses different required reply within its unchanged first read deadline (188.047154ms)\n✔ original conversation refuses empty preview within its unchanged first read deadline (208.860587ms)\n✔ original conversation refuses missing target within its unchanged first read deadline (275.557954ms)\n✔ original conversation refuses zero-size target within its unchanged first read deadline (372.452361ms)\n✔ original conversation refuses disabled target within its unchanged first read deadline (211.840198ms)\n✔ original conversation refuses covered target within its unchanged first read deadline (235.413931ms)\n✔ original conversation refuses two eligible rows with only the second ready within its unchanged first read deadline (265.741654ms)\n✔ original conversation serializes its required preview as literal data (3.514298ms)\n✔ original conversation rereads a revoked preview at unchanged final coordinates before input (3.422994ms)\n✔ original conversation still refuses final owner despite a ready preview (3.197121ms)\n✔ original conversation still refuses final movement despite a ready preview (4.184483ms)\n✔ actual openChat forwards TEST boot ready for alice (21.2389ms)\n✔ actual openChat forwards TEST stream partial for alice (4.08067ms)\n✔ actual openChat forwards TEST boot ready for team-lead (1.726298ms)\n✔ actual openChat forwards TEST stream partial for team-lead (1.994903ms)\nℹ tests 97\nℹ suites 0\nℹ pass 97\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 17111.235946\n"
+    },
+    "receipt": {
+      "bytes": 887,
+      "sha256": "1671d41f919b2ea5e69fbf44e46f774767340d42c3d064670214924a3dc52521",
+      "gitBlob": "c19cfcd3150ebc7f5a43ab43f944a1828a7271a6",
+      "originalContent": "{\n  \"argv\": [\n    \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n    \"--test\",\n    \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T15:29:13.638643+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 30,\n  \"metadataOnly\": false,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-ui-conversation-evidence/green-command-1.log\",\n    \"bytes\": 9861,\n    \"sha256\": \"f7d1a1a3c88a0993e7c8c638944182ed632d19862b2143f5f8d9b053cdbc9f50\",\n    \"gitBlob\": \"30a91e061f29b7605c1ab8e3d90b4b910626154c\"\n  },\n  \"finishedAt\": \"2026-11-16T15:29:31.091676+00:00\",\n  \"durationSeconds\": 17.45291191599972,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+    },
+    "exactReviewedCommand": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--test",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+    ],
+    "primaryExit": 0,
+    "outerExitSeparate": true,
+    "allRawLinesClassified": true,
+    "unexpectedLines": [],
+    "actualRawTotals": {
+      "tests": 97,
+      "suites": 0,
+      "pass": 97,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "duration_ms": 17111.235946
+    },
+    "uniqueActualNames": 97,
+    "fullExactCaseLedger": [
+      {
+        "ordinal": 1,
+        "name": "captured UI discovery waits for Main admission and actual mount while early diagnostics remain active",
+        "definitionLine": 63,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 216.224385
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 214.974939,
+          "rawLine": 1
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "the original remaining startup deadline rejects a pending snapshot without late discovery or a reset",
+        "definitionLine": 79,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 502.147541
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 505.445717,
+          "rawLine": 2
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin",
+        "definitionLine": 124,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 11.668332
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 30.219574,
+          "rawLine": 3
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted",
+        "definitionLine": 139,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 6.522559
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 9.751109,
+          "rawLine": 4
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "isolated shell fixture emits the actual framed environment and refuses shell effects",
+        "definitionLine": 149,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 425.906804
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 1037.427995,
+          "rawLine": 5
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "original in-progress Task comment prerequisite requires its exact stage without an assignment control",
+        "definitionLine": 337,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 28.846571
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 28.994787,
+          "rawLine": 6
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "Task attachment comment waits for its original focused owner after one click before inserting text",
+        "definitionLine": 372,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 216.612672
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 226.300542,
+          "rawLine": 7
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "original Task assignment prerequisite refuses receipt-only, pending and stale renderer state",
+        "definitionLine": 546,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 5.562517
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 8.917597,
+          "rawLine": 8
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface",
+        "definitionLine": 583,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 6.473176
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 8.896846,
+          "rawLine": 9
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "original desktop click waits for stable target geometry, without repeating input",
+        "definitionLine": 613,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 303.725905
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 304.166113,
+          "rawLine": 10
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "original Task hover waits through layout and unavailability before its one physical move",
+        "definitionLine": 641,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 603.265161
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 605.003494,
+          "rawLine": 11
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "original desktop click refuses a constantly moving target before dispatch",
+        "definitionLine": 667,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 1533.252942
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 1615.034901,
+          "rawLine": 12
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "original owner-qualified click rereads its full expression through unavailability at unchanged coordinates",
+        "definitionLine": 685,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 306.065921
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 318.188395,
+          "rawLine": 13
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "login failure facts retain only bounded original attempts and confirmed milestones",
+        "definitionLine": 715,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 3.473175
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 18.288569,
+          "rawLine": 14
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "finite readiness failure summaries keep only bounded states and never private snapshot data",
+        "definitionLine": 770,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 3.491602
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 17.845388,
+          "rawLine": 15
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "Taskboard failure summaries compare retained identities without exposing private snapshot values",
+        "definitionLine": 808,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 2.814267
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 9.932884,
+          "rawLine": 16
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "installer failure summaries preserve original wait sites and attempts without inferring installation effects",
+        "definitionLine": 896,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 3.650747
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 9.624044,
+          "rawLine": 17
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "installer failure projection does not invoke input getters and leaves oversized observations unknown",
+        "definitionLine": 952,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 0.970717
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 2.88353,
+          "rawLine": 18
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "installer CDP and cleanup projection retains only exact finite observations",
+        "definitionLine": 985,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 1.267743
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 4.467008,
+          "rawLine": 19
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "Selection target summaries retain the exact original phase and six closed facts",
+        "definitionLine": 1038,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 1.495369
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 1.650897,
+          "rawLine": 20
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "Selection target projection rejects unknown or malformed facts without exposing text or invoking getters",
+        "definitionLine": 1073,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 1.02018
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 1.312499,
+          "rawLine": 21
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input",
+        "definitionLine": 1102,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 3.12218
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 3.78155,
+          "rawLine": 22
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "original desktop click refuses a target unavailable during the final ownership check",
+        "definitionLine": 1198,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 204.234741
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 203.720344,
+          "rawLine": 23
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "original desktop click refuses a target moved during the final ownership check",
+        "definitionLine": 1198,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 204.168553
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 239.954328,
+          "rawLine": 24
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "original default scroll preserves a disabled control before its readiness wait",
+        "definitionLine": 1228,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 3.675483
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 10.225434,
+          "rawLine": 25
+        }
+      },
+      {
+        "ordinal": 26,
+        "name": "original scroll opt-in reveals a covered checkbox with one bounded wheel",
+        "definitionLine": 1228,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 104.173463
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 106.8707,
+          "rawLine": 26
+        }
+      },
+      {
+        "ordinal": 27,
+        "name": "original desktop click rechecks owner after its pending final target read",
+        "definitionLine": 1280,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 203.216739
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 206.46389,
+          "rawLine": 27
+        }
+      },
+      {
+        "ordinal": 28,
+        "name": "original desktop click rechecks cutoff after its pending final target read",
+        "definitionLine": 1280,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 204.117228
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 211.13808,
+          "rawLine": 28
+        }
+      },
+      {
+        "ordinal": 29,
+        "name": "original clarification lookup admits its retained read without completing the assignment prerequisite",
+        "definitionLine": 1324,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 5.566803
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 12.412685,
+          "rawLine": 29
+        }
+      },
+      {
+        "ordinal": 30,
+        "name": "original clarification lookup refuses changed owner, revision, refresh and retained-read joins",
+        "definitionLine": 1347,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 43.492084
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 136.12928,
+          "rawLine": 30
+        }
+      },
+      {
+        "ordinal": 31,
+        "name": "original owner availability admits three captured A Teams through its actual first DOM read",
+        "definitionLine": 1464,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 6.025879
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 26.979873,
+          "rawLine": 31
+        }
+      },
+      {
+        "ordinal": 32,
+        "name": "original owner availability retains singleton, subset and duplicate-row cardinality semantics",
+        "definitionLine": 1480,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 4.816891
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 20.077915,
+          "rawLine": 32
+        }
+      },
+      {
+        "ordinal": 33,
+        "name": "original owner availability refuses foreign identities and preserves its existing aggregate guards",
+        "definitionLine": 1494,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 50.160007
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 268.815754,
+          "rawLine": 33
+        }
+      },
+      {
+        "ordinal": 34,
+        "name": "original owner availability refuses invalid captured discovery before navigation",
+        "definitionLine": 1541,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 1.547615
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 9.134025,
+          "rawLine": 34
+        }
+      },
+      {
+        "ordinal": 35,
+        "name": "owner availability admits every captured A Team through the actual first observation",
+        "definitionLine": 1610,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 1.436121
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 5.269357,
+          "rawLine": 35
+        }
+      },
+      {
+        "ordinal": 36,
+        "name": "owner availability refuses healthy B in unavailable A rows",
+        "definitionLine": 1628,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 1.210269
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 4.456782,
+          "rawLine": 36
+        }
+      },
+      {
+        "ordinal": 37,
+        "name": "owner availability refuses captured foreign owner in unavailable A rows",
+        "definitionLine": 1628,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 0.679469
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 5.884537,
+          "rawLine": 37
+        }
+      },
+      {
+        "ordinal": 38,
+        "name": "owner availability refuses unknown Team in unavailable A rows",
+        "definitionLine": 1628,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 0.817342
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 4.030691,
+          "rawLine": 38
+        }
+      },
+      {
+        "ordinal": 39,
+        "name": "owner availability refuses malformed Team in unavailable A rows",
+        "definitionLine": 1628,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 0.855107
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 3.305621,
+          "rawLine": 39
+        }
+      },
+      {
+        "ordinal": 40,
+        "name": "owner availability refuses missing selected A before original navigation",
+        "definitionLine": 1638,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 0.590388
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 1.512264,
+          "rawLine": 40
+        }
+      },
+      {
+        "ordinal": 41,
+        "name": "owner availability refuses non-string A handle before original navigation",
+        "definitionLine": 1638,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 0.390424
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 1.322755,
+          "rawLine": 41
+        }
+      },
+      {
+        "ordinal": 42,
+        "name": "owner availability refuses empty A handle before original navigation",
+        "definitionLine": 1638,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 0.614793
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 9.11381,
+          "rawLine": 42
+        }
+      },
+      {
+        "ordinal": 43,
+        "name": "owner availability refuses duplicate A handle before original navigation",
+        "definitionLine": 1638,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 0.293662
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 1.279271,
+          "rawLine": 43
+        }
+      },
+      {
+        "ordinal": 44,
+        "name": "owner availability refuses over-bound capture before original navigation",
+        "definitionLine": 1638,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 0.451574
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 0.568086,
+          "rawLine": 44
+        }
+      },
+      {
+        "ordinal": 45,
+        "name": "passive input keeps its actual Team target and three separate original navigation samples",
+        "definitionLine": 1722,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 6.492925
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 33.683645,
+          "rawLine": 45
+        }
+      },
+      {
+        "ordinal": 46,
+        "name": "passive navigation preserves non-card events, the original ring bounds and null or non-Team state",
+        "definitionLine": 1747,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 64.4308
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 27.339066,
+          "rawLine": 46
+        }
+      },
+      {
+        "ordinal": 47,
+        "name": "passive navigation refuses malformed target and store facts without losing original callbacks",
+        "definitionLine": 1767,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 77.262468
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 251.544093,
+          "rawLine": 47
+        }
+      },
+      {
+        "ordinal": 48,
+        "name": "passive navigation remains bounded and cannot interrupt original writes on diagnostic failure",
+        "definitionLine": 1813,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 7.519433
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 71.011518,
+          "rawLine": 48
+        }
+      },
+      {
+        "ordinal": 49,
+        "name": "passive navigation uses only the callable store own method and ignores unrelated card surfaces",
+        "definitionLine": 1835,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 5.532192
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 38.750905,
+          "rawLine": 49
+        }
+      },
+      {
+        "ordinal": 50,
+        "name": "the selected provider receipt digest matches the actual manifest-selected archive bytes",
+        "definitionLine": 1853,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 24.08416
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 224.780193,
+          "rawLine": 50
+        }
+      },
+      {
+        "ordinal": 51,
+        "name": "provider receipt legacy, current and equal-dual implementation digests preserve manifest authority",
+        "definitionLine": 1866,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 9.950041
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 148.248918,
+          "rawLine": 51
+        }
+      },
+      {
+        "ordinal": 52,
+        "name": "every present provider implementation digest must be valid and both recognized fields must agree",
+        "definitionLine": 1890,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 77.201603
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 1051.85772,
+          "rawLine": 52
+        }
+      },
+      {
+        "ordinal": 53,
+        "name": "provider receipt shape, package selection and original file or JSON errors remain strict",
+        "definitionLine": 1916,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 36.13568
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 1043.497704,
+          "rawLine": 53
+        }
+      },
+      {
+        "ordinal": 54,
+        "name": "saved Launch uses three stable actual DOM samples before its original settings action",
+        "definitionLine": 2042,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 12.544481
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 20.744436,
+          "rawLine": 54
+        }
+      },
+      {
+        "ordinal": 55,
+        "name": "saved Launch resets exact geometry when the original button shifts by a quarter pixel",
+        "definitionLine": 2047,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 5.15558
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 14.754515,
+          "rawLine": 55
+        }
+      },
+      {
+        "ordinal": 56,
+        "name": "saved Launch restarts its three samples after changed identity",
+        "definitionLine": 2060,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 9.115089
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 11.255319,
+          "rawLine": 56
+        }
+      },
+      {
+        "ordinal": 57,
+        "name": "saved Launch restarts its three samples after changed expanded state",
+        "definitionLine": 2060,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 11.609747
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 17.518317,
+          "rawLine": 57
+        }
+      },
+      {
+        "ordinal": 58,
+        "name": "saved Launch restarts its three samples after changed horizontal position",
+        "definitionLine": 2060,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 14.043784
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 13.477611,
+          "rawLine": 58
+        }
+      },
+      {
+        "ordinal": 59,
+        "name": "saved Launch restarts its three samples after changed width",
+        "definitionLine": 2060,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 11.925391
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 6.659521,
+          "rawLine": 59
+        }
+      },
+      {
+        "ordinal": 60,
+        "name": "saved Launch restarts its three samples after changed height",
+        "definitionLine": 2060,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 12.39444
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 8.45359,
+          "rawLine": 60
+        }
+      },
+      {
+        "ordinal": 61,
+        "name": "saved Launch resets its original readiness after absent target",
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 16.618715
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 19.357529,
+          "rawLine": 61
+        }
+      },
+      {
+        "ordinal": 62,
+        "name": "saved Launch resets its original readiness after ambiguous target",
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 15.153081
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 19.036846,
+          "rawLine": 62
+        }
+      },
+      {
+        "ordinal": 63,
+        "name": "saved Launch resets its original readiness after wrong model",
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 7.944308
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 21.729417,
+          "rawLine": 63
+        }
+      },
+      {
+        "ordinal": 64,
+        "name": "saved Launch resets its original readiness after absent identity",
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 8.492554
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 19.446493,
+          "rawLine": 64
+        }
+      },
+      {
+        "ordinal": 65,
+        "name": "saved Launch resets its original readiness after empty identity",
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 8.260583
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 66.905239,
+          "rawLine": 65
+        }
+      },
+      {
+        "ordinal": 66,
+        "name": "saved Launch resets its original readiness after invalid expansion",
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 12.012208
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 22.680584,
+          "rawLine": 66
+        }
+      },
+      {
+        "ordinal": 67,
+        "name": "saved Launch resets its original readiness after missing owning dialog",
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 10.957357
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 16.282762,
+          "rawLine": 67
+        }
+      },
+      {
+        "ordinal": 68,
+        "name": "saved Launch resets its original readiness after nonfinite x",
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 10.235987
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 13.130086,
+          "rawLine": 68
+        }
+      },
+      {
+        "ordinal": 69,
+        "name": "saved Launch resets its original readiness after nonfinite y",
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 8.87702
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 13.464799,
+          "rawLine": 69
+        }
+      },
+      {
+        "ordinal": 70,
+        "name": "saved Launch resets its original readiness after zero width",
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 10.931239
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 11.67033,
+          "rawLine": 70
+        }
+      },
+      {
+        "ordinal": 71,
+        "name": "saved Launch resets its original readiness after negative height",
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 6.761359
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 20.306774,
+          "rawLine": 71
+        }
+      },
+      {
+        "ordinal": 72,
+        "name": "saved Launch resets its original readiness after running own animation",
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 7.159745
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 17.384191,
+          "rawLine": 72
+        }
+      },
+      {
+        "ordinal": 73,
+        "name": "saved Launch resets its original readiness after paused own animation",
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 7.128129
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 22.524635,
+          "rawLine": 73
+        }
+      },
+      {
+        "ordinal": 74,
+        "name": "saved Launch resets its original readiness after pending own animation",
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 9.762552
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 26.075,
+          "rawLine": 74
+        }
+      },
+      {
+        "ordinal": 75,
+        "name": "saved Launch allows finished own animation without inspecting descendant spinners or model status",
+        "definitionLine": 2083,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 4.633542
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 8.189367,
+          "rawLine": 75
+        }
+      },
+      {
+        "ordinal": 76,
+        "name": "saved Launch allows idle own animation without inspecting descendant spinners or model status",
+        "definitionLine": 2083,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 4.36023
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 16.799652,
+          "rawLine": 76
+        }
+      },
+      {
+        "ordinal": 77,
+        "name": "saved Launch exhausts its one original deadline with no matching model and no settings action",
+        "definitionLine": 2092,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 257.125626
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 430.101758,
+          "rawLine": 77
+        }
+      },
+      {
+        "ordinal": 78,
+        "name": "saved Launch exhausts its one original deadline with unsettled own dialog and no settings action",
+        "definitionLine": 2092,
+        "group": "preserved78",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 308.830814
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 258.124179,
+          "rawLine": 78
+        }
+      },
+      {
+        "ordinal": 79,
+        "name": "original conversation waits for its own reply before one click at the hydrated coordinates",
+        "definitionLine": 2146,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure",
+        "actualRed": {
+          "status": "fail",
+          "durationMs": 6.467388
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 8.664801,
+          "rawLine": 79
+        }
+      },
+      {
+        "ordinal": 80,
+        "name": "default conversation click retains its original final geometry refusal without a preview predicate",
+        "definitionLine": 2158,
+        "group": "added19",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 5.018958
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 7.423235,
+          "rawLine": 80
+        }
+      },
+      {
+        "ordinal": 81,
+        "name": "original conversation refuses body-only reply within its unchanged first read deadline",
+        "definitionLine": 2173,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure",
+        "actualRed": {
+          "status": "fail",
+          "durationMs": 5.068821
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 388.450675,
+          "rawLine": 81
+        }
+      },
+      {
+        "ordinal": 82,
+        "name": "original conversation refuses neighbor-only reply within its unchanged first read deadline",
+        "definitionLine": 2173,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure",
+        "actualRed": {
+          "status": "fail",
+          "durationMs": 4.778704
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 242.843865,
+          "rawLine": 82
+        }
+      },
+      {
+        "ordinal": 83,
+        "name": "original conversation refuses different required reply within its unchanged first read deadline",
+        "definitionLine": 2173,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure",
+        "actualRed": {
+          "status": "fail",
+          "durationMs": 5.672208
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 188.047154,
+          "rawLine": 83
+        }
+      },
+      {
+        "ordinal": 84,
+        "name": "original conversation refuses empty preview within its unchanged first read deadline",
+        "definitionLine": 2173,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure",
+        "actualRed": {
+          "status": "fail",
+          "durationMs": 5.612941
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 208.860587,
+          "rawLine": 84
+        }
+      },
+      {
+        "ordinal": 85,
+        "name": "original conversation refuses missing target within its unchanged first read deadline",
+        "definitionLine": 2173,
+        "group": "added19",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 468.758152
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 275.557954,
+          "rawLine": 85
+        }
+      },
+      {
+        "ordinal": 86,
+        "name": "original conversation refuses zero-size target within its unchanged first read deadline",
+        "definitionLine": 2173,
+        "group": "added19",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 257.80102
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 372.452361,
+          "rawLine": 86
+        }
+      },
+      {
+        "ordinal": 87,
+        "name": "original conversation refuses disabled target within its unchanged first read deadline",
+        "definitionLine": 2173,
+        "group": "added19",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 383.685047
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 211.840198,
+          "rawLine": 87
+        }
+      },
+      {
+        "ordinal": 88,
+        "name": "original conversation refuses covered target within its unchanged first read deadline",
+        "definitionLine": 2173,
+        "group": "added19",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 267.589084
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 235.413931,
+          "rawLine": 88
+        }
+      },
+      {
+        "ordinal": 89,
+        "name": "original conversation refuses two eligible rows with only the second ready within its unchanged first read deadline",
+        "definitionLine": 2173,
+        "group": "added19",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 268.612851
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 265.741654,
+          "rawLine": 89
+        }
+      },
+      {
+        "ordinal": 90,
+        "name": "original conversation serializes its required preview as literal data",
+        "definitionLine": 2182,
+        "group": "added19",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 6.200997
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 3.514298,
+          "rawLine": 90
+        }
+      },
+      {
+        "ordinal": 91,
+        "name": "original conversation rereads a revoked preview at unchanged final coordinates before input",
+        "definitionLine": 2189,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure",
+        "actualRed": {
+          "status": "fail",
+          "durationMs": 6.204682
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 3.422994,
+          "rawLine": 91
+        }
+      },
+      {
+        "ordinal": 92,
+        "name": "original conversation still refuses final owner despite a ready preview",
+        "definitionLine": 2200,
+        "group": "added19",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 7.19629
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 3.197121,
+          "rawLine": 92
+        }
+      },
+      {
+        "ordinal": 93,
+        "name": "original conversation still refuses final movement despite a ready preview",
+        "definitionLine": 2200,
+        "group": "added19",
+        "predictedBaseline": "pass",
+        "actualRed": {
+          "status": "pass",
+          "durationMs": 7.088392
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 4.184483,
+          "rawLine": 93
+        }
+      },
+      {
+        "ordinal": 94,
+        "name": "actual openChat forwards TEST boot ready for alice",
+        "definitionLine": 2219,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure",
+        "actualRed": {
+          "status": "fail",
+          "durationMs": 50.063469
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 21.2389,
+          "rawLine": 94
+        }
+      },
+      {
+        "ordinal": 95,
+        "name": "actual openChat forwards TEST stream partial for alice",
+        "definitionLine": 2219,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure",
+        "actualRed": {
+          "status": "fail",
+          "durationMs": 8.439888
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 4.08067,
+          "rawLine": 95
+        }
+      },
+      {
+        "ordinal": 96,
+        "name": "actual openChat forwards TEST boot ready for team-lead",
+        "definitionLine": 2219,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure",
+        "actualRed": {
+          "status": "fail",
+          "durationMs": 4.246433
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 1.726298,
+          "rawLine": 96
+        }
+      },
+      {
+        "ordinal": 97,
+        "name": "actual openChat forwards TEST stream partial for team-lead",
+        "definitionLine": 2219,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure",
+        "actualRed": {
+          "status": "fail",
+          "durationMs": 41.309859
+        },
+        "actualGreen": {
+          "status": "pass",
+          "durationMs": 1.994903,
+          "rawLine": 97
+        }
+      }
+    ]
+  },
+  "redComparison": {
+    "raw": "a9f4a5a2e351fb7c9898679a0d69846fb02bc01e",
+    "semanticReview": "5f316e969bc382cb7ed49fa824955fb939b989ef",
+    "finalClosure": "4cda111a657915dbf0c61662a4b07f66a8cd22cd",
+    "guardReview": "f2695e2c8ae5381a6175127fa240eef7b289c390",
+    "actualRed": {
+      "tests": 97,
+      "pass": 87,
+      "fail": 10,
+      "old78pass": 78,
+      "newPositivePass": 9,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0
+    },
+    "actualGreen": {
+      "tests": 97,
+      "pass": 97,
+      "fail": 0,
+      "old78pass": 78,
+      "added19pass": 19,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0
+    },
+    "formerFailureOrdinals": [
+      79,
+      81,
+      82,
+      83,
+      84,
+      91,
+      94,
+      95,
+      96,
+      97
+    ],
+    "positiveAdditionOrdinals": [
+      80,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      92,
+      93
+    ],
+    "testNameOrderAndMultiplicityIdentical": true
+  },
+  "semantics": [
+    {
+      "ordinals": [
+        79
+      ],
+      "sourceLines": [
+        2146,
+        2156
+      ],
+      "result": "PASS",
+      "meaning": "Actual controls predicate waits for the same row's required reply, then the finite harness records exactly hover/press/release at hydrated169.5,186.5. Assertions for10 reads/12 owner checks/zero body reads/one bringToFront and seven original 100 ms logical waits complete. This is the designated original-final-geometry RED now reaching its positive assertions."
+    },
+    {
+      "ordinals": [
+        80
+      ],
+      "sourceLines": [
+        2158,
+        2163
+      ],
+      "result": "PASS",
+      "meaning": "Undefined optional required reply still produces the original final movement refusal and hover-only event; no press/release. Original 5 reads/6 owner checks and zero body reads are asserted."
+    },
+    {
+      "ordinals": [
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89
+      ],
+      "sourceLines": [
+        2165,
+        2179
+      ],
+      "result": "PASS",
+      "meaning": "Body-only, neighboring, different required reply, empty, missing, zero-size, disabled, covered and duplicate eligible rows all refuse within the original finite first-read oracle; no hover or physical input,300 reads/owner checks,300 100 ms logical waits and zero body reads. The first four were the semantic RED failures; all nine exact callbacks now complete."
+    },
+    {
+      "ordinals": [
+        90
+      ],
+      "sourceLines": [
+        2182,
+        2187
+      ],
+      "result": "PASS",
+      "meaning": "Quoted, backslash, line-separator, closing-script and interpolation-like marker is passed as literal data and permits exactly one pair; not executable injected source."
+    },
+    {
+      "ordinals": [
+        91
+      ],
+      "sourceLines": [
+        2189,
+        2197
+      ],
+      "result": "PASS",
+      "meaning": "Revoking the same row's preview at unchanged final coordinates causes the original unavailable-target refusal before press/release; every observed phase uses the same full predicate."
+    },
+    {
+      "ordinals": [
+        92,
+        93
+      ],
+      "sourceLines": [
+        2199,
+        2215
+      ],
+      "result": "PASS",
+      "meaning": "Original owner error identity and exact final geometry refusal remain intact despite ready preview; only hover occurs."
+    },
+    {
+      "ordinals": [
+        94,
+        95,
+        96,
+        97
+      ],
+      "sourceLines": [
+        2217,
+        2238
+      ],
+      "result": "PASS",
+      "meaning": "The actual source-sliced openChat function is exercised for alice/team-lead and boot/partial markers; exactly one original scroll and click are asserted, with undefined third argument and the exact expectedReply fourth argument. These are finite function cases, not complete original platform journeys."
+    },
+    {
+      "ordinals": "1-78",
+      "result": "PASS",
+      "meaning": "All exactly preserved original 78 named runtime cases pass. No source prefix deletion, filtering, substitutions, skipped tests or duplicate-name collapse is accepted."
+    }
+  ],
+  "finalEvidence": {
+    "envelope": {
+      "bytes": 123957,
+      "sha256": "ba1990c5baac6d119925e2c928053ca7331a294c81f304c336ad32d45e2f547d",
+      "gitBlob": "852af17eef75cfefe5117276c42a960f20ff9ddf"
+    },
+    "finalReceipt": {
+      "bytes": 24625,
+      "sha256": "191557a7c37e46f6d7f0f6360e3e70cb1519292f959e9727cebdff2f494f1ca3",
+      "gitBlob": "e01ba171191344314babe0d6ea16cacdaf452cf3",
+      "originalContent": "{\n  \"kind\": \"single-authorized-whole-file-or-scoped-guard-command\",\n  \"command\": \"green\",\n  \"action\": \"run\",\n  \"attempt\": 1,\n  \"startedAt\": \"2026-11-16T15:27:43.716878+00:00\",\n  \"publishedR1\": \"f3fb3ead0315508901531e8f54b75f21518492a7\",\n  \"publishedSubject\": {\n    \"commit\": \"bc6594c3ff0a1061870612a8f688400123575754\",\n    \"tree\": \"3b30530f411c66ceaec24666b728ecaf842f8212\",\n    \"qualification\": \"Exact published reviewed controls/Selection postimages and unchanged97-case test. Local detached HEAD/index remain c5 with exactly these two source overlays; current documentation is not claimed locally materialized.\"\n  },\n  \"actualLocalHead\": \"c5ff4fc283e58d486c58147b4dfb00144ca10d34\",\n  \"runnerIdentity\": {\n    \"bytes\": 35916,\n    \"sha256\": \"495fac79660eb36f0795f74ff14bd665d79ac3e43534349c2f65234bda89d0f5\",\n    \"gitBlob\": \"6af0ac85f09ef02488ce15331828713882a73d13\"\n  },\n  \"bindingIdentity\": {\n    \"bytes\": 375818,\n    \"sha256\": \"744167b87c840de28f17b86fd8b801caec5c71d695cc49c9f037dab964176cfd\",\n    \"gitBlob\": \"21878f51fd1b7bfca5bab18ff71c7c1beca5aaef\"\n  },\n  \"argv\": [\n    \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n    \"--test\",\n    \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"outerCommandLimitSeconds\": 180,\n  \"inputsPreserved\": true,\n  \"commandCompletedNormally\": true,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"timedOut\": false,\n  \"cleanupSeconds\": 0,\n  \"cleanupTimeAccounting\": \"Captured termination/reap time is a subset of commandPhaseSeconds.\",\n  \"qualification\": \"Finite actual-source cases/scoped guards only. Semantic result needs full raw review; no GUI/native/vendor or whole-E2E claim.\",\n  \"before\": {\n    \"source\": {\n      \"path\": \"/tmp/c714-ui-conversation-evidence/green-before-source.json\",\n      \"bytes\": 2478453,\n      \"sha256\": \"74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb\",\n      \"gitBlob\": \"67a014a69edb6c0e1379fff08bff15ce95e6ec9a\"\n    },\n    \"dependencies\": {\n      \"path\": \"/tmp/c714-ui-conversation-evidence/green-before-dependencies.json\",\n      \"bytes\": 39168001,\n      \"sha256\": \"d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b\",\n      \"gitBlob\": \"8fb1a488520c95d3651098a81ad0160c6b049cf7\"\n    },\n    \"compiled\": {\n      \"path\": \"/tmp/c714-ui-conversation-evidence/green-before-compiled.json\",\n      \"bytes\": 400300,\n      \"sha256\": \"bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85\",\n      \"gitBlob\": \"224ff561f65772393140302de26b584bf08b06d9\"\n    },\n    \"providers\": [\n      {\n        \"name\": \"@agent-teams/provider-implementations\",\n        \"archive\": {\n          \"bytes\": 186398,\n          \"sha256\": \"a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8\",\n          \"gitBlob\": \"f05a05edba53aa07364d9bbd5510f468dfe7ebe3\"\n        },\n        \"regularMembers\": 253,\n        \"allRegularMembersEqual\": true\n      },\n      {\n        \"name\": \"@agent-teams/provider-session-contracts\",\n        \"archive\": {\n          \"bytes\": 6230,\n          \"sha256\": \"0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc\",\n          \"gitBlob\": \"33c2944ff8a52a9c087fba9d3cab1daffe2604d8\"\n        },\n        \"regularMembers\": 12,\n        \"allRegularMembersEqual\": true\n      }\n    ],\n    \"tools\": [\n      {\n        \"tool\": \"node\",\n        \"path\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n        \"realPath\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n        \"bytes\": 126939688,\n        \"sha256\": \"61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d\",\n        \"gitBlob\": \"97b7784b737e5bda3ec45af8c65508bd61001d0c\"\n      },\n      {\n        \"tool\": \"git\",\n        \"path\": \"/usr/local/bin/git\",\n        \"realPath\": \"/usr/local/bin/git\",\n        \"bytes\": 19295504,\n        \"sha256\": \"8a2ae22e7898e163330a96319b541f92ed6f90fc87576414f72c5a89aa1dc352\",\n        \"gitBlob\": \"d51aaf6e2f66bdf456e2d198085d4d35054433df\"\n      },\n      {\n        \"tool\": \"python\",\n        \"path\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3\",\n        \"realPath\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12\",\n        \"bytes\": 30894944,\n        \"sha256\": \"fa67443527ed9647f760d807e2a38f26340757123e643c4639cf273ed15d5ea7\",\n        \"gitBlob\": \"cdff710ca21bf61260e4c7d7f3818ecd65cba2e7\"\n      },\n      {\n        \"tool\": \"scriptShell\",\n        \"path\": \"/bin/sh\",\n        \"realPath\": \"/usr/bin/dash\",\n        \"bytes\": 129736,\n        \"sha256\": \"a6f559e00b69a4aa4d8cb607be18d9386c5aee55c509e2c075549dcf00e00fc7\",\n        \"gitBlob\": \"965067be6aaf758adf88a3ff5539f41b25770579\"\n      }\n    ],\n    \"pnpm\": {\n      \"bytes\": 238649,\n      \"sha256\": \"e814a4ca22111e747db4386274e92f596f0a26d7e4b5bc687f8d1ccf61510a77\",\n      \"gitBlob\": \"2f917a18c33c04a1c6398d1adf644ce62fb8e39f\"\n    },\n    \"environment\": {\n      \"capturedTransportCanonicalSha256\": \"50d9d20a52df716dfa23435b6ebb74172de3081853e538e33a8b68a952631fa4\",\n      \"values\": [\n        {\n          \"key\": \"ALL_PROXY\",\n          \"bytes\": 25,\n          \"sha256\": \"0b607f91753b29ae9c96aa3f54cd1a8dbf3d301a2ce861b8aa15222b389d6398\"\n        },\n        {\n          \"key\": \"HTTPS_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        },\n        {\n          \"key\": \"HTTP_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        },\n        {\n          \"key\": \"NO_PROXY\",\n          \"bytes\": 63,\n          \"sha256\": \"d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_AUDIT\",\n          \"bytes\": 5,\n          \"sha256\": \"fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_FUND\",\n          \"bytes\": 5,\n          \"sha256\": \"fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_HTTPS_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_HTTP_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_NOPROXY\",\n          \"bytes\": 63,\n          \"sha256\": \"d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_PREFIX\",\n          \"bytes\": 18,\n          \"sha256\": \"e0434a72761750c4ca689ad02b7a4341b6bd7e4660489f815c604d27e6342032\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        },\n        {\n          \"key\": \"all_proxy\",\n          \"bytes\": 25,\n          \"sha256\": \"0b607f91753b29ae9c96aa3f54cd1a8dbf3d301a2ce861b8aa15222b389d6398\"\n        },\n        {\n          \"key\": \"http_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        },\n        {\n          \"key\": \"https_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        },\n        {\n          \"key\": \"no_proxy\",\n          \"bytes\": 63,\n          \"sha256\": \"d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0\"\n        },\n        {\n          \"key\": \"npm_config_http_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        },\n        {\n          \"key\": \"npm_config_https_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        },\n        {\n          \"key\": \"npm_config_noproxy\",\n          \"bytes\": 63,\n          \"sha256\": \"d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0\"\n        },\n        {\n          \"key\": \"npm_config_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        }\n      ],\n      \"explicitAssignments\": {\n        \"PATH\": \"/workspace/scratch/c714-fresh-20261116/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin\",\n        \"TMPDIR\": \"/tmp/c714-ui-conversation-evidence/test-tmp\",\n        \"XDG_CACHE_HOME\": \"/workspace/scratch/c714-fresh-20261116/cache\",\n        \"XDG_STATE_HOME\": \"/workspace/scratch/c714-fresh-20261116/state\",\n        \"AGENT_TEAMS_INSTALL_PROFILE\": \"node-ci\",\n        \"CI\": \"true\",\n        \"GIT_CONFIG_NOSYSTEM\": \"1\",\n        \"GIT_CONFIG_GLOBAL\": \"/dev/null\",\n        \"GIT_TERMINAL_PROMPT\": \"0\",\n        \"XDG_CONFIG_HOME\": \"/workspace/scratch/c714-fresh-20261116/config\",\n        \"XDG_DATA_HOME\": \"/workspace/scratch/c714-fresh-20261116/data\",\n        \"PNPM_HOME\": \"/workspace/scratch/c714-fresh-20261116/bin\",\n        \"PNPM_CONFIG_PM_ON_FAIL\": \"error\",\n        \"PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN\": \"false\",\n        \"PNPM_CONFIG_ENGINE_STRICT\": \"true\",\n        \"PNPM_CONFIG_ENABLE_PRE_POST_SCRIPTS\": \"true\",\n        \"PNPM_CONFIG_IGNORE_PNPMFILE\": \"true\",\n        \"PNPM_CONFIG_STORE_DIR\": \"/workspace/scratch/c714-fresh-20261116/store\",\n        \"PNPM_CONFIG_ENABLE_GLOBAL_VIRTUAL_STORE\": \"false\",\n        \"PNPM_CONFIG_UPDATE_NOTIFIER\": \"false\",\n        \"PNPM_CONFIG_SCRIPT_SHELL\": \"/bin/sh\",\n        \"AGENT_BACKEND_TEST_NODE\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n        \"NODE_DISABLE_COMPILE_CACHE\": \"1\"\n      },\n      \"homePreserved\": true,\n      \"codexHomePreserved\": true,\n      \"absentConfigs\": [\n        \"/home/agent/.npmrc\",\n        \"/home/agent/.pnpmrc\",\n        \"/home/agent/.config/pnpm/rc\",\n        \"/etc/npmrc\",\n        \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/etc/npmrc\",\n        \"/home/agent/.local/etc/npmrc\"\n      ]\n    },\n    \"bootstrapCache\": [\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/2c055e6a\",\n        \"mode\": \"100644\",\n        \"bytes\": 1076,\n        \"sha256\": \"81d68862abef75d4cddbf3c9450326b5546534bb5eac1501563f72e46a377818\",\n        \"gitBlob\": \"92cc0b39314a692ffaa55077b500ad6eef15aa92\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/4d7e9989\",\n        \"mode\": \"100644\",\n        \"bytes\": 2780,\n        \"sha256\": \"2d0fab228f904b2c2e1f1e3a4ede1f5868c5d0e4007bbed6984690ccbc07143e\",\n        \"gitBlob\": \"0d8fc72131192a4d7dfb7c4f6a4d992e8d48edce\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/60988b90\",\n        \"mode\": \"100644\",\n        \"bytes\": 2300,\n        \"sha256\": \"d9ea89d372b2eaa86ef5562a02aeb9d5aceb836227436880781b83467afeaa7b\",\n        \"gitBlob\": \"4587d24377ed922a99494689c3b742eedf2e56ae\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/661efec4\",\n        \"mode\": \"100644\",\n        \"bytes\": 2208532,\n        \"sha256\": \"5f137a3b9d2d936472a1b3c7c540309f8fea9eed8b3614b382ee23157a259712\",\n        \"gitBlob\": \"feedc7210606667b16d2d0014d4bbb9b198afc00\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/b6303853\",\n        \"mode\": \"100644\",\n        \"bytes\": 2052,\n        \"sha256\": \"c8f65ca4824827fb20024dad6e8217007163410dceb840170ced910861cccda4\",\n        \"gitBlob\": \"256197c92bc42a5921d8207741fc4334aeabbea8\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/ceabdecc\",\n        \"mode\": \"100644\",\n        \"bytes\": 2652,\n        \"sha256\": \"c753344d313709d91a46d65cccc2f06988c81ceae1b83aefae0f8c34a509c165\",\n        \"gitBlob\": \"00b5784700c10e5ef5876c84e308b3b3a56a4009\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/d8c0d4fb\",\n        \"mode\": \"100644\",\n        \"bytes\": 6156,\n        \"sha256\": \"723856e14196bf1a3caffe7e8bd170efe3f0ed7a398f1f9c5cc672fc59260327\",\n        \"gitBlob\": \"3f3238d0c975515b3ef230c3bd61366ab85a1758\"\n      }\n    ],\n    \"processCensus\": [\n      {\n        \"pid\": 1,\n        \"name\": \"codex\",\n        \"state\": \"S\",\n        \"ppid\": 0,\n        \"pgid\": 1,\n        \"session\": 1,\n        \"startTicks\": 1834963\n      },\n      {\n        \"pid\": 2,\n        \"name\": \"python3\",\n        \"state\": \"R\",\n        \"ppid\": 1,\n        \"pgid\": 1,\n        \"session\": 1,\n        \"startTicks\": 1834967\n      }\n    ],\n    \"testTemps\": [],\n    \"taskTmpTopEntries\": []\n  },\n  \"preflightSeconds\": 89.9162496099998,\n  \"primaryReceipt\": {\n    \"path\": \"/tmp/c714-ui-conversation-evidence/green-command-1-receipt.json\",\n    \"bytes\": 887,\n    \"sha256\": \"1671d41f919b2ea5e69fbf44e46f774767340d42c3d064670214924a3dc52521\",\n    \"gitBlob\": \"c19cfcd3150ebc7f5a43ab43f944a1828a7271a6\"\n  },\n  \"commandPhaseSeconds\": 17.453824198000802,\n  \"rawCombinedOutput\": {\n    \"path\": \"/tmp/c714-ui-conversation-evidence/green-command-1.log\",\n    \"bytes\": 9861,\n    \"sha256\": \"f7d1a1a3c88a0993e7c8c638944182ed632d19862b2143f5f8d9b053cdbc9f50\",\n    \"gitBlob\": \"30a91e061f29b7605c1ab8e3d90b4b910626154c\"\n  },\n  \"after\": {\n    \"source\": {\n      \"path\": \"/tmp/c714-ui-conversation-evidence/green-after-source.json\",\n      \"bytes\": 2478453,\n      \"sha256\": \"74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb\",\n      \"gitBlob\": \"67a014a69edb6c0e1379fff08bff15ce95e6ec9a\"\n    },\n    \"dependencies\": {\n      \"path\": \"/tmp/c714-ui-conversation-evidence/green-after-dependencies.json\",\n      \"bytes\": 39168001,\n      \"sha256\": \"d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b\",\n      \"gitBlob\": \"8fb1a488520c95d3651098a81ad0160c6b049cf7\"\n    },\n    \"compiled\": {\n      \"path\": \"/tmp/c714-ui-conversation-evidence/green-after-compiled.json\",\n      \"bytes\": 400300,\n      \"sha256\": \"bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85\",\n      \"gitBlob\": \"224ff561f65772393140302de26b584bf08b06d9\"\n    },\n    \"providers\": [\n      {\n        \"name\": \"@agent-teams/provider-implementations\",\n        \"archive\": {\n          \"bytes\": 186398,\n          \"sha256\": \"a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8\",\n          \"gitBlob\": \"f05a05edba53aa07364d9bbd5510f468dfe7ebe3\"\n        },\n        \"regularMembers\": 253,\n        \"allRegularMembersEqual\": true\n      },\n      {\n        \"name\": \"@agent-teams/provider-session-contracts\",\n        \"archive\": {\n          \"bytes\": 6230,\n          \"sha256\": \"0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc\",\n          \"gitBlob\": \"33c2944ff8a52a9c087fba9d3cab1daffe2604d8\"\n        },\n        \"regularMembers\": 12,\n        \"allRegularMembersEqual\": true\n      }\n    ],\n    \"tools\": [\n      {\n        \"tool\": \"node\",\n        \"path\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n        \"realPath\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n        \"bytes\": 126939688,\n        \"sha256\": \"61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d\",\n        \"gitBlob\": \"97b7784b737e5bda3ec45af8c65508bd61001d0c\"\n      },\n      {\n        \"tool\": \"git\",\n        \"path\": \"/usr/local/bin/git\",\n        \"realPath\": \"/usr/local/bin/git\",\n        \"bytes\": 19295504,\n        \"sha256\": \"8a2ae22e7898e163330a96319b541f92ed6f90fc87576414f72c5a89aa1dc352\",\n        \"gitBlob\": \"d51aaf6e2f66bdf456e2d198085d4d35054433df\"\n      },\n      {\n        \"tool\": \"python\",\n        \"path\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3\",\n        \"realPath\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12\",\n        \"bytes\": 30894944,\n        \"sha256\": \"fa67443527ed9647f760d807e2a38f26340757123e643c4639cf273ed15d5ea7\",\n        \"gitBlob\": \"cdff710ca21bf61260e4c7d7f3818ecd65cba2e7\"\n      },\n      {\n        \"tool\": \"scriptShell\",\n        \"path\": \"/bin/sh\",\n        \"realPath\": \"/usr/bin/dash\",\n        \"bytes\": 129736,\n        \"sha256\": \"a6f559e00b69a4aa4d8cb607be18d9386c5aee55c509e2c075549dcf00e00fc7\",\n        \"gitBlob\": \"965067be6aaf758adf88a3ff5539f41b25770579\"\n      }\n    ],\n    \"pnpm\": {\n      \"bytes\": 238649,\n      \"sha256\": \"e814a4ca22111e747db4386274e92f596f0a26d7e4b5bc687f8d1ccf61510a77\",\n      \"gitBlob\": \"2f917a18c33c04a1c6398d1adf644ce62fb8e39f\"\n    },\n    \"environment\": {\n      \"capturedTransportCanonicalSha256\": \"50d9d20a52df716dfa23435b6ebb74172de3081853e538e33a8b68a952631fa4\",\n      \"values\": [\n        {\n          \"key\": \"ALL_PROXY\",\n          \"bytes\": 25,\n          \"sha256\": \"0b607f91753b29ae9c96aa3f54cd1a8dbf3d301a2ce861b8aa15222b389d6398\"\n        },\n        {\n          \"key\": \"HTTPS_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        },\n        {\n          \"key\": \"HTTP_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        },\n        {\n          \"key\": \"NO_PROXY\",\n          \"bytes\": 63,\n          \"sha256\": \"d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_AUDIT\",\n          \"bytes\": 5,\n          \"sha256\": \"fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_FUND\",\n          \"bytes\": 5,\n          \"sha256\": \"fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_HTTPS_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_HTTP_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_NOPROXY\",\n          \"bytes\": 63,\n          \"sha256\": \"d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_PREFIX\",\n          \"bytes\": 18,\n          \"sha256\": \"e0434a72761750c4ca689ad02b7a4341b6bd7e4660489f815c604d27e6342032\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        },\n        {\n          \"key\": \"all_proxy\",\n          \"bytes\": 25,\n          \"sha256\": \"0b607f91753b29ae9c96aa3f54cd1a8dbf3d301a2ce861b8aa15222b389d6398\"\n        },\n        {\n          \"key\": \"http_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        },\n        {\n          \"key\": \"https_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        },\n        {\n          \"key\": \"no_proxy\",\n          \"bytes\": 63,\n          \"sha256\": \"d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0\"\n        },\n        {\n          \"key\": \"npm_config_http_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        },\n        {\n          \"key\": \"npm_config_https_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        },\n        {\n          \"key\": \"npm_config_noproxy\",\n          \"bytes\": 63,\n          \"sha256\": \"d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0\"\n        },\n        {\n          \"key\": \"npm_config_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"1e7facbb427795de6006a1f00995d80a28c9e0a6044393a1e4d4167bef29de50\"\n        }\n      ],\n      \"explicitAssignments\": {\n        \"PATH\": \"/workspace/scratch/c714-fresh-20261116/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin\",\n        \"TMPDIR\": \"/tmp/c714-ui-conversation-evidence/test-tmp\",\n        \"XDG_CACHE_HOME\": \"/workspace/scratch/c714-fresh-20261116/cache\",\n        \"XDG_STATE_HOME\": \"/workspace/scratch/c714-fresh-20261116/state\",\n        \"AGENT_TEAMS_INSTALL_PROFILE\": \"node-ci\",\n        \"CI\": \"true\",\n        \"GIT_CONFIG_NOSYSTEM\": \"1\",\n        \"GIT_CONFIG_GLOBAL\": \"/dev/null\",\n        \"GIT_TERMINAL_PROMPT\": \"0\",\n        \"XDG_CONFIG_HOME\": \"/workspace/scratch/c714-fresh-20261116/config\",\n        \"XDG_DATA_HOME\": \"/workspace/scratch/c714-fresh-20261116/data\",\n        \"PNPM_HOME\": \"/workspace/scratch/c714-fresh-20261116/bin\",\n        \"PNPM_CONFIG_PM_ON_FAIL\": \"error\",\n        \"PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN\": \"false\",\n        \"PNPM_CONFIG_ENGINE_STRICT\": \"true\",\n        \"PNPM_CONFIG_ENABLE_PRE_POST_SCRIPTS\": \"true\",\n        \"PNPM_CONFIG_IGNORE_PNPMFILE\": \"true\",\n        \"PNPM_CONFIG_STORE_DIR\": \"/workspace/scratch/c714-fresh-20261116/store\",\n        \"PNPM_CONFIG_ENABLE_GLOBAL_VIRTUAL_STORE\": \"false\",\n        \"PNPM_CONFIG_UPDATE_NOTIFIER\": \"false\",\n        \"PNPM_CONFIG_SCRIPT_SHELL\": \"/bin/sh\",\n        \"AGENT_BACKEND_TEST_NODE\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n        \"NODE_DISABLE_COMPILE_CACHE\": \"1\"\n      },\n      \"homePreserved\": true,\n      \"codexHomePreserved\": true,\n      \"absentConfigs\": [\n        \"/home/agent/.npmrc\",\n        \"/home/agent/.pnpmrc\",\n        \"/home/agent/.config/pnpm/rc\",\n        \"/etc/npmrc\",\n        \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/etc/npmrc\",\n        \"/home/agent/.local/etc/npmrc\"\n      ]\n    },\n    \"bootstrapCache\": [\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/2c055e6a\",\n        \"mode\": \"100644\",\n        \"bytes\": 1076,\n        \"sha256\": \"81d68862abef75d4cddbf3c9450326b5546534bb5eac1501563f72e46a377818\",\n        \"gitBlob\": \"92cc0b39314a692ffaa55077b500ad6eef15aa92\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/4d7e9989\",\n        \"mode\": \"100644\",\n        \"bytes\": 2780,\n        \"sha256\": \"2d0fab228f904b2c2e1f1e3a4ede1f5868c5d0e4007bbed6984690ccbc07143e\",\n        \"gitBlob\": \"0d8fc72131192a4d7dfb7c4f6a4d992e8d48edce\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/60988b90\",\n        \"mode\": \"100644\",\n        \"bytes\": 2300,\n        \"sha256\": \"d9ea89d372b2eaa86ef5562a02aeb9d5aceb836227436880781b83467afeaa7b\",\n        \"gitBlob\": \"4587d24377ed922a99494689c3b742eedf2e56ae\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/661efec4\",\n        \"mode\": \"100644\",\n        \"bytes\": 2208532,\n        \"sha256\": \"5f137a3b9d2d936472a1b3c7c540309f8fea9eed8b3614b382ee23157a259712\",\n        \"gitBlob\": \"feedc7210606667b16d2d0014d4bbb9b198afc00\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/b6303853\",\n        \"mode\": \"100644\",\n        \"bytes\": 2052,\n        \"sha256\": \"c8f65ca4824827fb20024dad6e8217007163410dceb840170ced910861cccda4\",\n        \"gitBlob\": \"256197c92bc42a5921d8207741fc4334aeabbea8\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/ceabdecc\",\n        \"mode\": \"100644\",\n        \"bytes\": 2652,\n        \"sha256\": \"c753344d313709d91a46d65cccc2f06988c81ceae1b83aefae0f8c34a509c165\",\n        \"gitBlob\": \"00b5784700c10e5ef5876c84e308b3b3a56a4009\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/d8c0d4fb\",\n        \"mode\": \"100644\",\n        \"bytes\": 6156,\n        \"sha256\": \"723856e14196bf1a3caffe7e8bd170efe3f0ed7a398f1f9c5cc672fc59260327\",\n        \"gitBlob\": \"3f3238d0c975515b3ef230c3bd61366ab85a1758\"\n      }\n    ],\n    \"processCensus\": [\n      {\n        \"pid\": 1,\n        \"name\": \"codex\",\n        \"state\": \"S\",\n        \"ppid\": 0,\n        \"pgid\": 1,\n        \"session\": 1,\n        \"startTicks\": 1834963\n      },\n      {\n        \"pid\": 2,\n        \"name\": \"python3\",\n        \"state\": \"R\",\n        \"ppid\": 1,\n        \"pgid\": 1,\n        \"session\": 1,\n        \"startTicks\": 1834967\n      }\n    ],\n    \"testTemps\": [],\n    \"taskTmpTopEntries\": []\n  },\n  \"cleanup\": {\n    \"capturedSessionMembersAfter\": [],\n    \"newTestTempsRemaining\": [],\n    \"scope\": \"Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof.\"\n  },\n  \"signalAdmissionCutoff\": {\n    \"at\": \"2026-11-16T15:30:26.063179+00:00\",\n    \"pendingSignals\": [],\n    \"supervisorExitZeroRequired\": true,\n    \"scope\": \"Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.\"\n  },\n  \"postflightSeconds\": 54.97094560599726,\n  \"finishedAt\": \"2026-11-16T15:30:26.063205+00:00\",\n  \"totalInvocationSeconds\": 162.34200213800068,\n  \"interruptions\": [],\n  \"metadataCommands\": 14,\n  \"primaryUnreached\": false,\n  \"scopeCompleted\": true\n}\n"
+    },
+    "observedOuterExecutor": {
+      "start": {
+        "chunk_id": "195b14",
+        "wall_time_seconds": 1.000579366,
+        "session_id": 49931,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "completion": {
+        "chunk_id": "22f5d3",
+        "wall_time_seconds": 0.000025124,
+        "exit_code": 0,
+        "original_token_count": 279,
+        "output": "{\"command\": \"green\", \"action\": \"run\", \"exitCode\": 0, \"exitSignal\": null, \"timedOut\": false, \"executionError\": null, \"postflightError\": null, \"inputsPreserved\": true, \"commandCompletedNormally\": true, \"scopeCompleted\": true, \"preflightSeconds\": 89.9162496099998, \"commandPhaseSeconds\": 17.453824198000802, \"cleanupSeconds\": 0, \"postflightSeconds\": 54.97094560599726, \"totalInvocationSeconds\": 162.34200213800068, \"rawCombinedOutput\": {\"path\": \"/tmp/c714-ui-conversation-evidence/green-command-1.log\", \"bytes\": 9861, \"sha256\": \"f7d1a1a3c88a0993e7c8c638944182ed632d19862b2143f5f8d9b053cdbc9f50\", \"gitBlob\": \"30a91e061f29b7605c1ab8e3d90b4b910626154c\"}, \"cleanup\": {\"capturedSessionMembersAfter\": [], \"newTestTempsRemaining\": [], \"scope\": \"Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof.\"}, \"signalAdmissionCutoff\": {\"at\": \"2026-11-16T15:30:26.063179+00:00\", \"pendingSignals\": [], \"supervisorExitZeroRequired\": true, \"scope\": \"Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.\"}}\n"
+      }
+    },
+    "finalPrintedFieldsCompared": 16,
+    "printedFieldsEqual": true,
+    "fullSourceJoin": {
+      "fullActualSourceRehashed": {
+        "bytes": 2478453,
+        "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+        "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+      },
+      "allRows": 8798,
+      "onlyChangesFromAcceptedRed": [
+        {
+          "before": {
+            "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+            "mode": "100644",
+            "bytes": 24630,
+            "sha256": "20163a0e2b654c5ff3c778ffe4a3cd2138716172eb90e6aa5aa4fe6550864c43",
+            "gitBlob": "dcd0cc29a73a46a24126ec3552714fa1b057aaf4"
+          },
+          "after": {
+            "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+            "mode": "100644",
+            "bytes": 24759,
+            "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+            "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+          }
+        },
+        {
+          "before": {
+            "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+            "mode": "100644",
+            "bytes": 28741,
+            "sha256": "9d5233b82df6a7dfa0d735b27c11f39f130824f3947c38896a0d052ca549cba4",
+            "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78"
+          },
+          "after": {
+            "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+            "mode": "100644",
+            "bytes": 28974,
+            "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+            "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+          }
+        }
+      ],
+      "allOtherRowsUnchanged": 8796,
+      "otherTopLevelFieldsEqual": [
+        "actualLocalHead",
+        "tree",
+        "allTreeLeaves",
+        "workflowLeaves",
+        "localGitConfig"
+      ],
+      "workflowLeaves": 42,
+      "allTreeLeaves": 11567,
+      "test": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 136700,
+        "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+        "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+      },
+      "oldPrefixExact": true,
+      "oldPrefix": {
+        "bytes": 127790,
+        "sha256": "10803ce752a05140acbfa8270e97e782c452213f39589d52991a503e29db5c17",
+        "gitBlob": "3e5d5a5a765b503943bd72f68b2877311ee34479"
+      },
+      "addedSuffix": {
+        "bytes": 8910,
+        "sha256": "e1c52971337871d30c53a93c6f7a537f529fc1297a330edb150c3a3f1ec10f95",
+        "gitBlob": "74a180307f8d0cd975903de54d4fcb2ba264fa76"
+      },
+      "allBeforeAfterIdentityFieldsAndObservationsEqual": true
+    },
+    "beforeAfterSource": "Both full source identities are67a014a69edb6c0e1379fff08bff15ce95e6ec9a; complete8798-row actual body independently fetched/hashed and compared with full acceptedRED454b. Exactlytwo reviewed producer rows differ fromRED;8796 other rows,42workflows,localHEAD/tree/config and11567index unchanged.",
+    "all57LiteralBodiesIndependentlyRehashed": true,
+    "completeCensus": {
+      "files": 67,
+      "bytes": 90190019,
+      "uniqueBodies": 42
+    },
+    "metadataReceipts": [
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-10-receipt.json",
+        "bytes": 1088,
+        "sha256": "b538adf51f55bbb05d85ddb44928ee034680a09643a9078c2b1575354f34f666",
+        "gitBlob": "3bd2406b3f13037bf9e1a95d9bd40b2554e50772",
+        "argv": [
+          "/usr/local/bin/git",
+          "ls-tree",
+          "-rz",
+          "--full-tree",
+          "HEAD"
+        ],
+        "pid": 93,
+        "exitCode": 0,
+        "successful": true,
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-10.log",
+          "bytes": 1527575,
+          "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+          "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-10.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        }
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-11-receipt.json",
+        "bytes": 1082,
+        "sha256": "0d12cc3d2f3659ef5193c6e27127f031b4fdff39e04c21f06aec1a1cd49011eb",
+        "gitBlob": "6eb84fab2464126a0173131c31d58983e7508b80",
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--cached",
+          "--name-only",
+          "-z"
+        ],
+        "pid": 94,
+        "exitCode": 0,
+        "successful": true,
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-11.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-11.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        }
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-12-receipt.json",
+        "bytes": 1093,
+        "sha256": "19d99c1bc22987134baff9524c7da09569b47d6e81d7848158926ed40666dd2b",
+        "gitBlob": "c30240b8dea4e073f4c07b1bcf864f76e64ef470",
+        "argv": [
+          "/usr/local/bin/git",
+          "ls-files",
+          "--others",
+          "--exclude-standard",
+          "-z"
+        ],
+        "pid": 95,
+        "exitCode": 0,
+        "successful": true,
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-12.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-12.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        }
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-13-receipt.json",
+        "bytes": 1072,
+        "sha256": "85ff2dd96a180f195d1c07b75275623654264c107f64a988f1826c4fae1c64bf",
+        "gitBlob": "aa37c38aefdfd8a9d2ab9852b2b11c2c2d5c0ffb",
+        "argv": [
+          "/usr/local/bin/git",
+          "ls-files",
+          "--stage",
+          "-z"
+        ],
+        "pid": 96,
+        "exitCode": 0,
+        "successful": true,
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-13.log",
+          "bytes": 1492874,
+          "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+          "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-13.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        }
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-14-receipt.json",
+        "bytes": 1080,
+        "sha256": "015ca6dcadc31fe5e8f161f1fb609afd0d970aa34475cf9582d2f793b522b56e",
+        "gitBlob": "d9e7bea3487c50d3ad99135517b8a9e5e32b40bf",
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--name-only",
+          "-z",
+          "HEAD"
+        ],
+        "pid": 97,
+        "exitCode": 0,
+        "successful": true,
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-14.log",
+          "bytes": 108,
+          "sha256": "c8c29d8e0318b85c6f9f90bb33daad20abd9bf1d03dc0c36a1b86b6838108915",
+          "gitBlob": "f154b3782beb8bc58771c8bfab8a6a16dbcdd0d8"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-14.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        }
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-8-receipt.json",
+        "bytes": 1054,
+        "sha256": "7f816854a17aef50570b086e77b6b114d8310b75677384ccf346cf4d0e95cfab",
+        "gitBlob": "65e49e59f08777774548e9a5a9a92a5fba014994",
+        "argv": [
+          "/usr/local/bin/git",
+          "rev-parse",
+          "HEAD"
+        ],
+        "pid": 91,
+        "exitCode": 0,
+        "successful": true,
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-8.log",
+          "bytes": 41,
+          "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+          "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-8.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        }
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-9-receipt.json",
+        "bytes": 1061,
+        "sha256": "c09604fcf31a0301cd2aaed2fb94c74d25c4c5916a83e62cca7702543eb5012b",
+        "gitBlob": "2f355877061c8228d31415c81704706236477a07",
+        "argv": [
+          "/usr/local/bin/git",
+          "rev-parse",
+          "HEAD^{tree}"
+        ],
+        "pid": 92,
+        "exitCode": 0,
+        "successful": true,
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-9.log",
+          "bytes": 41,
+          "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+          "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-after-metadata-9.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        }
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-1-receipt.json",
+        "bytes": 1055,
+        "sha256": "a222289e41c71bcaa441d9c007eecc814c001ca6d981ac548f55aa1db9f481f9",
+        "gitBlob": "98a6d9d23268f117448d5f53a3e849e27027a402",
+        "argv": [
+          "/usr/local/bin/git",
+          "rev-parse",
+          "HEAD"
+        ],
+        "pid": 3,
+        "exitCode": 0,
+        "successful": true,
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-1.log",
+          "bytes": 41,
+          "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+          "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-1.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        }
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-2-receipt.json",
+        "bytes": 1061,
+        "sha256": "ec1a849ef6237598bbda736f73865419afd95032393157393df47565b7db2082",
+        "gitBlob": "7a1e90f29a8499f79467ed61a6c49b8ac38d36a1",
+        "argv": [
+          "/usr/local/bin/git",
+          "rev-parse",
+          "HEAD^{tree}"
+        ],
+        "pid": 4,
+        "exitCode": 0,
+        "successful": true,
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-2.log",
+          "bytes": 41,
+          "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+          "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-2.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        }
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-3-receipt.json",
+        "bytes": 1086,
+        "sha256": "0e9426e8a72e3f76cf730cbcf83e3bdaca4601313c9dc45d4877c50dc0acee90",
+        "gitBlob": "d5878ea825d0b8edd1861570a5cdc932d1250d4f",
+        "argv": [
+          "/usr/local/bin/git",
+          "ls-tree",
+          "-rz",
+          "--full-tree",
+          "HEAD"
+        ],
+        "pid": 5,
+        "exitCode": 0,
+        "successful": true,
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-3.log",
+          "bytes": 1527575,
+          "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+          "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-3.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        }
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-4-receipt.json",
+        "bytes": 1082,
+        "sha256": "d149eb04b6f58821105f876e1f174ef98b1b2f1b74f4e50ec6582112a612eee1",
+        "gitBlob": "134fdd56e17d371c12841000454fcf10fe24fdee",
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--cached",
+          "--name-only",
+          "-z"
+        ],
+        "pid": 6,
+        "exitCode": 0,
+        "successful": true,
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-4.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-4.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        }
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-5-receipt.json",
+        "bytes": 1091,
+        "sha256": "5656911f687eedbd98e0217aa1f8216843e93085bee377c54cffb5e60b1177db",
+        "gitBlob": "177ddca1b55d2edd7e0e64727787d90d92e88cbe",
+        "argv": [
+          "/usr/local/bin/git",
+          "ls-files",
+          "--others",
+          "--exclude-standard",
+          "-z"
+        ],
+        "pid": 7,
+        "exitCode": 0,
+        "successful": true,
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-5.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-5.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        }
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-6-receipt.json",
+        "bytes": 1072,
+        "sha256": "cf516da0382bc91ee71b1389b67a69004a231a651ae4dc16f330d8be23fec837",
+        "gitBlob": "7c807d99cdbd86cd8a0fb4213b01f21bb2821521",
+        "argv": [
+          "/usr/local/bin/git",
+          "ls-files",
+          "--stage",
+          "-z"
+        ],
+        "pid": 8,
+        "exitCode": 0,
+        "successful": true,
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-6.log",
+          "bytes": 1492874,
+          "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+          "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-6.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        }
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-7-receipt.json",
+        "bytes": 1080,
+        "sha256": "4b6e61780f5571c02695988472eab5bdc6fcc2313ff2bb6a60d860b73ec7e12e",
+        "gitBlob": "facd4a8be561aecc16a3cfb9492e9cb07a26d126",
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--name-only",
+          "-z",
+          "HEAD"
+        ],
+        "pid": 9,
+        "exitCode": 0,
+        "successful": true,
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-7.log",
+          "bytes": 108,
+          "sha256": "c8c29d8e0318b85c6f9f90bb33daad20abd9bf1d03dc0c36a1b86b6838108915",
+          "gitBlob": "f154b3782beb8bc58771c8bfab8a6a16dbcdd0d8"
+        },
+        "rawStderr": {
+          "path": "/tmp/c714-ui-conversation-evidence/green-before-metadata-7.stderr",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        }
+      }
+    ],
+    "finalGateFields": {
+      "scopeCompleted": true,
+      "inputsPreserved": true,
+      "commandCompletedNormally": true,
+      "exitCode": 0,
+      "exitSignal": null,
+      "timedOut": false,
+      "interruptions": [],
+      "primaryUnreached": false,
+      "cleanup": {
+        "capturedSessionMembersAfter": [],
+        "newTestTempsRemaining": [],
+        "scope": "Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof."
+      },
+      "signalAdmissionCutoff": {
+        "at": "2026-11-16T15:30:26.063179+00:00",
+        "pendingSignals": [],
+        "supervisorExitZeroRequired": true,
+        "scope": "Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission."
+      }
+    },
+    "actualBeforeAfterInputObservationFieldsEqual": true,
+    "inputReviewBoundary": "This lane independently rehashed all57 literal bodies, the complete new8798-source body, complete final receipt, outer record and every97case. The large unchanged dependency/compiled/index reconstruction and complete lifetime review remain assigned to guard_review; their separate acceptance closes the remaining overall continuation gate. No claim of independently re-reading all90MB in this semantic record.",
+    "additionalPrintedErrorFieldsValidatedNull": [
+      "executionError",
+      "postflightError"
+    ]
+  },
+  "timings": {
+    "primarySeconds": 17.45291191599972,
+    "nodeReportedDurationMs": 17111.235946,
+    "preflightSeconds": 89.9162496099998,
+    "commandPhaseSeconds": 17.453824198000802,
+    "cleanupSeconds": 0,
+    "postflightSeconds": 54.97094560599726,
+    "totalInvocationSeconds": 162.34200213800068,
+    "qualification": "Primary original 180-second bound is distinct from preflight/postflight accounting; fake Date/100 ms advancement inside finite controls fixtures is not real 30-second GUI elapsed-time evidence."
+  },
+  "limitations": [
+    "No new local execution by reviewer; immutable Git evidence and pure data analysis only.",
+    "Actual whole-file unit/finite-source GREEN is not GUI, packaged, native, real-provider/auth or whole-E2E qualification.",
+    "Original historical Installer, Cross, Windows Process/Packaged, P09, P11 and M16 results are unchanged.",
+    "All19 callbacks completing closes their previously downstream-unreached assertions within the finite harness only.",
+    "Managed-signal cutoff has its explicit scope; observed outer exit0 is separately joined, not inferred from the final receipt.",
+    "Empty captured command sessions/TEST-temp lists do not prove universal escaped-child/native custody.",
+    "No original build/compiler/CI retry or additional test attempt is authorized.",
+    "Three original guards remain unspent at this evidence snapshot; each requires its own primary0/full raw/input/supervisor acceptance."
+  ],
+  "remainingAttempts": {
+    "red": 0,
+    "green": 0,
+    "lint": 1,
+    "sourceSize": 1,
+    "diffCheck": 1
+  }
+}

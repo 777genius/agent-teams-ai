@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-prospective-Cross-Close-R1-review-requiring-target-coverage-correction",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/parity_audit",
+  "reviewedAtUtc": "2026-11-16T15:52:51.846Z",
+  "subject": {
+    "bytes": 18471,
+    "sha256": "33d49bb9e141767bc44a842a4d5be7b6cdb4b9e3e26126b17b7b9cd210a82192",
+    "gitBlob": "41e85b8b23d52b747c12fb6da6873530ee818ab7"
+  },
+  "verdict": "CHANGES REQUIRED before publication: add explicit finite target-eligibility/order subcases to the actual new-expression/driver test plan. The reviewed readiness/source/test-first direction is coherent; this record does not accept a future amended R1.",
+  "fullDraftReadAndHashVerified": true,
+  "acceptedScope": {
+    "completeCurrentTestPrefix": {
+      "bytes": 136700,
+      "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+      "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985",
+      "all97MustRemain": true
+    },
+    "newRegisteredCensus": {
+      "readiness": 28,
+      "actualDriver": 8,
+      "added": 36,
+      "total": 133,
+      "uniqueDraftCaseLabels": 36
+    },
+    "preimages": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 6433,
+        "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+        "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+        "physicalLines": 90,
+        "postimagePhysicalLineCap": 200,
+        "permitted": "Extend only the existing readiness-expression builder with a clarification-cleared/Close-specific stage and a narrow helper executing that expression via the existing clickExpression port. Existing undefined, clarification and in-progress-comment generated expressions and behavior remain byte-identical. The new stage may return the exact eligible same-dialog Close target tuple after its current read/session conditions, within the same synchronous section after the original two observer-module imports."
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36207,
+        "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+        "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c",
+        "physicalLines": 798,
+        "postimagePhysicalLineCap": 800,
+        "permitted": "Only the exact original generic Close call after clarificationReceipt may change to the narrow same-Task Close helper, plus its one named import in the existing helper import block. Forward the already captured original handleId/taskId/contextId/surfaceId. Keep its label, selector/text diagnostic context, preceding actions/receipts and following closed-dialog read byte-identical. No extraction/reformat/rewrite of unrelated taskboard flow."
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 136700,
+        "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+        "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985",
+        "postimageByteCap": 180000,
+        "permitted": "Append only the36 specified finite actual-source cases and their bounded fixtures. Preserve the complete136700-byte efd preimage as a literal prefix, all97 existing case bodies/names/order and imports. No rename/filter/skip or existing fixture rewrite. Add28 readiness-target cases and8 actual-driver Close cases, total133 registered cases. Additional subcase loops must be explicitly recorded rather than inflating registered counts."
+      }
+    ],
+    "fixedProducers": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      }
+    ],
+    "onlyThreeSourcePaths": true,
+    "bytePreservation": "The existing undefined, clarification and in-progress-comment generated expression strings must remain byte-identical. Future R2 must compare complete outputs/projections, not just preserve their function names.",
+    "driverLimits": "Current3f1 has798 physical lines and may reach at most800. Only one named import and exact original Close statement may change; preceding actions/receipts and following closed-dialog wait stay byte-identical.",
+    "helperLimits": "Current3703 has90 physical lines, cap200. New stage and narrow wrapper only; no controlsed57 or Selectioncf93 change.",
+    "testLimits": "Complete136700-byteefd prefix retained; maximum180000bytes leaves43300bytes for bounded fixtures/36case suffix. No imports or existing case edits.",
+    "semanticRedSeam": "Extract only the original Close statement between unique retained clarificationReceipt/closed-dialog boundaries, bind actual existing helper exports and actual controls. Old generic call must execute without absent-export/setup failure; independently predicted failures must expose missing readiness/driver admission. No producer exists until actual133-case RED is accepted."
+  },
+  "sourceAuthorityJoin": {
+    "currentFailureAnalysis": "e1708fb5f076b2a03d81be0971c663a29599bbaa",
+    "retainedReadiness": "8278c953ca81e24f9d0a0ab96068d2e9a08d9c2d",
+    "completedBackendReceiptNotRendererSettlement": true,
+    "existingDefaultPredicateNotEnoughWithoutClearedTaskAndSessionJoin": true,
+    "clearedClarificationMustBeUndefinedNotNull": true,
+    "canResolveClarificationFalseIsNotSettledOracle": true,
+    "originalFinalGeometryAndOwnerNoReplayRemainMandatory": true,
+    "historicalCauseStillUnknown": true
+  },
+  "concreteCoverageFinding": {
+    "issue": "The new helper stage constructs its own Close target tuple and eligibility. Existing97 generic-target tests exercise ed57's original target builder, so their success does not independently prove that the new helper preserved missing/text/size/hit/cardinality semantics.",
+    "authoritativeCurrentTarget": {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "lines": [
+        211,
+        225
+      ],
+      "originalContent": "  const target = (selector: string, text?: string, requiredContent?: string): string => `(() => {\n    const elements = [...document.querySelectorAll(${desktopJsLiteral(selector)})].filter(e => {\n      const r=e.getBoundingClientRect(); return r.width>0&&r.height>0${text === undefined ? '' : `&&e.textContent.trim()===${desktopJsLiteral(text)}`};\n    });\n    if(elements.length!==1)return {unavailableTarget:true,matches:Math.min(elements.length,256)};${requiredContent === undefined ? '' : `\n    if(!elements[0].textContent.includes(${desktopJsLiteral(requiredContent)}))return {unavailableTarget:true,matches:1};`}\n    const e=elements[0], r=e.getBoundingClientRect(), x=r.x+r.width/2,y=r.y+r.height/2;\n    const hit=document.elementFromPoint(x,y), disabled=e.matches(':disabled');\n    if(!hit||!(hit===e||e.contains(hit))||disabled)return {\n      unavailableTarget:true,matches:1,disabled,ariaDisabled:e.getAttribute('aria-disabled')==='true',\n      pointerEventsNone:getComputedStyle(e).pointerEvents==='none',\n      centerInViewport:x>=0&&y>=0&&x<innerWidth&&y<innerHeight,hitPresent:Boolean(hit)\n    };\n    return {x,y,text:e.textContent.trim().slice(0,300),tag:e.tagName};\n  })()`;",
+      "excerptIdentity": {
+        "bytes": 1188,
+        "sha256": "72a11223eeb7c5787bb3b47cc18a8c704a97e439716ba88453c6b0605d39f059",
+        "gitBlob": "ff67a657511cf67f35b4002d6fdfdd5fc0d50caf"
+      }
+    },
+    "order": "Original target builder first filters positive width/height and exact trimmed text, then refuses cardinality not equal to one, and only afterward checks native :disabled and actual center hit (direct element or its descendant). aria-disabled/pointer-events/viewport are diagnostic fields here, not additional original admission predicates.",
+    "requiredAmendment": {
+      "registrationCount": "Retain exactly28+8 registrations. List finite internal variants explicitly and count them separately from registered test cases.",
+      "foreignDialogDriverCase": [
+        "foreign-only Close",
+        "no own Close",
+        "wrong exact trimmed text on own target",
+        "zero width",
+        "zero height"
+      ],
+      "duplicateDriverCase": [
+        "two positive-size exact-text own Close rows",
+        "two such rows where one is disabled",
+        "two such rows where only one receives the center hit"
+      ],
+      "ineligibleOwnCloseDriverCase": [
+        "native disabled",
+        "center covered by another node",
+        "no center hit"
+      ],
+      "positiveDriverCase": [
+        "direct target hit",
+        "descendant hit accepted through the original contains rule"
+      ],
+      "assertions": "All negative variants must execute the actual new helper expression and actual source-extracted original driver statement through the unchanged controls, with zero hover/press/release and original finite first-read deadline/100ms accounting. Duplicate variants must refuse before filtering by enabled/hit state. Positive variants retain exactly one original physical pair.",
+      "noExtraPolicy": "Do not turn diagnostic-only aria/pointer/viewport fields into new admission requirements or manufacture a broader geometry/causal claim."
+    },
+    "parentAcknowledgedRequiredRevision": true,
+    "peerAgreement": "/root/guard_review independently confirmed the same new-expression coverage gap and exact original filter→singleton→disabled/hit order."
+  },
+  "executionBoundary": {
+    "original41eDraftReviewed": true,
+    "current97OrThreeGuardScopeUnchanged": true,
+    "laterRunnerPostimageRequiresIndependentR2AndPublishedReadback": true,
+    "latestProspectiveMaterializationDiscussion": "Root/guard are considering a future source-only metadata materialization proof with runtime dependency/compiled inputs explicitly UNINSPECTED at that stage, followed by full exact runtime preflight/postflight for eachRED/GREEN/validation package. This is not contained in accepted source/postimages and must be read in the actual amended R1 before acceptance.",
+    "noAutomaticAcceptanceOfAmendment": true
+  },
+  "actions": {
+    "bareReviewOnly": true,
+    "newR1Edits": 0,
+    "testPostimages": 0,
+    "producerPostimages": 0,
+    "runnerPostimages": 0,
+    "shellOrRuntimeCommands": 0,
+    "refsOrCIChanges": 0
+  }
+}

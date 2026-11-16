@@ -1,0 +1,340 @@
+{
+  "schemaVersion": 1,
+  "kind": "source-unchanged-actual-conversation-green-and-guards-retention-with-prospective-cross-close-r1",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "exactParent": "3db7943ae2b70232e926474e09fac20b609d10c8",
+  "exactParentTree": "7d4877188dd68d1033dd2736feb59405568ba746",
+  "changeKind": "Documentation/evidence only. No source/test/runner/workflow/package change.",
+  "parentLeaves": 11657,
+  "expectedLeaves": 11684,
+  "unchangedNonDocLeaves": 8798,
+  "unchangedWorkflowLeaves": 42,
+  "changedEntriesExcludingManifest": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-binding-independent-readback-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a491da84ce4ff17e841863b4646b93845b1bf5a8",
+      "bytes": 19767,
+      "sha256": "d0a48cf3b9058fd5c371d7c4ae40726522f0b65eba3dbb50882c1ec116fd76c5"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-materialization-source-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a",
+      "bytes": 2478453,
+      "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-materialization-receipt-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c0dcc04c0db61ea6712cbee6d4dcf02e1a7ab998",
+      "bytes": 24136,
+      "sha256": "98ccdbe86e80bb73ebb6cda60b199436785bd32349afebe052e035397ce55e82"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-materialization-evidence-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "006450583e21651539f5c0584b117fd5b081962c",
+      "bytes": 94844,
+      "sha256": "6f85618d26cd98ef8e382d97a83bae80211dd8a289a2c8f928048e0115580ee8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-materialization-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "96964d7ae1d278a67e51bd39be6fbcf85f6af773",
+      "bytes": 31471,
+      "sha256": "f085d9ba0747b0880908f292ac7e0e9af83a1ab6807ff1fa323ba8ed692185cb"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-output-20261116.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "30a91e061f29b7605c1ab8e3d90b4b910626154c",
+      "bytes": 9861,
+      "sha256": "f7d1a1a3c88a0993e7c8c638944182ed632d19862b2143f5f8d9b053cdbc9f50"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-receipt-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e01ba171191344314babe0d6ea16cacdaf452cf3",
+      "bytes": 24625,
+      "sha256": "191557a7c37e46f6d7f0f6360e3e70cb1519292f959e9727cebdff2f494f1ca3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-evidence-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d039b8d061439c6e61a71a37535a4f7cc76a6093",
+      "bytes": 124846,
+      "sha256": "62ebe8480892a5e8e6d2ed58f0ed0fe3052eba0edfecfadf36ef9ffbf3b7d4c3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-evidence-v1-superseded-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "852af17eef75cfefe5117276c42a960f20ff9ddf",
+      "bytes": 123957,
+      "sha256": "ba1990c5baac6d119925e2c928053ca7331a294c81f304c336ad32d45e2f547d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-parity-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1f1ef935177c9453bdf330ae14b0e3b319a45311",
+      "bytes": 123411,
+      "sha256": "5dcab89bd07be83778ce7b40084960a26a9b17b22327d7fc150a2a0e3f867b07"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-parity-closure-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "17e26030335deb4d9d1b70d902f7f0d7b62deefa",
+      "bytes": 17444,
+      "sha256": "c87b3279b67908eea859a5d3d857c6aa34a6be9a9b37af67b0a8e1de23ac01e5"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-guard-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bb67ad6d1ab86403356267ac28becaa067be958f",
+      "bytes": 95744,
+      "sha256": "845e5cfc6e317c63380f949d6e816782d28ba81d96aae8170a5d724c9dbc632c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-scoped-guards-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4ec154d23168a8c819a22a0d4a9328ef272f3203",
+      "bytes": 290501,
+      "sha256": "c5c1930f5cc47d7d891cf5c522b7c68879f643962ba20afee4aaab39e984fa54"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-readiness-readonly-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8278c953ca81e24f9d0a0ab96068d2e9a08d9c2d",
+      "bytes": 90087,
+      "sha256": "b0cbe7f713f648bb6a6399a713175f44ec57e0a3e145341d15d328c27cc30624"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-readiness-r1-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8abe2a1437489d5c0223d532535d6c520fd70184",
+      "bytes": 23142,
+      "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-readiness-r1-guard-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bacd76155f9d45ce40e2f77ead26ff58769712ee",
+      "bytes": 33350,
+      "sha256": "3635b74953344c3085ea3313f81f6a5cb60103dfa58e0aa84096240d227b0197"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-readiness-r1-parity-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7fa731637982b2629b35df2378bab0a5bfbbcc3e",
+      "bytes": 25572,
+      "sha256": "3dfdcd0350342a8adf141f072509c4d5f999fb259fa164e2db3fa1c2478c0fd1"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-readiness-r1-v1-unselected-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "41e85b8b23d52b747c12fb6da6873530ee818ab7",
+      "bytes": 18471,
+      "sha256": "33d49bb9e141767bc44a842a4d5be7b6cdb4b9e3e26126b17b7b9cd210a82192"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-readiness-r1-v1-parity-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0300e167d6925ffb19a54eeaf2b8f07632452872",
+      "bytes": 10987,
+      "sha256": "9aa959a1745b9ab92238592381296a3291472f5ef78a93f39249d9c371cb9c23"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/delivery-heads-freshness-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "453d973fe2a7f2176c1e4c6361318786c603a34f",
+      "bytes": 218343,
+      "sha256": "ea18db311fb79ecc3fb7cbe4d85dcccaa8665a8e927ec980cf0f11a074a55503"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/delivery-ui-overlap-readonly-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "248322debdd3e8cbc6a6f4dcaed3289efb68be3c",
+      "bytes": 73915,
+      "sha256": "b08f1080dd229d2d020ce975e11c2aede0e0d004483e350d9a8e6c91bb20b1bd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/windows-census-existing-route-assessment-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "33706a0d85242116032d0d3cac233ffc6ade97a3",
+      "bytes": 14360,
+      "sha256": "697c2f3e8e95f7647d7753a5ad185707a5b12d8b4f094c1abf73460e92342455"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-scoped-guards-guard-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "36cb4fa4f12885356166ab1fb9324740c9cd3293",
+      "bytes": 126977,
+      "sha256": "224a71c003508a19db5943dbe6928204647ef50d34753a9d4f7a1f900f6b43f1"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-scoped-guards-parity-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3d2c03fab5fd956530b0f66554138d7052b91467",
+      "bytes": 31690,
+      "sha256": "100cd9477c073b7f069c0c140bf9ce6b1d1a0bc9cc62f5366e9c9989f6b951e2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/delivery-heads-ci-readonly-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0f2963af97dcabda330e2635af90c67a4e5d9651",
+      "bytes": 4551343,
+      "sha256": "4ec9efc8301ddfbd03777bf6fdc2b69b7592116bfb27f26401495c27617f0157"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-accepted-green-and-guards-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7568f9f49a4f56d0e3f41be2b4b202267a4998f2",
+      "bytes": 13626,
+      "sha256": "50973286bf56d66b7c7dc9097c8a9a50cb9aaecc9d235eb21fc044271dfd87eb"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "12302bf2f1fdceb44c3259165d1d01b1372acb13",
+      "bytes": 2507525,
+      "sha256": "703e6bbf1d3f08e2612d55a0b10558b889de6c3c5fb22a06b240b08ed2ae84b7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6c5da89ebce00f1811e3c4d5f7d0dda78044644d",
+      "bytes": 26693,
+      "sha256": "98a94bb43a0e47497c11e3ff0492bd03c59fc3d700833a775ab7294f6f6a073c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "022bb6f4cb3250a1907c5aeb5ed74611347eaa13",
+      "bytes": 42948,
+      "sha256": "32295b84e5c24d88cef878f10ad818d17a5c851fb8a067e91e1067ab913727b5"
+    }
+  ],
+  "manifestSelfExcluded": true,
+  "expectedChangedFiles": 30,
+  "expectedAddedFiles": 27,
+  "expectedModifiedFiles": 3,
+  "planStatusPrefixes": {
+    "plan": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "priorBlob": "e48d364ef30b85f1ea89b47bf56485e37cb7fd1a",
+      "priorCompleteBody": {
+        "bytes": 2502539,
+        "sha256": "cdcfeb2ffb5835a312c88b03c29be2d98cbda9c298c2b2e0ae8d19f8a6b3b82e",
+        "gitBlob": "e48d364ef30b85f1ea89b47bf56485e37cb7fd1a"
+      },
+      "appended": {
+        "bytes": 4986,
+        "sha256": "a97cf9715ca2e12538175dad8546f3252e632c427c7504bd3639c7588b977329",
+        "gitBlob": "0f52403a11eed04565c445d739b713272c81388c"
+      }
+    },
+    "status": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "priorBlob": "39ca7a31005308cd84f671e1da95f750ab056f27",
+      "priorCompleteBody": {
+        "bytes": 24221,
+        "sha256": "6c02234442714c504a8034679167427f090b340835520d3af28fb69d461cf705",
+        "gitBlob": "39ca7a31005308cd84f671e1da95f750ab056f27"
+      },
+      "appended": {
+        "bytes": 2472,
+        "sha256": "338f62c1bdd2e2bb928a60da1634f23fb705b35589f27f196420c20ae6721d1f",
+        "gitBlob": "7b403c8644063b494b440654d1dd47e6af26ee2f"
+      }
+    }
+  },
+  "currentOutcome": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-accepted-green-and-guards-20261116.json",
+    "bytes": 13626,
+    "sha256": "50973286bf56d66b7c7dc9097c8a9a50cb9aaecc9d235eb21fc044271dfd87eb",
+    "gitBlob": "7568f9f49a4f56d0e3f41be2b4b202267a4998f2"
+  },
+  "actual97GreenAccepted": {
+    "bytes": 124846,
+    "sha256": "62ebe8480892a5e8e6d2ed58f0ed0fe3052eba0edfecfadf36ef9ffbf3b7d4c3",
+    "gitBlob": "d039b8d061439c6e61a71a37535a4f7cc76a6093"
+  },
+  "actual3GuardsAccepted": {
+    "bytes": 290501,
+    "sha256": "c5c1930f5cc47d7d891cf5c522b7c68879f643962ba20afee4aaab39e984fa54",
+    "gitBlob": "4ec154d23168a8c819a22a0d4a9328ef272f3203"
+  },
+  "guardReview": {
+    "bytes": 126977,
+    "sha256": "224a71c003508a19db5943dbe6928204647ef50d34753a9d4f7a1f900f6b43f1",
+    "gitBlob": "36cb4fa4f12885356166ab1fb9324740c9cd3293"
+  },
+  "parityReview": {
+    "bytes": 31690,
+    "sha256": "100cd9477c073b7f069c0c140bf9ce6b1d1a0bc9cc62f5366e9c9989f6b951e2",
+    "gitBlob": "3d2c03fab5fd956530b0f66554138d7052b91467"
+  },
+  "prospectiveR1": {
+    "r1": {
+      "bytes": 23142,
+      "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+      "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+    },
+    "guard": {
+      "bytes": 33350,
+      "sha256": "3635b74953344c3085ea3313f81f6a5cb60103dfa58e0aa84096240d227b0197",
+      "gitBlob": "bacd76155f9d45ce40e2f77ead26ff58769712ee"
+    },
+    "parity": {
+      "bytes": 25572,
+      "sha256": "3dfdcd0350342a8adf141f072509c4d5f999fb259fa164e2db3fa1c2478c0fd1",
+      "gitBlob": "7fa731637982b2629b35df2378bab0a5bfbbcc3e"
+    },
+    "postimagesAuthored": 0,
+    "newRuntimeCommands": 0,
+    "actualPublicationReadbackBeforeAnyNewPostimage": true
+  },
+  "incomingHeadCi": {
+    "evidence": {
+      "bytes": 4551343,
+      "sha256": "4ec9efc8301ddfbd03777bf6fdc2b69b7592116bfb27f26401495c27617f0157",
+      "gitBlob": "0f2963af97dcabda330e2635af90c67a4e5d9651"
+    },
+    "completeInnerBodies": 46,
+    "completeInnerBytes": 3470288,
+    "rootRehashedAll": true,
+    "sourceAdoption": false,
+    "qualificationTransfer": false
+  },
+  "scope": "Current finite97+three original scopedguards complete; newCross R1 is prospective. All original conversation attempts spent. Canonical typing/build, GUI/platform, incoming integration, Windows15s/Packaged10s, strictDarwinP09, laterP11/genuineM16 and wholeE2E stay open. No frozenPR/run action, CI venue, Ready, merge,release/defaultactivation orStage2."
+}

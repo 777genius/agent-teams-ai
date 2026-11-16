@@ -1,0 +1,348 @@
+{
+  "schemaVersion": 1,
+  "kind": "accepted-conversation-green-and-original-scoped-guards-with-prospective-cross-close-R1",
+  "repository": "777genius/agent-teams-ai",
+  "documentaryParent": "3db7943ae2b70232e926474e09fac20b609d10c8",
+  "rootClosedAt": "2026-11-16 16:03:36 UTC",
+  "sourceSubject": {
+    "commit": "bc6594c3ff0a1061870612a8f688400123575754",
+    "tree": "3b30530f411c66ceaec24666b728ecaf842f8212",
+    "qualification": "Exact published reviewed controls/Selection postimages and unchanged97-case test. Local detached HEAD/index remain c5 with exactly these two source overlays; current documentation is not claimed locally materialized."
+  },
+  "sourceSnapshot": {
+    "bytes": 2478453,
+    "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+    "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+  },
+  "completeGate": {
+    "accepted": true,
+    "at": "2026-11-16 16:03:36 UTC",
+    "green": {
+      "accepted": true,
+      "at": "2026-11-16 15:36:56 UTC",
+      "scope": "Complete actual97-case GREEN gate, including independent full semantic and input/lifetime closure, before exactly three original scoped guards.",
+      "envelope": {
+        "bytes": 124846,
+        "sha256": "62ebe8480892a5e8e6d2ed58f0ed0fe3052eba0edfecfadf36ef9ffbf3b7d4c3",
+        "gitBlob": "d039b8d061439c6e61a71a37535a4f7cc76a6093"
+      },
+      "receipt": {
+        "bytes": 24625,
+        "sha256": "191557a7c37e46f6d7f0f6360e3e70cb1519292f959e9727cebdff2f494f1ca3",
+        "gitBlob": "e01ba171191344314babe0d6ea16cacdaf452cf3"
+      },
+      "rootData": {
+        "accepted": true,
+        "scope": "Actual97-case finite source suite only; independent final review remains a continuation gate before three guards.",
+        "files": 67,
+        "fullBytes": 90190019,
+        "uniqueBodies": 42,
+        "allActualBodiesRetainedOrExactlyReconstructible": true,
+        "allSmallBodiesRehashed": true,
+        "sourceRows8798ExactToReviewedMaterializedPostimage": true,
+        "dependencyCompiledAndFullTreeBodiesExactToPreviouslyReviewedBootstrap": true,
+        "metadataChildren": 14,
+        "primaryChildren": 1,
+        "allCapturedSessionsEmpty": true,
+        "outerSupervisorExit": 0,
+        "innerTestExit": 0,
+        "scopeCompleted": true,
+        "testCases": 97,
+        "pass": 97,
+        "fail": 0,
+        "skip": 0,
+        "cancel": 0,
+        "todo": 0,
+        "oldCases": 78,
+        "addedCases": 19,
+        "commandSeconds": 17.45291191599972
+      },
+      "parityReview": {
+        "bytes": 123411,
+        "sha256": "5dcab89bd07be83778ce7b40084960a26a9b17b22327d7fc150a2a0e3f867b07",
+        "gitBlob": "1f1ef935177c9453bdf330ae14b0e3b319a45311"
+      },
+      "guard": {
+        "reviewer": "/root/guard_review",
+        "completeAcceptanceReceived": true,
+        "statement": "COMPLETE actual GREEN acceptance CLOSED. Corrected d039 full read/hash and documentary-only inverse accepted; all57 literals/all67files90190019B42unique fullresolved; source8798 both67a; dependencies122773/compiled1454/providers253+12/tools/config/cache unchanged;14metadata+primary clean;97PASS,10formerRED nowPASS; primary0 and separate observed outer49931exit0. Existing three scoped guards may proceed under21878/6af0.",
+        "bareReviewPending": false,
+        "bareReview": {
+          "bytes": 95744,
+          "sha256": "845e5cfc6e317c63380f949d6e816782d28ba81d96aae8170a5d724c9dbc632c",
+          "gitBlob": "bb67ad6d1ab86403356267ac28becaa067be958f"
+        }
+      },
+      "parityFinal": {
+        "reviewer": "/root/parity_audit",
+        "completeAcceptanceReceived": true,
+        "statement": "FINAL combined actual GREEN gate ACCEPTED after Guard full closure; no remaining GREEN gate. Three original scoped guards may proceed under unchanged218/6af, requiring own primary0/raw/input/outer review.",
+        "supplementPending": false,
+        "supplement": {
+          "bytes": 17444,
+          "sha256": "c87b3279b67908eea859a5d3d857c6aa34a6be9a9b37af67b0a8e1de23ac01e5",
+          "gitBlob": "17e26030335deb4d9d1b70d902f7f0d7b62deefa"
+        }
+      }
+    },
+    "guardsEnvelope": {
+      "bytes": 290501,
+      "sha256": "c5c1930f5cc47d7d891cf5c522b7c68879f643962ba20afee4aaab39e984fa54",
+      "gitBlob": "4ec154d23168a8c819a22a0d4a9328ef272f3203"
+    },
+    "guardsRootAudits": [
+      {
+        "accepted": true,
+        "command": "lint",
+        "files": 67,
+        "bytes": 90181351,
+        "uniqueBodies": 42,
+        "smallBodiesRehashed": 57,
+        "allActualBodiesResolved": true,
+        "allInputSnapshotsUnchanged": true,
+        "metadataChildren": 14,
+        "metadataAllExitZeroClean": true,
+        "primaryExit": 0,
+        "outerExit": 0,
+        "commandSeconds": 9.781771877998835,
+        "noTimeoutOrInterruptionsOrCapturedCleanupDebt": true,
+        "sourceRows": 8798,
+        "sourcePostimage": {
+          "bytes": 2478453,
+          "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+          "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+        },
+        "dependencyRows": 122773,
+        "compiledRows": 1454,
+        "sourceWorkflows": 42,
+        "rawQualificationPending": false,
+        "rawQualified": "Exact scoped ESLint invocation, no diagnostics, primary0 and outer0."
+      },
+      {
+        "accepted": true,
+        "command": "source-size",
+        "files": 67,
+        "bytes": 90181063,
+        "uniqueBodies": 42,
+        "smallBodiesRehashed": 57,
+        "allActualBodiesResolved": true,
+        "allInputSnapshotsUnchanged": true,
+        "metadataChildren": 14,
+        "metadataAllExitZeroClean": true,
+        "primaryExit": 0,
+        "outerExit": 0,
+        "commandSeconds": 9.268049633999908,
+        "noTimeoutOrInterruptionsOrCapturedCleanupDebt": true,
+        "sourceRows": 8798,
+        "sourcePostimage": {
+          "bytes": 2478453,
+          "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+          "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+        },
+        "dependencyRows": 122773,
+        "compiledRows": 1454,
+        "sourceWorkflows": 42,
+        "rawQualificationPending": false,
+        "rawQualified": "Actual source-size guard PASS:5020 production files,141 frozen exceptions,800-line limit;86 below-cap legacy files are a preexisting informational note, no cap/baseline changes."
+      },
+      {
+        "accepted": true,
+        "command": "diff-check",
+        "files": 67,
+        "bytes": 90180626,
+        "uniqueBodies": 41,
+        "smallBodiesRehashed": 57,
+        "allActualBodiesResolved": true,
+        "allInputSnapshotsUnchanged": true,
+        "metadataChildren": 14,
+        "metadataAllExitZeroClean": true,
+        "primaryExit": 0,
+        "outerExit": 0,
+        "commandSeconds": 0.036582931999873836,
+        "noTimeoutOrInterruptionsOrCapturedCleanupDebt": true,
+        "sourceRows": 8798,
+        "sourcePostimage": {
+          "bytes": 2478453,
+          "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+          "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+        },
+        "dependencyRows": 122773,
+        "compiledRows": 1454,
+        "sourceWorkflows": 42,
+        "rawQualificationPending": false,
+        "rawQualified": "Original git diff --check for the three authorized conversation paths emitted no output and primary/outer both0; source8798, workflows42 and complete runtime inputs remained exact."
+      }
+    ],
+    "guardReview": {
+      "bytes": 126977,
+      "sha256": "224a71c003508a19db5943dbe6928204647ef50d34753a9d4f7a1f900f6b43f1",
+      "gitBlob": "36cb4fa4f12885356166ab1fb9324740c9cd3293"
+    },
+    "parityReview": {
+      "bytes": 31690,
+      "sha256": "100cd9477c073b7f069c0c140bf9ce6b1d1a0bc9cc62f5366e9c9989f6b951e2",
+      "gitBlob": "3d2c03fab5fd956530b0f66554138d7052b91467"
+    },
+    "allOriginalAttemptsSpent": true,
+    "crossR1": {
+      "bytes": 23142,
+      "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+      "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+    },
+    "crossR1Guard": {
+      "bytes": 33350,
+      "sha256": "3635b74953344c3085ea3313f81f6a5cb60103dfa58e0aa84096240d227b0197",
+      "gitBlob": "bacd76155f9d45ce40e2f77ead26ff58769712ee"
+    },
+    "crossR1Parity": {
+      "bytes": 25572,
+      "sha256": "3dfdcd0350342a8adf141f072509c4d5f999fb259fa164e2db3fa1c2478c0fd1",
+      "gitBlob": "7fa731637982b2629b35df2378bab0a5bfbbcc3e"
+    },
+    "newCrossPostimages": 0,
+    "publicationReadbackStillRequired": true
+  },
+  "materialization": {
+    "envelope": {
+      "bytes": 94844,
+      "sha256": "6f85618d26cd98ef8e382d97a83bae80211dd8a289a2c8f928048e0115580ee8",
+      "gitBlob": "006450583e21651539f5c0584b117fd5b081962c"
+    },
+    "review": {
+      "bytes": 31471,
+      "sha256": "f085d9ba0747b0880908f292ac7e0e9af83a1ab6807ff1fa323ba8ed692185cb",
+      "gitBlob": "96964d7ae1d278a67e51bd39be6fbcf85f6af773"
+    },
+    "actualOuterExit": 0,
+    "behavioralPass": null
+  },
+  "green": {
+    "testFile": {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 136700,
+      "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+      "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+    },
+    "actualCases": 97,
+    "pass": 97,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0,
+    "preservedCases": 78,
+    "newCases": 19,
+    "formerSemanticRedFailuresNowPass": 10,
+    "primaryExit": 0,
+    "outerExit": 0,
+    "raw": "30a91e061f29b7605c1ab8e3d90b4b910626154c",
+    "envelope": {
+      "bytes": 124846,
+      "sha256": "62ebe8480892a5e8e6d2ed58f0ed0fe3052eba0edfecfadf36ef9ffbf3b7d4c3",
+      "gitBlob": "d039b8d061439c6e61a71a37535a4f7cc76a6093"
+    },
+    "receipt": {
+      "bytes": 24625,
+      "sha256": "191557a7c37e46f6d7f0f6360e3e70cb1519292f959e9727cebdff2f494f1ca3",
+      "gitBlob": "e01ba171191344314babe0d6ea16cacdaf452cf3"
+    },
+    "semantic": {
+      "bytes": 123411,
+      "sha256": "5dcab89bd07be83778ce7b40084960a26a9b17b22327d7fc150a2a0e3f867b07",
+      "gitBlob": "1f1ef935177c9453bdf330ae14b0e3b319a45311"
+    },
+    "fullGuard": {
+      "bytes": 95744,
+      "sha256": "845e5cfc6e317c63380f949d6e816782d28ba81d96aae8170a5d724c9dbc632c",
+      "gitBlob": "bb67ad6d1ab86403356267ac28becaa067be958f"
+    },
+    "closure": {
+      "bytes": 17444,
+      "sha256": "c87b3279b67908eea859a5d3d857c6aa34a6be9a9b37af67b0a8e1de23ac01e5",
+      "gitBlob": "17e26030335deb4d9d1b70d902f7f0d7b62deefa"
+    }
+  },
+  "guards": {
+    "envelope": {
+      "bytes": 290501,
+      "sha256": "c5c1930f5cc47d7d891cf5c522b7c68879f643962ba20afee4aaab39e984fa54",
+      "gitBlob": "4ec154d23168a8c819a22a0d4a9328ef272f3203"
+    },
+    "fullGuard": {
+      "bytes": 126977,
+      "sha256": "224a71c003508a19db5943dbe6928204647ef50d34753a9d4f7a1f900f6b43f1",
+      "gitBlob": "36cb4fa4f12885356166ab1fb9324740c9cd3293"
+    },
+    "parity": {
+      "bytes": 31690,
+      "sha256": "100cd9477c073b7f069c0c140bf9ce6b1d1a0bc9cc62f5366e9c9989f6b951e2",
+      "gitBlob": "3d2c03fab5fd956530b0f66554138d7052b91467"
+    },
+    "allPrimaryAndOuterExitsZero": true,
+    "sourceSize": {
+      "productionFiles": 5020,
+      "frozenExceptions": 141,
+      "cap": 800
+    },
+    "originalRemainingAttempts": {
+      "red": 0,
+      "green": 0,
+      "lint": 0,
+      "sourceSize": 0,
+      "diffCheck": 0
+    }
+  },
+  "newProspectiveCrossScope": {
+    "r1": {
+      "bytes": 23142,
+      "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+      "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+    },
+    "guard": {
+      "bytes": 33350,
+      "sha256": "3635b74953344c3085ea3313f81f6a5cb60103dfa58e0aa84096240d227b0197",
+      "gitBlob": "bacd76155f9d45ce40e2f77ead26ff58769712ee"
+    },
+    "parity": {
+      "bytes": 25572,
+      "sha256": "3dfdcd0350342a8adf141f072509c4d5f999fb259fa164e2db3fa1c2478c0fd1",
+      "gitBlob": "7fa731637982b2629b35df2378bab0a5bfbbcc3e"
+    },
+    "sourcePostimages": 0,
+    "testPostimages": 0,
+    "runnerPostimages": 0,
+    "executedNewCases": 0,
+    "plannedPreserved97AndAdded36Total133": true,
+    "publicationReadbackBeforePostimages": true
+  },
+  "readOnlyIncoming": {
+    "headReview": {
+      "bytes": 218343,
+      "sha256": "ea18db311fb79ecc3fb7cbe4d85dcccaa8665a8e927ec980cf0f11a074a55503",
+      "gitBlob": "453d973fe2a7f2176c1e4c6361318786c603a34f"
+    },
+    "uiOverlap": {
+      "bytes": 73915,
+      "sha256": "b08f1080dd229d2d020ce975e11c2aede0e0d004483e350d9a8e6c91bb20b1bd",
+      "gitBlob": "248322debdd3e8cbc6a6f4dcaed3289efb68be3c"
+    },
+    "ci": {
+      "bytes": 4551343,
+      "sha256": "4ec9efc8301ddfbd03777bf6fdc2b69b7592116bfb27f26401495c27617f0157",
+      "gitBlob": "0f2963af97dcabda330e2635af90c67a4e5d9651"
+    },
+    "rootInnerAudit": {
+      "bodies": 46,
+      "bytes": 3470288,
+      "complete": true
+    },
+    "sourceAdoption": false,
+    "qualificationTransfer": false
+  },
+  "limitations": [
+    "Complete local finite source proof and original scoped guards only.",
+    "Canonical typecheck/build, actual fresh GUI/platform checks, incoming integration and wholeE2E remain open.",
+    "Windows15s/Packaged10s, strictDarwinP09 and laterP11/genuineM16 remain open; no deadline/currentness/cleanup/no-replay relaxation.",
+    "All original9 terminal runs and frozenPRs untouched; newCI venue remains unselected.",
+    "Driver.close diagnostic remains dormant; no realClaude/Codex even version, release/default activation,Stage2,Ready or merge."
+  ]
+}

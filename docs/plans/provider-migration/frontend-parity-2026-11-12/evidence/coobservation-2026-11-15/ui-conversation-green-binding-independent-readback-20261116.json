@@ -1,0 +1,521 @@
+{
+  "schemaVersion": 1,
+  "kind": "Complete independent actual GREEN-binding publication readback",
+  "reviewer": "/root/pr_graph",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "verdict": "COMPLETE ACCEPTED",
+  "acceptance": {
+    "accepted": true,
+    "scope": "Actual GREEN-binding publication only",
+    "commit": "3db7943ae2b70232e926474e09fac20b609d10c8",
+    "tree": "7d4877188dd68d1033dd2736feb59405568ba746",
+    "parent": "bc6594c3ff0a1061870612a8f688400123575754",
+    "leaves": 11657,
+    "changedBodies": 7,
+    "changedBytes": 2995655,
+    "newDocs": 5,
+    "modifiedDocs": 2,
+    "sourceLeavesUnchanged": 8798,
+    "workflowsUnchanged": 42,
+    "noDeletionOrModeChange": true,
+    "fullPrefixesExact": true,
+    "planAppendBytes": 1878,
+    "statusAppendBytes": 869,
+    "allCompleteContainerHashesExact": true,
+    "greenBindingExact": "21878f51fd1b7bfca5bab18ff71c7c1beca5aaef",
+    "innerBindingR2NotRepeated": true,
+    "sourceApplicationByChild": false,
+    "runtimeByChild": false,
+    "greenResultNotClaimed": true,
+    "newCiNotSelected": true
+  },
+  "publication": {
+    "actualRef": "refs/heads/fix/frontend-parity-coobservation-c714-20261115",
+    "actualRefCommit": "3db7943ae2b70232e926474e09fac20b609d10c8",
+    "commit": "3db7943ae2b70232e926474e09fac20b609d10c8",
+    "tree": "7d4877188dd68d1033dd2736feb59405568ba746",
+    "orderedParents": [
+      "bc6594c3ff0a1061870612a8f688400123575754"
+    ],
+    "actualParentTree": "3b30530f411c66ceaec24666b728ecaf842f8212",
+    "refResponse": {
+      "bytes": 492,
+      "sha256": "1766cdf2060493c2a68ca9dc674b290a91ab5655fcf4001428312cfef11bd342",
+      "gitBlob": "a64144f148e9b093bda15490ef835ff5341d2ca9"
+    },
+    "commitResponse": {
+      "bytes": 1177,
+      "sha256": "7e16bf4b75b3f3a568c14a839f2dd6121598b86e18d709cf3b9450ad15b6dde3",
+      "gitBlob": "2e832a522dbbd76d8d8f24389010dd5e4d9e9b13"
+    },
+    "fullTreeResponse": {
+      "bytes": 3895080,
+      "sha256": "08990960f554ef428b6c46b364828db61d67b9cde89d9f7a5b4222efc02e9f2e",
+      "gitBlob": "01679260936ffad881032b4f0f7694c6bb71ef1c"
+    },
+    "parentTreeResponse": {
+      "bytes": 3893262,
+      "sha256": "40d30844e2d049748af5acacfa140ec652d2fa45a1dc3bffc18a68f35dd27972",
+      "gitBlob": "e013d4ee1186a64809ca11e8c52cc2b7fd25c9a9"
+    },
+    "parentTreeProvenance": "Complete nontruncated parent tree independently fetched and accepted at the immediately preceding bc6594 publication; its actual commit/tree binding was freshly fetched for this gate.",
+    "truncated": false
+  },
+  "manifest": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-binding-publication-manifest-20261116.json",
+    "bytes": 17438,
+    "sha256": "95351e770e072dc066c07b595fe2b152a0db7292c7525c40c30bf2b2ed668e2b",
+    "gitBlob": "54242590b615858865fd025178d3833c4bcbb9fb"
+  },
+  "allCompleteBodyReadbacks": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-fresh-green-binding-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "gitBlob": "21878f51fd1b7bfca5bab18ff71c7c1beca5aaef",
+      "bytes": 375818,
+      "sha256": "744167b87c840de28f17b86fd8b801caec5c71d695cc49c9f037dab964176cfd",
+      "fullBodyRead": true,
+      "allIdentitiesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-producer-independent-readback-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "gitBlob": "8567f1214ce91e97c83e82fe4438361803f8a07a",
+      "bytes": 32556,
+      "sha256": "ac12236efc423bc3a018814712bbfcb887b6b63a4ca6bb46eae3db8fc5a455d4",
+      "fullBodyRead": true,
+      "allIdentitiesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-binding-guard-r2-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "gitBlob": "2a62b76acdb0fe8dba4574dd98c3f26d9ef8d613",
+      "bytes": 21257,
+      "sha256": "bf2f7f12cda7639342ef0e1e6d1e65b9177b2f6a5d22b46740f2ca94b5d22e8d",
+      "fullBodyRead": true,
+      "allIdentitiesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-binding-parity-r2-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "gitBlob": "2d5498e9b5f9bcd2694b36453dc33b6aac51db6f",
+      "bytes": 21826,
+      "sha256": "6a24dbccc373367fe5ac0eb8073aec7b2882dc9c620df411238a806ccde6886b",
+      "fullBodyRead": true,
+      "allIdentitiesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "type": "blob",
+      "gitBlob": "e48d364ef30b85f1ea89b47bf56485e37cb7fd1a",
+      "bytes": 2502539,
+      "sha256": "cdcfeb2ffb5835a312c88b03c29be2d98cbda9c298c2b2e0ae8d19f8a6b3b82e",
+      "fullBodyRead": true,
+      "allIdentitiesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "mode": "100644",
+      "type": "blob",
+      "gitBlob": "39ca7a31005308cd84f671e1da95f750ab056f27",
+      "bytes": 24221,
+      "sha256": "6c02234442714c504a8034679167427f090b340835520d3af28fb69d461cf705",
+      "fullBodyRead": true,
+      "allIdentitiesExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-binding-publication-manifest-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "bytes": 17438,
+      "sha256": "95351e770e072dc066c07b595fe2b152a0db7292c7525c40c30bf2b2ed668e2b",
+      "gitBlob": "54242590b615858865fd025178d3833c4bcbb9fb",
+      "fullBodyRead": true,
+      "allIdentitiesExact": true
+    }
+  ],
+  "exactDelta": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "before": {
+        "sha": "0f7320e345c7982a4c678980ee9eebaf0b1a31cf",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "sha": "e48d364ef30b85f1ea89b47bf56485e37cb7fd1a",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "before": {
+        "sha": "2de26c9ef51c3ccfc2b2a4a96117b7ba538c8235",
+        "mode": "100644",
+        "type": "blob"
+      },
+      "after": {
+        "sha": "39ca7a31005308cd84f671e1da95f750ab056f27",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-fresh-green-binding-20261116.json",
+      "before": null,
+      "after": {
+        "sha": "21878f51fd1b7bfca5bab18ff71c7c1beca5aaef",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-binding-guard-r2-20261116.json",
+      "before": null,
+      "after": {
+        "sha": "2a62b76acdb0fe8dba4574dd98c3f26d9ef8d613",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-binding-parity-r2-20261116.json",
+      "before": null,
+      "after": {
+        "sha": "2d5498e9b5f9bcd2694b36453dc33b6aac51db6f",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-green-binding-publication-manifest-20261116.json",
+      "before": null,
+      "after": {
+        "sha": "54242590b615858865fd025178d3833c4bcbb9fb",
+        "mode": "100644",
+        "type": "blob"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-producer-independent-readback-20261116.json",
+      "before": null,
+      "after": {
+        "sha": "8567f1214ce91e97c83e82fe4438361803f8a07a",
+        "mode": "100644",
+        "type": "blob"
+      }
+    }
+  ],
+  "sourcePreservation": {
+    "all8798PathsModesTypesBlobsEqual": true,
+    "canonicalSerialization": "JSON.stringify(sorted rows of {path,mode,type,sha}) + LF",
+    "sourceSetMetadata": {
+      "bytes": 1341679,
+      "sha256": "c5cc5351ad3d5d7c833b461a8b8328c869f6ffb260951c57cb9b7e6b850c4194",
+      "gitBlob": "5081e741969ef848fe48fd2472d87bf4ca7fb661"
+    },
+    "all42WorkflowsUnchanged": [
+      {
+        "path": ".github/workflows/announcements-content.yml",
+        "sha": "d7d1c6fde200971f29defe95c2c0436a0318b499",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/anthropic-compatible-status-e2e.yml",
+        "sha": "6ec8f76ef4036fde31daab73db1205cf9f7dfdd2",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/anthropic-env-portability.yml",
+        "sha": "d3fa7512b79b79dc64c1580dfdc42d63361ae68a",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/build-linux-windows-draft.yml",
+        "sha": "919dc9d816a5f7441783af22a286da9b1e4f6f8a",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "sha": "a93ff6ba1e5656523668694bca24910a468aebc7",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/codeql.yml",
+        "sha": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/codex-runtime-smoke.yml",
+        "sha": "cef44447c47e39a7da678f37e2518952e218da08",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/dependency-review.yml",
+        "sha": "4a5f2ab17b3daf4ffdf6992ee85d159adf2c46c6",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+        "sha": "490c2048dfbd9f275f784d7a0f1a6eeba0a9f361",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "sha": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "sha": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "sha": "70202d22a5840401a00025cd60b797c514f3e455",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+        "sha": "95d681fe04abd838dd11799d7791fa59444c6e32",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/landing-hetzner-release.yml",
+        "sha": "4b54f229156f9d347e1a33da0d83b3374acc4078",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/landing.yml",
+        "sha": "4a1ad9ae59ff2e338930a195d54fdff62da1ebc5",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/macos-signing-qualification.yml",
+        "sha": "d63bddd51302a5c0380762bf22171f43c38a39b0",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/opencode-desktop-e2e.yml",
+        "sha": "3d2a90a0e335155d435bd4eae4f2bd2842425983",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/opencode-native-windows-e2e.yml",
+        "sha": "f5a2a472b752acf37399fc9e11f63f6d45bdb297",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/opencode-packaged-e2e.yml",
+        "sha": "458e165ef020a1f8b05806b9ae7edc839134e1b4",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+        "sha": "be6a9ae5a88efadca344773ed4aa962d42823d28",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "sha": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/prepare-updater-native-inputs.yml",
+        "sha": "51beb92ade4931fe04336c7d3908bacfc932269e",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/provider-real-runtime-e2e.yml",
+        "sha": "4ee30807aa18f043fe53d090bfb6211bb5458ce0",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/publish-carried-release.yml",
+        "sha": "371ed6d3b2cf4e41c012da287a295783c39c426e",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/recover-existing-draft-payloads.yml",
+        "sha": "eadeedf4381cbf1d7e32cd31105dd88cd2c8eb65",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/release-publication-guard.yml",
+        "sha": "10b7abd2992cc740084a5c51ace7f3fe025220f9",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/release.yml",
+        "sha": "d28bee6dea87ec191f0d40670f3e68c48251d049",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/reviewrouter-interaction.yml",
+        "sha": "edb68c51f54ad4a792eb29f1f557aad48e3a6218",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/reviewrouter-review.yml",
+        "sha": "04964f8ac7beadb3277fb28ec9cc0d61b86ca84b",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+        "sha": "4020f668ab2a9a7b16fcb0aa7fd2d79a061f1d44",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/sentry-owned-process-native.yml",
+        "sha": "1188fa5b89d59b739d927082d1b6954a57181819",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/stage-existing-partial-draft.yml",
+        "sha": "295dbf212e13b15505696d997ec7c45b4ee3cfa9",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "sha": "ef939f224a1642cb596906324c8d61441780ccc7",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/updater-linux-packages.yml",
+        "sha": "60d214756c640b7925cfe11ba45ed4009f27ca3c",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/updater-mac-manual-migration.yml",
+        "sha": "4aa3a4181259514c5a43fbc7dd4ad98811a3588e",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/updater-mac-old-updater.yml",
+        "sha": "067a25687f36caefe156b0446c5056d230d27c62",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/updater-mac-source.yml",
+        "sha": "1196e40faa99e0ab64e329d91f3fea7c6ed47f94",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/updater-mac-updater.yml",
+        "sha": "950f95892277ae303772ac699915250f0f4f66af",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/updater-native-feasibility.yml",
+        "sha": "b55e6cbcb4de61e2e8688e1ff4b4529b043a4ada",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/updater-windows-ota.yml",
+        "sha": "10ffcd79e48a71346df7545af638208ce039ad83",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/updater-windows.yml",
+        "sha": "a4e9375cb95c4129c503f1d7be82de1e3926ea62",
+        "mode": "100644"
+      },
+      {
+        "path": ".github/workflows/windows-backfill-diagnostic.yml",
+        "sha": "44bec5d82998468d48ac539f3624d0c2de1c6648",
+        "mode": "100644"
+      }
+    ],
+    "priorCompleteSourcePublicationReview": "8567f1214ce91e97c83e82fe4438361803f8a07a"
+  },
+  "appendOnlyProofs": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "preimage": {
+        "bytes": 2500661,
+        "sha256": "660a4fb6c6b64f05171c27ee660da870bca00ec5cf83a0341a210952f4d63fbd",
+        "gitBlob": "0f7320e345c7982a4c678980ee9eebaf0b1a31cf"
+      },
+      "postimage": {
+        "bytes": 2502539,
+        "sha256": "cdcfeb2ffb5835a312c88b03c29be2d98cbda9c298c2b2e0ae8d19f8a6b3b82e",
+        "gitBlob": "e48d364ef30b85f1ea89b47bf56485e37cb7fd1a"
+      },
+      "fullPrefixExact": true,
+      "appendBytes": 1878,
+      "appendMetadata": {
+        "bytes": 1878,
+        "sha256": "4a3139eb66317f69653b7b8a7d4350cead6afba7959e0368a772df4db90ae5d4",
+        "gitBlob": "7cc847b2f0c4b12b2bd759454a9b610dae82a9ec"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "preimage": {
+        "bytes": 23352,
+        "sha256": "6c6472151d527b6b176f4af46762e7e602b30a655fb04450aa04a9be45d39a9b",
+        "gitBlob": "2de26c9ef51c3ccfc2b2a4a96117b7ba538c8235"
+      },
+      "postimage": {
+        "bytes": 24221,
+        "sha256": "6c02234442714c504a8034679167427f090b340835520d3af28fb69d461cf705",
+        "gitBlob": "39ca7a31005308cd84f671e1da95f750ab056f27"
+      },
+      "fullPrefixExact": true,
+      "appendBytes": 869,
+      "appendMetadata": {
+        "bytes": 869,
+        "sha256": "2c8891064504148f4ced241630d54a81b71719e70ea0f345f1753f017aadd331",
+        "gitBlob": "8c513aa35a222d4ce9a491f49a36f05479530df6"
+      }
+    }
+  ],
+  "binding": {
+    "gitBlob": "21878f51fd1b7bfca5bab18ff71c7c1beca5aaef",
+    "phase": "green",
+    "publishedSubject": {
+      "commit": "bc6594c3ff0a1061870612a8f688400123575754",
+      "tree": "3b30530f411c66ceaec24666b728ecaf842f8212",
+      "qualification": "Exact published reviewed controls/Selection postimages and unchanged97-case test. Local detached HEAD/index remain c5 with exactly these two source overlays; current documentation is not claimed locally materialized."
+    },
+    "runnerIdentity": {
+      "bytes": 35916,
+      "sha256": "495fac79660eb36f0795f74ff14bd665d79ac3e43534349c2f65234bda89d0f5",
+      "gitBlob": "6af0ac85f09ef02488ce15331828713882a73d13"
+    },
+    "test": {
+      "bytes": 136700,
+      "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+      "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+    },
+    "behavioralAttempts": {
+      "red": 0,
+      "green": 1,
+      "lint": 1,
+      "sourceSize": 1,
+      "diffCheck": 1,
+      "previousWholeFileExecutions": 1,
+      "materializeGreen": 1
+    }
+  },
+  "exactApprovedR2Bodies": {
+    "guard": "2a62b76acdb0fe8dba4574dd98c3f26d9ef8d613",
+    "parity": "2d5498e9b5f9bcd2694b36453dc33b6aac51db6f"
+  },
+  "semanticBoundaries": [
+    "This is complete actual publication readback, not a repeated inner binding/source/lifetime review.",
+    "No local source materialization or runtime was performed by this reviewer.",
+    "Publication claims correctly preserve sourceApplied=false and greenExecuted=false at publication.",
+    "Root still requires the accepted materialization receipt and separately observed supervisor exit0 before GREEN.",
+    "GREEN requires all97 unchanged cases PASS, normal primary exit0, unchanged inputs/complete cleanup and separately observed supervisor exit0 before scoped guards.",
+    "Each guard requires its own actual successful primary and raw result; supervision alone is insufficient.",
+    "No native/GUI/provider/full-E2E success, new CI venue, ref mutation or retry is inferred."
+  ]
+}

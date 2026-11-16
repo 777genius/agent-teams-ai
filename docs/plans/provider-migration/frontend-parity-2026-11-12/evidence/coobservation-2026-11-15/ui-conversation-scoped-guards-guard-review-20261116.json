@@ -1,0 +1,3151 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-complete-actual-three-original-conversation-guard-review",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/guard_review",
+  "reviewedAtUtc": "2026-11-16T15:59:51.406Z",
+  "accepted": true,
+  "parentNotifiedBeforeBareRetention": true,
+  "reviewedEnvelope": {
+    "bytes": 290501,
+    "sha256": "c5c1930f5cc47d7d891cf5c522b7c68879f643962ba20afee4aaab39e984fa54",
+    "gitBlob": "4ec154d23168a8c819a22a0d4a9328ef272f3203"
+  },
+  "source": {
+    "commit": "bc6594c3ff0a1061870612a8f688400123575754",
+    "tree": "3b30530f411c66ceaec24666b728ecaf842f8212",
+    "qualification": "Exact published reviewed controls/Selection postimages and unchanged97-case test. Local detached HEAD/index remain c5 with exactly these two source overlays; current documentation is not claimed locally materialized."
+  },
+  "runner": {
+    "bytes": 35916,
+    "sha256": "495fac79660eb36f0795f74ff14bd665d79ac3e43534349c2f65234bda89d0f5",
+    "gitBlob": "6af0ac85f09ef02488ce15331828713882a73d13"
+  },
+  "binding": {
+    "bytes": 375818,
+    "sha256": "744167b87c840de28f17b86fd8b801caec5c71d695cc49c9f037dab964176cfd",
+    "gitBlob": "21878f51fd1b7bfca5bab18ff71c7c1beca5aaef"
+  },
+  "priorComplete97Green": {
+    "envelope": {
+      "bytes": 124846,
+      "sha256": "62ebe8480892a5e8e6d2ed58f0ed0fe3052eba0edfecfadf36ef9ffbf3b7d4c3",
+      "gitBlob": "d039b8d061439c6e61a71a37535a4f7cc76a6093"
+    },
+    "receipt": {
+      "bytes": 24625,
+      "sha256": "191557a7c37e46f6d7f0f6360e3e70cb1519292f959e9727cebdff2f494f1ca3",
+      "gitBlob": "e01ba171191344314babe0d6ea16cacdaf452cf3"
+    },
+    "independentGuardReview": {
+      "bytes": 95744,
+      "sha256": "845e5cfc6e317c63380f949d6e816782d28ba81d96aae8170a5d724c9dbc632c",
+      "gitBlob": "bb67ad6d1ab86403356267ac28becaa067be958f"
+    },
+    "rootAdmissionAt": "2026-11-16 15:36:56 UTC",
+    "firstGuardStartedStrictlyAfterAdmission": true
+  },
+  "completeCensus": {
+    "actualFileInstances": 201,
+    "actualFileBytes": 270543040,
+    "uniqueBodiesAcrossPhases": 107,
+    "literalSmallBodies": 171,
+    "literalBytes": 139822,
+    "literalUniqueBodiesAcrossPhases": 102,
+    "largeInstances": 30,
+    "largeBytes": 270403218,
+    "all201ExpectedActualFileInstancesExact": true,
+    "all171LiteralBodiesRehashed": true,
+    "all30LargeInstancesResolvedByWholeFileIdentities": true,
+    "allPerPhaseCensusCountsAndSumsRecomputed": true,
+    "qualification": "Instance bytes include repeated whole input bodies at each boundary, not270MB of unique evidence or extra tests. Exact file-entry arrays are retained in the fully rehashed4ec envelope; their canonical digest in each phase is an audit anchor, not a substitute for the complete source bodies."
+  },
+  "fullRuntimeInputClosure": {
+    "source": {
+      "bytes": 2478453,
+      "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+      "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+    },
+    "sourceRows": 8798,
+    "workflowLeaves": 42,
+    "sourceChangesDuringAnyGuard": 0,
+    "localHead": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+    "localTree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+    "allowedTrackedOverlays": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      }
+    ],
+    "unchangedTest": {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 136700,
+      "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+      "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+    },
+    "dependencies": {
+      "bytes": 39168001,
+      "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+      "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+    },
+    "dependencyRows": 122773,
+    "compiled": {
+      "bytes": 400300,
+      "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+      "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+    },
+    "compiledRows": 1454,
+    "index": {
+      "bytes": 1492874,
+      "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+      "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+    },
+    "indexRows": 11567,
+    "fullTree": {
+      "bytes": 1527575,
+      "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+      "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+    },
+    "providerMembers": [
+      {
+        "name": "@agent-teams/provider-implementations",
+        "archive": {
+          "bytes": 186398,
+          "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+          "gitBlob": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3"
+        },
+        "regularMembers": 253,
+        "allRegularMembersEqual": true
+      },
+      {
+        "name": "@agent-teams/provider-session-contracts",
+        "archive": {
+          "bytes": 6230,
+          "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+          "gitBlob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8"
+        },
+        "regularMembers": 12,
+        "allRegularMembersEqual": true
+      }
+    ],
+    "tools": [
+      {
+        "tool": "node",
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "realPath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "bytes": 126939688,
+        "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+        "gitBlob": "97b7784b737e5bda3ec45af8c65508bd61001d0c"
+      },
+      {
+        "tool": "git",
+        "path": "/usr/local/bin/git",
+        "realPath": "/usr/local/bin/git",
+        "bytes": 19295504,
+        "sha256": "8a2ae22e7898e163330a96319b541f92ed6f90fc87576414f72c5a89aa1dc352",
+        "gitBlob": "d51aaf6e2f66bdf456e2d198085d4d35054433df"
+      },
+      {
+        "tool": "python",
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "realPath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12",
+        "bytes": 30894944,
+        "sha256": "fa67443527ed9647f760d807e2a38f26340757123e643c4639cf273ed15d5ea7",
+        "gitBlob": "cdff710ca21bf61260e4c7d7f3818ecd65cba2e7"
+      },
+      {
+        "tool": "scriptShell",
+        "path": "/bin/sh",
+        "realPath": "/usr/bin/dash",
+        "bytes": 129736,
+        "sha256": "a6f559e00b69a4aa4d8cb607be18d9386c5aee55c509e2c075549dcf00e00fc7",
+        "gitBlob": "965067be6aaf758adf88a3ff5539f41b25770579"
+      }
+    ],
+    "pnpm": {
+      "bytes": 238649,
+      "sha256": "e814a4ca22111e747db4386274e92f596f0a26d7e4b5bc687f8d1ccf61510a77",
+      "gitBlob": "2f917a18c33c04a1c6398d1adf644ce62fb8e39f"
+    },
+    "eightInputPins": {
+      "setupBinding": {
+        "path": "/tmp/c714-fresh-bootstrap-review/binding.json",
+        "bytes": 2790411,
+        "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+        "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+      },
+      "sourceFull": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/source-restore-source-after.json",
+        "bytes": 3451167,
+        "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+        "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+      },
+      "sourceNonDoc": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-source-after.json",
+        "bytes": 2478318,
+        "sha256": "59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751",
+        "gitBlob": "51bf0d0962e07fcc7843fcd65c3202ec9133a607"
+      },
+      "dependencies": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json",
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "compiled": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-compiled-after.json",
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      },
+      "pnpm": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/pnpm-inventory.json",
+        "bytes": 253936,
+        "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+        "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c"
+      },
+      "currentBoundary": {
+        "path": "/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json",
+        "bytes": 3654,
+        "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+        "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+      },
+      "providers": {
+        "path": "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json",
+        "bytes": 789090,
+        "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+        "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+      }
+    },
+    "originalFullBodyEvidenceContainers": [
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-bootstrap-tool-compiled-metadata-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5192e6e0290dd5beaf486a3315b984759fef96bd",
+        "bytes": 2572284,
+        "sha256": "22fe3985fc1fa3708a4c0387ecbb955c687d653538e11ba1fed1a64d19633652"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-bootstrap-dependencies-01-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "bc970c1035aa7804b9fd6f50e45204fb466ba02f",
+        "bytes": 4326013,
+        "sha256": "78b5d2718cb8d11b44bfff74d83d29bedf28f5c6cdf74ba5fda2ae5a78cd751c"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-bootstrap-dependencies-02-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "36e809c267f130aa696632f14f9f25d32b13bea3",
+        "bytes": 4141629,
+        "sha256": "867bad8dc5bea19cfabd3e5e33748228e3a119129b8be4ff72f43fea8c4b3abb"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-bootstrap-dependencies-03-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ec99ecaf06e8a2f013944e66983c5e771b9f86a5",
+        "bytes": 4204973,
+        "sha256": "1c63baf237ccf2485bb8787b50f9a243953c431f490cb970f55567d9543ebd76"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-bootstrap-dependencies-04-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "93491c2c85d205867ce5f25363d0c33d0c8f3420",
+        "bytes": 4167930,
+        "sha256": "b1c98bd7747f44ca2ff26d35c8dd3dec845bc52a47e0f85b42a4ca7560b358b0"
+      }
+    ],
+    "wholeBodyReuseQualification": "Every actual source/dependency/compiled/tree/index file at all six boundaries matches bytes+SHA256+Git identity of the already completely read/reconstructed accepted body. The complete39MB dependency body was reconstructed in the earlier independent bootstrap audit; this review reuses only that whole verified body and validates every present actual identity, without count-only/prefix substitution or a claim of new runtime execution.",
+    "beforeAfterProviderToolPnpmEnvironmentCacheEqual": true,
+    "explicitAssignments": {
+      "PATH": "/workspace/scratch/c714-fresh-20261116/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin",
+      "TMPDIR": "/tmp/c714-ui-conversation-evidence/test-tmp",
+      "XDG_CACHE_HOME": "/workspace/scratch/c714-fresh-20261116/cache",
+      "XDG_STATE_HOME": "/workspace/scratch/c714-fresh-20261116/state",
+      "AGENT_TEAMS_INSTALL_PROFILE": "node-ci",
+      "CI": "true",
+      "GIT_CONFIG_NOSYSTEM": "1",
+      "GIT_CONFIG_GLOBAL": "/dev/null",
+      "GIT_TERMINAL_PROMPT": "0",
+      "XDG_CONFIG_HOME": "/workspace/scratch/c714-fresh-20261116/config",
+      "XDG_DATA_HOME": "/workspace/scratch/c714-fresh-20261116/data",
+      "PNPM_HOME": "/workspace/scratch/c714-fresh-20261116/bin",
+      "PNPM_CONFIG_PM_ON_FAIL": "error",
+      "PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN": "false",
+      "PNPM_CONFIG_ENGINE_STRICT": "true",
+      "PNPM_CONFIG_ENABLE_PRE_POST_SCRIPTS": "true",
+      "PNPM_CONFIG_IGNORE_PNPMFILE": "true",
+      "PNPM_CONFIG_STORE_DIR": "/workspace/scratch/c714-fresh-20261116/store",
+      "PNPM_CONFIG_ENABLE_GLOBAL_VIRTUAL_STORE": "false",
+      "PNPM_CONFIG_UPDATE_NOTIFIER": "false",
+      "PNPM_CONFIG_SCRIPT_SHELL": "/bin/sh",
+      "AGENT_BACKEND_TEST_NODE": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "NODE_DISABLE_COMPILE_CACHE": "1"
+    },
+    "absentConfigs": [
+      "/home/agent/.npmrc",
+      "/home/agent/.pnpmrc",
+      "/home/agent/.config/pnpm/rc",
+      "/etc/npmrc",
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/etc/npmrc",
+      "/home/agent/.local/etc/npmrc"
+    ],
+    "retainedBootstrapCache": {
+      "files": 7,
+      "bytes": 2225548,
+      "wholeBeforeAfterAndAcceptedGreenEqual": true,
+      "compileCacheDisabledBy": "NODE_DISABLE_COMPILE_CACHE=1",
+      "qualification": "This is the seven retained bootstrap Node cache files. The scoped lint command retains its existing ESLint cache flags; no assertion that all unrelated filesystem/output caches are untouched."
+    }
+  },
+  "phases": [
+    {
+      "command": "lint",
+      "receipt": {
+        "bytes": 24936,
+        "sha256": "5bb300c7853e1a680ebe114d95ca24d60102f956576f5b05c47dea0b9291b954",
+        "gitBlob": "1a1c35adcf188bacb66930b69d89d02015cb180c"
+      },
+      "primaryReceipt": {
+        "bytes": 1206,
+        "sha256": "8def1ef74721793db1fb4a91e563ee4c45dfb5715d50d484abcb1e11855cb1d4",
+        "gitBlob": "e7525ed9349704fc2cc742a8436ac154997643c6"
+      },
+      "primaryStart": {
+        "bytes": 713,
+        "sha256": "2b27f3ff68bd0041748e4a57f01affbb03dcda12de53365b1ef9375b406430a5",
+        "gitBlob": "5005ab2fa2e3be6eafc1bec50ffe60c10cd20dd1"
+      },
+      "primary": {
+        "argv": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+          "--config.pm-on-fail=error",
+          "--config.verify-deps-before-run=false",
+          "--config.engine-strict=true",
+          "lint:fast:files",
+          "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T15:39:12.842968+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 30,
+        "metadataOnly": false,
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/lint-command-1.log",
+          "bytes": 272,
+          "sha256": "c0ff9944f59867a8f5cc920acfa891350ca3727a2a1ced460a29b7cf4d4022f1",
+          "gitBlob": "b175040d78318e660b88a695ed63f9cd325855e1"
+        },
+        "finishedAt": "2026-11-16T15:39:22.624839+00:00",
+        "durationSeconds": 9.781771877998835,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true
+      },
+      "completeRaw": "$ eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content scripts/legacy-agent-host/desktop-ui-controls.ts scripts/legacy-agent-host/desktop-emulated-selection-ui.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\n",
+      "rawOutcome": {
+        "scope": "Three original conversation source paths only",
+        "diagnostics": 0,
+        "originalCacheFlagRetained": true,
+        "primaryExit": 0
+      },
+      "actualOuterExecutor": {
+        "start": {
+          "chunk_id": "d2f2ed",
+          "wall_time_seconds": 1.000821653,
+          "session_id": 33804,
+          "original_token_count": 0,
+          "output": ""
+        },
+        "completion": {
+          "chunk_id": "0f2ebf",
+          "wall_time_seconds": 0.000028805,
+          "exit_code": 0,
+          "original_token_count": 278,
+          "output": "{\"command\": \"lint\", \"action\": \"run\", \"exitCode\": 0, \"exitSignal\": null, \"timedOut\": false, \"executionError\": null, \"postflightError\": null, \"inputsPreserved\": true, \"commandCompletedNormally\": true, \"scopeCompleted\": true, \"preflightSeconds\": 135.3852573969998, \"commandPhaseSeconds\": 9.783031872997526, \"cleanupSeconds\": 0, \"postflightSeconds\": 88.40826932300115, \"totalInvocationSeconds\": 233.5771721070014, \"rawCombinedOutput\": {\"path\": \"/tmp/c714-ui-conversation-evidence/lint-command-1.log\", \"bytes\": 272, \"sha256\": \"c0ff9944f59867a8f5cc920acfa891350ca3727a2a1ced460a29b7cf4d4022f1\", \"gitBlob\": \"b175040d78318e660b88a695ed63f9cd325855e1\"}, \"cleanup\": {\"capturedSessionMembersAfter\": [], \"newTestTempsRemaining\": [], \"scope\": \"Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof.\"}, \"signalAdmissionCutoff\": {\"at\": \"2026-11-16T15:40:51.034070+00:00\", \"pendingSignals\": [], \"supervisorExitZeroRequired\": true, \"scope\": \"Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.\"}}\n"
+        }
+      },
+      "all18PrintedFields": [
+        "command",
+        "action",
+        "exitCode",
+        "exitSignal",
+        "timedOut",
+        "executionError",
+        "postflightError",
+        "inputsPreserved",
+        "commandCompletedNormally",
+        "scopeCompleted",
+        "preflightSeconds",
+        "commandPhaseSeconds",
+        "cleanupSeconds",
+        "postflightSeconds",
+        "totalInvocationSeconds",
+        "rawCombinedOutput",
+        "cleanup",
+        "signalAdmissionCutoff"
+      ],
+      "allPrintedFieldsEqual": true,
+      "attemptMarker": {
+        "bytes": 33,
+        "sha256": "dc5a55797394f7f3a9c1755f3c8bdfa4bd7ca1b3e4401c7fc86dac18cea657fd",
+        "gitBlob": "8fd08a6c34efa8f03bf4007a98c1a29457fd63a4",
+        "body": "2026-11-16T15:36:57.455903+00:00\n"
+      },
+      "timings": {
+        "startedAt": "2026-11-16T15:36:57.455949+00:00",
+        "preflightSeconds": 135.3852573969998,
+        "primarySeconds": 9.781771877998835,
+        "commandPhaseSeconds": 9.783031872997526,
+        "cleanupSeconds": 0,
+        "postflightSeconds": 88.40826932300115,
+        "totalSeconds": 233.5771721070014,
+        "accountingOverheadSeconds": 0.0006135140029073227,
+        "cutoff": {
+          "at": "2026-11-16T15:40:51.034070+00:00",
+          "pendingSignals": [],
+          "supervisorExitZeroRequired": true,
+          "scope": "Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission."
+        },
+        "finishedAt": "2026-11-16T15:40:51.034096+00:00"
+      },
+      "census": {
+        "files": 67,
+        "fullBytes": 90181351,
+        "uniqueBodies": 42,
+        "literalInstances": 57,
+        "literalBytes": 46945,
+        "literalUnique": 37,
+        "largeInstances": 10,
+        "largeBytes": 90134406,
+        "largeUnique": 5,
+        "exact67ExpectedPaths": true,
+        "all57ActualSmallBodiesFreshlyRehashed": true,
+        "canonicalFullEntryArrayDigest": {
+          "bytes": 14578,
+          "sha256": "cc1a0828e39b112ca5ee79bedfd278c455ecb332b04768c6262da61b95ad8e4b",
+          "gitBlob": "0759326884c4fb1385169acbfa3a6609cc0f28c2"
+        }
+      },
+      "metadataRows": [
+        {
+          "sequence": 1,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1053,
+            "sha256": "9db665e39496c55fc9e3dfaa141928956a8523d3a00da552765737c7f1cb8835",
+            "gitBlob": "be58cef04f86d14e239e4c086bde0b6a08a97c62"
+          },
+          "start": {
+            "bytes": 293,
+            "sha256": "4f40514aec51d68fed43666d5dd5b86564bbf82a74199a047112abea4e497a49",
+            "gitBlob": "a1eab184a554f7fbaf7cfb6bc0560e55897d40f5"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "rev-parse",
+            "HEAD"
+          ],
+          "startedAt": "2026-11-16T15:36:57.456945+00:00",
+          "finishedAt": "2026-11-16T15:36:57.470324+00:00",
+          "durationSeconds": 0.011771045003115432,
+          "capturedPid": 3,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-before-metadata-1.log",
+            "bytes": 41,
+            "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+            "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-before-metadata-1.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 2,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1060,
+            "sha256": "f5bfdda222e046898a0c201f2b82d40b0a36105ef5ef94ef0fac2cc9eb171936",
+            "gitBlob": "03d0146bc2c96623bf862958da087fc6a64ccfa7"
+          },
+          "start": {
+            "bytes": 300,
+            "sha256": "fc702b5d0447d524d7045f674199e696a55dba51d362d1a24899d4ed8056f18b",
+            "gitBlob": "6658843526fd0a6e250f15fe6f2f1c9609799671"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "rev-parse",
+            "HEAD^{tree}"
+          ],
+          "startedAt": "2026-11-16T15:36:57.470680+00:00",
+          "finishedAt": "2026-11-16T15:36:57.481133+00:00",
+          "durationSeconds": 0.010380165000242414,
+          "capturedPid": 4,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-before-metadata-2.log",
+            "bytes": 41,
+            "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+            "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-before-metadata-2.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 3,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1084,
+            "sha256": "d808ac464dfc114d027e365e8ae71a8dd8d6468ce8e3664e840e26e59c7cb14b",
+            "gitBlob": "731134c52733a2cc7728712075fe2ee3ba3b7929"
+          },
+          "start": {
+            "bytes": 321,
+            "sha256": "e28168cd07004ce782c468c24f63df081d0dabf96609e39eeaa21cbf710f40b6",
+            "gitBlob": "259b78f98c957d093ffa2ef3898e919360f39efb"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "ls-tree",
+            "-rz",
+            "--full-tree",
+            "HEAD"
+          ],
+          "startedAt": "2026-11-16T15:36:57.481510+00:00",
+          "finishedAt": "2026-11-16T15:36:57.768811+00:00",
+          "durationSeconds": 0.2870466979984485,
+          "capturedPid": 5,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-before-metadata-3.log",
+            "bytes": 1527575,
+            "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+            "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-before-metadata-3.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 4,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1080,
+            "sha256": "d4a5607891e86f07ff2cf554af2ce1e0decb3b1149ae0e89a3962489a02c0bf9",
+            "gitBlob": "590772c90a1156faf985f970a199ab94fa9b4462"
+          },
+          "start": {
+            "bytes": 321,
+            "sha256": "a2129633b820cece3ffc42b6ed7a586f45fb178f7f7b5c7b4a4c06725516865a",
+            "gitBlob": "6789dbb642d675b1388d0abb07f6273d1c0e4745"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "diff",
+            "--cached",
+            "--name-only",
+            "-z"
+          ],
+          "startedAt": "2026-11-16T15:36:57.840256+00:00",
+          "finishedAt": "2026-11-16T15:36:57.861239+00:00",
+          "durationSeconds": 0.020644662999984575,
+          "capturedPid": 6,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-before-metadata-4.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-before-metadata-4.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 5,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1089,
+            "sha256": "1b7d46a65664930b2d3d61351c829dabcd71611d406bcea824d5372cf2cdea46",
+            "gitBlob": "bf7758ec0caa3dca57ac3194615d4ff2c098c430"
+          },
+          "start": {
+            "bytes": 332,
+            "sha256": "163d140818a38df1ec790dfdf0b8f802f98072075cff3d9d64a3562894669621",
+            "gitBlob": "025312ef072b486fd71870888a5b0e9ce4befeef"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "-z"
+          ],
+          "startedAt": "2026-11-16T15:36:57.861476+00:00",
+          "finishedAt": "2026-11-16T15:36:59.089631+00:00",
+          "durationSeconds": 1.2281159150006715,
+          "capturedPid": 7,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-before-metadata-5.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-before-metadata-5.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 6,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1069,
+            "sha256": "13b3122c8f5bcf1b0f401c8989535fcdef490b9ea27499cb1caebeb6ba70f9a3",
+            "gitBlob": "d5dc30211b6839360b6e86a515171577d6efee1f"
+          },
+          "start": {
+            "bytes": 305,
+            "sha256": "d241d69a1165acc9868b63e4b1637abd3c712f3431898ef40835203a7dee2dd7",
+            "gitBlob": "5b8f10c3535a5c08d6e571c52fb60e93e08d5711"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "ls-files",
+            "--stage",
+            "-z"
+          ],
+          "startedAt": "2026-11-16T15:36:59.092812+00:00",
+          "finishedAt": "2026-11-16T15:36:59.134607+00:00",
+          "durationSeconds": 0.04082645599919488,
+          "capturedPid": 8,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-before-metadata-6.log",
+            "bytes": 1492874,
+            "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+            "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-before-metadata-6.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 7,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1077,
+            "sha256": "b3c4a0a85d90e10148ac0c6148a5718196d200268cc94c00e20277d0c194968f",
+            "gitBlob": "8d934bb6b3460ac345b4444a5f9b1e34b1946392"
+          },
+          "start": {
+            "bytes": 317,
+            "sha256": "b69098b3357c67a3b813e3b2a0749f15cb3c4646ed576ec42c861d54cb9055f3",
+            "gitBlob": "3841e52b562681dea88ad373ed52ab1a10126dc1"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "diff",
+            "--name-only",
+            "-z",
+            "HEAD"
+          ],
+          "startedAt": "2026-11-16T15:36:59.172766+00:00",
+          "finishedAt": "2026-11-16T15:36:59.210540+00:00",
+          "durationSeconds": 0.03745816700029536,
+          "capturedPid": 9,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-before-metadata-7.log",
+            "bytes": 108,
+            "sha256": "c8c29d8e0318b85c6f9f90bb33daad20abd9bf1d03dc0c36a1b86b6838108915",
+            "gitBlob": "f154b3782beb8bc58771c8bfab8a6a16dbcdd0d8"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-before-metadata-7.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 8,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1052,
+            "sha256": "1c11924843edfbb7ed6214e2413a5dfb3a8fb4f478a1d969e088f7b89def23c9",
+            "gitBlob": "32e95e4eb29bc113489b69f2df92869cc984ab1d"
+          },
+          "start": {
+            "bytes": 293,
+            "sha256": "0bd07fb7f4c0fe94ff9bbc317989208309c094d9e9e0bdf8dadeee17f396910b",
+            "gitBlob": "ec19fa1bb020ce33fa184bdb34688f8c52427b6a"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "rev-parse",
+            "HEAD"
+          ],
+          "startedAt": "2026-11-16T15:39:22.626283+00:00",
+          "finishedAt": "2026-11-16T15:39:22.636603+00:00",
+          "durationSeconds": 0.010124109001480974,
+          "capturedPid": 60,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-after-metadata-8.log",
+            "bytes": 41,
+            "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+            "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-after-metadata-8.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 9,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1059,
+            "sha256": "f3b2291de53507212ff754f09f9fe64835a60366da0634eb33df9c945b33a412",
+            "gitBlob": "84dc10de1c4a9b441dd7b97d690c10468ff91b1b"
+          },
+          "start": {
+            "bytes": 300,
+            "sha256": "bc7a46064a125886e536a34264ce3cded9a23fd5d92505b2bccc65040168a224",
+            "gitBlob": "427774abcc07395803b3703acaea9d3b42570344"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "rev-parse",
+            "HEAD^{tree}"
+          ],
+          "startedAt": "2026-11-16T15:39:22.636786+00:00",
+          "finishedAt": "2026-11-16T15:39:22.644507+00:00",
+          "durationSeconds": 0.007681270999455592,
+          "capturedPid": 61,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-after-metadata-9.log",
+            "bytes": 41,
+            "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+            "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-after-metadata-9.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 10,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1085,
+            "sha256": "e949dfe4b331a998b8dc8e7ff5b95aebfe57325c9d774ef0ae5b2d7e1760162c",
+            "gitBlob": "4632cb28edb8e17a4c9e74009b4dd8128c0ec471"
+          },
+          "start": {
+            "bytes": 321,
+            "sha256": "3ba8715b8835a71da11c36d121bdadf2645c39da147137ceea25c97d453da782",
+            "gitBlob": "99b4f60bdc15827cab0730ca99988fe7ccdd3134"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "ls-tree",
+            "-rz",
+            "--full-tree",
+            "HEAD"
+          ],
+          "startedAt": "2026-11-16T15:39:22.645298+00:00",
+          "finishedAt": "2026-11-16T15:39:22.828904+00:00",
+          "durationSeconds": 0.1835087020008359,
+          "capturedPid": 62,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-after-metadata-10.log",
+            "bytes": 1527575,
+            "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+            "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-after-metadata-10.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 11,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1081,
+            "sha256": "52b3e5b3164aff4145f9eef98488872f94dcf9f15d9788162bd98339ecd92acc",
+            "gitBlob": "1c1909048e27cb9873c9681e4e2e75597dbae000"
+          },
+          "start": {
+            "bytes": 321,
+            "sha256": "808b52d461792b4f366041a53a70f1dafea10dbdda980d14dde6d9a5bad86c31",
+            "gitBlob": "314731f8ce94121fa7e2d22bdd751deb1e688fdb"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "diff",
+            "--cached",
+            "--name-only",
+            "-z"
+          ],
+          "startedAt": "2026-11-16T15:39:22.881010+00:00",
+          "finishedAt": "2026-11-16T15:39:22.900817+00:00",
+          "durationSeconds": 0.019676189000165323,
+          "capturedPid": 63,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-after-metadata-11.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-after-metadata-11.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 12,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1090,
+            "sha256": "8cd6c8e947388574eb5faa062509a2db5bec20d62ef6d18cfceab664c48e0753",
+            "gitBlob": "812c72a94ac70cc13a81d4f56f327227db95f3e1"
+          },
+          "start": {
+            "bytes": 332,
+            "sha256": "353da2a9a4a07f718e404b188581ae982b3d073444a9d78a436b0b7a9f14ae93",
+            "gitBlob": "5ad255e7c46c868fa5e4267549f8090e1d3f8041"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "-z"
+          ],
+          "startedAt": "2026-11-16T15:39:22.902186+00:00",
+          "finishedAt": "2026-11-16T15:39:23.452168+00:00",
+          "durationSeconds": 0.5496409010011121,
+          "capturedPid": 64,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-after-metadata-12.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-after-metadata-12.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 13,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1070,
+            "sha256": "3855d2a2b022b367dc43c095912894990f317442f9472acefcd3ce9932f519ec",
+            "gitBlob": "7c376bcaa17055616c7ab79881b48673601110e2"
+          },
+          "start": {
+            "bytes": 305,
+            "sha256": "8ffec9479770599e5ddef557b1b5ee284806c5d74f8186a22b9ee8e8911837ee",
+            "gitBlob": "9252633d72baca07d8d37f46eb704938b752d7da"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "ls-files",
+            "--stage",
+            "-z"
+          ],
+          "startedAt": "2026-11-16T15:39:23.478054+00:00",
+          "finishedAt": "2026-11-16T15:39:23.527572+00:00",
+          "durationSeconds": 0.04866748900167295,
+          "capturedPid": 65,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-after-metadata-13.log",
+            "bytes": 1492874,
+            "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+            "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-after-metadata-13.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 14,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1078,
+            "sha256": "5e6013ae5918e04bbb652228411f841296e06896cfecb93d8da3803818a5e297",
+            "gitBlob": "5026c814d3097aaebf3b2d7d8594124b96c81e16"
+          },
+          "start": {
+            "bytes": 317,
+            "sha256": "a3866d754672cc3e188ea92c515bfbf9acb6dffec644ccb1a07465e16491d305",
+            "gitBlob": "b4ee926afb07bf17c0d0d21b890887d1d6c76345"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "diff",
+            "--name-only",
+            "-z",
+            "HEAD"
+          ],
+          "startedAt": "2026-11-16T15:39:23.602858+00:00",
+          "finishedAt": "2026-11-16T15:39:23.671011+00:00",
+          "durationSeconds": 0.06718596900100238,
+          "capturedPid": 66,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-after-metadata-14.log",
+            "bytes": 108,
+            "sha256": "c8c29d8e0318b85c6f9f90bb33daad20abd9bf1d03dc0c36a1b86b6838108915",
+            "gitBlob": "f154b3782beb8bc58771c8bfab8a6a16dbcdd0d8"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/lint-after-metadata-14.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        }
+      ],
+      "wholeSourceBefore": {
+        "path": "/tmp/c714-ui-conversation-evidence/lint-before-source.json",
+        "bytes": 2478453,
+        "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+        "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+      },
+      "wholeSourceAfter": {
+        "path": "/tmp/c714-ui-conversation-evidence/lint-after-source.json",
+        "bytes": 2478453,
+        "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+        "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+      },
+      "environment": {
+        "oneCapturedSnapshotBeforeAfter": true,
+        "transport": {
+          "canonicalSha256": "539a6d6d1c4268ccd3a47d208d83c470f5fd3317085445d649eaf6cafd80f8b8",
+          "values": [
+            {
+              "key": "ALL_PROXY",
+              "bytes": 25,
+              "sha256": "ae8a8a3481dbbd81e175fb83511233e0c9e06f2e284e973a7e9468c31e469842"
+            },
+            {
+              "key": "HTTPS_PROXY",
+              "bytes": 22,
+              "sha256": "fc62f072ef0d6458e06fac876d960d7cbef1841196e4df5ebb9b6687576744eb"
+            },
+            {
+              "key": "HTTP_PROXY",
+              "bytes": 22,
+              "sha256": "fc62f072ef0d6458e06fac876d960d7cbef1841196e4df5ebb9b6687576744eb"
+            },
+            {
+              "key": "NO_PROXY",
+              "bytes": 63,
+              "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+            },
+            {
+              "key": "NPM_CONFIG_AUDIT",
+              "bytes": 5,
+              "sha256": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa"
+            },
+            {
+              "key": "NPM_CONFIG_FUND",
+              "bytes": 5,
+              "sha256": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa"
+            },
+            {
+              "key": "NPM_CONFIG_HTTPS_PROXY",
+              "bytes": 22,
+              "sha256": "fc62f072ef0d6458e06fac876d960d7cbef1841196e4df5ebb9b6687576744eb"
+            },
+            {
+              "key": "NPM_CONFIG_HTTP_PROXY",
+              "bytes": 22,
+              "sha256": "fc62f072ef0d6458e06fac876d960d7cbef1841196e4df5ebb9b6687576744eb"
+            },
+            {
+              "key": "NPM_CONFIG_NOPROXY",
+              "bytes": 63,
+              "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+            },
+            {
+              "key": "NPM_CONFIG_PREFIX",
+              "bytes": 18,
+              "sha256": "e0434a72761750c4ca689ad02b7a4341b6bd7e4660489f815c604d27e6342032"
+            },
+            {
+              "key": "NPM_CONFIG_PROXY",
+              "bytes": 22,
+              "sha256": "fc62f072ef0d6458e06fac876d960d7cbef1841196e4df5ebb9b6687576744eb"
+            },
+            {
+              "key": "all_proxy",
+              "bytes": 25,
+              "sha256": "ae8a8a3481dbbd81e175fb83511233e0c9e06f2e284e973a7e9468c31e469842"
+            },
+            {
+              "key": "http_proxy",
+              "bytes": 22,
+              "sha256": "fc62f072ef0d6458e06fac876d960d7cbef1841196e4df5ebb9b6687576744eb"
+            },
+            {
+              "key": "https_proxy",
+              "bytes": 22,
+              "sha256": "fc62f072ef0d6458e06fac876d960d7cbef1841196e4df5ebb9b6687576744eb"
+            },
+            {
+              "key": "no_proxy",
+              "bytes": 63,
+              "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+            },
+            {
+              "key": "npm_config_http_proxy",
+              "bytes": 22,
+              "sha256": "fc62f072ef0d6458e06fac876d960d7cbef1841196e4df5ebb9b6687576744eb"
+            },
+            {
+              "key": "npm_config_https_proxy",
+              "bytes": 22,
+              "sha256": "fc62f072ef0d6458e06fac876d960d7cbef1841196e4df5ebb9b6687576744eb"
+            },
+            {
+              "key": "npm_config_noproxy",
+              "bytes": 63,
+              "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+            },
+            {
+              "key": "npm_config_proxy",
+              "bytes": 22,
+              "sha256": "fc62f072ef0d6458e06fac876d960d7cbef1841196e4df5ebb9b6687576744eb"
+            }
+          ],
+          "keys": 19,
+          "assignments": 23,
+          "wholeBeforeAfterEqual": true,
+          "fixedAndAliasChecksPassed": true
+        },
+        "explicitAssignmentsMatchAcceptedGreen": true,
+        "absentConfigsMatchAcceptedGreen": true,
+        "homePreserved": true,
+        "codexHomePreserved": true
+      },
+      "processCensus": [
+        {
+          "pid": 1,
+          "name": "codex",
+          "state": "S",
+          "ppid": 0,
+          "pgid": 1,
+          "session": 1,
+          "startTicks": 1890499
+        },
+        {
+          "pid": 2,
+          "name": "python3",
+          "state": "R",
+          "ppid": 1,
+          "pgid": 1,
+          "session": 1,
+          "startTicks": 1890502
+        }
+      ],
+      "bootstrapCache": {
+        "files": 7,
+        "bytes": 2225548,
+        "wholeBeforeAfterAndGreenEqual": true
+      },
+      "rawExportQualification": {
+        "firstDataOnlyRead": "The first read-only Python export returned no completed exit within1000ms; orchestration raised Error without retaining the underlying tool result/session. No test/guard/source process was reexecuted and no file was written. The repeated complete data-only read completed as retained here.",
+        "behavioralAttemptsUnchanged": true
+      },
+      "errors": []
+    },
+    {
+      "command": "source-size",
+      "receipt": {
+        "bytes": 24823,
+        "sha256": "9f6182a6bd98e1a1ee833728aaf9b18f56d4118acd5eaad268430d1358e5e110",
+        "gitBlob": "911c1d56bda3e3ed76dea6a175979ba9348254dd"
+      },
+      "primaryReceipt": {
+        "bytes": 1035,
+        "sha256": "3695bbeb8c2ef156c2012698efa3c0c279f20951a2190c1ff89876fcc18d34dd",
+        "gitBlob": "4f7b41221690b4f52337e5adb0c19966d7a812d3"
+      },
+      "primaryStart": {
+        "bytes": 535,
+        "sha256": "25109deed2999340b76bcdf10878f5ab352c7e545543ca317d3ff34773be863e",
+        "gitBlob": "60f033eb08fb5f5ded8f17468878bf8f5bbd175b"
+      },
+      "primary": {
+        "argv": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+          "--config.pm-on-fail=error",
+          "--config.verify-deps-before-run=false",
+          "--config.engine-strict=true",
+          "guard:source-file-size"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T15:45:45.187870+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 30,
+        "metadataOnly": false,
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/source-size-command-1.log",
+          "bytes": 249,
+          "sha256": "26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f",
+          "gitBlob": "399a78f77777d0669218be2d4dae5360657308fa"
+        },
+        "finishedAt": "2026-11-16T15:45:54.456216+00:00",
+        "durationSeconds": 9.268049633999908,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true
+      },
+      "completeRaw": "$ node ./scripts/ci/check-source-file-size.mjs\nSource file size guard passed: 5020 production files checked, 141 frozen legacy exceptions, 800-line limit.\n86 legacy file(s) are below their frozen caps; lower those caps when committing the refactor.\n",
+      "rawOutcome": {
+        "productionFiles": 5020,
+        "frozenExceptions": 141,
+        "lineLimit": 800,
+        "belowCapLegacyInformational": 86,
+        "baselineChanges": 0,
+        "primaryExit": 0
+      },
+      "actualOuterExecutor": {
+        "start": {
+          "chunk_id": "afef43",
+          "wall_time_seconds": 1.00115456,
+          "session_id": 92277,
+          "original_token_count": 0,
+          "output": ""
+        },
+        "completion": {
+          "chunk_id": "439a92",
+          "wall_time_seconds": 0.000028294,
+          "exit_code": 0,
+          "original_token_count": 282,
+          "output": "{\"command\": \"source-size\", \"action\": \"run\", \"exitCode\": 0, \"exitSignal\": null, \"timedOut\": false, \"executionError\": null, \"postflightError\": null, \"inputsPreserved\": true, \"commandCompletedNormally\": true, \"scopeCompleted\": true, \"preflightSeconds\": 187.70758165200095, \"commandPhaseSeconds\": 9.26855888299906, \"cleanupSeconds\": 0, \"postflightSeconds\": 165.62848875499913, \"totalInvocationSeconds\": 362.60509694699795, \"rawCombinedOutput\": {\"path\": \"/tmp/c714-ui-conversation-evidence/source-size-command-1.log\", \"bytes\": 249, \"sha256\": \"26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f\", \"gitBlob\": \"399a78f77777d0669218be2d4dae5360657308fa\"}, \"cleanup\": {\"capturedSessionMembersAfter\": [], \"newTestTempsRemaining\": [], \"scope\": \"Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof.\"}, \"signalAdmissionCutoff\": {\"at\": \"2026-11-16T15:48:40.084860+00:00\", \"pendingSignals\": [], \"supervisorExitZeroRequired\": true, \"scope\": \"Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.\"}}\n"
+        }
+      },
+      "all18PrintedFields": [
+        "command",
+        "action",
+        "exitCode",
+        "exitSignal",
+        "timedOut",
+        "executionError",
+        "postflightError",
+        "inputsPreserved",
+        "commandCompletedNormally",
+        "scopeCompleted",
+        "preflightSeconds",
+        "commandPhaseSeconds",
+        "cleanupSeconds",
+        "postflightSeconds",
+        "totalInvocationSeconds",
+        "rawCombinedOutput",
+        "cleanup",
+        "signalAdmissionCutoff"
+      ],
+      "allPrintedFieldsEqual": true,
+      "attemptMarker": {
+        "bytes": 33,
+        "sha256": "bf08223969936eb67d9bc4af03c3aa3018186da3d8db01657c1f52118d786d49",
+        "gitBlob": "ea57561bd5257886396332b300baa4f03d4af2ff",
+        "body": "2026-11-16T15:42:37.478986+00:00\n"
+      },
+      "timings": {
+        "startedAt": "2026-11-16T15:42:37.479028+00:00",
+        "preflightSeconds": 187.70758165200095,
+        "primarySeconds": 9.268049633999908,
+        "commandPhaseSeconds": 9.26855888299906,
+        "cleanupSeconds": 0,
+        "postflightSeconds": 165.62848875499913,
+        "totalSeconds": 362.60509694699795,
+        "accountingOverheadSeconds": 0.0004676569988077972,
+        "cutoff": {
+          "at": "2026-11-16T15:48:40.084860+00:00",
+          "pendingSignals": [],
+          "supervisorExitZeroRequired": true,
+          "scope": "Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission."
+        },
+        "finishedAt": "2026-11-16T15:48:40.084931+00:00"
+      },
+      "census": {
+        "files": 67,
+        "fullBytes": 90181063,
+        "uniqueBodies": 42,
+        "literalInstances": 57,
+        "literalBytes": 46657,
+        "literalUnique": 37,
+        "largeInstances": 10,
+        "largeBytes": 90134406,
+        "largeUnique": 5,
+        "exact67ExpectedPaths": true,
+        "all57ActualSmallBodiesFreshlyRehashed": true,
+        "canonicalFullEntryArrayDigest": {
+          "bytes": 15047,
+          "sha256": "44b29b36b10fbd1a32ba2fec36fcff3ca8bfd0f7bf6ca7df38e6fcbb43849abd",
+          "gitBlob": "2f1cebe95e91d04bb4e78ae4f9905eac33b679eb"
+        }
+      },
+      "metadataRows": [
+        {
+          "sequence": 1,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1067,
+            "sha256": "cbdaac0ec2916c80c5ab271c6ccd03d0b6d1474143d5da49369e5ce2491f1b5b",
+            "gitBlob": "e336e8bb823af64f5c1af906294c7e09c2bada1a"
+          },
+          "start": {
+            "bytes": 293,
+            "sha256": "b918c3cd78ce57ae5262cf6e8dd73a3feb698670cc852093b4cc2b6270ddd165",
+            "gitBlob": "f8768a3c8577e43badfda92acb80558abe6fd4f4"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "rev-parse",
+            "HEAD"
+          ],
+          "startedAt": "2026-11-16T15:42:37.479851+00:00",
+          "finishedAt": "2026-11-16T15:42:37.489123+00:00",
+          "durationSeconds": 0.009183253001538105,
+          "capturedPid": 3,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-before-metadata-1.log",
+            "bytes": 41,
+            "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+            "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-before-metadata-1.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 2,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1074,
+            "sha256": "b7995a5f655a83d0c13ef824ab88fbce9df0de3b092965d9546d9077757040c5",
+            "gitBlob": "1b46901f62a27f23f4de73588a6822eba994629b"
+          },
+          "start": {
+            "bytes": 300,
+            "sha256": "faf5bd3250e2e33a5563740bcb772f981a89fed6558a620195d6ee3b795d9ec3",
+            "gitBlob": "2dbf11be34b003b93c93f65e864eeca9c6784714"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "rev-parse",
+            "HEAD^{tree}"
+          ],
+          "startedAt": "2026-11-16T15:42:37.489349+00:00",
+          "finishedAt": "2026-11-16T15:42:37.498060+00:00",
+          "durationSeconds": 0.008601667002949398,
+          "capturedPid": 4,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-before-metadata-2.log",
+            "bytes": 41,
+            "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+            "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-before-metadata-2.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 3,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1099,
+            "sha256": "46db16e6ffce5cc1a37829c147aafd5c2d1ac55867c57634404fa46d3072167a",
+            "gitBlob": "81c8e33088175a8fd5e31044587e986a0a6cf5a2"
+          },
+          "start": {
+            "bytes": 321,
+            "sha256": "dea66caa0484bfe315fc9f72a508bf74b2c9d4a3fcc19986c8251e01c760d8ee",
+            "gitBlob": "aefcff26659f2a71173fed39a9d4307265e8bec9"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "ls-tree",
+            "-rz",
+            "--full-tree",
+            "HEAD"
+          ],
+          "startedAt": "2026-11-16T15:42:37.498241+00:00",
+          "finishedAt": "2026-11-16T15:42:37.669864+00:00",
+          "durationSeconds": 0.17159662400081288,
+          "capturedPid": 5,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-before-metadata-3.log",
+            "bytes": 1527575,
+            "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+            "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-before-metadata-3.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 4,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1093,
+            "sha256": "8a862ce5d23ef301c88617f06844092b3d89b6a9da1ea9ab6576dcc144404148",
+            "gitBlob": "7e4141ded6c47fefae64ee4c23416eec4a57cc6c"
+          },
+          "start": {
+            "bytes": 321,
+            "sha256": "0da8bdb4ef2bddae656cefaa63511a5e5be23218c742d05c1aec3fa02fdc8745",
+            "gitBlob": "cc8773679a480851e46845626f1a078b213ecd64"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "diff",
+            "--cached",
+            "--name-only",
+            "-z"
+          ],
+          "startedAt": "2026-11-16T15:42:37.707467+00:00",
+          "finishedAt": "2026-11-16T15:42:37.725025+00:00",
+          "durationSeconds": 0.01716409100117744,
+          "capturedPid": 6,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-before-metadata-4.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-before-metadata-4.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 5,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1103,
+            "sha256": "affc74b197e2affbca077b3e3752687de2200dfc6965c6902f8a831d6e2c0448",
+            "gitBlob": "8f3c8dc1423d1e8acb2bb788577b66342991641a"
+          },
+          "start": {
+            "bytes": 332,
+            "sha256": "01bf6848cbb2a65d43465bc1deebc49fea2c22c598e14868b853ac661aebf014",
+            "gitBlob": "ea1ad5149750ef87e23bc4d8ca45dc6fbc753048"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "-z"
+          ],
+          "startedAt": "2026-11-16T15:42:37.725311+00:00",
+          "finishedAt": "2026-11-16T15:42:38.401756+00:00",
+          "durationSeconds": 0.6761056760005886,
+          "capturedPid": 7,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-before-metadata-5.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-before-metadata-5.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 6,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1084,
+            "sha256": "de7d7cd169aa9731c67ec8dfe061ecc70cd4ff94e80a642acba90480380c62ea",
+            "gitBlob": "d03a5c84c629ca8349c57ae8ff8446e2fac77d22"
+          },
+          "start": {
+            "bytes": 305,
+            "sha256": "f28ad56c948aa5d90821d285dca4d8f784d1268a777880d3145d47fc594c0117",
+            "gitBlob": "983bdee7a39ad8925ee899389ab0e8f8397faf36"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "ls-files",
+            "--stage",
+            "-z"
+          ],
+          "startedAt": "2026-11-16T15:42:38.405264+00:00",
+          "finishedAt": "2026-11-16T15:42:38.431613+00:00",
+          "durationSeconds": 0.026139202000194928,
+          "capturedPid": 8,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-before-metadata-6.log",
+            "bytes": 1492874,
+            "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+            "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-before-metadata-6.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 7,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1091,
+            "sha256": "5db46f296c3062a5fc38e8c306926427014d0eec0517cdcc0da46adc9550d876",
+            "gitBlob": "9b5c5d6878b117cc1ea82cbc18e0216a86d10d70"
+          },
+          "start": {
+            "bytes": 317,
+            "sha256": "51d629b7a14bf840b609763b21ba2b48ee17659f15fa30bd77704ef0b11523ff",
+            "gitBlob": "60e5e0beb58e4da5f52e927b2431d23705ee5e6c"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "diff",
+            "--name-only",
+            "-z",
+            "HEAD"
+          ],
+          "startedAt": "2026-11-16T15:42:38.485324+00:00",
+          "finishedAt": "2026-11-16T15:42:38.561108+00:00",
+          "durationSeconds": 0.07541953599866247,
+          "capturedPid": 9,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-before-metadata-7.log",
+            "bytes": 108,
+            "sha256": "c8c29d8e0318b85c6f9f90bb33daad20abd9bf1d03dc0c36a1b86b6838108915",
+            "gitBlob": "f154b3782beb8bc58771c8bfab8a6a16dbcdd0d8"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-before-metadata-7.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 8,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1066,
+            "sha256": "28861d822b5a5e94d4e7851a2fe1b164e3e4fcd0ed726e86c7c50b40bc05c55d",
+            "gitBlob": "739da8fd87d4d85e9a5f5c94c24d610510a6b82b"
+          },
+          "start": {
+            "bytes": 293,
+            "sha256": "bffc845f0e9c2c1f693b1ca4a0bef343fc566b2d2481dc84bef68c71926a7121",
+            "gitBlob": "a2e8ba54268387e46fed29a14121576ab184989a"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "rev-parse",
+            "HEAD"
+          ],
+          "startedAt": "2026-11-16T15:45:54.456467+00:00",
+          "finishedAt": "2026-11-16T15:45:54.496590+00:00",
+          "durationSeconds": 0.039913993001391646,
+          "capturedPid": 52,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-after-metadata-8.log",
+            "bytes": 41,
+            "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+            "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-after-metadata-8.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 9,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1073,
+            "sha256": "3068b688bb81024dd4fba0881a985f95577788d3e5deceaeae19fac6508e3652",
+            "gitBlob": "5b42680f5981bdb6c33389529b343d690182a3d2"
+          },
+          "start": {
+            "bytes": 300,
+            "sha256": "44a5df3b888b24fc983c015ad09925ea56f28005831fc3d316149a7318c2b4da",
+            "gitBlob": "fa753065f9d5826accc7c964d8386ce365b2bf22"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "rev-parse",
+            "HEAD^{tree}"
+          ],
+          "startedAt": "2026-11-16T15:45:54.496812+00:00",
+          "finishedAt": "2026-11-16T15:45:54.531707+00:00",
+          "durationSeconds": 0.034832772998925066,
+          "capturedPid": 53,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-after-metadata-9.log",
+            "bytes": 41,
+            "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+            "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-after-metadata-9.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 10,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1100,
+            "sha256": "daf1b9b5f70fc575703cdaef7527e0d336f62721b989fcf9bf3f0de8b160ba40",
+            "gitBlob": "dd5632bf15e4608b2ce07afd6bde11ba5d68634c"
+          },
+          "start": {
+            "bytes": 321,
+            "sha256": "2e86f2fd88d2bbbffbcc1e0eebcc21314d465832566295196188e9bbe57167a3",
+            "gitBlob": "1d78266c82ac1feac57a30dbcec204de36443d78"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "ls-tree",
+            "-rz",
+            "--full-tree",
+            "HEAD"
+          ],
+          "startedAt": "2026-11-16T15:45:54.532240+00:00",
+          "finishedAt": "2026-11-16T15:45:55.015248+00:00",
+          "durationSeconds": 0.48248108199913986,
+          "capturedPid": 54,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-after-metadata-10.log",
+            "bytes": 1527575,
+            "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+            "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-after-metadata-10.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 11,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1094,
+            "sha256": "54b87b825e9ad5048c40690f0d7c3c6b862115422eed0e7477ac876c8245a849",
+            "gitBlob": "3d68df78c7ad3ac290e51d1b1fc3eea31d54bd97"
+          },
+          "start": {
+            "bytes": 321,
+            "sha256": "6098b0fdae1eabdbc91f21f5f4ad32a560b76f2e901fd0f10203c29f906ea488",
+            "gitBlob": "c8cda88719d389bc0a85b5ce990b038612a6101f"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "diff",
+            "--cached",
+            "--name-only",
+            "-z"
+          ],
+          "startedAt": "2026-11-16T15:45:55.067642+00:00",
+          "finishedAt": "2026-11-16T15:45:55.106996+00:00",
+          "durationSeconds": 0.03912095199848409,
+          "capturedPid": 55,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-after-metadata-11.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-after-metadata-11.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 12,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1104,
+            "sha256": "6e3e4dba28e554a048ec41a187e2fc4ee167993e42073c0fdbbccbf9f19f56cf",
+            "gitBlob": "929f06a4173390fcfa7ff8b2fa9dcfadf573be2a"
+          },
+          "start": {
+            "bytes": 332,
+            "sha256": "b4f616a5aa2bd711ccff247e6e003bb5719ea47f91aa1337464c9e8fcb76aad9",
+            "gitBlob": "ff404acc6e678b7cb75d3a02a4d0faca85bdc22d"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "-z"
+          ],
+          "startedAt": "2026-11-16T15:45:55.111749+00:00",
+          "finishedAt": "2026-11-16T15:45:55.287053+00:00",
+          "durationSeconds": 0.1751890329978778,
+          "capturedPid": 56,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-after-metadata-12.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-after-metadata-12.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 13,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1084,
+            "sha256": "78fc9607f52ed2f0240eeaf1814c12cc4c90e5042621e5c9d512d307069393db",
+            "gitBlob": "be9db6ab8a126c30c17ccc4814d74d3e10878d07"
+          },
+          "start": {
+            "bytes": 305,
+            "sha256": "762d07aaf1b1638c9bf964f484dc069dbc7ff7e1daee8bb11a1356c7062bde4f",
+            "gitBlob": "edbc06b52e938369a95d621b43cfc4a99a1c7332"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "ls-files",
+            "--stage",
+            "-z"
+          ],
+          "startedAt": "2026-11-16T15:45:55.291798+00:00",
+          "finishedAt": "2026-11-16T15:45:55.379119+00:00",
+          "durationSeconds": 0.08693565000066883,
+          "capturedPid": 57,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-after-metadata-13.log",
+            "bytes": 1492874,
+            "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+            "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-after-metadata-13.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 14,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1092,
+            "sha256": "4335c3937e600ad86f3cb6d9447d0029fed193460e6393a93c0e73033d1efa61",
+            "gitBlob": "7fe39ebda7bd8f92318b26e4ebecb41edaa145b1"
+          },
+          "start": {
+            "bytes": 317,
+            "sha256": "2caab86b13bb6d1e5d0dfbb1a67cd68ffd5322111cd37d23243699921316505d",
+            "gitBlob": "f1e130766631547efcc27aa4c675beecc17d7114"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "diff",
+            "--name-only",
+            "-z",
+            "HEAD"
+          ],
+          "startedAt": "2026-11-16T15:45:55.483040+00:00",
+          "finishedAt": "2026-11-16T15:45:55.556514+00:00",
+          "durationSeconds": 0.07316465800249716,
+          "capturedPid": 58,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-after-metadata-14.log",
+            "bytes": 108,
+            "sha256": "c8c29d8e0318b85c6f9f90bb33daad20abd9bf1d03dc0c36a1b86b6838108915",
+            "gitBlob": "f154b3782beb8bc58771c8bfab8a6a16dbcdd0d8"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/source-size-after-metadata-14.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        }
+      ],
+      "wholeSourceBefore": {
+        "path": "/tmp/c714-ui-conversation-evidence/source-size-before-source.json",
+        "bytes": 2478453,
+        "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+        "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+      },
+      "wholeSourceAfter": {
+        "path": "/tmp/c714-ui-conversation-evidence/source-size-after-source.json",
+        "bytes": 2478453,
+        "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+        "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+      },
+      "environment": {
+        "oneCapturedSnapshotBeforeAfter": true,
+        "transport": {
+          "canonicalSha256": "0543ae53eebdaf08fea0d860b82ba3b232ac9466f1274678e7b06ba35d07de13",
+          "values": [
+            {
+              "key": "ALL_PROXY",
+              "bytes": 25,
+              "sha256": "3523cfccc1dc1c512a593a8c8fa87e08b757907fb08ff625289a9735502914fc"
+            },
+            {
+              "key": "HTTPS_PROXY",
+              "bytes": 22,
+              "sha256": "3bc2e7bd713aff7553da8a0a218b143a5c8000543b7e3a406c757ecc0e172d45"
+            },
+            {
+              "key": "HTTP_PROXY",
+              "bytes": 22,
+              "sha256": "3bc2e7bd713aff7553da8a0a218b143a5c8000543b7e3a406c757ecc0e172d45"
+            },
+            {
+              "key": "NO_PROXY",
+              "bytes": 63,
+              "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+            },
+            {
+              "key": "NPM_CONFIG_AUDIT",
+              "bytes": 5,
+              "sha256": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa"
+            },
+            {
+              "key": "NPM_CONFIG_FUND",
+              "bytes": 5,
+              "sha256": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa"
+            },
+            {
+              "key": "NPM_CONFIG_HTTPS_PROXY",
+              "bytes": 22,
+              "sha256": "3bc2e7bd713aff7553da8a0a218b143a5c8000543b7e3a406c757ecc0e172d45"
+            },
+            {
+              "key": "NPM_CONFIG_HTTP_PROXY",
+              "bytes": 22,
+              "sha256": "3bc2e7bd713aff7553da8a0a218b143a5c8000543b7e3a406c757ecc0e172d45"
+            },
+            {
+              "key": "NPM_CONFIG_NOPROXY",
+              "bytes": 63,
+              "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+            },
+            {
+              "key": "NPM_CONFIG_PREFIX",
+              "bytes": 18,
+              "sha256": "e0434a72761750c4ca689ad02b7a4341b6bd7e4660489f815c604d27e6342032"
+            },
+            {
+              "key": "NPM_CONFIG_PROXY",
+              "bytes": 22,
+              "sha256": "3bc2e7bd713aff7553da8a0a218b143a5c8000543b7e3a406c757ecc0e172d45"
+            },
+            {
+              "key": "all_proxy",
+              "bytes": 25,
+              "sha256": "3523cfccc1dc1c512a593a8c8fa87e08b757907fb08ff625289a9735502914fc"
+            },
+            {
+              "key": "http_proxy",
+              "bytes": 22,
+              "sha256": "3bc2e7bd713aff7553da8a0a218b143a5c8000543b7e3a406c757ecc0e172d45"
+            },
+            {
+              "key": "https_proxy",
+              "bytes": 22,
+              "sha256": "3bc2e7bd713aff7553da8a0a218b143a5c8000543b7e3a406c757ecc0e172d45"
+            },
+            {
+              "key": "no_proxy",
+              "bytes": 63,
+              "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+            },
+            {
+              "key": "npm_config_http_proxy",
+              "bytes": 22,
+              "sha256": "3bc2e7bd713aff7553da8a0a218b143a5c8000543b7e3a406c757ecc0e172d45"
+            },
+            {
+              "key": "npm_config_https_proxy",
+              "bytes": 22,
+              "sha256": "3bc2e7bd713aff7553da8a0a218b143a5c8000543b7e3a406c757ecc0e172d45"
+            },
+            {
+              "key": "npm_config_noproxy",
+              "bytes": 63,
+              "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+            },
+            {
+              "key": "npm_config_proxy",
+              "bytes": 22,
+              "sha256": "3bc2e7bd713aff7553da8a0a218b143a5c8000543b7e3a406c757ecc0e172d45"
+            }
+          ],
+          "keys": 19,
+          "assignments": 23,
+          "wholeBeforeAfterEqual": true,
+          "fixedAndAliasChecksPassed": true
+        },
+        "explicitAssignmentsMatchAcceptedGreen": true,
+        "absentConfigsMatchAcceptedGreen": true,
+        "homePreserved": true,
+        "codexHomePreserved": true
+      },
+      "processCensus": [
+        {
+          "pid": 1,
+          "name": "codex",
+          "state": "S",
+          "ppid": 0,
+          "pgid": 1,
+          "session": 1,
+          "startTicks": 1924469
+        },
+        {
+          "pid": 2,
+          "name": "python3",
+          "state": "R",
+          "ppid": 1,
+          "pgid": 1,
+          "session": 1,
+          "startTicks": 1924472
+        }
+      ],
+      "bootstrapCache": {
+        "files": 7,
+        "bytes": 2225548,
+        "wholeBeforeAfterAndGreenEqual": true
+      },
+      "rawExportQualification": null,
+      "errors": []
+    },
+    {
+      "command": "diff-check",
+      "receipt": {
+        "bytes": 24763,
+        "sha256": "5f48be7f4cf19b5db5f5929523bce60fb6a67cf9cb92fa0a70c86b141dcac8d2",
+        "gitBlob": "4d85dce484c341e29a1223ef9ce4b922f9c428db"
+      },
+      "primaryReceipt": {
+        "bytes": 987,
+        "sha256": "0af6ad53afae51ca0bf561c3ae1859b9470c041471c5a5f5fb34ada43e45ddb8",
+        "gitBlob": "501b644bc85af23f6a6971471117b1fadd6c1d00"
+      },
+      "primaryStart": {
+        "bytes": 487,
+        "sha256": "3930a213032ede53048e92762b5b813e6aff39a0cc26a47eb6cfcaf4423bf699",
+        "gitBlob": "cc85c54aae221bb86e5aab4c978fde0e8fc6500f"
+      },
+      "primary": {
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--check",
+          "--",
+          "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T15:51:36.570675+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 30,
+        "metadataOnly": false,
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/diff-check-command-1.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finishedAt": "2026-11-16T15:51:36.607351+00:00",
+        "durationSeconds": 0.036582931999873836,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true
+      },
+      "completeRaw": "",
+      "rawOutcome": {
+        "scope": "Exact original three conversation paths",
+        "emptyRaw": true,
+        "primaryExit": 0
+      },
+      "actualOuterExecutor": {
+        "start": {
+          "chunk_id": "43d61c",
+          "wall_time_seconds": 1.000488117,
+          "session_id": 14823,
+          "original_token_count": 0,
+          "output": ""
+        },
+        "completion": {
+          "chunk_id": "3ce75f",
+          "wall_time_seconds": 0.00003032,
+          "exit_code": 0,
+          "original_token_count": 281,
+          "output": "{\"command\": \"diff-check\", \"action\": \"run\", \"exitCode\": 0, \"exitSignal\": null, \"timedOut\": false, \"executionError\": null, \"postflightError\": null, \"inputsPreserved\": true, \"commandCompletedNormally\": true, \"scopeCompleted\": true, \"preflightSeconds\": 128.0484635549983, \"commandPhaseSeconds\": 0.03693185500014806, \"cleanupSeconds\": 0, \"postflightSeconds\": 118.54299658899981, \"totalInvocationSeconds\": 246.628869199998, \"rawCombinedOutput\": {\"path\": \"/tmp/c714-ui-conversation-evidence/diff-check-command-1.log\", \"bytes\": 0, \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\", \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"}, \"cleanup\": {\"capturedSessionMembersAfter\": [], \"newTestTempsRemaining\": [], \"scope\": \"Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof.\"}, \"signalAdmissionCutoff\": {\"at\": \"2026-11-16T15:53:35.150454+00:00\", \"pendingSignals\": [], \"supervisorExitZeroRequired\": true, \"scope\": \"Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.\"}}\n"
+        }
+      },
+      "all18PrintedFields": [
+        "command",
+        "action",
+        "exitCode",
+        "exitSignal",
+        "timedOut",
+        "executionError",
+        "postflightError",
+        "inputsPreserved",
+        "commandCompletedNormally",
+        "scopeCompleted",
+        "preflightSeconds",
+        "commandPhaseSeconds",
+        "cleanupSeconds",
+        "postflightSeconds",
+        "totalInvocationSeconds",
+        "rawCombinedOutput",
+        "cleanup",
+        "signalAdmissionCutoff"
+      ],
+      "allPrintedFieldsEqual": true,
+      "attemptMarker": {
+        "bytes": 33,
+        "sha256": "47f5632451cd69650cc099b92ed2e81faca08de98deb498a14ab1a6ebe42e51c",
+        "gitBlob": "943a5011d4b57485aebb5e7e690c0d71a9aeaa64",
+        "body": "2026-11-16T15:49:28.520867+00:00\n"
+      },
+      "timings": {
+        "startedAt": "2026-11-16T15:49:28.520912+00:00",
+        "preflightSeconds": 128.0484635549983,
+        "primarySeconds": 0.036582931999873836,
+        "commandPhaseSeconds": 0.03693185500014806,
+        "cleanupSeconds": 0,
+        "postflightSeconds": 118.54299658899981,
+        "totalSeconds": 246.628869199998,
+        "accountingOverheadSeconds": 0.00047720099973957986,
+        "cutoff": {
+          "at": "2026-11-16T15:53:35.150454+00:00",
+          "pendingSignals": [],
+          "supervisorExitZeroRequired": true,
+          "scope": "Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission."
+        },
+        "finishedAt": "2026-11-16T15:53:35.150581+00:00"
+      },
+      "census": {
+        "files": 67,
+        "fullBytes": 90180626,
+        "uniqueBodies": 41,
+        "literalInstances": 57,
+        "literalBytes": 46220,
+        "literalUnique": 36,
+        "largeInstances": 10,
+        "largeBytes": 90134406,
+        "largeUnique": 5,
+        "exact67ExpectedPaths": true,
+        "all57ActualSmallBodiesFreshlyRehashed": true,
+        "canonicalFullEntryArrayDigest": {
+          "bytes": 14977,
+          "sha256": "170e93fd6d93ad78c81adfcd7e66d4b8d59750ebfae7bc4e29b08c642b65a580",
+          "gitBlob": "6def118ffa227ee4469db22fbd476b29e38a3c97"
+        }
+      },
+      "metadataRows": [
+        {
+          "sequence": 1,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1064,
+            "sha256": "08b01f7db018f8a963ae7146f35f68abce950fb5379df758a55f0cd7d9d3364f",
+            "gitBlob": "b742b7f719ded6a76408db69c40430e5fcac11d6"
+          },
+          "start": {
+            "bytes": 293,
+            "sha256": "4ec1b80df514edfa49a63b7982f30cbe0f27df91d8735572bf96c977da21e141",
+            "gitBlob": "e69d6dfd169ae96a0b97373aa78494d4676d94c6"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "rev-parse",
+            "HEAD"
+          ],
+          "startedAt": "2026-11-16T15:49:28.521729+00:00",
+          "finishedAt": "2026-11-16T15:49:28.543895+00:00",
+          "durationSeconds": 0.02205852399856667,
+          "capturedPid": 3,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-before-metadata-1.log",
+            "bytes": 41,
+            "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+            "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-before-metadata-1.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 2,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1072,
+            "sha256": "c56b33db96bd6d4cdc326b99c5f38761c4c98f872e46d8e05f5ebf9dcb6b9553",
+            "gitBlob": "d2de9cd85a2348fbb9d1558d794e5bff96af2a0f"
+          },
+          "start": {
+            "bytes": 300,
+            "sha256": "3b8e906e30e6f663e2c3eab621fb8a96a619fb84b9fafa113c10491065e710f6",
+            "gitBlob": "51b01848067f71c0bebdf007d6cf5ee85a2183a8"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "rev-parse",
+            "HEAD^{tree}"
+          ],
+          "startedAt": "2026-11-16T15:49:28.544176+00:00",
+          "finishedAt": "2026-11-16T15:49:28.557619+00:00",
+          "durationSeconds": 0.013313800998730585,
+          "capturedPid": 4,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-before-metadata-2.log",
+            "bytes": 41,
+            "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+            "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-before-metadata-2.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 3,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1096,
+            "sha256": "da9c7e4d6b352517dd7bc241b478f39097f29b4c22160bfefb336a6ec650dacd",
+            "gitBlob": "2ef226c71955837aff4151d0f5b0e790eed2fe48"
+          },
+          "start": {
+            "bytes": 321,
+            "sha256": "f45d99168a75e9055e601578fc507ddea37c7e39c54c1e52dab97986a67115fd",
+            "gitBlob": "8232700cf0f7f462c66edb53b4dc680bfba2314e"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "ls-tree",
+            "-rz",
+            "--full-tree",
+            "HEAD"
+          ],
+          "startedAt": "2026-11-16T15:49:28.557988+00:00",
+          "finishedAt": "2026-11-16T15:49:28.990910+00:00",
+          "durationSeconds": 0.4328548099983891,
+          "capturedPid": 5,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-before-metadata-3.log",
+            "bytes": 1527575,
+            "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+            "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-before-metadata-3.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 4,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1092,
+            "sha256": "d9ed13dbd6efe5504d78478d2a0fa5e50ba0bd6c100a9713be45b93458ef1ba6",
+            "gitBlob": "d45d2aad3af86a816503e4ed9c45c17a5b030061"
+          },
+          "start": {
+            "bytes": 321,
+            "sha256": "2df3d8a9e1a9b8f8603ddb3de2767aba60dde07ab0da8e5d07c833e79f96f201",
+            "gitBlob": "d5388a1500c304c72df5fd6a3f008135e49fd579"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "diff",
+            "--cached",
+            "--name-only",
+            "-z"
+          ],
+          "startedAt": "2026-11-16T15:49:29.074133+00:00",
+          "finishedAt": "2026-11-16T15:49:29.097585+00:00",
+          "durationSeconds": 0.023021169999992708,
+          "capturedPid": 6,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-before-metadata-4.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-before-metadata-4.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 5,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1101,
+            "sha256": "7a91abfb367c674048685f03907700ec4cfe799893df3fad393036d78c2029d0",
+            "gitBlob": "aaee882a50c1ce21862cb21f60c8680e06d90fdd"
+          },
+          "start": {
+            "bytes": 332,
+            "sha256": "7b2295910a78d29bf961a515220a4d6ef8ba9017e6355adde331c8e6299cf8bd",
+            "gitBlob": "3c2acd675ea9e4e0877bb85fca5214143855be98"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "-z"
+          ],
+          "startedAt": "2026-11-16T15:49:29.097765+00:00",
+          "finishedAt": "2026-11-16T15:49:30.274543+00:00",
+          "durationSeconds": 1.1767493650004326,
+          "capturedPid": 7,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-before-metadata-5.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-before-metadata-5.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 6,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1081,
+            "sha256": "8d427aaae3558fd8dfe9ec536de9638f16a7703620da233817cd43f70da48a67",
+            "gitBlob": "f9301459c1442ade0387696f73eaa69c8a478939"
+          },
+          "start": {
+            "bytes": 305,
+            "sha256": "3adc03f1315befca154498a4024d33c37ea6159815f02f9177ab3939132ce987",
+            "gitBlob": "31162d160d737509580649fc1022b456e3fd73a2"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "ls-files",
+            "--stage",
+            "-z"
+          ],
+          "startedAt": "2026-11-16T15:49:30.279211+00:00",
+          "finishedAt": "2026-11-16T15:49:30.313093+00:00",
+          "durationSeconds": 0.03213258599862456,
+          "capturedPid": 8,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-before-metadata-6.log",
+            "bytes": 1492874,
+            "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+            "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-before-metadata-6.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 7,
+          "phase": "before",
+          "receipt": {
+            "bytes": 1089,
+            "sha256": "1d905c3df63dad8d5455a3b62c06afcef1b5eb9245cccb4c2d77d0966e0ea32d",
+            "gitBlob": "ff0a203177941dae1e0cabed1abdfe5d7eab7551"
+          },
+          "start": {
+            "bytes": 317,
+            "sha256": "6fb9a0aac3bdd4efa7698e9934fa5bc7f7187e8b50818b7ffa217177a43a8ef7",
+            "gitBlob": "664cc67dcafcb5969337cb23349af982c2390bd3"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "diff",
+            "--name-only",
+            "-z",
+            "HEAD"
+          ],
+          "startedAt": "2026-11-16T15:49:30.392661+00:00",
+          "finishedAt": "2026-11-16T15:49:30.554959+00:00",
+          "durationSeconds": 0.16203619299994898,
+          "capturedPid": 9,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-before-metadata-7.log",
+            "bytes": 108,
+            "sha256": "c8c29d8e0318b85c6f9f90bb33daad20abd9bf1d03dc0c36a1b86b6838108915",
+            "gitBlob": "f154b3782beb8bc58771c8bfab8a6a16dbcdd0d8"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-before-metadata-7.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 8,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1064,
+            "sha256": "44140ef68f59a834f522dcf5d6d62f32b3f45353880e757da9548088ed50d207",
+            "gitBlob": "a79924b3e5c163fd39013a49aa6232c09695ce01"
+          },
+          "start": {
+            "bytes": 293,
+            "sha256": "19ce57f0df37ce0c01521b8d55e9ce3cbc51ec7b59ddf98d9a99b0371ba5e557",
+            "gitBlob": "dc6554e136977056fa5b05a7a1659bb9c6394720"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "rev-parse",
+            "HEAD"
+          ],
+          "startedAt": "2026-11-16T15:51:36.607618+00:00",
+          "finishedAt": "2026-11-16T15:51:36.618656+00:00",
+          "durationSeconds": 0.010986041997966822,
+          "capturedPid": 51,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-after-metadata-8.log",
+            "bytes": 41,
+            "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+            "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-after-metadata-8.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 9,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1071,
+            "sha256": "cda2528017902ffadf1a23fc451665b2d0bb4f3dcd57c9da72b11415f9c3e656",
+            "gitBlob": "cbb7ca2c160e83992d122239f9a14e16261d0748"
+          },
+          "start": {
+            "bytes": 300,
+            "sha256": "b3beb418b6cb9beb116c88ca91388c8f36f5093f19eaa3aab5de52a4e9cdd63b",
+            "gitBlob": "77c83bdd1e21b8cb52afff02e96fd9725b3d48c2"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "rev-parse",
+            "HEAD^{tree}"
+          ],
+          "startedAt": "2026-11-16T15:51:36.619007+00:00",
+          "finishedAt": "2026-11-16T15:51:36.623292+00:00",
+          "durationSeconds": 0.004211237999697914,
+          "capturedPid": 52,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-after-metadata-9.log",
+            "bytes": 41,
+            "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+            "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-after-metadata-9.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 10,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1097,
+            "sha256": "43eb7badbdc51978ee75a67282fc2d2848e88a4c46f96961d360d3650d7f65a0",
+            "gitBlob": "a619d2a4013f897bafd3668d982cdb1ae305d7dc"
+          },
+          "start": {
+            "bytes": 321,
+            "sha256": "da6fa4a63e3d241fa7b009e548f4b2001a2f0c318b10e46717374e7aa20f9fec",
+            "gitBlob": "8122eed6016311512ee77dd2ebb97973ebec94fe"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "ls-tree",
+            "-rz",
+            "--full-tree",
+            "HEAD"
+          ],
+          "startedAt": "2026-11-16T15:51:36.623497+00:00",
+          "finishedAt": "2026-11-16T15:51:37.114662+00:00",
+          "durationSeconds": 0.4911242019989004,
+          "capturedPid": 53,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-after-metadata-10.log",
+            "bytes": 1527575,
+            "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+            "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-after-metadata-10.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 11,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1092,
+            "sha256": "55ba5fd1985f53fd8b6328a0c3a7becef63e5ecd110a179bd48c10e0da44cc75",
+            "gitBlob": "e2cdd491aed391b0d9360d13e15930174141dc58"
+          },
+          "start": {
+            "bytes": 321,
+            "sha256": "8b07eb7c056129240d83de931f1dbe3d57799c1a41e0e7b1a0027a61cbeefbc1",
+            "gitBlob": "6481d39e024eadee62ece698f38104703ed7a063"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "diff",
+            "--cached",
+            "--name-only",
+            "-z"
+          ],
+          "startedAt": "2026-11-16T15:51:37.192888+00:00",
+          "finishedAt": "2026-11-16T15:51:37.229253+00:00",
+          "durationSeconds": 0.03530287600005977,
+          "capturedPid": 54,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-after-metadata-11.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-after-metadata-11.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 12,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1101,
+            "sha256": "a174a46f81e2514d26bcee005f2cc151153a95fd9b9120f6ee69f413f679e0f5",
+            "gitBlob": "b4c7c197160632dc61895d2b7e0bbe976742ac13"
+          },
+          "start": {
+            "bytes": 332,
+            "sha256": "ece600e38ab6bb6fe2ccbf853072b4452569abb32e758fe5b6e2709acfc69b2f",
+            "gitBlob": "72cb81c8d754b27b0a758e9ec3fef23f32d197ee"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "-z"
+          ],
+          "startedAt": "2026-11-16T15:51:37.229661+00:00",
+          "finishedAt": "2026-11-16T15:51:37.929466+00:00",
+          "durationSeconds": 0.699859774998913,
+          "capturedPid": 55,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-after-metadata-12.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-after-metadata-12.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 13,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1082,
+            "sha256": "4ad33f6f66d7069df7e9626ba50b979f9d7c7b3e165c40c8003cdcb7f1b1bb53",
+            "gitBlob": "ba568b64e3b00b216c9085e9ecc4b8cbf1af2c74"
+          },
+          "start": {
+            "bytes": 305,
+            "sha256": "56ae3761771163cd19c38ddb24c88aab47ad1da8be1f5e2998d90c7a066d8f32",
+            "gitBlob": "2c3dc9852017e70949551a8b5b5f19e049d51e02"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "ls-files",
+            "--stage",
+            "-z"
+          ],
+          "startedAt": "2026-11-16T15:51:37.951439+00:00",
+          "finishedAt": "2026-11-16T15:51:38.096261+00:00",
+          "durationSeconds": 0.14442435700038914,
+          "capturedPid": 56,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-after-metadata-13.log",
+            "bytes": 1492874,
+            "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+            "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-after-metadata-13.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        },
+        {
+          "sequence": 14,
+          "phase": "after",
+          "receipt": {
+            "bytes": 1090,
+            "sha256": "da30c8c47e9a5e39f551798ebf0ea86547256c3d9f6fc75057807b72439dea02",
+            "gitBlob": "c5937fc98dc28f3f9a4c62e7ccfdf5c39f2b18cc"
+          },
+          "start": {
+            "bytes": 317,
+            "sha256": "14262ce934217149025ef05db48a481b61b149fdd03b44000ee8bb06fe47d2e1",
+            "gitBlob": "17c7050dda8e6ebea230dbba9dc80043a9e8389f"
+          },
+          "argv": [
+            "/usr/local/bin/git",
+            "diff",
+            "--name-only",
+            "-z",
+            "HEAD"
+          ],
+          "startedAt": "2026-11-16T15:51:38.197776+00:00",
+          "finishedAt": "2026-11-16T15:51:38.267812+00:00",
+          "durationSeconds": 0.06970156700117514,
+          "capturedPid": 57,
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "deadlineExceeded": false,
+          "successful": true,
+          "cleanupSeconds": 0,
+          "interruptions": [],
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-after-metadata-14.log",
+            "bytes": 108,
+            "sha256": "c8c29d8e0318b85c6f9f90bb33daad20abd9bf1d03dc0c36a1b86b6838108915",
+            "gitBlob": "f154b3782beb8bc58771c8bfab8a6a16dbcdd0d8"
+          },
+          "stderr": {
+            "path": "/tmp/c714-ui-conversation-evidence/diff-check-after-metadata-14.stderr",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          }
+        }
+      ],
+      "wholeSourceBefore": {
+        "path": "/tmp/c714-ui-conversation-evidence/diff-check-before-source.json",
+        "bytes": 2478453,
+        "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+        "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+      },
+      "wholeSourceAfter": {
+        "path": "/tmp/c714-ui-conversation-evidence/diff-check-after-source.json",
+        "bytes": 2478453,
+        "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+        "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+      },
+      "environment": {
+        "oneCapturedSnapshotBeforeAfter": true,
+        "transport": {
+          "canonicalSha256": "b56a433e864c0bd3549966efe430c91f2e73e498d20fdbdcf83965357a0ba995",
+          "values": [
+            {
+              "key": "ALL_PROXY",
+              "bytes": 25,
+              "sha256": "d75742412b377d3d8ec0107d5bd2a6172675fc5bcd7a7f6da249206bbe0a7ad6"
+            },
+            {
+              "key": "HTTPS_PROXY",
+              "bytes": 22,
+              "sha256": "2cb483a04a1df76f0c7685d85bdd99c6a7baa9b446dd1aefb90b3fcbf73fbad1"
+            },
+            {
+              "key": "HTTP_PROXY",
+              "bytes": 22,
+              "sha256": "2cb483a04a1df76f0c7685d85bdd99c6a7baa9b446dd1aefb90b3fcbf73fbad1"
+            },
+            {
+              "key": "NO_PROXY",
+              "bytes": 63,
+              "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+            },
+            {
+              "key": "NPM_CONFIG_AUDIT",
+              "bytes": 5,
+              "sha256": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa"
+            },
+            {
+              "key": "NPM_CONFIG_FUND",
+              "bytes": 5,
+              "sha256": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa"
+            },
+            {
+              "key": "NPM_CONFIG_HTTPS_PROXY",
+              "bytes": 22,
+              "sha256": "2cb483a04a1df76f0c7685d85bdd99c6a7baa9b446dd1aefb90b3fcbf73fbad1"
+            },
+            {
+              "key": "NPM_CONFIG_HTTP_PROXY",
+              "bytes": 22,
+              "sha256": "2cb483a04a1df76f0c7685d85bdd99c6a7baa9b446dd1aefb90b3fcbf73fbad1"
+            },
+            {
+              "key": "NPM_CONFIG_NOPROXY",
+              "bytes": 63,
+              "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+            },
+            {
+              "key": "NPM_CONFIG_PREFIX",
+              "bytes": 18,
+              "sha256": "e0434a72761750c4ca689ad02b7a4341b6bd7e4660489f815c604d27e6342032"
+            },
+            {
+              "key": "NPM_CONFIG_PROXY",
+              "bytes": 22,
+              "sha256": "2cb483a04a1df76f0c7685d85bdd99c6a7baa9b446dd1aefb90b3fcbf73fbad1"
+            },
+            {
+              "key": "all_proxy",
+              "bytes": 25,
+              "sha256": "d75742412b377d3d8ec0107d5bd2a6172675fc5bcd7a7f6da249206bbe0a7ad6"
+            },
+            {
+              "key": "http_proxy",
+              "bytes": 22,
+              "sha256": "2cb483a04a1df76f0c7685d85bdd99c6a7baa9b446dd1aefb90b3fcbf73fbad1"
+            },
+            {
+              "key": "https_proxy",
+              "bytes": 22,
+              "sha256": "2cb483a04a1df76f0c7685d85bdd99c6a7baa9b446dd1aefb90b3fcbf73fbad1"
+            },
+            {
+              "key": "no_proxy",
+              "bytes": 63,
+              "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+            },
+            {
+              "key": "npm_config_http_proxy",
+              "bytes": 22,
+              "sha256": "2cb483a04a1df76f0c7685d85bdd99c6a7baa9b446dd1aefb90b3fcbf73fbad1"
+            },
+            {
+              "key": "npm_config_https_proxy",
+              "bytes": 22,
+              "sha256": "2cb483a04a1df76f0c7685d85bdd99c6a7baa9b446dd1aefb90b3fcbf73fbad1"
+            },
+            {
+              "key": "npm_config_noproxy",
+              "bytes": 63,
+              "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+            },
+            {
+              "key": "npm_config_proxy",
+              "bytes": 22,
+              "sha256": "2cb483a04a1df76f0c7685d85bdd99c6a7baa9b446dd1aefb90b3fcbf73fbad1"
+            }
+          ],
+          "keys": 19,
+          "assignments": 23,
+          "wholeBeforeAfterEqual": true,
+          "fixedAndAliasChecksPassed": true
+        },
+        "explicitAssignmentsMatchAcceptedGreen": true,
+        "absentConfigsMatchAcceptedGreen": true,
+        "homePreserved": true,
+        "codexHomePreserved": true
+      },
+      "processCensus": [
+        {
+          "pid": 1,
+          "name": "codex",
+          "state": "S",
+          "ppid": 0,
+          "pgid": 1,
+          "session": 1,
+          "startTicks": 1965553
+        },
+        {
+          "pid": 2,
+          "name": "python3",
+          "state": "R",
+          "ppid": 1,
+          "pgid": 1,
+          "session": 1,
+          "startTicks": 1965557
+        }
+      ],
+      "bootstrapCache": {
+        "files": 7,
+        "bytes": 2225548,
+        "wholeBeforeAfterAndGreenEqual": true
+      },
+      "rawExportQualification": null,
+      "errors": []
+    }
+  ],
+  "lifetimeSummary": {
+    "separateOriginalInvocations": true,
+    "futureCrossValidationPackageUsed": false,
+    "metadataChildren": 42,
+    "primaryChildren": 3,
+    "allPrimaryExitZero": true,
+    "allMetadataExitZero": true,
+    "observedOuterSessions": [
+      33804,
+      92277,
+      14823
+    ],
+    "allObservedOuterExitZero": true,
+    "originalPrimaryLimitSecondsEach": 180,
+    "originalMetadataLimitSecondsEach": 30,
+    "clockScope": "Each original180-second clock begins at captured command launch before start/raw/spawn work and is never reset. Full preflight/postflight are distinct and can exceed180seconds; no invocation-total180-second claim is made.",
+    "microsecondChronology": true,
+    "allPrimaryStartAndPostflightMetadataSequencingExact": true,
+    "allFullRawFinalizedAfterCapturedQuiescence": true,
+    "allCapturedBeforeAndAfterSessionsEmpty": true,
+    "cleanupSecondsTotal": 0,
+    "allManagedInterruptionsAndCutoffPendingSignalsEmpty": true,
+    "allTestTempAndTaskTmpTopEntriesEmpty": true,
+    "cutoffScope": "Managed pending-signal snapshot under mask is bounded at each recorded cutoff. Separate actual outer exit0 is required and joined for all three; receipt success alone is not a post-cutoff guarantee.",
+    "custodyScope": "Captured command session/group and TEST-prefix task temps only. No universal escaped-child/native custody claim."
+  },
+  "outcomes": {
+    "lint": "PASS: exact three-file scope, no diagnostics, primary0/outer0",
+    "sourceSize": "PASS:5020 production files,141 frozen exceptions,800-line cap;86 below-cap legacy files informational",
+    "diffCheck": "PASS: exact original three conversation paths, empty raw, primary0/outer0"
+  },
+  "remainingOriginalConversationAttempts": {
+    "red": 0,
+    "green": 0,
+    "lint": 0,
+    "sourceSize": 0,
+    "diffCheck": 0
+  },
+  "dataExportQualification": {
+    "rootAttributedNote": {
+      "firstDataOnlyRead": "The first read-only Python export returned no completed exit within1000ms; orchestration raised Error without retaining the underlying tool result/session. No test/guard/source process was reexecuted and no file was written. The repeated complete data-only read completed as retained here.",
+      "behavioralAttemptsUnchanged": true
+    },
+    "missingInitialExportExitStillUnknown": true,
+    "noSuccessfulExitOrUniversalCleanupInferredForThatUnretainedRead": true,
+    "originalPrimaryAttemptLedgerUnchanged": true,
+    "qualification": "This note concerns a repeated read-only data export after an unretained unfinished tool result. The complete retained command attempt/start/raw/final and actual supervisor outcomes independently qualify the three selected guards. No claim of independently recovering the missing data-export process result is made."
+  },
+  "nextScope": {
+    "prospectiveCrossR1": "8abe2a1437489d5c0223d532535d6c520fd70184",
+    "independentCrossR1Review": {
+      "bytes": 33350,
+      "sha256": "3635b74953344c3085ea3313f81f6a5cb60103dfa58e0aa84096240d227b0197",
+      "gitBlob": "bacd76155f9d45ce40e2f77ead26ff58769712ee"
+    },
+    "existing97DocumentationGate": "Current original RED/GREEN and all three scoped guards are complete. Parent may now finish the reviewed documentary checkpoint/R1 publication; actual complete published readback remains required before any Cross test/runner/producer postimage.",
+    "newCrossAttemptsSpentByThisReview": 0
+  },
+  "limitations": [
+    "Scoped lint, source-size and whitespace checks are not canonical full typecheck/build, GUI, packaged/native/real-provider/vendor or wholeE2E qualification.",
+    "All current checks were the original separate6af/218 invocations with complete per-invocation before/after inputs. Future source-only metadata materializations or validation-package optimizations were not applied retroactively.",
+    "Lint is exact original three-file scope and reports no diagnostics. Source-size passes5020/141/800 with86 informational below-cap files; no baseline edits are selected. Diff is the original three paths and empty output.",
+    "No source, test, runner, dependency, reference, PR, CI or runtime action by this reviewer; immutable reads/data analysis and authorized bare evidence retention only."
+  ],
+  "auditErrors": []
+}

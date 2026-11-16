@@ -1,0 +1,791 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-actual-two-producer-materialization-input-lifetime-review",
+  "reviewer": "/root/guard_review",
+  "reviewedAt": "2026-11-16T15:31:42.466Z",
+  "repository": "777genius/agent-teams-ai",
+  "verdict": "ACCEPTED: one exact metadata-only materialization of the two published producer bodies. This closes the materialization prerequisite only; it is not a behavioral GREEN PASS.",
+  "exactEvidence": {
+    "envelope": {
+      "bytes": 94844,
+      "sha256": "6f85618d26cd98ef8e382d97a83bae80211dd8a289a2c8f928048e0115580ee8",
+      "gitBlob": "006450583e21651539f5c0584b117fd5b081962c"
+    },
+    "receipt": {
+      "bytes": 24136,
+      "sha256": "98ccdbe86e80bb73ebb6cda60b199436785bd32349afebe052e035397ce55e82",
+      "gitBlob": "c0dcc04c0db61ea6712cbee6d4dcf02e1a7ab998"
+    },
+    "completeAfterSource": {
+      "bytes": 2478453,
+      "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+      "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+    },
+    "completeBeforeSource": {
+      "bytes": 2478329,
+      "sha256": "abbf2b325ec7c0b40fd4c37bd6f7ee65ce69273723230032e150f3e8e0af3089",
+      "gitBlob": "454b6d6c6141a3926635d46b63aa6c3ac62ec551"
+    },
+    "completeStageZeroIndex": {
+      "bytes": 1492874,
+      "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+      "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+    },
+    "publishedBindingReadback": {
+      "bytes": 19767,
+      "sha256": "d0a48cf3b9058fd5c371d7c4ae40726522f0b65eba3dbb50882c1ec116fd76c5",
+      "gitBlob": "a491da84ce4ff17e841863b4646b93845b1bf5a8"
+    },
+    "binding": {
+      "bytes": 375818,
+      "sha256": "744167b87c840de28f17b86fd8b801caec5c71d695cc49c9f037dab964176cfd",
+      "gitBlob": "21878f51fd1b7bfca5bab18ff71c7c1beca5aaef"
+    },
+    "runner": {
+      "bytes": 35916,
+      "sha256": "495fac79660eb36f0795f74ff14bd665d79ac3e43534349c2f65234bda89d0f5",
+      "gitBlob": "6af0ac85f09ef02488ce15331828713882a73d13"
+    },
+    "exactBindingR2": {
+      "bytes": 21257,
+      "sha256": "bf2f7f12cda7639342ef0e1e6d1e65b9177b2f6a5d22b46740f2ca94b5d22e8d",
+      "gitBlob": "2a62b76acdb0fe8dba4574dd98c3f26d9ef8d613"
+    }
+  },
+  "executionAndPublication": {
+    "bindingPublication": {
+      "commit": "3db7943ae2b70232e926474e09fac20b609d10c8",
+      "tree": "7d4877188dd68d1033dd2736feb59405568ba746",
+      "parent": "bc6594c3ff0a1061870612a8f688400123575754",
+      "completeReadbackAccepted": true,
+      "bodies": 7,
+      "bytes": 2995655,
+      "sourceUnchanged": 8798,
+      "workflowsUnchanged": 42
+    },
+    "publicationReviewAttribution": "The complete a491 independent actual-publication record was freshly fetched and rehashed. The underlying full ref/tree/seven-body check remains attributed to /root/pr_graph and root, without claiming a repeated scan here.",
+    "publishedSource": {
+      "commit": "bc6594c3ff0a1061870612a8f688400123575754",
+      "tree": "3b30530f411c66ceaec24666b728ecaf842f8212",
+      "qualification": "Exact published reviewed controls/Selection postimages and unchanged97-case test. Local detached HEAD/index remain c5 with exactly these two source overlays; current documentation is not claimed locally materialized."
+    },
+    "actualLocalHead": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+    "actualLocalIndexTree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+    "actualOuterExecutor": {
+      "start": {
+        "chunk_id": "ed2410",
+        "wall_time_seconds": 1.001513931,
+        "session_id": 93810,
+        "original_token_count": 0,
+        "output": ""
+      },
+      "completion": {
+        "chunk_id": "a7a95b",
+        "wall_time_seconds": 0.000027706,
+        "exit_code": 0,
+        "original_token_count": 227,
+        "output": "{\"command\": \"green\", \"action\": \"materialize\", \"exitCode\": null, \"exitSignal\": null, \"timedOut\": false, \"executionError\": null, \"postflightError\": null, \"inputsPreserved\": true, \"commandCompletedNormally\": false, \"scopeCompleted\": true, \"preflightSeconds\": 106.50820870299867, \"commandPhaseSeconds\": null, \"cleanupSeconds\": 0, \"postflightSeconds\": 35.80234102999748, \"totalInvocationSeconds\": 142.31507239499842, \"rawCombinedOutput\": null, \"cleanup\": {\"capturedSessionMembersAfter\": [], \"newTestTempsRemaining\": [], \"scope\": \"Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof.\"}, \"signalAdmissionCutoff\": {\"at\": \"2026-11-16T15:21:11.579685+00:00\", \"pendingSignals\": [], \"supervisorExitZeroRequired\": true, \"scope\": \"Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.\"}}\n"
+      }
+    },
+    "rootContinuationGate": "2026-11-16 15:27:40 UTC",
+    "all18OuterPrintedFieldsExactlyMatchReceipt": true,
+    "actualSupervisorExit": 0,
+    "outerOutcomeAttribution": "The immutable envelope retains root-observed tool start/completion responses for session93810. This reviewer read and joined them; it did not launch or poll that session.",
+    "action": "materialize",
+    "command": "green",
+    "attempt": 1,
+    "actualSourceWrites": 2,
+    "primaryBehavioralCommands": 0,
+    "metadataCommands": 14,
+    "primaryArgv": null,
+    "primaryExitCode": null,
+    "primaryExitSignal": null,
+    "commandCompletedNormally": false,
+    "primaryUnreached": false,
+    "noPrimaryQualification": "The reviewed materialize route intentionally does not launch a primary test. Null primary fields and commandCompletedNormally=false are correct for this action and are not a failed or passed GREEN.",
+    "inputsPreserved": true,
+    "scopeCompleted": true,
+    "timedOut": false,
+    "interruptions": [],
+    "executionError": null,
+    "postflightError": null
+  },
+  "completeCensus": {
+    "files": 64,
+    "fullFileBytes": 90178489,
+    "uniqueBodies": 40,
+    "allExpectedNamesAndOnlyThoseNamesPresent": true,
+    "literalSmallInstances": 54,
+    "literalSmallBytes": 44207,
+    "literalSmallUniqueBodies": 34,
+    "all54EntireLiteralBodiesIndependentlyHashed": true,
+    "everyLiteralJoinedToCompleteCensus": true,
+    "largeInstances": 10,
+    "largeBytes": 90134282,
+    "largeUniqueBodies": 6,
+    "everyLargeInstanceResolved": true,
+    "largeJoins": [
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/materialize-green-after-compiled.json",
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9",
+        "method": "complete literal body already independently rehashed in prior actual input/RED review"
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/materialize-green-after-dependencies.json",
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7",
+        "method": "complete previously independently reconstructed39168001-byte body; actual whole-file identity equality"
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/materialize-green-after-metadata-10.log",
+        "bytes": 1527575,
+        "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+        "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec",
+        "method": "complete literal body already independently rehashed in prior actual input/RED review"
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/materialize-green-after-metadata-13.log",
+        "bytes": 1492874,
+        "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+        "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8",
+        "method": "already fully read and verified complete actual RED body"
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/materialize-green-after-source.json",
+        "bytes": 2478453,
+        "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+        "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a",
+        "method": "fresh full body rehash and exact8798-row reconstruction"
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/materialize-green-before-compiled.json",
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9",
+        "method": "complete literal body already independently rehashed in prior actual input/RED review"
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/materialize-green-before-dependencies.json",
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7",
+        "method": "complete previously independently reconstructed39168001-byte body; actual whole-file identity equality"
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/materialize-green-before-metadata-3.log",
+        "bytes": 1527575,
+        "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+        "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec",
+        "method": "complete literal body already independently rehashed in prior actual input/RED review"
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/materialize-green-before-metadata-6.log",
+        "bytes": 1492874,
+        "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+        "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8",
+        "method": "already fully read and verified complete actual RED body"
+      },
+      {
+        "path": "/tmp/c714-ui-conversation-evidence/materialize-green-before-source.json",
+        "bytes": 2478329,
+        "sha256": "abbf2b325ec7c0b40fd4c37bd6f7ee65ce69273723230032e150f3e8e0af3089",
+        "gitBlob": "454b6d6c6141a3926635d46b63aa6c3ac62ec551",
+        "method": "already fully read and verified complete actual RED body"
+      }
+    ],
+    "reusedBodyQualification": "Complete prior body identities are reused only after matching the actual whole-file bytes/SHA-256/Git identities in the receipt/census. No row-count, partial-prefix or sampled equality substitutes for full identity. The already completed39168001-byte dependency reconstruction is not falsely claimed to have been repeated."
+  },
+  "sourceApplication": {
+    "fullRows": 8798,
+    "beforeSourceIdentity": {
+      "bytes": 2478329,
+      "sha256": "abbf2b325ec7c0b40fd4c37bd6f7ee65ce69273723230032e150f3e8e0af3089",
+      "gitBlob": "454b6d6c6141a3926635d46b63aa6c3ac62ec551"
+    },
+    "afterSourceIdentity": {
+      "bytes": 2478453,
+      "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+      "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+    },
+    "completeAfterBodyReconstructedAndRehashedExact": true,
+    "reconstruction": "Take every complete accepted RED source row, substitute exactly the two published producer rows, and set the exact sorted two-path changedTrackedPaths field. Python-compatible indent2/ensure_ascii/LF reconstruction equals every byte of67a.",
+    "changes": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "before": {
+          "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "mode": "100644",
+          "bytes": 24630,
+          "sha256": "20163a0e2b654c5ff3c778ffe4a3cd2138716172eb90e6aa5aa4fe6550864c43",
+          "gitBlob": "dcd0cc29a73a46a24126ec3552714fa1b057aaf4"
+        },
+        "after": {
+          "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "mode": "100644",
+          "bytes": 24759,
+          "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+          "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "before": {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "bytes": 28741,
+          "sha256": "9d5233b82df6a7dfa0d735b27c11f39f130824f3947c38896a0d052ca549cba4",
+          "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78"
+        },
+        "after": {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        }
+      }
+    ],
+    "writtenPaths": [
+      "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts"
+    ],
+    "writtenPathsExactlyMatchBindingOrder": true,
+    "otherSourceRowsUnchanged": 8796,
+    "workflowLeavesUnchanged": 42,
+    "whole97TestUnchanged": "efd876b86db16cc4faf63a9ba8e309503ca7b985",
+    "localHeadTreeAndConfigUnchanged": true,
+    "localGitConfig": {
+      "bytes": 210,
+      "sha256": "6ff4733acc7f5f6541ad024fd46a03cc3938ffbb8e04d9c5591df0d36904cac2",
+      "gitBlob": "9e3a8c79305c001abd936eeee71b661091dd6150"
+    },
+    "fullStageZeroIndex11567Unchanged": true,
+    "bothLsTreeBodiesExactToAcceptedFullC5Tree": true,
+    "stagedChangesAbsent": true,
+    "nonignoredUntrackedSourceAbsent": true,
+    "beforeTrackedChanges": [],
+    "afterTrackedChanges": [
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts"
+    ],
+    "exactAfterTrackedDiffRawJoined": true,
+    "currentPublishedDocumentationNotClaimedLocallyMaterialized": true
+  },
+  "fullInputPreservation": {
+    "dependencyRows": 122773,
+    "completeDependencyIdentity": {
+      "bytes": 39168001,
+      "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+      "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+    },
+    "compiledRows": 1454,
+    "completeCompiledIdentity": {
+      "bytes": 400300,
+      "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+      "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+    },
+    "bothBeforeAndAfterPointersMatchThoseCompleteAcceptedBodies": true,
+    "providers": [
+      {
+        "name": "@agent-teams/provider-implementations",
+        "archive": {
+          "bytes": 186398,
+          "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+          "gitBlob": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3"
+        },
+        "regularMembers": 253,
+        "allRegularMembersEqual": true
+      },
+      {
+        "name": "@agent-teams/provider-session-contracts",
+        "archive": {
+          "bytes": 6230,
+          "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+          "gitBlob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8"
+        },
+        "regularMembers": 12,
+        "allRegularMembersEqual": true
+      }
+    ],
+    "all265ArchiveRegularMembersRemainBoundToUnchangedInputs": true,
+    "tools": [
+      {
+        "tool": "node",
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "realPath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "bytes": 126939688,
+        "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+        "gitBlob": "97b7784b737e5bda3ec45af8c65508bd61001d0c"
+      },
+      {
+        "tool": "git",
+        "path": "/usr/local/bin/git",
+        "realPath": "/usr/local/bin/git",
+        "bytes": 19295504,
+        "sha256": "8a2ae22e7898e163330a96319b541f92ed6f90fc87576414f72c5a89aa1dc352",
+        "gitBlob": "d51aaf6e2f66bdf456e2d198085d4d35054433df"
+      },
+      {
+        "tool": "python",
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "realPath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12",
+        "bytes": 30894944,
+        "sha256": "fa67443527ed9647f760d807e2a38f26340757123e643c4639cf273ed15d5ea7",
+        "gitBlob": "cdff710ca21bf61260e4c7d7f3818ecd65cba2e7"
+      },
+      {
+        "tool": "scriptShell",
+        "path": "/bin/sh",
+        "realPath": "/usr/bin/dash",
+        "bytes": 129736,
+        "sha256": "a6f559e00b69a4aa4d8cb607be18d9386c5aee55c509e2c075549dcf00e00fc7",
+        "gitBlob": "965067be6aaf758adf88a3ff5539f41b25770579"
+      }
+    ],
+    "allFourPinnedToolsUnchanged": true,
+    "pnpm": {
+      "bytes": 238649,
+      "sha256": "e814a4ca22111e747db4386274e92f596f0a26d7e4b5bc687f8d1ccf61510a77",
+      "gitBlob": "2f917a18c33c04a1c6398d1adf644ce62fb8e39f"
+    },
+    "fullPnpmManifestUnchanged": true,
+    "environment": {
+      "exactCaseSensitiveKeys": 19,
+      "exactAssignments": 23,
+      "allCaseAliasesAndProxyGroupsAgree": true,
+      "fixedValueHashesUnchanged": true,
+      "beforeAfterCapturedEnvironmentEqual": true,
+      "homePreserved": true,
+      "codexHomePreserved": true,
+      "configAbsencePreserved": true,
+      "compileCacheDisabled": true
+    },
+    "cache": {
+      "retainedFiles": 7,
+      "bytes": 2225548,
+      "allIdentitiesExactlyPreserved": true,
+      "notEmpty": true
+    },
+    "taskTempEntriesBefore": [],
+    "taskTempEntriesAfter": [],
+    "newRemainingTestTemps": [],
+    "processCensusBefore": [
+      {
+        "pid": 1,
+        "name": "codex",
+        "state": "S",
+        "ppid": 0,
+        "pgid": 1,
+        "session": 1,
+        "startTicks": 1781582
+      },
+      {
+        "pid": 2,
+        "name": "python3",
+        "state": "R",
+        "ppid": 1,
+        "pgid": 1,
+        "session": 1,
+        "startTicks": 1781585
+      }
+    ],
+    "processCensusAfter": [
+      {
+        "pid": 1,
+        "name": "codex",
+        "state": "S",
+        "ppid": 0,
+        "pgid": 1,
+        "session": 1,
+        "startTicks": 1781582
+      },
+      {
+        "pid": 2,
+        "name": "python3",
+        "state": "R",
+        "ppid": 1,
+        "pgid": 1,
+        "session": 1,
+        "startTicks": 1781585
+      }
+    ],
+    "beforeAfterProcessCensusEqual": true
+  },
+  "lifetime": {
+    "metadataChildren": 14,
+    "primaryChildren": 0,
+    "allMetadataExitCodesZero": true,
+    "allMetadataSignalsNull": true,
+    "allMetadataStdErrBodiesEmpty": true,
+    "allMetadataDeadlinesAndTimeoutsFalse": true,
+    "allCapturedSessionMembersBeforeCleanupAndAfterEmpty": true,
+    "allCleanupSecondsZero": true,
+    "noAbnormalCleanupOrFinalizationError": true,
+    "metadataPerReadCapSeconds": 30,
+    "maximumActualMetadataSeconds": 2.2014774150011363,
+    "completeStartReceiptRawPointerJoins": true,
+    "metadataLedger": [
+      {
+        "name": "materialize-green-before-metadata-1",
+        "receiptIdentity": {
+          "bytes": 1079,
+          "sha256": "3689c809f3d92488bdac1560b228bc4111ba0888953999093772b59fa9eaca38",
+          "gitBlob": "2c6d4378091d337830eb51610ff8ae8b704b28a0"
+        },
+        "argv": [
+          "/usr/local/bin/git",
+          "rev-parse",
+          "HEAD"
+        ],
+        "capturedPid": 3,
+        "startedAt": "2026-11-16T15:18:49.264654+00:00",
+        "finishedAt": "2026-11-16T15:18:49.284313+00:00",
+        "durationSeconds": 0.019499917998473393,
+        "exitCode": 0,
+        "exitSignal": null,
+        "remainingCapturedSession": [],
+        "cleanupSeconds": 0
+      },
+      {
+        "name": "materialize-green-before-metadata-2",
+        "receiptIdentity": {
+          "bytes": 1085,
+          "sha256": "c5aeaa3a4fc03c6b6ae0bcd4494077f3b6d3746460d739d2bd1355cc3af6c7b4",
+          "gitBlob": "4152d4e0002932a946647dba253193fee7401e06"
+        },
+        "argv": [
+          "/usr/local/bin/git",
+          "rev-parse",
+          "HEAD^{tree}"
+        ],
+        "capturedPid": 4,
+        "startedAt": "2026-11-16T15:18:49.284610+00:00",
+        "finishedAt": "2026-11-16T15:18:49.319534+00:00",
+        "durationSeconds": 0.03488085899880389,
+        "exitCode": 0,
+        "exitSignal": null,
+        "remainingCapturedSession": [],
+        "cleanupSeconds": 0
+      },
+      {
+        "name": "materialize-green-before-metadata-3",
+        "receiptIdentity": {
+          "bytes": 1110,
+          "sha256": "1efdf559f31a7e0d1d46f2d9787dcae5517608b86d51ce9c1a1b394a459b1eff",
+          "gitBlob": "eee35de85440e600540bd9bfb47df20d20e9b25b"
+        },
+        "argv": [
+          "/usr/local/bin/git",
+          "ls-tree",
+          "-rz",
+          "--full-tree",
+          "HEAD"
+        ],
+        "capturedPid": 5,
+        "startedAt": "2026-11-16T15:18:49.319796+00:00",
+        "finishedAt": "2026-11-16T15:18:49.698899+00:00",
+        "durationSeconds": 0.3790427429994452,
+        "exitCode": 0,
+        "exitSignal": null,
+        "remainingCapturedSession": [],
+        "cleanupSeconds": 0
+      },
+      {
+        "name": "materialize-green-before-metadata-4",
+        "receiptIdentity": {
+          "bytes": 1105,
+          "sha256": "e6fd2d1ec7f9ddd5de780aaa0047d943a2d3e34dfcbc51e25181201f7ab1c25c",
+          "gitBlob": "e66a0c488e1cbe840edba154b3a8cb413a69ba96"
+        },
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--cached",
+          "--name-only",
+          "-z"
+        ],
+        "capturedPid": 6,
+        "startedAt": "2026-11-16T15:18:49.769708+00:00",
+        "finishedAt": "2026-11-16T15:18:49.838872+00:00",
+        "durationSeconds": 0.06841604199871654,
+        "exitCode": 0,
+        "exitSignal": null,
+        "remainingCapturedSession": [],
+        "cleanupSeconds": 0
+      },
+      {
+        "name": "materialize-green-before-metadata-5",
+        "receiptIdentity": {
+          "bytes": 1115,
+          "sha256": "6e37762b44e53e2e546d9afd2eec3ae9dfed5fc13a60446551583be2cbfba834",
+          "gitBlob": "4576e2298bc746fd31585054ee3b4b704b7a6aff"
+        },
+        "argv": [
+          "/usr/local/bin/git",
+          "ls-files",
+          "--others",
+          "--exclude-standard",
+          "-z"
+        ],
+        "capturedPid": 7,
+        "startedAt": "2026-11-16T15:18:49.840884+00:00",
+        "finishedAt": "2026-11-16T15:18:52.043061+00:00",
+        "durationSeconds": 2.2014774150011363,
+        "exitCode": 0,
+        "exitSignal": null,
+        "remainingCapturedSession": [],
+        "cleanupSeconds": 0
+      },
+      {
+        "name": "materialize-green-before-metadata-6",
+        "receiptIdentity": {
+          "bytes": 1095,
+          "sha256": "3e9255c5f16c7b5f593f1b60213244abeabd85b9c600cb100e9ccd6b26b75d54",
+          "gitBlob": "76a030af57920714956bf582329d6404531516bd"
+        },
+        "argv": [
+          "/usr/local/bin/git",
+          "ls-files",
+          "--stage",
+          "-z"
+        ],
+        "capturedPid": 8,
+        "startedAt": "2026-11-16T15:18:52.058329+00:00",
+        "finishedAt": "2026-11-16T15:18:52.108806+00:00",
+        "durationSeconds": 0.04983066200293251,
+        "exitCode": 0,
+        "exitSignal": null,
+        "remainingCapturedSession": [],
+        "cleanupSeconds": 0
+      },
+      {
+        "name": "materialize-green-before-metadata-7",
+        "receiptIdentity": {
+          "bytes": 1101,
+          "sha256": "83f6613eaba3d234efe40f5e8473a74a2e9a9acc9e3ddc0257be07195a5526e9",
+          "gitBlob": "afd0ea6c5b8d34e794947ff68d31d339e2d0bdd1"
+        },
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--name-only",
+          "-z",
+          "HEAD"
+        ],
+        "capturedPid": 9,
+        "startedAt": "2026-11-16T15:18:52.163791+00:00",
+        "finishedAt": "2026-11-16T15:18:52.202593+00:00",
+        "durationSeconds": 0.03829066199978115,
+        "exitCode": 0,
+        "exitSignal": null,
+        "remainingCapturedSession": [],
+        "cleanupSeconds": 0
+      },
+      {
+        "name": "materialize-green-after-metadata-8",
+        "receiptIdentity": {
+          "bytes": 1078,
+          "sha256": "c2c5221647d958d63fe6d2f650dededc8aeacfb8ede87d4844dee9c4fc3ec857",
+          "gitBlob": "e00c1e0ae6c250c4ff1e63aece8ebf04c09ce0f3"
+        },
+        "argv": [
+          "/usr/local/bin/git",
+          "rev-parse",
+          "HEAD"
+        ],
+        "capturedPid": 30,
+        "startedAt": "2026-11-16T15:20:35.777529+00:00",
+        "finishedAt": "2026-11-16T15:20:35.787607+00:00",
+        "durationSeconds": 0.009624696998798754,
+        "exitCode": 0,
+        "exitSignal": null,
+        "remainingCapturedSession": [],
+        "cleanupSeconds": 0
+      },
+      {
+        "name": "materialize-green-after-metadata-9",
+        "receiptIdentity": {
+          "bytes": 1085,
+          "sha256": "49e6c5594f1681ebeeebb743129fd9764367ce867822ff571b7cf3a37ef59680",
+          "gitBlob": "7b224203addebc5e32639b47c0c2761501dbfd13"
+        },
+        "argv": [
+          "/usr/local/bin/git",
+          "rev-parse",
+          "HEAD^{tree}"
+        ],
+        "capturedPid": 31,
+        "startedAt": "2026-11-16T15:20:35.787805+00:00",
+        "finishedAt": "2026-11-16T15:20:35.796718+00:00",
+        "durationSeconds": 0.008870316996762995,
+        "exitCode": 0,
+        "exitSignal": null,
+        "remainingCapturedSession": [],
+        "cleanupSeconds": 0
+      },
+      {
+        "name": "materialize-green-after-metadata-10",
+        "receiptIdentity": {
+          "bytes": 1112,
+          "sha256": "c36bc8b1af4f26e14a7d77d26eda15565f8f766050bf35f5cd0c432e76a762f2",
+          "gitBlob": "4898c471bb71abed5497c5ccd4df387bd6cf57c9"
+        },
+        "argv": [
+          "/usr/local/bin/git",
+          "ls-tree",
+          "-rz",
+          "--full-tree",
+          "HEAD"
+        ],
+        "capturedPid": 32,
+        "startedAt": "2026-11-16T15:20:35.796907+00:00",
+        "finishedAt": "2026-11-16T15:20:35.867288+00:00",
+        "durationSeconds": 0.07034557199949631,
+        "exitCode": 0,
+        "exitSignal": null,
+        "remainingCapturedSession": [],
+        "cleanupSeconds": 0
+      },
+      {
+        "name": "materialize-green-after-metadata-11",
+        "receiptIdentity": {
+          "bytes": 1107,
+          "sha256": "177d03f339cbf7089e1613abbd6c6716571abe9a44ab690c73b57384f6c4e2f9",
+          "gitBlob": "032d8bf7245568cf14a37acc0d09b1325a3b8748"
+        },
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--cached",
+          "--name-only",
+          "-z"
+        ],
+        "capturedPid": 33,
+        "startedAt": "2026-11-16T15:20:35.917693+00:00",
+        "finishedAt": "2026-11-16T15:20:35.937680+00:00",
+        "durationSeconds": 0.019622342002548976,
+        "exitCode": 0,
+        "exitSignal": null,
+        "remainingCapturedSession": [],
+        "cleanupSeconds": 0
+      },
+      {
+        "name": "materialize-green-after-metadata-12",
+        "receiptIdentity": {
+          "bytes": 1116,
+          "sha256": "3e47f41ba57647ee07f23ec92afee5d602be21f6e26d41358e87bf6b3bebb467",
+          "gitBlob": "da1fd0c095e4e4a3e335580f2a5877cf4b9db0d6"
+        },
+        "argv": [
+          "/usr/local/bin/git",
+          "ls-files",
+          "--others",
+          "--exclude-standard",
+          "-z"
+        ],
+        "capturedPid": 34,
+        "startedAt": "2026-11-16T15:20:35.937877+00:00",
+        "finishedAt": "2026-11-16T15:20:36.413026+00:00",
+        "durationSeconds": 0.4753346750003402,
+        "exitCode": 0,
+        "exitSignal": null,
+        "remainingCapturedSession": [],
+        "cleanupSeconds": 0
+      },
+      {
+        "name": "materialize-green-after-metadata-13",
+        "receiptIdentity": {
+          "bytes": 1096,
+          "sha256": "8c06bb83aead02aedf4af18ada04ffbe48dac170c93acb2df4142322ee032332",
+          "gitBlob": "e33e7707f5b888629741f104714d50224e79ec51"
+        },
+        "argv": [
+          "/usr/local/bin/git",
+          "ls-files",
+          "--stage",
+          "-z"
+        ],
+        "capturedPid": 35,
+        "startedAt": "2026-11-16T15:20:36.506033+00:00",
+        "finishedAt": "2026-11-16T15:20:36.598180+00:00",
+        "durationSeconds": 0.09153914700073074,
+        "exitCode": 0,
+        "exitSignal": null,
+        "remainingCapturedSession": [],
+        "cleanupSeconds": 0
+      },
+      {
+        "name": "materialize-green-after-metadata-14",
+        "receiptIdentity": {
+          "bytes": 1104,
+          "sha256": "a3b15343f88ddaa9998231273206fc839ec96b456e3d7dd8ec9efdbae5151fc0",
+          "gitBlob": "366c879b753a38f3673ef374d2a6f78fcba4174c"
+        },
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--name-only",
+          "-z",
+          "HEAD"
+        ],
+        "capturedPid": 36,
+        "startedAt": "2026-11-16T15:20:36.673480+00:00",
+        "finishedAt": "2026-11-16T15:20:36.742777+00:00",
+        "durationSeconds": 0.06822077100150636,
+        "exitCode": 0,
+        "exitSignal": null,
+        "remainingCapturedSession": [],
+        "cleanupSeconds": 0
+      }
+    ],
+    "timing": {
+      "started": "2026-11-16T15:18:49.263633+00:00",
+      "preflightSeconds": 106.50820870299867,
+      "postflightSeconds": 35.80234102999748,
+      "totalInvocationSeconds": 142.31507239499842,
+      "writeAndSupervisorOverheadSeconds": 0.004522662002273137,
+      "cleanupSeconds": 0,
+      "cutoff": "2026-11-16T15:21:11.579685+00:00",
+      "finished": "2026-11-16T15:21:11.579708+00:00"
+    },
+    "timingQualification": "No primary behavioral command ran, so no commandPhaseSeconds result exists. The106.50820870299867-second preflight and35.80234102999748-second postflight remain separate from any future180-second GREEN command clock.",
+    "signalAdmissionCutoff": {
+      "at": "2026-11-16T15:21:11.579685+00:00",
+      "pendingSignals": [],
+      "supervisorExitZeroRequired": true,
+      "scope": "Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission."
+    },
+    "actualOuterExitZeroJoinedSeparately": true,
+    "noPostCutoffSignalCoverageClaim": true,
+    "cleanup": {
+      "capturedSessionMembersAfter": [],
+      "newTestTempsRemaining": [],
+      "scope": "Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof."
+    },
+    "custodyScope": "Reviewed captured metadata command sessions/groups and owned TEST-temp scope only; no universal escaped-child/native custody claim."
+  },
+  "decisionAndLimits": {
+    "materializationAccepted": true,
+    "qualifiesOnlyExactSelectedGreenPrerequisite": true,
+    "behavioralGreenPass": null,
+    "actualGreenEvidenceStillSeparate": true,
+    "sourceMaterializationNotCountedAsTestExecution": true,
+    "noNativeGuiRealProviderPlatformCrossTeamOrWholeE2EQualification": true,
+    "rootReportedGreenLaunchedOnlyAfterItsCompleteMaterializationAcceptance": true,
+    "laterGreenOrdering": "The precise actual GREEN start/result and its input/lifetime/raw admission will be joined in the separate actual GREEN review; this record does not substitute for it.",
+    "noNewAttemptOrRetryGranted": true
+  },
+  "reviewerActions": {
+    "immutableBodyReadsAndPureDataHashingOnly": true,
+    "sourceOrPackageEvaluation": 0,
+    "shellCommands": 0,
+    "sourceOrRunnerApplications": 0,
+    "testsOrGuards": 0,
+    "refCommitPrCiMutations": 0,
+    "onlyNewArtifact": "This bare immutable independent review."
+  },
+  "remainingIssues": []
+}

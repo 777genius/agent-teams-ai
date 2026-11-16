@@ -1,0 +1,641 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-actual-three-original-conversation-guard-outcome-and-final-closure",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/parity_audit",
+  "reviewDateUtc": "2026-11-16",
+  "verdict": "ACCEPTED",
+  "parentNotifiedBeforeBareRetention": true,
+  "scope": "Full actual command/raw outcome review, literal evidence hashes, receipt/primary/outer joins and scoped final acceptance. Complete large-input and lifetime reconstruction is independently retained by /root/guard_review and explicitly joined below.",
+  "reviewedEnvelope": {
+    "bytes": 290501,
+    "sha256": "c5c1930f5cc47d7d891cf5c522b7c68879f643962ba20afee4aaab39e984fa54",
+    "gitBlob": "4ec154d23168a8c819a22a0d4a9328ef272f3203"
+  },
+  "subject": {
+    "commit": "bc6594c3ff0a1061870612a8f688400123575754",
+    "tree": "3b30530f411c66ceaec24666b728ecaf842f8212",
+    "qualification": "Exact published reviewed controls/Selection postimages and unchanged97-case test. Local detached HEAD/index remain c5 with exactly these two source overlays; current documentation is not claimed locally materialized."
+  },
+  "localSource": {
+    "head": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+    "tree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+    "sourcePostimage": {
+      "bytes": 2478453,
+      "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+      "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+    },
+    "allowedTrackedOverlays": [
+      "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts"
+    ],
+    "controls": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+    "selection": "cf93da72a198dac636658e512093eef7828b5927",
+    "unchangedTest": "efd876b86db16cc4faf63a9ba8e309503ca7b985",
+    "sourceRows": 8798,
+    "workflows": 42,
+    "localDocumentationPublicationNotClaimed": true
+  },
+  "runner": {
+    "bytes": 35916,
+    "sha256": "495fac79660eb36f0795f74ff14bd665d79ac3e43534349c2f65234bda89d0f5",
+    "gitBlob": "6af0ac85f09ef02488ce15331828713882a73d13"
+  },
+  "binding": {
+    "bytes": 375818,
+    "sha256": "744167b87c840de28f17b86fd8b801caec5c71d695cc49c9f037dab964176cfd",
+    "gitBlob": "21878f51fd1b7bfca5bab18ff71c7c1beca5aaef"
+  },
+  "priorComplete97Green": {
+    "acceptedBeforeFirstGuard": true,
+    "rootAdmissionAt": "2026-11-16 15:36:56 UTC",
+    "envelope": {
+      "bytes": 124846,
+      "sha256": "62ebe8480892a5e8e6d2ed58f0ed0fe3052eba0edfecfadf36ef9ffbf3b7d4c3",
+      "gitBlob": "d039b8d061439c6e61a71a37535a4f7cc76a6093"
+    },
+    "receipt": {
+      "bytes": 24625,
+      "sha256": "191557a7c37e46f6d7f0f6360e3e70cb1519292f959e9727cebdff2f494f1ca3",
+      "gitBlob": "e01ba171191344314babe0d6ea16cacdaf452cf3"
+    },
+    "semanticReview": {
+      "bytes": 123411,
+      "sha256": "5dcab89bd07be83778ce7b40084960a26a9b17b22327d7fc150a2a0e3f867b07",
+      "gitBlob": "1f1ef935177c9453bdf330ae14b0e3b319a45311"
+    },
+    "finalSupplement": {
+      "bytes": 17444,
+      "sha256": "c87b3279b67908eea859a5d3d857c6aa34a6be9a9b37af67b0a8e1de23ac01e5",
+      "gitBlob": "17e26030335deb4d9d1b70d902f7f0d7b62deefa"
+    },
+    "independentInputLifetimeReview": {
+      "bytes": 95744,
+      "sha256": "845e5cfc6e317c63380f949d6e816782d28ba81d96aae8170a5d724c9dbc632c",
+      "gitBlob": "bb67ad6d1ab86403356267ac28becaa067be958f"
+    },
+    "actualCases": 97,
+    "pass": 97,
+    "fail": 0,
+    "skip": 0,
+    "cancel": 0,
+    "todo": 0,
+    "oldCases": 78,
+    "addedCases": 19
+  },
+  "independentMechanicalChecks": {
+    "fullEnvelopeUtf8BytesSha256GitRecomputed": true,
+    "all171LiteralBodiesRehashedAndJoinedToExactPathCensus": true,
+    "allThreeFullPrimaryRawsReadAndExactlyMatched": true,
+    "allThreeActualArgvEqualReviewedBindingCommandVectors": true,
+    "allThreePrimaryReceiptsEqualFullLiteralBodies": true,
+    "allThreeFinalReceiptsEqualFullLiteralBodies": true,
+    "all18PrintedOuterFieldsPerInvocationEqualFinalReceipt": true,
+    "actualOuterExitZeroDistinctFromPrimaryExit": true,
+    "metadataChildren": 42,
+    "metadataReceiptsJoinedToOwnRawAndStderrIdentities": true,
+    "allBeforeAfterSourceDependencyCompiledPnpmIdentitiesEqualAcceptedGreen": true,
+    "providerToolAndBootstrapCacheObjectsEqualAcceptedGreen": true,
+    "perInvocationEnvironmentBeforeAfterEqual": true,
+    "completeLargeBodyReconstructionNotDuplicatedInThisLane": true
+  },
+  "totals": {
+    "actualFileInstances": 201,
+    "actualFileBytes": 270543040,
+    "literalSmallBodies": 171,
+    "metadataChildren": 42,
+    "primaryChildren": 3,
+    "instanceBytesIncludeRepeatedWholeInputs": true
+  },
+  "phases": [
+    {
+      "command": "lint",
+      "verdict": "PASS",
+      "commandAndEvidenceProof": {
+        "command": "lint",
+        "argv": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+          "--config.pm-on-fail=error",
+          "--config.verify-deps-before-run=false",
+          "--config.engine-strict=true",
+          "lint:fast:files",
+          "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ],
+        "primary": {
+          "bytes": 1206,
+          "sha256": "8def1ef74721793db1fb4a91e563ee4c45dfb5715d50d484abcb1e11855cb1d4",
+          "gitBlob": "e7525ed9349704fc2cc742a8436ac154997643c6"
+        },
+        "raw": {
+          "bytes": 272,
+          "sha256": "c0ff9944f59867a8f5cc920acfa891350ca3727a2a1ced460a29b7cf4d4022f1",
+          "gitBlob": "b175040d78318e660b88a695ed63f9cd325855e1"
+        },
+        "finalReceipt": {
+          "bytes": 24936,
+          "sha256": "5bb300c7853e1a680ebe114d95ca24d60102f956576f5b05c47dea0b9291b954",
+          "gitBlob": "1a1c35adcf188bacb66930b69d89d02015cb180c"
+        },
+        "files": 67,
+        "bytes": 90181351,
+        "literalBodies": 57,
+        "metadataChildren": 14,
+        "primarySeconds": 9.781771877998835,
+        "commandPhaseSeconds": 9.783031872997526,
+        "outerSession": 33804,
+        "observedOuterExit": 0,
+        "printedFieldsJoined": 18,
+        "scopeCompleted": true,
+        "rawEqualsExpected": true,
+        "runtimeIds": {
+          "source": {
+            "bytes": 2478453,
+            "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+            "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+          },
+          "dependencies": {
+            "bytes": 39168001,
+            "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+            "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+          },
+          "compiled": {
+            "bytes": 400300,
+            "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+            "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+          },
+          "pnpm": {
+            "bytes": 238649,
+            "sha256": "e814a4ca22111e747db4386274e92f596f0a26d7e4b5bc687f8d1ccf61510a77",
+            "gitBlob": "2f917a18c33c04a1c6398d1adf644ce62fb8e39f"
+          }
+        }
+      },
+      "fullPrimaryReceipt": {
+        "argv": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+          "--config.pm-on-fail=error",
+          "--config.verify-deps-before-run=false",
+          "--config.engine-strict=true",
+          "lint:fast:files",
+          "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T15:39:12.842968+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 30,
+        "metadataOnly": false,
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/lint-command-1.log",
+          "bytes": 272,
+          "sha256": "c0ff9944f59867a8f5cc920acfa891350ca3727a2a1ced460a29b7cf4d4022f1",
+          "gitBlob": "b175040d78318e660b88a695ed63f9cd325855e1"
+        },
+        "finishedAt": "2026-11-16T15:39:22.624839+00:00",
+        "durationSeconds": 9.781771877998835,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true
+      },
+      "fullActualPrimaryRaw": "$ eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content scripts/legacy-agent-host/desktop-ui-controls.ts scripts/legacy-agent-host/desktop-emulated-selection-ui.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\n",
+      "rawInterpretation": "The complete output is only the selected ESLint invocation over the exact three authorized paths. No diagnostics are printed. This is the fast lint command, without a canonical typecheck or build claim.",
+      "actualOuterExecutor": {
+        "start": {
+          "chunk_id": "d2f2ed",
+          "wall_time_seconds": 1.000821653,
+          "session_id": 33804,
+          "original_token_count": 0,
+          "output": ""
+        },
+        "completion": {
+          "chunk_id": "0f2ebf",
+          "wall_time_seconds": 0.000028805,
+          "exit_code": 0,
+          "original_token_count": 278,
+          "output": "{\"command\": \"lint\", \"action\": \"run\", \"exitCode\": 0, \"exitSignal\": null, \"timedOut\": false, \"executionError\": null, \"postflightError\": null, \"inputsPreserved\": true, \"commandCompletedNormally\": true, \"scopeCompleted\": true, \"preflightSeconds\": 135.3852573969998, \"commandPhaseSeconds\": 9.783031872997526, \"cleanupSeconds\": 0, \"postflightSeconds\": 88.40826932300115, \"totalInvocationSeconds\": 233.5771721070014, \"rawCombinedOutput\": {\"path\": \"/tmp/c714-ui-conversation-evidence/lint-command-1.log\", \"bytes\": 272, \"sha256\": \"c0ff9944f59867a8f5cc920acfa891350ca3727a2a1ced460a29b7cf4d4022f1\", \"gitBlob\": \"b175040d78318e660b88a695ed63f9cd325855e1\"}, \"cleanup\": {\"capturedSessionMembersAfter\": [], \"newTestTempsRemaining\": [], \"scope\": \"Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof.\"}, \"signalAdmissionCutoff\": {\"at\": \"2026-11-16T15:40:51.034070+00:00\", \"pendingSignals\": [], \"supervisorExitZeroRequired\": true, \"scope\": \"Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.\"}}\n"
+        }
+      },
+      "finalAdmission": {
+        "attempt": 1,
+        "action": "run",
+        "primaryExit": 0,
+        "primarySignal": null,
+        "primaryTimedOut": false,
+        "inputsPreserved": true,
+        "commandCompletedNormally": true,
+        "scopeCompleted": true,
+        "primaryUnreached": false,
+        "interruptions": [],
+        "cleanup": {
+          "capturedSessionMembersAfter": [],
+          "newTestTempsRemaining": [],
+          "scope": "Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof."
+        },
+        "signalAdmissionCutoff": {
+          "at": "2026-11-16T15:40:51.034070+00:00",
+          "pendingSignals": [],
+          "supervisorExitZeroRequired": true,
+          "scope": "Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission."
+        },
+        "primaryLimitSeconds": 180,
+        "startedAt": "2026-11-16T15:36:57.455949+00:00",
+        "finishedAt": "2026-11-16T15:40:51.034096+00:00",
+        "preflightSeconds": 135.3852573969998,
+        "commandPhaseSeconds": 9.783031872997526,
+        "cleanupSeconds": 0,
+        "postflightSeconds": 88.40826932300115,
+        "totalInvocationSeconds": 233.5771721070014
+      },
+      "dataOnlyExportNote": {
+        "firstDataOnlyRead": "The first read-only Python export returned no completed exit within1000ms; orchestration raised Error without retaining the underlying tool result/session. No test/guard/source process was reexecuted and no file was written. The repeated complete data-only read completed as retained here.",
+        "behavioralAttemptsUnchanged": true
+      }
+    },
+    {
+      "command": "source-size",
+      "verdict": "PASS",
+      "commandAndEvidenceProof": {
+        "command": "source-size",
+        "argv": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+          "--config.pm-on-fail=error",
+          "--config.verify-deps-before-run=false",
+          "--config.engine-strict=true",
+          "guard:source-file-size"
+        ],
+        "primary": {
+          "bytes": 1035,
+          "sha256": "3695bbeb8c2ef156c2012698efa3c0c279f20951a2190c1ff89876fcc18d34dd",
+          "gitBlob": "4f7b41221690b4f52337e5adb0c19966d7a812d3"
+        },
+        "raw": {
+          "bytes": 249,
+          "sha256": "26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f",
+          "gitBlob": "399a78f77777d0669218be2d4dae5360657308fa"
+        },
+        "finalReceipt": {
+          "bytes": 24823,
+          "sha256": "9f6182a6bd98e1a1ee833728aaf9b18f56d4118acd5eaad268430d1358e5e110",
+          "gitBlob": "911c1d56bda3e3ed76dea6a175979ba9348254dd"
+        },
+        "files": 67,
+        "bytes": 90181063,
+        "literalBodies": 57,
+        "metadataChildren": 14,
+        "primarySeconds": 9.268049633999908,
+        "commandPhaseSeconds": 9.26855888299906,
+        "outerSession": 92277,
+        "observedOuterExit": 0,
+        "printedFieldsJoined": 18,
+        "scopeCompleted": true,
+        "rawEqualsExpected": true,
+        "runtimeIds": {
+          "source": {
+            "bytes": 2478453,
+            "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+            "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+          },
+          "dependencies": {
+            "bytes": 39168001,
+            "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+            "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+          },
+          "compiled": {
+            "bytes": 400300,
+            "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+            "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+          },
+          "pnpm": {
+            "bytes": 238649,
+            "sha256": "e814a4ca22111e747db4386274e92f596f0a26d7e4b5bc687f8d1ccf61510a77",
+            "gitBlob": "2f917a18c33c04a1c6398d1adf644ce62fb8e39f"
+          }
+        }
+      },
+      "fullPrimaryReceipt": {
+        "argv": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+          "--config.pm-on-fail=error",
+          "--config.verify-deps-before-run=false",
+          "--config.engine-strict=true",
+          "guard:source-file-size"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T15:45:45.187870+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 30,
+        "metadataOnly": false,
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/source-size-command-1.log",
+          "bytes": 249,
+          "sha256": "26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f",
+          "gitBlob": "399a78f77777d0669218be2d4dae5360657308fa"
+        },
+        "finishedAt": "2026-11-16T15:45:54.456216+00:00",
+        "durationSeconds": 9.268049633999908,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true
+      },
+      "fullActualPrimaryRaw": "$ node ./scripts/ci/check-source-file-size.mjs\nSource file size guard passed: 5020 production files checked, 141 frozen legacy exceptions, 800-line limit.\n86 legacy file(s) are below their frozen caps; lower those caps when committing the refactor.\n",
+      "rawInterpretation": "The complete output explicitly passes 5,020 production files, 141 frozen legacy exceptions and the 800-line limit. The following 86-below-cap message is informational; no baseline or cap change is selected.",
+      "actualOuterExecutor": {
+        "start": {
+          "chunk_id": "afef43",
+          "wall_time_seconds": 1.00115456,
+          "session_id": 92277,
+          "original_token_count": 0,
+          "output": ""
+        },
+        "completion": {
+          "chunk_id": "439a92",
+          "wall_time_seconds": 0.000028294,
+          "exit_code": 0,
+          "original_token_count": 282,
+          "output": "{\"command\": \"source-size\", \"action\": \"run\", \"exitCode\": 0, \"exitSignal\": null, \"timedOut\": false, \"executionError\": null, \"postflightError\": null, \"inputsPreserved\": true, \"commandCompletedNormally\": true, \"scopeCompleted\": true, \"preflightSeconds\": 187.70758165200095, \"commandPhaseSeconds\": 9.26855888299906, \"cleanupSeconds\": 0, \"postflightSeconds\": 165.62848875499913, \"totalInvocationSeconds\": 362.60509694699795, \"rawCombinedOutput\": {\"path\": \"/tmp/c714-ui-conversation-evidence/source-size-command-1.log\", \"bytes\": 249, \"sha256\": \"26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f\", \"gitBlob\": \"399a78f77777d0669218be2d4dae5360657308fa\"}, \"cleanup\": {\"capturedSessionMembersAfter\": [], \"newTestTempsRemaining\": [], \"scope\": \"Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof.\"}, \"signalAdmissionCutoff\": {\"at\": \"2026-11-16T15:48:40.084860+00:00\", \"pendingSignals\": [], \"supervisorExitZeroRequired\": true, \"scope\": \"Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.\"}}\n"
+        }
+      },
+      "finalAdmission": {
+        "attempt": 1,
+        "action": "run",
+        "primaryExit": 0,
+        "primarySignal": null,
+        "primaryTimedOut": false,
+        "inputsPreserved": true,
+        "commandCompletedNormally": true,
+        "scopeCompleted": true,
+        "primaryUnreached": false,
+        "interruptions": [],
+        "cleanup": {
+          "capturedSessionMembersAfter": [],
+          "newTestTempsRemaining": [],
+          "scope": "Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof."
+        },
+        "signalAdmissionCutoff": {
+          "at": "2026-11-16T15:48:40.084860+00:00",
+          "pendingSignals": [],
+          "supervisorExitZeroRequired": true,
+          "scope": "Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission."
+        },
+        "primaryLimitSeconds": 180,
+        "startedAt": "2026-11-16T15:42:37.479028+00:00",
+        "finishedAt": "2026-11-16T15:48:40.084931+00:00",
+        "preflightSeconds": 187.70758165200095,
+        "commandPhaseSeconds": 9.26855888299906,
+        "cleanupSeconds": 0,
+        "postflightSeconds": 165.62848875499913,
+        "totalInvocationSeconds": 362.60509694699795
+      },
+      "dataOnlyExportNote": null
+    },
+    {
+      "command": "diff-check",
+      "verdict": "PASS",
+      "commandAndEvidenceProof": {
+        "command": "diff-check",
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--check",
+          "--",
+          "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ],
+        "primary": {
+          "bytes": 987,
+          "sha256": "0af6ad53afae51ca0bf561c3ae1859b9470c041471c5a5f5fb34ada43e45ddb8",
+          "gitBlob": "501b644bc85af23f6a6971471117b1fadd6c1d00"
+        },
+        "raw": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finalReceipt": {
+          "bytes": 24763,
+          "sha256": "5f48be7f4cf19b5db5f5929523bce60fb6a67cf9cb92fa0a70c86b141dcac8d2",
+          "gitBlob": "4d85dce484c341e29a1223ef9ce4b922f9c428db"
+        },
+        "files": 67,
+        "bytes": 90180626,
+        "literalBodies": 57,
+        "metadataChildren": 14,
+        "primarySeconds": 0.036582931999873836,
+        "commandPhaseSeconds": 0.03693185500014806,
+        "outerSession": 14823,
+        "observedOuterExit": 0,
+        "printedFieldsJoined": 18,
+        "scopeCompleted": true,
+        "rawEqualsExpected": true,
+        "runtimeIds": {
+          "source": {
+            "bytes": 2478453,
+            "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+            "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+          },
+          "dependencies": {
+            "bytes": 39168001,
+            "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+            "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+          },
+          "compiled": {
+            "bytes": 400300,
+            "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+            "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+          },
+          "pnpm": {
+            "bytes": 238649,
+            "sha256": "e814a4ca22111e747db4386274e92f596f0a26d7e4b5bc687f8d1ccf61510a77",
+            "gitBlob": "2f917a18c33c04a1c6398d1adf644ce62fb8e39f"
+          }
+        }
+      },
+      "fullPrimaryReceipt": {
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--check",
+          "--",
+          "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T15:51:36.570675+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 30,
+        "metadataOnly": false,
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-ui-conversation-evidence/diff-check-command-1.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finishedAt": "2026-11-16T15:51:36.607351+00:00",
+        "durationSeconds": 0.036582931999873836,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true
+      },
+      "fullActualPrimaryRaw": "",
+      "rawInterpretation": "The complete output is empty and the original three-path git diff --check returns 0. This qualifies only that original whitespace/error check.",
+      "actualOuterExecutor": {
+        "start": {
+          "chunk_id": "43d61c",
+          "wall_time_seconds": 1.000488117,
+          "session_id": 14823,
+          "original_token_count": 0,
+          "output": ""
+        },
+        "completion": {
+          "chunk_id": "3ce75f",
+          "wall_time_seconds": 0.00003032,
+          "exit_code": 0,
+          "original_token_count": 281,
+          "output": "{\"command\": \"diff-check\", \"action\": \"run\", \"exitCode\": 0, \"exitSignal\": null, \"timedOut\": false, \"executionError\": null, \"postflightError\": null, \"inputsPreserved\": true, \"commandCompletedNormally\": true, \"scopeCompleted\": true, \"preflightSeconds\": 128.0484635549983, \"commandPhaseSeconds\": 0.03693185500014806, \"cleanupSeconds\": 0, \"postflightSeconds\": 118.54299658899981, \"totalInvocationSeconds\": 246.628869199998, \"rawCombinedOutput\": {\"path\": \"/tmp/c714-ui-conversation-evidence/diff-check-command-1.log\", \"bytes\": 0, \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\", \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"}, \"cleanup\": {\"capturedSessionMembersAfter\": [], \"newTestTempsRemaining\": [], \"scope\": \"Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof.\"}, \"signalAdmissionCutoff\": {\"at\": \"2026-11-16T15:53:35.150454+00:00\", \"pendingSignals\": [], \"supervisorExitZeroRequired\": true, \"scope\": \"Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.\"}}\n"
+        }
+      },
+      "finalAdmission": {
+        "attempt": 1,
+        "action": "run",
+        "primaryExit": 0,
+        "primarySignal": null,
+        "primaryTimedOut": false,
+        "inputsPreserved": true,
+        "commandCompletedNormally": true,
+        "scopeCompleted": true,
+        "primaryUnreached": false,
+        "interruptions": [],
+        "cleanup": {
+          "capturedSessionMembersAfter": [],
+          "newTestTempsRemaining": [],
+          "scope": "Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof."
+        },
+        "signalAdmissionCutoff": {
+          "at": "2026-11-16T15:53:35.150454+00:00",
+          "pendingSignals": [],
+          "supervisorExitZeroRequired": true,
+          "scope": "Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission."
+        },
+        "primaryLimitSeconds": 180,
+        "startedAt": "2026-11-16T15:49:28.520912+00:00",
+        "finishedAt": "2026-11-16T15:53:35.150581+00:00",
+        "preflightSeconds": 128.0484635549983,
+        "commandPhaseSeconds": 0.03693185500014806,
+        "cleanupSeconds": 0,
+        "postflightSeconds": 118.54299658899981,
+        "totalInvocationSeconds": 246.628869199998
+      },
+      "dataOnlyExportNote": null
+    }
+  ],
+  "independentCompleteInputAndLifetimeClosure": {
+    "reviewer": "/root/guard_review",
+    "record": {
+      "bytes": 126977,
+      "sha256": "224a71c003508a19db5943dbe6928204647ef50d34753a9d4f7a1f900f6b43f1",
+      "gitBlob": "36cb4fa4f12885356166ab1fb9324740c9cd3293"
+    },
+    "fullRecordRehashedAndScopeJoined": true,
+    "accepted": true,
+    "completeCensus": {
+      "actualFileInstances": 201,
+      "actualFileBytes": 270543040,
+      "uniqueBodiesAcrossPhases": 107,
+      "literalSmallBodies": 171,
+      "literalBytes": 139822,
+      "literalUniqueBodiesAcrossPhases": 102,
+      "largeInstances": 30,
+      "largeBytes": 270403218,
+      "all201ExpectedActualFileInstancesExact": true,
+      "all171LiteralBodiesRehashed": true,
+      "all30LargeInstancesResolvedByWholeFileIdentities": true,
+      "allPerPhaseCensusCountsAndSumsRecomputed": true,
+      "qualification": "Instance bytes include repeated whole input bodies at each boundary, not270MB of unique evidence or extra tests. Exact file-entry arrays are retained in the fully rehashed4ec envelope; their canonical digest in each phase is an audit anchor, not a substitute for the complete source bodies."
+    },
+    "lifetimeSummary": {
+      "separateOriginalInvocations": true,
+      "futureCrossValidationPackageUsed": false,
+      "metadataChildren": 42,
+      "primaryChildren": 3,
+      "allPrimaryExitZero": true,
+      "allMetadataExitZero": true,
+      "observedOuterSessions": [
+        33804,
+        92277,
+        14823
+      ],
+      "allObservedOuterExitZero": true,
+      "originalPrimaryLimitSecondsEach": 180,
+      "originalMetadataLimitSecondsEach": 30,
+      "clockScope": "Each original180-second clock begins at captured command launch before start/raw/spawn work and is never reset. Full preflight/postflight are distinct and can exceed180seconds; no invocation-total180-second claim is made.",
+      "microsecondChronology": true,
+      "allPrimaryStartAndPostflightMetadataSequencingExact": true,
+      "allFullRawFinalizedAfterCapturedQuiescence": true,
+      "allCapturedBeforeAndAfterSessionsEmpty": true,
+      "cleanupSecondsTotal": 0,
+      "allManagedInterruptionsAndCutoffPendingSignalsEmpty": true,
+      "allTestTempAndTaskTmpTopEntriesEmpty": true,
+      "cutoffScope": "Managed pending-signal snapshot under mask is bounded at each recorded cutoff. Separate actual outer exit0 is required and joined for all three; receipt success alone is not a post-cutoff guarantee.",
+      "custodyScope": "Captured command session/group and TEST-prefix task temps only. No universal escaped-child/native custody claim."
+    },
+    "sourceRows": 8798,
+    "workflows": 42,
+    "dependencyRows": 122773,
+    "compiledRows": 1454,
+    "providerRegularMembers": [
+      253,
+      12
+    ],
+    "allSixSourceBoundaries": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a",
+    "noSourceChangesDuringGuards": true
+  },
+  "finalCombinedAcceptance": {
+    "currentConversationRedGreenAndThreeGuardsClosed": true,
+    "noRemainingCurrentGuardGate": true,
+    "remainingOriginalAttempts": {
+      "red": 0,
+      "green": 0,
+      "lint": 0,
+      "sourceSize": 0,
+      "diffCheck": 0
+    },
+    "prospectiveCrossR1": "8abe2a1437489d5c0223d532535d6c520fd70184",
+    "myProspectiveR1Review": "7fa731637982b2629b35df2378bab0a5bfbbcc3e",
+    "guardProspectiveR1Review": "bacd76155f9d45ce40e2f77ead26ff58769712ee",
+    "publicationBoundary": "Parent may complete the already reviewed documentary checkpoint and amended R1 publication. Complete actual published readback is still required before any Cross test/runner/producer postimage. This review creates no further execution allowance."
+  },
+  "qualifications": [
+    "All three guards are the original separate 6af0/21878 invocations. Full per-invocation preflight and postflight were used; the future Cross shared validation package or source-only metadata optimization was not used retroactively.",
+    "Each original 180-second limit bounds its captured primary command phase. Full input preflight/postflight may exceed 180 seconds; there is no 180-second whole-invocation assertion.",
+    "Primary exit 0 and the separate actual outer exit 0 are both required and retained for all three. Managed-signal cutoff is explicit; no signal-after-cutoff guarantee is inferred from a receipt alone.",
+    "Cleanup qualifies captured sessions/groups and TEST-prefixed task temporaries. It is not universal escaped-child or native custody proof.",
+    "The first read-only data export has an unretained unfinished orchestration result. Its eventual exit/cleanup remains unknown; no successful result is invented. The separately retained primary receipts, raw outputs and actual outer completions establish the selected original guard results. No primary retry is inferred.",
+    "These results do not establish canonical full typing/build, GUI, packaged/native/real-provider/vendor or remaining end-to-end qualification.",
+    "No shell, target runtime, source/test/runner/dependency change, ref/commit/PR/CI action or artifact download was performed by this reviewer. Only immutable evidence reads, pure-data analysis and this authorized bare review were performed."
+  ],
+  "auditErrors": []
+}

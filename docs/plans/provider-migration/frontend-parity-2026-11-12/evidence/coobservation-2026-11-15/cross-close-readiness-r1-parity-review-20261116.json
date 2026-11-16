@@ -1,0 +1,343 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-final-prospective-Cross-Close-R1-acceptance",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/parity_audit",
+  "reviewedAtUtc": "2026-11-16T15:55:58.300Z",
+  "subject": {
+    "bytes": 23142,
+    "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+    "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+  },
+  "verdict": "ACCEPTED as the bounded prospective R1. Publication is still conditional on independently closed current97 GREEN and all three original guards, followed by complete actual published readback before any new postimage/runner authoring. No runtime or source application is admitted by this bare review alone.",
+  "fullBodyReadAndHashVerified": true,
+  "initialRequiredChangesReview": {
+    "gitBlob": "0300e167d6925ffb19a54eeaf2b8f07632452872",
+    "bytes": 10987,
+    "sha256": "9aa959a1745b9ab92238592381296a3291472f5ef78a93f39249d9c371cb9c23",
+    "closedByAmendment": true
+  },
+  "exactAmendmentProof": {
+    "draft": {
+      "bytes": 18471,
+      "sha256": "33d49bb9e141767bc44a842a4d5be7b6cdb4b9e3e26126b17b7b9cd210a82192",
+      "gitBlob": "41e85b8b23d52b747c12fb6da6873530ee818ab7"
+    },
+    "amended": {
+      "bytes": 23142,
+      "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+      "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+    },
+    "exactWholeInverse": {
+      "bytes": 18471,
+      "sha256": "33d49bb9e141767bc44a842a4d5be7b6cdb4b9e3e26126b17b7b9cd210a82192",
+      "gitBlob": "41e85b8b23d52b747c12fb6da6873530ee818ab7"
+    },
+    "wholeInverseExact": true,
+    "deltaPaths": [
+      "testFirst.targetSubcases",
+      "executionPlan.materialization",
+      "executionPlan.validationPackage",
+      "executionPlan.materializationReceiptContract",
+      "executionPlan.fullPreflightFailure",
+      "draftAmendment"
+    ],
+    "delta": [
+      {
+        "path": "testFirst.targetSubcases",
+        "before": "<absent>",
+        "after": {
+          "registeredCountUnchanged": 36,
+          "subcasesDoNotInflateCaseCount": true,
+          "actualDriverForeignDialogCase": [
+            "only a foreign dialog has Close",
+            "own dialog has no Close",
+            "own text is not exact trimmed Close",
+            "own Close has zero width",
+            "own Close has zero height"
+          ],
+          "actualDriverDuplicateCase": [
+            "two eligible same-dialog Close buttons",
+            "two positive-size exact-text Close buttons with only one natively enabled",
+            "two positive-size exact-text Close buttons with only one center-hit candidate"
+          ],
+          "actualDriverDisabledCase": [
+            "native disabled Close",
+            "covered center",
+            "absent center hit"
+          ],
+          "actualDriverPositiveCase": [
+            "center hit is the button itself",
+            "center hit is a descendant contained by that same button"
+          ],
+          "oracle": "All refusal subcases execute the actual helper/actual source-extracted driver statement against bounded DOM/store facts. Assert zero hover/press/release, original300 reads and100ms waits to the first30000ms cutoff when admission remains unavailable. Singleton decision precedes disabled/hit narrowing. Each positive variant preserves exactly one hover and one press/release pair at the accepted own target coordinates, original final reread and e.contains(hit) semantics. Do not recreate the producer predicate in fixture code."
+        }
+      },
+      {
+        "path": "executionPlan.materialization",
+        "before": "First metadata-only stage changes only efd test to reviewed append-only133-case postimage, preserving ed57/cf93 overlays and the two unchanged Cross preimages. After accepted actualRED, second metadata-only stage changes only the two reviewed Cross producers, keeping test bytes and all other source/input identities exact. Both require full before/after source/input and captured metadata/actual outer0 joins.",
+        "after": "First source/metadata-only stage changes only efd test to reviewed append-only133-case postimage, preserving ed57/cf93 and the two unchanged Cross preimages. After accepted actualRED and published/read-back producerR2, second source/metadata-only stage changes only the two approved Cross producers, preserving the exact test and all other source rows. Neither phase consumes Node, dependency, compiled or provider code. Both fully read/hash all8798 source rows and HEAD/tree/index/42workflows, exact Python/Git/tools, runner/binding/admission control files, config/environment boundary and captured metadata child sessions before/after; require no managed interruption/error/deadline/cleanup debt and actual outer0. Runtime dependency/compiled/provider/cache inputs are explicitly UNINSPECTED in these metadata-only stages. Never report a blanket all-input preservation/PASS there. Every next RED/GREEN preflight independently performs all original full current runtime input/provider/cache checks before any primary/eager import, regardless of successful materialization."
+      },
+      {
+        "path": "executionPlan.validationPackage",
+        "before": "Only after complete independently accepted133 GREEN, run exactly once each and sequentially in one captured validation invocation: pinned pnpm lint:fast:files for the three Cross paths, pinned pnpm guard:source-file-size, then pinned git diff --check for the five total approved overlay paths. Each gets its own captured primary/start/raw/exit0/cleanup receipt and original180s command budget. Full exact input/source metadata snapshots surround the validation package; stop at the first nonzero/unknown/timeout and mark later commands UNREACHED. No retry, fresh test, broad lint/format, benchmark, source mutation or install is selected.",
+        "after": "Only after complete independently accepted133 GREEN, one captured validation invocation uses one shared captured environment and complete full current input/source preflight, then exactly once each in order: pinned pnpm lint:fast:files for the three Cross paths, pinned pnpm guard:source-file-size, pinned git diff --check for all five approved overlay paths. Each child gets a distinct captured session/group, its own absolute180s clock started before its spawn/start/raw work (never reset afterward), full start/raw/final receipt and cleanup accounting. Admit each next child only after prior primary exit0, successful raw/receipt finalization, no timeout/deadline/execution/cleanup error, empty captured session, no managed interruption in that child and still-clear supervisor interruption state. Otherwise mark every later command permanently UNREACHED and spend the single package attempt; no partial-resume/retry path. Full exact input/source snapshots surround the whole package, not each child; do not claim per-check snapshots. Preflight, each command/cleanup subset, and postflight timing are separately reported. Actual supervisor exit0 is an independent required continuation condition. No broad lint/format, benchmark, new test/install/build/provider command or source mutation is selected."
+      },
+      {
+        "path": "executionPlan.materializationReceiptContract",
+        "before": "<absent>",
+        "after": {
+          "scope": "source-and-supervisor-metadata-only",
+          "fullRuntimeInputsInspected": false,
+          "fullRuntimeInputsPreserved": null,
+          "dependencies": "UNINSPECTED",
+          "compiled": "UNINSPECTED",
+          "providerArchivesAndInstalledMembers": "UNINSPECTED",
+          "bootstrapNodeCache": "UNINSPECTED",
+          "required": "Complete actual source/control/tool/config and captured metadata/session lifecycle before/after plus independent observed outer0. Source preservation is stated separately with exactly authorized written paths. This is not a behavioral or all-input result."
+        }
+      },
+      {
+        "path": "executionPlan.fullPreflightFailure",
+        "before": "<absent>",
+        "after": "Any failed full current-input preflight is a spent attempted invocation with the primary UNREACHED and later commands unrun. It never licenses a retry/automatic resume, source substitution, cached/earlier input evidence, skipped verification or relaxed admission."
+      },
+      {
+        "path": "draftAmendment",
+        "before": "<absent>",
+        "after": {
+          "supersedes": {
+            "bytes": 18471,
+            "sha256": "33d49bb9e141767bc44a842a4d5be7b6cdb4b9e3e26126b17b7b9cd210a82192",
+            "gitBlob": "41e85b8b23d52b747c12fb6da6873530ee818ab7"
+          },
+          "beforePublication": true,
+          "beforeAnyPostimage": true,
+          "changes": [
+            "Add explicit original-target eligibility/cardinality/descendant-hit subcases within unchanged36 new registrations.",
+            "Specify one shared validation environment, three distinct captured primary sessions/absolute180s clocks and strict per-child zero/receipt/raw/quiescence/signal gate; single spent package/no partial resume.",
+            "Explicitly scope future no-Node metadata-only source materializations to complete source/control/tool/config/session checks; dependency/compiled/provider/cache inputs uninspected there and full current-input preflight remains mandatory before actualRED/GREEN. No completed/current phase changed."
+          ]
+        }
+      }
+    ],
+    "unchangedSourceScope": true,
+    "unchangedProblemAndCauseLimits": true,
+    "unchangedRegisteredCases": true,
+    "plannedRegisteredCases": {
+      "preserved": 97,
+      "readiness": 28,
+      "actualDriver": 8,
+      "new": 36,
+      "total": 133
+    },
+    "explicitlyEnumeratedTargetSubcaseCounts": {
+      "foreignDialog": 5,
+      "duplicate": 3,
+      "disabledOrHit": 3,
+      "positive": 2,
+      "total": 13
+    },
+    "all5CurrentSourcePinsExact": true
+  },
+  "sourceScope": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "mode": "100644",
+      "bytes": 6433,
+      "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+      "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+      "physicalLines": 90,
+      "postimagePhysicalLineCap": 200,
+      "permitted": "Extend only the existing readiness-expression builder with a clarification-cleared/Close-specific stage and a narrow helper executing that expression via the existing clickExpression port. Existing undefined, clarification and in-progress-comment generated expressions and behavior remain byte-identical. The new stage may return the exact eligible same-dialog Close target tuple after its current read/session conditions, within the same synchronous section after the original two observer-module imports."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 36207,
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+      "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c",
+      "physicalLines": 798,
+      "postimagePhysicalLineCap": 800,
+      "permitted": "Only the exact original generic Close call after clarificationReceipt may change to the narrow same-Task Close helper, plus its one named import in the existing helper import block. Forward the already captured original handleId/taskId/contextId/surfaceId. Keep its label, selector/text diagnostic context, preceding actions/receipts and following closed-dialog read byte-identical. No extraction/reformat/rewrite of unrelated taskboard flow."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 136700,
+      "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+      "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985",
+      "postimageByteCap": 180000,
+      "permitted": "Append only the36 specified finite actual-source cases and their bounded fixtures. Preserve the complete136700-byte efd preimage as a literal prefix, all97 existing case bodies/names/order and imports. No rename/filter/skip or existing fixture rewrite. Add28 readiness-target cases and8 actual-driver Close cases, total133 registered cases. Additional subcase loops must be explicitly recorded rather than inflating registered counts."
+    }
+  ],
+  "preservedFixedSources": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "mode": "100644",
+      "bytes": 24759,
+      "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+      "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+    }
+  ],
+  "sourceEvidenceJoin": {
+    "actualCurrentSource": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a",
+    "completeRows": 8798,
+    "workflows": 42,
+    "allFiveSelectedOrFixedPinsExact": true,
+    "old97TestPrefix": "efd876b86db16cc4faf63a9ba8e309503ca7b985",
+    "old97PrefixBytes": 136700,
+    "sourceReadinessEvidence": "8278c953ca81e24f9d0a0ab96068d2e9a08d9c2d",
+    "originalCauseDiagnosis": "e1708fb5f076b2a03d81be0971c663a29599bbaa"
+  },
+  "semanticAcceptance": {
+    "exactOriginalTaskAuthority": "Existing handle/task/context and captured surface, current React root/controller, current canEditNow, exact live detail and stored session owner/revision are joined. A replaced Task/dialog or another surface cannot supply admission.",
+    "pendingVsSettled": "Ready detail, no loading/refreshPending, no scoped team refresh, accepted current live metadata, error/deletionIntent null and not deleted, exact alice assignment control and needsClarification undefined. canResolveClarification=false alone is not used as a settled oracle.",
+    "synchronousFinalTarget": "After the same two original observer imports, own state and same-dialog Close geometry/hit selection occur without an additional await/observer boundary. The exact complete expression is used through original clickExpression, including its final direct read.",
+    "targetOrder": "Positive size/exact trimmed text first, singleton second, native disabled and direct-or-contained-descendant center hit third. New explicitly required duplicate-disabled/hit variants prevent accidental ordering changes.",
+    "originalControlsUnchanged": "Whole ed57 controls, Page.bringToFront,30-second reads,100ms cadence,15 settling iterations/two equal samples, original owner checks/final exact geometry and one physical pair/no replay stay unchanged.",
+    "originalExpressionsUnchanged": "Undefined, clarification and in-progress-comment generated expressions must remain byte-identical, to be mechanically proven at source R2.",
+    "actualCauseLimit": "The historical four-pixel shift remains unexplained. This is prospective current own-Task readiness admission, not proof the historical Cross run would pass or a guarantee of later geometry."
+  },
+  "casePlan": {
+    "readiness": [
+      "admits a ready cleared original Task and ignores canResolveClarification=false",
+      "refuses retained user clarification",
+      "refuses retained external clarification",
+      "refuses null clarification instead of an absent field",
+      "refuses full-detail refreshPending",
+      "refuses full-detail loading",
+      "refuses current detail error",
+      "refuses current deletionIntent",
+      "refuses full Task deletedAt",
+      "refuses full Task deleted status",
+      "refuses a non-ready full-detail phase",
+      "refuses a foreign full Task ID",
+      "refuses a foreign detail identity",
+      "refuses a changed active context",
+      "refuses a different selected Team",
+      "refuses a rebound controller surface",
+      "refuses a missing stored session",
+      "refuses a different stored session owner surface",
+      "refuses a changed stored owner revision",
+      "refuses current canEditNow=false",
+      "refuses a non-owning controller",
+      "refuses scoped Team refresh",
+      "refuses unavailable current accepted Team metadata",
+      "refuses a disabled assignment control",
+      "refuses an expanded assignment control",
+      "refuses another assignee",
+      "refuses a missing assignment control",
+      "refuses duplicate assignment controls"
+    ],
+    "actualDriver": [
+      "the actual original Close action waits for cleared same-Task renderer readiness before one physical pair at settled coordinates",
+      "the actual original Close action exhausts its unchanged first-read deadline while renderer readiness remains pending, with no input",
+      "the actual original Close action cannot use a Close button from another dialog",
+      "the actual original Close action refuses two eligible Close controls in its own dialog",
+      "the actual original Close action refuses its disabled Close control",
+      "the actual original Close action re-observes revoked same-Task readiness at unchanged final coordinates before input",
+      "the actual original Close action preserves the final original renderer-ownership refusal",
+      "the actual original Close action preserves the final exact-geometry refusal without replay"
+    ],
+    "registeredCounts": {
+      "preserved": 97,
+      "added": 36,
+      "total": 133
+    },
+    "explicitTargetSubcases": {
+      "registeredCountUnchanged": 36,
+      "subcasesDoNotInflateCaseCount": true,
+      "actualDriverForeignDialogCase": [
+        "only a foreign dialog has Close",
+        "own dialog has no Close",
+        "own text is not exact trimmed Close",
+        "own Close has zero width",
+        "own Close has zero height"
+      ],
+      "actualDriverDuplicateCase": [
+        "two eligible same-dialog Close buttons",
+        "two positive-size exact-text Close buttons with only one natively enabled",
+        "two positive-size exact-text Close buttons with only one center-hit candidate"
+      ],
+      "actualDriverDisabledCase": [
+        "native disabled Close",
+        "covered center",
+        "absent center hit"
+      ],
+      "actualDriverPositiveCase": [
+        "center hit is the button itself",
+        "center hit is a descendant contained by that same button"
+      ],
+      "oracle": "All refusal subcases execute the actual helper/actual source-extracted driver statement against bounded DOM/store facts. Assert zero hover/press/release, original300 reads and100ms waits to the first30000ms cutoff when admission remains unavailable. Singleton decision precedes disabled/hit narrowing. Each positive variant preserves exactly one hover and one press/release pair at the accepted own target coordinates, original final reread and e.contains(hit) semantics. Do not recreate the producer predicate in fixture code."
+    },
+    "targetVariantCounts": {
+      "foreignDialog": 5,
+      "duplicate": 3,
+      "disabledOrHit": 3,
+      "positive": 2,
+      "total": 13
+    },
+    "qualification": "13 named target variants occupy four of the eight driver registrations; they do not inflate the36 new registered count. All actual133 names/order/results and reachable/unreached assertions remain future source and runtime review gates.",
+    "baselineExecutable": "Use the actual current exported builder/actual controls and uniquely extracted original Close statement. Old generic Close remains executable; no missing new export, fallback implementation, changed import setup or fabricated RED is accepted.",
+    "testFirstOrder": "Published R1/readback → reviewed append-only test and runner/binding → test-only publication/readback/materialization → one whole133 actual semanticRED/full input/lifetime/outer0 acceptance → only then producer authorship/R2/publication/readback/materialization → one same133 wholeGREEN/full acceptance → one scoped validation package.",
+    "noPredictedRuntimeClaim": true
+  },
+  "boundedExecutionAcceptance": {
+    "materialization": "First source/metadata-only stage changes only efd test to reviewed append-only133-case postimage, preserving ed57/cf93 and the two unchanged Cross preimages. After accepted actualRED and published/read-back producerR2, second source/metadata-only stage changes only the two approved Cross producers, preserving the exact test and all other source rows. Neither phase consumes Node, dependency, compiled or provider code. Both fully read/hash all8798 source rows and HEAD/tree/index/42workflows, exact Python/Git/tools, runner/binding/admission control files, config/environment boundary and captured metadata child sessions before/after; require no managed interruption/error/deadline/cleanup debt and actual outer0. Runtime dependency/compiled/provider/cache inputs are explicitly UNINSPECTED in these metadata-only stages. Never report a blanket all-input preservation/PASS there. Every next RED/GREEN preflight independently performs all original full current runtime input/provider/cache checks before any primary/eager import, regardless of successful materialization.",
+    "materializationReceiptContract": {
+      "scope": "source-and-supervisor-metadata-only",
+      "fullRuntimeInputsInspected": false,
+      "fullRuntimeInputsPreserved": null,
+      "dependencies": "UNINSPECTED",
+      "compiled": "UNINSPECTED",
+      "providerArchivesAndInstalledMembers": "UNINSPECTED",
+      "bootstrapNodeCache": "UNINSPECTED",
+      "required": "Complete actual source/control/tool/config and captured metadata/session lifecycle before/after plus independent observed outer0. Source preservation is stated separately with exactly authorized written paths. This is not a behavioral or all-input result."
+    },
+    "fullPreflightFailure": "Any failed full current-input preflight is a spent attempted invocation with the primary UNREACHED and later commands unrun. It never licenses a retry/automatic resume, source substitution, cached/earlier input evidence, skipped verification or relaxed admission.",
+    "validationPackage": "Only after complete independently accepted133 GREEN, one captured validation invocation uses one shared captured environment and complete full current input/source preflight, then exactly once each in order: pinned pnpm lint:fast:files for the three Cross paths, pinned pnpm guard:source-file-size, pinned git diff --check for all five approved overlay paths. Each child gets a distinct captured session/group, its own absolute180s clock started before its spawn/start/raw work (never reset afterward), full start/raw/final receipt and cleanup accounting. Admit each next child only after prior primary exit0, successful raw/receipt finalization, no timeout/deadline/execution/cleanup error, empty captured session, no managed interruption in that child and still-clear supervisor interruption state. Otherwise mark every later command permanently UNREACHED and spend the single package attempt; no partial-resume/retry path. Full exact input/source snapshots surround the whole package, not each child; do not claim per-check snapshots. Preflight, each command/cleanup subset, and postflight timing are separately reported. Actual supervisor exit0 is an independent required continuation condition. No broad lint/format, benchmark, new test/install/build/provider command or source mutation is selected.",
+    "attempts": {
+      "materializeTest": 1,
+      "red": 1,
+      "materializeProducer": 1,
+      "green": 1,
+      "validationPackage": 1
+    },
+    "sourceOnlyNotRuntimeProof": "The future no-Node materialization stages fully inspect source/control/tool/config/supervisor state but explicitly do not inspect dependency/compiled/provider/cache state. They cannot report blanket inputsPreserved. Full original runtime preflight/postflight for actualRED/GREEN and validation package remains mandatory and is not replaced by an earlier snapshot.",
+    "validationScope": "Shared environment and one full package pre/post pair only. Three separate captured primary sessions, each own absolute180-second clock and distinct start/raw/final receipt/cleanup. Prior zero exit, finalized evidence, no error/signal/debt and live supervisor interruption clearance gate the next child. First failure spends package and permanently leaves later commandsUNREACHED; no partialresume.",
+    "noCurrentPhaseChange": "Current97 execution and its three independently supervised guards remain under their existing scope. This R1 changes no completed receipt or current attempt.",
+    "laterRunnerReview": "No runner is present or accepted here. Its exact implementation and data binding require independent full R2 and published readback; all future raw/source/lifetime joins still apply."
+  },
+  "publicationAndQualification": {
+    "originalThreeGuardsBeforePublication": true,
+    "actualPublishedReadbackBeforeAnyPostimage": true,
+    "helperCap": 200,
+    "driverCap": 800,
+    "driverCurrentLines": 798,
+    "testByteCap": 180000,
+    "newTestHeadroomBytes": 43300,
+    "sourceCount5020Exception141Cap800Unchanged": true,
+    "canonicalBuildTypesAndFreshGUIPlatformRemainOpen": true,
+    "noIncomingAdoption": true,
+    "noProviderArchiveChange": true,
+    "noCIAction": true
+  },
+  "actions": {
+    "newR1Edits": 0,
+    "testPostimages": 0,
+    "producerPostimages": 0,
+    "runnerPostimages": 0,
+    "runtime": 0,
+    "sourceApplication": 0,
+    "refOrPRorCIChanges": 0,
+    "bareReviewOnly": true
+  }
+}

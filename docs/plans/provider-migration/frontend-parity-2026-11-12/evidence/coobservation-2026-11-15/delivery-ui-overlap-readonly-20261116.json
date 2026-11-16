@@ -1,0 +1,2793 @@
+{
+  "schemaVersion": 1,
+  "kind": "read-only-direct-ui-reconciliation-assessment",
+  "sourceScope": {
+    "ownCommit": "3db7943ae2b70232e926474e09fac20b609d10c8",
+    "ownSourceSubject": "bc6594c3ff0a1061870612a8f688400123575754",
+    "incomingCommit": "a07e2d68ece77d08e152d7b0de1eb4b85d72ca06",
+    "incomingTree": "56b61eca335f951e6b53bd5c768bd586c5ec6c7b",
+    "repository": "777genius/agent-teams-ai",
+    "paths": [
+      "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "scripts/legacy-agent-host/desktop-emulated-boot-chat.ts"
+    ],
+    "sourcePostimagesAuthored": 0,
+    "selectedPostimages": 0,
+    "sourceAdopted": false
+  },
+  "completeFetchedBodyIdentities": [
+    {
+      "label": "own-controls",
+      "sha": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "physicalLines": 494
+    },
+    {
+      "label": "own-selection",
+      "sha": "cf93da72a198dac636658e512093eef7828b5927",
+      "bytes": 24759,
+      "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+      "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+      "physicalLines": 298
+    },
+    {
+      "label": "own-test",
+      "sha": "efd876b86db16cc4faf63a9ba8e309503ca7b985",
+      "bytes": 136700,
+      "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+      "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985",
+      "physicalLines": 2238
+    },
+    {
+      "label": "incoming-controls",
+      "sha": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+      "bytes": 30733,
+      "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e",
+      "gitBlob": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+      "physicalLines": 548
+    },
+    {
+      "label": "incoming-selection",
+      "sha": "de952472530e397059730ed55741fdbfd2ced146",
+      "bytes": 26716,
+      "sha256": "15070efccca67835def722835d53bf5ac01591b1e68a7faeb6b5ef2e6cd4cc9b",
+      "gitBlob": "de952472530e397059730ed55741fdbfd2ced146",
+      "physicalLines": 322
+    },
+    {
+      "label": "incoming-test",
+      "sha": "b7fda498b1e50856211616a3c062ca65a148cc26",
+      "bytes": 162166,
+      "sha256": "a6d8237d934911e755305361496ee043e45995627b6cadbab9218e6738be1a8d",
+      "gitBlob": "b7fda498b1e50856211616a3c062ca65a148cc26",
+      "physicalLines": 2689
+    },
+    {
+      "label": "incoming-boot-helper",
+      "sha": "00e61ff3a6228c33a59790f9ff997111a487d3e5",
+      "bytes": 1589,
+      "sha256": "ddb388b182f3b037ef88d2cdfe8a2e480fe0db05f61909e6dbc6cedbce566205",
+      "gitBlob": "00e61ff3a6228c33a59790f9ff997111a487d3e5",
+      "physicalLines": 32
+    }
+  ],
+  "totalFetchedBodyBytes": 411637,
+  "testNameCensus": {
+    "method": "Static registration-name census from every standalone test(...) call and literal finite registration loops. Inner loops within a test callback are subcases, not additional registered tests. No module import, VM execution, test registration, tests or source evaluation was performed.",
+    "counts": {
+      "ours": 97,
+      "incoming": 69,
+      "common": 44,
+      "oursOnly": 53,
+      "incomingOnly": 25,
+      "union": 122
+    },
+    "definitions": {
+      "own": 56,
+      "incoming": 55
+    },
+    "cases": [
+      {
+        "id": 1,
+        "name": "captured UI discovery waits for Main admission and actual mount while early diagnostics remain active",
+        "own": {
+          "ordinal": 1,
+          "line": 63,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 1,
+          "line": 64,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 2,
+        "name": "the original remaining startup deadline rejects a pending snapshot without late discovery or a reset",
+        "own": {
+          "ordinal": 2,
+          "line": 79,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 2,
+          "line": 80,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 3,
+        "name": "packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin",
+        "own": {
+          "ordinal": 3,
+          "line": 124,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 8,
+          "line": 249,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 4,
+        "name": "HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted",
+        "own": {
+          "ordinal": 4,
+          "line": 139,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 9,
+          "line": 264,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 5,
+        "name": "isolated shell fixture emits the actual framed environment and refuses shell effects",
+        "own": {
+          "ordinal": 5,
+          "line": 149,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 10,
+          "line": 274,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 6,
+        "name": "original in-progress Task comment prerequisite requires its exact stage without an assignment control",
+        "own": {
+          "ordinal": 6,
+          "line": 337,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 11,
+          "line": 462,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 7,
+        "name": "Task attachment comment waits for its original focused owner after one click before inserting text",
+        "own": {
+          "ordinal": 7,
+          "line": 372,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 12,
+          "line": 497,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 8,
+        "name": "original Task assignment prerequisite refuses receipt-only, pending and stale renderer state",
+        "own": {
+          "ordinal": 8,
+          "line": 546,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 13,
+          "line": 671,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 9,
+        "name": "original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface",
+        "own": {
+          "ordinal": 9,
+          "line": 583,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 14,
+          "line": 708,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 10,
+        "name": "original desktop click waits for stable target geometry, without repeating input",
+        "own": {
+          "ordinal": 10,
+          "line": 613,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 15,
+          "line": 738,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 11,
+        "name": "original Task hover waits through layout and unavailability before its one physical move",
+        "own": {
+          "ordinal": 11,
+          "line": 641,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 16,
+          "line": 766,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 12,
+        "name": "original desktop click refuses a constantly moving target before dispatch",
+        "own": {
+          "ordinal": 12,
+          "line": 667,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 17,
+          "line": 792,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 13,
+        "name": "original owner-qualified click rereads its full expression through unavailability at unchanged coordinates",
+        "own": {
+          "ordinal": 13,
+          "line": 685,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 18,
+          "line": 810,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 14,
+        "name": "login failure facts retain only bounded original attempts and confirmed milestones",
+        "own": {
+          "ordinal": 14,
+          "line": 715,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 19,
+          "line": 840,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 15,
+        "name": "finite readiness failure summaries keep only bounded states and never private snapshot data",
+        "own": {
+          "ordinal": 15,
+          "line": 770,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 20,
+          "line": 895,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 16,
+        "name": "Taskboard failure summaries compare retained identities without exposing private snapshot values",
+        "own": {
+          "ordinal": 16,
+          "line": 808,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 21,
+          "line": 933,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 17,
+        "name": "installer failure summaries preserve original wait sites and attempts without inferring installation effects",
+        "own": {
+          "ordinal": 17,
+          "line": 896,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 22,
+          "line": 1021,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 18,
+        "name": "installer failure projection does not invoke input getters and leaves oversized observations unknown",
+        "own": {
+          "ordinal": 18,
+          "line": 952,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 23,
+          "line": 1077,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 19,
+        "name": "installer CDP and cleanup projection retains only exact finite observations",
+        "own": {
+          "ordinal": 19,
+          "line": 985,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 24,
+          "line": 1110,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 20,
+        "name": "Selection target summaries retain the exact original phase and six closed facts",
+        "own": {
+          "ordinal": 20,
+          "line": 1038,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 25,
+          "line": 1163,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 21,
+        "name": "Selection target projection rejects unknown or malformed facts without exposing text or invoking getters",
+        "own": {
+          "ordinal": 21,
+          "line": 1073,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 26,
+          "line": 1198,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 22,
+        "name": "Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input",
+        "own": {
+          "ordinal": 22,
+          "line": 1102,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 27,
+          "line": 1227,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 23,
+        "name": "original desktop click refuses a target unavailable during the final ownership check",
+        "own": {
+          "ordinal": 23,
+          "line": 1198,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 28,
+          "line": 1323,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 24,
+        "name": "original desktop click refuses a target moved during the final ownership check",
+        "own": {
+          "ordinal": 24,
+          "line": 1198,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 29,
+          "line": 1323,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 25,
+        "name": "original default scroll preserves a disabled control before its readiness wait",
+        "own": {
+          "ordinal": 25,
+          "line": 1228,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 30,
+          "line": 1353,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 26,
+        "name": "original scroll opt-in reveals a covered checkbox with one bounded wheel",
+        "own": {
+          "ordinal": 26,
+          "line": 1228,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 31,
+          "line": 1353,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 27,
+        "name": "original desktop click rechecks owner after its pending final target read",
+        "own": {
+          "ordinal": 27,
+          "line": 1280,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 32,
+          "line": 1405,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 28,
+        "name": "original desktop click rechecks cutoff after its pending final target read",
+        "own": {
+          "ordinal": 28,
+          "line": 1280,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 33,
+          "line": 1405,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 29,
+        "name": "original clarification lookup admits its retained read without completing the assignment prerequisite",
+        "own": {
+          "ordinal": 29,
+          "line": 1324,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 34,
+          "line": 1449,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 30,
+        "name": "original clarification lookup refuses changed owner, revision, refresh and retained-read joins",
+        "own": {
+          "ordinal": 30,
+          "line": 1347,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 35,
+          "line": 1472,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 31,
+        "name": "original owner availability admits three captured A Teams through its actual first DOM read",
+        "own": {
+          "ordinal": 31,
+          "line": 1464,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 36,
+          "line": 1589,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 32,
+        "name": "original owner availability retains singleton, subset and duplicate-row cardinality semantics",
+        "own": {
+          "ordinal": 32,
+          "line": 1480,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 37,
+          "line": 1605,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 33,
+        "name": "original owner availability refuses foreign identities and preserves its existing aggregate guards",
+        "own": {
+          "ordinal": 33,
+          "line": 1494,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 38,
+          "line": 1619,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 34,
+        "name": "original owner availability refuses invalid captured discovery before navigation",
+        "own": {
+          "ordinal": 34,
+          "line": 1541,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 39,
+          "line": 1666,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 35,
+        "name": "owner availability admits every captured A Team through the actual first observation",
+        "own": {
+          "ordinal": 35,
+          "line": 1610,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 40,
+          "line": 1735,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 36,
+        "name": "owner availability refuses healthy B in unavailable A rows",
+        "own": {
+          "ordinal": 36,
+          "line": 1628,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 41,
+          "line": 1753,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 37,
+        "name": "owner availability refuses captured foreign owner in unavailable A rows",
+        "own": {
+          "ordinal": 37,
+          "line": 1628,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 42,
+          "line": 1753,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 38,
+        "name": "owner availability refuses unknown Team in unavailable A rows",
+        "own": {
+          "ordinal": 38,
+          "line": 1628,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 43,
+          "line": 1753,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 39,
+        "name": "owner availability refuses malformed Team in unavailable A rows",
+        "own": {
+          "ordinal": 39,
+          "line": 1628,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 44,
+          "line": 1753,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 40,
+        "name": "owner availability refuses missing selected A before original navigation",
+        "own": {
+          "ordinal": 40,
+          "line": 1638,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 45,
+          "line": 1763,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 41,
+        "name": "owner availability refuses non-string A handle before original navigation",
+        "own": {
+          "ordinal": 41,
+          "line": 1638,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 46,
+          "line": 1763,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 42,
+        "name": "owner availability refuses empty A handle before original navigation",
+        "own": {
+          "ordinal": 42,
+          "line": 1638,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 47,
+          "line": 1763,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 43,
+        "name": "owner availability refuses duplicate A handle before original navigation",
+        "own": {
+          "ordinal": 43,
+          "line": 1638,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 48,
+          "line": 1763,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 44,
+        "name": "owner availability refuses over-bound capture before original navigation",
+        "own": {
+          "ordinal": 44,
+          "line": 1638,
+          "multiplicity": 1
+        },
+        "incoming": {
+          "ordinal": 49,
+          "line": 1763,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 45,
+        "name": "passive input keeps its actual Team target and three separate original navigation samples",
+        "own": {
+          "ordinal": 45,
+          "line": 1722,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 46,
+        "name": "passive navigation preserves non-card events, the original ring bounds and null or non-Team state",
+        "own": {
+          "ordinal": 46,
+          "line": 1747,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 47,
+        "name": "passive navigation refuses malformed target and store facts without losing original callbacks",
+        "own": {
+          "ordinal": 47,
+          "line": 1767,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 48,
+        "name": "passive navigation remains bounded and cannot interrupt original writes on diagnostic failure",
+        "own": {
+          "ordinal": 48,
+          "line": 1813,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 49,
+        "name": "passive navigation uses only the callable store own method and ignores unrelated card surfaces",
+        "own": {
+          "ordinal": 49,
+          "line": 1835,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 50,
+        "name": "the selected provider receipt digest matches the actual manifest-selected archive bytes",
+        "own": {
+          "ordinal": 50,
+          "line": 1853,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 51,
+        "name": "provider receipt legacy, current and equal-dual implementation digests preserve manifest authority",
+        "own": {
+          "ordinal": 51,
+          "line": 1866,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 52,
+        "name": "every present provider implementation digest must be valid and both recognized fields must agree",
+        "own": {
+          "ordinal": 52,
+          "line": 1890,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 53,
+        "name": "provider receipt shape, package selection and original file or JSON errors remain strict",
+        "own": {
+          "ordinal": 53,
+          "line": 1916,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 54,
+        "name": "saved Launch uses three stable actual DOM samples before its original settings action",
+        "own": {
+          "ordinal": 54,
+          "line": 2042,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 55,
+        "name": "saved Launch resets exact geometry when the original button shifts by a quarter pixel",
+        "own": {
+          "ordinal": 55,
+          "line": 2047,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 56,
+        "name": "saved Launch restarts its three samples after changed identity",
+        "own": {
+          "ordinal": 56,
+          "line": 2060,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 57,
+        "name": "saved Launch restarts its three samples after changed expanded state",
+        "own": {
+          "ordinal": 57,
+          "line": 2060,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 58,
+        "name": "saved Launch restarts its three samples after changed horizontal position",
+        "own": {
+          "ordinal": 58,
+          "line": 2060,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 59,
+        "name": "saved Launch restarts its three samples after changed width",
+        "own": {
+          "ordinal": 59,
+          "line": 2060,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 60,
+        "name": "saved Launch restarts its three samples after changed height",
+        "own": {
+          "ordinal": 60,
+          "line": 2060,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 61,
+        "name": "saved Launch resets its original readiness after absent target",
+        "own": {
+          "ordinal": 61,
+          "line": 2077,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 62,
+        "name": "saved Launch resets its original readiness after ambiguous target",
+        "own": {
+          "ordinal": 62,
+          "line": 2077,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 63,
+        "name": "saved Launch resets its original readiness after wrong model",
+        "own": {
+          "ordinal": 63,
+          "line": 2077,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 64,
+        "name": "saved Launch resets its original readiness after absent identity",
+        "own": {
+          "ordinal": 64,
+          "line": 2077,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 65,
+        "name": "saved Launch resets its original readiness after empty identity",
+        "own": {
+          "ordinal": 65,
+          "line": 2077,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 66,
+        "name": "saved Launch resets its original readiness after invalid expansion",
+        "own": {
+          "ordinal": 66,
+          "line": 2077,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 67,
+        "name": "saved Launch resets its original readiness after missing owning dialog",
+        "own": {
+          "ordinal": 67,
+          "line": 2077,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 68,
+        "name": "saved Launch resets its original readiness after nonfinite x",
+        "own": {
+          "ordinal": 68,
+          "line": 2077,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 69,
+        "name": "saved Launch resets its original readiness after nonfinite y",
+        "own": {
+          "ordinal": 69,
+          "line": 2077,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 70,
+        "name": "saved Launch resets its original readiness after zero width",
+        "own": {
+          "ordinal": 70,
+          "line": 2077,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 71,
+        "name": "saved Launch resets its original readiness after negative height",
+        "own": {
+          "ordinal": 71,
+          "line": 2077,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 72,
+        "name": "saved Launch resets its original readiness after running own animation",
+        "own": {
+          "ordinal": 72,
+          "line": 2077,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 73,
+        "name": "saved Launch resets its original readiness after paused own animation",
+        "own": {
+          "ordinal": 73,
+          "line": 2077,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 74,
+        "name": "saved Launch resets its original readiness after pending own animation",
+        "own": {
+          "ordinal": 74,
+          "line": 2077,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 75,
+        "name": "saved Launch allows finished own animation without inspecting descendant spinners or model status",
+        "own": {
+          "ordinal": 75,
+          "line": 2083,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 76,
+        "name": "saved Launch allows idle own animation without inspecting descendant spinners or model status",
+        "own": {
+          "ordinal": 76,
+          "line": 2083,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 77,
+        "name": "saved Launch exhausts its one original deadline with no matching model and no settings action",
+        "own": {
+          "ordinal": 77,
+          "line": 2092,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 78,
+        "name": "saved Launch exhausts its one original deadline with unsettled own dialog and no settings action",
+        "own": {
+          "ordinal": 78,
+          "line": 2092,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 79,
+        "name": "original conversation waits for its own reply before one click at the hydrated coordinates",
+        "own": {
+          "ordinal": 79,
+          "line": 2146,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 80,
+        "name": "default conversation click retains its original final geometry refusal without a preview predicate",
+        "own": {
+          "ordinal": 80,
+          "line": 2158,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 81,
+        "name": "original conversation refuses body-only reply within its unchanged first read deadline",
+        "own": {
+          "ordinal": 81,
+          "line": 2173,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 82,
+        "name": "original conversation refuses neighbor-only reply within its unchanged first read deadline",
+        "own": {
+          "ordinal": 82,
+          "line": 2173,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 83,
+        "name": "original conversation refuses different required reply within its unchanged first read deadline",
+        "own": {
+          "ordinal": 83,
+          "line": 2173,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 84,
+        "name": "original conversation refuses empty preview within its unchanged first read deadline",
+        "own": {
+          "ordinal": 84,
+          "line": 2173,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 85,
+        "name": "original conversation refuses missing target within its unchanged first read deadline",
+        "own": {
+          "ordinal": 85,
+          "line": 2173,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 86,
+        "name": "original conversation refuses zero-size target within its unchanged first read deadline",
+        "own": {
+          "ordinal": 86,
+          "line": 2173,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 87,
+        "name": "original conversation refuses disabled target within its unchanged first read deadline",
+        "own": {
+          "ordinal": 87,
+          "line": 2173,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 88,
+        "name": "original conversation refuses covered target within its unchanged first read deadline",
+        "own": {
+          "ordinal": 88,
+          "line": 2173,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 89,
+        "name": "original conversation refuses two eligible rows with only the second ready within its unchanged first read deadline",
+        "own": {
+          "ordinal": 89,
+          "line": 2173,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 90,
+        "name": "original conversation serializes its required preview as literal data",
+        "own": {
+          "ordinal": 90,
+          "line": 2182,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 91,
+        "name": "original conversation rereads a revoked preview at unchanged final coordinates before input",
+        "own": {
+          "ordinal": 91,
+          "line": 2189,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 92,
+        "name": "original conversation still refuses final owner despite a ready preview",
+        "own": {
+          "ordinal": 92,
+          "line": 2200,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 93,
+        "name": "original conversation still refuses final movement despite a ready preview",
+        "own": {
+          "ordinal": 93,
+          "line": 2200,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 94,
+        "name": "actual openChat forwards TEST boot ready for alice",
+        "own": {
+          "ordinal": 94,
+          "line": 2219,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 95,
+        "name": "actual openChat forwards TEST stream partial for alice",
+        "own": {
+          "ordinal": 95,
+          "line": 2219,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 96,
+        "name": "actual openChat forwards TEST boot ready for team-lead",
+        "own": {
+          "ordinal": 96,
+          "line": 2219,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 97,
+        "name": "actual openChat forwards TEST stream partial for team-lead",
+        "own": {
+          "ordinal": 97,
+          "line": 2219,
+          "multiplicity": 1
+        },
+        "incoming": null
+      },
+      {
+        "id": 98,
+        "name": "view-load diagnostics retain and echo the same bounded current-document projection without new reads",
+        "own": null,
+        "incoming": {
+          "ordinal": 3,
+          "line": 100,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 99,
+        "name": "view-load diagnostics do not reuse the initial document fence after navigation",
+        "own": null,
+        "incoming": {
+          "ordinal": 4,
+          "line": 170,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 100,
+        "name": "view-load diagnostics do not reuse the initial document fence after cleared",
+        "own": null,
+        "incoming": {
+          "ordinal": 5,
+          "line": 170,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 101,
+        "name": "view-load diagnostics do not reuse the initial document fence after destroyed",
+        "own": null,
+        "incoming": {
+          "ordinal": 6,
+          "line": 170,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 102,
+        "name": "throwing diagnostic stdout preserves the retained row and the original startup refusal",
+        "own": null,
+        "incoming": {
+          "ordinal": 7,
+          "line": 197,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 103,
+        "name": "original Selection final Stop joins physical absence with its exact stopped UI within the same poll budget",
+        "own": null,
+        "incoming": {
+          "ordinal": 50,
+          "line": 1858,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 104,
+        "name": "Selection stopped convergence refuses wrong identity, unaccepted progress, visible progress and exhausted observation budget",
+        "own": null,
+        "incoming": {
+          "ordinal": 51,
+          "line": 1874,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 105,
+        "name": "the existing passive click recorder distinguishes the actual Team from later navigation without new actions",
+        "own": null,
+        "incoming": {
+          "ordinal": 52,
+          "line": 1896,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 106,
+        "name": "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "own": null,
+        "incoming": {
+          "ordinal": 53,
+          "line": 2062,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 107,
+        "name": "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "own": null,
+        "incoming": {
+          "ordinal": 54,
+          "line": 2062,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 108,
+        "name": "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+        "own": null,
+        "incoming": {
+          "ordinal": 55,
+          "line": 2062,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 109,
+        "name": "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+        "own": null,
+        "incoming": {
+          "ordinal": 56,
+          "line": 2068,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 110,
+        "name": "final click movement retains five original geometry reads and one closed diagnostic without a press",
+        "own": null,
+        "incoming": {
+          "ordinal": 57,
+          "line": 2087,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 111,
+        "name": "geometry metadata getters cannot replace the original unavailable-target refusal when stdout throws",
+        "own": null,
+        "incoming": {
+          "ordinal": 58,
+          "line": 2130,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 112,
+        "name": "the actual generated target expression keeps the same eligible click when optional geometry APIs fail",
+        "own": null,
+        "incoming": {
+          "ordinal": 59,
+          "line": 2210,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 113,
+        "name": "original review correction refuses missing or false live edit authority before any input action",
+        "own": null,
+        "incoming": {
+          "ordinal": 60,
+          "line": 2348,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 114,
+        "name": "original review correction admits current authority with one original insertion and submit",
+        "own": null,
+        "incoming": {
+          "ordinal": 61,
+          "line": 2358,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 115,
+        "name": "original first A and B conversation waits for its exact preview before one physical click in the shared budget",
+        "own": null,
+        "incoming": {
+          "ordinal": 62,
+          "line": 2486,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 116,
+        "name": "original initial conversation rejects observations crossing the same cutoff without a late press or replay",
+        "own": null,
+        "incoming": {
+          "ordinal": 63,
+          "line": 2506,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 117,
+        "name": "original initial conversation refuses missing wrong or duplicate terminal previews before opening a chat",
+        "own": null,
+        "incoming": {
+          "ordinal": 64,
+          "line": 2520,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 118,
+        "name": "original lifecycle runtime and collaboration retain their boot budgets and navigation before one chat click",
+        "own": null,
+        "incoming": {
+          "ordinal": 65,
+          "line": 2532,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 119,
+        "name": "finite V2 P11 admission rejects mixed selectors before any fixture or process observation",
+        "own": null,
+        "incoming": {
+          "ordinal": 66,
+          "line": 2571,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 120,
+        "name": "finite V2 P11 Linux projection keeps exact kernel identity and refuses changed or foreign children",
+        "own": null,
+        "incoming": {
+          "ordinal": 67,
+          "line": 2593,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 121,
+        "name": "finite V2 terminal completion retains the original scenario Error after successful original final assertions",
+        "own": null,
+        "incoming": {
+          "ordinal": 68,
+          "line": 2672,
+          "multiplicity": 1
+        }
+      },
+      {
+        "id": 122,
+        "name": "finite V2 terminal completion retains original finally precedence and refuses incomplete successful work",
+        "own": null,
+        "incoming": {
+          "ordinal": 69,
+          "line": 2679,
+          "multiplicity": 1
+        }
+      }
+    ],
+    "commonCaseIds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "oursOnlyCaseIds": [
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97
+    ],
+    "incomingOnlyCaseIds": [
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122
+    ],
+    "ownRegistrationOrder": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97
+    ],
+    "incomingRegistrationOrder": [
+      1,
+      2,
+      98,
+      99,
+      100,
+      101,
+      102,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122
+    ],
+    "finiteRegistrations": {
+      "own-test": [
+        {
+          "line": 1198,
+          "nameExpression": "`original desktop click refuses a target ${change} during the final ownership check`",
+          "caseIds": [
+            23,
+            24
+          ]
+        },
+        {
+          "line": 1228,
+          "nameExpression": "requireCenterHit\n    ? 'original scroll opt-in reveals a covered checkbox with one bounded wheel'\n    : 'original default scroll preserves a disabled control before its readiness wait'",
+          "caseIds": [
+            25,
+            26
+          ]
+        },
+        {
+          "line": 1280,
+          "nameExpression": "'original desktop click rechecks ' + change + ' after its pending final target read'",
+          "caseIds": [
+            27,
+            28
+          ]
+        },
+        {
+          "line": 1628,
+          "nameExpression": "'owner availability refuses ' + label + ' in unavailable A rows'",
+          "caseIds": [
+            36,
+            37,
+            38,
+            39
+          ]
+        },
+        {
+          "line": 1638,
+          "nameExpression": "'owner availability refuses ' + label + ' before original navigation'",
+          "caseIds": [
+            40,
+            41,
+            42,
+            43,
+            44
+          ]
+        },
+        {
+          "line": 2060,
+          "nameExpression": "'saved Launch restarts its three samples after changed ' + label",
+          "caseIds": [
+            56,
+            57,
+            58,
+            59,
+            60
+          ]
+        },
+        {
+          "line": 2077,
+          "nameExpression": "'saved Launch resets its original readiness after ' + label",
+          "caseIds": [
+            61,
+            62,
+            63,
+            64,
+            65,
+            66,
+            67,
+            68,
+            69,
+            70,
+            71,
+            72,
+            73,
+            74
+          ]
+        },
+        {
+          "line": 2083,
+          "nameExpression": "'saved Launch allows ' + playState + ' own animation without inspecting descendant spinners or model status'",
+          "caseIds": [
+            75,
+            76
+          ]
+        },
+        {
+          "line": 2092,
+          "nameExpression": "'saved Launch exhausts its one original deadline with ' + label + ' and no settings action'",
+          "caseIds": [
+            77,
+            78
+          ]
+        },
+        {
+          "line": 2173,
+          "nameExpression": "'original conversation refuses ' + label + ' within its unchanged first read deadline'",
+          "caseIds": [
+            81,
+            82,
+            83,
+            84,
+            85,
+            86,
+            87,
+            88,
+            89
+          ]
+        },
+        {
+          "line": 2200,
+          "nameExpression": "'original conversation still refuses final ' + kind + ' despite a ready preview'",
+          "caseIds": [
+            92,
+            93
+          ]
+        },
+        {
+          "line": 2219,
+          "nameExpression": "'actual openChat forwards ' + expectedReply + ' for ' + memberName",
+          "caseIds": [
+            94,
+            95,
+            96,
+            97
+          ]
+        }
+      ],
+      "incoming-test": [
+        {
+          "line": 170,
+          "nameExpression": "`view-load diagnostics do not reuse the initial document fence after ${invalidation}`",
+          "caseIds": [
+            99,
+            100,
+            101
+          ]
+        },
+        {
+          "line": 1323,
+          "nameExpression": "`original desktop click refuses a target ${change} during the final ownership check`",
+          "caseIds": [
+            23,
+            24
+          ]
+        },
+        {
+          "line": 1353,
+          "nameExpression": "requireCenterHit\n    ? 'original scroll opt-in reveals a covered checkbox with one bounded wheel'\n    : 'original default scroll preserves a disabled control before its readiness wait'",
+          "caseIds": [
+            25,
+            26
+          ]
+        },
+        {
+          "line": 1405,
+          "nameExpression": "'original desktop click rechecks ' + change + ' after its pending final target read'",
+          "caseIds": [
+            27,
+            28
+          ]
+        },
+        {
+          "line": 1753,
+          "nameExpression": "'owner availability refuses ' + label + ' in unavailable A rows'",
+          "caseIds": [
+            36,
+            37,
+            38,
+            39
+          ]
+        },
+        {
+          "line": 1763,
+          "nameExpression": "'owner availability refuses ' + label + ' before original navigation'",
+          "caseIds": [
+            40,
+            41,
+            42,
+            43,
+            44
+          ]
+        },
+        {
+          "line": 2062,
+          "nameExpression": "'P11 keeps the original 90-second cutoff for ' + scenario.name",
+          "caseIds": [
+            106,
+            107,
+            108
+          ]
+        }
+      ]
+    }
+  },
+  "commonTestBodyProof": {
+    "method": "For each of the 34 common registered source definitions, retain the exact test(...) block and its same-indentation closing line; full literal equality and SHA-256 match across the two files. Literal finite registration expansion accounts for 44 names. The complete source line diff independently shows no changed common test assertion.",
+    "proofs": [
+      {
+        "ownLines": [
+          63,
+          77
+        ],
+        "incomingLines": [
+          64,
+          78
+        ],
+        "bytes": 1239,
+        "sha256": "9c47e9b1ea6d7224bae595cef939cbeceea1914a3393e6bac2426e3db3f8f47a",
+        "equal": true,
+        "caseIds": [
+          1
+        ]
+      },
+      {
+        "ownLines": [
+          79,
+          86
+        ],
+        "incomingLines": [
+          80,
+          87
+        ],
+        "bytes": 551,
+        "sha256": "ebbe9571f3ba282c5e2735ba3a4eefa168cbd0ae7e5b5d2c84f0d6f98814c65b",
+        "equal": true,
+        "caseIds": [
+          2
+        ]
+      },
+      {
+        "ownLines": [
+          124,
+          137
+        ],
+        "incomingLines": [
+          249,
+          262
+        ],
+        "bytes": 951,
+        "sha256": "8acb8a2902f9f0e3473c6a6bd69cc4465f14f330373662a2d4c9113d997ba4ea",
+        "equal": true,
+        "caseIds": [
+          3
+        ]
+      },
+      {
+        "ownLines": [
+          139,
+          146
+        ],
+        "incomingLines": [
+          264,
+          271
+        ],
+        "bytes": 721,
+        "sha256": "d7e33533b3952c9537edb8e09c6ca96f67e427fde338bcf9c3850e85c19aa36d",
+        "equal": true,
+        "caseIds": [
+          4
+        ]
+      },
+      {
+        "ownLines": [
+          149,
+          188
+        ],
+        "incomingLines": [
+          274,
+          313
+        ],
+        "bytes": 2678,
+        "sha256": "da0236dd2d84c0cc930f4008552bf3c588b40efe5f10900a65dbc73e05619df6",
+        "equal": true,
+        "caseIds": [
+          5
+        ]
+      },
+      {
+        "ownLines": [
+          337,
+          370
+        ],
+        "incomingLines": [
+          462,
+          495
+        ],
+        "bytes": 2063,
+        "sha256": "8ca3bcaf915f5ae76c0a20918704708b844f77fd0f692df6c90eb7022629547c",
+        "equal": true,
+        "caseIds": [
+          6
+        ]
+      },
+      {
+        "ownLines": [
+          372,
+          544
+        ],
+        "incomingLines": [
+          497,
+          669
+        ],
+        "bytes": 5909,
+        "sha256": "4093a80803888044eff08287c606990db79b1597c3b5bd00152000f7e590256b",
+        "equal": true,
+        "caseIds": [
+          7
+        ]
+      },
+      {
+        "ownLines": [
+          546,
+          581
+        ],
+        "incomingLines": [
+          671,
+          706
+        ],
+        "bytes": 1366,
+        "sha256": "8aab9826ff53454cdd80ea6722422f79283fb250f579788d7e137090b5c3309a",
+        "equal": true,
+        "caseIds": [
+          8
+        ]
+      },
+      {
+        "ownLines": [
+          583,
+          611
+        ],
+        "incomingLines": [
+          708,
+          736
+        ],
+        "bytes": 968,
+        "sha256": "c45cd44b4595fd2176eb9ea968f3eab5618c3bf7a84a4e06ab76b79a4fae70de",
+        "equal": true,
+        "caseIds": [
+          9
+        ]
+      },
+      {
+        "ownLines": [
+          613,
+          639
+        ],
+        "incomingLines": [
+          738,
+          764
+        ],
+        "bytes": 1174,
+        "sha256": "87ceb53ef745b6e45cc60de8bca256840096d2724a3e79752f287dfb46fd70b6",
+        "equal": true,
+        "caseIds": [
+          10
+        ]
+      },
+      {
+        "ownLines": [
+          641,
+          665
+        ],
+        "incomingLines": [
+          766,
+          790
+        ],
+        "bytes": 1212,
+        "sha256": "db26b1269e6858d73628022f7bcd1ab036520d0673174fd6f0d5ba8f89ea0db4",
+        "equal": true,
+        "caseIds": [
+          11
+        ]
+      },
+      {
+        "ownLines": [
+          667,
+          683
+        ],
+        "incomingLines": [
+          792,
+          808
+        ],
+        "bytes": 854,
+        "sha256": "67f0109071f504cc5909d9fd8824c338d47a53184049a3028d5f16b09da942f6",
+        "equal": true,
+        "caseIds": [
+          12
+        ]
+      },
+      {
+        "ownLines": [
+          685,
+          713
+        ],
+        "incomingLines": [
+          810,
+          838
+        ],
+        "bytes": 1397,
+        "sha256": "cb69460462af6fc84ac6a35c8c9169a57bea92403b507f125b5b25857f12c8ac",
+        "equal": true,
+        "caseIds": [
+          13
+        ]
+      },
+      {
+        "ownLines": [
+          715,
+          768
+        ],
+        "incomingLines": [
+          840,
+          893
+        ],
+        "bytes": 3897,
+        "sha256": "258663e3685db393471815fd1c35827904dc1c3ed9955279b79fd06e433246c0",
+        "equal": true,
+        "caseIds": [
+          14
+        ]
+      },
+      {
+        "ownLines": [
+          770,
+          806
+        ],
+        "incomingLines": [
+          895,
+          931
+        ],
+        "bytes": 3037,
+        "sha256": "164c72488e8032aaaef13d07295ee434ed35c1a2b3e6b70676554adee024856c",
+        "equal": true,
+        "caseIds": [
+          15
+        ]
+      },
+      {
+        "ownLines": [
+          808,
+          894
+        ],
+        "incomingLines": [
+          933,
+          1019
+        ],
+        "bytes": 5905,
+        "sha256": "cd13bf9b8ca5af9b6de9e5aa077e86cb99e3f145a0dccd7baf7443db90efdfe5",
+        "equal": true,
+        "caseIds": [
+          16
+        ]
+      },
+      {
+        "ownLines": [
+          896,
+          950
+        ],
+        "incomingLines": [
+          1021,
+          1075
+        ],
+        "bytes": 4392,
+        "sha256": "68eeb75818d79e1e83471f3c9ad6a46dc7e4d51be000a5fc54098afba9c2eb85",
+        "equal": true,
+        "caseIds": [
+          17
+        ]
+      },
+      {
+        "ownLines": [
+          952,
+          983
+        ],
+        "incomingLines": [
+          1077,
+          1108
+        ],
+        "bytes": 2566,
+        "sha256": "67e5730dd3136882e1e8bd593a4999ecd878e5423fe8d84338705e97a6422d91",
+        "equal": true,
+        "caseIds": [
+          18
+        ]
+      },
+      {
+        "ownLines": [
+          985,
+          1036
+        ],
+        "incomingLines": [
+          1110,
+          1161
+        ],
+        "bytes": 4191,
+        "sha256": "be8bfa6d855466819a9043a73b80951744090e57e26d0c67565be0a7e7ad9de4",
+        "equal": true,
+        "caseIds": [
+          19
+        ]
+      },
+      {
+        "ownLines": [
+          1038,
+          1071
+        ],
+        "incomingLines": [
+          1163,
+          1196
+        ],
+        "bytes": 2554,
+        "sha256": "b6b9f3844813c9730c662125ad866a268b335e2216cddd6d8ba6e4ae941f549a",
+        "equal": true,
+        "caseIds": [
+          20
+        ]
+      },
+      {
+        "ownLines": [
+          1073,
+          1100
+        ],
+        "incomingLines": [
+          1198,
+          1225
+        ],
+        "bytes": 2079,
+        "sha256": "f4d54a4cc3ee54da903670b5e5a34ddfe7880882a5d46859608b73b38b85aa58",
+        "equal": true,
+        "caseIds": [
+          21
+        ]
+      },
+      {
+        "ownLines": [
+          1102,
+          1192
+        ],
+        "incomingLines": [
+          1227,
+          1317
+        ],
+        "bytes": 6906,
+        "sha256": "98ea925a9294b33e1e70a736b4a0f775c6875d0d182f78c946c1f718c2e546c6",
+        "equal": true,
+        "caseIds": [
+          22
+        ]
+      },
+      {
+        "ownLines": [
+          1198,
+          1224
+        ],
+        "incomingLines": [
+          1323,
+          1349
+        ],
+        "bytes": 1484,
+        "sha256": "2e9101507ca0d9dc8112e256e214d2f9746205f9f0f308d946f5d4a7b8354e6a",
+        "equal": true,
+        "caseIds": [
+          23,
+          24
+        ]
+      },
+      {
+        "ownLines": [
+          1228,
+          1276
+        ],
+        "incomingLines": [
+          1353,
+          1401
+        ],
+        "bytes": 2993,
+        "sha256": "d742e55cdcdd3b8af97c7176f0b858fbe35ca4245a95e38e86a50d4179fb08e1",
+        "equal": true,
+        "caseIds": [
+          25,
+          26
+        ]
+      },
+      {
+        "ownLines": [
+          1280,
+          1321
+        ],
+        "incomingLines": [
+          1405,
+          1446
+        ],
+        "bytes": 2213,
+        "sha256": "84a95b68aea9edb534d8ef54463fa40056380449e57b0c5f52b450a8ec1aaed8",
+        "equal": true,
+        "caseIds": [
+          27,
+          28
+        ]
+      },
+      {
+        "ownLines": [
+          1324,
+          1345
+        ],
+        "incomingLines": [
+          1449,
+          1470
+        ],
+        "bytes": 1196,
+        "sha256": "8bbb6ba25da9c5adf5858d21fc232f02cfd14af06537eb923ee623108886a26d",
+        "equal": true,
+        "caseIds": [
+          29
+        ]
+      },
+      {
+        "ownLines": [
+          1347,
+          1379
+        ],
+        "incomingLines": [
+          1472,
+          1504
+        ],
+        "bytes": 2316,
+        "sha256": "5962c94000795b5f985d999522dc38608d39edc267a5fd45b1c05306978d845a",
+        "equal": true,
+        "caseIds": [
+          30
+        ]
+      },
+      {
+        "ownLines": [
+          1464,
+          1478
+        ],
+        "incomingLines": [
+          1589,
+          1603
+        ],
+        "bytes": 1037,
+        "sha256": "4448aef4f86544039b2bea38e4b77fa0e6a2ccc6180c4c1b47b151a8432e6542",
+        "equal": true,
+        "caseIds": [
+          31
+        ]
+      },
+      {
+        "ownLines": [
+          1480,
+          1492
+        ],
+        "incomingLines": [
+          1605,
+          1617
+        ],
+        "bytes": 696,
+        "sha256": "23ff20a17c37cb52ff1d8f6f9c2717ccb734de3254d4ded44b8ec1541c4c673d",
+        "equal": true,
+        "caseIds": [
+          32
+        ]
+      },
+      {
+        "ownLines": [
+          1494,
+          1538
+        ],
+        "incomingLines": [
+          1619,
+          1663
+        ],
+        "bytes": 3213,
+        "sha256": "27d4e2ac641be686c53367a0d83c968819e5d21abfc47b6dc1d89c13b291774c",
+        "equal": true,
+        "caseIds": [
+          33
+        ]
+      },
+      {
+        "ownLines": [
+          1541,
+          1554
+        ],
+        "incomingLines": [
+          1666,
+          1679
+        ],
+        "bytes": 909,
+        "sha256": "fb4bfb1309c9f8a2c08183918e1e3e84ce8eaab9848ffd2e91d98b394ddd3796",
+        "equal": true,
+        "caseIds": [
+          34
+        ]
+      },
+      {
+        "ownLines": [
+          1610,
+          1620
+        ],
+        "incomingLines": [
+          1735,
+          1745
+        ],
+        "bytes": 648,
+        "sha256": "cbbfc201ab7f1f72cf12d623e87f9ce904e590638b67b3c82a077771de27525c",
+        "equal": true,
+        "caseIds": [
+          35
+        ]
+      },
+      {
+        "ownLines": [
+          1628,
+          1634
+        ],
+        "incomingLines": [
+          1753,
+          1759
+        ],
+        "bytes": 377,
+        "sha256": "f35487a6e1a81508eb5e8ff3b199f53e09a936b3b2a58686cab1ad505511546a",
+        "equal": true,
+        "caseIds": [
+          36,
+          37,
+          38,
+          39
+        ]
+      },
+      {
+        "ownLines": [
+          1638,
+          1651
+        ],
+        "incomingLines": [
+          1763,
+          1776
+        ],
+        "bytes": 856,
+        "sha256": "721cf95994beba645933fd35dbc4c4ab0e12f70c6018b9db271a465d1954d2a9",
+        "equal": true,
+        "caseIds": [
+          40,
+          41,
+          42,
+          43,
+          44
+        ]
+      }
+    ]
+  },
+  "testGroups": {
+    "common": {
+      "cases": 44,
+      "note": "All common registered test bodies are byte-identical. The shared startup fixture gains command/listener exposure in incoming; that fixture delta is separate from the unchanged common assertions."
+    },
+    "oursOnly": [
+      {
+        "group": "pane-aware getter-safe passive navigation",
+        "cases": 5
+      },
+      {
+        "group": "provider artifact receipt authority",
+        "cases": 4
+      },
+      {
+        "group": "saved settings three-sample readiness",
+        "cases": 25
+      },
+      {
+        "group": "conversation required-content admission and actual forwarding",
+        "cases": 19
+      }
+    ],
+    "incomingOnly": [
+      {
+        "group": "view-load diagnostics",
+        "cases": 5
+      },
+      {
+        "group": "Selection final Stop UI convergence",
+        "cases": 2
+      },
+      {
+        "group": "flat active-tab passive navigation recorder",
+        "cases": 1
+      },
+      {
+        "group": "P11 original cutoff",
+        "cases": 4
+      },
+      {
+        "group": "click geometry diagnostics",
+        "cases": 3
+      },
+      {
+        "group": "review correction live-edit authority",
+        "cases": 2
+      },
+      {
+        "group": "shared BOOT helper across initial Selection and other journeys",
+        "cases": 4
+      },
+      {
+        "group": "finite V2 membership selector/identity/terminal completion",
+        "cases": 4
+      }
+    ],
+    "unionLimit": "122 is only the union of registered names (97+69−44), not a selected or executed combined suite. Inner callback loops are subcases and were not inflated into test registrations."
+  },
+  "unchangedAndConflictingContracts": {
+    "waitRead": {
+      "ownLines": [
+        186,
+        209
+      ],
+      "incomingLines": [
+        182,
+        205
+      ],
+      "literalEqual": true,
+      "bytes": 793,
+      "sha256": "a1b1d26ea3873cf48398642707799c26e672be2dcb1b59b146b425baae8c7d6c",
+      "behavior": "Same original Date.now deadline, 100ms cadence, original ownership callback and known destroyed-context exception policy. This equality does not assert equal total polls after stronger admission."
+    },
+    "ownConversationCalls": [
+      {
+        "text": "await openChat(liveA, 'TEST boot ready'); await visible('TEST boot ready');",
+        "ownCount": 1,
+        "incomingCount": 0
+      },
+      {
+        "text": "await openChat(liveB, 'TEST boot ready'); await visible('TEST boot ready');",
+        "ownCount": 1,
+        "incomingCount": 0
+      },
+      {
+        "text": "await openTeam(a); await openChat(liveA, 'TEST boot ready');",
+        "ownCount": 1,
+        "incomingCount": 0
+      },
+      {
+        "text": "await openChat(liveA, 'TEST stream partial'); await visible('TEST stream partial');",
+        "ownCount": 1,
+        "incomingCount": 0
+      }
+    ],
+    "requiredContent": {
+      "ownLines": [
+        211,
+        225,
+        356,
+        357
+      ],
+      "incomingLines": [
+        207,
+        237,
+        410,
+        411
+      ],
+      "finding": "Own target/click accepts the optional fourth requiredContent argument and embeds its literal in the same generated target expression. The content check is made after unique visible-target admission and therefore participates in the initial read, post-hover read, every original stability sample and the final direct target read. Incoming target/click has no such argument."
+    },
+    "savedSettings": {
+      "ownLines": [
+        74,
+        95
+      ],
+      "incomingLines": [
+        76,
+        81
+      ],
+      "finding": "Own retains exact model/control identity, valid expanded state, finite positive rectangle, the captured dialog's own non-running/non-paused/non-pending animations, and three consecutive equal eligible samples with reset on missing/ineligible/changed state. Its original30s/100ms loop and single subsequent settings click remain. Incoming uses only unique row plus id/expanded and contains none of this admission block. BOOT helper is unrelated to saved settings and cannot preserve that block automatically."
+    },
+    "navigationObserver": {
+      "ownLines": [
+        49,
+        81,
+        160,
+        178
+      ],
+      "incomingLines": [
+        49,
+        77,
+        155,
+        174
+      ],
+      "finding": "Own observes eligible pointerdown/pointerup/click card events, captures a canonical encoded host-team target, and reads own-data descriptors from the callable Zustand store into the focused pane/tab projection (up to4 panes/128 tabs). Its five tests cover getter-zero failures, bounded schema, non-card handling and callback retention. Incoming observes trusted click only, uses flattened openTabs/activeTabId (up to64), direct property accesses and a different target/key/schema/bound projection. Its one test has materially different expected fields and does not replace the five own tests. Preserve ours unless a separate observer redesign is selected; do not silently install a second observer or mix field schemas."
+    },
+    "geometryDiagnostics": {
+      "incomingLines": [
+        219,
+        274,
+        336,
+        345,
+        368,
+        384
+      ],
+      "finding": "Incoming adds optional same-evaluation target/dialog rectangles, active animation counts and font status, plus at most18 closed phase records attached to the hover row and logged on original final-target refusal. Original final availability and coordinate assertions are still hard and original error is rethrown. The change adds DOM/API/bookkeeping cost despite adding no CDP call site. It is separable from the requiredContent argument and from the navigation observer replacement; optional metadata failure must remain isolated."
+    },
+    "finalStop": {
+      "incomingSelectionLines": [
+        159,
+        196,
+        316
+      ],
+      "finding": "Incoming also strengthens final A Stop to join physical absence with exact Team/run/current provisioning/runtime IDs, disconnected progress, visible offline banner and enabled Launch under the existing75s poll. This is an independent extra convergence scope with extra reads. It is not necessary to import BOOT admission or geometry diagnostics and must not enter a narrow merge inadvertently."
+    },
+    "testImports": {
+      "finding": "Whole incoming test replacement removes own createHash/fixture-reader imports and all53 ours-only registrations. Keep the own file as the baseline. New incoming helper fixtures often read actual source blocks and depend on additional producers outside these three own files."
+    }
+  },
+  "bootAdmissionComparison": {
+    "helper": {
+      "sha": "00e61ff3a6228c33a59790f9ff997111a487d3e5",
+      "lines": [
+        7,
+        32
+      ],
+      "observation": "The helper computes one30s/60s absolute cutoff, creates controls whose ownership callback also checks that cutoff, optionally performs original beforePreview navigation, and waits for exactly one selector row containing exactly one span whose trimmed text equals TEST boot ready. It checks currentness after that wait, opens through the callback, observes the existing body reply with remaining budget, and checks currentness again."
+    },
+    "answer": "It supplies a same-lead-row exact terminal BOOT preview precondition for the initial opening. It is not equivalent to our continuous required-content target admission and is not a replacement for our saved-settings gate.",
+    "differences": [
+      "Its initial query counts every row matching the selector before target geometry filtering; ours counts unique visible eligible target rows. Both refer to the same selector, not a retained DOM node identity across reads.",
+      "Its exact one-span equality rejects a user-prefixed or substring-only marker and duplicate exact spans. Our generic requiredContent check is intentionally textContent.includes(expectedReply), covering both BOOT and stream-partial callers; these are different admission contracts.",
+      "After the helper's preview succeeds, scrollTo and click run separate evaluations. Incoming click does not recheck the BOOT text. A row can change content after the preview while retaining selector and geometry; source alone establishes that no content predicate then prevents its press. This is a static uncovered possibility, not an observed historical failure.",
+      "Own checks the required reply again in the final expression after the ownership check. The existing revoked-preview test changes content at the sixth ownership call and requires no press/release even at unchanged coordinates.",
+      "Incoming helper is used only for initial A/B openings in Selection. Later return to A and reopening the held stream use plain openChat without content. Own keeps expected BOOT or stream-partial literals at all four call sites.",
+      "The shared helper adds an explicit preview wait and one cross-operation absolute cutoff; existing controls wait sites remain, but their poll counts and active duration can change. Do not claim call-count/timing equivalence or silently select a new budget interpretation."
+    ],
+    "incomingBootTests": {
+      "definitionLines": [
+        2486,
+        2506,
+        2520,
+        2532
+      ],
+      "coverage": "Four registered cases contain finite subcases for two lead names; expiration after preview/final-target/reply; missing/pending/wrong-row/user-prefix/substring/duplicate-row/duplicate-span; and lifecycle/runtime/collaboration navigation/budgets. They do not revoke preview content between successful preview and final click. The final case depends on three additional journey source files outside this direct Selection scope."
+    },
+    "ownConversationTests": {
+      "definitionLines": [
+        2146,
+        2158,
+        2173,
+        2182,
+        2189,
+        2200,
+        2219
+      ],
+      "cases": 19,
+      "coverage": "Actual generated expression and controls with no whole-body readiness substitution; missing/covered/disabled/ambiguous/foreign/empty content controls; escaped literal; pending-read hydration; final content revocation; final ownership/movement refusal; and four real openChat forwarding registrations for BOOT/stream x alice/team-lead."
+    }
+  },
+  "prospectiveNonOverwritingApproach": {
+    "status": "Assessment only. No R1, source/test/runner postimage or integration selection is authored.",
+    "baseline": "Use exact ed57 controls, cf93 Selection and efd97 test as the preserved base, with all97 assertions and existing authority/deadline/cleanup behavior.",
+    "independentUnits": [
+      {
+        "unit": "Shared initial BOOT admission, only if selected",
+        "approach": "The new helper may provide its exact-span precondition and common absolute cutoff while the opener continues passing the appropriate expectedReply into our existing fourth click argument. Preserve later A/stream call-site requirements. Supplying helper-created controls must be explicit and must not reinterpret the existing second expectedReply argument as a controls object. Keep the saved-settings block untouched.",
+        "notAutomatic": "The helper is not required merely to replace the same-row hydration behavior already supplied by the own target predicate; its stricter exact-span and shared-budget semantics are additional choices."
+      },
+      {
+        "unit": "Passive geometry facts, only if selected",
+        "approach": "Port only the isolated geometry projection/phase retention/failure emission around the preserved own target and click path. Keep the fourth argument, our navigation observer, all original sample limits/currentness and final equality refusal. Its three new tests can exercise that isolated behavior after compatibility with our DOM fixtures is reviewed."
+      },
+      {
+        "unit": "Tests",
+        "approach": "Retain all97 own names and assertions. Reuse the44 exact common bodies once. Add only incoming assertions whose corresponding producers are explicitly selected. Do not delete the53 ours-only registrations or replace the pane-schema observer tests to match the flattened incoming schema."
+      },
+      {
+        "unit": "Source-bound test seams",
+        "approach": "Keep tests exercising the actual composed functions. Our forwarding harness extracts from const openChat to const assertSameLive; incoming moves selector construction into a preceding leadSelector and adds another arrow function. A direct textual transplant would leave that harness without its helper binding. Any future adaptation must retain the actual selector/expectedReply behavior and closure, not weaken the oracle into a marker check."
+      }
+    ],
+    "scopesToKeepSeparate": [
+      "final Stop convergence",
+      "shared helper adoption by lifecycle/runtime/collaboration",
+      "view-load product diagnostics and silent-refresh behavior",
+      "P11 cutoff/finite-membership routes",
+      "review live-edit authority",
+      "provider artifact receipt semantics"
+    ],
+    "meaningfulFutureChecks": [
+      "Retain all existing saved-settings25 and conversation19 controls.",
+      "If shared BOOT is selected, cover exact-stage rejection and preview becoming stale before final target, with no late press/replay and the selected original absolute cutoff.",
+      "Keep initial A/B and return-to-A/stream expected literals explicit.",
+      "Exercise actual composed observer/geometry projection with malformed/getter/serialization failures while preserving the original error and physical input count."
+    ]
+  },
+  "limits": {
+    "runtimeTestsOrVMExecution": 0,
+    "ciQueries": 0,
+    "refOrPrActions": 0,
+    "sourceTestRunnerPostimages": 0,
+    "R1Authored": 0,
+    "sourceAdoption": false,
+    "oldOrIncomingRuntimeQualificationTransferred": false,
+    "all69IncomingCasesPassedClaim": false,
+    "bareEvidenceRetentionOnly": true
+  },
+  "conclusion": "A non-overwriting combination is feasible as separately reviewed hunks, but the incoming helper is only a stronger initial exact-stage precheck; it does not supersede our final per-target content admission or saved-settings readiness. Whole-file incoming replacement loses independent protections and tests."
+}

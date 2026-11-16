@@ -342,10 +342,10 @@
   "localEnvironment": "The independently reviewed fresh bootstrap completed all four stages on exact c5ff sources with Node24.22.1 and pnpm11.22.0. Full actual inventories and separate SDK/MCP import reviews are accepted. Historical old binding remains unexecutable here. The separately reviewed fresh whole97 runner still requires this checkpoint's complete actual publication readback; no test or producer has executed/changed at this checkpoint.",
   "remainingRuntimeBudgets": {
     "red": 0,
-    "green": 1,
-    "lint": 1,
-    "sourceSize": 1,
-    "diffCheck": 1
+    "green": 0,
+    "lint": 0,
+    "sourceSize": 0,
+    "diffCheck": 0
   },
   "totals": {
     "bundles": 27,
@@ -405,7 +405,12 @@
     "originalCases": 78,
     "addedCases": 19,
     "plannedWholeCases": 97,
-    "executedCases": 0
+    "executedCases": 97,
+    "historicalPhase": "RED",
+    "historicalAtBindingPublication": 0,
+    "actualPass": 87,
+    "actualSemanticFail": 10,
+    "qualification": "Exact retained original test-first RED; subsequent GREEN selects separate218binding and publisheded57/cf93 source."
   },
   "originalCiFinal": {
     "head": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
@@ -767,6 +772,84 @@
     "allExactReviewBodiesFetchedAndRehashed": true
   },
   "currentConversationStage": {
+    "state": "Actual whole97 GREEN and all three original scoped guards passed; original attempts exhausted; Cross R1 prospective and gated on actual new publication readback.",
+    "publishedSource": "bc6594c3ff0a1061870612a8f688400123575754",
+    "greenBinding": {
+      "bytes": 375818,
+      "sha256": "744167b87c840de28f17b86fd8b801caec5c71d695cc49c9f037dab964176cfd",
+      "gitBlob": "21878f51fd1b7bfca5bab18ff71c7c1beca5aaef"
+    },
+    "materializationEvidence": {
+      "bytes": 94844,
+      "sha256": "6f85618d26cd98ef8e382d97a83bae80211dd8a289a2c8f928048e0115580ee8",
+      "gitBlob": "006450583e21651539f5c0584b117fd5b081962c"
+    },
+    "materializationReview": {
+      "bytes": 31471,
+      "sha256": "f085d9ba0747b0880908f292ac7e0e9af83a1ab6807ff1fa323ba8ed692185cb",
+      "gitBlob": "96964d7ae1d278a67e51bd39be6fbcf85f6af773"
+    },
+    "greenEvidence": {
+      "bytes": 124846,
+      "sha256": "62ebe8480892a5e8e6d2ed58f0ed0fe3052eba0edfecfadf36ef9ffbf3b7d4c3",
+      "gitBlob": "d039b8d061439c6e61a71a37535a4f7cc76a6093"
+    },
+    "greenReceipt": {
+      "bytes": 24625,
+      "sha256": "191557a7c37e46f6d7f0f6360e3e70cb1519292f959e9727cebdff2f494f1ca3",
+      "gitBlob": "e01ba171191344314babe0d6ea16cacdaf452cf3"
+    },
+    "greenSemanticReview": {
+      "bytes": 123411,
+      "sha256": "5dcab89bd07be83778ce7b40084960a26a9b17b22327d7fc150a2a0e3f867b07",
+      "gitBlob": "1f1ef935177c9453bdf330ae14b0e3b319a45311"
+    },
+    "greenGuardReview": {
+      "bytes": 95744,
+      "sha256": "845e5cfc6e317c63380f949d6e816782d28ba81d96aae8170a5d724c9dbc632c",
+      "gitBlob": "bb67ad6d1ab86403356267ac28becaa067be958f"
+    },
+    "greenParityClosure": {
+      "bytes": 17444,
+      "sha256": "c87b3279b67908eea859a5d3d857c6aa34a6be9a9b37af67b0a8e1de23ac01e5",
+      "gitBlob": "17e26030335deb4d9d1b70d902f7f0d7b62deefa"
+    },
+    "scopedGuards": {
+      "bytes": 290501,
+      "sha256": "c5c1930f5cc47d7d891cf5c522b7c68879f643962ba20afee4aaab39e984fa54",
+      "gitBlob": "4ec154d23168a8c819a22a0d4a9328ef272f3203"
+    },
+    "outcomePath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-accepted-green-and-guards-20261116.json",
+    "guardsFullReview": {
+      "bytes": 126977,
+      "sha256": "224a71c003508a19db5943dbe6928204647ef50d34753a9d4f7a1f900f6b43f1",
+      "gitBlob": "36cb4fa4f12885356166ab1fb9324740c9cd3293"
+    },
+    "guardsParityClosure": {
+      "bytes": 31690,
+      "sha256": "100cd9477c073b7f069c0c140bf9ce6b1d1a0bc9cc62f5366e9c9989f6b951e2",
+      "gitBlob": "3d2c03fab5fd956530b0f66554138d7052b91467"
+    }
+  },
+  "originalP09ArtifactReview": {
+    "x64": {
+      "bytes": 130500,
+      "sha256": "7ceebfec788ca68ce6f93d325a87b5229f09984c7542cdb641ee485a6dd5096f",
+      "gitBlob": "47bd44b7bf25b9c54b3fb741abe084caddfafdaf"
+    },
+    "arm64": {
+      "bytes": 130480,
+      "sha256": "453bff87f588c51c745ed342794845232f0dd6669f53c0d048031f6e6139a484",
+      "gitBlob": "8c895bf8310f8890e354d61c4b7f9091bb474097"
+    },
+    "independent": {
+      "bytes": 34786,
+      "sha256": "477bf2f39792b1cbf7e43a60648f9c648ee758e4be19875f6078ce5750882395",
+      "gitBlob": "2ed811c6e71c4031486f2a1f139cec474618d1e0"
+    },
+    "strictQualification": false
+  },
+  "priorConversationStageAtProducerPublication": {
     "state": "Actual semantic RED accepted; exact two producers reviewed for publication; local application/GREEN not yet performed",
     "actualRed": {
       "bytes": 127239,
@@ -810,22 +893,92 @@
     },
     "outcomePath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-producer-reviewed-outcome-20261116.json"
   },
-  "originalP09ArtifactReview": {
-    "x64": {
-      "bytes": 130500,
-      "sha256": "7ceebfec788ca68ce6f93d325a87b5229f09984c7542cdb641ee485a6dd5096f",
-      "gitBlob": "47bd44b7bf25b9c54b3fb741abe084caddfafdaf"
+  "crossCloseProspectiveScope": {
+    "r1": {
+      "bytes": 23142,
+      "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+      "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
     },
-    "arm64": {
-      "bytes": 130480,
-      "sha256": "453bff87f588c51c745ed342794845232f0dd6669f53c0d048031f6e6139a484",
-      "gitBlob": "8c895bf8310f8890e354d61c4b7f9091bb474097"
+    "guardReview": {
+      "bytes": 33350,
+      "sha256": "3635b74953344c3085ea3313f81f6a5cb60103dfa58e0aa84096240d227b0197",
+      "gitBlob": "bacd76155f9d45ce40e2f77ead26ff58769712ee"
     },
-    "independent": {
-      "bytes": 34786,
-      "sha256": "477bf2f39792b1cbf7e43a60648f9c648ee758e4be19875f6078ce5750882395",
-      "gitBlob": "2ed811c6e71c4031486f2a1f139cec474618d1e0"
+    "parityReview": {
+      "bytes": 25572,
+      "sha256": "3dfdcd0350342a8adf141f072509c4d5f999fb259fa164e2db3fa1c2478c0fd1",
+      "gitBlob": "7fa731637982b2629b35df2378bab0a5bfbbcc3e"
     },
-    "strictQualification": false
+    "readOnlyDiagnosis": {
+      "bytes": 90087,
+      "sha256": "b0cbe7f713f648bb6a6399a713175f44ec57e0a3e145341d15d328c27cc30624",
+      "gitBlob": "8278c953ca81e24f9d0a0ab96068d2e9a08d9c2d"
+    },
+    "sourcePreimages": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 6433,
+        "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+        "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+        "physicalLines": 90,
+        "postimagePhysicalLineCap": 200
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36207,
+        "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+        "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c",
+        "physicalLines": 798,
+        "postimagePhysicalLineCap": 800
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 136700,
+        "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+        "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985",
+        "postimageByteCap": 180000
+      }
+    ],
+    "testCensus": {
+      "preserved": 97,
+      "plannedAdded": 36,
+      "plannedWhole": 133,
+      "executedNewCases": 0
+    },
+    "postimagesAuthored": 0,
+    "newRuntimeCommands": 0,
+    "publicationReadbackRequiredBeforePostimage": true,
+    "qualification": "Prospective same-Task Close readiness only; no historical-cause/native/GUI/full-E2E proof.",
+    "current97GuardPrerequisiteClosed": true
+  },
+  "incomingDeliveryUpdates": {
+    "headObservation": {
+      "bytes": 218343,
+      "sha256": "ea18db311fb79ecc3fb7cbe4d85dcccaa8665a8e927ec980cf0f11a074a55503",
+      "gitBlob": "453d973fe2a7f2176c1e4c6361318786c603a34f"
+    },
+    "uiOverlap": {
+      "bytes": 73915,
+      "sha256": "b08f1080dd229d2d020ce975e11c2aede0e0d004483e350d9a8e6c91bb20b1bd",
+      "gitBlob": "248322debdd3e8cbc6a6f4dcaed3289efb68be3c"
+    },
+    "heads": {
+      "app": "a07e2d68ece77d08e152d7b0de1eb4b85d72ca06",
+      "provider": "c930d3c8b9a213762528d6e28c9ed0172ab1fa27"
+    },
+    "qualification": "Read-only future integration evidence only. No incoming source/workflow/package or qualification is adopted. Own97 and incoming69 have44 names common,53 own-only,25 incoming-only;122 is a name union, not a selected combined suite.",
+    "actualCi": {
+      "bytes": 4551343,
+      "sha256": "4ec9efc8301ddfbd03777bf6fdc2b69b7592116bfb27f26401495c27617f0157",
+      "gitBlob": "0f2963af97dcabda330e2635af90c67a4e5d9651"
+    },
+    "actualCiRootInnerBodies": {
+      "count": 46,
+      "bytes": 3470288,
+      "allRehashed": true
+    }
   }
 }

@@ -1,0 +1,636 @@
+{
+  "kind": "single-authorized-whole-file-or-scoped-guard-command",
+  "command": "green",
+  "action": "materialize",
+  "attempt": 1,
+  "startedAt": "2026-11-16T15:18:49.263633+00:00",
+  "publishedR1": "f3fb3ead0315508901531e8f54b75f21518492a7",
+  "publishedSubject": {
+    "commit": "bc6594c3ff0a1061870612a8f688400123575754",
+    "tree": "3b30530f411c66ceaec24666b728ecaf842f8212",
+    "qualification": "Exact published reviewed controls/Selection postimages and unchanged97-case test. Local detached HEAD/index remain c5 with exactly these two source overlays; current documentation is not claimed locally materialized."
+  },
+  "actualLocalHead": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+  "runnerIdentity": {
+    "bytes": 35916,
+    "sha256": "495fac79660eb36f0795f74ff14bd665d79ac3e43534349c2f65234bda89d0f5",
+    "gitBlob": "6af0ac85f09ef02488ce15331828713882a73d13"
+  },
+  "bindingIdentity": {
+    "bytes": 375818,
+    "sha256": "744167b87c840de28f17b86fd8b801caec5c71d695cc49c9f037dab964176cfd",
+    "gitBlob": "21878f51fd1b7bfca5bab18ff71c7c1beca5aaef"
+  },
+  "argv": null,
+  "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+  "outerCommandLimitSeconds": 180,
+  "inputsPreserved": true,
+  "commandCompletedNormally": false,
+  "exitCode": null,
+  "exitSignal": null,
+  "timedOut": false,
+  "cleanupSeconds": 0,
+  "cleanupTimeAccounting": "Captured termination/reap time is a subset of commandPhaseSeconds.",
+  "qualification": "Finite actual-source cases/scoped guards only. Semantic result needs full raw review; no GUI/native/vendor or whole-E2E claim.",
+  "before": {
+    "source": {
+      "path": "/tmp/c714-ui-conversation-evidence/materialize-green-before-source.json",
+      "bytes": 2478329,
+      "sha256": "abbf2b325ec7c0b40fd4c37bd6f7ee65ce69273723230032e150f3e8e0af3089",
+      "gitBlob": "454b6d6c6141a3926635d46b63aa6c3ac62ec551"
+    },
+    "dependencies": {
+      "path": "/tmp/c714-ui-conversation-evidence/materialize-green-before-dependencies.json",
+      "bytes": 39168001,
+      "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+      "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+    },
+    "compiled": {
+      "path": "/tmp/c714-ui-conversation-evidence/materialize-green-before-compiled.json",
+      "bytes": 400300,
+      "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+      "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+    },
+    "providers": [
+      {
+        "name": "@agent-teams/provider-implementations",
+        "archive": {
+          "bytes": 186398,
+          "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+          "gitBlob": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3"
+        },
+        "regularMembers": 253,
+        "allRegularMembersEqual": true
+      },
+      {
+        "name": "@agent-teams/provider-session-contracts",
+        "archive": {
+          "bytes": 6230,
+          "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+          "gitBlob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8"
+        },
+        "regularMembers": 12,
+        "allRegularMembersEqual": true
+      }
+    ],
+    "tools": [
+      {
+        "tool": "node",
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "realPath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "bytes": 126939688,
+        "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+        "gitBlob": "97b7784b737e5bda3ec45af8c65508bd61001d0c"
+      },
+      {
+        "tool": "git",
+        "path": "/usr/local/bin/git",
+        "realPath": "/usr/local/bin/git",
+        "bytes": 19295504,
+        "sha256": "8a2ae22e7898e163330a96319b541f92ed6f90fc87576414f72c5a89aa1dc352",
+        "gitBlob": "d51aaf6e2f66bdf456e2d198085d4d35054433df"
+      },
+      {
+        "tool": "python",
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "realPath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12",
+        "bytes": 30894944,
+        "sha256": "fa67443527ed9647f760d807e2a38f26340757123e643c4639cf273ed15d5ea7",
+        "gitBlob": "cdff710ca21bf61260e4c7d7f3818ecd65cba2e7"
+      },
+      {
+        "tool": "scriptShell",
+        "path": "/bin/sh",
+        "realPath": "/usr/bin/dash",
+        "bytes": 129736,
+        "sha256": "a6f559e00b69a4aa4d8cb607be18d9386c5aee55c509e2c075549dcf00e00fc7",
+        "gitBlob": "965067be6aaf758adf88a3ff5539f41b25770579"
+      }
+    ],
+    "pnpm": {
+      "bytes": 238649,
+      "sha256": "e814a4ca22111e747db4386274e92f596f0a26d7e4b5bc687f8d1ccf61510a77",
+      "gitBlob": "2f917a18c33c04a1c6398d1adf644ce62fb8e39f"
+    },
+    "environment": {
+      "capturedTransportCanonicalSha256": "88bf5d79df640f35e108f871a612e562ebd408373826523153dfb459afd7506d",
+      "values": [
+        {
+          "key": "ALL_PROXY",
+          "bytes": 25,
+          "sha256": "366bbc5321efea11b2dae70dfe92fd9e8d6549c2b923a1446614ba460ef2dfbf"
+        },
+        {
+          "key": "HTTPS_PROXY",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        },
+        {
+          "key": "HTTP_PROXY",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        },
+        {
+          "key": "NO_PROXY",
+          "bytes": 63,
+          "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+        },
+        {
+          "key": "NPM_CONFIG_AUDIT",
+          "bytes": 5,
+          "sha256": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa"
+        },
+        {
+          "key": "NPM_CONFIG_FUND",
+          "bytes": 5,
+          "sha256": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa"
+        },
+        {
+          "key": "NPM_CONFIG_HTTPS_PROXY",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        },
+        {
+          "key": "NPM_CONFIG_HTTP_PROXY",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        },
+        {
+          "key": "NPM_CONFIG_NOPROXY",
+          "bytes": 63,
+          "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+        },
+        {
+          "key": "NPM_CONFIG_PREFIX",
+          "bytes": 18,
+          "sha256": "e0434a72761750c4ca689ad02b7a4341b6bd7e4660489f815c604d27e6342032"
+        },
+        {
+          "key": "NPM_CONFIG_PROXY",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        },
+        {
+          "key": "all_proxy",
+          "bytes": 25,
+          "sha256": "366bbc5321efea11b2dae70dfe92fd9e8d6549c2b923a1446614ba460ef2dfbf"
+        },
+        {
+          "key": "http_proxy",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        },
+        {
+          "key": "https_proxy",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        },
+        {
+          "key": "no_proxy",
+          "bytes": 63,
+          "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+        },
+        {
+          "key": "npm_config_http_proxy",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        },
+        {
+          "key": "npm_config_https_proxy",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        },
+        {
+          "key": "npm_config_noproxy",
+          "bytes": 63,
+          "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+        },
+        {
+          "key": "npm_config_proxy",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        }
+      ],
+      "explicitAssignments": {
+        "PATH": "/workspace/scratch/c714-fresh-20261116/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin",
+        "TMPDIR": "/tmp/c714-ui-conversation-evidence/test-tmp",
+        "XDG_CACHE_HOME": "/workspace/scratch/c714-fresh-20261116/cache",
+        "XDG_STATE_HOME": "/workspace/scratch/c714-fresh-20261116/state",
+        "AGENT_TEAMS_INSTALL_PROFILE": "node-ci",
+        "CI": "true",
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_TERMINAL_PROMPT": "0",
+        "XDG_CONFIG_HOME": "/workspace/scratch/c714-fresh-20261116/config",
+        "XDG_DATA_HOME": "/workspace/scratch/c714-fresh-20261116/data",
+        "PNPM_HOME": "/workspace/scratch/c714-fresh-20261116/bin",
+        "PNPM_CONFIG_PM_ON_FAIL": "error",
+        "PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN": "false",
+        "PNPM_CONFIG_ENGINE_STRICT": "true",
+        "PNPM_CONFIG_ENABLE_PRE_POST_SCRIPTS": "true",
+        "PNPM_CONFIG_IGNORE_PNPMFILE": "true",
+        "PNPM_CONFIG_STORE_DIR": "/workspace/scratch/c714-fresh-20261116/store",
+        "PNPM_CONFIG_ENABLE_GLOBAL_VIRTUAL_STORE": "false",
+        "PNPM_CONFIG_UPDATE_NOTIFIER": "false",
+        "PNPM_CONFIG_SCRIPT_SHELL": "/bin/sh",
+        "AGENT_BACKEND_TEST_NODE": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "NODE_DISABLE_COMPILE_CACHE": "1"
+      },
+      "homePreserved": true,
+      "codexHomePreserved": true,
+      "absentConfigs": [
+        "/home/agent/.npmrc",
+        "/home/agent/.pnpmrc",
+        "/home/agent/.config/pnpm/rc",
+        "/etc/npmrc",
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/etc/npmrc",
+        "/home/agent/.local/etc/npmrc"
+      ]
+    },
+    "bootstrapCache": [
+      {
+        "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/2c055e6a",
+        "mode": "100644",
+        "bytes": 1076,
+        "sha256": "81d68862abef75d4cddbf3c9450326b5546534bb5eac1501563f72e46a377818",
+        "gitBlob": "92cc0b39314a692ffaa55077b500ad6eef15aa92"
+      },
+      {
+        "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/4d7e9989",
+        "mode": "100644",
+        "bytes": 2780,
+        "sha256": "2d0fab228f904b2c2e1f1e3a4ede1f5868c5d0e4007bbed6984690ccbc07143e",
+        "gitBlob": "0d8fc72131192a4d7dfb7c4f6a4d992e8d48edce"
+      },
+      {
+        "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/60988b90",
+        "mode": "100644",
+        "bytes": 2300,
+        "sha256": "d9ea89d372b2eaa86ef5562a02aeb9d5aceb836227436880781b83467afeaa7b",
+        "gitBlob": "4587d24377ed922a99494689c3b742eedf2e56ae"
+      },
+      {
+        "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/661efec4",
+        "mode": "100644",
+        "bytes": 2208532,
+        "sha256": "5f137a3b9d2d936472a1b3c7c540309f8fea9eed8b3614b382ee23157a259712",
+        "gitBlob": "feedc7210606667b16d2d0014d4bbb9b198afc00"
+      },
+      {
+        "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/b6303853",
+        "mode": "100644",
+        "bytes": 2052,
+        "sha256": "c8f65ca4824827fb20024dad6e8217007163410dceb840170ced910861cccda4",
+        "gitBlob": "256197c92bc42a5921d8207741fc4334aeabbea8"
+      },
+      {
+        "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/ceabdecc",
+        "mode": "100644",
+        "bytes": 2652,
+        "sha256": "c753344d313709d91a46d65cccc2f06988c81ceae1b83aefae0f8c34a509c165",
+        "gitBlob": "00b5784700c10e5ef5876c84e308b3b3a56a4009"
+      },
+      {
+        "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/d8c0d4fb",
+        "mode": "100644",
+        "bytes": 6156,
+        "sha256": "723856e14196bf1a3caffe7e8bd170efe3f0ed7a398f1f9c5cc672fc59260327",
+        "gitBlob": "3f3238d0c975515b3ef230c3bd61366ab85a1758"
+      }
+    ],
+    "processCensus": [
+      {
+        "pid": 1,
+        "name": "codex",
+        "state": "S",
+        "ppid": 0,
+        "pgid": 1,
+        "session": 1,
+        "startTicks": 1781582
+      },
+      {
+        "pid": 2,
+        "name": "python3",
+        "state": "R",
+        "ppid": 1,
+        "pgid": 1,
+        "session": 1,
+        "startTicks": 1781585
+      }
+    ],
+    "testTemps": [],
+    "taskTmpTopEntries": []
+  },
+  "preflightSeconds": 106.50820870299867,
+  "writtenPaths": [
+    "scripts/legacy-agent-host/desktop-ui-controls.ts",
+    "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts"
+  ],
+  "after": {
+    "source": {
+      "path": "/tmp/c714-ui-conversation-evidence/materialize-green-after-source.json",
+      "bytes": 2478453,
+      "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+      "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+    },
+    "dependencies": {
+      "path": "/tmp/c714-ui-conversation-evidence/materialize-green-after-dependencies.json",
+      "bytes": 39168001,
+      "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+      "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+    },
+    "compiled": {
+      "path": "/tmp/c714-ui-conversation-evidence/materialize-green-after-compiled.json",
+      "bytes": 400300,
+      "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+      "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+    },
+    "providers": [
+      {
+        "name": "@agent-teams/provider-implementations",
+        "archive": {
+          "bytes": 186398,
+          "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+          "gitBlob": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3"
+        },
+        "regularMembers": 253,
+        "allRegularMembersEqual": true
+      },
+      {
+        "name": "@agent-teams/provider-session-contracts",
+        "archive": {
+          "bytes": 6230,
+          "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+          "gitBlob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8"
+        },
+        "regularMembers": 12,
+        "allRegularMembersEqual": true
+      }
+    ],
+    "tools": [
+      {
+        "tool": "node",
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "realPath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "bytes": 126939688,
+        "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d",
+        "gitBlob": "97b7784b737e5bda3ec45af8c65508bd61001d0c"
+      },
+      {
+        "tool": "git",
+        "path": "/usr/local/bin/git",
+        "realPath": "/usr/local/bin/git",
+        "bytes": 19295504,
+        "sha256": "8a2ae22e7898e163330a96319b541f92ed6f90fc87576414f72c5a89aa1dc352",
+        "gitBlob": "d51aaf6e2f66bdf456e2d198085d4d35054433df"
+      },
+      {
+        "tool": "python",
+        "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+        "realPath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12",
+        "bytes": 30894944,
+        "sha256": "fa67443527ed9647f760d807e2a38f26340757123e643c4639cf273ed15d5ea7",
+        "gitBlob": "cdff710ca21bf61260e4c7d7f3818ecd65cba2e7"
+      },
+      {
+        "tool": "scriptShell",
+        "path": "/bin/sh",
+        "realPath": "/usr/bin/dash",
+        "bytes": 129736,
+        "sha256": "a6f559e00b69a4aa4d8cb607be18d9386c5aee55c509e2c075549dcf00e00fc7",
+        "gitBlob": "965067be6aaf758adf88a3ff5539f41b25770579"
+      }
+    ],
+    "pnpm": {
+      "bytes": 238649,
+      "sha256": "e814a4ca22111e747db4386274e92f596f0a26d7e4b5bc687f8d1ccf61510a77",
+      "gitBlob": "2f917a18c33c04a1c6398d1adf644ce62fb8e39f"
+    },
+    "environment": {
+      "capturedTransportCanonicalSha256": "88bf5d79df640f35e108f871a612e562ebd408373826523153dfb459afd7506d",
+      "values": [
+        {
+          "key": "ALL_PROXY",
+          "bytes": 25,
+          "sha256": "366bbc5321efea11b2dae70dfe92fd9e8d6549c2b923a1446614ba460ef2dfbf"
+        },
+        {
+          "key": "HTTPS_PROXY",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        },
+        {
+          "key": "HTTP_PROXY",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        },
+        {
+          "key": "NO_PROXY",
+          "bytes": 63,
+          "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+        },
+        {
+          "key": "NPM_CONFIG_AUDIT",
+          "bytes": 5,
+          "sha256": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa"
+        },
+        {
+          "key": "NPM_CONFIG_FUND",
+          "bytes": 5,
+          "sha256": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa"
+        },
+        {
+          "key": "NPM_CONFIG_HTTPS_PROXY",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        },
+        {
+          "key": "NPM_CONFIG_HTTP_PROXY",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        },
+        {
+          "key": "NPM_CONFIG_NOPROXY",
+          "bytes": 63,
+          "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+        },
+        {
+          "key": "NPM_CONFIG_PREFIX",
+          "bytes": 18,
+          "sha256": "e0434a72761750c4ca689ad02b7a4341b6bd7e4660489f815c604d27e6342032"
+        },
+        {
+          "key": "NPM_CONFIG_PROXY",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        },
+        {
+          "key": "all_proxy",
+          "bytes": 25,
+          "sha256": "366bbc5321efea11b2dae70dfe92fd9e8d6549c2b923a1446614ba460ef2dfbf"
+        },
+        {
+          "key": "http_proxy",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        },
+        {
+          "key": "https_proxy",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        },
+        {
+          "key": "no_proxy",
+          "bytes": 63,
+          "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+        },
+        {
+          "key": "npm_config_http_proxy",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        },
+        {
+          "key": "npm_config_https_proxy",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        },
+        {
+          "key": "npm_config_noproxy",
+          "bytes": 63,
+          "sha256": "d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0"
+        },
+        {
+          "key": "npm_config_proxy",
+          "bytes": 22,
+          "sha256": "1b028b5a1530af7eaa2ff83ef415071c64945cf9f1e55b1c0cc5a4521ea6f4df"
+        }
+      ],
+      "explicitAssignments": {
+        "PATH": "/workspace/scratch/c714-fresh-20261116/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin",
+        "TMPDIR": "/tmp/c714-ui-conversation-evidence/test-tmp",
+        "XDG_CACHE_HOME": "/workspace/scratch/c714-fresh-20261116/cache",
+        "XDG_STATE_HOME": "/workspace/scratch/c714-fresh-20261116/state",
+        "AGENT_TEAMS_INSTALL_PROFILE": "node-ci",
+        "CI": "true",
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_TERMINAL_PROMPT": "0",
+        "XDG_CONFIG_HOME": "/workspace/scratch/c714-fresh-20261116/config",
+        "XDG_DATA_HOME": "/workspace/scratch/c714-fresh-20261116/data",
+        "PNPM_HOME": "/workspace/scratch/c714-fresh-20261116/bin",
+        "PNPM_CONFIG_PM_ON_FAIL": "error",
+        "PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN": "false",
+        "PNPM_CONFIG_ENGINE_STRICT": "true",
+        "PNPM_CONFIG_ENABLE_PRE_POST_SCRIPTS": "true",
+        "PNPM_CONFIG_IGNORE_PNPMFILE": "true",
+        "PNPM_CONFIG_STORE_DIR": "/workspace/scratch/c714-fresh-20261116/store",
+        "PNPM_CONFIG_ENABLE_GLOBAL_VIRTUAL_STORE": "false",
+        "PNPM_CONFIG_UPDATE_NOTIFIER": "false",
+        "PNPM_CONFIG_SCRIPT_SHELL": "/bin/sh",
+        "AGENT_BACKEND_TEST_NODE": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "NODE_DISABLE_COMPILE_CACHE": "1"
+      },
+      "homePreserved": true,
+      "codexHomePreserved": true,
+      "absentConfigs": [
+        "/home/agent/.npmrc",
+        "/home/agent/.pnpmrc",
+        "/home/agent/.config/pnpm/rc",
+        "/etc/npmrc",
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/etc/npmrc",
+        "/home/agent/.local/etc/npmrc"
+      ]
+    },
+    "bootstrapCache": [
+      {
+        "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/2c055e6a",
+        "mode": "100644",
+        "bytes": 1076,
+        "sha256": "81d68862abef75d4cddbf3c9450326b5546534bb5eac1501563f72e46a377818",
+        "gitBlob": "92cc0b39314a692ffaa55077b500ad6eef15aa92"
+      },
+      {
+        "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/4d7e9989",
+        "mode": "100644",
+        "bytes": 2780,
+        "sha256": "2d0fab228f904b2c2e1f1e3a4ede1f5868c5d0e4007bbed6984690ccbc07143e",
+        "gitBlob": "0d8fc72131192a4d7dfb7c4f6a4d992e8d48edce"
+      },
+      {
+        "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/60988b90",
+        "mode": "100644",
+        "bytes": 2300,
+        "sha256": "d9ea89d372b2eaa86ef5562a02aeb9d5aceb836227436880781b83467afeaa7b",
+        "gitBlob": "4587d24377ed922a99494689c3b742eedf2e56ae"
+      },
+      {
+        "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/661efec4",
+        "mode": "100644",
+        "bytes": 2208532,
+        "sha256": "5f137a3b9d2d936472a1b3c7c540309f8fea9eed8b3614b382ee23157a259712",
+        "gitBlob": "feedc7210606667b16d2d0014d4bbb9b198afc00"
+      },
+      {
+        "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/b6303853",
+        "mode": "100644",
+        "bytes": 2052,
+        "sha256": "c8f65ca4824827fb20024dad6e8217007163410dceb840170ced910861cccda4",
+        "gitBlob": "256197c92bc42a5921d8207741fc4334aeabbea8"
+      },
+      {
+        "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/ceabdecc",
+        "mode": "100644",
+        "bytes": 2652,
+        "sha256": "c753344d313709d91a46d65cccc2f06988c81ceae1b83aefae0f8c34a509c165",
+        "gitBlob": "00b5784700c10e5ef5876c84e308b3b3a56a4009"
+      },
+      {
+        "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/d8c0d4fb",
+        "mode": "100644",
+        "bytes": 6156,
+        "sha256": "723856e14196bf1a3caffe7e8bd170efe3f0ed7a398f1f9c5cc672fc59260327",
+        "gitBlob": "3f3238d0c975515b3ef230c3bd61366ab85a1758"
+      }
+    ],
+    "processCensus": [
+      {
+        "pid": 1,
+        "name": "codex",
+        "state": "S",
+        "ppid": 0,
+        "pgid": 1,
+        "session": 1,
+        "startTicks": 1781582
+      },
+      {
+        "pid": 2,
+        "name": "python3",
+        "state": "R",
+        "ppid": 1,
+        "pgid": 1,
+        "session": 1,
+        "startTicks": 1781585
+      }
+    ],
+    "testTemps": [],
+    "taskTmpTopEntries": []
+  },
+  "cleanup": {
+    "capturedSessionMembersAfter": [],
+    "newTestTempsRemaining": [],
+    "scope": "Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof."
+  },
+  "signalAdmissionCutoff": {
+    "at": "2026-11-16T15:21:11.579685+00:00",
+    "pendingSignals": [],
+    "supervisorExitZeroRequired": true,
+    "scope": "Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission."
+  },
+  "postflightSeconds": 35.80234102999748,
+  "finishedAt": "2026-11-16T15:21:11.579708+00:00",
+  "totalInvocationSeconds": 142.31507239499842,
+  "interruptions": [],
+  "metadataCommands": 14,
+  "primaryUnreached": false,
+  "scopeCompleted": true
+}
