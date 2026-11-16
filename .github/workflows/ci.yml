@@ -614,7 +614,9 @@ jobs:
           pnpm lint:fast:files -- \
             scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts \
             scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts \
-            scripts/legacy-agent-host/desktop-retained-opencode-app.ts
+            scripts/legacy-agent-host/desktop-retained-opencode-app.ts \
+            scripts/legacy-agent-host/desktop-retained-opencode-model.ts \
+            scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts
       - name: Prepare existing verified V2 graph and original Bun
         run: node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
       - name: Verify the retained release matches the pinned stock helper source
@@ -923,14 +925,43 @@ jobs:
             assert.match(d.inputs.custody[key], /^[a-f0-9]{64}$/);
           assert.equal(d.marker, 'TEST_RETAINED_V1_HISTORY'); assert.equal(d.reply, 'REPLY_TEST_RETAINED_V1_HISTORY');
           assert.equal(d.identity.teamName, d.teamName); assert.equal(d.identity.provider, 'opencode_runtime');
-          for (const key of ['teamName', 'runId', 'memberName', 'laneId', 'nativeSessionId', 'taskId', 'messageId', 'replyUuid'])
+          for (const key of ['teamName', 'runId', 'memberName', 'laneId', 'nativeSessionId', 'taskId', 'displayId', 'messageId', 'replyUuid'])
             assert.ok(typeof d.identity[key] === 'string' && d.identity[key].length > 0);
           assert.match(d.identity.replyContentSha256, /^[a-f0-9]{64}$/);
+          assert.match(d.identity.taskId, /^[A-Za-z0-9_-]+$/);
+          assert.match(d.identity.displayId, /^[A-Za-z0-9-]{1,128}$/);
+          const taskRefs = [{ taskId: d.identity.taskId, displayId: d.identity.displayId, teamName: d.teamName }];
+          const messageText = d.marker + ' #' + d.identity.displayId;
+          const fixture = d.reviewFixture;
+          const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
+          assert.equal(fixture.relativePath, 'TEST-donor-review.txt');
+          assert.equal(fixture.filePath, join(d.root, 'project', fixture.relativePath));
+          assert.equal(fixture.before, 'TEST donor native review before\n');
+          assert.equal(fixture.after, 'TEST donor native review after\n');
+          assert.equal(fixture.beforeSha256, sha256(fixture.before)); assert.equal(fixture.afterSha256, sha256(fixture.after));
+          assert.match(fixture.commit, /^[a-f0-9]{40}$/); assert.match(fixture.tree, /^[a-f0-9]{40}$/);
+          assert.deepEqual(fixture.png, { path: join(d.root, 'TEST-donor-task.png'), name: 'TEST-donor-task.png',
+            bytes: 71, sha256: '5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6' });
+          const pick = (row, keys) => Object.fromEntries(keys.map(key => [key, row[key]]));
+          const bindingKeys = ['teamName', 'runId', 'memberName', 'laneId', 'nativeSessionId', 'taskId', 'displayId', 'messageId'];
+          const deliveryKeys = ['id', 'source', 'status', 'inboxMessageId', 'deliveredUserMessageId',
+            'runtimeSessionId', 'runId', 'laneId', 'memberName', 'taskRefs'];
+          const eventKeys = ['eventId', 'toolUseId', 'taskId', 'sessionId', 'memberName', 'filePath', 'relativePath',
+            'source', 'sourceRuntime', 'sourceProvider', 'sourceSessionId', 'sourcePartId', 'sourceMessageId',
+            'parentUserMessageId', 'attributionMethod', 'sourceImportKey', 'evidenceProof', 'snapshotId', 'snapshotSource',
+            'toolStatus', 'operation', 'confidence'];
+          const stableReview = value => pick(value, ['binding', 'delivery', 'event', 'before', 'after']);
           assert.deepEqual(d.epochs.map(epoch => epoch.kind), ['donor', 'current', 'cold']);
           assert.deepEqual(d.model.failures, []); assert.ok(Array.isArray(d.model.observations) && d.model.observations.length <= 32);
           assert.ok(Number.isSafeInteger(d.inferenceAtDonorQuit) && d.inferenceAtDonorQuit > 0);
           assert.equal(d.model.observations.length, d.inferenceAtDonorQuit);
           assert.deepEqual(d.model.observations.filter(row => row.marker).map(row => row.marker), [d.marker]);
+          const turns = d.model.observations.filter(row => row.donorStage);
+          assert.deepEqual(turns.map(row => row.donorStage), ['read', 'edit', 'reply']);
+          assert.deepEqual(turns.map(row => row.toolCallId ?? null), ['TEST_DONOR_REVIEW_READ', 'TEST_DONOR_REVIEW_EDIT', null]);
+          assert.deepEqual(turns.map(row => row.toolResultIds), [[], ['TEST_DONOR_REVIEW_READ'],
+            ['TEST_DONOR_REVIEW_READ', 'TEST_DONOR_REVIEW_EDIT']]);
+          assert.ok(turns.every(row => row.owner === 'legacy'));
           const nativeHistory = { provider: d.identity.provider, laneId: d.identity.laneId,
             nativeSessionId: d.identity.nativeSessionId, replyUuid: d.identity.replyUuid,
             replyContentSha256: d.identity.replyContentSha256 };
@@ -942,15 +973,47 @@ jobs:
           for (const [index, epoch] of d.epochs.entries()) {
             assert.equal(epoch.sourceCommit, index === 0 ? d.inputs.commit : r.sourceHead);
             epochProcesses.push(processKey(epoch.original), processKey(epoch.electron));
-            assert.equal(epoch.task.id, d.identity.taskId); assert.ok(typeof epoch.task.subject === 'string' && epoch.task.subject.length > 0);
+            assert.equal(epoch.task.id, d.identity.taskId); assert.equal(epoch.task.displayId, d.identity.displayId);
+            assert.ok(typeof epoch.task.subject === 'string' && epoch.task.subject.length > 0);
             assert.deepEqual(epoch.task, d.epochs[0].task);
-            assert.deepEqual(epoch.message, { messageId: d.identity.messageId, text: d.marker, to: d.identity.memberName });
+            assert.deepEqual(epoch.message, { messageId: d.identity.messageId, text: messageText, to: d.identity.memberName, taskRefs });
             assert.deepEqual(epoch.visibleTask, { key: JSON.stringify([d.teamName, d.identity.taskId]), subject: epoch.task.subject });
-            for (const [field, expected] of [['visibleMessage', d.marker], ['visibleReply', d.reply]]) {
+            for (const [field, expected] of [['visibleMessage', messageText], ['visibleReply', d.reply]]) {
               assert.equal(epoch[field].text, expected);
               assert.ok(Number.isSafeInteger(epoch[field].matches) && epoch[field].matches >= 1 && epoch[field].matches <= 32);
             }
             assert.deepEqual(epoch.nativeHistory, nativeHistory);
+            const attachment = epoch.attachment;
+            assert.ok(typeof attachment.id === 'string' && attachment.id.length > 0);
+            assert.equal(attachment.filename, fixture.png.name); assert.equal(attachment.mimeType, 'image/png');
+            assert.equal(attachment.size, fixture.png.bytes); assert.equal(attachment.sha256, fixture.png.sha256);
+            assert.equal(attachment.width, 2); assert.equal(attachment.height, 1);
+            assert.deepEqual(attachment, d.epochs[0].attachment);
+            assert.equal(epoch.review.filePath, fixture.filePath); assert.equal(epoch.review.relativePath, fixture.relativePath);
+            assert.equal(epoch.review.visibleBefore, fixture.before.trim()); assert.equal(epoch.review.visibleAfter, fixture.after.trim());
+            const provenance = epoch.review.provenance, delivery = provenance.delivery, event = provenance.event;
+            assert.deepEqual(provenance.binding, pick(d.identity, bindingKeys));
+            assert.deepEqual(stableReview(provenance), stableReview(d.epochs[0].review.provenance));
+            assert.ok(['ui-send', 'watcher'].includes(delivery.source)); assert.equal(delivery.status, 'responded');
+            assert.equal(delivery.inboxMessageId, d.identity.messageId); assert.equal(delivery.runtimeSessionId, d.identity.nativeSessionId);
+            for (const key of ['runId', 'laneId', 'memberName']) assert.equal(delivery[key], d.identity[key]);
+            assert.deepEqual(delivery.taskRefs, taskRefs);
+            for (const key of ['id', 'deliveredUserMessageId']) assert.ok(typeof delivery[key] === 'string' && delivery[key].length > 0);
+            for (const [key, expected] of Object.entries({ toolUseId: 'TEST_DONOR_REVIEW_EDIT', taskId: d.identity.taskId,
+              sessionId: d.identity.nativeSessionId, memberName: d.identity.memberName, filePath: fixture.filePath,
+              relativePath: fixture.relativePath, source: 'opencode_toolpart_edit', sourceRuntime: 'opencode',
+              sourceProvider: 'opencode', sourceSessionId: d.identity.nativeSessionId,
+              parentUserMessageId: delivery.deliveredUserMessageId, attributionMethod: 'delivery-ledger-taskrefs',
+              snapshotSource: 'opencode', toolStatus: 'succeeded', operation: 'modify', confidence: 'high' })) assert.equal(event[key], expected);
+            assert.ok(['opencode-snapshot', 'inverse-edit-chain'].includes(event.evidenceProof));
+            for (const key of ['eventId', 'sourcePartId', 'sourceMessageId', 'sourceImportKey', 'snapshotId'])
+              assert.ok(typeof event[key] === 'string' && event[key].length > 0);
+            for (const side of ['before', 'after'])
+              assert.deepEqual(provenance[side], { sha256: fixture[side + 'Sha256'], bytes: Buffer.byteLength(fixture[side]) });
+            assert.equal(provenance.sources.delivery.path, `claude/teams/${d.teamName}/.opencode-runtime/lanes/${encodeURIComponent(d.identity.laneId)}/opencode-prompt-delivery-ledger.json`);
+            assert.match(provenance.sources.journal.path, /^claude\/projects\/[^/]+\/\.board-task-changes\/events\//);
+            assert.ok(provenance.sources.journal.path.endsWith(`/${d.identity.taskId}.jsonl`));
+            for (const field of ['delivery', 'journal']) assert.match(provenance.sources[field].sha256, /^[a-f0-9]{64}$/);
             assert.deepEqual(epoch.quit, { launcherAbsent: true, electronAbsent: true, launcherExitCode: 0,
               launcherSignal: null, originalGroupReleased: true, namespaceAfter: [] });
             assert.equal(epoch.inferenceAfterQuit, d.inferenceAtDonorQuit);
@@ -967,7 +1030,13 @@ jobs:
           assert.equal(realpathSync(d.corpus.directory), d.corpus.directory);
           assert.deepEqual(JSON.parse(readFileSync(join(d.corpus.directory, 'manifest.json'), 'utf8')), d.corpus);
           assert.ok(d.corpus.files.length > 0 && d.corpus.files.length <= 4096);
-          const corpusPaths = new Set(); let corpusBytes = 0;
+          const donorProvenance = d.epochs[0].review.provenance;
+          const donorLedgerRoot = donorProvenance.sources.journal.path.slice(0, donorProvenance.sources.journal.path.lastIndexOf('/events/'));
+          const selectedRawPaths = new Set([donorProvenance.sources.delivery.path, donorProvenance.sources.journal.path,
+            `project/${fixture.relativePath}`,
+            `userData/data/task-attachments/${d.teamName}/${d.identity.taskId}/${d.epochs[0].attachment.id}--${fixture.png.name}`,
+            ...['before', 'after'].map(side => `${donorLedgerRoot}/blobs/sha256/${fixture[side + 'Sha256']}`)]);
+          const corpusPaths = new Set(), corpusData = new Map(); let corpusBytes = 0;
           for (const [index, row] of d.corpus.files.entries()) {
             assert.ok(typeof row.path === 'string' && !isAbsolute(row.path) && row.path.split('/').every(part => part && part !== '.' && part !== '..'));
             assert.equal(corpusPaths.has(row.path), false); corpusPaths.add(row.path);
@@ -979,11 +1048,45 @@ jobs:
             corpusBytes += row.bytes; assert.ok(corpusBytes <= 256 * 1024 * 1024);
             const bytes = readFileSync(path);
             assert.equal(bytes.length, row.bytes); assert.equal(createHash('sha256').update(bytes).digest('hex'), row.sha256);
+            if (selectedRawPaths.has(row.path)) {
+              assert.ok(bytes.length <= 8 * 1024 * 1024); corpusData.set(row.path, bytes);
+            }
           }
           assert.equal(corpusBytes, d.corpus.bytes);
           for (const prefix of [`claude/teams/${d.teamName}/`, `claude/tasks/${d.teamName}/`])
             assert.ok(d.corpus.files.some(row => row.path.startsWith(prefix)));
           assert.ok(d.corpus.files.some(row => /^runtime-data\/opencode\/profiles\/[^/]+\/data\/opencode\//.test(row.path)));
+          assert.ok(d.corpus.files.some(row => /^runtime-data\/opencode\/profiles\/[^/]+\/data\/opencode\/snapshot\/[^/]+\/[a-f0-9]{40}\//.test(row.path)));
+          assert.equal(corpusData.has('project/.git'), false);
+          assert.equal(d.corpus.files.some(row => row.path.startsWith('project/.git/')), false);
+          assert.equal(corpusData.get(`project/${fixture.relativePath}`)?.toString('utf8'), fixture.after);
+          const attachmentPath = `userData/data/task-attachments/${d.teamName}/${d.identity.taskId}/${d.epochs[0].attachment.id}--${fixture.png.name}`;
+          const attachmentBytes = corpusData.get(attachmentPath);
+          assert.ok(attachmentBytes); assert.equal(attachmentBytes.length, fixture.png.bytes); assert.equal(sha256(attachmentBytes), fixture.png.sha256);
+          const provenance = d.epochs[0].review.provenance;
+          const deliveryEnvelope = JSON.parse(corpusData.get(provenance.sources.delivery.path).toString('utf8'));
+          assert.equal(deliveryEnvelope.schemaVersion, 1); assert.ok(deliveryEnvelope.data.length <= 200);
+          const deliveries = deliveryEnvelope.data.filter(row => row.inboxMessageId === d.identity.messageId);
+          assert.equal(deliveries.length, 1); assert.deepEqual(pick(deliveries[0], deliveryKeys), provenance.delivery);
+          const events = corpusData.get(provenance.sources.journal.path).toString('utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
+          assert.ok(events.length > 0 && events.length <= 128);
+          assert.equal(new Set(events.map(row => row.eventId)).size, events.length);
+          const superseded = new Set(events.map(row => row.supersedesEventId).filter(id => typeof id === 'string'));
+          for (const id of superseded) assert.ok(events.some(row => row.eventId === id));
+          for (const event of events) {
+            assert.equal(event.taskId, d.identity.taskId); assert.equal(event.toolUseId, 'TEST_DONOR_REVIEW_EDIT');
+            assert.equal(event.filePath, fixture.filePath); assert.equal(event.sourceRuntime, 'opencode');
+          }
+          const active = events.filter(row => row.suppressed !== true && !superseded.has(row.eventId));
+          assert.equal(active.length, 1); assert.deepEqual(pick(active[0], eventKeys), provenance.event);
+          assert.equal(active[0].taskRef, d.identity.taskId); assert.equal(active[0].taskRefKind, 'canonical'); assert.equal(active[0].phase, 'work');
+          const ledgerRoot = provenance.sources.journal.path.slice(0, provenance.sources.journal.path.lastIndexOf('/events/'));
+          for (const side of ['before', 'after']) {
+            const ref = active[0][side]; assert.equal(ref.sha256, fixture[side + 'Sha256']);
+            assert.equal(ref.sizeBytes, Buffer.byteLength(fixture[side])); assert.equal(ref.blobRef, `sha256/${ref.sha256}`);
+            const bytes = corpusData.get(`${ledgerRoot}/blobs/${ref.blobRef}`);
+            assert.ok(bytes); assert.equal(bytes.toString('utf8'), fixture[side]); assert.equal(sha256(bytes), ref.sha256);
+          }
           NODE
       - name: Preserve original coexistence receipts and failure diagnostics
         if: always()
@@ -1005,6 +1108,12 @@ jobs:
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-donor.png
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-current.png
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-cold.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-donor-task.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-donor-review.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-current-task.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-current-review.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-cold-task.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-cold-review.png
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/coexistence-app-3.log
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/coexistence-app-4.log
             ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/coexistence-app-5.log

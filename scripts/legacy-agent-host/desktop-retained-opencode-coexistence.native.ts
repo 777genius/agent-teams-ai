@@ -516,7 +516,9 @@ async function runDonorHistory(input: {
     general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark' },
     httpServer: { enabled: false, port: await reservePort() },
   }), { mode: 0o600, flag: 'wx' });
-  const model = await startRetainedOpenCodeModel();
+  const reviewFixture = await prepareDonorReviewFixture(root, environment);
+  proof.reviewFixture = reviewFixture;
+  const model = await startRetainedOpenCodeModel({ donorReview: reviewFixture });
   const errorsBefore = input.cleanupErrors.length;
   let failure: unknown, completed = false;
   const assertClosedInputs = async () => {
@@ -539,9 +541,12 @@ async function runDonorHistory(input: {
         node: { path: String(node.path) }, runtime: { path: String(runtime.path), sha256: String(runtime.sha256) },
         custody: { sha256: String(custody.sha256) } }, v1: input.v1, env: environment, model, proof,
       cleanupErrors: input.cleanupErrors, baseline: input.processBaseline, assertInputs: assertClosedInputs,
-      preserveCorpus: teamName => preserveDonorCorpus(root, teamName),
+      reviewFixture, captureReview: identity => captureDonorReview(root, reviewFixture, identity, environment),
+      preserveCorpus: (teamName, taskId) => preserveDonorCorpus(root, teamName, taskId, reviewFixture),
     });
     assert.deepEqual(model.failures, []);
+    assert.deepEqual(model.observations.filter(row => row.donorStage).map(row => row.donorStage), ['read', 'edit', 'reply']);
+    assert.equal(await readFile(reviewFixture.filePath, 'utf8'), reviewFixture.after);
     completed = true;
   } catch (error) { failure = error; }
   finally {
@@ -564,8 +569,121 @@ async function runDonorHistory(input: {
   assert.equal(proof.status, 'PASS', 'donor history and original cleanup are required before final PASS');
 }
 
+/** Fresh CI-only Git input; the model cannot fabricate product history or Review events. */
+async function prepareDonorReviewFixture(root: string, environment: Record<string, string>) {
+  const project = join(root, 'project'), relativePath = 'TEST-donor-review.txt';
+  const before = 'TEST donor native review before\n', after = 'TEST donor native review after\n';
+  const filePath = join(project, relativePath);
+  await writeFile(filePath, before, { mode: 0o600, flag: 'wx' });
+  const git = (args: string[]) => execFileSync('/usr/bin/git', ['-C', project,
+    '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false', ...args], { encoding: 'utf8', timeout: 5000,
+    env: { ...environment, GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null',
+      GIT_AUTHOR_NAME: 'TEST donor', GIT_AUTHOR_EMAIL: 'test-donor@example.invalid',
+      GIT_COMMITTER_NAME: 'TEST donor', GIT_COMMITTER_EMAIL: 'test-donor@example.invalid',
+      GIT_AUTHOR_DATE: '2000-01-01T00:00:00Z', GIT_COMMITTER_DATE: '2000-01-01T00:00:00Z' } }).trim();
+  git(['init', '--template=', '--initial-branch=TEST-donor']);
+  await mkdir(join(project, '.git/info'), { recursive: true, mode: 0o700 });
+  await writeFile(join(project, '.git/info/exclude'), '/opencode.json\n', { mode: 0o600 });
+  git(['add', '--', relativePath]); git(['commit', '-m', 'TEST donor native Review input']);
+  assert.equal(git(['ls-files']), relativePath); assert.equal(git(['status', '--porcelain']), '');
+  const commit = git(['rev-parse', 'HEAD']), tree = git(['rev-parse', 'HEAD^{tree}']);
+  assert.match(commit, /^[a-f0-9]{40}$/); assert.match(tree, /^[a-f0-9]{40}$/);
+  const pngBytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8DwHwQBEPgD/U6VwW8AAAAASUVORK5CYII=', 'base64');
+  const png = { path: join(root, 'TEST-donor-task.png'), name: 'TEST-donor-task.png',
+    bytes: pngBytes.length, sha256: createHash('sha256').update(pngBytes).digest('hex') };
+  await writeFile(png.path, pngBytes, { mode: 0o600, flag: 'wx' });
+  return { filePath, relativePath, before, after, beforeSha256: digest(before), afterSha256: digest(after), commit, tree, png };
+}
+
+/** Read the old frontend's persisted strict-delivery join after its own Task Changes opened. */
+async function captureDonorReview(root: string, fixture: Awaited<ReturnType<typeof prepareDonorReviewFixture>>,
+  identity: Record<string, unknown>, environment: Record<string, string>) {
+  const value = (key: string) => { const item = identity[key]; assert.ok(typeof item === 'string' && item.length > 0); return item; };
+  const binding = Object.fromEntries(['teamName', 'runId', 'memberName', 'laneId', 'nativeSessionId',
+    'taskId', 'displayId', 'messageId'].map(key => [key, value(key)]));
+  assert.equal(binding.teamName, 'test-donor-4a-opencode-history'); assert.match(value('taskId'), /^[A-Za-z0-9_-]+$/);
+  const read = async (path: string) => {
+    assert.ok(path.startsWith(root + '/')); assert.equal(await realpath(path), path);
+    const before = await lstat(path, { bigint: true });
+    assert.ok(before.isFile() && !before.isSymbolicLink() && before.nlink === 1n && before.uid === BigInt(process.getuid!()));
+    assert.ok(before.size <= 8n * 1024n * 1024n, 'finite selected provenance file');
+    const bytes = await readFile(path), after = await lstat(path, { bigint: true });
+    assert.ok(before.dev === after.dev && before.ino === after.ino && before.size === after.size &&
+      before.mtimeNs === after.mtimeNs && before.ctimeNs === after.ctimeNs, 'same file throughout provenance read');
+    return { bytes, pin: { path: path.slice(root.length + 1), sha256: createHash('sha256').update(bytes).digest('hex') } };
+  };
+  const { file: deliveryFile, row: deliveryRow } = await waitFor(async () => {
+    const file = await read(join(root, 'claude/teams', value('teamName'), '.opencode-runtime/lanes',
+      encodeURIComponent(value('laneId')), 'opencode-prompt-delivery-ledger.json'));
+    const envelope = record(JSON.parse(file.bytes.toString('utf8')));
+    assert.equal(envelope.schemaVersion, 1); assert.ok(Array.isArray(envelope.data) && envelope.data.length <= 200);
+    const matches = envelope.data.map(record).filter(row => row.inboxMessageId === value('messageId'));
+    assert.equal(matches.length, 1); const row = matches[0]!;
+    for (const key of ['teamName', 'runId', 'memberName', 'laneId']) assert.equal(row[key], binding[key]);
+    assert.equal(row.runtimeSessionId, binding.nativeSessionId);
+    assert.ok(row.source === 'ui-send' || row.source === 'watcher');
+    assert.deepEqual(row.taskRefs, [{ taskId: value('taskId'), displayId: value('displayId'), teamName: value('teamName') }]);
+    assert.ok(['pending', 'accepted', 'responded'].includes(String(row.status)));
+    if (row.status !== 'responded') return null;
+    assert.ok(typeof row.deliveredUserMessageId === 'string' && row.deliveredUserMessageId.length > 0);
+    return { file, row };
+  }, 'original donor reply settles its exact delivery ledger', 30_000);
+  const projects = join(root, 'claude/projects'), names = await readdir(projects);
+  assert.ok(names.length <= 128); const journals: string[] = [];
+  for (const name of names) {
+    const path = join(projects, name, '.board-task-changes/events', value('taskId') + '.jsonl');
+    try { await lstat(path); journals.push(path); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT' && (error as NodeJS.ErrnoException).code !== 'ENOTDIR') throw error; }
+  }
+  assert.equal(journals.length, 1, 'one original donor task ledger');
+  const journal = await read(journals[0]!);
+  const events = journal.bytes.toString('utf8').trim().split('\n').filter(Boolean).map(line => record(JSON.parse(line)));
+  assert.ok(events.length > 0 && events.length <= 128);
+  for (const event of events) {
+    assert.ok(typeof event.eventId === 'string' && event.eventId.length > 0);
+    assert.equal(event.taskId, binding.taskId); assert.equal(event.toolUseId, 'TEST_DONOR_REVIEW_EDIT');
+    assert.equal(event.filePath, fixture.filePath); assert.equal(event.sourceRuntime, 'opencode');
+  }
+  assert.equal(new Set(events.map(row => row.eventId)).size, events.length);
+  const superseded = new Set<unknown>(events.map(row => row.supersedesEventId).filter(item => typeof item === 'string'));
+  for (const id of superseded) assert.ok(events.some(row => row.eventId === id));
+  const active = events.filter(row => row.suppressed !== true && !superseded.has(row.eventId));
+  assert.equal(active.length, 1); const selected = active[0]!;
+  for (const [key, expected] of Object.entries({ taskRef: value('taskId'), taskRefKind: 'canonical', phase: 'work',
+    sessionId: value('nativeSessionId'), memberName: value('memberName'), relativePath: fixture.relativePath,
+    source: 'opencode_toolpart_edit', sourceProvider: 'opencode', sourceSessionId: value('nativeSessionId'),
+    parentUserMessageId: deliveryRow.deliveredUserMessageId, attributionMethod: 'delivery-ledger-taskrefs',
+    toolStatus: 'succeeded', operation: 'modify', snapshotSource: 'opencode', confidence: 'high' })) assert.equal(selected[key], expected);
+  assert.ok(['opencode-snapshot', 'inverse-edit-chain'].includes(String(selected.evidenceProof)));
+  for (const key of ['eventId', 'sourcePartId', 'sourceMessageId', 'sourceImportKey', 'snapshotId'])
+    assert.ok(typeof selected[key] === 'string' && selected[key].length > 0);
+  const sides: Record<string, { sha256: string; bytes: number }> = {};
+  for (const [side, expected] of [['before', fixture.before], ['after', fixture.after]] as const) {
+    const ref = record(selected[side]); assert.equal(ref.sha256, digest(expected));
+    assert.equal(ref.sizeBytes, Buffer.byteLength(expected)); assert.equal(ref.blobRef, `sha256/${digest(expected)}`);
+    const blob = await read(join(dirname(dirname(journals[0]!)), 'blobs', String(ref.blobRef)));
+    assert.equal(blob.bytes.toString('utf8'), expected); sides[side] = { sha256: digest(expected), bytes: blob.bytes.length };
+  }
+  assert.equal(await readFile(fixture.filePath, 'utf8'), fixture.after);
+  const project = join(root, 'project');
+  const gitEnvironment = { ...environment, GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null' };
+  assert.equal(execFileSync('/usr/bin/git', ['-C', project, 'rev-parse', 'HEAD'],
+    { encoding: 'utf8', timeout: 5000, env: gitEnvironment }).trim(), fixture.commit);
+  assert.equal(execFileSync('/usr/bin/git', ['-C', project, 'rev-parse', 'HEAD^{tree}'],
+    { encoding: 'utf8', timeout: 5000, env: gitEnvironment }).trim(), fixture.tree);
+  const fields = (row: Record<string, unknown>, keys: string[]) => Object.fromEntries(keys.map(key => [key, row[key]]));
+  return { binding, delivery: fields(deliveryRow, ['id', 'source', 'status', 'inboxMessageId', 'deliveredUserMessageId',
+    'runtimeSessionId', 'runId', 'laneId', 'memberName', 'taskRefs']),
+    event: fields(selected, ['eventId', 'toolUseId', 'taskId', 'sessionId', 'memberName', 'filePath', 'relativePath',
+      'source', 'sourceRuntime', 'sourceProvider', 'sourceSessionId', 'sourcePartId', 'sourceMessageId',
+      'parentUserMessageId', 'attributionMethod', 'sourceImportKey', 'evidenceProof', 'snapshotId', 'snapshotSource',
+      'toolStatus', 'operation', 'confidence']),
+    before: sides.before!, after: sides.after!, sources: { delivery: deliveryFile.pin, journal: journal.pin } };
+}
+
 /** Preserve raw stopped product/history bytes; exclude executables and unrelated Electron caches. */
-async function preserveDonorCorpus(root: string, teamName: string) {
+async function preserveDonorCorpus(root: string, teamName: string, taskId: string,
+  fixture: Awaited<ReturnType<typeof prepareDonorReviewFixture>>) {
   const directory = join(root, 'evidence-corpus');
   const files: { path: string; copy: string; bytes: number; sha256: string }[] = [];
   let totalBytes = 0;
@@ -589,11 +707,20 @@ async function preserveDonorCorpus(root: string, teamName: string) {
     await writeFile(join(directory, copy), bytes, { mode: 0o600, flag: 'wx' });
     files.push({ path: relative, copy, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') });
   };
-  for (const path of ['claude', 'runtime-data', 'data', 'state', 'config/opencode', 'project/opencode.json']) await visit(path);
+  assert.match(taskId, /^[A-Za-z0-9_-]+$/);
+  for (const path of ['claude', 'runtime-data', 'data', 'state', 'config/opencode', 'project/opencode.json',
+    `project/${fixture.relativePath}`, `userData/data/task-attachments/${teamName}/${taskId}`]) await visit(path);
   assert.ok(files.some(row => row.path.startsWith(`claude/teams/${teamName}/`)), 'real donor team corpus');
   assert.ok(files.some(row => row.path.startsWith(`claude/tasks/${teamName}/`)), 'real donor task corpus');
   assert.ok(files.some(row => /^runtime-data\/opencode\/profiles\/[^/]+\/data\/opencode\//.test(row.path)),
     'real native OpenCode managed-profile history corpus');
+  assert.ok(files.some(row => /^runtime-data\/opencode\/profiles\/[^/]+\/data\/opencode\/snapshot\/[^/]+\/[a-f0-9]{40}\//.test(row.path)),
+    'original managed-profile native Git snapshots remain in the raw stopped corpus');
+  assert.ok(files.some(row => row.path === `project/${fixture.relativePath}` && row.sha256 === fixture.afterSha256));
+  assert.ok(files.some(row => row.path.startsWith(`userData/data/task-attachments/${teamName}/${taskId}/`) &&
+    row.sha256 === fixture.png.sha256 && row.bytes === fixture.png.bytes), 'actual original Task PNG corpus');
+  assert.ok(files.some(row => row.path.includes('/.board-task-changes/events/') && row.path.endsWith(`/${taskId}.jsonl`)),
+    'old frontend persisted its actual native Task Changes before Quit');
   const manifest = { directory, files, bytes: totalBytes };
   await writeFile(join(directory, 'manifest.json'), JSON.stringify(manifest, null, 2), { mode: 0o600, flag: 'wx' });
   return manifest;

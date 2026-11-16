@@ -364,9 +364,14 @@ export async function exerciseRetainedDonorHistory(input: {
   model: Awaited<ReturnType<typeof startRetainedOpenCodeModel>>;
   proof: Record<string, unknown>; cleanupErrors: unknown[];
   baseline: Awaited<ReturnType<typeof snapshotLinuxProcesses>>;
-  assertInputs(): Promise<void>; preserveCorpus(teamName: string): Promise<Record<string, unknown>>;
+  reviewFixture: { filePath: string; relativePath: string; before: string; after: string;
+    beforeSha256: string; afterSha256: string; commit: string; tree: string;
+    png: { path: string; name: string; bytes: number; sha256: string } };
+  assertInputs(): Promise<void>;
+  captureReview(identity: Record<string, unknown>): Promise<Record<string, unknown>>;
+  preserveCorpus(teamName: string, taskId: string): Promise<Record<string, unknown>>;
 }) {
-  const { proof, model, donor, root } = input;
+  const { proof, model, donor, root, reviewFixture } = input;
   const literal = desktopJsLiteral;
   const teamName = 'test-donor-4a-opencode-history', subject = 'TEST donor 4a retained sidebar record';
   const marker = 'TEST_RETAINED_V1_HISTORY', reply = 'REPLY_TEST_RETAINED_V1_HISTORY';
@@ -376,8 +381,11 @@ export async function exerciseRetainedDonorHistory(input: {
   let app: RetainedApp | undefined, failure: unknown;
   let member: Record<string, unknown>, memberName: string, taskId: string, messageId: string;
   let savedTask: unknown, savedMessage: unknown, nativeReply: Record<string, unknown>;
+  let displayId: string, messageText: string, attachment: Record<string, unknown> | undefined;
+  let savedReview: Record<string, unknown> | undefined;
   let inferenceAtDonorQuit: number | undefined;
   const getData = () => app!.call(`window.__TEST_retainedApi.teams.getData(${literal(teamName)})`);
+  const getTask = () => app!.call(`window.__TEST_retainedApi.teams.getTask(${literal(teamName)},${literal(taskId!)})`);
   const captureProcesses = async () => {
     const values = [
       ...await app!.nativeChildren(donor.runtime.path),
@@ -429,6 +437,69 @@ export async function exerciseRetainedDonorHistory(input: {
           const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&e.innerText?.trim()===${literal(expected)};
         });return rows.length>0&&rows.length<=32?{text:${literal(expected)},matches:rows.length}:null;
       })()`, 'original visible ' + expected, 90_000);
+      const openTask = async () => {
+        const selector = '.kanban-task-card[data-task-id=' + literal(taskId!) + '] h5';
+        await ui.scrollTo(selector, 'original retained Task subject', subject);
+        await ui.click(selector, 'open original retained Task detail', subject);
+        epoch.taskDetail = await ui.waitRead(`(() => {
+          const nodes=[...document.querySelectorAll('[role="dialog"] [data-task-detail-content]')];
+          if(nodes.length!==1)return null;const node=nodes[0];
+          const key=Object.keys(node).find(key=>key.startsWith('__reactFiber$'));
+          let fiber=key?node[key]:null;
+          for(let depth=0;fiber&&depth<64;depth++,fiber=fiber.return){
+            const model=fiber.memoizedProps?.model,task=model?.currentTask;
+            if(model?.teamName===${literal(teamName)}&&task?.id===${literal(taskId!)}&&task.subject===${literal(subject)})
+              return {teamName:model.teamName,taskId:task.id,subject:task.subject};
+          }return null;
+        })()`, 'exact original Task detail owner');
+      };
+      const attachmentSection = '[role="dialog"] section:has(svg.lucide-image)';
+      const readAttachment = async () => {
+        const task = record(await getTask());
+        assert.equal(task.id, taskId); assert.ok(Array.isArray(task.attachments));
+        assert.equal(task.attachments.length, 1, 'one actual Task attachment');
+        const current = record(task.attachments[0]);
+        assert.equal(current.filename, reviewFixture.png.name);
+        assert.equal(current.mimeType, 'image/png'); assert.equal(current.size, reviewFixture.png.bytes);
+        assert.ok(text(current.id));
+        if (attachment) assert.deepEqual(current, attachment);
+        const encoded = await app!.call<string>(
+          `window.__TEST_retainedApi.teams.getTaskAttachment(${literal(teamName)},${literal(taskId!)},${literal(text(current.id))},'image/png')`
+        );
+        assert.equal(typeof encoded, 'string'); assert.ok(encoded.length <= 4096);
+        const bytes = Buffer.from(encoded, 'base64');
+        assert.equal(bytes.length, reviewFixture.png.bytes);
+        assert.equal(createHash('sha256').update(bytes).digest('hex'), reviewFixture.png.sha256);
+        app!.assertCurrent();
+        const section = record(await app!.cdp.evaluate(`(() => {
+          const sections=[...document.querySelectorAll(${literal(attachmentSection)})];
+          if(sections.length!==1)return null;
+          const headers=[...sections[0].querySelectorAll(':scope > div:first-child > button[aria-label]')]
+            .filter(e=>['Expand section','Collapse section'].includes(e.getAttribute('aria-label')));
+          if(headers.length!==1)return null;const button=headers[0],r=button.getBoundingClientRect();
+          return button instanceof HTMLButtonElement&&!button.disabled&&r.width>0&&r.height>0
+            ?{collapsed:button.getAttribute('aria-label')==='Expand section'}:null;
+        })()`));
+        app!.assertCurrent();
+        if (section.collapsed === true) {
+          const header = attachmentSection + ' > div:first-child > button[aria-label="Expand section"]';
+          await ui.scrollTo(header, 'original Task attachment header visible');
+          await ui.click(header, 'expand original retained Task attachments');
+        }
+        await ui.scrollTo(attachmentSection + ' img[alt=' + literal(reviewFixture.png.name) + ']', 'original Task PNG visible');
+        const image = record(await ui.waitRead(`(() => {
+          const images=[...document.querySelectorAll(${literal(attachmentSection + ' img')})]
+            .filter(e=>e.alt===${literal(reviewFixture.png.name)}&&e.complete&&e.naturalWidth===2&&e.naturalHeight===1);
+          if(images.length!==1)return null;const image=images[0],r=image.getBoundingClientRect();
+          return r.width>0&&r.height>0?{src:image.currentSrc||image.src,width:image.naturalWidth,height:image.naturalHeight}:null;
+        })()`, 'actual original Task PNG visible'));
+        assert.match(text(image.src), /^data:image\/png;base64,/);
+        const visibleBytes = Buffer.from(text(image.src).split(',')[1]!, 'base64');
+        assert.equal(visibleBytes.length, reviewFixture.png.bytes);
+        assert.equal(createHash('sha256').update(visibleBytes).digest('hex'), reviewFixture.png.sha256);
+        attachment = current;
+        epoch.attachment = { ...current, sha256: reviewFixture.png.sha256, width: image.width, height: image.height };
+      };
       if (kind === 'donor') {
         assert.deepEqual(await app.call('window.__TEST_retainedApi.teams.list()'), [], 'fresh donor has no seeded teams');
         await ui.click('button[aria-label="More actions"]', 'open existing More menu');
@@ -490,23 +561,60 @@ export async function exerciseRetainedDonorHistory(input: {
           const tasks = data.tasks.map(record).filter(row => row.subject === subject);
           assert.ok(tasks.length <= 1); return tasks[0] ?? null;
         }, 'actual donor task identity', 30_000);
-        taskId = text(task.id); savedTask = task;
+        taskId = text(task.id); proof.createdTask = task;
         await ui.waitRead('!document.querySelector("#task-subject")', 'original create task dialog settled');
+        await openTask();
+        await ui.scrollTo(attachmentSection + ' > div > button[aria-label="Expand section"]', 'original Task attachment section');
+        await ui.click(attachmentSection + ' > div > button[aria-label="Expand section"]', 'expand original Task attachments');
+        const fileSelector = attachmentSection + ' input[type="file"]';
+        await ui.waitRead(`(() => {const nodes=document.querySelectorAll(${literal(fileSelector)});
+          return nodes.length===1&&!nodes[0].disabled;})()`, 'original Task file input eligible');
+        assert.equal(await fileHash(reviewFixture.png.path), reviewFixture.png.sha256);
+        const dom = await app.cdp.send<{ root: { nodeId: number } }>('DOM.getDocument');
+        app.assertCurrent();
+        const fileInputs = await app.cdp.send<{ nodeIds: number[] }>('DOM.querySelectorAll', {
+          nodeId: dom.root.nodeId, selector: fileSelector,
+        });
+        assert.equal(fileInputs.nodeIds.length, 1);
+        app.assertCurrent();
+        steps.push({ epoch: kind, action: 'fileInput', name: reviewFixture.png.name, sha256: reviewFixture.png.sha256 });
+        await app.cdp.send('DOM.setFileInputFiles', { nodeId: fileInputs.nodeIds[0], files: [reviewFixture.png.path] });
+        await ui.waitRead(
+          `Boolean(document.querySelector(${literal(attachmentSection + ' img[alt=' + literal(reviewFixture.png.name) + ']')}))`,
+          'Task upload acknowledged'
+        );
+        await readAttachment();
+        await ui.click('[role="dialog"] button', 'close original Task detail before message', 'Close');
+        await ui.waitRead('!document.querySelector("[role=dialog] [data-task-detail-content]")', 'Task detail closed');
         await openLead();
         await ui.click('[role="dialog"] button', 'open direct lead message', 'Send Message');
-        await fill('#smd-message', marker);
+        await fill('#smd-message', marker + ' #');
+        const suggestionSelector = '[role="listbox"] [role="option"]:has(svg.lucide-hash)';
+        const suggestion = record(await ui.waitRead(`(() => {
+          const rows=[...document.querySelectorAll(${literal(suggestionSelector)})].filter(e=>e.getBoundingClientRect().width>0);
+          if(rows.length!==1||![...rows[0].querySelectorAll('div')].some(e=>e.textContent.trim()===${literal(subject)}))return null;
+          const label=rows[0].querySelector('div > div > span')?.textContent.trim();
+          return label&&/^#[A-Za-z0-9-]{1,128}$/.test(label)?{displayId:label.slice(1),subject:${literal(subject)}}:null;
+        })()`, 'one real Task reference suggestion'));
+        displayId = text(suggestion.displayId); messageText = marker + ' #' + displayId;
+        await ui.click(suggestionSelector, 'choose original Task reference once');
+        epoch.taskMention = suggestion;
+        await ui.waitRead(`(() => {const value=document.querySelector('#smd-message')?.value;
+          return typeof value==='string'&&value.startsWith(${literal(messageText)})&&value.includes('\\u2063')&&value.includes('\\u2064');})()`,
+          'original encoded Task reference acknowledged');
         await ui.click('[role="dialog"] button', 'send one original HISTORY message', 'Send');
         await waitFor(async () => { assert.deepEqual(model.failures, []); return model.markers.has(marker) || null; }, 'donor inference observes original input', 90_000);
         nativeReply = await waitFor(() => readRetainedNativeReply({ app: app!, teamName, memberName, member,
           expectedReply: reply, failures: model.failures, observe: value => { epoch.nativeRead = value; } }), 'actual donor native reply', 90_000);
         const message = await waitFor(async () => {
           const data = await getData(); assert.ok(Array.isArray(data.messages));
-          const rows = data.messages.map(record).filter(row => row.from === 'user' && row.to === memberName && row.text === marker && row.source === 'user_sent');
+          const rows = data.messages.map(record).filter(row => row.from === 'user' && row.to === memberName && row.text === messageText && row.source === 'user_sent');
           assert.ok(rows.length <= 1); return rows[0] ?? null;
         }, 'actual donor sent message identity', 30_000);
         messageId = text(message.messageId); savedMessage = message;
+        assert.deepEqual(message.taskRefs, [{ taskId, displayId, teamName }]);
         proof.identity = { teamName, runId: launched.runId, memberName, laneId: text(member.laneId),
-          nativeSessionId: text(member.runtimeSessionId), taskId, messageId, ...nativeReply };
+          nativeSessionId: text(member.runtimeSessionId), taskId, displayId, messageId, ...nativeReply };
         const children = await captureProcesses();
         assert.ok(children.some(row => 'sha256' in row && row.sha256 === input.v1.sha256), 'real original donor V1 image captured');
         epoch.nativeProcesses = children;
@@ -516,9 +624,12 @@ export async function exerciseRetainedDonorHistory(input: {
       }
       const data = await getData();
       assert.ok(Array.isArray(data.tasks)); assert.ok(Array.isArray(data.messages));
-      assert.deepEqual(data.tasks.map(record).find(row => row.id === taskId!), savedTask);
+      const taskBeforeReview = data.tasks.map(record).find(row => row.id === taskId!);
+      assert.ok(taskBeforeReview); assert.equal(taskBeforeReview.subject, subject);
       assert.deepEqual(data.messages.map(record).find(row => row.messageId === messageId! && row.source === 'user_sent'), savedMessage);
-      epoch.task = { id: taskId!, subject }; epoch.message = { messageId: messageId!, text: marker, to: memberName! };
+      epoch.task = { id: taskId!, displayId: displayId!, subject };
+      epoch.message = { messageId: messageId!, text: messageText!, to: memberName!,
+        taskRefs: [{ taskId: taskId!, displayId: displayId!, teamName }] };
       epoch.visibleTask = await ui.waitRead(`(() => {
         const rows=[...document.querySelectorAll('#sidebar-tasks-panel [data-task-key]')].filter(e=>
           e.dataset.taskKey===${literal(JSON.stringify([teamName, taskId!]))}&&e.getBoundingClientRect().width>0);
@@ -526,9 +637,48 @@ export async function exerciseRetainedDonorHistory(input: {
         return value===${literal(subject)}?{key:rows[0].dataset.taskKey,subject:value}:null;
       })()`, 'same original visible task identity');
       await ui.waitRead('!document.querySelector("#smd-message")', 'original send dialog settled');
+      await openTask();
+      await readAttachment();
+      const taskImage = await app.cdp.send<{ data: string }>('Page.captureScreenshot', { format: 'png' });
+      await writeFile(join(root, `donor-history-${kind}-task.png`), Buffer.from(taskImage.data, 'base64'), { mode: 0o600 });
+      const changesSection = '[role="dialog"] section:has(svg.lucide-file-diff) > div > button[aria-label="Expand section"]';
+      await ui.scrollTo(changesSection, 'original Task Changes section');
+      await ui.click(changesSection, 'open original Task Changes');
+      const changedFile = '[role="dialog"] [role="button"][aria-label=' + literal(reviewFixture.relativePath) + ']';
+      await ui.scrollTo(changedFile, 'actual native Task file');
+      await ui.click(changedFile, 'open original native Task diff');
+      epoch.review = await ui.waitRead(`(() => {
+        if(document.querySelectorAll('button[aria-label="Close Changes"]').length!==1||
+          ![...document.querySelectorAll('h2')].some(e=>e.textContent.includes(${literal(subject)})))return null;
+        const editors=[...document.querySelectorAll('.cm-editor')].filter(e=>e.getBoundingClientRect().width>0);
+        if(editors.length!==1)return null;
+        const visible=text=>[...editors[0].querySelectorAll('div,span')].some(e=>{
+          const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&e.textContent.trim()===text;
+        });
+        return visible(${literal(reviewFixture.before.trim())})&&visible(${literal(reviewFixture.after.trim())})
+          ?{filePath:${literal(reviewFixture.filePath)},relativePath:${literal(reviewFixture.relativePath)},
+            visibleBefore:${literal(reviewFixture.before.trim())},visibleAfter:${literal(reviewFixture.after.trim())}}:null;
+      })()`, 'actual native before and after in original Task Changes');
+      const provenance = await input.captureReview(record(proof.identity));
+      const stableReview = Object.fromEntries(
+        ['binding', 'delivery', 'event', 'before', 'after'].map(key => [key, record(provenance[key])])
+      );
+      if (savedReview) assert.deepEqual(stableReview, savedReview, 'same persisted native Task change after restart');
+      else savedReview = stableReview;
+      record(epoch.review).provenance = provenance;
+      const reviewImage = await app.cdp.send<{ data: string }>('Page.captureScreenshot', { format: 'png' });
+      await writeFile(join(root, `donor-history-${kind}-review.png`), Buffer.from(reviewImage.data, 'base64'), { mode: 0o600 });
+      await ui.click('button[aria-label="Close Changes"]', 'close original Task Changes without decisions');
+      await ui.waitRead(`!document.querySelector('button[aria-label="Close Changes"]')&&
+        !document.querySelector('[role="dialog"] [data-task-detail-content]')`, 'original Changes and Task detail closed');
+      const afterReview = await getData(); assert.ok(Array.isArray(afterReview.tasks));
+      const reviewedTask = afterReview.tasks.map(record).find(row => row.id === taskId!);
+      assert.ok(reviewedTask); assert.equal(reviewedTask.subject, subject);
+      if (kind === 'donor') savedTask = reviewedTask;
+      else assert.deepEqual(reviewedTask, savedTask, 'whole retained Task after its original Changes read');
       await openLead();
       await ui.click('[role="dialog"] [role="tab"]', 'open original native Logs', 'Logs');
-      epoch.visibleMessage = await visibleText('[role="dialog"] [role="tabpanel"][data-state="active"]', marker);
+      epoch.visibleMessage = await visibleText('[role="dialog"] [role="tabpanel"][data-state="active"]', messageText!);
       epoch.visibleReply = await visibleText('[role="dialog"] [role="tabpanel"][data-state="active"]', reply);
       const observed = await waitFor(() => readRetainedNativeReply({ app: app!, teamName, memberName: memberName!, member: member!,
         expectedReply: reply, failures: model.failures, observe: value => { epoch.nativeRead = value; } }), 'same original native history tuple', 90_000);
@@ -558,7 +708,7 @@ export async function exerciseRetainedDonorHistory(input: {
         record(proof.stop).originalNativeAbsentAfterQuit = true;
         inferenceAtDonorQuit = model.observations.length;
         assert.equal(model.observations.filter(row => row.marker === marker).length, 1);
-        proof.corpus = await input.preserveCorpus(teamName);
+        proof.corpus = await input.preserveCorpus(teamName, taskId!);
       } else assert.equal(model.observations.length, inferenceAtDonorQuit, 'retained UI read never replays inference');
       await input.assertInputs();
     }
