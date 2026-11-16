@@ -33,7 +33,8 @@ export const desktopRuntimePeerSources = [
 ] as const;
 
 /** TEST executables implement a finite native protocol; the original Host and D remain unchanged. */
-export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEntry: string, provider: 'codex' | 'claude' | 'opencode' = 'codex', variant?: 'selection' | 'installer' | 'lifecycle' | 'collaboration') {
+export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEntry: string, provider: 'codex' | 'claude' | 'opencode' = 'codex', variant?: 'selection' | 'installer' | 'lifecycle' | 'collaboration', candidateRuntime?: Parameters<typeof prepareDesktopBackendFixture>[1]['candidateRuntime']) {
+  if (candidateRuntime) assert.ok(provider === 'claude' && variant === 'lifecycle', 'One captured packaged Launch/Stop lifecycle');
   if (variant === 'collaboration') {
     assert.equal(provider, 'claude'); return prepareDesktopEmulatedCollaborationFixture(repo, pnpmEntry);
   }
@@ -41,7 +42,7 @@ export async function prepareDesktopEmulatedRuntimeFixture(repo: string, pnpmEnt
   if (variant === 'installer') {
     assert.equal(process.platform, 'darwin'); assert.equal(process.arch, 'arm64');
   }
-  const fixture = await prepareDesktopBackendFixture(repo, { pnpmEntry, seedUiPreferences: true, creation: true });
+  const fixture = await prepareDesktopBackendFixture(repo, { pnpmEntry, seedUiPreferences: true, creation: true, ...(candidateRuntime ? { candidateRuntime } : {}) });
   const selectedSources = provider === 'claude' ? ['tools/owned-process-broker/fixtures/claudeProviderPeer.mjs'] :
     [...desktopRuntimePeerSources, ...(provider === 'opencode'
       ? ['packages/legacy-agent-host/dist/adapters/providers/OpenCodeMcpPolicyPlugin.js'] : [])];
@@ -238,8 +239,8 @@ export async function observeDesktopEmulatedRuntimeChildren(group: number,
   };
   const table = census(), hosts = table.filter(row => row.pgid === group && row.command === `${fixture.node} ${fixture.hostEntry}`);
   if (phase === 'before-first-team-read') assert.ok(hosts.length <= 1); else assert.equal(hosts.length, 1);
-  if (!hosts.some(host => table.some(row => row.ppid === host.pid)))
-    await readDesktopEmulatedRuntimeEffects(fixture);
+  await readDesktopEmulatedRuntimeEffects(fixture);
+  assert.ok(performance.now() < deadline, 'Original peer journal validation exceeded its deadline');
   const installed = fixture.emulatedRuntime.installer ? await readDesktopEmulatedCodexInstallation(fixture.emulatedRuntime.installer) : undefined;
   const prefixes = [fixture.emulatedRuntime.commandPrefix,
     ...(installed ? [`${fixture.node} ${installed.executable.path} `] : [])];
