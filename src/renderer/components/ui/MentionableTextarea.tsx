@@ -1343,9 +1343,9 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
           <AutoResizeTextarea
             ref={setRefs}
             value={value}
-            onChange={composedHandleChange}
-            onKeyDown={composedHandleKeyDown}
-            onSelect={composedHandleSelect}
+            onChange={textareaProps.readOnly ? undefined : composedHandleChange}
+            onKeyDown={textareaProps.readOnly ? undefined : composedHandleKeyDown}
+            onSelect={textareaProps.readOnly ? undefined : composedHandleSelect}
             {...textareaProps}
             className={cn(className, hasCornerActions && cornerInsetClass)}
             onScroll={handleScroll}
@@ -1414,7 +1414,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
         <MentionSuggestionsPopup
           placement={suggestionPlacement}
           anchorRef={surfaceShellRef}
-          open={isOpen}
+          open={isOpen && !textareaProps.readOnly}
           top={dropdownPosition?.top}
           dismiss={dismiss}
           suggestions={effectiveSuggestions}
