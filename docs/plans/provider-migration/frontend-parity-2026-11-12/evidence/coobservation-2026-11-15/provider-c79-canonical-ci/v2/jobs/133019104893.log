@@ -1,0 +1,494 @@
+﻿2026-11-16T00:36:36.7243092Z Current runner version: '2.338.2'
+2026-11-16T00:36:36.7269250Z ##[group]Runner Image Provisioner
+2026-11-16T00:36:36.7270154Z Hosted Compute Agent
+2026-11-16T00:36:36.7270693Z Version: 20261103.629
+2026-11-16T00:36:36.7271480Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-16T00:36:36.7272236Z Build Date: 2026-11-03T17:26:59Z
+2026-11-16T00:36:36.7272846Z Worker ID: {1e070878-e65c-4e9f-9603-171af2cf6c60}
+2026-11-16T00:36:36.7273551Z Region: northcentralus
+2026-11-16T00:36:36.7274105Z Cloud: Azure
+2026-11-16T00:36:36.7274635Z ##[endgroup]
+2026-11-16T00:36:36.7276098Z ##[group]Operating System
+2026-11-16T00:36:36.7276672Z Ubuntu
+2026-11-16T00:36:36.7277267Z 24.04.5
+2026-11-16T00:36:36.7277753Z LTS
+2026-11-16T00:36:36.7278255Z ##[endgroup]
+2026-11-16T00:36:36.7278828Z ##[group]Runner Image
+2026-11-16T00:36:36.7279369Z Image: ubuntu-24.04
+2026-11-16T00:36:36.7279888Z Version: 20261111.370.1
+2026-11-16T00:36:36.7281457Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261111.370/images/ubuntu/Ubuntu2404-Readme.md
+2026-11-16T00:36:36.7283041Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261111.370
+2026-11-16T00:36:36.7283936Z ##[endgroup]
+2026-11-16T00:36:36.7285042Z ##[group]GITHUB_TOKEN Permissions
+2026-11-16T00:36:36.7286967Z Contents: read
+2026-11-16T00:36:36.7287479Z Metadata: read
+2026-11-16T00:36:36.7288098Z ##[endgroup]
+2026-11-16T00:36:36.7290111Z Secret source: Actions
+2026-11-16T00:36:36.7291309Z Cache mode: write
+2026-11-16T00:36:36.7292057Z Prepare workflow directory
+2026-11-16T00:36:36.7611953Z Prepare all required actions
+2026-11-16T00:36:36.7657590Z Getting action download info
+2026-11-16T00:36:36.9805572Z Download action repository 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-11-16T00:36:37.1527877Z Download action repository 'actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+2026-11-16T00:36:37.2501817Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-16T00:36:37.4316805Z Complete job name: native-v2-test (ubuntu-24.04, embedded-target-spi)
+2026-11-16T00:36:37.4916118Z ##[group]Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+2026-11-16T00:36:37.4916642Z with:
+2026-11-16T00:36:37.4916911Z   ref: c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-16T00:36:37.4917255Z   persist-credentials: false
+2026-11-16T00:36:37.4917711Z   repository: agent-teams-ai/old-provider-implementations
+2026-11-16T00:36:37.4921543Z   token: ***
+2026-11-16T00:36:37.4921803Z   ssh-strict: true
+2026-11-16T00:36:37.4922049Z   ssh-user: git
+2026-11-16T00:36:37.4922285Z   clean: true
+2026-11-16T00:36:37.4922535Z   sparse-checkout-cone-mode: true
+2026-11-16T00:36:37.4922830Z   fetch-depth: 1
+2026-11-16T00:36:37.4923072Z   fetch-tags: false
+2026-11-16T00:36:37.4923325Z   show-progress: true
+2026-11-16T00:36:37.4923581Z   lfs: false
+2026-11-16T00:36:37.4923831Z   submodules: false
+2026-11-16T00:36:37.4924084Z   set-safe-directory: true
+2026-11-16T00:36:37.4924369Z   allow-unsafe-pr-checkout: false
+2026-11-16T00:36:37.4924922Z ##[endgroup]
+2026-11-16T00:36:37.7417157Z Syncing repository: agent-teams-ai/old-provider-implementations
+2026-11-16T00:36:37.7418988Z ##[group]Getting Git version info
+2026-11-16T00:36:37.7419871Z Working directory is '/home/runner/work/old-provider-implementations/old-provider-implementations'
+2026-11-16T00:36:37.7421335Z [command]/usr/bin/git version
+2026-11-16T00:36:37.7421965Z git version 2.56.1
+2026-11-16T00:36:37.7437494Z ##[endgroup]
+2026-11-16T00:36:37.7454264Z Temporarily overriding HOME='/home/runner/work/_temp/5d883621-8444-4b5b-872d-f654032a84c2' before making global git config changes
+2026-11-16T00:36:37.7455679Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T00:36:37.7458588Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/old-provider-implementations/old-provider-implementations
+2026-11-16T00:36:37.7504100Z Deleting the contents of '/home/runner/work/old-provider-implementations/old-provider-implementations'
+2026-11-16T00:36:37.7513678Z ##[group]Determining repository object format
+2026-11-16T00:36:37.7514642Z ##[endgroup]
+2026-11-16T00:36:37.7515342Z ##[group]Initializing the repository
+2026-11-16T00:36:37.7520302Z [command]/usr/bin/git init /home/runner/work/old-provider-implementations/old-provider-implementations
+2026-11-16T00:36:37.7674498Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-16T00:36:37.7675388Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-16T00:36:37.7675903Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-16T00:36:37.7676326Z hint: call:
+2026-11-16T00:36:37.7676592Z hint:
+2026-11-16T00:36:37.7677011Z hint: 	git config --global init.defaultBranch <name>
+2026-11-16T00:36:37.7677353Z hint:
+2026-11-16T00:36:37.7677712Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-16T00:36:37.7678300Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-16T00:36:37.7678935Z hint:
+2026-11-16T00:36:37.7679286Z hint: 	git branch -m <name>
+2026-11-16T00:36:37.7679694Z hint:
+2026-11-16T00:36:37.7680232Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-16T00:36:37.7685300Z Initialized empty Git repository in /home/runner/work/old-provider-implementations/old-provider-implementations/.git/
+2026-11-16T00:36:37.7693281Z [command]/usr/bin/git remote add origin https://github.com/agent-teams-ai/old-provider-implementations
+2026-11-16T00:36:37.7766607Z ##[endgroup]
+2026-11-16T00:36:37.7767419Z ##[group]Disabling automatic garbage collection
+2026-11-16T00:36:37.7769710Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-16T00:36:37.7801589Z ##[endgroup]
+2026-11-16T00:36:37.7802406Z ##[group]Setting up auth
+2026-11-16T00:36:37.7811677Z Removing SSH command configuration
+2026-11-16T00:36:37.7812524Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T00:36:37.7843501Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T00:36:37.8170444Z Removing HTTP extra header
+2026-11-16T00:36:37.8175990Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T00:36:37.8212972Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T00:36:37.8405318Z Removing includeIf entries pointing to credentials config files
+2026-11-16T00:36:37.8410350Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T00:36:37.8446187Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T00:36:37.8639513Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-a5e87076-e76c-46c5-ada1-6c50d277dc6a.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-16T00:36:37.8679877Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git.path /home/runner/work/_temp/git-credentials-a5e87076-e76c-46c5-ada1-6c50d277dc6a.config
+2026-11-16T00:36:37.8716276Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-a5e87076-e76c-46c5-ada1-6c50d277dc6a.config
+2026-11-16T00:36:37.8757957Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-a5e87076-e76c-46c5-ada1-6c50d277dc6a.config
+2026-11-16T00:36:37.8791525Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-a5e87076-e76c-46c5-ada1-6c50d277dc6a.config
+2026-11-16T00:36:37.8824328Z ##[endgroup]
+2026-11-16T00:36:37.8824944Z ##[group]Fetching the repository
+2026-11-16T00:36:37.8829091Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-16T00:36:38.2809724Z From https://github.com/agent-teams-ai/old-provider-implementations
+2026-11-16T00:36:38.2810824Z  * branch            c79b81bf002eaac95436da71c7049d7f309906a9 -> FETCH_HEAD
+2026-11-16T00:36:38.2823133Z [command]/usr/bin/git rev-parse --verify --quiet c79b81bf002eaac95436da71c7049d7f309906a9^{object}
+2026-11-16T00:36:38.2857986Z c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-16T00:36:38.2868196Z ##[endgroup]
+2026-11-16T00:36:38.2868924Z ##[group]Determining the checkout info
+2026-11-16T00:36:38.2869731Z ##[endgroup]
+2026-11-16T00:36:38.2870212Z [command]/usr/bin/git sparse-checkout disable
+2026-11-16T00:36:38.2929572Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-16T00:36:38.2969451Z ##[group]Checking out the ref
+2026-11-16T00:36:38.2970396Z [command]/usr/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-16T00:36:38.3143978Z Note: switching to 'c79b81bf002eaac95436da71c7049d7f309906a9'.
+2026-11-16T00:36:38.3144606Z 
+2026-11-16T00:36:38.3145014Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-16T00:36:38.3146162Z changes and commit them, and you can discard any commits you make in this
+2026-11-16T00:36:38.3147262Z state without impacting any branches by switching back to a branch.
+2026-11-16T00:36:38.3147889Z 
+2026-11-16T00:36:38.3148268Z If you want to create a new branch to retain commits you create, you may
+2026-11-16T00:36:38.3149229Z do so (now or later) by using -c with the switch command. Example:
+2026-11-16T00:36:38.3149869Z 
+2026-11-16T00:36:38.3150136Z   git switch -c <new-branch-name>
+2026-11-16T00:36:38.3150677Z 
+2026-11-16T00:36:38.3151130Z Or undo this operation with:
+2026-11-16T00:36:38.3151818Z 
+2026-11-16T00:36:38.3152073Z   git switch -
+2026-11-16T00:36:38.3152400Z 
+2026-11-16T00:36:38.3152983Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-16T00:36:38.3153890Z 
+2026-11-16T00:36:38.3154714Z HEAD is now at c79b81b fix: retain uncertain native suggestion ownership and targeted cancellation
+2026-11-16T00:36:38.3157381Z ##[endgroup]
+2026-11-16T00:36:38.3195968Z [command]/usr/bin/git log -1 --format=%H
+2026-11-16T00:36:38.3225598Z c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-16T00:36:38.3232947Z ##[group]Removing auth
+2026-11-16T00:36:38.3233602Z Removing SSH command configuration
+2026-11-16T00:36:38.3235330Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T00:36:38.3272018Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T00:36:38.3461919Z Removing HTTP extra header
+2026-11-16T00:36:38.3464642Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T00:36:38.3499571Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T00:36:38.3686392Z Removing includeIf entries pointing to credentials config files
+2026-11-16T00:36:38.3688663Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T00:36:38.3720711Z includeif.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git.path
+2026-11-16T00:36:38.3723773Z includeif.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git/worktrees/*.path
+2026-11-16T00:36:38.3726499Z includeif.gitdir:/github/workspace/.git.path
+2026-11-16T00:36:38.3727827Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T00:36:38.3732012Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git.path
+2026-11-16T00:36:38.3765505Z /home/runner/work/_temp/git-credentials-a5e87076-e76c-46c5-ada1-6c50d277dc6a.config
+2026-11-16T00:36:38.3774532Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git.path /home/runner/work/_temp/git-credentials-a5e87076-e76c-46c5-ada1-6c50d277dc6a.config
+2026-11-16T00:36:38.3811734Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git/worktrees/*.path
+2026-11-16T00:36:38.3838669Z /home/runner/work/_temp/git-credentials-a5e87076-e76c-46c5-ada1-6c50d277dc6a.config
+2026-11-16T00:36:38.3847277Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-a5e87076-e76c-46c5-ada1-6c50d277dc6a.config
+2026-11-16T00:36:38.3884390Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-11-16T00:36:38.3914013Z /github/runner_temp/git-credentials-a5e87076-e76c-46c5-ada1-6c50d277dc6a.config
+2026-11-16T00:36:38.3921161Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-a5e87076-e76c-46c5-ada1-6c50d277dc6a.config
+2026-11-16T00:36:38.3958313Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T00:36:38.3988436Z /github/runner_temp/git-credentials-a5e87076-e76c-46c5-ada1-6c50d277dc6a.config
+2026-11-16T00:36:38.3994209Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-a5e87076-e76c-46c5-ada1-6c50d277dc6a.config
+2026-11-16T00:36:38.4029575Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T00:36:38.4218857Z Removing credentials config '/home/runner/work/_temp/git-credentials-a5e87076-e76c-46c5-ada1-6c50d277dc6a.config'
+2026-11-16T00:36:38.4225715Z ##[endgroup]
+2026-11-16T00:36:38.4465732Z ##[group]Run actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+2026-11-16T00:36:38.4466532Z with:
+2026-11-16T00:36:38.4466934Z   node-version: 24.21.0
+2026-11-16T00:36:38.4467424Z   package-manager-cache: false
+2026-11-16T00:36:38.4467949Z   check-latest: false
+2026-11-16T00:36:38.4473582Z   token: ***
+2026-11-16T00:36:38.4473989Z ##[endgroup]
+2026-11-16T00:36:38.5395811Z Attempting to download 24.21.0...
+2026-11-16T00:36:39.0409611Z Acquiring 24.21.0 - x64 from https://github.com/actions/node-versions/releases/download/24.21.0-34304089047/node-24.21.0-linux-x64.tar.gz
+2026-11-16T00:36:39.5036821Z Extracting ...
+2026-11-16T00:36:39.5144243Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/0e03225e-fdc6-432d-9c50-34acf1f8100a -f /home/runner/work/_temp/b846c926-7b0c-49f0-8d35-a5b6c221bce5
+2026-11-16T00:36:40.4665187Z Adding to the cache ...
+2026-11-16T00:36:42.2123010Z ##[group]Environment details
+2026-11-16T00:36:42.3700373Z node: v24.21.0
+2026-11-16T00:36:42.3700740Z npm: 11.19.0
+2026-11-16T00:36:42.3700916Z yarn: 1.22.22
+2026-11-16T00:36:42.3701531Z ##[endgroup]
+2026-11-16T00:36:42.3875228Z ##[group]Run set -euo pipefail
+2026-11-16T00:36:42.3875506Z [36;1mset -euo pipefail[0m
+2026-11-16T00:36:42.3875773Z [36;1mnpm exec --yes --package=pnpm@11.18.0 -- pnpm install --frozen-lockfile --ignore-scripts[0m
+2026-11-16T00:36:42.3876081Z [36;1mnpm exec --yes --package=pnpm@11.18.0 -- pnpm build[0m
+2026-11-16T00:36:42.3897849Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T00:36:42.3898082Z ##[endgroup]
+2026-11-16T00:36:42.5838015Z npm warn Unknown project config "strict-peer-dependencies". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+2026-11-16T00:36:43.8117529Z Scope: all 3 workspace projects
+2026-11-16T00:36:43.9008225Z ? Verifying lockfile against supply-chain policies (152 entries)...
+2026-11-16T00:36:43.9069085Z Lockfile is up to date, resolution step is skipped
+2026-11-16T00:36:43.9685304Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-16T00:36:43.9787064Z Packages: +108
+2026-11-16T00:36:43.9787875Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-11-16T00:36:44.4175306Z Packages are hard linked from the content-addressable store to the virtual store.
+2026-11-16T00:36:44.4183464Z   Content-addressable store is at: /home/runner/.local/share/pnpm/store/v11
+2026-11-16T00:36:44.4184355Z   Virtual store is at:             node_modules/.pnpm
+2026-11-16T00:36:44.9922187Z Progress: resolved 108, reused 0, downloaded 107, added 107
+2026-11-16T00:36:45.2946465Z ✓ Lockfile passes supply-chain policies (152 entries in 1.3s)
+2026-11-16T00:36:46.1061867Z Progress: resolved 108, reused 0, downloaded 108, added 107
+2026-11-16T00:36:46.1082099Z Progress: resolved 108, reused 0, downloaded 108, added 108, done
+2026-11-16T00:36:46.1770153Z 
+2026-11-16T00:36:46.2058920Z Done in 2.7s using pnpm v11.18.0
+2026-11-16T00:36:46.4869430Z npm warn Unknown project config "strict-peer-dependencies". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+2026-11-16T00:36:46.8544758Z $ pnpm -r run build
+2026-11-16T00:36:47.1366127Z Scope: 2 of 3 workspace projects
+2026-11-16T00:36:47.1383386Z packages/provider-session-contracts build$ tsc --project tsconfig.json --pretty false
+2026-11-16T00:36:47.5114603Z packages/provider-session-contracts build: Done
+2026-11-16T00:36:47.5121311Z packages/provider-implementations build$ tsc --project tsconfig.json --pretty false
+2026-11-16T00:36:48.9870167Z packages/provider-implementations build: Done
+2026-11-16T00:36:49.0202237Z ##[group]Run node --check scripts/native-v2-readonly-proof.mjs
+2026-11-16T00:36:49.0202533Z [36;1mnode --check scripts/native-v2-readonly-proof.mjs[0m
+2026-11-16T00:36:49.0202759Z [36;1mnode --check scripts/native-v2-model-candidate.mjs[0m
+2026-11-16T00:36:49.0202983Z [36;1mnode --check scripts/verify-native-v2-cli-hold.mjs[0m
+2026-11-16T00:36:49.0203205Z [36;1mnode --check scripts/native-v2-embedded-proof.mjs[0m
+2026-11-16T00:36:49.0203413Z [36;1mnode --check scripts/native-v2-spi-proof.mjs[0m
+2026-11-16T00:36:49.0203650Z [36;1mnode --check scripts/verify-native-v2-embedded-floor-hold.mjs[0m
+2026-11-16T00:36:49.0203910Z [36;1mnode --check scripts/verify-native-v2-interrupt-proof.mjs[0m
+2026-11-16T00:36:49.0204136Z [36;1mnode --check scripts/native-v2-mcp-proof.mjs[0m
+2026-11-16T00:36:49.0204354Z [36;1mnode --test scripts/native-v2-mcp-proof.test.mjs[0m
+2026-11-16T00:36:49.0204583Z [36;1mnode --check scripts/verify-native-v2-receipt-safety.mjs[0m
+2026-11-16T00:36:49.0204871Z [36;1mnode --test scripts/verify-native-v2-receipt-safety.test.mjs[0m
+2026-11-16T00:36:49.0223797Z shell: /usr/bin/bash -e {0}
+2026-11-16T00:36:49.0223942Z ##[endgroup]
+2026-11-16T00:36:49.2675661Z ✔ MCP child records owned process before initialize (57.37404ms)
+2026-11-16T00:36:49.3722978Z ✔ MCP child upgrades same marker after real initialize (106.376864ms)
+2026-11-16T00:36:54.3754589Z ℹ tests 2
+2026-11-16T00:36:54.3754795Z ℹ suites 0
+2026-11-16T00:36:54.3755102Z ℹ pass 2
+2026-11-16T00:36:54.3755278Z ℹ fail 0
+2026-11-16T00:36:54.3755463Z ℹ cancelled 0
+2026-11-16T00:36:54.3755697Z ℹ skipped 0
+2026-11-16T00:36:54.3755925Z ℹ todo 0
+2026-11-16T00:36:54.3756147Z ℹ duration_ms 5195.767056
+2026-11-16T00:36:55.0497801Z ✔ accepts one clean receipt for the selected matrix proof (87.777564ms)
+2026-11-16T00:36:55.0498781Z ✔ rejects absent, mismatched or extra receipts (66.871903ms)
+2026-11-16T00:36:55.0504792Z ✔ rejects unsupported matrix proof and missing proof selector (42.991443ms)
+2026-11-16T00:36:55.0505294Z ✔ rejects unqualified or unsafe native error receipts (42.813017ms)
+2026-11-16T00:36:55.0505724Z ✔ rejects nested credential-like keys and recognizable token values (199.495622ms)
+2026-11-16T00:36:55.0506300Z ✔ rejects slash-normalized Windows drive and UNC paths in public receipts (73.608205ms)
+2026-11-16T00:36:55.0506710Z ✔ ordinary non-secret URL metadata is not mistaken for a Windows drive path (20.975236ms)
+2026-11-16T00:36:55.0507070Z ✔ does not reject safe Session authority assertion metadata (21.012535ms)
+2026-11-16T00:36:55.0507641Z ✔ accepts native lifecycle credential-read counter but not a string payload (43.458641ms)
+2026-11-16T00:36:55.0575197Z ℹ tests 9
+2026-11-16T00:36:55.0575460Z ℹ suites 0
+2026-11-16T00:36:55.0575640Z ℹ pass 9
+2026-11-16T00:36:55.0575764Z ℹ fail 0
+2026-11-16T00:36:55.0575908Z ℹ cancelled 0
+2026-11-16T00:36:55.0576043Z ℹ skipped 0
+2026-11-16T00:36:55.0576163Z ℹ todo 0
+2026-11-16T00:36:55.0576303Z ℹ duration_ms 639.419924
+2026-11-16T00:36:55.0690701Z ##[group]Run set -euo pipefail
+2026-11-16T00:36:55.0690898Z [36;1mset -euo pipefail[0m
+2026-11-16T00:36:55.0691346Z [36;1mmkdir -p "$RUNNER_TEMP/opencode-v2-embedded"[0m
+2026-11-16T00:36:55.0691598Z [36;1mnpm install --prefix "$RUNNER_TEMP/opencode-v2-embedded" --no-save \[0m
+2026-11-16T00:36:55.0691905Z [36;1m  --package-lock=true --ignore-scripts --no-audit --no-fund @opencode/sdk@2.1.4[0m
+2026-11-16T00:36:55.0692219Z [36;1mnpm ls --prefix "$RUNNER_TEMP/opencode-v2-embedded" --depth=0 @opencode/sdk[0m
+2026-11-16T00:36:55.0709093Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T00:36:55.0709276Z env:
+2026-11-16T00:36:55.0709392Z   npm_config_audit: false
+2026-11-16T00:36:55.0709531Z   npm_config_fund: false
+2026-11-16T00:36:55.0709661Z ##[endgroup]
+2026-11-16T00:37:12.3404509Z npm warn EBADENGINE Unsupported engine {
+2026-11-16T00:37:12.3405022Z npm warn EBADENGINE   package: '@opentui/core@0.6.8',
+2026-11-16T00:37:12.3405580Z npm warn EBADENGINE   required: { bun: '>=1.3.14', node: '>=26.4.0' },
+2026-11-16T00:37:12.3406069Z npm warn EBADENGINE   current: { node: 'v24.21.0', npm: '11.19.0' }
+2026-11-16T00:37:12.3406400Z npm warn EBADENGINE }
+2026-11-16T00:37:13.6402322Z npm warn deprecated @opentelemetry/sdk-trace-node@2.8.0: Use @opentelemetry/sdk-trace package
+2026-11-16T00:37:13.6755039Z npm warn deprecated @ai-sdk/vercel@2.0.39: The v0 Model API has been removed, and @ai-sdk/vercel no longer works. Use the v0 API instead: https://v0.app/docs/api
+2026-11-16T00:37:13.7162135Z npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+2026-11-16T00:37:14.4204931Z npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-11-16T00:37:15.6956001Z npm warn deprecated @opentelemetry/sdk-trace-base@2.8.0: Use @opentelemetry/sdk-trace package
+2026-11-16T00:37:17.1982808Z 
+2026-11-16T00:37:17.1983504Z added 384 packages in 22s
+2026-11-16T00:37:17.4416602Z /home/runner/work/_temp/opencode-v2-embedded
+2026-11-16T00:37:17.4418149Z └── @opencode/sdk@2.1.4 extraneous
+2026-11-16T00:37:17.4418335Z 
+2026-11-16T00:37:17.4568030Z ##[group]Run node scripts/native-v2-spi-proof.mjs
+2026-11-16T00:37:17.4568265Z [36;1mnode scripts/native-v2-spi-proof.mjs[0m
+2026-11-16T00:37:17.4585360Z shell: /usr/bin/bash -e {0}
+2026-11-16T00:37:17.4585499Z env:
+2026-11-16T00:37:17.4585685Z   OPENCODE_V2_EMBEDDED_NPM_PREFIX: /home/runner/work/_temp/opencode-v2-embedded
+2026-11-16T00:37:17.4586116Z   OPENCODE_V2_SPI_RECEIPT: /home/runner/work/old-provider-implementations/old-provider-implementations/native-v2-embedded-target-spi-proof.json
+2026-11-16T00:37:17.4586626Z   OPENCODE_V2_TEST_EXPECTED_PLATFORM: linux-x64
+2026-11-16T00:37:17.4586791Z ##[endgroup]
+2026-11-16T00:37:18.6974797Z [00:37:18.696] INFO (#4): database schema bootstrap started { migrations: 50 }
+2026-11-16T00:37:18.7041637Z [00:37:18.703] INFO (#4): database schema bootstrap completed { migrations: 50, durationMs: 7 }
+2026-11-16T00:37:18.8344092Z [00:37:18.833] INFO (#165) http.span=40ms: location services booted {
+2026-11-16T00:37:18.8344691Z   directory: '/tmp/TEST-v2-spi-g9iUQR/workspace',
+2026-11-16T00:37:18.8345147Z   workspaceID: undefined,
+2026-11-16T00:37:18.8345406Z   durationMs: 38
+2026-11-16T00:37:18.8345764Z }
+2026-11-16T00:37:18.9685163Z [00:37:18.968] INFO (#253) http.span=175ms: event {
+2026-11-16T00:37:18.9685558Z   event: {
+2026-11-16T00:37:18.9685793Z     id: 'evt_1e1c975f700138aoh0SymizEfB',
+2026-11-16T00:37:18.9686059Z     created: 1794789438968,
+2026-11-16T00:37:18.9686297Z     type: 'provider.updated',
+2026-11-16T00:37:18.9686528Z     location: {
+2026-11-16T00:37:18.9686795Z       directory: '/tmp/TEST-v2-spi-g9iUQR/workspace',
+2026-11-16T00:37:18.9687136Z       workspaceID: undefined
+2026-11-16T00:37:18.9687350Z     },
+2026-11-16T00:37:18.9687526Z     data: {}
+2026-11-16T00:37:18.9687696Z   }
+2026-11-16T00:37:18.9687854Z }
+2026-11-16T00:37:18.9714997Z [00:37:18.971] INFO (#257) http.span=178ms: event {
+2026-11-16T00:37:18.9715314Z   event: {
+2026-11-16T00:37:18.9715538Z     id: 'evt_1e1c975fb001D4I9WEQ5Sik7qm',
+2026-11-16T00:37:18.9715817Z     created: 1794789438971,
+2026-11-16T00:37:18.9716042Z     type: 'model.updated',
+2026-11-16T00:37:18.9716251Z     location: {
+2026-11-16T00:37:18.9716518Z       directory: '/tmp/TEST-v2-spi-g9iUQR/workspace',
+2026-11-16T00:37:18.9716810Z       workspaceID: undefined
+2026-11-16T00:37:18.9717020Z     },
+2026-11-16T00:37:18.9717186Z     data: {}
+2026-11-16T00:37:18.9717359Z   }
+2026-11-16T00:37:18.9717518Z }
+2026-11-16T00:37:18.9733788Z [00:37:18.973] INFO (#502) http.span=180ms: event {
+2026-11-16T00:37:18.9734102Z   event: {
+2026-11-16T00:37:18.9734339Z     id: 'evt_1e1c975fd001ZWnB5mCkO7m8bk',
+2026-11-16T00:37:18.9734591Z     created: 1794789438973,
+2026-11-16T00:37:18.9734813Z     type: 'agent.updated',
+2026-11-16T00:37:18.9735019Z     location: {
+2026-11-16T00:37:18.9735275Z       directory: '/tmp/TEST-v2-spi-g9iUQR/workspace',
+2026-11-16T00:37:18.9735558Z       workspaceID: undefined
+2026-11-16T00:37:18.9735762Z     },
+2026-11-16T00:37:18.9735925Z     data: {}
+2026-11-16T00:37:18.9736090Z   }
+2026-11-16T00:37:18.9736255Z }
+2026-11-16T00:37:18.9742621Z [00:37:18.974] INFO (#502) http.span=181ms: event {
+2026-11-16T00:37:18.9742810Z   event: {
+2026-11-16T00:37:18.9742953Z     id: 'evt_1e1c975fd002gY0kVW3t15bQBG',
+2026-11-16T00:37:18.9743115Z     created: 1794789438974,
+2026-11-16T00:37:18.9743290Z     type: 'command.updated',
+2026-11-16T00:37:18.9743504Z     location: {
+2026-11-16T00:37:18.9743764Z       directory: '/tmp/TEST-v2-spi-g9iUQR/workspace',
+2026-11-16T00:37:18.9744048Z       workspaceID: undefined
+2026-11-16T00:37:18.9744256Z     },
+2026-11-16T00:37:18.9744438Z     data: {}
+2026-11-16T00:37:18.9744610Z   }
+2026-11-16T00:37:18.9744769Z }
+2026-11-16T00:37:19.0622920Z [00:37:19.061] INFO (#642) http.span=268ms: mcp connected { server: 'testteams', tools: 1 } {
+2026-11-16T00:37:19.0623379Z   server: 'testteams',
+2026-11-16T00:37:19.0623673Z   directory: '/tmp/TEST-v2-spi-g9iUQR/workspace',
+2026-11-16T00:37:19.0624040Z   connectionID: '2e0ffd3d-7a33-4fe1-b6ff-be4618730510'
+2026-11-16T00:37:19.0624896Z }
+2026-11-16T00:37:19.0641118Z [00:37:19.063] INFO (#567): event {
+2026-11-16T00:37:19.0641473Z   event: {
+2026-11-16T00:37:19.0641696Z     id: 'evt_1e1c97657003HCbFu77qrzxsVh',
+2026-11-16T00:37:19.0641945Z     created: 1794789439063,
+2026-11-16T00:37:19.0642172Z     type: 'command.updated',
+2026-11-16T00:37:19.0642386Z     location: {
+2026-11-16T00:37:19.0642642Z       directory: '/tmp/TEST-v2-spi-g9iUQR/workspace',
+2026-11-16T00:37:19.0642920Z       workspaceID: undefined
+2026-11-16T00:37:19.0643154Z     },
+2026-11-16T00:37:19.0643316Z     data: {}
+2026-11-16T00:37:19.0643742Z   }
+2026-11-16T00:37:19.0643899Z }
+2026-11-16T00:37:20.0786259Z [00:37:20.078] INFO (#1941) http.span=18ms: location services booted {
+2026-11-16T00:37:20.0786592Z   directory: '/tmp/TEST-v2-spi-g9iUQR/workspace',
+2026-11-16T00:37:20.0786794Z   workspaceID: undefined,
+2026-11-16T00:37:20.0786936Z   durationMs: 17
+2026-11-16T00:37:20.0787053Z }
+2026-11-16T00:37:20.1038198Z [00:37:20.103] INFO (#2029) http.span=43ms: event {
+2026-11-16T00:37:20.1038570Z   event: {
+2026-11-16T00:37:20.1038792Z     id: 'evt_1e1c97a67002i88SG3WHPVhRAU',
+2026-11-16T00:37:20.1039047Z     created: 1794789440103,
+2026-11-16T00:37:20.1039269Z     type: 'provider.updated',
+2026-11-16T00:37:20.1039485Z     location: {
+2026-11-16T00:37:20.1039746Z       directory: '/tmp/TEST-v2-spi-g9iUQR/workspace',
+2026-11-16T00:37:20.1040028Z       workspaceID: undefined
+2026-11-16T00:37:20.1040230Z     },
+2026-11-16T00:37:20.1040393Z     data: {}
+2026-11-16T00:37:20.1040514Z   }
+2026-11-16T00:37:20.1040617Z }
+2026-11-16T00:37:20.1045452Z [00:37:20.104] INFO (#2033) http.span=44ms: event {
+2026-11-16T00:37:20.1045703Z   event: {
+2026-11-16T00:37:20.1045904Z     id: 'evt_1e1c97a68001a5AocUzG9fWQqw',
+2026-11-16T00:37:20.1046144Z     created: 1794789440104,
+2026-11-16T00:37:20.1046283Z     type: 'model.updated',
+2026-11-16T00:37:20.1046414Z     location: {
+2026-11-16T00:37:20.1046576Z       directory: '/tmp/TEST-v2-spi-g9iUQR/workspace',
+2026-11-16T00:37:20.1046761Z       workspaceID: undefined
+2026-11-16T00:37:20.1046894Z     },
+2026-11-16T00:37:20.1046997Z     data: {}
+2026-11-16T00:37:20.1047102Z   }
+2026-11-16T00:37:20.1047201Z }
+2026-11-16T00:37:20.1049878Z [00:37:20.104] INFO (#2279) http.span=44ms: event {
+2026-11-16T00:37:20.1050116Z   event: {
+2026-11-16T00:37:20.1050317Z     id: 'evt_1e1c97a68002hzElpz3AQo3mR6',
+2026-11-16T00:37:20.1050550Z     created: 1794789440104,
+2026-11-16T00:37:20.1050755Z     type: 'agent.updated',
+2026-11-16T00:37:20.1050950Z     location: {
+2026-11-16T00:37:20.1051301Z       directory: '/tmp/TEST-v2-spi-g9iUQR/workspace',
+2026-11-16T00:37:20.1051582Z       workspaceID: undefined
+2026-11-16T00:37:20.1051780Z     },
+2026-11-16T00:37:20.1051939Z     data: {}
+2026-11-16T00:37:20.1052099Z   }
+2026-11-16T00:37:20.1052250Z }
+2026-11-16T00:37:20.1052489Z [00:37:20.105] INFO (#2279) http.span=45ms: event {
+2026-11-16T00:37:20.1052732Z   event: {
+2026-11-16T00:37:20.1052929Z     id: 'evt_1e1c97a69001X4otq3ogrvu1fd',
+2026-11-16T00:37:20.1053169Z     created: 1794789440105,
+2026-11-16T00:37:20.1053375Z     type: 'command.updated',
+2026-11-16T00:37:20.1053578Z     location: {
+2026-11-16T00:37:20.1053818Z       directory: '/tmp/TEST-v2-spi-g9iUQR/workspace',
+2026-11-16T00:37:20.1054082Z       workspaceID: undefined
+2026-11-16T00:37:20.1054276Z     },
+2026-11-16T00:37:20.1054435Z     data: {}
+2026-11-16T00:37:20.1054592Z   }
+2026-11-16T00:37:20.1054740Z }
+2026-11-16T00:37:20.1199843Z [00:37:20.119] INFO (#2407) http.span=59ms: mcp connected { server: 'testteams', tools: 1 } {
+2026-11-16T00:37:20.1200447Z   server: 'testteams',
+2026-11-16T00:37:20.1206513Z   directory: '/tmp/TEST-v2-spi-g9iUQR/workspace',
+2026-11-16T00:37:20.1207118Z   connectionID: 'deffbdf0-4578-478d-8d77-092f7050f648'
+2026-11-16T00:37:20.1207404Z }
+2026-11-16T00:37:20.1210611Z [00:37:20.120] INFO (#2342): event {
+2026-11-16T00:37:20.1210943Z   event: {
+2026-11-16T00:37:20.1211305Z     id: 'evt_1e1c97a780040XadmJyoFlKL3u',
+2026-11-16T00:37:20.1211569Z     created: 1794789440120,
+2026-11-16T00:37:20.1212395Z     type: 'command.updated',
+2026-11-16T00:37:20.1212627Z     location: {
+2026-11-16T00:37:20.1212896Z       directory: '/tmp/TEST-v2-spi-g9iUQR/workspace',
+2026-11-16T00:37:20.1213319Z       workspaceID: undefined
+2026-11-16T00:37:20.1213567Z     },
+2026-11-16T00:37:20.1213736Z     data: {}
+2026-11-16T00:37:20.1213905Z   }
+2026-11-16T00:37:20.1214064Z }
+2026-11-16T00:37:20.3820679Z {"kind":"TEST_V2_NATIVE_SESSION_SPI","version":"2.1.4","qualified":false,"completed":true,"cleanup":true,"steps":["native_all_provider_directory_without_account_or_configuration_fields","native_owned_identity_model_permissions_instructions_mcp_readback","session_SPI_native_model_tool_permission_deny_then_once_actual_MCP_effect","session_SPI_native_builtin_edit_immutable_input_window_and_real_log_anchors","session_SPI_original_verified_PNG_native_ACK_history_and_actual_image_inference","session_SPI_active_stream_interrupt_native_terminal_and_stop","cold_same_session_new_endpoint_checkpoint_no_replay_and_fresh_input","private_credential_witness_retained_on_cold_readback_and_absent_from_model_requests"],"nativeEditCapture":{"dialect":"v2","protocolRevision":"2.1.4","immutable":true,"beforeSha256":"25a7c1737d90d27dbb0c62ad6ece92b5812455ef7678700b8a09692668092b05","afterSha256":"10333d3e3654e64b195fd298e8b19a3c6ef9c9fb8fc25d25c77721b4379afc46","patchSha256":"528e739026006adf808185798abeea93871eb848d9566c5a6a39bfb03dea53fe","calledEvent":{"id":"evt_1e1c978c4001kfXQQGWG5NP7FC","seq":37},"completedEvent":{"id":"evt_1e1c978d0001yQTgR6brcxHBNc","seq":39,"type":"session.tool.success"},"filePathFlavor":"workspace-relative","unifiedIndexEnvelope":true},"nativePNG":{"mimeType":"image/png","sha256":"5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6","byteLength":71,"resolutions":1,"actualInference":true,"coldHistory":true,"resubmitted":false},"modelRequests":9,"mcpEffects":1,"instructionsEffective":true,"nativeCatalogEffective":true,"platform":"linux-x64"}
+2026-11-16T00:37:20.4319154Z ##[group]Run node scripts/verify-native-v2-receipt-safety.mjs
+2026-11-16T00:37:20.4319437Z [36;1mnode scripts/verify-native-v2-receipt-safety.mjs[0m
+2026-11-16T00:37:20.4336647Z shell: /usr/bin/bash -e {0}
+2026-11-16T00:37:20.4336787Z env:
+2026-11-16T00:37:20.4336939Z   OPENCODE_V2_EXPECTED_TEST_PROOF: embedded-target-spi
+2026-11-16T00:37:20.4337126Z ##[endgroup]
+2026-11-16T00:37:20.4583696Z TEST_native_receipts_safe count=1
+2026-11-16T00:37:20.4674936Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-11-16T00:37:20.4675174Z with:
+2026-11-16T00:37:20.4675367Z   name: opencode-v2-discovery-ubuntu-24.04-embedded-target-spi
+2026-11-16T00:37:20.4675581Z   if-no-files-found: warn
+2026-11-16T00:37:20.4675719Z   retention-days: 7
+2026-11-16T00:37:20.4677155Z   path: native-v2-readonly-proof.json
+native-v2-model-candidate.json
+native-v2-embedded-proof.json
+native-v2-embedded-model-proof.json
+native-v2-embedded-interrupt-proof.json
+native-v2-embedded-target-interrupt-proof.json
+native-v2-embedded-target-spi-proof.json
+native-v2-embedded-mcp-proof.json
+native-v2-embedded-target-mcp-proof.json
+native-v2-embedded-floor-proof.json
+native-v2-embedded-target-proof.json
+native-v2-embedded-target-model-proof.json
+native-v2-embedded-target-tool-proof.json
+native-v2-embedded-pinned-tool-proof.json
+/home/runner/work/_temp/opencode-v2-embedded/package-lock.json
+/home/runner/work/_temp/opencode-v2-native/npm/package-lock.json
+
+2026-11-16T00:37:20.4678592Z   compression-level: 6
+2026-11-16T00:37:20.4678722Z   overwrite: false
+2026-11-16T00:37:20.4678859Z   include-hidden-files: false
+2026-11-16T00:37:20.4679006Z ##[endgroup]
+2026-11-16T00:37:20.5822215Z (node:2719) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T00:37:20.5822974Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T00:37:20.5857660Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-11-16T00:37:20.5860404Z The least common ancestor is /home/runner/work. This will be the root directory of the artifact
+2026-11-16T00:37:20.5860859Z With the provided path, there will be 1 file uploaded
+2026-11-16T00:37:20.5863454Z Artifact name is valid!
+2026-11-16T00:37:20.5864058Z Root directory input is valid!
+2026-11-16T00:37:20.8312152Z Beginning upload of artifact content to blob storage
+2026-11-16T00:37:20.8424063Z (node:2719) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-16T00:37:20.9511340Z Uploaded bytes 1272
+2026-11-16T00:37:20.9810140Z Finished uploading artifact content to blob storage!
+2026-11-16T00:37:20.9811460Z SHA256 digest of uploaded artifact zip is 359fe96c668931789c233df55442bb52573ec486cd331bd766b5f40a4125576a
+2026-11-16T00:37:20.9812944Z Finalizing artifact upload
+2026-11-16T00:37:21.3282583Z Artifact opencode-v2-discovery-ubuntu-24.04-embedded-target-spi.zip successfully finalized. Artifact ID 14188497747
+2026-11-16T00:37:21.3285068Z Artifact opencode-v2-discovery-ubuntu-24.04-embedded-target-spi has been successfully uploaded! Final size is 1272 bytes. Artifact ID is 14188497747
+2026-11-16T00:37:21.3288817Z Artifact download URL: https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43781376036/artifacts/14188497747
+2026-11-16T00:37:21.3453486Z Post job cleanup.
+2026-11-16T00:37:21.4410283Z Post job cleanup.
+2026-11-16T00:37:21.5032826Z [command]/usr/bin/git version
+2026-11-16T00:37:21.5077050Z git version 2.56.1
+2026-11-16T00:37:21.5102462Z Temporarily overriding HOME='/home/runner/work/_temp/291f9c12-52b2-4cc0-b8ef-8e7130f4e37b' before making global git config changes
+2026-11-16T00:37:21.5103357Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T00:37:21.5106166Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/old-provider-implementations/old-provider-implementations
+2026-11-16T00:37:21.5140858Z Removing SSH command configuration
+2026-11-16T00:37:21.5145694Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T00:37:21.5177041Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T00:37:21.5382798Z Removing HTTP extra header
+2026-11-16T00:37:21.5387845Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T00:37:21.5442694Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T00:37:21.5799646Z Removing includeIf entries pointing to credentials config files
+2026-11-16T00:37:21.5800424Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T00:37:21.5837758Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T00:37:21.6176792Z Cleaning up orphan processes
+2026-11-16T00:37:21.6465815Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

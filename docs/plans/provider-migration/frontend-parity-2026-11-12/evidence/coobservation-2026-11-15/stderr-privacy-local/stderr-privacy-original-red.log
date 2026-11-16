@@ -1,0 +1,127 @@
+✔ original stderr captures startup and tail while redacting selected values across UTF-8 chunks (8.268246ms)
+✔ standalone stderr uses selected private values without a Team endpoint (0.913088ms)
+✔ invalid UTF-8 and NUL are readable diagnostics, including a final incomplete sequence (0.67858ms)
+✔ decoded UTF-8 and NUL expansion cannot exceed the retained text byte limit (3.189987ms)
+✔ oversized lines discard their complete suffix and preserve a multiline dump opener (0.869524ms)
+✔ dump continuations stay suppressed through ordinary newlines and oversized fragments (0.630368ms)
+✔ observer errors and reentrant close cannot change stream outcomes or duplicate a tail (0.480916ms)
+✔ a bounded escape-heavy line remains subject to the existing serialized journal limit (1.264352ms)
+✔ held escaped, URI and whitespace-normalized values and quoted assignments cannot leave secret suffixes (1.259715ms)
+✔ overlapping held values are masked in one pass: ABABAB (0.856595ms)
+✔ overlapping held values are masked in one pass: a (0.513775ms)
+✔ long split ANSI does not lose a dump opener before flush (0.583728ms)
+✔ long split ANSI does not lose a dump opener before discard (0.986378ms)
+✔ dump detection continues through already discarded oversized fragments (0.959488ms)
+✔ a short held value cannot destroy sensitive syntax before classification: s (0.589007ms)
+✔ a short held value cannot destroy sensitive syntax before classification: a (0.492934ms)
+✔ a short held value cannot destroy sensitive syntax before classification: h (0.664519ms)
+✔ syntax redaction cannot expose fragments of a transformed held value (1.046828ms)
+✔ an ANSI prefix larger than the line budget remains fail-closed (false) (0.763746ms)
+✔ an ANSI prefix larger than the line budget remains fail-closed (true) (0.641705ms)
+✖ held whitespace values cannot leak after contextual syntax redaction (space) (1.155099ms)
+✖ held whitespace values cannot leak after contextual syntax redaction (tab) (0.505423ms)
+✖ held whitespace values cannot leak after contextual syntax redaction (mixed) (0.61148ms)
+✔ safe diagnostics and unambiguous held-value context remain readable (0.441186ms)
+✖ held escaped forms stay private after contextual whitespace normalization (false) (1.226946ms)
+✖ held escaped forms stay private after contextual whitespace normalization (true) (0.600183ms)
+✔ post-mask expansion preserves the oversized gap before contextual ambiguity refusal (0.877686ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 22
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 127.957371
+
+✖ failing tests:
+
+test at packages/legacy-agent-host/tests/member-process-stderr.test.ts:250:3
+✖ held whitespace values cannot leak after contextual syntax redaction (space) (1.155099ms)
+  AssertionError [ERR_ASSERTION]: the complete already-held value stays private
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/member-process-stderr.test.ts:258:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/member-process-stderr.test.ts:250:3
+✖ held whitespace values cannot leak after contextual syntax redaction (tab) (0.505423ms)
+  AssertionError [ERR_ASSERTION]: the complete already-held value stays private
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/member-process-stderr.test.ts:258:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/member-process-stderr.test.ts:250:3
+✖ held whitespace values cannot leak after contextual syntax redaction (mixed) (0.61148ms)
+  AssertionError [ERR_ASSERTION]: the complete already-held value stays private
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/member-process-stderr.test.ts:258:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/member-process-stderr.test.ts:280:3
+✖ held escaped forms stay private after contextual whitespace normalization (false) (1.226946ms)
+  AssertionError [ERR_ASSERTION]: the already-held escaped form stays private
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/member-process-stderr.test.ts:290:14)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at packages/legacy-agent-host/tests/member-process-stderr.test.ts:280:3
+✖ held escaped forms stay private after contextual whitespace normalization (true) (0.600183ms)
+  AssertionError [ERR_ASSERTION]: the already-held escaped form stays private
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/member-process-stderr.test.ts:290:14)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

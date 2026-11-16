@@ -1,0 +1,38 @@
+{
+  "sourceHead": "a3a9f56baf00a67f18256caea7721c3f6b954ca3",
+  "sourceTree": "ce8a2eaf377e69bd1c81782343cbd04e180307a9",
+  "originalAttempt": {
+    "name": "logs69-source-closure.log",
+    "argv": [
+      "node",
+      "--input-type=module",
+      "-e",
+      "import assert from 'node:assert/strict';\nimport {existsSync} from 'node:fs';\nimport {createHash} from 'node:crypto';\nimport {desktopProofSources} from './scripts/legacy-agent-host/desktop-proof-sources.ts';\nimport {desktopProofWindowsRetrySources} from './scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts';\nconst common=[...new Set(desktopProofSources)].sort();\nconst windows=[...new Set([...common,...desktopProofWindowsRetrySources])].sort();\nconst packaged=[...new Set([...common,'scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts','packages/legacy-agent-host/tests/opencode-v1-version-source.ts'])].sort();\nconst rows=[['common',common,1757,'2e4566fa4aafd7b6db99195177385ffa96c2b1e50b72f260dd13fb61181473eb'],['windows',windows,1798,'2c8ba366802fe193a354ec13a4ec39b2231e6bfccbd3462f6fec0b60797dc9f6'],['packaged',packaged,1759,'a0ceedded66acc074e7242228e15a6aac364c00133d3577c3962cae1ec23ac2f']];\nfor(const [name,paths,count,digest] of rows){const raw=JSON.stringify(paths),actual=createHash('sha256').update(raw).digest('hex');assert.equal(paths.length,count);assert.equal(actual,digest);for(const p of paths)assert.ok(existsSync(p),p);console.log(JSON.stringify({name,count,bytes:Buffer.byteLength(raw),sha256:actual,allPathsExist:true}));}\n"
+    ],
+    "startedAt": "2026-11-16T00:24:54.878374+00:00",
+    "completedAt": "2026-11-16T00:24:54.944474+00:00",
+    "exitCode": 1,
+    "bytes": 956,
+    "sha256": "6466e2b38abbf1ee24349f294c6f5c4efcb966d9591b0b6e39f61548f262b99b"
+  },
+  "diagnosis": "Audit sortedJSON is compact JSON followed by exactly one LF. Original guard omitted that LF; exact common no-LF hash matched independent review. No source or source-set difference. Only the serializer is corrected; no build/test/compiler is repeated.",
+  "literalCorrection": {
+    "before": "const raw=JSON.stringify(paths),actual=",
+    "after": "const raw=JSON.stringify(paths)+'\\n',actual=",
+    "unique": true,
+    "inverseExact": true
+  },
+  "name": "logs69-source-closure-corrected.log",
+  "argv": [
+    "node",
+    "--input-type=module",
+    "-e",
+    "import assert from 'node:assert/strict';\nimport {existsSync} from 'node:fs';\nimport {createHash} from 'node:crypto';\nimport {desktopProofSources} from './scripts/legacy-agent-host/desktop-proof-sources.ts';\nimport {desktopProofWindowsRetrySources} from './scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts';\nconst common=[...new Set(desktopProofSources)].sort();\nconst windows=[...new Set([...common,...desktopProofWindowsRetrySources])].sort();\nconst packaged=[...new Set([...common,'scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts','packages/legacy-agent-host/tests/opencode-v1-version-source.ts'])].sort();\nconst rows=[['common',common,1757,'2e4566fa4aafd7b6db99195177385ffa96c2b1e50b72f260dd13fb61181473eb'],['windows',windows,1798,'2c8ba366802fe193a354ec13a4ec39b2231e6bfccbd3462f6fec0b60797dc9f6'],['packaged',packaged,1759,'a0ceedded66acc074e7242228e15a6aac364c00133d3577c3962cae1ec23ac2f']];\nfor(const [name,paths,count,digest] of rows){const raw=JSON.stringify(paths)+'\\n',actual=createHash('sha256').update(raw).digest('hex');assert.equal(paths.length,count);assert.equal(actual,digest);for(const p of paths)assert.ok(existsSync(p),p);console.log(JSON.stringify({name,count,bytes:Buffer.byteLength(raw),sha256:actual,allPathsExist:true}));}\n"
+  ],
+  "startedAt": "2026-11-16T00:26:46.874811+00:00",
+  "completedAt": "2026-11-16T00:26:46.950647+00:00",
+  "exitCode": 0,
+  "bytes": 432,
+  "sha256": "859323dddac1e333da1508c9641c2bd8d0ebac95eacbba545ec34fe79bdabd13",
+  "statusAfter": ""
+}

@@ -38,6 +38,7 @@ class ControlledChild extends ChildProcess {
   mcpConfiguration: Record<string, unknown> | undefined;
   unexpectedMcp = false;
   failInitialize = false;
+  startupStderr = '';
   protocolRevision: CodexMemberProfile['protocolRevision'] = '0.162.0';
   holdTurn = false;
   turns = 0;
@@ -53,6 +54,7 @@ class ControlledChild extends ChildProcess {
             return;
           }
           const params = record(frame.params);
+          if (frame.method === 'initialize' && this.startupStderr) this.stderr.write(this.startupStderr);
           let result: unknown = {};
           if (frame.method === 'initialize' && this.failInitialize) {
             this.stdout.write(
@@ -366,6 +368,24 @@ function fixture(
     running: () => running,
   };
 }
+
+test('Codex observes only original stderr before initialization completes and retains the final tail', async () => {
+  const f = fixture(), observations: unknown[] = [];
+  let opening = true;
+  f.context.observeProcessOutput = value => {
+    if (!observations.length) assert.equal(opening, true);
+    observations.push(value);
+  };
+  f.child.startupStderr = `TEST startup ${f.context.endpoint.bearerToken}\n`;
+  const opened = await f.provider.factory.open(f.context.request);
+  opening = false;
+  assert.equal(f.launches.length, 1);
+  assert.deepEqual(observations, [{ kind: 'process-output', stream: 'stderr', text: 'TEST startup [redacted]' }]);
+  f.child.stderr.write('TEST shutdown tail');
+  await opened.driver.close(); await tick();
+  assert.deepEqual(observations.at(-1), { kind: 'process-output', stream: 'stderr', text: 'TEST shutdown tail' });
+  assert.equal(JSON.stringify(observations).includes('TEST-thread'), false, 'Native stdout protocol is not Logs output');
+});
 
 test('Codex profile is a finite private union and requires captured namespace paths', () => {
   const f = fixture();

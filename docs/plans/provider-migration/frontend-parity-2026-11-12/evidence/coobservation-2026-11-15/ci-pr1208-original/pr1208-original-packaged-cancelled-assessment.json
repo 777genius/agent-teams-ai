@@ -1,0 +1,62 @@
+{
+  "kind": "ORIGINAL_CI_API_OBSERVATION",
+  "repository": "777genius/agent-teams-ai",
+  "retrievedAt": "2026-11-15 23:48:44 UTC",
+  "runId": 43771193746,
+  "attempt": 1,
+  "sourceHead": "6e222b57f700832cfd78a934a3b6a205a5764761",
+  "pullRequest": 1208,
+  "base": "58c14e5fbe6188aea70307e2b0734b125d899a03",
+  "runConclusion": "cancelled",
+  "runCreatedAt": "2026-11-15T22:47:02Z",
+  "runUpdatedAt": "2026-11-15T23:32:19Z",
+  "jobs": [
+    {
+      "id": 132987258120,
+      "name": "classify packaged smoke",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "started_at": "2026-11-15T22:47:03Z",
+      "completed_at": "2026-11-15T23:32:18Z",
+      "reportedStepCount": 0
+    },
+    {
+      "id": 133000287458,
+      "name": "github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'metadata packaged gate' || 'packaged full gate'",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "started_at": "2026-11-15T23:32:18Z",
+      "completed_at": "2026-11-15T23:32:18Z",
+      "reportedStepCount": 0
+    },
+    {
+      "id": 133000287918,
+      "name": "${{ (((github.event.action == 'edited') && !github.event.changes.base && ((github.event.changes.title || github.event.changes.body)) && 'metadata packaged smoke') || 'packaged smoke') }} (${{ matrix.platform }})",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "started_at": "2026-11-15T23:32:19Z",
+      "completed_at": "2026-11-15T23:32:18Z",
+      "reportedStepCount": 0
+    }
+  ],
+  "payloads": [
+    {
+      "path": "pr1208-original-packaged-run-api.json",
+      "bytes": 13868,
+      "sha256": "2266ecba2e6808e0ab351f9d1faba7a8bc612da53f825705a0f1d1d62cb22826"
+    },
+    {
+      "path": "pr1208-original-packaged-jobs-api.json",
+      "bytes": 3167,
+      "sha256": "ca2ad73d81b498f6faf1b0f44f10bd58ca7c1651f86327388266f12fbdfc6d40"
+    }
+  ],
+  "limits": [
+    "Direct original run/jobs API, not workflow wrapper.",
+    "All three returned jobs are CANCELLED and have no reported steps. These are classifier/downstream placeholders, not five completed matrix tuples.",
+    "One returned downstream completion timestamp precedes its start timestamp; raw API values are preserved without correction.",
+    "No application, native, packaged, build/test or cleanup PASS follows from this observation.",
+    "Cause of cancellation is unknown. Root and this child have made no cancellation, rerun, dispatch, ref, or PR metadata action for this frozen cohort.",
+    "The later separately observed edited-event workflow is not substituted for this original run."
+  ]
+}

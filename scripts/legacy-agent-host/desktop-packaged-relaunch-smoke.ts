@@ -85,7 +85,8 @@ async function main() {
     fixturePins: pins, realVendorExecutions: 0, nativeProviderQualified: false, releaseQualified: false });
   const sources = [...new Set([...desktopProofSources,
     'scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts',
-    'packages/legacy-agent-host/tests/opencode-v1-version-source.ts'])];
+    'packages/legacy-agent-host/tests/opencode-v1-version-source.ts',
+    'scripts/e2e/comment-notification/cdp.mjs'])];
   const sourceHashes = await captureDesktopSourceHashes(repo, sources);
   evidence.selectedSourceHashesBeforeApp = sourceHashes;
   await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600, flag: 'wx' });

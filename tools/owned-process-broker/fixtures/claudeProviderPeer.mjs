@@ -210,12 +210,23 @@ const partial = (input, text) => {
   frame({ type: 'message_start', message: message(input.messageId, []) });
   frame({ type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } });
   frame({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } });
+  if (input.marker === 'TEST_UI_STREAM') {
+    frame({ type: 'content_block_stop', index: 0 });
+    frame({ type: 'content_block_start', index: 1, content_block: { type: 'thinking', thinking: '' } });
+    frame({ type: 'content_block_delta', index: 1,
+      delta: { type: 'thinking_delta', thinking: 'TEST stream thought partial' } });
+  }
   effect({ event: 'partial', inputId: input.id, marker: input.marker, text });
 };
 function finish(input, text, { interrupted = false, localCommand } = {}) {
   assert.equal(active, input, 'authority');
   clearTimeout(streamTimer); streamTimer = undefined;
-  if (!interrupted && !localCommand) assistant(input, [{ type: 'text', text }]);
+  if (!interrupted && !localCommand && input.marker === 'TEST_UI_STREAM')
+    send({ type: 'stream_event', ...envelope(input), event: { type: 'content_block_stop', index: 1 } });
+  if (!interrupted && !localCommand) assistant(input, [{ type: 'text', text },
+    ...(input.marker === 'TEST_UI_STREAM' ? [{ type: 'thinking', thinking: 'TEST stream thought complete',
+      signature: 'TEST_SIGNATURE_NOT_LOGGED' }] : []),
+    ...(input.marker === 'TEST_UI_STANDALONE_DONE' ? [{ type: 'thinking', thinking: 'TEST standalone thought complete' }] : [])]);
   const counted = localCommand !== 'usage';
   if (counted) resultCount++;
   const cost = Number((resultCount * 0.0123).toFixed(4));
@@ -385,6 +396,7 @@ function input(frame) {
     ...(attached ? { attachments: collaboration.verifyCollaborationAttachments(content) } : {}) })
     .then(reply => finish(selected, reply)).catch(fail);
   else if (text === 'TEST_UI_STREAM') {
+    process.stderr.write('TEST selected member stderr\n');
     partial(selected, 'TEST stream partial');
     const wait = () => {
       if (active !== selected || failed) return;
@@ -398,15 +410,16 @@ function input(frame) {
   } else if (text === 'TEST_UI_HOLD' || text === 'TEST_UI_SCHEDULE_HOLD' || text === 'TEST_UI_STANDALONE_HOLD') partial(selected, 'TEST held partial');
   else if (text.startsWith('TEST_UI_APPROVAL_') || text === 'TEST_UI_QUESTION' || text === 'TEST_UI_QUESTION_DECLINE') void interaction(selected).catch(fail);
   else if (text === 'TEST_UI_SCHEDULE_DONE') void scheduled(selected).catch(fail);
-  else if (text === '/compact') {
+  else if (text === 'TEST_UI_STANDALONE_DONE') {
+    process.stderr.write('TEST standalone stderr\n'); finish(selected, 'TEST standalone complete');
+  } else if (text === '/compact') {
     send({ type: 'system', subtype: 'compact_boundary', ...envelope(selected), compact_metadata: { trigger: 'manual', pre_tokens: 42, post_tokens: 12 } });
     effect({ event: 'compact', inputId: selected.id }); finish(selected, 'TEST context compacted', { localCommand: 'compact' });
   } else if (text === '/cost' || text === '/usage')
     finish(selected, 'TEST cost input=' + resultCount * 42 + ' output=' + resultCount * 18 + ' total=$' + (resultCount * 0.0123).toFixed(4), { localCommand: 'usage' });
   else finish(selected, text === probe ? 'OK' : text === '/test-desktop-skill' ? 'TEST skill complete'
     : text === '/review TEST_UI_REVIEW' ? 'TEST review complete'
-      : text === 'TEST_UI_STANDALONE_DONE' ? 'TEST standalone complete'
-        : text === 'TEST_UI_RESUME' ? 'TEST resumed history retained' : 'TEST boot ready');
+      : text === 'TEST_UI_RESUME' ? 'TEST resumed history retained' : 'TEST boot ready');
 }
 async function accept(frame) {
   record(frame);

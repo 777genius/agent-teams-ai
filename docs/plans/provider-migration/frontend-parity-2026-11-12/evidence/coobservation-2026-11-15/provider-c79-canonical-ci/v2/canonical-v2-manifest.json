@@ -1,0 +1,3451 @@
+{
+  "schemaVersion": 1,
+  "repository": "agent-teams-ai/old-provider-implementations",
+  "sourceCommit": "c79b81bf002eaac95436da71c7049d7f309906a9",
+  "sourceTree": "5595f99535a7cabcb0cfeda053f988fd7e17a590",
+  "pullRequest": 8,
+  "headBranch": "feat/frontend-parity-20261112",
+  "run": {
+    "id": 43781376036,
+    "event": "pull_request",
+    "attempt": 1,
+    "createdAt": "2026-11-16T00:36:32Z",
+    "completedApiUpdatedAt": "2026-11-16T00:44:38Z",
+    "status": "completed",
+    "conclusion": "success"
+  },
+  "workflow": {
+    "path": ".github/workflows/native-v2-readonly.yml",
+    "blob": "b4b88ce1c41c89559a584cce830de59fb5ec0fc0"
+  },
+  "originalMatrix": [
+    {
+      "os": "ubuntu-24.04",
+      "proof": "embedded-target-spi"
+    },
+    {
+      "os": "macos-15",
+      "proof": "embedded-target-spi"
+    },
+    {
+      "os": "macos-15-intel",
+      "proof": "embedded-target-spi"
+    },
+    {
+      "os": "windows-2022",
+      "proof": "embedded-target-spi"
+    },
+    {
+      "os": "windows-11-arm",
+      "proof": "embedded-target-spi"
+    },
+    {
+      "os": "ubuntu-24.04",
+      "proof": "lifecycle"
+    },
+    {
+      "os": "ubuntu-24.04",
+      "proof": "model"
+    },
+    {
+      "os": "ubuntu-24.04",
+      "proof": "embedded"
+    },
+    {
+      "os": "ubuntu-24.04",
+      "proof": "embedded-model"
+    },
+    {
+      "os": "ubuntu-24.04",
+      "proof": "embedded-interrupt"
+    },
+    {
+      "os": "ubuntu-24.04",
+      "proof": "embedded-mcp"
+    },
+    {
+      "os": "ubuntu-24.04",
+      "proof": "embedded-target-mcp"
+    },
+    {
+      "os": "ubuntu-24.04",
+      "proof": "embedded-floor"
+    },
+    {
+      "os": "ubuntu-24.04",
+      "proof": "embedded-target"
+    },
+    {
+      "os": "ubuntu-24.04",
+      "proof": "embedded-target-model"
+    },
+    {
+      "os": "ubuntu-24.04",
+      "proof": "embedded-target-interrupt"
+    },
+    {
+      "os": "ubuntu-24.04",
+      "proof": "embedded-target-tool"
+    },
+    {
+      "os": "ubuntu-24.04",
+      "proof": "embedded-pinned-tool"
+    },
+    {
+      "os": "macos-15",
+      "proof": "embedded"
+    },
+    {
+      "os": "macos-15",
+      "proof": "embedded-model"
+    },
+    {
+      "os": "macos-15",
+      "proof": "embedded-interrupt"
+    },
+    {
+      "os": "macos-15",
+      "proof": "embedded-target-interrupt"
+    },
+    {
+      "os": "macos-15",
+      "proof": "embedded-target-model"
+    },
+    {
+      "os": "macos-15",
+      "proof": "embedded-pinned-tool"
+    },
+    {
+      "os": "macos-15",
+      "proof": "embedded-target-tool"
+    },
+    {
+      "os": "macos-15",
+      "proof": "embedded-target-mcp"
+    },
+    {
+      "os": "macos-15",
+      "proof": "embedded-mcp"
+    },
+    {
+      "os": "macos-15-intel",
+      "proof": "embedded"
+    },
+    {
+      "os": "macos-15-intel",
+      "proof": "embedded-model"
+    },
+    {
+      "os": "macos-15-intel",
+      "proof": "embedded-interrupt"
+    },
+    {
+      "os": "macos-15-intel",
+      "proof": "embedded-target-interrupt"
+    },
+    {
+      "os": "macos-15-intel",
+      "proof": "embedded-target-model"
+    },
+    {
+      "os": "macos-15-intel",
+      "proof": "embedded-pinned-tool"
+    },
+    {
+      "os": "macos-15-intel",
+      "proof": "embedded-target-tool"
+    },
+    {
+      "os": "macos-15-intel",
+      "proof": "embedded-target-mcp"
+    },
+    {
+      "os": "macos-15-intel",
+      "proof": "embedded-mcp"
+    },
+    {
+      "os": "windows-2022",
+      "proof": "embedded"
+    },
+    {
+      "os": "windows-2022",
+      "proof": "embedded-model"
+    },
+    {
+      "os": "windows-2022",
+      "proof": "embedded-interrupt"
+    },
+    {
+      "os": "windows-2022",
+      "proof": "embedded-target-interrupt"
+    },
+    {
+      "os": "windows-2022",
+      "proof": "embedded-pinned-tool"
+    },
+    {
+      "os": "windows-2022",
+      "proof": "embedded-target-tool"
+    },
+    {
+      "os": "windows-2022",
+      "proof": "embedded-target-mcp"
+    },
+    {
+      "os": "windows-2022",
+      "proof": "embedded-mcp"
+    },
+    {
+      "os": "windows-11-arm",
+      "proof": "embedded-target-mcp"
+    },
+    {
+      "os": "windows-11-arm",
+      "proof": "embedded-mcp"
+    },
+    {
+      "os": "windows-11-arm",
+      "proof": "embedded-target-interrupt"
+    },
+    {
+      "os": "windows-11-arm",
+      "proof": "embedded-target-model"
+    },
+    {
+      "os": "windows-11-arm",
+      "proof": "embedded-target-tool"
+    },
+    {
+      "os": "windows-11-arm",
+      "proof": "embedded-interrupt"
+    },
+    {
+      "os": "windows-11-arm",
+      "proof": "embedded-pinned-tool"
+    },
+    {
+      "os": "windows-2022",
+      "proof": "embedded-target"
+    },
+    {
+      "os": "windows-2022",
+      "proof": "embedded-target-model"
+    }
+  ],
+  "matrixNameMultisetMatches": true,
+  "counts": {
+    "jobs": 53,
+    "success": 53,
+    "failure": 0,
+    "cancelled": 0,
+    "jobSkipped": 0,
+    "positiveCompletedSummaries": 51,
+    "expectedNegativeControlSummaries": 2,
+    "earlierCompletedFalseSummariesRetained": 2,
+    "allFinalOriginalSummaryCleanupTrue": true,
+    "receiptSafetyChecks": 53,
+    "sourceJoinedUploads": 53,
+    "zipBytesInspectedByChild": 0
+  },
+  "platforms": {
+    "ubuntu-24.04": 14,
+    "macos-15": 10,
+    "macos-15-intel": 10,
+    "windows-2022": 11,
+    "windows-11-arm": 8
+  },
+  "rawApi": {
+    "path": "canonical-v2-api.json",
+    "sha256": "a2dbe74ff166c01f7c7af42a4e2db39fc26ff87d10b49eef49c5c32455e16109",
+    "bytes": 345006
+  },
+  "jobs": [
+    {
+      "id": 133019104671,
+      "name": "native-v2-test (ubuntu-24.04, lifecycle)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:35Z",
+      "completedAt": "2026-11-16T00:37:04Z",
+      "raw": {
+        "path": "jobs/133019104671.log",
+        "blob": "0d915af0e764ad1fc1019225671a831303303e50",
+        "sha256": "db533a0e27414734955e257521444dfd6077763e628c57d2acd87a410682eee1",
+        "bytes": 28419
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:36:38.2045890Z [command]/usr/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 253,
+        "text": "2026-11-16T00:37:01.1445556Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 246,
+          "value": {
+            "completed": true,
+            "steps": [
+              "native_ELF_and_SHA256_recorded",
+              "pre_execution_TEST_binary_SHA256_pin_verified",
+              "exact_native_version",
+              "actual_TEST_owned_process_executable_digest",
+              "authenticated_loopback_native_info",
+              "unauthenticated_request_rejected",
+              "native_OpenAPI_retrievable",
+              "native_TEST_session_created",
+              "native_TEST_session_readback",
+              "native_TEST_production_V2_session_codec_bound",
+              "native_TEST_session_authz_denials",
+              "native_TEST_stale_permission_reply_rejected",
+              "native_TEST_permission_ask_pending_owned",
+              "native_TEST_execution_transport_foreign_session_fenced",
+              "native_TEST_idle_interrupt_and_foreign_control_fenced",
+              "native_TEST_foreign_permission_read_and_grant_rejected",
+              "native_TEST_permission_rejected_and_not_replayable",
+              "native_TEST_last_matching_rule_allow_deny_ask_evaluated",
+              "native_TEST_preexecution_empty_SSE_with_owned_sync",
+              "native_TEST_first_writer_wins_and_foreign_collision_denied",
+              "native_TEST_durable_synthetic_inbox_single",
+              "native_TEST_post_enqueue_SSE_visibility_captured",
+              "native_TEST_lost_ack_readback_without_replay",
+              "native_TEST_cold_stop_confirmed",
+              "native_TEST_cold_restart_identity",
+              "native_TEST_session_survived_cold_restart",
+              "native_TEST_ordered_permission_rules_retained",
+              "native_TEST_no_stale_permission_after_restart",
+              "native_TEST_synthetic_inbox_survived_cold_restart",
+              "native_TEST_restored_inbox_authz_denials",
+              "native_TEST_first_writer_retained_after_cold_replay",
+              "native_TEST_foreign_id_rejected_after_cold_restart",
+              "native_TEST_synthetic_inbox_cancelled",
+              "native_TEST_prompt_admit_and_cancel_without_model",
+              "native_TEST_user_prompt_lost_ack_reconciled_without_replay",
+              "native_TEST_session_removed",
+              "native_TEST_session_absence_verified"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188177405,
+        "name": "opencode-v2-discovery-ubuntu-24.04-lifecycle",
+        "bytes": 2095,
+        "sha256": "7f296347e914ff771d65d66be9b2d6c4108327a786843ceb70ebb52bc40309a0",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019104819,
+      "name": "native-v2-test (ubuntu-24.04, embedded-mcp)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:35Z",
+      "completedAt": "2026-11-16T00:37:19Z",
+      "raw": {
+        "path": "jobs/133019104819.log",
+        "blob": "ccf76f31724eced759fb2dd42d80b2d39e6b73d0",
+        "sha256": "808df7ef469dcfa12d2edc73583c5314d02fe8f8cbef68b45b237facb4ed891c",
+        "bytes": 30297
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:36:43.2251783Z [command]/usr/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 290,
+        "text": "2026-11-16T00:37:16.4506131Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 283,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_pinned_embedded_SDK_started",
+              "TEST_real_MCP_server_registered",
+              "TEST_MCP_stdio_handshake_and_owned_process",
+              "TEST_MCP_native_resource_discovery_and_workspace_isolation",
+              "TEST_MCP_disconnect_stopped_child",
+              "TEST_MCP_server_removed",
+              "TEST_MCP_direct_remove_child_active",
+              "TEST_MCP_direct_remove_stopped_active_child",
+              "TEST_MCP_second_child_active_before_host_close",
+              "TEST_MCP_host_close_stopped_active_child"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14187898172,
+        "name": "opencode-v2-discovery-ubuntu-24.04-embedded-mcp",
+        "bytes": 597,
+        "sha256": "dfd40e16a98fac5493eceb2f4454f79d082cd3719de217d1650cc412425f529b",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019104878,
+      "name": "native-v2-test (ubuntu-24.04, embedded-target-mcp)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:37Z",
+      "completedAt": "2026-11-16T00:37:23Z",
+      "raw": {
+        "path": "jobs/133019104878.log",
+        "blob": "7c9031818910759aabe75c4c0f3f5c342f828624",
+        "sha256": "ee3063e609e025605175e98b0d71bc3ec4ec3971bb229a21674c6e09bdc8cca2",
+        "bytes": 30080
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:36:44.9893702Z [command]/usr/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 288,
+        "text": "2026-11-16T00:37:18.4046188Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 281,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_pinned_embedded_SDK_started",
+              "TEST_real_MCP_server_registered",
+              "TEST_MCP_stdio_handshake_and_owned_process",
+              "TEST_MCP_native_resource_discovery_and_workspace_isolation",
+              "TEST_MCP_disconnect_stopped_child",
+              "TEST_MCP_server_removed",
+              "TEST_MCP_direct_remove_child_active",
+              "TEST_MCP_direct_remove_stopped_active_child",
+              "TEST_MCP_second_child_active_before_host_close",
+              "TEST_MCP_host_close_stopped_active_child"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188820921,
+        "name": "opencode-v2-discovery-ubuntu-24.04-embedded-target-mcp",
+        "bytes": 610,
+        "sha256": "352321e167a0cfe1804c8d54ea5e425d6eb59be84bd25cd35ce1f536787a8e0c",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019104893,
+      "name": "native-v2-test (ubuntu-24.04, embedded-target-spi)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:37:23Z",
+      "raw": {
+        "path": "jobs/133019104893.log",
+        "blob": "36e91daaf41a1a46c28489d011ed4ca1691a6d71",
+        "sha256": "d7bdcb25fa3e13e00485b7e0d44a94a58970e277dfaf0aef824402b6b5abb18d",
+        "bytes": 40024
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:36:38.2970396Z [command]/usr/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 434,
+        "text": "2026-11-16T00:37:20.4583696Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 427,
+          "value": {
+            "kind": "TEST_V2_NATIVE_SESSION_SPI",
+            "version": "2.1.4",
+            "qualified": false,
+            "completed": true,
+            "cleanup": true,
+            "steps": [
+              "native_all_provider_directory_without_account_or_configuration_fields",
+              "native_owned_identity_model_permissions_instructions_mcp_readback",
+              "session_SPI_native_model_tool_permission_deny_then_once_actual_MCP_effect",
+              "session_SPI_native_builtin_edit_immutable_input_window_and_real_log_anchors",
+              "session_SPI_original_verified_PNG_native_ACK_history_and_actual_image_inference",
+              "session_SPI_active_stream_interrupt_native_terminal_and_stop",
+              "cold_same_session_new_endpoint_checkpoint_no_replay_and_fresh_input",
+              "private_credential_witness_retained_on_cold_readback_and_absent_from_model_requests"
+            ],
+            "nativeEditCapture": {
+              "dialect": "v2",
+              "protocolRevision": "2.1.4",
+              "immutable": true,
+              "beforeSha256": "25a7c1737d90d27dbb0c62ad6ece92b5812455ef7678700b8a09692668092b05",
+              "afterSha256": "10333d3e3654e64b195fd298e8b19a3c6ef9c9fb8fc25d25c77721b4379afc46",
+              "patchSha256": "528e739026006adf808185798abeea93871eb848d9566c5a6a39bfb03dea53fe",
+              "calledEvent": {
+                "id": "evt_1e1c978c4001kfXQQGWG5NP7FC",
+                "seq": 37
+              },
+              "completedEvent": {
+                "id": "evt_1e1c978d0001yQTgR6brcxHBNc",
+                "seq": 39,
+                "type": "session.tool.success"
+              },
+              "filePathFlavor": "workspace-relative",
+              "unifiedIndexEnvelope": true
+            },
+            "nativePNG": {
+              "mimeType": "image/png",
+              "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+              "byteLength": 71,
+              "resolutions": 1,
+              "actualInference": true,
+              "coldHistory": true,
+              "resubmitted": false
+            },
+            "modelRequests": 9,
+            "mcpEffects": 1,
+            "instructionsEffective": true,
+            "nativeCatalogEffective": true,
+            "platform": "linux-x64"
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188497747,
+        "name": "opencode-v2-discovery-ubuntu-24.04-embedded-target-spi",
+        "bytes": 1272,
+        "sha256": "359fe96c668931789c233df55442bb52573ec486cd331bd766b5f40a4125576a",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019104899,
+      "name": "native-v2-test (windows-11-arm, embedded-target-spi)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:44:33Z",
+      "raw": {
+        "path": "jobs/133019104899.log",
+        "blob": "5f4ad9229a2affed2020b4c0b1a5f6a0c1c458f4",
+        "sha256": "54eb008a22e6cf8828e54c6e81292cdb91656116b5448ed2b23a9b97a69780a9",
+        "bytes": 43519
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:36:47.1833673Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 435,
+        "text": "2026-11-16T00:43:51.1329452Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 428,
+          "value": {
+            "kind": "TEST_V2_NATIVE_SESSION_SPI",
+            "version": "2.1.4",
+            "qualified": false,
+            "completed": true,
+            "cleanup": true,
+            "steps": [
+              "native_all_provider_directory_without_account_or_configuration_fields",
+              "native_owned_identity_model_permissions_instructions_mcp_readback",
+              "session_SPI_native_model_tool_permission_deny_then_once_actual_MCP_effect",
+              "session_SPI_native_builtin_edit_immutable_input_window_and_real_log_anchors",
+              "session_SPI_original_verified_PNG_native_ACK_history_and_actual_image_inference",
+              "session_SPI_active_stream_interrupt_native_terminal_and_stop",
+              "cold_same_session_new_endpoint_checkpoint_no_replay_and_fresh_input",
+              "private_credential_witness_retained_on_cold_readback_and_absent_from_model_requests"
+            ],
+            "nativeEditCapture": {
+              "dialect": "v2",
+              "protocolRevision": "2.1.4",
+              "immutable": true,
+              "beforeSha256": "25a7c1737d90d27dbb0c62ad6ece92b5812455ef7678700b8a09692668092b05",
+              "afterSha256": "10333d3e3654e64b195fd298e8b19a3c6ef9c9fb8fc25d25c77721b4379afc46",
+              "patchSha256": "528e739026006adf808185798abeea93871eb848d9566c5a6a39bfb03dea53fe",
+              "calledEvent": {
+                "id": "evt_1e1cf69b90010TkkkfB21qi12U",
+                "seq": 37
+              },
+              "completedEvent": {
+                "id": "evt_1e1cf69d2001CCaOx5vyCIplsr",
+                "seq": 39,
+                "type": "session.tool.success"
+              },
+              "filePathFlavor": "workspace-relative",
+              "unifiedIndexEnvelope": true
+            },
+            "nativePNG": {
+              "mimeType": "image/png",
+              "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+              "byteLength": 71,
+              "resolutions": 1,
+              "actualInference": true,
+              "coldHistory": true,
+              "resubmitted": false
+            },
+            "modelRequests": 9,
+            "mcpEffects": 1,
+            "instructionsEffective": true,
+            "nativeCatalogEffective": true,
+            "platform": "win32-arm64"
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188950147,
+        "name": "opencode-v2-discovery-windows-11-arm-embedded-target-spi",
+        "bytes": 1267,
+        "sha256": "b993f9b161fde1f6b36e62778649a441f9ac4250f9c07c9a0a9cc512e3c34d36",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019104900,
+      "name": "native-v2-test (ubuntu-24.04, embedded-target-model)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:37:18Z",
+      "raw": {
+        "path": "jobs/133019104900.log",
+        "blob": "f543a4d43ad844399345100688f747f8a11a6ed1",
+        "sha256": "084bd4702dbdc9b7c4708e5a338a2188962dd6a9aafafd95a5a4eadde48737ae",
+        "bytes": 29031
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:36:43.6778013Z [command]/usr/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 267,
+        "text": "2026-11-16T00:37:16.2797519Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 260,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_target_backend_not_admitted",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188781583,
+        "name": "opencode-v2-discovery-ubuntu-24.04-embedded-target-model",
+        "bytes": 1016,
+        "sha256": "edd6a9f9ee5080eaf66024fd2d92f291505cbfe5cf6a738baf162a43b7f1c846",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019104911,
+      "name": "native-v2-test (windows-2022, embedded-target-spi)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:38:09Z",
+      "raw": {
+        "path": "jobs/133019104911.log",
+        "blob": "8cb943523e8ae56fd36f37cb1705897218fac53c",
+        "sha256": "6d4d8e76a3e80f0af70bc864761d2e0099651765c79644bf7b7b03d1b549fef8",
+        "bytes": 42276
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:36:42.3217436Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 422,
+        "text": "2026-11-16T00:38:03.5214324Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 415,
+          "value": {
+            "kind": "TEST_V2_NATIVE_SESSION_SPI",
+            "version": "2.1.4",
+            "qualified": false,
+            "completed": true,
+            "cleanup": true,
+            "steps": [
+              "native_all_provider_directory_without_account_or_configuration_fields",
+              "native_owned_identity_model_permissions_instructions_mcp_readback",
+              "session_SPI_native_model_tool_permission_deny_then_once_actual_MCP_effect",
+              "session_SPI_native_builtin_edit_immutable_input_window_and_real_log_anchors",
+              "session_SPI_original_verified_PNG_native_ACK_history_and_actual_image_inference",
+              "session_SPI_active_stream_interrupt_native_terminal_and_stop",
+              "cold_same_session_new_endpoint_checkpoint_no_replay_and_fresh_input",
+              "private_credential_witness_retained_on_cold_readback_and_absent_from_model_requests"
+            ],
+            "nativeEditCapture": {
+              "dialect": "v2",
+              "protocolRevision": "2.1.4",
+              "immutable": true,
+              "beforeSha256": "25a7c1737d90d27dbb0c62ad6ece92b5812455ef7678700b8a09692668092b05",
+              "afterSha256": "10333d3e3654e64b195fd298e8b19a3c6ef9c9fb8fc25d25c77721b4379afc46",
+              "patchSha256": "528e739026006adf808185798abeea93871eb848d9566c5a6a39bfb03dea53fe",
+              "calledEvent": {
+                "id": "evt_1e1ca1e24001UbMZM3nMep6QST",
+                "seq": 37
+              },
+              "completedEvent": {
+                "id": "evt_1e1ca1e36001SLZ1ADieY63k7q",
+                "seq": 39,
+                "type": "session.tool.success"
+              },
+              "filePathFlavor": "workspace-relative",
+              "unifiedIndexEnvelope": true
+            },
+            "nativePNG": {
+              "mimeType": "image/png",
+              "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+              "byteLength": 71,
+              "resolutions": 1,
+              "actualInference": true,
+              "coldHistory": true,
+              "resubmitted": false
+            },
+            "modelRequests": 9,
+            "mcpEffects": 1,
+            "instructionsEffective": true,
+            "nativeCatalogEffective": true,
+            "platform": "win32-x64"
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188162458,
+        "name": "opencode-v2-discovery-windows-2022-embedded-target-spi",
+        "bytes": 1269,
+        "sha256": "8f5ccf80d85dd478ca461c8cc65e47d62965c66c4ed366f5fa12b84b0be26a05",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019104923,
+      "name": "native-v2-test (ubuntu-24.04, model)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:37:04Z",
+      "raw": {
+        "path": "jobs/133019104923.log",
+        "blob": "840dcaba7ef2405dd6752444269f8dd7c8f23f8e",
+        "sha256": "e9d4b0d7f4e15838dab8f93ecaa545a94ffbe02cddee864d9cd538231d03149f",
+        "bytes": 27958
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:36:43.5317019Z [command]/usr/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 262,
+        "text": "2026-11-16T00:37:02.0114871Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 254,
+          "value": {
+            "completed": false,
+            "steps": [
+              "pre_execution_native_elf_version_digest_verified",
+              "TEST_workspace_local_provider_config_written",
+              "TEST_native_model_server_identity_verified",
+              "TEST_native_local_model_selected_without_inference",
+              "TEST_native_model_session_created",
+              "TEST_native_real_prompt_admitted",
+              "TEST_native_fake_model_assistant_message_received",
+              "TEST_native_session_outcome_and_idle_consistent",
+              "TEST_native_model_cold_stop_confirmed",
+              "TEST_native_model_cold_history_retained_without_replay",
+              "TEST_native_model_session_removed"
+            ],
+            "failure": "TEST_native_model_terminal_event_not_qualified"
+          }
+        },
+        {
+          "rawLine": 255,
+          "value": {
+            "negativeControl": "stock_cli_no_durable_events",
+            "observed": true,
+            "qualified": false,
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188049194,
+        "name": "opencode-v2-discovery-ubuntu-24.04-model",
+        "bytes": 1062,
+        "sha256": "e21e2e6ed5afdcc2da0a356a79b9809a5b9774cc4ea4521433d4f2cdb973c0ea",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019104931,
+      "name": "native-v2-test (windows-2022, embedded-target-model)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:37:56Z",
+      "raw": {
+        "path": "jobs/133019104931.log",
+        "blob": "125faeef06b2978126317b41e31e8b05ff6cf47a",
+        "sha256": "2cbca5f41ce99aaa32543129c4d21b330b7b4f1356e3a72f84e01c58d953eb3a",
+        "bytes": 30392
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:36:43.2689921Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 253,
+        "text": "2026-11-16T00:37:51.1960834Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 246,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_target_backend_not_admitted",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14187838521,
+        "name": "opencode-v2-discovery-windows-2022-embedded-target-model",
+        "bytes": 1016,
+        "sha256": "dea80a87953f5ea03ddf0dbad1c5cba67850a6171d07c0f4ca9c88ca1a37fadc",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019104935,
+      "name": "native-v2-test (ubuntu-24.04, embedded-interrupt)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:37:38Z",
+      "raw": {
+        "path": "jobs/133019104935.log",
+        "blob": "a5032c8d42682c09fcba59a9e33a7d6fab6825c8",
+        "sha256": "09453ca1a7a1d51f0e572181ffae33db2c69bba959a3bbad174481ac3daefe58",
+        "bytes": 29265
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:36:39.0058596Z [command]/usr/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 268,
+        "text": "2026-11-16T00:37:35.3083053Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 260,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_native_SPI_platform_absolute_directory_admitted",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_active_interrupt_durable_cold_no_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188177479,
+        "name": "opencode-v2-discovery-ubuntu-24.04-embedded-interrupt",
+        "bytes": 1257,
+        "sha256": "51a3a29c4b0845c03b8d7a988d26e0d6a28a61f5a7d93a870e67657e34247ca9",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019104942,
+      "name": "native-v2-test (ubuntu-24.04, embedded-floor)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:37Z",
+      "completedAt": "2026-11-16T00:37:24Z",
+      "raw": {
+        "path": "jobs/133019104942.log",
+        "blob": "b65add3762bc5e189a0c4b5f70dbbbce6ceaadfb",
+        "sha256": "8ca4a91bdf40787c6dfad235fc92f2882ad063eed7999312558ee687f8b979f5",
+        "bytes": 28652
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:36:44.5608780Z [command]/usr/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 271,
+        "text": "2026-11-16T00:37:19.3217967Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 263,
+          "value": {
+            "completed": false,
+            "steps": [],
+            "failure": "TEST_embedded_floor_ESM_import_unavailable",
+            "cleanup": true
+          }
+        },
+        {
+          "rawLine": 264,
+          "value": {
+            "negativeControl": "sdk_2_0_0_node_esm_artifact_unusable",
+            "observed": true,
+            "qualified": false,
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14187884998,
+        "name": "opencode-v2-discovery-ubuntu-24.04-embedded-floor",
+        "bytes": 467,
+        "sha256": "f5c96064e7a1cf725044e0c501f161563e4bc5326e2ddb03bc3d19e9fa80d138",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019104943,
+      "name": "native-v2-test (ubuntu-24.04, embedded-target-tool)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:37Z",
+      "completedAt": "2026-11-16T00:37:23Z",
+      "raw": {
+        "path": "jobs/133019104943.log",
+        "blob": "b63880443075e474f4368ca0332649503a6dd122",
+        "sha256": "1f83327595331afba982922afaee19ef9474314061d1ccc528f29e29139de0a2",
+        "bytes": 29246
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:36:45.9781866Z [command]/usr/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 267,
+        "text": "2026-11-16T00:37:18.8523759Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 260,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_embedded_v2_native_tool_plugin_configured",
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_target_backend_not_admitted",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_effective_tool_policy_denial_verified",
+              "TEST_embedded_denied_tool_production_projection_verified",
+              "TEST_embedded_tool_lineage_persisted_without_cold_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188267172,
+        "name": "opencode-v2-discovery-ubuntu-24.04-embedded-target-tool",
+        "bytes": 1705,
+        "sha256": "c7e181a0db9ff8c908321d2fabf6a9444a582125fef4557743449570e0a104c1",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019104952,
+      "name": "native-v2-test (ubuntu-24.04, embedded-target)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:37Z",
+      "completedAt": "2026-11-16T00:37:21Z",
+      "raw": {
+        "path": "jobs/133019104952.log",
+        "blob": "e28036f2d27a49a8315ea31ab087f4eabcc69196",
+        "sha256": "f6ff3f577ae836845e5dbd827b9cddb2d09df83ff41924a6c7d5b66d1e09bee0",
+        "bytes": 28483
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:36:40.1663495Z [command]/usr/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 267,
+        "text": "2026-11-16T00:37:16.8829360Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 260,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188706990,
+        "name": "opencode-v2-discovery-ubuntu-24.04-embedded-target",
+        "bytes": 584,
+        "sha256": "dd8da7a04b2c2bf0aa08fa9428f19cc62552ea151967addc623af60267bc87d8",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019104963,
+      "name": "native-v2-test (ubuntu-24.04, embedded)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:37:25Z",
+      "raw": {
+        "path": "jobs/133019104963.log",
+        "blob": "33d2e2baaac2c8d7073ba235afb113c8d597b553",
+        "sha256": "5841b3c66a033c993030f022de002d7524c3ff6ef8afc107f086e513cb5efb43",
+        "bytes": 28500
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:36:38.7367455Z [command]/usr/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 267,
+        "text": "2026-11-16T00:37:21.4180913Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 260,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_native_SPI_platform_absolute_directory_admitted",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14187459965,
+        "name": "opencode-v2-discovery-ubuntu-24.04-embedded",
+        "bytes": 603,
+        "sha256": "cb64c11983515a044570d4d118b4b1352b40c225e699dc6db58b9f2c8518b3c4",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019104980,
+      "name": "native-v2-test (macos-15, embedded-target-spi)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:42:09Z",
+      "completedAt": "2026-11-16T00:43:24Z",
+      "raw": {
+        "path": "jobs/133019104980.log",
+        "blob": "837487e4130d3d951d72ee07a5c700b66303e6f4",
+        "sha256": "1c0f22adf58f63d451e36b66abbfd2b5749872fc9fcc5225d06a457a4c773c00",
+        "bytes": 48726
+      },
+      "checkout": {
+        "line": 115,
+        "text": "2026-11-16T00:42:12.1803480Z [command]/opt/homebrew/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 559,
+        "text": "2026-11-16T00:43:14.6940320Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 552,
+          "value": {
+            "kind": "TEST_V2_NATIVE_SESSION_SPI",
+            "version": "2.1.4",
+            "qualified": false,
+            "completed": true,
+            "cleanup": true,
+            "steps": [
+              "native_all_provider_directory_without_account_or_configuration_fields",
+              "native_owned_identity_model_permissions_instructions_mcp_readback",
+              "session_SPI_native_model_tool_permission_deny_then_once_actual_MCP_effect",
+              "session_SPI_native_builtin_edit_immutable_input_window_and_real_log_anchors",
+              "session_SPI_original_verified_PNG_native_ACK_history_and_actual_image_inference",
+              "session_SPI_active_stream_interrupt_native_terminal_and_stop",
+              "cold_same_session_new_endpoint_checkpoint_no_replay_and_fresh_input",
+              "private_credential_witness_retained_on_cold_readback_and_absent_from_model_requests"
+            ],
+            "nativeEditCapture": {
+              "dialect": "v2",
+              "protocolRevision": "2.1.4",
+              "immutable": true,
+              "beforeSha256": "25a7c1737d90d27dbb0c62ad6ece92b5812455ef7678700b8a09692668092b05",
+              "afterSha256": "10333d3e3654e64b195fd298e8b19a3c6ef9c9fb8fc25d25c77721b4379afc46",
+              "patchSha256": "528e739026006adf808185798abeea93871eb848d9566c5a6a39bfb03dea53fe",
+              "calledEvent": {
+                "id": "evt_1e1ceddda001PsgJVNmSsoOSj8",
+                "seq": 37
+              },
+              "completedEvent": {
+                "id": "evt_1e1ceddec001ZqKHYJmmk5KV6B",
+                "seq": 39,
+                "type": "session.tool.success"
+              },
+              "filePathFlavor": "workspace-relative",
+              "unifiedIndexEnvelope": true
+            },
+            "nativePNG": {
+              "mimeType": "image/png",
+              "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+              "byteLength": 71,
+              "resolutions": 1,
+              "actualInference": true,
+              "coldHistory": true,
+              "resubmitted": false
+            },
+            "modelRequests": 9,
+            "mcpEffects": 1,
+            "instructionsEffective": true,
+            "nativeCatalogEffective": true,
+            "platform": "darwin-arm64"
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14187779392,
+        "name": "opencode-v2-discovery-macos-15-embedded-target-spi",
+        "bytes": 1272,
+        "sha256": "701c01fd9def8731d9ab957a5f475a59ec1609c4c60a9271e3f57167491f60cd",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019104988,
+      "name": "native-v2-test (macos-15, embedded-interrupt)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:37:48Z",
+      "raw": {
+        "path": "jobs/133019104988.log",
+        "blob": "500a1f5dcacb512e4f6839ee407612cd22ae8b2a",
+        "sha256": "be39343db294e67c87151666217f1cfec504e843e15166beb12ac860f04ef524",
+        "bytes": 28865
+      },
+      "checkout": {
+        "line": 115,
+        "text": "2026-11-16T00:36:40.2549490Z [command]/opt/homebrew/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 252,
+        "text": "2026-11-16T00:37:40.5252810Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 244,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_native_SPI_platform_absolute_directory_admitted",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_active_interrupt_durable_cold_no_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188796312,
+        "name": "opencode-v2-discovery-macos-15-embedded-interrupt",
+        "bytes": 1257,
+        "sha256": "1f42a7c4a28b76cf28b8d965dadc716a5c7967e44021656f6d53d2a679119344",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019104990,
+      "name": "native-v2-test (macos-15, embedded-model)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:41:51Z",
+      "completedAt": "2026-11-16T00:43:03Z",
+      "raw": {
+        "path": "jobs/133019104990.log",
+        "blob": "46edc40a40b6b04300dbe64c236cc4ae77d0be45",
+        "sha256": "e03c679b2dbc6807e8eafc3e33dc625fde8065ccfb6330ce5ebc31c4b954ecd1",
+        "bytes": 28705
+      },
+      "checkout": {
+        "line": 115,
+        "text": "2026-11-16T00:41:54.7467960Z [command]/opt/homebrew/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 254,
+        "text": "2026-11-16T00:42:56.8111200Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 247,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_native_SPI_platform_absolute_directory_admitted",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188133173,
+        "name": "opencode-v2-discovery-macos-15-embedded-model",
+        "bytes": 1014,
+        "sha256": "f414dfc7881c2987590e349ddc40572dc9b325eb09b118406b2629171908e4e1",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019104997,
+      "name": "native-v2-test (ubuntu-24.04, embedded-model)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:37:21Z",
+      "raw": {
+        "path": "jobs/133019104997.log",
+        "blob": "3192ac9aab1cacd9371b7986e6bd9e830ab67970",
+        "sha256": "1b29ce33e11a7bd0e8d989aacb16b65cb3f62c8611af0e34e0c5db0102bf315b",
+        "bytes": 29004
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:36:38.6635823Z [command]/usr/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 267,
+        "text": "2026-11-16T00:37:18.3918600Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 260,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_native_SPI_platform_absolute_directory_admitted",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188477740,
+        "name": "opencode-v2-discovery-ubuntu-24.04-embedded-model",
+        "bytes": 1014,
+        "sha256": "454878bef4d1ac5df38c5d509408ba28d0b68e76ad8b2b3fe1755cb23e7f514a",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105000,
+      "name": "native-v2-test (macos-15, embedded)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:37Z",
+      "completedAt": "2026-11-16T00:37:42Z",
+      "raw": {
+        "path": "jobs/133019105000.log",
+        "blob": "b9e9d60208f7007454192e90912bbcf2fd4c7fa6",
+        "sha256": "f5a2a97e52356f1ffe53aa41b05f1b10823a0825eecde795447138bac6dee558",
+        "bytes": 28099
+      },
+      "checkout": {
+        "line": 115,
+        "text": "2026-11-16T00:36:41.4273280Z [command]/opt/homebrew/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 251,
+        "text": "2026-11-16T00:37:33.7907960Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 244,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_native_SPI_platform_absolute_directory_admitted",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14187649229,
+        "name": "opencode-v2-discovery-macos-15-embedded",
+        "bytes": 603,
+        "sha256": "ebc47929ae587802a4313d44f291f6ac3cef351af59ccb964148ffe2ba5c2efe",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105016,
+      "name": "native-v2-test (macos-15-intel, embedded-target-spi)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:37:56Z",
+      "completedAt": "2026-11-16T00:40:18Z",
+      "raw": {
+        "path": "jobs/133019105016.log",
+        "blob": "16daf95c1c566e0251f4fc743505897175673495",
+        "sha256": "ed1ac497d0909e403779cf0e2fed9577eb7cacda7d35360b26af02abc169dd1c",
+        "bytes": 49525
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:38:01.6618940Z [command]/usr/local/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 569,
+        "text": "2026-11-16T00:40:04.2680790Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 562,
+          "value": {
+            "kind": "TEST_V2_NATIVE_SESSION_SPI",
+            "version": "2.1.4",
+            "qualified": false,
+            "completed": true,
+            "cleanup": true,
+            "steps": [
+              "native_all_provider_directory_without_account_or_configuration_fields",
+              "native_owned_identity_model_permissions_instructions_mcp_readback",
+              "session_SPI_native_model_tool_permission_deny_then_once_actual_MCP_effect",
+              "session_SPI_native_builtin_edit_immutable_input_window_and_real_log_anchors",
+              "session_SPI_original_verified_PNG_native_ACK_history_and_actual_image_inference",
+              "session_SPI_active_stream_interrupt_native_terminal_and_stop",
+              "cold_same_session_new_endpoint_checkpoint_no_replay_and_fresh_input",
+              "private_credential_witness_retained_on_cold_readback_and_absent_from_model_requests"
+            ],
+            "nativeEditCapture": {
+              "dialect": "v2",
+              "protocolRevision": "2.1.4",
+              "immutable": true,
+              "beforeSha256": "25a7c1737d90d27dbb0c62ad6ece92b5812455ef7678700b8a09692668092b05",
+              "afterSha256": "10333d3e3654e64b195fd298e8b19a3c6ef9c9fb8fc25d25c77721b4379afc46",
+              "patchSha256": "528e739026006adf808185798abeea93871eb848d9566c5a6a39bfb03dea53fe",
+              "calledEvent": {
+                "id": "evt_1e1cbf51a001XYY7GU5KXFIan2",
+                "seq": 37
+              },
+              "completedEvent": {
+                "id": "evt_1e1cbf532001W2lYD7BDvu7CZT",
+                "seq": 39,
+                "type": "session.tool.success"
+              },
+              "filePathFlavor": "workspace-relative",
+              "unifiedIndexEnvelope": true
+            },
+            "nativePNG": {
+              "mimeType": "image/png",
+              "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+              "byteLength": 71,
+              "resolutions": 1,
+              "actualInference": true,
+              "coldHistory": true,
+              "resubmitted": false
+            },
+            "modelRequests": 9,
+            "mcpEffects": 1,
+            "instructionsEffective": true,
+            "nativeCatalogEffective": true,
+            "platform": "darwin-x64"
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14187893630,
+        "name": "opencode-v2-discovery-macos-15-intel-embedded-target-spi",
+        "bytes": 1273,
+        "sha256": "8a3b879c9d844a0fd3d63f622567fa51e8e170f7963d2ab6ca209780d394cf42",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105021,
+      "name": "native-v2-test (ubuntu-24.04, embedded-pinned-tool)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:37:30Z",
+      "raw": {
+        "path": "jobs/133019105021.log",
+        "blob": "4e62b99fcea279d13a4e6d2fb89abc3722fc69a1",
+        "sha256": "b1e610650bf2699d5113af1bb3abe71c6a34d98a38322d8881e49a4076418e7d",
+        "bytes": 29382
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:36:39.7500645Z [command]/usr/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 267,
+        "text": "2026-11-16T00:37:25.9607145Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 260,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_embedded_pinned_builtin_read_selected",
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_native_SPI_platform_absolute_directory_admitted",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_effective_tool_policy_denial_verified",
+              "TEST_embedded_denied_tool_production_projection_verified",
+              "TEST_embedded_builtin_read_inside_workspace_succeeded",
+              "TEST_embedded_allowed_tool_production_projection_verified",
+              "TEST_embedded_tool_lineage_persisted_without_cold_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188756666,
+        "name": "opencode-v2-discovery-ubuntu-24.04-embedded-pinned-tool",
+        "bytes": 1733,
+        "sha256": "0bb1827f38ba85a105674643089df9a24f154d18c6e3592445992d3e912dafec",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105025,
+      "name": "native-v2-test (windows-11-arm, embedded-target-model)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:41:54Z",
+      "raw": {
+        "path": "jobs/133019105025.log",
+        "blob": "0bdb31ceb0b50e2b5ea803392a7df10716a39ed4",
+        "sha256": "0188f1cfbc7a3b2cfb8b78bdf33e6a7c272927ce9f5336aac9e42c6151bc1f16",
+        "bytes": 30450
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:36:47.0438881Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 253,
+        "text": "2026-11-16T00:41:34.7230954Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 246,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_target_backend_not_admitted",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188468572,
+        "name": "opencode-v2-discovery-windows-11-arm-embedded-target-model",
+        "bytes": 1016,
+        "sha256": "35daa2f27c3115955d7887382d6ebd36526b121eef37e6d96f933691881f9079",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105036,
+      "name": "native-v2-test (macos-15, embedded-target-interrupt)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:42:53Z",
+      "completedAt": "2026-11-16T00:44:16Z",
+      "raw": {
+        "path": "jobs/133019105036.log",
+        "blob": "11f983b5b5b47c222b7db511045503de9295fa4d",
+        "sha256": "427f010ce0ef46869306d1f2c0b4c75d0b11c55645af58b8cf5f7db22e21e7c9",
+        "bytes": 28899
+      },
+      "checkout": {
+        "line": 115,
+        "text": "2026-11-16T00:42:57.2097480Z [command]/opt/homebrew/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 252,
+        "text": "2026-11-16T00:44:06.1290410Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 244,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_target_backend_not_admitted",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_active_interrupt_durable_cold_no_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188523897,
+        "name": "opencode-v2-discovery-macos-15-embedded-target-interrupt",
+        "bytes": 1257,
+        "sha256": "a679c3b0d027aa5158512399f29a3e18352e51b178e4c3e69a50bd0ff9b7c034",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105054,
+      "name": "native-v2-test (windows-2022, embedded-mcp)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:37:54Z",
+      "raw": {
+        "path": "jobs/133019105054.log",
+        "blob": "1459786c98e39ceda2ed3579298e82ab7afe08ae",
+        "sha256": "22f10d10757a7593b3e0b22241bb70a69368eac600cf329a8f339f348b981c7e",
+        "bytes": 31812
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:36:43.5607339Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 276,
+        "text": "2026-11-16T00:37:47.3251121Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 269,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_pinned_embedded_SDK_started",
+              "TEST_real_MCP_server_registered",
+              "TEST_MCP_stdio_handshake_and_owned_process",
+              "TEST_MCP_native_resource_discovery_and_workspace_isolation",
+              "TEST_MCP_disconnect_stopped_child",
+              "TEST_MCP_server_removed",
+              "TEST_MCP_direct_remove_child_active",
+              "TEST_MCP_direct_remove_stopped_active_child",
+              "TEST_MCP_second_child_active_before_host_close",
+              "TEST_MCP_host_close_stopped_active_child"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14187768821,
+        "name": "opencode-v2-discovery-windows-2022-embedded-mcp",
+        "bytes": 597,
+        "sha256": "424d7316245009d207f351b29418d683c480b18f0dc202788c2a976094d4f2fa",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105066,
+      "name": "native-v2-test (macos-15-intel, embedded-target-interrupt)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:37:41Z",
+      "completedAt": "2026-11-16T00:40:09Z",
+      "raw": {
+        "path": "jobs/133019105066.log",
+        "blob": "5e1afd56aac36e7037874df7f795ad4abdc737b9",
+        "sha256": "01ee89e9ef6964608ffcd406e220bfe95ad1b1fcacfb93d8385c92477ef3eb56",
+        "bytes": 28724
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:37:48.1516690Z [command]/usr/local/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 251,
+        "text": "2026-11-16T00:39:50.0928540Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 243,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_target_backend_not_admitted",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_active_interrupt_durable_cold_no_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188458313,
+        "name": "opencode-v2-discovery-macos-15-intel-embedded-target-interrupt",
+        "bytes": 1257,
+        "sha256": "13f8fbb9bad3d82e5a8b3359457a941c32cd90775372393c5b0eae28acb75b61",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105070,
+      "name": "native-v2-test (macos-15, embedded-target-model)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:37Z",
+      "completedAt": "2026-11-16T00:37:36Z",
+      "raw": {
+        "path": "jobs/133019105070.log",
+        "blob": "6832f9a3077466c94f08bbfad543078db39ecff4",
+        "sha256": "85e14f1133d28a12251a3a277953746bf6eed44c2c61127ff7e7228694d68c14",
+        "bytes": 28632
+      },
+      "checkout": {
+        "line": 115,
+        "text": "2026-11-16T00:36:40.0819540Z [command]/opt/homebrew/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 251,
+        "text": "2026-11-16T00:37:27.3629620Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 244,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_target_backend_not_admitted",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188622393,
+        "name": "opencode-v2-discovery-macos-15-embedded-target-model",
+        "bytes": 1016,
+        "sha256": "cdba3eb5f2150cb07e8efbbab607200f1a24b0bfd7dcfb78b1b2f17e989b336b",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105085,
+      "name": "native-v2-test (ubuntu-24.04, embedded-target-interrupt)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:37:31Z",
+      "raw": {
+        "path": "jobs/133019105085.log",
+        "blob": "ba66225cde41f35a892eac8095c9010c17e35f7f",
+        "sha256": "0413c9e4a9a3d1f95121d438cd7bcc83878b5d5b6614dd62e9334ddbcccb5017",
+        "bytes": 29298
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:36:44.4665656Z [command]/usr/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 268,
+        "text": "2026-11-16T00:37:28.1908891Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 260,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_target_backend_not_admitted",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_active_interrupt_durable_cold_no_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14187639121,
+        "name": "opencode-v2-discovery-ubuntu-24.04-embedded-target-interrupt",
+        "bytes": 1257,
+        "sha256": "3d6248beec6f7d3542fda4e72ced18a30144863d8fca5d0b65b710d01e823302",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105087,
+      "name": "native-v2-test (macos-15, embedded-mcp)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:37:36Z",
+      "raw": {
+        "path": "jobs/133019105087.log",
+        "blob": "a88c201accddb533d4e2efacb5c14cf604dc74c0",
+        "sha256": "1a7329d5601b54ee9627ccf407da183767b21570e2268c0cf0219c8719a9db81",
+        "bytes": 30060
+      },
+      "checkout": {
+        "line": 115,
+        "text": "2026-11-16T00:36:40.0689450Z [command]/opt/homebrew/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 274,
+        "text": "2026-11-16T00:37:29.4866860Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 267,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_pinned_embedded_SDK_started",
+              "TEST_real_MCP_server_registered",
+              "TEST_MCP_stdio_handshake_and_owned_process",
+              "TEST_MCP_native_resource_discovery_and_workspace_isolation",
+              "TEST_MCP_disconnect_stopped_child",
+              "TEST_MCP_server_removed",
+              "TEST_MCP_direct_remove_child_active",
+              "TEST_MCP_direct_remove_stopped_active_child",
+              "TEST_MCP_second_child_active_before_host_close",
+              "TEST_MCP_host_close_stopped_active_child"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188462838,
+        "name": "opencode-v2-discovery-macos-15-embedded-mcp",
+        "bytes": 597,
+        "sha256": "d79f0b894e461264a99834fc77fa929950d31797ab18d13cba206a317111f5dd",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105099,
+      "name": "native-v2-test (windows-2022, embedded-target-interrupt)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:38:03Z",
+      "raw": {
+        "path": "jobs/133019105099.log",
+        "blob": "bdd3f71faaf711a6b5fc815f2c737b821a952b57",
+        "sha256": "2c7197b62467e1e08bf36dc5c844359221cee40187f2bbe6ce43d22ac7def270",
+        "bytes": 30657
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:36:42.0480598Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 254,
+        "text": "2026-11-16T00:37:57.4827608Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 246,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_target_backend_not_admitted",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_active_interrupt_durable_cold_no_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14187913179,
+        "name": "opencode-v2-discovery-windows-2022-embedded-target-interrupt",
+        "bytes": 1257,
+        "sha256": "e04da70b031152fc2e660113877e5df76e74553a55ea0b6eb7625322842a72f1",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105100,
+      "name": "native-v2-test (macos-15-intel, embedded)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:37:41Z",
+      "completedAt": "2026-11-16T00:40:40Z",
+      "raw": {
+        "path": "jobs/133019105100.log",
+        "blob": "e4aece6644b97ea7ddfa168906883fc8d1ff4f3a",
+        "sha256": "8cfd120b2808ed1165654ffe1902e0754b6c05527cd198313057805b9b1267c2",
+        "bytes": 27925
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:37:34.2055450Z [command]/usr/local/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 250,
+        "text": "2026-11-16T00:39:59.0788610Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 243,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_native_SPI_platform_absolute_directory_admitted",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188596962,
+        "name": "opencode-v2-discovery-macos-15-intel-embedded",
+        "bytes": 603,
+        "sha256": "e13a6db6a81ea36af3c1cf64799132f65513d62b5a87df4781e35be91c9b1bb3",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105106,
+      "name": "native-v2-test (windows-2022, embedded-target)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:37Z",
+      "completedAt": "2026-11-16T00:37:52Z",
+      "raw": {
+        "path": "jobs/133019105106.log",
+        "blob": "a666ad2eb86e5def89161a1f72a174758d087261",
+        "sha256": "0ccc7a5785f27033d2fd0c96bad9fb1b3bb3225eb5c2e72bf4deb8c1035a6d3f",
+        "bytes": 29852
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:36:44.0903493Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 253,
+        "text": "2026-11-16T00:37:46.3018083Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 246,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188417944,
+        "name": "opencode-v2-discovery-windows-2022-embedded-target",
+        "bytes": 584,
+        "sha256": "f23e10c669dba874989bf775409459fae2e92f417d56ffd7ccb5bfe7cc67c544",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105110,
+      "name": "native-v2-test (windows-11-arm, embedded-interrupt)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:37:02Z",
+      "completedAt": "2026-11-16T00:44:37Z",
+      "raw": {
+        "path": "jobs/133019105110.log",
+        "blob": "83dde586cca06991fc6d661f1bf7ad6388cbeebd",
+        "sha256": "47430dd1609b9ba1c63f3829787f6616d1cc1413c852e370644c542571746bf2",
+        "bytes": 30699
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:37:12.7179400Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 254,
+        "text": "2026-11-16T00:44:03.8350789Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 246,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_native_SPI_platform_absolute_directory_admitted",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_active_interrupt_durable_cold_no_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14187824312,
+        "name": "opencode-v2-discovery-windows-11-arm-embedded-interrupt",
+        "bytes": 1257,
+        "sha256": "6ef9d69cc42775e6ea010cfff0d876b055b0deb57094a58af1f6278fd17877bc",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105123,
+      "name": "native-v2-test (macos-15-intel, embedded-mcp)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:37:50Z",
+      "completedAt": "2026-11-16T00:39:47Z",
+      "raw": {
+        "path": "jobs/133019105123.log",
+        "blob": "7b8ffecca6b932298caadad5e86b01c6e836fb22",
+        "sha256": "351c88578aedc31adefca01504cfbefe70d4215353ad72736cc5ada82ca13773",
+        "bytes": 29886
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:37:54.2829840Z [command]/usr/local/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 273,
+        "text": "2026-11-16T00:39:32.8825830Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 266,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_pinned_embedded_SDK_started",
+              "TEST_real_MCP_server_registered",
+              "TEST_MCP_stdio_handshake_and_owned_process",
+              "TEST_MCP_native_resource_discovery_and_workspace_isolation",
+              "TEST_MCP_disconnect_stopped_child",
+              "TEST_MCP_server_removed",
+              "TEST_MCP_direct_remove_child_active",
+              "TEST_MCP_direct_remove_stopped_active_child",
+              "TEST_MCP_second_child_active_before_host_close",
+              "TEST_MCP_host_close_stopped_active_child"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188527997,
+        "name": "opencode-v2-discovery-macos-15-intel-embedded-mcp",
+        "bytes": 597,
+        "sha256": "276913f77e703ed12bdda5fa24cbb29b31bb8b4eb3ce17dec3ef6e5bcc8f3c5b",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105124,
+      "name": "native-v2-test (macos-15-intel, embedded-target-model)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:39:52Z",
+      "completedAt": "2026-11-16T00:42:49Z",
+      "raw": {
+        "path": "jobs/133019105124.log",
+        "blob": "33b3ddcf9431f2753668c98c9d81ce863777f84e",
+        "sha256": "52bd7771d40ea47c6ab9c996419cffc8e3e4c405081ed3e686718de9d2bacdee",
+        "bytes": 28465
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:39:58.6013440Z [command]/usr/local/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 250,
+        "text": "2026-11-16T00:42:13.5227130Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 243,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_target_backend_not_admitted",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14187774185,
+        "name": "opencode-v2-discovery-macos-15-intel-embedded-target-model",
+        "bytes": 1016,
+        "sha256": "a3afa451d6471bce52687f6e301ee653933b0a5ce75263486328efa0bfb9009f",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105130,
+      "name": "native-v2-test (macos-15-intel, embedded-interrupt)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:39:44Z",
+      "completedAt": "2026-11-16T00:42:49Z",
+      "raw": {
+        "path": "jobs/133019105130.log",
+        "blob": "4a0b481f634427b3503ebb5ebeab051d1a298f49",
+        "sha256": "7de9ec6794ab8feeec3ae70fb81be2ad727ed959c7bffa4e6245f2d5581bc8c7",
+        "bytes": 28698
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:39:53.1571240Z [command]/usr/local/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 251,
+        "text": "2026-11-16T00:42:29.0326120Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 243,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_native_SPI_platform_absolute_directory_admitted",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_active_interrupt_durable_cold_no_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14187819206,
+        "name": "opencode-v2-discovery-macos-15-intel-embedded-interrupt",
+        "bytes": 1257,
+        "sha256": "40a0fd35ea2f4f11a3ba94b8290cad54ab83e0b6035ce52ad8561b7645036ad9",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105138,
+      "name": "native-v2-test (windows-11-arm, embedded-pinned-tool)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:42:38Z",
+      "raw": {
+        "path": "jobs/133019105138.log",
+        "blob": "9c742b54beea317a9249ebe20ee20a1491e1b5b4",
+        "sha256": "5e70de2db6d81ac373fbff774daea1d2e7111de4e3521c83bfe18ef6202cb517",
+        "bytes": 30801
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:36:46.2481921Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 253,
+        "text": "2026-11-16T00:42:13.3377847Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 246,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_embedded_pinned_builtin_read_selected",
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_native_SPI_platform_absolute_directory_admitted",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_effective_tool_policy_denial_verified",
+              "TEST_embedded_denied_tool_production_projection_verified",
+              "TEST_embedded_builtin_read_inside_workspace_succeeded",
+              "TEST_embedded_allowed_tool_production_projection_verified",
+              "TEST_embedded_tool_lineage_persisted_without_cold_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14187794183,
+        "name": "opencode-v2-discovery-windows-11-arm-embedded-pinned-tool",
+        "bytes": 1733,
+        "sha256": "0945f069a43043535d6827069301f027bf3fe8f5d901f101bb05a9115eee8a36",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105141,
+      "name": "native-v2-test (windows-2022, embedded)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:37:54Z",
+      "raw": {
+        "path": "jobs/133019105141.log",
+        "blob": "b40ee7d7f3b2bbf641c1d8cb15efd21ecb5a21bc",
+        "sha256": "288f59e86b7c1bdbb0c5dab8266fe9d3c6ab1e90aecd6bdfbf12124a3615f841",
+        "bytes": 29858
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:36:43.1765609Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 253,
+        "text": "2026-11-16T00:37:46.8338433Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 246,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_native_SPI_platform_absolute_directory_admitted",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188502640,
+        "name": "opencode-v2-discovery-windows-2022-embedded",
+        "bytes": 603,
+        "sha256": "a66e48d7957b6c932e10f12e749012c6cfa1ef5b3ebd0f52847b57e3451d486f",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105147,
+      "name": "native-v2-test (macos-15, embedded-pinned-tool)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:42:53Z",
+      "completedAt": "2026-11-16T00:44:07Z",
+      "raw": {
+        "path": "jobs/133019105147.log",
+        "blob": "b3ed90cab33b05d45b469dee9eea96830d1fc95a",
+        "sha256": "65c1047fc0cba46def050dd083fcbf955e07de7e9520a23454d66423d1319413",
+        "bytes": 28969
+      },
+      "checkout": {
+        "line": 115,
+        "text": "2026-11-16T00:42:57.0672190Z [command]/opt/homebrew/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 251,
+        "text": "2026-11-16T00:43:56.3814890Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 244,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_embedded_pinned_builtin_read_selected",
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_native_SPI_platform_absolute_directory_admitted",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_effective_tool_policy_denial_verified",
+              "TEST_embedded_denied_tool_production_projection_verified",
+              "TEST_embedded_builtin_read_inside_workspace_succeeded",
+              "TEST_embedded_allowed_tool_production_projection_verified",
+              "TEST_embedded_tool_lineage_persisted_without_cold_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188183410,
+        "name": "opencode-v2-discovery-macos-15-embedded-pinned-tool",
+        "bytes": 1733,
+        "sha256": "3ba11c98848b7aab4bd60f6c4eedd8254d059449a79947f35ecf91414fb3ec55",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105192,
+      "name": "native-v2-test (windows-2022, embedded-target-tool)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:37:52Z",
+      "raw": {
+        "path": "jobs/133019105192.log",
+        "blob": "f512660367bc65b8c2e2631edd00271313f1ce80",
+        "sha256": "9d1138eaf42affce806df27edc5a7f0d018e11a5422f40f267a3d670eb3ac3e1",
+        "bytes": 30608
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:36:43.3533839Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 253,
+        "text": "2026-11-16T00:37:45.0084104Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 246,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_embedded_v2_native_tool_plugin_configured",
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_target_backend_not_admitted",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_effective_tool_policy_denial_verified",
+              "TEST_embedded_denied_tool_production_projection_verified",
+              "TEST_embedded_tool_lineage_persisted_without_cold_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188532699,
+        "name": "opencode-v2-discovery-windows-2022-embedded-target-tool",
+        "bytes": 1705,
+        "sha256": "152d8d4febd7667d05c59390b5a78230496356024917c2e26a640fca25e404c2",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105203,
+      "name": "native-v2-test (macos-15-intel, embedded-pinned-tool)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:40:14Z",
+      "completedAt": "2026-11-16T00:42:37Z",
+      "raw": {
+        "path": "jobs/133019105203.log",
+        "blob": "44d30e8a509ba731e1fa186301e141b74c283e48",
+        "sha256": "85c8d7126da89476341b49ebd83aafd59390a1317698cde4104bd454df0e3008",
+        "bytes": 28803
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:40:22.9028330Z [command]/usr/local/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 250,
+        "text": "2026-11-16T00:42:20.7381800Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 243,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_embedded_pinned_builtin_read_selected",
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_native_SPI_platform_absolute_directory_admitted",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_effective_tool_policy_denial_verified",
+              "TEST_embedded_denied_tool_production_projection_verified",
+              "TEST_embedded_builtin_read_inside_workspace_succeeded",
+              "TEST_embedded_allowed_tool_production_projection_verified",
+              "TEST_embedded_tool_lineage_persisted_without_cold_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14187829163,
+        "name": "opencode-v2-discovery-macos-15-intel-embedded-pinned-tool",
+        "bytes": 1733,
+        "sha256": "32174a4cf91cf19eaf4af335bda65f58c5806a5c3458b1509d18c6d6da4bdcda",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105207,
+      "name": "native-v2-test (windows-11-arm, embedded-target-interrupt)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:37:06Z",
+      "completedAt": "2026-11-16T00:42:37Z",
+      "raw": {
+        "path": "jobs/133019105207.log",
+        "blob": "ea30a926b12e756412bd9373f35fd81e8bcae73a",
+        "sha256": "ced4502a31b3cf64e965581140cf339fc3a2810e363e77bb655f32bfa0e93eda",
+        "bytes": 30718
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:37:16.5907230Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 254,
+        "text": "2026-11-16T00:42:17.8777359Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 246,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_target_backend_not_admitted",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_active_interrupt_durable_cold_no_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188716702,
+        "name": "opencode-v2-discovery-windows-11-arm-embedded-target-interrupt",
+        "bytes": 1257,
+        "sha256": "cba5695c7cf0556284922ec25d2bda0ed6f14a1dbe55bdc42a11bdd8ce503e42",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105222,
+      "name": "native-v2-test (macos-15-intel, embedded-model)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:37:45Z",
+      "completedAt": "2026-11-16T00:39:40Z",
+      "raw": {
+        "path": "jobs/133019105222.log",
+        "blob": "98cd0809e2a63e6a8fcd9cead8c23b6dcadfad4e",
+        "sha256": "8eca6e7cbef56c30c0d3776b75989de6aef885bca523338f218c092842535608",
+        "bytes": 28432
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:37:49.4574240Z [command]/usr/local/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 250,
+        "text": "2026-11-16T00:39:25.4022450Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 243,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_native_SPI_platform_absolute_directory_admitted",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188672503,
+        "name": "opencode-v2-discovery-macos-15-intel-embedded-model",
+        "bytes": 1014,
+        "sha256": "adb9d6aaaec4f0d3d6f0776586c5649fd0921676cf3fb637e161040af1c9fd8e",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105228,
+      "name": "native-v2-test (windows-11-arm, embedded-target-tool)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:42:11Z",
+      "raw": {
+        "path": "jobs/133019105228.log",
+        "blob": "c2cbba5a891f7854136a232fc2cb12ee8a639302",
+        "sha256": "3fcba02a991965b65fc122012c1ece0d20ca72318f53972d0204e6ea61533d3c",
+        "bytes": 30667
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:36:47.1240732Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 253,
+        "text": "2026-11-16T00:41:49.2008262Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 246,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_embedded_v2_native_tool_plugin_configured",
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_target_backend_not_admitted",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_effective_tool_policy_denial_verified",
+              "TEST_embedded_denied_tool_production_projection_verified",
+              "TEST_embedded_tool_lineage_persisted_without_cold_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188742490,
+        "name": "opencode-v2-discovery-windows-11-arm-embedded-target-tool",
+        "bytes": 1705,
+        "sha256": "771a2a9596e92392f387b886484637f5a99ceea27f65e101774dbb45eac50bb2",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105235,
+      "name": "native-v2-test (windows-2022, embedded-interrupt)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:38:08Z",
+      "raw": {
+        "path": "jobs/133019105235.log",
+        "blob": "d5b2715f87fdd2a83a8433511242e5329498f4f4",
+        "sha256": "9b7c27c206bf3e44669e06505961e99a2f3721d53db799dc09bd2eec6080fb8c",
+        "bytes": 30642
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:36:42.5120729Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 254,
+        "text": "2026-11-16T00:38:01.5269416Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 246,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_native_SPI_platform_absolute_directory_admitted",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_active_interrupt_durable_cold_no_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188860231,
+        "name": "opencode-v2-discovery-windows-2022-embedded-interrupt",
+        "bytes": 1257,
+        "sha256": "5f76299f1db8a5721b39d88cf4aa5c8172f01df0ad4a3dc44ec81f21bf948526",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105237,
+      "name": "native-v2-test (windows-2022, embedded-pinned-tool)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:37:42Z",
+      "raw": {
+        "path": "jobs/133019105237.log",
+        "blob": "7251affed8ffa5e571153dffb09a35d837a6e81e",
+        "sha256": "8e3a30b0cc2775bccd0c5f2fffb302d03e7130b6f7621766e2ad912266e9a242",
+        "bytes": 30734
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:36:42.3846187Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 253,
+        "text": "2026-11-16T00:37:35.7266688Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 246,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_embedded_pinned_builtin_read_selected",
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_native_SPI_platform_absolute_directory_admitted",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_effective_tool_policy_denial_verified",
+              "TEST_embedded_denied_tool_production_projection_verified",
+              "TEST_embedded_builtin_read_inside_workspace_succeeded",
+              "TEST_embedded_allowed_tool_production_projection_verified",
+              "TEST_embedded_tool_lineage_persisted_without_cold_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188865087,
+        "name": "opencode-v2-discovery-windows-2022-embedded-pinned-tool",
+        "bytes": 1733,
+        "sha256": "3f39a4a91997b76105ba847408985b855f6015aeb79c0853e0b60730d5b7993c",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105268,
+      "name": "native-v2-test (macos-15, embedded-target-mcp)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:40:43Z",
+      "completedAt": "2026-11-16T00:41:48Z",
+      "raw": {
+        "path": "jobs/133019105268.log",
+        "blob": "5d60ee82f57c3e95e85296281db7dccc8de72add",
+        "sha256": "b8df2d4375884e3394b5c96d64cda981afd33c0e0881b691d44e60f8da162dd7",
+        "bytes": 29846
+      },
+      "checkout": {
+        "line": 115,
+        "text": "2026-11-16T00:40:46.7390520Z [command]/opt/homebrew/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 272,
+        "text": "2026-11-16T00:41:40.8670420Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 265,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_pinned_embedded_SDK_started",
+              "TEST_real_MCP_server_registered",
+              "TEST_MCP_stdio_handshake_and_owned_process",
+              "TEST_MCP_native_resource_discovery_and_workspace_isolation",
+              "TEST_MCP_disconnect_stopped_child",
+              "TEST_MCP_server_removed",
+              "TEST_MCP_direct_remove_child_active",
+              "TEST_MCP_direct_remove_stopped_active_child",
+              "TEST_MCP_second_child_active_before_host_close",
+              "TEST_MCP_host_close_stopped_active_child"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188254229,
+        "name": "opencode-v2-discovery-macos-15-embedded-target-mcp",
+        "bytes": 610,
+        "sha256": "800256f22483dd39dfbcc50bc320d2794e15a211ccbb793d21191ecfc435ecd9",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105274,
+      "name": "native-v2-test (windows-11-arm, embedded-mcp)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:44:23Z",
+      "raw": {
+        "path": "jobs/133019105274.log",
+        "blob": "25e337e850c1ac55aa3e5c54bd4016badb73d73c",
+        "sha256": "0ffdb0e24944363c25ed13820910d2d8d5a14de72325d64dc8266bafd826dea1",
+        "bytes": 31884
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:36:47.6317003Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 276,
+        "text": "2026-11-16T00:43:48.5660112Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 269,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_pinned_embedded_SDK_started",
+              "TEST_real_MCP_server_registered",
+              "TEST_MCP_stdio_handshake_and_owned_process",
+              "TEST_MCP_native_resource_discovery_and_workspace_isolation",
+              "TEST_MCP_disconnect_stopped_child",
+              "TEST_MCP_server_removed",
+              "TEST_MCP_direct_remove_child_active",
+              "TEST_MCP_direct_remove_stopped_active_child",
+              "TEST_MCP_second_child_active_before_host_close",
+              "TEST_MCP_host_close_stopped_active_child"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188344229,
+        "name": "opencode-v2-discovery-windows-11-arm-embedded-mcp",
+        "bytes": 597,
+        "sha256": "885357a01d46aa210c92b1871b896f3c41f977e1110e9f331167d369a4b897ad",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105276,
+      "name": "native-v2-test (macos-15-intel, embedded-target-tool)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:42:44Z",
+      "completedAt": "2026-11-16T00:44:30Z",
+      "raw": {
+        "path": "jobs/133019105276.log",
+        "blob": "e12308c7fc03927d9de87ebb2efd3b3b53b27b67",
+        "sha256": "c5d1fbeea708c30d7a510a159bae7533b2f4c992fb044362060852adc7864901",
+        "bytes": 28677
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:42:53.1244340Z [command]/usr/local/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 250,
+        "text": "2026-11-16T00:44:15.0516340Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 243,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_embedded_v2_native_tool_plugin_configured",
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_target_backend_not_admitted",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_effective_tool_policy_denial_verified",
+              "TEST_embedded_denied_tool_production_projection_verified",
+              "TEST_embedded_tool_lineage_persisted_without_cold_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188384160,
+        "name": "opencode-v2-discovery-macos-15-intel-embedded-target-tool",
+        "bytes": 1705,
+        "sha256": "1e9a51021ff7f1a2f4c313302ff63b596e532990f9326b3f96e1a91b6dd2bac7",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105277,
+      "name": "native-v2-test (windows-2022, embedded-model)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:38:03Z",
+      "raw": {
+        "path": "jobs/133019105277.log",
+        "blob": "4345d4034228c5f1c38e9bd21a6f70b0acc4535f",
+        "sha256": "cd3918388cd176ee59c9e70d4a99e0d076dbbf5c823582f4f1cb6e3e0518f788",
+        "bytes": 30368
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:36:44.1452975Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 253,
+        "text": "2026-11-16T00:37:54.2976541Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 246,
+          "value": {
+            "completed": true,
+            "steps": [
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_native_SPI_platform_absolute_directory_admitted",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188188690,
+        "name": "opencode-v2-discovery-windows-2022-embedded-model",
+        "bytes": 1014,
+        "sha256": "f5ed2af717dc8c981a8e6c5c870fd8f2c84ce8def486c64f260ab001e4dd9777",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105312,
+      "name": "native-v2-test (macos-15, embedded-target-tool)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:37Z",
+      "completedAt": "2026-11-16T00:37:51Z",
+      "raw": {
+        "path": "jobs/133019105312.log",
+        "blob": "5eaecb9725a53e459ff3baa3fd1dbfdb1f6a1ab0",
+        "sha256": "1485d9108eabd73b7f8d9ad92aaef03494303b7a83153c4f9fb0fe8217faafe8",
+        "bytes": 28845
+      },
+      "checkout": {
+        "line": 115,
+        "text": "2026-11-16T00:36:43.1344500Z [command]/opt/homebrew/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 251,
+        "text": "2026-11-16T00:37:40.4623700Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 244,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_embedded_v2_native_tool_plugin_configured",
+              "pinned_embedded_SDK_module_resolved",
+              "TEST_embedded_loopback_model_configured",
+              "TEST_embedded_session_created",
+              "TEST_embedded_durable_event_persisted",
+              "TEST_embedded_ordered_external_deny_and_ask_verified",
+              "TEST_embedded_permission_policy_and_session_isolation_verified",
+              "TEST_embedded_host_closed_before_restart",
+              "TEST_embedded_durable_log_survived_cold_restart",
+              "TEST_embedded_model_prompt_admitted",
+              "TEST_embedded_native_message_pagination_verified",
+              "TEST_embedded_production_driver_projection_verified",
+              "TEST_embedded_target_backend_not_admitted",
+              "TEST_embedded_durable_model_terminal_qualified",
+              "TEST_embedded_foreign_input_id_denied_without_model",
+              "TEST_embedded_model_durable_lineage_survived_cold_restart",
+              "TEST_embedded_effective_tool_policy_denial_verified",
+              "TEST_embedded_denied_tool_production_projection_verified",
+              "TEST_embedded_tool_lineage_persisted_without_cold_replay",
+              "TEST_embedded_session_removed"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188263505,
+        "name": "opencode-v2-discovery-macos-15-embedded-target-tool",
+        "bytes": 1705,
+        "sha256": "f426a8dc8d9c16b6dd64717919dc39e8d40a09c2baaa33962282a1a7daaae9ab",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105321,
+      "name": "native-v2-test (windows-11-arm, embedded-target-mcp)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:43:14Z",
+      "raw": {
+        "path": "jobs/133019105321.log",
+        "blob": "da534656265293f0ab3d1cb3f5f5a1a403903f6d",
+        "sha256": "435de05891b93f3240793bbb2f1d6eabda34c4f83f58947f8d1d2ce63ff89dc9",
+        "bytes": 31660
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:36:46.3053728Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 274,
+        "text": "2026-11-16T00:42:47.1890991Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 267,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_pinned_embedded_SDK_started",
+              "TEST_real_MCP_server_registered",
+              "TEST_MCP_stdio_handshake_and_owned_process",
+              "TEST_MCP_native_resource_discovery_and_workspace_isolation",
+              "TEST_MCP_disconnect_stopped_child",
+              "TEST_MCP_server_removed",
+              "TEST_MCP_direct_remove_child_active",
+              "TEST_MCP_direct_remove_stopped_active_child",
+              "TEST_MCP_second_child_active_before_host_close",
+              "TEST_MCP_host_close_stopped_active_child"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188955409,
+        "name": "opencode-v2-discovery-windows-11-arm-embedded-target-mcp",
+        "bytes": 610,
+        "sha256": "9a52142d70b1cdca9b4750538ad3cc29a513e0b722099c7caea05cecd4f2e8e2",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105368,
+      "name": "native-v2-test (macos-15-intel, embedded-target-mcp)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:40:23Z",
+      "completedAt": "2026-11-16T00:42:06Z",
+      "raw": {
+        "path": "jobs/133019105368.log",
+        "blob": "297edeb4f34ac89c87d043eb344dc78a1c379344",
+        "sha256": "80ba5c4d886adde5c2a946c206b0185c09d8b879922d66c25402c2c5ae1bf495",
+        "bytes": 29671
+      },
+      "checkout": {
+        "line": 114,
+        "text": "2026-11-16T00:40:29.7670530Z [command]/usr/local/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9"
+      },
+      "receiptSafety": {
+        "line": 271,
+        "text": "2026-11-16T00:41:50.9468600Z TEST_native_receipts_safe count=1"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 264,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_pinned_embedded_SDK_started",
+              "TEST_real_MCP_server_registered",
+              "TEST_MCP_stdio_handshake_and_owned_process",
+              "TEST_MCP_native_resource_discovery_and_workspace_isolation",
+              "TEST_MCP_disconnect_stopped_child",
+              "TEST_MCP_server_removed",
+              "TEST_MCP_direct_remove_child_active",
+              "TEST_MCP_direct_remove_stopped_active_child",
+              "TEST_MCP_second_child_active_before_host_close",
+              "TEST_MCP_host_close_stopped_active_child"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188204457,
+        "name": "opencode-v2-discovery-macos-15-intel-embedded-target-mcp",
+        "bytes": 610,
+        "sha256": "ddfa25924925a0c0b11a19a463a993fa3df3a95e3dfa2e897f38c1321400d0df",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    },
+    {
+      "id": 133019105428,
+      "name": "native-v2-test (windows-2022, embedded-target-mcp)",
+      "status": "completed",
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:36Z",
+      "completedAt": "2026-11-16T00:37:58Z",
+      "raw": {
+        "path": "jobs/133019105428.log",
+        "blob": "5ad7699d3fab721217261096836796fe4f38f792",
+        "sha256": "1b56d830517288ffca5dd91f6afb94f669a51d220bc8cec0a682269565944dde",
+        "bytes": 31594
+      },
+      "checkout": {
+        "line": 101,
+        "text": "2026-11-16T00:36:43.7384956Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9\r"
+      },
+      "receiptSafety": {
+        "line": 274,
+        "text": "2026-11-16T00:37:50.8138513Z TEST_native_receipts_safe count=1\r"
+      },
+      "originalStdoutObservations": [
+        {
+          "rawLine": 267,
+          "value": {
+            "completed": true,
+            "steps": [
+              "TEST_pinned_embedded_SDK_started",
+              "TEST_real_MCP_server_registered",
+              "TEST_MCP_stdio_handshake_and_owned_process",
+              "TEST_MCP_native_resource_discovery_and_workspace_isolation",
+              "TEST_MCP_disconnect_stopped_child",
+              "TEST_MCP_server_removed",
+              "TEST_MCP_direct_remove_child_active",
+              "TEST_MCP_direct_remove_stopped_active_child",
+              "TEST_MCP_second_child_active_before_host_close",
+              "TEST_MCP_host_close_stopped_active_child"
+            ],
+            "cleanup": true
+          }
+        }
+      ],
+      "artifact": {
+        "id": 14188557631,
+        "name": "opencode-v2-discovery-windows-2022-embedded-target-mcp",
+        "bytes": 610,
+        "sha256": "1ddb4f60df658ab9eb035ad6c7372362767de7b807abf88b1bf77b3fe36ebd0b",
+        "uploadAndApiAgree": true,
+        "sourceBound": true,
+        "actualZipRead": false
+      }
+    }
+  ],
+  "qualificationBoundaries": [
+    "This is the original canonical PR8 c79 OpenCode V2 TEST workflow; old9423 outcomes and PR10 safe561 outcomes remain separate.",
+    "All53 original API jobs concluded success. Each log retains exactc79 checkout, original receipt-safety output and an upload joined to API by artifactID, size, SHA256 and source/run.",
+    "Fifty-one original final stdout summaries report completed:true. Two original expected-negative wrappers report observed:true/qualified:false; their preceding completed:false observations and exact failure reasons remain retained, not relabelled.",
+    "All53 final original stdout summaries report cleanup:true; this is the original controlled harness claim, not an invented general Job/HANDLE or release oracle.",
+    "The stock CLI no-durable-events and SDK2.0.0 unusable Node ESM controls remain HOLD/negative, not product support. Native SPI qualified:false and target-not-admitted/TEST limitations remain as emitted.",
+    "No broad Host/Electron/release or actual Claude/Codex qualification follows from the original OpenCode TEST matrix.",
+    "Artifacts are bound by original upload/API metadata only here. No actual ZIP bytes, CRCs or members were inspected by this child, and no archive-safety claim is made.",
+    "Full raw strings are stored unchanged including original CRLF/ANSI/timestamps. Parsed original stdout records are secondary projections; logs remain authoritative.",
+    "No manual dispatch/rerun/cancel, source/ref/PR mutation or local runtime command was performed to obtain these automatic outcomes."
+  ]
+}

@@ -1001,3 +1001,186 @@ test('private child activity shares the original Runtime input/fence and snapsho
   owner.observeProviderActivity(binding(), session.sessionRef, { ...attribution, data });
   assert.equal(owner.readActivitySnapshot(binding()).cursor.sequence, closed.cursor.sequence, 'sealed parent cannot publish late child activity');
 });
+
+test('original process diagnostics keep config and incarnation fences and survive only unreleased closing', async t => {
+  const f = await setup(t), owner = f.make(), { session, attribution } = await f.open(owner);
+  const original = owner.readSession(binding()).record!, config = original.config!;
+  const before = owner.readActivitySnapshot(binding());
+  const conversation = owner.readConversation(binding(), 'messages');
+  const data = { kind: 'process-output' as const, stream: 'stderr' as const, text: 'TEST stderr' };
+  let grant = true, checks = 0;
+  const current = () => { checks++; if (!grant) throw new RuntimeOwnerError('forbidden'); };
+  owner.observeProcessOutput(binding(), config, { ...data, ...attribution }, current);
+  const retained = owner.readActivityFeed(binding(), before.cursor);
+  assert.deepEqual(retained.events.map(event => event.data), [data]);
+  assert.equal(retained.events[0]!.inputId, undefined);
+  assert.equal(retained.events[0]!.operationRef, undefined);
+  assert.deepEqual(owner.readConversation(binding(), 'messages'), conversation);
+  const { activitySequence: ignored, ...after } = owner.readSession(binding()).record!;
+  const { activitySequence: previous, ...prior } = original; void ignored; void previous;
+  assert.deepEqual(after, prior, 'diagnostics change only the existing journal high water');
+  owner.observeProcessOutput(binding(), { ...config, checkpointRef: 'TEST-other-checkpoint' }, data, current);
+  owner.observeProcessOutput(binding(), { ...config, configRevision: 'TEST-other-config' }, data, current);
+  owner.observeProcessOutput(binding('TEST-foreign'), config, data, current);
+  f.make('other-host').observeProcessOutput(binding(), config, data, current);
+  f.make('host-1', { profileId: 'other-profile' }).observeProcessOutput(binding(), config, data, current);
+  grant = false;
+  owner.observeProcessOutput(binding(), config, data, current);
+  assert.equal(owner.readActivitySnapshot(binding()).cursor.sequence, retained.cursor.sequence);
+  grant = true;
+  session.close = async () => {
+    const closing = owner.readSession(binding()).record!;
+    assert.equal(closing.phase, 'closing'); assert.equal(closing.sealed, true);
+    owner.observeProcessOutput(binding(), config, { ...data, text: 'TEST closing' }, current);
+    session.end();
+    return { logicallyClosed: true, cleanup: 'confirmed' };
+  };
+  assert.equal((await owner.stopCapturedSession(binding())).custody, 'released');
+  const closed = owner.readActivitySnapshot(binding());
+  assert.ok(owner.readActivityFeed(binding(), retained.cursor).events.some(event => event.data.text === 'TEST closing'));
+  owner.observeProcessOutput(binding(), config, data, current);
+  assert.equal(owner.readActivitySnapshot(binding()).cursor.sequence, closed.cursor.sequence);
+  assert.equal(checks, 9, 'every observation checks the captured source under the member fence');
+});
+
+test('process diagnostics use the existing serialized event budget and storage degradation without changing control', async t => {
+  const f = await setup(t), owner = f.make();
+  await f.open(owner);
+  const original = owner.readSession(binding()).record!, config = original.config!;
+  const before = owner.readActivitySnapshot(binding());
+  owner.observeProcessOutput(binding(), config, { kind: 'process-output', stream: 'stderr', text: '\\'.repeat(24 * 1024) }, () => {});
+  const oversized = owner.readActivityFeed(binding(), before.cursor);
+  assert.deepEqual(oversized.events.map(event => event.data), [{ kind: 'gap', reason: 'oversized' }]);
+  assert.equal(oversized.cursor.sequence, before.cursor.sequence + 1);
+  const failed = t.mock.method(f.store, 'writeActivity', () => { throw Error('TEST-storage-failure'); });
+  assert.doesNotThrow(() => owner.observeProcessOutput(binding(), config, { kind: 'process-output', stream: 'stderr', text: 'TEST lost' }, () => {}));
+  assert.equal(owner.readActivitySnapshot(binding()).gap?.reason, 'storage');
+  failed.mock.restore();
+  owner.observeProcessOutput(binding(), config, { kind: 'process-output', stream: 'stderr', text: 'TEST recovered' }, () => {});
+  const recovered = owner.readActivityFeed(binding(), oversized.cursor);
+  assert.deepEqual(recovered.events.map(event => event.data), [
+    { kind: 'gap', reason: 'storage' }, { kind: 'process-output', stream: 'stderr', text: 'TEST recovered' },
+  ]);
+  const { activitySequence: ignored, ...after } = owner.readSession(binding()).record!;
+  const { activitySequence: previous, ...prior } = original; void ignored; void previous;
+  assert.deepEqual(after, prior);
+  assert.ok((await stat(f.path())).size <= f.store.activityLimits.maxBytes);
+});
+
+test('distinct Thinking retains original attribution without becoming text, conversation or state', async t => {
+  const f = await setup(t), owner = f.make(), { session, attribution } = await f.open(owner);
+  const before = owner.readSession(binding()).record!;
+  const cursor = owner.readActivitySnapshot(binding()).cursor;
+  session.emit({ ...attribution, kind: 'text', messageRef: 'TEST-message', block: 0,
+    text: 'TEST visible answer', phase: 'complete' });
+  const thought: Extract<Event, { kind: 'thinking' }> = { ...attribution,
+    sessionRef: session.sessionRef, kind: 'thinking', messageRef: 'TEST-message', block: 0,
+    text: 'TEST distinct thought', phase: 'snapshot' };
+  session.raw(thought);
+  session.raw({ ...thought, text: 'TEST completed thought', phase: 'complete' });
+  await tick();
+  const feed = owner.readActivityFeed(binding(), cursor);
+  const thinking = feed.events.filter(event => event.data.kind === 'thinking');
+  assert.equal(thinking.length, 2);
+  assert.ok(thinking.every(event => event.inputId === attribution.inputId &&
+    event.operationRef === attribution.operationRef && event.data.block === 0 &&
+    event.data.messageRef === 'TEST-message'));
+  assert.deepEqual(thinking.map(event => event.data.phase), ['snapshot', 'complete']);
+  const latest = owner.readActivitySnapshot(binding()).latest.text;
+  assert.deepEqual(latest.map(event => event.data.text), ['TEST visible answer']);
+  const conversation = owner.readConversation(binding(), 'messages');
+  assert.ok(JSON.stringify(conversation).includes('TEST visible answer'));
+  assert.equal(JSON.stringify(conversation).includes('thought'), false);
+  const after = owner.readSession(binding()).record!;
+  assert.deepEqual(after.inputs, before.inputs);
+  assert.equal(after.phase, before.phase); assert.equal(after.nativeReady, before.nativeReady);
+  const cold = f.make('cold-host'), restored = cold.readActivitySnapshot(binding());
+  const retained = cold.readActivityFeed(binding(), { ...restored.cursor, sequence: cursor.sequence });
+  assert.deepEqual(retained.events.filter(event => event.data.kind === 'thinking'), thinking);
+});
+
+test('scheduled log projection is one read of original Thinking identities and unattributed stderr, including cold recovery', async t => {
+  const f = await setup(t), owner = f.make(), { session, attribution } = await f.open(owner);
+  const cursor = owner.readActivitySnapshot(binding()).cursor;
+  const thought: WithoutSession<Extract<Event, { kind: 'thinking' }>> = {
+    ...attribution, kind: 'thinking', messageRef: 'TEST-same-message', block: 0,
+    text: 'TEST partial', phase: 'snapshot',
+  };
+  session.emit(thought);
+  session.emit({ ...thought, text: 'TEST same thought', phase: 'complete' });
+  session.emit({ ...thought, text: 'TEST stale snapshot' });
+  session.emit({ ...thought, messageRef: 'TEST-other-message', text: 'TEST same thought', phase: 'complete' });
+  session.emit({ ...thought, block: 1, text: 'TEST same thought', phase: 'complete' });
+  session.emit({ ...attribution, kind: 'text', messageRef: 'TEST-same-message', block: 0,
+    text: 'TEST original answer', phase: 'complete' });
+  session.emit({ ...attribution, kind: 'result', outcome: 'succeeded' });
+  await tick();
+  await owner.admitDelivery({ binding: binding(), deliveryId: 'TEST-second', inputId: 'TEST-second',
+    messageId: 'TEST-second', content: 'TEST second input' });
+  await owner.dispatchNext(binding());
+  const second = session.submits[1]!;
+  session.emit({ ...thought, inputId: second.inputId, operationRef: second.operationRef,
+    text: 'TEST same thought', phase: 'complete' });
+  await tick();
+  const config = owner.readSession(binding()).record!.config!;
+  for (let index = 0; index < 2; index++) owner.observeProcessOutput(binding(), config,
+    { kind: 'process-output', stream: 'stderr', text: 'TEST same stderr' }, () => {});
+  owner.observeProviderActivity(binding(), session.sessionRef, { inputId: second.inputId,
+    operationRef: second.operationRef, data: { kind: 'subagent', childId: 'TEST-child',
+      parentToolRef: 'TEST-parent', phase: 'fact', fact: { kind: 'thinking',
+        messageRef: 'TEST-child-message', block: 0, text: 'TEST child thought', phase: 'complete' } } });
+  const retained = await readFile(f.path(), 'utf8');
+  let reads = 0;
+  const read = f.store.readActivity.bind(f.store);
+  const spy = t.mock.method(f.store, 'readActivity', (target: RuntimeBinding) => { reads++; return read(target); });
+  const snapshot = owner.readActivitySnapshot(binding());
+  assert.equal(reads, 1, 'the auxiliary groups reuse the original snapshot journal read');
+  spy.mock.restore();
+  const projected = snapshot.logProjection!;
+  assert.equal(projected.truncated, false);
+  assert.equal(projected.thinking.length, 4, 'equal bodies from distinct messages, blocks and inputs stay distinct');
+  assert.ok(projected.thinking.every(event => event.data.phase === 'complete' && event.data.text === 'TEST same thought'));
+  assert.equal(new Set(projected.thinking.map(event => event.inputId)).size, 2);
+  assert.equal(projected.stderr.length, 2, 'separate original stderr facts are not deduplicated by body');
+  assert.ok(projected.stderr.every(event => event.inputId === undefined && event.operationRef === undefined));
+  const feed = owner.readActivityFeed(binding(), cursor);
+  assert.deepEqual(projected.thinking, feed.events.filter(event =>
+    event.data.kind === 'thinking' && event.data.phase === 'complete'));
+  assert.deepEqual(projected.stderr, feed.events.filter(event => event.data.kind === 'process-output'));
+  assert.equal(snapshot.latest.subagents.length, 1, 'child Thinking stays in its original child projection');
+  assert.deepEqual(snapshot.latest.text.map(event => event.data.text), ['TEST original answer']);
+  assert.equal(JSON.stringify(owner.readConversation(binding(), 'messages')).includes('thought'), false);
+  const cold = f.make('TEST-cold').readActivitySnapshot(binding());
+  assert.deepEqual(cold.logProjection, projected);
+  assert.equal(cold.gap?.reason, 'incarnation');
+  assert.equal(await readFile(f.path(), 'utf8'), retained, 'hot/cold derived reads never rewrite the journal');
+  assert.equal(f.sessions.length, 1); assert.equal(session.submits.length, 2);
+});
+
+test('auxiliary log trimming shares the existing byte budget without changing original groups or their completeness', async t => {
+  const f = await setup(t), owner = f.make(), { session, attribution } = await f.open(owner);
+  session.emit({ ...attribution, kind: 'text', messageRef: 'TEST-answer', block: 0,
+    text: 'TEST answer', phase: 'complete' });
+  session.emit({ ...attribution, kind: 'usage', inputTokens: 5, outputTokens: 2, cumulativeCostUsd: 0.25 });
+  await tick();
+  const original = owner.readActivitySnapshot(binding());
+  assert.equal(original.gap, undefined);
+  for (let index = 0; index < 20; index++) session.emit({ ...attribution, kind: 'thinking',
+    messageRef: 'TEST-thought-' + index, block: 0, phase: 'complete', text: 'x'.repeat(16 * 1024) });
+  await tick();
+  owner.observeProcessOutput(binding(), owner.readSession(binding()).record!.config!,
+    { kind: 'process-output', stream: 'stderr', text: 'TEST bounded stderr' }, () => {});
+  const snapshot = owner.readActivitySnapshot(binding());
+  assert.equal(snapshot.retainedFrom, original.retainedFrom, 'the journal itself has not lost any events');
+  assert.equal(snapshot.logProjection?.truncated, true);
+  assert.ok(snapshot.logProjection!.thinking.length > 0 && snapshot.logProjection!.thinking.length < 20);
+  assert.deepEqual(snapshot.latest, original.latest, 'old groups retain their original priority and exact observations');
+  assert.equal(snapshot.gap, undefined, 'auxiliary display loss must not become a global Stats gap');
+  assert.deepEqual(snapshot.state, original.state);
+  const events = [...snapshot.latest.usage, ...snapshot.latest.interactions, ...snapshot.latest.tools,
+    ...snapshot.latest.text, ...snapshot.latest.subagents, ...snapshot.logProjection!.thinking,
+    ...snapshot.logProjection!.stderr];
+  assert.ok(events.reduce((bytes, event) => bytes + Buffer.byteLength(JSON.stringify(event)), 0) <= 256 * 1024);
+  assert.ok((await stat(f.path())).size < f.store.activityLimits.maxBytes);
+  assert.equal(session.submits.length, 1);
+});

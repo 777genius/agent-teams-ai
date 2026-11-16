@@ -1,0 +1,509 @@
+{
+  "sourceHead": "1f9242563bec2641b25077c3aa83a999bd7f4871",
+  "runId": 43773535515,
+  "jobs": [
+    {
+      "id": 132994541673,
+      "run_id": 43773535515,
+      "workflow_name": "Host process fixture acceptance",
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43773535515",
+      "run_attempt": 1,
+      "node_id": "CR_kwDORVTEtM8AAAAe9xeoaQ",
+      "head_sha": "1f9242563bec2641b25077c3aa83a999bd7f4871",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132994541673",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43773535515/job/132994541673",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-15T23:12:29Z",
+      "started_at": "2026-11-15T23:20:48Z",
+      "completed_at": "2026-11-15T23:29:47Z",
+      "name": "Host process fixtures (win32-x64)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-15T23:20:49Z",
+          "completed_at": "2026-11-15T23:20:50Z"
+        },
+        {
+          "name": "Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-15T23:20:50Z",
+          "completed_at": "2026-11-15T23:21:03Z"
+        },
+        {
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-15T23:21:03Z",
+          "completed_at": "2026-11-15T23:21:12Z"
+        },
+        {
+          "name": "Select the pinned package manager with bundled Corepack",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-15T23:21:12Z",
+          "completed_at": "2026-11-15T23:21:22Z"
+        },
+        {
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-15T23:21:22Z",
+          "completed_at": "2026-11-15T23:21:24Z"
+        },
+        {
+          "name": "Bind exact source and actual process tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-15T23:21:24Z",
+          "completed_at": "2026-11-15T23:21:24Z"
+        },
+        {
+          "name": "Install frozen workspace without Desktop postinstall",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-15T23:21:24Z",
+          "completed_at": "2026-11-15T23:23:23Z"
+        },
+        {
+          "name": "Build existing controller and Host",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-15T23:23:23Z",
+          "completed_at": "2026-11-15T23:23:33Z"
+        },
+        {
+          "name": "Verify process contracts and retained Main Host transport",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-15T23:23:33Z",
+          "completed_at": "2026-11-15T23:25:11Z"
+        },
+        {
+          "name": "Verify original POSIX Node and shell lifecycle fixtures",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10,
+          "started_at": "2026-11-15T23:25:11Z",
+          "completed_at": "2026-11-15T23:25:11Z"
+        },
+        {
+          "name": "Prepare pinned Electron for native process fixtures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-11-15T23:25:11Z",
+          "completed_at": "2026-11-15T23:25:11Z"
+        },
+        {
+          "name": "Verify Linux Node exec descriptor closure under both original parents",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12,
+          "started_at": "2026-11-15T23:25:11Z",
+          "completed_at": "2026-11-15T23:25:11Z"
+        },
+        {
+          "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13,
+          "started_at": "2026-11-15T23:25:11Z",
+          "completed_at": "2026-11-15T23:25:11Z"
+        },
+        {
+          "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14,
+          "started_at": "2026-11-15T23:25:11Z",
+          "completed_at": "2026-11-15T23:25:11Z"
+        },
+        {
+          "name": "Build original Windows product broker and C++ fixtures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-11-15T23:25:11Z",
+          "completed_at": "2026-11-15T23:25:38Z"
+        },
+        {
+          "name": "Qualify original Windows Job and control under Host Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16,
+          "started_at": "2026-11-15T23:25:38Z",
+          "completed_at": "2026-11-15T23:25:48Z"
+        },
+        {
+          "name": "Qualify original Windows Job and control under Electron Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17,
+          "started_at": "2026-11-15T23:25:48Z",
+          "completed_at": "2026-11-15T23:25:59Z"
+        },
+        {
+          "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18,
+          "started_at": "2026-11-15T23:25:59Z",
+          "completed_at": "2026-11-15T23:26:26Z"
+        },
+        {
+          "name": "Qualify original codex source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-11-15T23:26:26Z",
+          "completed_at": "2026-11-15T23:27:27Z"
+        },
+        {
+          "name": "Qualify original claude source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20,
+          "started_at": "2026-11-15T23:27:27Z",
+          "completed_at": "2026-11-15T23:27:58Z"
+        },
+        {
+          "name": "Qualify original opencode source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21,
+          "started_at": "2026-11-15T23:27:58Z",
+          "completed_at": "2026-11-15T23:29:22Z"
+        },
+        {
+          "name": "Require completed original platform receipts and unchanged source",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 22,
+          "started_at": "2026-11-15T23:29:22Z",
+          "completed_at": "2026-11-15T23:29:23Z"
+        },
+        {
+          "name": "Preserve original process evidence including failures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23,
+          "started_at": "2026-11-15T23:29:23Z",
+          "completed_at": "2026-11-15T23:29:24Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 44,
+          "started_at": "2026-11-15T23:29:24Z",
+          "completed_at": "2026-11-15T23:29:45Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 45,
+          "started_at": "2026-11-15T23:29:45Z",
+          "completed_at": "2026-11-15T23:29:45Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 46,
+          "started_at": "2026-11-15T23:29:45Z",
+          "completed_at": "2026-11-15T23:29:46Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 47,
+          "started_at": "2026-11-15T23:29:46Z",
+          "completed_at": "2026-11-15T23:29:47Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132994541673",
+      "labels": [
+        "windows-2022"
+      ],
+      "runner_id": 1000374952,
+      "runner_name": "GitHub Actions 1000374952",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 132994541961,
+      "run_id": 43773535515,
+      "workflow_name": "Host process fixture acceptance",
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43773535515",
+      "run_attempt": 1,
+      "node_id": "CR_kwDORVTEtM8AAAAe9xepiQ",
+      "head_sha": "1f9242563bec2641b25077c3aa83a999bd7f4871",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132994541961",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43773535515/job/132994541961",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-15T23:12:30Z",
+      "started_at": "2026-11-15T23:12:37Z",
+      "completed_at": "2026-11-15T23:29:50Z",
+      "name": "Host process fixtures (win32-arm64)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-15T23:12:38Z",
+          "completed_at": "2026-11-15T23:12:40Z"
+        },
+        {
+          "name": "Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-15T23:12:40Z",
+          "completed_at": "2026-11-15T23:13:11Z"
+        },
+        {
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-15T23:13:11Z",
+          "completed_at": "2026-11-15T23:13:28Z"
+        },
+        {
+          "name": "Select the pinned package manager with bundled Corepack",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-15T23:13:28Z",
+          "completed_at": "2026-11-15T23:13:40Z"
+        },
+        {
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-15T23:13:40Z",
+          "completed_at": "2026-11-15T23:13:43Z"
+        },
+        {
+          "name": "Bind exact source and actual process tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-15T23:13:43Z",
+          "completed_at": "2026-11-15T23:13:43Z"
+        },
+        {
+          "name": "Install frozen workspace without Desktop postinstall",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-15T23:13:43Z",
+          "completed_at": "2026-11-15T23:21:17Z"
+        },
+        {
+          "name": "Build existing controller and Host",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-15T23:21:17Z",
+          "completed_at": "2026-11-15T23:21:26Z"
+        },
+        {
+          "name": "Verify process contracts and retained Main Host transport",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-15T23:21:26Z",
+          "completed_at": "2026-11-15T23:23:20Z"
+        },
+        {
+          "name": "Verify original POSIX Node and shell lifecycle fixtures",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10,
+          "started_at": "2026-11-15T23:23:20Z",
+          "completed_at": "2026-11-15T23:23:20Z"
+        },
+        {
+          "name": "Prepare pinned Electron for native process fixtures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-11-15T23:23:20Z",
+          "completed_at": "2026-11-15T23:23:20Z"
+        },
+        {
+          "name": "Verify Linux Node exec descriptor closure under both original parents",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12,
+          "started_at": "2026-11-15T23:23:20Z",
+          "completed_at": "2026-11-15T23:23:20Z"
+        },
+        {
+          "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13,
+          "started_at": "2026-11-15T23:23:20Z",
+          "completed_at": "2026-11-15T23:23:20Z"
+        },
+        {
+          "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14,
+          "started_at": "2026-11-15T23:23:20Z",
+          "completed_at": "2026-11-15T23:23:20Z"
+        },
+        {
+          "name": "Build original Windows product broker and C++ fixtures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-11-15T23:23:20Z",
+          "completed_at": "2026-11-15T23:23:56Z"
+        },
+        {
+          "name": "Qualify original Windows Job and control under Host Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16,
+          "started_at": "2026-11-15T23:23:56Z",
+          "completed_at": "2026-11-15T23:24:07Z"
+        },
+        {
+          "name": "Qualify original Windows Job and control under Electron Node",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17,
+          "started_at": "2026-11-15T23:24:07Z",
+          "completed_at": "2026-11-15T23:24:19Z"
+        },
+        {
+          "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18,
+          "started_at": "2026-11-15T23:24:19Z",
+          "completed_at": "2026-11-15T23:24:56Z"
+        },
+        {
+          "name": "Qualify original codex source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-11-15T23:24:56Z",
+          "completed_at": "2026-11-15T23:26:32Z"
+        },
+        {
+          "name": "Qualify original claude source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20,
+          "started_at": "2026-11-15T23:26:32Z",
+          "completed_at": "2026-11-15T23:27:13Z"
+        },
+        {
+          "name": "Qualify original opencode source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21,
+          "started_at": "2026-11-15T23:27:13Z",
+          "completed_at": "2026-11-15T23:28:58Z"
+        },
+        {
+          "name": "Require completed original platform receipts and unchanged source",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 22,
+          "started_at": "2026-11-15T23:28:58Z",
+          "completed_at": "2026-11-15T23:28:59Z"
+        },
+        {
+          "name": "Preserve original process evidence including failures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23,
+          "started_at": "2026-11-15T23:28:59Z",
+          "completed_at": "2026-11-15T23:29:01Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 44,
+          "started_at": "2026-11-15T23:29:01Z",
+          "completed_at": "2026-11-15T23:29:43Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 45,
+          "started_at": "2026-11-15T23:29:43Z",
+          "completed_at": "2026-11-15T23:29:44Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 46,
+          "started_at": "2026-11-15T23:29:44Z",
+          "completed_at": "2026-11-15T23:29:48Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 47,
+          "started_at": "2026-11-15T23:29:48Z",
+          "completed_at": "2026-11-15T23:29:48Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132994541961",
+      "labels": [
+        "windows-11-arm"
+      ],
+      "runner_id": 1000374915,
+      "runner_name": "GitHub Actions 1000374915",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  ],
+  "raws": [
+    {
+      "path": "process-win32-x64.log",
+      "blob": "9a8daa24b5d2aa5b03942322b119bf2b45841b2a",
+      "bytes": 432930,
+      "sha256": "b67f65773370a6b4d0d6ca50ac67a045695bb507e3ee73b7bb2056c97cf41989"
+    },
+    {
+      "path": "process-win32-arm64.log",
+      "blob": "3f96e55695968503570bd7aebdd39ef61b61198b",
+      "bytes": 449554,
+      "sha256": "2e3821ade2b2d630a9425cd8a2674710d986c192b41b01af7cfa2dfa200c144b"
+    }
+  ],
+  "qualification": "Original incoming 1f Windows job outcomes under that source's expanded budgets only. Full raw bytes were root-hashed and independently reviewed. These do not qualify our original 15-second Process readiness or the distinct packaged P08 10-second Retry phase, nor prove a particular timing bottleneck. No rerun, cancellation or budget change is authorized."
+}

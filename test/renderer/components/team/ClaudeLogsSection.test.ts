@@ -15,6 +15,12 @@ const sectionState = vi.hoisted(() => ({
     enabled: boolean | undefined;
   }[],
   memberLogStreamUiEnabled: true,
+  memberLogTabCalls: [] as {
+    teamName: string;
+    memberName: string;
+    enabled?: boolean;
+    hostView?: unknown;
+  }[],
 }));
 
 function createController(): ClaudeLogsController {
@@ -64,7 +70,14 @@ vi.mock('@renderer/components/team/useClaudeLogsController', () => ({
   },
 }));
 
-vi.mock('@renderer/components/team/ClaudeLogsPanel', () => ({
+vi.mock('@renderer/components/team/CliLogsRichView', () => ({ CliLogsRichView: () => null }));
+
+vi.mock('@renderer/components/team/ClaudeLogsPanel', async () => ({
+  ClaudeLogsToolbar: (
+    await vi.importActual<typeof import('@renderer/components/team/ClaudeLogsPanel')>(
+      '@renderer/components/team/ClaudeLogsPanel'
+    )
+  ).ClaudeLogsToolbar,
   ClaudeLogsPanel: ({
     toolbarAccessory,
     toolbarControlsStart,
@@ -154,8 +167,22 @@ vi.mock('@renderer/components/ui/MemberSelect', () => ({
 }));
 
 vi.mock('@renderer/components/team/members/MemberLogsTab', () => ({
-  MemberLogsTab: ({ memberName }: { memberName: string }) =>
-    React.createElement('div', { 'data-testid': 'legacy-member-logs' }, memberName),
+  MemberLogsTab: (props: {
+    teamName: string;
+    memberName: string;
+    enabled?: boolean;
+    hostView?: unknown;
+  }) => {
+    sectionState.memberLogTabCalls.push(props);
+    return React.createElement(
+      'div',
+      {
+        'data-testid': 'legacy-member-logs',
+        'data-host-view': props.hostView ? 'true' : 'false',
+      },
+      props.memberName
+    );
+  },
 }));
 
 vi.mock('@renderer/components/ui/dialog', () => ({
@@ -225,6 +252,7 @@ vi.mock('@renderer/components/ui/tooltip', () => ({
 }));
 
 import { ClaudeLogsSection } from '@renderer/components/team/ClaudeLogsSection';
+import { MemberLogStreamWithLegacyFallback } from '@renderer/components/team/members/MemberLogStreamWithLegacyFallback';
 
 describe('ClaudeLogsSection source filtering', () => {
   beforeEach(() => {
@@ -250,6 +278,7 @@ describe('ClaudeLogsSection source filtering', () => {
     ];
     sectionState.controllerCalls = [];
     sectionState.memberLogStreamCalls = [];
+    sectionState.memberLogTabCalls = [];
     sectionState.memberLogStreamUiEnabled = true;
   });
 
@@ -1069,5 +1098,132 @@ describe('ClaudeLogsSection source filtering', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('routes actual Host lead and member sources directly through one typed fullscreen body', async () => {
+    sectionState.members[0] = { ...sectionState.members[0]!, name: 'Planner' };
+    const host = document.createElement('div'),
+      root = createRoot(host);
+    document.body.appendChild(host);
+    try {
+      await act(async () =>
+        root.render(React.createElement(ClaudeLogsSection, { teamName: 'host-team:TEST' }))
+      );
+      expect(sectionState.controllerCalls.every((call) => call.enabled === false)).toBe(true);
+      expect(sectionState.memberLogStreamCalls).toEqual([]);
+      expect(sectionState.memberLogTabCalls.at(-1)).toMatchObject({
+        teamName: 'host-team:TEST',
+        memberName: 'Planner',
+        enabled: true,
+      });
+      expect(
+        host.querySelector('[data-testid="legacy-member-logs"]')?.getAttribute('data-host-view')
+      ).toBe('true');
+      expect(host.querySelector('[data-testid="lead-logs-panel"]')).toBeNull();
+      expect(host.querySelector('input[placeholder="Search logs..."]')).not.toBeNull();
+      await act(async () => {
+        host.querySelector<HTMLButtonElement>('button[aria-label="Open fullscreen logs"]')!.click();
+      });
+      expect(host.querySelectorAll('[data-testid="legacy-member-logs"]')).toHaveLength(1);
+      const dialog = host.querySelector('[data-testid="logs-dialog"]')!;
+      const select = dialog.querySelector<HTMLSelectElement>('select')!;
+      await act(async () => {
+        select.value = 'Builder';
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      expect(sectionState.memberLogTabCalls.at(-1)).toMatchObject({
+        teamName: 'host-team:TEST',
+        memberName: 'Builder',
+        enabled: true,
+      });
+      expect(dialog.querySelector('input[placeholder="Search logs..."]')).not.toBeNull();
+      expect(sectionState.memberLogStreamCalls).toEqual([]);
+      expect(sectionState.controllerCalls.every((call) => call.enabled === false)).toBe(true);
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
+  });
+
+  it('does not query an invented Host lead while the actual roster is unavailable', async () => {
+    sectionState.members = [sectionState.members[1]!];
+    const host = document.createElement('div'),
+      root = createRoot(host);
+    document.body.appendChild(host);
+    try {
+      await act(async () =>
+        root.render(React.createElement(ClaudeLogsSection, { teamName: 'host-team:no-lead' }))
+      );
+      expect(sectionState.memberLogTabCalls).toEqual([]);
+      expect(sectionState.memberLogStreamCalls).toEqual([]);
+      expect(sectionState.controllerCalls.every((call) => call.enabled === false)).toBe(true);
+      const select = host.querySelector<HTMLSelectElement>('select')!;
+      expect([...select.options].map((option) => option.value)).toEqual(['Builder']);
+      await act(async () => {
+        select.value = 'Builder';
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      expect(sectionState.memberLogTabCalls.at(-1)?.memberName).toBe('Builder');
+      expect(sectionState.memberLogTabCalls.some((call) => call.memberName === 'team-lead')).toBe(
+        false
+      );
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
+  });
+
+  it.each(['host-team:disabled', 'legacy-disabled'])(
+    'preserves disabled read ownership through the fallback for %s',
+    async (teamName) => {
+      sectionState.memberLogStreamUiEnabled = teamName.startsWith('host-team:');
+      const host = document.createElement('div'),
+        root = createRoot(host);
+      document.body.appendChild(host);
+      try {
+        await act(async () =>
+          root.render(
+            React.createElement(MemberLogStreamWithLegacyFallback, {
+              teamName,
+              member: sectionState.members[1]!,
+              enabled: false,
+            })
+          )
+        );
+        expect(sectionState.memberLogTabCalls.at(-1)).toMatchObject({
+          teamName,
+          memberName: 'Builder',
+          enabled: false,
+        });
+        expect(sectionState.memberLogStreamCalls).toEqual([]);
+      } finally {
+        await act(async () => root.unmount());
+        host.remove();
+      }
+    }
+  );
+
+  it('keeps a disabled legacy error fallback disabled', async () => {
+    const host = document.createElement('div'),
+      root = createRoot(host);
+    document.body.appendChild(host);
+    try {
+      await act(async () =>
+        root.render(
+          React.createElement(MemberLogStreamWithLegacyFallback, {
+            teamName: 'legacy-disabled-error',
+            member: sectionState.members[1]!,
+            enabled: false,
+          })
+        )
+      );
+      await act(async () => {
+        host.querySelector<HTMLButtonElement>('[data-testid="member-log-stream"]')!.click();
+      });
+      expect(sectionState.memberLogTabCalls.at(-1)?.enabled).toBe(false);
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+    }
   });
 });

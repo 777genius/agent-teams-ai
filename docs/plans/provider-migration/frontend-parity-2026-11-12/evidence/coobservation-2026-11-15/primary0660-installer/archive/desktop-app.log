@@ -1,0 +1,233 @@
+[WARN] Your node_modules are out of sync with your lockfile. The value of the enableGlobalVirtualStore setting has changed
+$ node ./scripts/dev-with-runtime.mjs --remoteDebuggingPort 9222 --remoteDebuggingPort 9222
+Using runtime from explicit runtime override /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/bin/claude-multimodel
+Runtime version: 2.777.777 (teams orchestrator)
+Using terminal-platform runtime from CLAUDE_TERMINAL_DAEMON_BINARY
+vite v6.4.4 building SSR bundle for development...
+transforming...
+node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js (400:0): A comment
+
+"// Wrapped in a `@__PURE__` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle."
+
+in "node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js (74:0): A comment
+
+"/** Anchors a pattern source. The interpolation lives here rather than at the call site because
+ * esbuild will not drop a `@__PURE__` call whose own argument interpolates a variable, but it
+ * will drop `anchor(dateSource)`. Keeping it inline pinned `date` into every bundle. */"
+
+in "node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+"fchmodSync", "ftruncateSync", "renameSync" and "unlinkSync" are imported from external module "fs" but never used in "node_modules/.pnpm/@anthropic-ai+claude-agent-sdk@0.3.305_@anthropic-ai+sdk@0.122.0_zod@4.6.7__@modelconte_62c9a77da74e02db303bb50cb88ff403/node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs".
+✓ 4018 modules transformed.
+rendering chunks...
+dist-electron/main/sentry-artifact-inventory.json                       0.22 kB
+dist-electron/main/task-change-worker.cjs                               2.35 kB │ map:      2.29 kB
+dist-electron/main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs       4.25 kB │ map:      7.76 kB
+dist-electron/main/chunks/index-yaJFGvjB.cjs                            4.30 kB │ map:      6.10 kB
+dist-electron/main/team-data-worker.cjs                                 6.59 kB │ map:     10.78 kB
+dist-electron/main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs       9.72 kB │ map:     19.61 kB
+dist-electron/main/chunks/index-D9GX0Q6a.cjs                           28.61 kB │ map:     38.45 kB
+dist-electron/main/team-fs-worker.cjs                                  56.73 kB │ map:    108.01 kB
+dist-electron/main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs              68.95 kB │ map:    135.17 kB
+dist-electron/main/internal-storage-worker.cjs                        212.54 kB │ map:    417.54 kB
+dist-electron/main/chunks/taskChangeState-rZolvpL6.cjs                561.88 kB │ map:    792.47 kB
+dist-electron/main/chunks/TeamDataService-DySh5-O-.cjs                800.65 kB │ map:  1,744.24 kB
+dist-electron/main/chunks/taskHistory-2kbwfqIg.cjs                  1,646.70 kB │ map:  3,906.02 kB
+dist-electron/main/index.cjs                                       11,737.96 kB │ map: 24,511.67 kB
+✓ built in 42.83s
+
+electron main process built successfully
+
+-----
+
+vite v6.4.4 building SSR bundle for development...
+transforming...
+✓ 109 modules transformed.
+rendering chunks...
+dist-electron/preload/index.js  96.17 kB
+✓ built in 475ms
+
+electron preload scripts built successfully
+
+-----
+
+[file-viewer:vite-plugin] Copied 18/18 renderer assets to /Users/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.cache/document-preview-public/file-viewer
+dev server running for the electron renderer process at:
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+
+starting electron app...
+
+[App] Electron dev path overrides enabled {
+  userDataDir: '/Users/runner/work/_temp/TEST-desktop-backend-oILXLv/userData',
+  claudeRoot: '/Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude'
+}
+
+DevTools listening on ws://127.0.0.1:9222/devtools/browser/d94df95a-42f7-4b76-a52a-af51f9a1a10e
+[App] [dev] loading renderer from http://localhost:5173
+[Feature:Announcements] State transition { reason: 'writer_busy' }
+2026-11-16 00:47:59.072 Electron Helper[17921:50949] XPC error for connection com.apple.backupd.sandbox.xpc: Connection invalid
+2026-11-16 00:47:59.073 Electron Helper[17921:50950] XPC error for connection com.apple.backupd.sandbox.xpc: Connection invalid
+2026-11-16 00:47:59.075 Electron Helper[17921:50942] XPC error for connection com.apple.backupd.sandbox.xpc: Connection invalid
+2026-11-16 00:47:59.089 Electron Helper[17921:50942] XPC error for connection com.apple.backupd.sandbox.xpc: Connection invalid
+2026-11-16 00:47:59.090 Electron Helper[17921:50950] XPC error for connection com.apple.backupd.sandbox.xpc: Connection invalid
+2026-11-16 00:47:59.108 Electron Helper[17921:50950] XPC error for connection com.apple.backupd.sandbox.xpc: Connection invalid
+[Feature:Announcements] State transition { reason: 'disabled' }
+[Service:TeamFsWorkerClient] worker call slow op=listTeams ms=1570 workerTotalMs=4 pendingNow=0 queued=0 payload={"teamsDir":"/Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/teams","concurrency":12,"maxConfigReadMs":5000,"maxConfigBytes":10485760}
+[Service:TeamConfigReader] [listTeams] worker slow ms=1573 diag={"op":"listTeams","startedAt":1794790080606,"teamsDir":"/Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/teams","totalDirs":1,"returned":0,"skipped":1,"skipReasons":{"config_stat_failed":1},"slowest":[],"cacheHits":0,"cacheMisses":1,"cacheWriteSkips":0,"cacheEvictions":0,"totalMs":4}
+[App] [startup] renderer dom-ready
+[App] [startup] renderer did-finish-load
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Discovery:ProjectScanner] Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+2026-11-16 00:49:05.353 Electron Helper[17921:50949] XPC error for connection com.apple.backupd.sandbox.xpc: Connection invalid
+2026-11-16 00:49:05.354 Electron Helper[17921:50942] XPC error for connection com.apple.backupd.sandbox.xpc: Connection invalid
+2026-11-16 00:49:05.359 Electron Helper[17921:50949] XPC error for connection com.apple.backupd.sandbox.xpc: Connection invalid
+2026-11-16 00:49:05.370 Electron Helper[17921:50942] XPC error for connection com.apple.backupd.sandbox.xpc: Connection invalid
+2026-11-16 00:49:05.372 Electron Helper[17921:50942] XPC error for connection com.apple.backupd.sandbox.xpc: Connection invalid
+2026-11-16 00:49:05.374 Electron Helper[17921:50942] XPC error for connection com.apple.backupd.sandbox.xpc: Connection invalid
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[IPC:openCodeRuntime] Error in openCodeRuntime:getStatus: Backend routing: unavailable
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+2026-11-16 00:49:36.118 Electron Helper[17921:50942] XPC error for connection com.apple.backupd.sandbox.xpc: Connection invalid
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Discovery:ProjectScanner] Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[IPC:AgentBackend] Captured backend sender refused {
+  windowAvailable: true,
+  mainSender: true,
+  frameAvailable: false,
+  mainFrame: false,
+  frameUrl: false,
+  contentsUrl: true
+}
+(node:17705) electron: Frame property was accessed after it navigated or was destroyed. Avoid asynchronous tasks prior to indexing.
+(Use `Electron --trace-warnings ...` to show where the warning was created)
+(node:17705) electron: Frame property was accessed after it navigated or was destroyed. Avoid asynchronous tasks prior to indexing.
+(node:17705) electron: Frame property was accessed after it navigated or was destroyed. Avoid asynchronous tasks prior to indexing.
+(node:17705) electron: Frame property was accessed after it navigated or was destroyed. Avoid asynchronous tasks prior to indexing.
+(node:17705) electron: Frame property was accessed after it navigated or was destroyed. Avoid asynchronous tasks prior to indexing.
+(node:17705) electron: Frame property was accessed after it navigated or was destroyed. Avoid asynchronous tasks prior to indexing.
+(node:17705) electron: Frame property was accessed after it navigated or was destroyed. Avoid asynchronous tasks prior to indexing.
+(node:17705) electron: Frame property was accessed after it navigated or was destroyed. Avoid asynchronous tasks prior to indexing.
+(node:17705) electron: Frame property was accessed after it navigated or was destroyed. Avoid asynchronous tasks prior to indexing.
+[App] [startup] renderer dom-ready
+[App] [startup] renderer did-finish-load
+(node:17705) electron: Frame property was accessed after it navigated or was destroyed. Avoid asynchronous tasks prior to indexing.
+(node:17705) electron: Frame property was accessed after it navigated or was destroyed. Avoid asynchronous tasks prior to indexing.
+[Feature:AgentBackendConnections] Captured backend discovery held { phase: 'discover-bindings', code: 'forbidden' }
+(node:17705) electron: Frame property was accessed after it navigated or was destroyed. Avoid asynchronous tasks prior to indexing.
+(node:17705) electron: Frame property was accessed after it navigated or was destroyed. Avoid asynchronous tasks prior to indexing.
+(node:17705) electron: Frame property was accessed after it navigated or was destroyed. Avoid asynchronous tasks prior to indexing.
+(node:17705) electron: Frame property was accessed after it navigated or was destroyed. Avoid asynchronous tasks prior to indexing.
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Discovery:ProjectScanner] Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[IPC:openCodeRuntime] Error in openCodeRuntime:getStatus: Backend routing: unavailable
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Discovery:ProjectScanner] Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /Users/runner/work/_temp/TEST-desktop-backend-oILXLv/claude/projects
+[Feature:AgentBackendConnections] Captured backend discovery held { phase: 'discover-bindings', code: 'unavailable' }
+[Feature:Announcements] State transition { reason: 'writer_busy' }
+Error occurred in handler for 'agentBackend:connections': Error: No handler registered for 'agentBackend:connections'
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119140)
+    at Session.emit (node:events:514:28)

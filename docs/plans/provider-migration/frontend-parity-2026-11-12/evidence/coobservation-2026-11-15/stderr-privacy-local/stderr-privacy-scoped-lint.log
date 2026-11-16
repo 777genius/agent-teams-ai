@@ -1,0 +1,1 @@
+$ eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts

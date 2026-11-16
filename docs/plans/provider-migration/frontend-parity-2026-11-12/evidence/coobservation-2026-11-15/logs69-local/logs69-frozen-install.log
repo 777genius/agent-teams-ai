@@ -1,0 +1,19 @@
+Scope: all 7 workspace projects
+? Verifying lockfile against supply-chain policies (2533 entries)...
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +3 -2
++++--
+Progress: resolved 3, reused 1, downloaded 2, added 3, done
+
+   ╭───────────────────────────────────────────────╮
+   │                                               │
+   │     Update available! 11.22.0 → 12.21.0.      │
+   │     Changelog: https://pnpm.io/v/12.21.0      │
+   │   To update, run: corepack use pnpm@12.21.0   │
+   │                                               │
+   ╰───────────────────────────────────────────────╯
+
+✓ Lockfile passes supply-chain policies (2533 entries in 11.6s)
+
+Done in 12.5s using pnpm v11.22.0

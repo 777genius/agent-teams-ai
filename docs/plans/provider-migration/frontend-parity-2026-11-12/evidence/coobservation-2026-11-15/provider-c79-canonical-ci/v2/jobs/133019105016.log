@@ -1,0 +1,630 @@
+﻿2026-11-16T00:37:57.3929450Z Current runner version: '2.338.2'
+2026-11-16T00:37:57.3959240Z ##[group]Runner Image Provisioner
+2026-11-16T00:37:57.3960430Z Hosted Compute Agent
+2026-11-16T00:37:57.3961320Z Version: 20260819.586
+2026-11-16T00:37:57.3962530Z Commit: 3cc4a88dfa507ef76119ad1bb3eccc6378bb2b76
+2026-11-16T00:37:57.3963690Z Build Date: 2026-08-18T23:20:18Z
+2026-11-16T00:37:57.3964650Z Worker ID: {f61540d8-d314-4885-8f29-1c2f40e47811}
+2026-11-16T00:37:57.3965620Z Azure Region: westus
+2026-11-16T00:37:57.3966420Z ##[endgroup]
+2026-11-16T00:37:57.3969030Z ##[group]Operating System
+2026-11-16T00:37:57.3969910Z macOS
+2026-11-16T00:37:57.3970610Z 15.7.9
+2026-11-16T00:37:57.3971290Z 24G830
+2026-11-16T00:37:57.3972030Z ##[endgroup]
+2026-11-16T00:37:57.3972760Z ##[group]Runner Image
+2026-11-16T00:37:57.3973540Z Image: macos-15
+2026-11-16T00:37:57.3974300Z Version: 20260824.0482.1
+2026-11-16T00:37:57.3976060Z Included Software: https://github.com/actions/runner-images/blob/macos-15/20260824.0482/images/macos/macos-15-Readme.md
+2026-11-16T00:37:57.3978680Z Image Release: https://github.com/actions/runner-images/releases/tag/macos-15%2F20260824.0482
+2026-11-16T00:37:57.3980170Z ##[endgroup]
+2026-11-16T00:37:57.3981890Z ##[group]GITHUB_TOKEN Permissions
+2026-11-16T00:37:57.3984710Z Contents: read
+2026-11-16T00:37:57.3985520Z Metadata: read
+2026-11-16T00:37:57.3986290Z ##[endgroup]
+2026-11-16T00:37:57.3988940Z Secret source: Actions
+2026-11-16T00:37:57.3990210Z Cache mode: write
+2026-11-16T00:37:57.3991650Z Prepare workflow directory
+2026-11-16T00:37:57.4602320Z Prepare all required actions
+2026-11-16T00:37:57.4691210Z Getting action download info
+2026-11-16T00:37:57.8096170Z Download action repository 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-11-16T00:37:58.1798580Z Download action repository 'actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+2026-11-16T00:37:58.5352360Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-16T00:37:58.9335610Z Complete job name: native-v2-test (macos-15-intel, embedded-target-spi)
+2026-11-16T00:37:59.0634160Z ##[group]Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+2026-11-16T00:37:59.0638510Z with:
+2026-11-16T00:37:59.0639860Z   ref: c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-16T00:37:59.0641790Z   persist-credentials: false
+2026-11-16T00:37:59.0643980Z   repository: agent-teams-ai/old-provider-implementations
+2026-11-16T00:37:59.0656610Z   token: ***
+2026-11-16T00:37:59.0657510Z   ssh-strict: true
+2026-11-16T00:37:59.0658440Z   ssh-user: git
+2026-11-16T00:37:59.0659210Z   clean: true
+2026-11-16T00:37:59.0660180Z   sparse-checkout-cone-mode: true
+2026-11-16T00:37:59.0661220Z   fetch-depth: 1
+2026-11-16T00:37:59.0662080Z   fetch-tags: false
+2026-11-16T00:37:59.0662940Z   show-progress: true
+2026-11-16T00:37:59.0663880Z   lfs: false
+2026-11-16T00:37:59.0664610Z   submodules: false
+2026-11-16T00:37:59.0665670Z   set-safe-directory: true
+2026-11-16T00:37:59.0666800Z   allow-unsafe-pr-checkout: false
+2026-11-16T00:37:59.0668670Z ##[endgroup]
+2026-11-16T00:38:00.1176550Z Syncing repository: agent-teams-ai/old-provider-implementations
+2026-11-16T00:38:00.1181010Z ##[group]Getting Git version info
+2026-11-16T00:38:00.1184120Z Working directory is '/Users/runner/work/old-provider-implementations/old-provider-implementations'
+2026-11-16T00:38:00.1188460Z [command]/usr/local/bin/git version
+2026-11-16T00:38:00.1720190Z git version 2.55.0
+2026-11-16T00:38:00.1774590Z ##[endgroup]
+2026-11-16T00:38:00.1790100Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/eaff54ef-25e9-4fb0-a616-9aa69286a45d/.gitconfig'
+2026-11-16T00:38:00.1806960Z Temporarily overriding HOME='/Users/runner/work/_temp/eaff54ef-25e9-4fb0-a616-9aa69286a45d' before making global git config changes
+2026-11-16T00:38:00.1820340Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T00:38:00.1834540Z [command]/usr/local/bin/git config --global --add safe.directory /Users/runner/work/old-provider-implementations/old-provider-implementations
+2026-11-16T00:38:00.1991050Z Deleting the contents of '/Users/runner/work/old-provider-implementations/old-provider-implementations'
+2026-11-16T00:38:00.2001490Z ##[group]Determining repository object format
+2026-11-16T00:38:00.2006690Z ##[endgroup]
+2026-11-16T00:38:00.2010690Z ##[group]Initializing the repository
+2026-11-16T00:38:00.2016560Z [command]/usr/local/bin/git init /Users/runner/work/old-provider-implementations/old-provider-implementations
+2026-11-16T00:38:00.2545640Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-16T00:38:00.2553920Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-16T00:38:00.2576440Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-16T00:38:00.2580980Z hint: call:
+2026-11-16T00:38:00.2584380Z hint:
+2026-11-16T00:38:00.2589160Z hint: 	git config --global init.defaultBranch <name>
+2026-11-16T00:38:00.2594220Z hint:
+2026-11-16T00:38:00.2599090Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-16T00:38:00.2606040Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-16T00:38:00.2611900Z hint:
+2026-11-16T00:38:00.2615790Z hint: 	git branch -m <name>
+2026-11-16T00:38:00.2628470Z hint:
+2026-11-16T00:38:00.2632680Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-16T00:38:00.2641600Z Initialized empty Git repository in /Users/runner/work/old-provider-implementations/old-provider-implementations/.git/
+2026-11-16T00:38:00.2658690Z [command]/usr/local/bin/git remote add origin https://github.com/agent-teams-ai/old-provider-implementations
+2026-11-16T00:38:00.2781320Z ##[endgroup]
+2026-11-16T00:38:00.2785090Z ##[group]Disabling automatic garbage collection
+2026-11-16T00:38:00.2787900Z [command]/usr/local/bin/git config --local gc.auto 0
+2026-11-16T00:38:00.2937700Z ##[endgroup]
+2026-11-16T00:38:00.2941580Z ##[group]Setting up auth
+2026-11-16T00:38:00.2944510Z Removing SSH command configuration
+2026-11-16T00:38:00.2954290Z [command]/usr/local/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T00:38:00.3090730Z [command]/usr/local/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T00:38:00.4945080Z Removing HTTP extra header
+2026-11-16T00:38:00.4954690Z [command]/usr/local/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T00:38:00.5060950Z [command]/usr/local/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T00:38:00.7209920Z Removing includeIf entries pointing to credentials config files
+2026-11-16T00:38:00.7215260Z [command]/usr/local/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T00:38:00.7238660Z [command]/usr/local/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T00:38:00.9609450Z [command]/usr/local/bin/git config --file /Users/runner/work/_temp/git-credentials-7c74646f-88ed-4faa-911f-b0ec0748fa12.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-16T00:38:00.9631910Z [command]/usr/local/bin/git config --local includeIf.gitdir:/Users/runner/work/old-provider-implementations/old-provider-implementations/.git.path /Users/runner/work/_temp/git-credentials-7c74646f-88ed-4faa-911f-b0ec0748fa12.config
+2026-11-16T00:38:00.9731380Z [command]/usr/local/bin/git config --local includeIf.gitdir:/Users/runner/work/old-provider-implementations/old-provider-implementations/.git/worktrees/*.path /Users/runner/work/_temp/git-credentials-7c74646f-88ed-4faa-911f-b0ec0748fa12.config
+2026-11-16T00:38:00.9839950Z [command]/usr/local/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-7c74646f-88ed-4faa-911f-b0ec0748fa12.config
+2026-11-16T00:38:00.9960560Z [command]/usr/local/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-7c74646f-88ed-4faa-911f-b0ec0748fa12.config
+2026-11-16T00:38:01.0065380Z ##[endgroup]
+2026-11-16T00:38:01.0070170Z ##[group]Fetching the repository
+2026-11-16T00:38:01.0076420Z [command]/usr/local/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-16T00:38:01.6219410Z From https://github.com/agent-teams-ai/old-provider-implementations
+2026-11-16T00:38:01.6223380Z  * branch            c79b81bf002eaac95436da71c7049d7f309906a9 -> FETCH_HEAD
+2026-11-16T00:38:01.6234140Z [command]/usr/local/bin/git rev-parse --verify --quiet c79b81bf002eaac95436da71c7049d7f309906a9^{object}
+2026-11-16T00:38:01.6336770Z c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-16T00:38:01.6346190Z ##[endgroup]
+2026-11-16T00:38:01.6350340Z ##[group]Determining the checkout info
+2026-11-16T00:38:01.6355100Z ##[endgroup]
+2026-11-16T00:38:01.6371310Z [command]/usr/local/bin/git sparse-checkout disable
+2026-11-16T00:38:01.6507880Z [command]/usr/local/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-16T00:38:01.6615110Z ##[group]Checking out the ref
+2026-11-16T00:38:01.6618940Z [command]/usr/local/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-16T00:38:01.8405830Z HEAD is now at c79b81b fix: retain uncertain native suggestion ownership and targeted cancellation
+2026-11-16T00:38:01.8431530Z ##[endgroup]
+2026-11-16T00:38:01.8610240Z [command]/usr/local/bin/git log -1 --format=%H
+2026-11-16T00:38:01.8743650Z c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-16T00:38:01.8761810Z ##[group]Removing auth
+2026-11-16T00:38:01.8764710Z Removing SSH command configuration
+2026-11-16T00:38:01.8769030Z [command]/usr/local/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T00:38:01.8901900Z [command]/usr/local/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T00:38:02.0678490Z Removing HTTP extra header
+2026-11-16T00:38:02.0705790Z [command]/usr/local/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T00:38:02.0938170Z [command]/usr/local/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T00:38:02.3131100Z Removing includeIf entries pointing to credentials config files
+2026-11-16T00:38:02.3436570Z [command]/usr/local/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T00:38:02.3459070Z includeif.gitdir:/Users/runner/work/old-provider-implementations/old-provider-implementations/.git.path
+2026-11-16T00:38:02.3481620Z includeif.gitdir:/Users/runner/work/old-provider-implementations/old-provider-implementations/.git/worktrees/*.path
+2026-11-16T00:38:02.3546400Z includeif.gitdir:/github/workspace/.git.path
+2026-11-16T00:38:02.3553680Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T00:38:02.3594840Z [command]/usr/local/bin/git config --local --get-all includeif.gitdir:/Users/runner/work/old-provider-implementations/old-provider-implementations/.git.path
+2026-11-16T00:38:02.3615510Z /Users/runner/work/_temp/git-credentials-7c74646f-88ed-4faa-911f-b0ec0748fa12.config
+2026-11-16T00:38:02.3636500Z [command]/usr/local/bin/git config --local --unset includeif.gitdir:/Users/runner/work/old-provider-implementations/old-provider-implementations/.git.path /Users/runner/work/_temp/git-credentials-7c74646f-88ed-4faa-911f-b0ec0748fa12.config
+2026-11-16T00:38:02.3663700Z [command]/usr/local/bin/git config --local --get-all includeif.gitdir:/Users/runner/work/old-provider-implementations/old-provider-implementations/.git/worktrees/*.path
+2026-11-16T00:38:02.3738950Z /Users/runner/work/_temp/git-credentials-7c74646f-88ed-4faa-911f-b0ec0748fa12.config
+2026-11-16T00:38:02.3761170Z [command]/usr/local/bin/git config --local --unset includeif.gitdir:/Users/runner/work/old-provider-implementations/old-provider-implementations/.git/worktrees/*.path /Users/runner/work/_temp/git-credentials-7c74646f-88ed-4faa-911f-b0ec0748fa12.config
+2026-11-16T00:38:02.3786970Z [command]/usr/local/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-11-16T00:38:02.3888390Z /github/runner_temp/git-credentials-7c74646f-88ed-4faa-911f-b0ec0748fa12.config
+2026-11-16T00:38:02.3906350Z [command]/usr/local/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-7c74646f-88ed-4faa-911f-b0ec0748fa12.config
+2026-11-16T00:38:02.4048910Z [command]/usr/local/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T00:38:02.4173740Z /github/runner_temp/git-credentials-7c74646f-88ed-4faa-911f-b0ec0748fa12.config
+2026-11-16T00:38:02.4192420Z [command]/usr/local/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-7c74646f-88ed-4faa-911f-b0ec0748fa12.config
+2026-11-16T00:38:02.4400840Z [command]/usr/local/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T00:38:02.6443520Z Removing credentials config '/Users/runner/work/_temp/git-credentials-7c74646f-88ed-4faa-911f-b0ec0748fa12.config'
+2026-11-16T00:38:02.6468240Z ##[endgroup]
+2026-11-16T00:38:02.7238780Z ##[group]Run actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+2026-11-16T00:38:02.7242770Z with:
+2026-11-16T00:38:02.7244820Z   node-version: 24.21.0
+2026-11-16T00:38:02.7247690Z   package-manager-cache: false
+2026-11-16T00:38:02.7250320Z   check-latest: false
+2026-11-16T00:38:02.7274950Z   token: ***
+2026-11-16T00:38:02.7277200Z ##[endgroup]
+2026-11-16T00:38:03.0598170Z Attempting to download 24.21.0...
+2026-11-16T00:38:03.9124620Z Acquiring 24.21.0 - x64 from https://github.com/actions/node-versions/releases/download/24.21.0-34304089047/node-24.21.0-darwin-x64.tar.gz
+2026-11-16T00:38:05.2559990Z Extracting ...
+2026-11-16T00:38:05.3113910Z [command]/usr/bin/tar xz --strip 1 -C /Users/runner/work/_temp/0980dfc4-155b-43b4-9231-5fb4fe2b2913 -f /Users/runner/work/_temp/1abfc0d1-aca6-4b84-aca6-06f351330fea
+2026-11-16T00:38:10.0046730Z Adding to the cache ...
+2026-11-16T00:38:17.1007070Z ##[group]Environment details
+2026-11-16T00:38:17.7388250Z node: v24.21.0
+2026-11-16T00:38:17.7389700Z npm: 11.19.0
+2026-11-16T00:38:17.7390250Z yarn: 1.22.22
+2026-11-16T00:38:17.7391840Z ##[endgroup]
+2026-11-16T00:38:17.7626930Z ##[group]Run set -euo pipefail
+2026-11-16T00:38:17.7627960Z [36;1mset -euo pipefail[0m
+2026-11-16T00:38:17.7629130Z [36;1mnpm exec --yes --package=pnpm@11.18.0 -- pnpm install --frozen-lockfile --ignore-scripts[0m
+2026-11-16T00:38:17.7630520Z [36;1mnpm exec --yes --package=pnpm@11.18.0 -- pnpm build[0m
+2026-11-16T00:38:17.7735610Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T00:38:17.7736300Z ##[endgroup]
+2026-11-16T00:38:18.4055770Z npm warn Unknown project config "strict-peer-dependencies". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+2026-11-16T00:38:24.0278510Z Scope: all 3 workspace projects
+2026-11-16T00:38:24.0670870Z ? Verifying lockfile against supply-chain policies (152 entries)...
+2026-11-16T00:38:24.1444840Z Lockfile is up to date, resolution step is skipped
+2026-11-16T00:38:24.4514350Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-16T00:38:24.4942280Z Packages: +108
+2026-11-16T00:38:24.5153990Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-11-16T00:38:25.4295000Z Progress: resolved 108, reused 0, downloaded 0, added 0
+2026-11-16T00:38:26.5104500Z Progress: resolved 108, reused 0, downloaded 4, added 0
+2026-11-16T00:38:27.7639180Z Progress: resolved 108, reused 0, downloaded 24, added 0
+2026-11-16T00:38:28.7093050Z Progress: resolved 108, reused 0, downloaded 41, added 0
+2026-11-16T00:38:29.8659080Z Progress: resolved 108, reused 0, downloaded 59, added 0
+2026-11-16T00:38:30.0690680Z Packages are cloned from the content-addressable store to the virtual store.
+2026-11-16T00:38:30.1694890Z   Content-addressable store is at: /Users/runner/Library/pnpm/store/v11
+2026-11-16T00:38:30.2728560Z   Virtual store is at:             node_modules/.pnpm
+2026-11-16T00:38:30.8532700Z Progress: resolved 108, reused 0, downloaded 63, added 4
+2026-11-16T00:38:32.1105750Z Progress: resolved 108, reused 0, downloaded 64, added 4
+2026-11-16T00:38:33.1544640Z Progress: resolved 108, reused 0, downloaded 99, added 4
+2026-11-16T00:38:34.2143210Z Progress: resolved 108, reused 0, downloaded 107, added 11
+2026-11-16T00:38:34.3876660Z [WARN] Request took 10107ms: https://registry.npmjs.org/@types%2Fnode
+2026-11-16T00:38:36.1169020Z Progress: resolved 108, reused 0, downloaded 107, added 46
+2026-11-16T00:38:37.6155520Z ✓ Lockfile passes supply-chain policies (152 entries in 13.4s)
+2026-11-16T00:38:37.6195590Z Progress: resolved 108, reused 0, downloaded 107, added 76
+2026-11-16T00:38:38.5908870Z Progress: resolved 108, reused 0, downloaded 107, added 107
+2026-11-16T00:38:54.1738400Z Progress: resolved 108, reused 0, downloaded 108, added 107
+2026-11-16T00:38:54.2329250Z Progress: resolved 108, reused 0, downloaded 108, added 108, done
+2026-11-16T00:38:54.8128390Z 
+2026-11-16T00:38:54.9587030Z Done in 32.1s using pnpm v11.18.0
+2026-11-16T00:38:55.9069530Z npm warn Unknown project config "strict-peer-dependencies". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+2026-11-16T00:38:56.8704310Z $ pnpm -r run build
+2026-11-16T00:38:57.5609630Z Scope: 2 of 3 workspace projects
+2026-11-16T00:38:57.6618300Z packages/provider-session-contracts build$ tsc --project tsconfig.json --pretty false
+2026-11-16T00:38:58.9589510Z packages/provider-session-contracts build: Done
+2026-11-16T00:38:58.9597540Z packages/provider-implementations build$ tsc --project tsconfig.json --pretty false
+2026-11-16T00:39:02.2688760Z packages/provider-implementations build: Done
+2026-11-16T00:39:02.3210760Z ##[group]Run node --check scripts/native-v2-readonly-proof.mjs
+2026-11-16T00:39:02.3212140Z [36;1mnode --check scripts/native-v2-readonly-proof.mjs[0m
+2026-11-16T00:39:02.3213030Z [36;1mnode --check scripts/native-v2-model-candidate.mjs[0m
+2026-11-16T00:39:02.3213920Z [36;1mnode --check scripts/verify-native-v2-cli-hold.mjs[0m
+2026-11-16T00:39:02.3214980Z [36;1mnode --check scripts/native-v2-embedded-proof.mjs[0m
+2026-11-16T00:39:02.3215860Z [36;1mnode --check scripts/native-v2-spi-proof.mjs[0m
+2026-11-16T00:39:02.3216810Z [36;1mnode --check scripts/verify-native-v2-embedded-floor-hold.mjs[0m
+2026-11-16T00:39:02.3217880Z [36;1mnode --check scripts/verify-native-v2-interrupt-proof.mjs[0m
+2026-11-16T00:39:02.3218780Z [36;1mnode --check scripts/native-v2-mcp-proof.mjs[0m
+2026-11-16T00:39:02.3219620Z [36;1mnode --test scripts/native-v2-mcp-proof.test.mjs[0m
+2026-11-16T00:39:02.3220520Z [36;1mnode --check scripts/verify-native-v2-receipt-safety.mjs[0m
+2026-11-16T00:39:02.3221660Z [36;1mnode --test scripts/verify-native-v2-receipt-safety.test.mjs[0m
+2026-11-16T00:39:02.3304420Z shell: /bin/bash -e {0}
+2026-11-16T00:39:02.3304920Z ##[endgroup]
+2026-11-16T00:39:03.3327800Z ✔ MCP child records owned process before initialize (118.442781ms)
+2026-11-16T00:39:03.4950050Z ✔ MCP child upgrades same marker after real initialize (167.145576ms)
+2026-11-16T00:39:08.4994950Z ℹ tests 2
+2026-11-16T00:39:08.4997330Z ℹ suites 0
+2026-11-16T00:39:08.4997970Z ℹ pass 2
+2026-11-16T00:39:08.4998490Z ℹ fail 0
+2026-11-16T00:39:08.5000640Z ℹ cancelled 0
+2026-11-16T00:39:08.5001210Z ℹ skipped 0
+2026-11-16T00:39:08.5002240Z ℹ todo 0
+2026-11-16T00:39:08.5002900Z ℹ duration_ms 5390.556378
+2026-11-16T00:39:11.4197240Z ✔ accepts one clean receipt for the selected matrix proof (401.000446ms)
+2026-11-16T00:39:11.4237370Z ✔ rejects absent, mismatched or extra receipts (270.133046ms)
+2026-11-16T00:39:11.4303850Z ✔ rejects unsupported matrix proof and missing proof selector (176.226265ms)
+2026-11-16T00:39:11.4398540Z ✔ rejects unqualified or unsafe native error receipts (222.04323ms)
+2026-11-16T00:39:11.4451830Z ✔ rejects nested credential-like keys and recognizable token values (957.079247ms)
+2026-11-16T00:39:11.4475900Z ✔ rejects slash-normalized Windows drive and UNC paths in public receipts (244.170209ms)
+2026-11-16T00:39:11.4487370Z ✔ ordinary non-secret URL metadata is not mistaken for a Windows drive path (80.086359ms)
+2026-11-16T00:39:11.4488900Z ✔ does not reject safe Session authority assertion metadata (80.180844ms)
+2026-11-16T00:39:11.4510270Z ✔ accepts native lifecycle credential-read counter but not a string payload (160.884613ms)
+2026-11-16T00:39:11.4526970Z ℹ tests 9
+2026-11-16T00:39:11.4539630Z ℹ suites 0
+2026-11-16T00:39:11.4561400Z ℹ pass 9
+2026-11-16T00:39:11.4570010Z ℹ fail 0
+2026-11-16T00:39:11.4594730Z ℹ cancelled 0
+2026-11-16T00:39:11.4610700Z ℹ skipped 0
+2026-11-16T00:39:11.4631360Z ℹ todo 0
+2026-11-16T00:39:11.4642870Z ℹ duration_ms 2737.234138
+2026-11-16T00:39:11.4832650Z ##[group]Run set -euo pipefail
+2026-11-16T00:39:11.4833240Z [36;1mset -euo pipefail[0m
+2026-11-16T00:39:11.4833860Z [36;1mmkdir -p "$RUNNER_TEMP/opencode-v2-embedded"[0m
+2026-11-16T00:39:11.4835230Z [36;1mnpm install --prefix "$RUNNER_TEMP/opencode-v2-embedded" --no-save \[0m
+2026-11-16T00:39:11.4836350Z [36;1m  --package-lock=true --ignore-scripts --no-audit --no-fund @opencode/sdk@2.1.4[0m
+2026-11-16T00:39:11.4837520Z [36;1mnpm ls --prefix "$RUNNER_TEMP/opencode-v2-embedded" --depth=0 @opencode/sdk[0m
+2026-11-16T00:39:11.4904630Z shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T00:39:11.4905300Z env:
+2026-11-16T00:39:11.4905720Z   npm_config_audit: false
+2026-11-16T00:39:11.4906250Z   npm_config_fund: false
+2026-11-16T00:39:11.4906670Z ##[endgroup]
+2026-11-16T00:39:35.6733460Z npm warn EBADENGINE Unsupported engine {
+2026-11-16T00:39:35.6734830Z npm warn EBADENGINE   package: '@opentui/core@0.6.8',
+2026-11-16T00:39:35.6740220Z npm warn EBADENGINE   required: { bun: '>=1.3.14', node: '>=26.4.0' },
+2026-11-16T00:39:35.6741560Z npm warn EBADENGINE   current: { node: 'v24.21.0', npm: '11.19.0' }
+2026-11-16T00:39:35.6742630Z npm warn EBADENGINE }
+2026-11-16T00:39:39.6593790Z npm warn deprecated @ai-sdk/vercel@2.0.39: The v0 Model API has been removed, and @ai-sdk/vercel no longer works. Use the v0 API instead: https://v0.app/docs/api
+2026-11-16T00:39:39.8917570Z npm warn deprecated @opentelemetry/sdk-trace-node@2.8.0: Use @opentelemetry/sdk-trace package
+2026-11-16T00:39:40.4578390Z npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+2026-11-16T00:39:43.6348990Z npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+2026-11-16T00:39:48.6950650Z npm warn deprecated @opentelemetry/sdk-trace-base@2.8.0: Use @opentelemetry/sdk-trace package
+2026-11-16T00:39:56.3563980Z 
+2026-11-16T00:39:56.3564670Z added 384 packages in 45s
+2026-11-16T00:39:56.9740130Z /Users/runner/work/_temp/opencode-v2-embedded
+2026-11-16T00:39:56.9741200Z └── @opencode/sdk@2.1.4 extraneous
+2026-11-16T00:39:56.9742320Z 
+2026-11-16T00:39:57.0038830Z ##[group]Run node scripts/native-v2-spi-proof.mjs
+2026-11-16T00:39:57.0039480Z [36;1mnode scripts/native-v2-spi-proof.mjs[0m
+2026-11-16T00:39:57.0094380Z shell: /bin/bash -e {0}
+2026-11-16T00:39:57.0094750Z env:
+2026-11-16T00:39:57.0095290Z   OPENCODE_V2_EMBEDDED_NPM_PREFIX: /Users/runner/work/_temp/opencode-v2-embedded
+2026-11-16T00:39:57.0097320Z   OPENCODE_V2_SPI_RECEIPT: /Users/runner/work/old-provider-implementations/old-provider-implementations/native-v2-embedded-target-spi-proof.json
+2026-11-16T00:39:57.0098580Z   OPENCODE_V2_TEST_EXPECTED_PLATFORM: darwin-x64
+2026-11-16T00:39:57.0099060Z ##[endgroup]
+2026-11-16T00:39:59.6865770Z [00:39:59.685] INFO (#4): database schema bootstrap started { migrations: 50 }
+2026-11-16T00:39:59.7060060Z [00:39:59.702] INFO (#4): database schema bootstrap completed { migrations: 50, durationMs: 17 }
+2026-11-16T00:40:00.4333180Z [00:40:00.343] INFO (#165) http.span=253ms: location services booted {
+2026-11-16T00:40:00.4502200Z   directory: '/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:00.4724290Z   workspaceID: undefined,
+2026-11-16T00:40:00.5307060Z   durationMs: 250
+2026-11-16T00:40:00.5496930Z }
+2026-11-16T00:40:00.7703840Z [00:40:00.766] INFO (#253) http.span=676ms: event {
+2026-11-16T00:40:00.7783170Z   event: {
+2026-11-16T00:40:00.7851090Z     id: 'evt_1e1cbedfe0013rNtxyervZLS78',
+2026-11-16T00:40:00.7858540Z     created: 1794789600766,
+2026-11-16T00:40:00.7910450Z     type: 'provider.updated',
+2026-11-16T00:40:00.7955280Z     location: {
+2026-11-16T00:40:00.8081930Z       directory: '/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:00.8117920Z       workspaceID: undefined
+2026-11-16T00:40:00.8146750Z     },
+2026-11-16T00:40:00.8187300Z     data: {}
+2026-11-16T00:40:00.8220760Z   }
+2026-11-16T00:40:00.8272620Z }
+2026-11-16T00:40:00.8322660Z [00:40:00.793] INFO (#257) http.span=703ms: event {
+2026-11-16T00:40:00.8368170Z   event: {
+2026-11-16T00:40:00.8401680Z     id: 'evt_1e1cbee18001NKcefR11XJHE4q',
+2026-11-16T00:40:00.8447200Z     created: 1794789600792,
+2026-11-16T00:40:00.8502920Z     type: 'model.updated',
+2026-11-16T00:40:00.8616500Z     location: {
+2026-11-16T00:40:00.8689170Z       directory: '/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:00.9178880Z       workspaceID: undefined
+2026-11-16T00:40:00.9788040Z     },
+2026-11-16T00:40:00.9888190Z     data: {}
+2026-11-16T00:40:00.9952840Z   }
+2026-11-16T00:40:00.9980220Z }
+2026-11-16T00:40:01.0027960Z [00:40:00.819] INFO (#502) http.span=729ms: event {
+2026-11-16T00:40:01.0077540Z   event: {
+2026-11-16T00:40:01.0111000Z     id: 'evt_1e1cbee33001vck7XeqIhaWdrA',
+2026-11-16T00:40:01.0155920Z     created: 1794789600819,
+2026-11-16T00:40:01.0208950Z     type: 'agent.updated',
+2026-11-16T00:40:01.0209930Z     location: {
+2026-11-16T00:40:01.0267200Z       directory: '/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:01.0300870Z       workspaceID: undefined
+2026-11-16T00:40:01.0336670Z     },
+2026-11-16T00:40:01.0381370Z     data: {}
+2026-11-16T00:40:01.0425760Z   }
+2026-11-16T00:40:01.0459350Z }
+2026-11-16T00:40:01.0493850Z [00:40:00.829] INFO (#502) http.span=739ms: event {
+2026-11-16T00:40:01.0550260Z   event: {
+2026-11-16T00:40:01.0683630Z     id: 'evt_1e1cbee3d001EfRZ2SB77tAwcA',
+2026-11-16T00:40:01.0721470Z     created: 1794789600829,
+2026-11-16T00:40:01.0770370Z     type: 'command.updated',
+2026-11-16T00:40:01.0798330Z     location: {
+2026-11-16T00:40:01.0827230Z       directory: '/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:01.0853950Z       workspaceID: undefined
+2026-11-16T00:40:01.0885080Z     },
+2026-11-16T00:40:01.0915750Z     data: {}
+2026-11-16T00:40:01.0947180Z   }
+2026-11-16T00:40:01.0976730Z }
+2026-11-16T00:40:01.3139360Z [00:40:01.309] INFO (#692) http.span=1219ms: mcp connected { server: 'testteams', tools: 1 } {
+2026-11-16T00:40:01.3142930Z   server: 'testteams',
+2026-11-16T00:40:01.3174110Z   directory: '/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:01.3199340Z   connectionID: '30548603-077c-42b2-93c5-687ce108fd4c'
+2026-11-16T00:40:01.3221500Z }
+2026-11-16T00:40:01.3252550Z [00:40:01.316] INFO (#567): event {
+2026-11-16T00:40:01.3296180Z   event: {
+2026-11-16T00:40:01.3297100Z     id: 'evt_1e1cbf023002qYFwz96dyBWDLY',
+2026-11-16T00:40:01.3358740Z     created: 1794789601315,
+2026-11-16T00:40:01.3414590Z     type: 'command.updated',
+2026-11-16T00:40:01.3478020Z     location: {
+2026-11-16T00:40:01.3587260Z       directory: '/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:01.3647680Z       workspaceID: undefined
+2026-11-16T00:40:01.3675640Z     },
+2026-11-16T00:40:01.3705460Z     data: {}
+2026-11-16T00:40:01.3746590Z   }
+2026-11-16T00:40:01.3778130Z }
+2026-11-16T00:40:01.3807470Z [00:40:01.328] INFO (#582) http.span=913ms: location services booted {
+2026-11-16T00:40:01.3870800Z   directory: '/private/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:01.3872600Z   workspaceID: undefined,
+2026-11-16T00:40:01.3903300Z   durationMs: 913
+2026-11-16T00:40:01.3933840Z }
+2026-11-16T00:40:01.6627910Z [00:40:01.656] INFO (#731) http.span=1241ms: event {
+2026-11-16T00:40:01.6665030Z   event: {
+2026-11-16T00:40:01.6719700Z     id: 'evt_1e1cbf178001Z8xopSYeo3rFLU',
+2026-11-16T00:40:01.6748860Z     created: 1794789601656,
+2026-11-16T00:40:01.6815440Z     type: 'provider.updated',
+2026-11-16T00:40:01.6975850Z     location: {
+2026-11-16T00:40:01.6998970Z       directory: '/private/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:01.7020720Z       workspaceID: undefined
+2026-11-16T00:40:01.7050720Z     },
+2026-11-16T00:40:01.7054390Z     data: {}
+2026-11-16T00:40:01.7067190Z   }
+2026-11-16T00:40:01.7081670Z }
+2026-11-16T00:40:01.7105160Z [00:40:01.658] INFO (#735) http.span=1243ms: event {
+2026-11-16T00:40:01.7109920Z   event: {
+2026-11-16T00:40:01.7139470Z     id: 'evt_1e1cbf17a001hpCSaSZIffIZq0',
+2026-11-16T00:40:01.7155030Z     created: 1794789601658,
+2026-11-16T00:40:01.7159420Z     type: 'model.updated',
+2026-11-16T00:40:01.7174730Z     location: {
+2026-11-16T00:40:01.7180930Z       directory: '/private/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:01.7188660Z       workspaceID: undefined
+2026-11-16T00:40:01.7198330Z     },
+2026-11-16T00:40:01.7199850Z     data: {}
+2026-11-16T00:40:01.7201780Z   }
+2026-11-16T00:40:01.7204270Z }
+2026-11-16T00:40:01.7266890Z [00:40:01.659] INFO (#984) http.span=1244ms: event {
+2026-11-16T00:40:01.7321780Z   event: {
+2026-11-16T00:40:01.7401150Z     id: 'evt_1e1cbf17b0014sB0a9EV5fmdPH',
+2026-11-16T00:40:01.7455760Z     created: 1794789601659,
+2026-11-16T00:40:01.7488740Z     type: 'agent.updated',
+2026-11-16T00:40:01.7506880Z     location: {
+2026-11-16T00:40:01.7523450Z       directory: '/private/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:01.7544770Z       workspaceID: undefined
+2026-11-16T00:40:01.7568390Z     },
+2026-11-16T00:40:01.7577000Z     data: {}
+2026-11-16T00:40:01.7595230Z   }
+2026-11-16T00:40:01.7597350Z }
+2026-11-16T00:40:01.7629820Z [00:40:01.660] INFO (#984) http.span=1245ms: event {
+2026-11-16T00:40:01.7652210Z   event: {
+2026-11-16T00:40:01.7686020Z     id: 'evt_1e1cbf17c001RDvVVhDO3Gx7rK',
+2026-11-16T00:40:01.7696000Z     created: 1794789601660,
+2026-11-16T00:40:01.7713870Z     type: 'command.updated',
+2026-11-16T00:40:01.7723930Z     location: {
+2026-11-16T00:40:01.7740430Z       directory: '/private/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:01.7751900Z       workspaceID: undefined
+2026-11-16T00:40:01.7769300Z     },
+2026-11-16T00:40:01.7772350Z     data: {}
+2026-11-16T00:40:01.7788380Z   }
+2026-11-16T00:40:01.7799060Z }
+2026-11-16T00:40:01.7822670Z [00:40:01.693] INFO (#1121) http.span=1278ms: mcp connected { server: 'testteams', tools: 1 } {
+2026-11-16T00:40:01.7823680Z   server: 'testteams',
+2026-11-16T00:40:01.7866070Z   directory: '/private/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:01.7879430Z   connectionID: '470ce586-79ff-4f5f-a22e-2c7da5842386'
+2026-11-16T00:40:01.7902280Z }
+2026-11-16T00:40:01.7907160Z [00:40:01.696] INFO (#1047): event {
+2026-11-16T00:40:01.7931910Z   event: {
+2026-11-16T00:40:01.7963680Z     id: 'evt_1e1cbf1a0001ENxllhq6vp1TWV',
+2026-11-16T00:40:01.8082490Z     created: 1794789601696,
+2026-11-16T00:40:01.8119380Z     type: 'command.updated',
+2026-11-16T00:40:01.8147000Z     location: {
+2026-11-16T00:40:01.8171560Z       directory: '/private/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:01.8194490Z       workspaceID: undefined
+2026-11-16T00:40:01.8208750Z     },
+2026-11-16T00:40:01.8222460Z     data: {}
+2026-11-16T00:40:01.8236210Z   }
+2026-11-16T00:40:01.8250230Z }
+2026-11-16T00:40:03.4369150Z [00:40:03.435] INFO (#2857) http.span=48ms: location services booted {
+2026-11-16T00:40:03.4400280Z   directory: '/private/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:03.4401420Z   workspaceID: undefined,
+2026-11-16T00:40:03.4411340Z   durationMs: 47
+2026-11-16T00:40:03.4435370Z }
+2026-11-16T00:40:03.5118630Z [00:40:03.508] INFO (#2945) http.span=121ms: event {
+2026-11-16T00:40:03.5147280Z   event: {
+2026-11-16T00:40:03.5173860Z     id: 'evt_1e1cbf8b40014MyeACzbrwgQaJ',
+2026-11-16T00:40:03.5175460Z     created: 1794789603508,
+2026-11-16T00:40:03.5231780Z     type: 'provider.updated',
+2026-11-16T00:40:03.5307430Z     location: {
+2026-11-16T00:40:03.5374820Z       directory: '/private/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:03.5403730Z       workspaceID: undefined
+2026-11-16T00:40:03.5436290Z     },
+2026-11-16T00:40:03.5462840Z     data: {}
+2026-11-16T00:40:03.5493650Z   }
+2026-11-16T00:40:03.5567240Z }
+2026-11-16T00:40:03.5629390Z [00:40:03.511] INFO (#2949) http.span=124ms: event {
+2026-11-16T00:40:03.5681470Z   event: {
+2026-11-16T00:40:03.5720420Z     id: 'evt_1e1cbf8b7001V3NZnAylrANf38',
+2026-11-16T00:40:03.5813760Z     created: 1794789603511,
+2026-11-16T00:40:03.5860820Z     type: 'model.updated',
+2026-11-16T00:40:03.5891060Z     location: {
+2026-11-16T00:40:03.5911690Z       directory: '/private/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:03.5968400Z       workspaceID: undefined
+2026-11-16T00:40:03.6000550Z     },
+2026-11-16T00:40:03.6029290Z     data: {}
+2026-11-16T00:40:03.6057510Z   }
+2026-11-16T00:40:03.6114380Z }
+2026-11-16T00:40:03.6169600Z [00:40:03.512] INFO (#3195) http.span=125ms: event {
+2026-11-16T00:40:03.6219900Z   event: {
+2026-11-16T00:40:03.6305730Z     id: 'evt_1e1cbf8b8001gdDj1mB1sH5QwM',
+2026-11-16T00:40:03.6389470Z     created: 1794789603512,
+2026-11-16T00:40:03.6446410Z     type: 'agent.updated',
+2026-11-16T00:40:03.6473730Z     location: {
+2026-11-16T00:40:03.6516030Z       directory: '/private/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:03.6589670Z       workspaceID: undefined
+2026-11-16T00:40:03.6617840Z     },
+2026-11-16T00:40:03.6649790Z     data: {}
+2026-11-16T00:40:03.6678730Z   }
+2026-11-16T00:40:03.6710870Z }
+2026-11-16T00:40:03.6728220Z [00:40:03.513] INFO (#3195) http.span=126ms: event {
+2026-11-16T00:40:03.6742740Z   event: {
+2026-11-16T00:40:03.6773920Z     id: 'evt_1e1cbf8b8002S79AzJ9NzGRxc6',
+2026-11-16T00:40:03.6802410Z     created: 1794789603512,
+2026-11-16T00:40:03.6814500Z     type: 'command.updated',
+2026-11-16T00:40:03.6844410Z     location: {
+2026-11-16T00:40:03.6894840Z       directory: '/private/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:03.6936200Z       workspaceID: undefined
+2026-11-16T00:40:03.6972430Z     },
+2026-11-16T00:40:03.7014990Z     data: {}
+2026-11-16T00:40:03.7037650Z   }
+2026-11-16T00:40:03.7043980Z }
+2026-11-16T00:40:03.7066930Z [00:40:03.545] INFO (#3376) http.span=158ms: mcp connected { server: 'testteams', tools: 1 } {
+2026-11-16T00:40:03.7140690Z   server: 'testteams',
+2026-11-16T00:40:03.7169350Z   directory: '/private/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:03.7198550Z   connectionID: 'a8a1a7fc-c3ec-48fe-b8f3-7bdef153c81f'
+2026-11-16T00:40:03.7223170Z }
+2026-11-16T00:40:03.7230520Z [00:40:03.549] INFO (#3258): event {
+2026-11-16T00:40:03.7240870Z   event: {
+2026-11-16T00:40:03.7255500Z     id: 'evt_1e1cbf8dd002yqxIqHIsSdA4cd',
+2026-11-16T00:40:03.7262360Z     created: 1794789603549,
+2026-11-16T00:40:03.7283500Z     type: 'command.updated',
+2026-11-16T00:40:03.7300150Z     location: {
+2026-11-16T00:40:03.7322950Z       directory: '/private/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:03.7362020Z       workspaceID: undefined
+2026-11-16T00:40:03.7394800Z     },
+2026-11-16T00:40:03.7443590Z     data: {}
+2026-11-16T00:40:03.7472970Z   }
+2026-11-16T00:40:03.7515390Z }
+2026-11-16T00:40:03.7591650Z [00:40:03.571] INFO (#3262) http.span=127ms: location services booted {
+2026-11-16T00:40:03.7673390Z   directory: '/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:03.7782230Z   workspaceID: undefined,
+2026-11-16T00:40:03.7857550Z   durationMs: 126
+2026-11-16T00:40:03.7902700Z }
+2026-11-16T00:40:03.7925040Z [00:40:03.752] INFO (#3421) http.span=308ms: event {
+2026-11-16T00:40:03.7966580Z   event: {
+2026-11-16T00:40:03.7991120Z     id: 'evt_1e1cbf9a8001xJmILQM85wfko0',
+2026-11-16T00:40:03.7995420Z     created: 1794789603752,
+2026-11-16T00:40:03.8038800Z     type: 'provider.updated',
+2026-11-16T00:40:03.8061480Z     location: {
+2026-11-16T00:40:03.8086440Z       directory: '/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:03.8094090Z       workspaceID: undefined
+2026-11-16T00:40:03.8119720Z     },
+2026-11-16T00:40:03.8140340Z     data: {}
+2026-11-16T00:40:03.8181920Z   }
+2026-11-16T00:40:03.8182400Z }
+2026-11-16T00:40:03.8230820Z [00:40:03.754] INFO (#3425) http.span=310ms: event {
+2026-11-16T00:40:03.8284920Z   event: {
+2026-11-16T00:40:03.8411160Z     id: 'evt_1e1cbf9aa001ZqbKzMfkQos7Rs',
+2026-11-16T00:40:03.8464730Z     created: 1794789603754,
+2026-11-16T00:40:03.8509370Z     type: 'model.updated',
+2026-11-16T00:40:03.8535950Z     location: {
+2026-11-16T00:40:03.8545070Z       directory: '/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:03.8593440Z       workspaceID: undefined
+2026-11-16T00:40:03.8614140Z     },
+2026-11-16T00:40:03.8660550Z     data: {}
+2026-11-16T00:40:03.8680790Z   }
+2026-11-16T00:40:03.8804520Z }
+2026-11-16T00:40:03.8872740Z [00:40:03.756] INFO (#3668) http.span=312ms: event {
+2026-11-16T00:40:03.8903410Z   event: {
+2026-11-16T00:40:03.8927000Z     id: 'evt_1e1cbf9ac001hqskOGN1iHSkvC',
+2026-11-16T00:40:03.8948730Z     created: 1794789603756,
+2026-11-16T00:40:03.9002790Z     type: 'agent.updated',
+2026-11-16T00:40:03.9021970Z     location: {
+2026-11-16T00:40:03.9057820Z       directory: '/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:03.9121430Z       workspaceID: undefined
+2026-11-16T00:40:03.9214580Z     },
+2026-11-16T00:40:03.9265290Z     data: {}
+2026-11-16T00:40:03.9290600Z   }
+2026-11-16T00:40:03.9330110Z }
+2026-11-16T00:40:03.9366510Z [00:40:03.757] INFO (#3668) http.span=313ms: event {
+2026-11-16T00:40:03.9400490Z   event: {
+2026-11-16T00:40:03.9434800Z     id: 'evt_1e1cbf9ad001Te5Ksba7m1nqMM',
+2026-11-16T00:40:03.9465170Z     created: 1794789603757,
+2026-11-16T00:40:03.9499420Z     type: 'command.updated',
+2026-11-16T00:40:03.9649990Z     location: {
+2026-11-16T00:40:03.9694200Z       directory: '/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:03.9735330Z       workspaceID: undefined
+2026-11-16T00:40:03.9800960Z     },
+2026-11-16T00:40:03.9847740Z     data: {}
+2026-11-16T00:40:03.9860270Z   }
+2026-11-16T00:40:03.9881240Z }
+2026-11-16T00:40:03.9908030Z [00:40:03.787] INFO (#3794) http.span=343ms: mcp connected { server: 'testteams', tools: 1 } {
+2026-11-16T00:40:03.9928500Z   server: 'testteams',
+2026-11-16T00:40:03.9965610Z   directory: '/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:04.0004150Z   connectionID: '32ecc22e-be61-4ae9-83ae-078b7eb25539'
+2026-11-16T00:40:04.0027280Z }
+2026-11-16T00:40:04.0055130Z [00:40:03.789] INFO (#3731): event {
+2026-11-16T00:40:04.0100740Z   event: {
+2026-11-16T00:40:04.0146710Z     id: 'evt_1e1cbf9cd002fuaiQQgbaWxrDt',
+2026-11-16T00:40:04.0185350Z     created: 1794789603789,
+2026-11-16T00:40:04.0237900Z     type: 'command.updated',
+2026-11-16T00:40:04.0288510Z     location: {
+2026-11-16T00:40:04.0320950Z       directory: '/var/folders/20/jp1_0n3n7kndh6rnbqb5344m0000gn/T/TEST-v2-spi-INv5j1/workspace',
+2026-11-16T00:40:04.0352900Z       workspaceID: undefined
+2026-11-16T00:40:04.0412810Z     },
+2026-11-16T00:40:04.0441180Z     data: {}
+2026-11-16T00:40:04.0452940Z   }
+2026-11-16T00:40:04.0480010Z }
+2026-11-16T00:40:04.0655070Z {"kind":"TEST_V2_NATIVE_SESSION_SPI","version":"2.1.4","qualified":false,"completed":true,"cleanup":true,"steps":["native_all_provider_directory_without_account_or_configuration_fields","native_owned_identity_model_permissions_instructions_mcp_readback","session_SPI_native_model_tool_permission_deny_then_once_actual_MCP_effect","session_SPI_native_builtin_edit_immutable_input_window_and_real_log_anchors","session_SPI_original_verified_PNG_native_ACK_history_and_actual_image_inference","session_SPI_active_stream_interrupt_native_terminal_and_stop","cold_same_session_new_endpoint_checkpoint_no_replay_and_fresh_input","private_credential_witness_retained_on_cold_readback_and_absent_from_model_requests"],"nativeEditCapture":{"dialect":"v2","protocolRevision":"2.1.4","immutable":true,"beforeSha256":"25a7c1737d90d27dbb0c62ad6ece92b5812455ef7678700b8a09692668092b05","afterSha256":"10333d3e3654e64b195fd298e8b19a3c6ef9c9fb8fc25d25c77721b4379afc46","patchSha256":"528e739026006adf808185798abeea93871eb848d9566c5a6a39bfb03dea53fe","calledEvent":{"id":"evt_1e1cbf51a001XYY7GU5KXFIan2","seq":37},"completedEvent":{"id":"evt_1e1cbf532001W2lYD7BDvu7CZT","seq":39,"type":"session.tool.success"},"filePathFlavor":"workspace-relative","unifiedIndexEnvelope":true},"nativePNG":{"mimeType":"image/png","sha256":"5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6","byteLength":71,"resolutions":1,"actualInference":true,"coldHistory":true,"resubmitted":false},"modelRequests":9,"mcpEffects":1,"instructionsEffective":true,"nativeCatalogEffective":true,"platform":"darwin-x64"}
+2026-11-16T00:40:04.1501270Z ##[group]Run node scripts/verify-native-v2-receipt-safety.mjs
+2026-11-16T00:40:04.1502180Z [36;1mnode scripts/verify-native-v2-receipt-safety.mjs[0m
+2026-11-16T00:40:04.1578660Z shell: /bin/bash -e {0}
+2026-11-16T00:40:04.1579080Z env:
+2026-11-16T00:40:04.1579540Z   OPENCODE_V2_EXPECTED_TEST_PROOF: embedded-target-spi
+2026-11-16T00:40:04.1580160Z ##[endgroup]
+2026-11-16T00:40:04.2680790Z TEST_native_receipts_safe count=1
+2026-11-16T00:40:04.3256640Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-11-16T00:40:04.3257520Z with:
+2026-11-16T00:40:04.3258110Z   name: opencode-v2-discovery-macos-15-intel-embedded-target-spi
+2026-11-16T00:40:04.3258870Z   if-no-files-found: warn
+2026-11-16T00:40:04.3259340Z   retention-days: 7
+2026-11-16T00:40:04.3264790Z   path: native-v2-readonly-proof.json
+native-v2-model-candidate.json
+native-v2-embedded-proof.json
+native-v2-embedded-model-proof.json
+native-v2-embedded-interrupt-proof.json
+native-v2-embedded-target-interrupt-proof.json
+native-v2-embedded-target-spi-proof.json
+native-v2-embedded-mcp-proof.json
+native-v2-embedded-target-mcp-proof.json
+native-v2-embedded-floor-proof.json
+native-v2-embedded-target-proof.json
+native-v2-embedded-target-model-proof.json
+native-v2-embedded-target-tool-proof.json
+native-v2-embedded-pinned-tool-proof.json
+/Users/runner/work/_temp/opencode-v2-embedded/package-lock.json
+/Users/runner/work/_temp/opencode-v2-native/npm/package-lock.json
+
+2026-11-16T00:40:04.3270310Z   compression-level: 6
+2026-11-16T00:40:04.3271370Z   overwrite: false
+2026-11-16T00:40:04.3271830Z   include-hidden-files: false
+2026-11-16T00:40:04.3272320Z ##[endgroup]
+2026-11-16T00:40:04.6350910Z (node:6675) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T00:40:04.6384200Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T00:40:04.7296430Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-11-16T00:40:04.8884960Z The least common ancestor is /Users/runner/work. This will be the root directory of the artifact
+2026-11-16T00:40:04.8886220Z With the provided path, there will be 1 file uploaded
+2026-11-16T00:40:04.8887360Z Artifact name is valid!
+2026-11-16T00:40:04.8887990Z Root directory input is valid!
+2026-11-16T00:40:05.0098410Z (node:6675) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-16T00:40:05.0311490Z Beginning upload of artifact content to blob storage
+2026-11-16T00:40:05.3140390Z Uploaded bytes 1273
+2026-11-16T00:40:05.3986070Z Finished uploading artifact content to blob storage!
+2026-11-16T00:40:05.4010060Z SHA256 digest of uploaded artifact zip is 8a3b879c9d844a0fd3d63f622567fa51e8e170f7963d2ab6ca209780d394cf42
+2026-11-16T00:40:05.4052930Z Finalizing artifact upload
+2026-11-16T00:40:05.7495550Z Artifact opencode-v2-discovery-macos-15-intel-embedded-target-spi.zip successfully finalized. Artifact ID 14187893630
+2026-11-16T00:40:05.7527220Z Artifact opencode-v2-discovery-macos-15-intel-embedded-target-spi has been successfully uploaded! Final size is 1273 bytes. Artifact ID is 14187893630
+2026-11-16T00:40:05.7560900Z Artifact download URL: https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43781376036/artifacts/14187893630
+2026-11-16T00:40:05.7750400Z Post job cleanup.
+2026-11-16T00:40:05.9901260Z Post job cleanup.
+2026-11-16T00:40:06.1529280Z [command]/usr/local/bin/git version
+2026-11-16T00:40:06.1643000Z git version 2.55.0
+2026-11-16T00:40:06.1987260Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/4930a6a8-cd1f-416c-9732-12f970689265/.gitconfig'
+2026-11-16T00:40:06.2003570Z Temporarily overriding HOME='/Users/runner/work/_temp/4930a6a8-cd1f-416c-9732-12f970689265' before making global git config changes
+2026-11-16T00:40:06.2030660Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T00:40:06.2049510Z [command]/usr/local/bin/git config --global --add safe.directory /Users/runner/work/old-provider-implementations/old-provider-implementations
+2026-11-16T00:40:06.2083130Z Removing SSH command configuration
+2026-11-16T00:40:06.2112730Z [command]/usr/local/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T00:40:06.2166420Z [command]/usr/local/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T00:40:06.4956190Z Removing HTTP extra header
+2026-11-16T00:40:06.5053200Z [command]/usr/local/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T00:40:06.5195330Z [command]/usr/local/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T00:40:06.6072470Z Removing includeIf entries pointing to credentials config files
+2026-11-16T00:40:06.6331120Z [command]/usr/local/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T00:40:06.6793350Z [command]/usr/local/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T00:40:06.8356080Z Cleaning up orphan processes
+2026-11-16T00:40:07.2516320Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

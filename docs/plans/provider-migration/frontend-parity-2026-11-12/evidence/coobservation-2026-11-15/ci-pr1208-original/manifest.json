@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 1,
+  "scope": "Original frozen PR1208 completed Process four tuples and Installer; raw/API evidence only",
+  "head": "6e222b57f700832cfd78a934a3b6a205a5764761",
+  "tree": "2ac4903718c3ce3e615b209085226d5d35f0a2a1",
+  "runAttempt": 1,
+  "results": [
+    {
+      "key": "x64",
+      "job": 132987257822,
+      "file": "process-win32-x64.log",
+      "bytes": 109018,
+      "sha256": "0cbd048e060aac288bfd92f7b1b0268e03bf20d3cea758d6f4fc24ab9ccbefe3",
+      "sourceHead": "6e222b57f700832cfd78a934a3b6a205a5764761",
+      "conclusion": "failure",
+      "started": "2026-11-15T22:51:41Z",
+      "completed": "2026-11-15T22:55:17Z",
+      "artifact": {
+        "id": 14184641705,
+        "name": "host-process-fixtures-win32-x64-6e222b57f700832cfd78a934a3b6a205a5764761",
+        "size": 9634,
+        "digest": "sha256:08d776f6557b62175338fd00eaf899d7f401268d78c1ea21d1fa022ea9382de2",
+        "head": "6e222b57f700832cfd78a934a3b6a205a5764761"
+      },
+      "qualification": {
+        "host": {
+          "pass": 160,
+          "fail": 0,
+          "skip": 3
+        },
+        "protocol": {
+          "files": 3,
+          "pass": 53
+        },
+        "main": {
+          "files": 8,
+          "pass": 81
+        },
+        "types": "Original combined Host/native/retained compiler/build step completed before tests",
+        "posix": null,
+        "windowsNative": "Not reached: original fixture link LNK2019 __imp_GetSystemWow64Directory2W and LNK1120"
+      }
+    },
+    {
+      "key": "arm",
+      "job": 132987258103,
+      "file": "process-win32-arm64.log",
+      "bytes": 132092,
+      "sha256": "d9ab1582c7e08a85f2c74bb7c2d9538a3420ed29f8be774e1d17fe2d251c0fd7",
+      "sourceHead": "6e222b57f700832cfd78a934a3b6a205a5764761",
+      "conclusion": "failure",
+      "started": "2026-11-15T22:51:37Z",
+      "completed": "2026-11-15T23:04:23Z",
+      "artifact": {
+        "id": 14184986325,
+        "name": "host-process-fixtures-win32-arm64-6e222b57f700832cfd78a934a3b6a205a5764761",
+        "size": 10016,
+        "digest": "sha256:c528a101b5334aeb7efa56e6ee0c946e335c55f209e77729b71e1290f544f11d",
+        "head": "6e222b57f700832cfd78a934a3b6a205a5764761"
+      },
+      "qualification": {
+        "host": {
+          "pass": 160,
+          "fail": 0,
+          "skip": 3
+        },
+        "protocol": {
+          "files": 3,
+          "pass": 53
+        },
+        "main": {
+          "files": 8,
+          "pass": 81
+        },
+        "types": "Original combined Host/native/retained compiler/build step completed before tests",
+        "posix": null,
+        "windowsNative": "Not reached: original fixture link LNK2019 __imp_GetSystemWow64Directory2W and LNK1120"
+      }
+    },
+    {
+      "key": "darwinARM",
+      "job": 132987258050,
+      "file": "process-darwin-arm64.log",
+      "bytes": 122122,
+      "sha256": "e4ea5edbbece1d7faa042b912db69aae16f79a0397bdd8d3b6dcd29cac2283c6",
+      "sourceHead": "6e222b57f700832cfd78a934a3b6a205a5764761",
+      "conclusion": "success",
+      "started": "2026-11-15T22:59:25Z",
+      "completed": "2026-11-15T23:03:47Z",
+      "artifact": {
+        "id": 14185300539,
+        "name": "host-process-fixtures-darwin-arm64-6e222b57f700832cfd78a934a3b6a205a5764761",
+        "size": 11930,
+        "digest": "sha256:fba65e47c92535dfc8646b56f802ce1bbd2508841c352c7e9b3928972a84acfb",
+        "head": "6e222b57f700832cfd78a934a3b6a205a5764761"
+      },
+      "qualification": {
+        "host": {
+          "pass": 161,
+          "fail": 0,
+          "skip": 2
+        },
+        "protocol": {
+          "files": 3,
+          "pass": 53
+        },
+        "main": {
+          "files": 8,
+          "pass": 81
+        },
+        "types": "Original combined Host/native/retained compiler/build step completed before tests",
+        "posix": {
+          "pass": 23,
+          "fail": 0,
+          "skip": 0
+        },
+        "windowsNative": "Not applicable"
+      }
+    },
+    {
+      "key": "darwinX64",
+      "job": 132987258088,
+      "file": "process-darwin-x64.log",
+      "bytes": 140095,
+      "sha256": "e2cb7fa18a333828ce29ef065da737045bcf3e24b4f1f948e98642c31c9b7e32",
+      "sourceHead": "6e222b57f700832cfd78a934a3b6a205a5764761",
+      "conclusion": "success",
+      "started": "2026-11-15T23:06:07Z",
+      "completed": "2026-11-15T23:17:57Z",
+      "artifact": {
+        "id": 14185607346,
+        "name": "host-process-fixtures-darwin-x64-6e222b57f700832cfd78a934a3b6a205a5764761",
+        "size": 12423,
+        "digest": "sha256:734e1f2e8791ecf3240dc5419fe78ff8cec6ff8c9bf97a1f7e5640a13e70e968",
+        "head": "6e222b57f700832cfd78a934a3b6a205a5764761"
+      },
+      "qualification": {
+        "host": {
+          "pass": 161,
+          "fail": 0,
+          "skip": 2
+        },
+        "protocol": {
+          "files": 3,
+          "pass": 53
+        },
+        "main": {
+          "files": 8,
+          "pass": 81
+        },
+        "types": "Original combined Host/native/retained compiler/build step completed before tests",
+        "posix": {
+          "pass": 23,
+          "fail": 0,
+          "skip": 0
+        },
+        "windowsNative": "Not applicable"
+      }
+    },
+    {
+      "key": "installer",
+      "job": 132987259044,
+      "file": "desktop-installer-darwin-arm64.log",
+      "bytes": 176338,
+      "sha256": "a5a799a68066c2152f6f4b2f3cc024c6121ee9ddd5c2191fdbf24bcd4ac4ff30",
+      "sourceHead": "6e222b57f700832cfd78a934a3b6a205a5764761",
+      "conclusion": "success",
+      "started": "2026-11-15T23:18:01Z",
+      "completed": "2026-11-15T23:25:41Z",
+      "artifact": {
+        "id": 14186145110,
+        "name": "host-emulated-darwin-arm64-6e222b57f700832cfd78a934a3b6a205a5764761-installer",
+        "size": 1129449,
+        "digest": "sha256:82047d2f9c553243bb6387c2e95b8e056278d27f9081e4136d9cd8c698d24158",
+        "head": "6e222b57f700832cfd78a934a3b6a205a5764761"
+      },
+      "qualification": {
+        "shared": {
+          "pass": 116,
+          "fail": 0,
+          "skip": 1
+        },
+        "installer": {
+          "pass": 7,
+          "fail": 0,
+          "skip": 0
+        },
+        "emptyJournalEight": "All eight explicitly passed",
+        "wholeSelectedJourney": "PASS in original job; payload/ZIP not independently read here"
+      }
+    }
+  ],
+  "limits": [
+    "Run metadata still reported queued while direct jobs reported these terminal results; do not infer whole-run success or absence of other work.",
+    "Linux Process and other useful jobs remain pending; no cancellation, rerun, ref or PR metadata action by this reviewer.",
+    "Both Windows fail at fixture linking, before original native Node/Electron and source-provider gates. SDK repair a42 is a later separate source and has no result from these jobs.",
+    "No ZIP contents, actual images or receipt payloads were materialized by this reviewer. Artifact sizes/digests/heads are API/upload joins only.",
+    "Installer shared suite has one original capture skip; it is not117 passing cases. Existing eight empty-state journal negatives each passed.",
+    "Darwin source tests and POSIX fixtures do not qualify Windows or real Claude/Codex/native provider/release. Counts overlap existing suites and are not summed as unique tests.",
+    "Decoded logs are preserved byte-for-byte as supplied by the log tool, including existing line endings."
+  ]
+}

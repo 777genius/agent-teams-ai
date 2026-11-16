@@ -81,6 +81,7 @@ export function createRuntimeMemberProviderFactory(options: {
   readRuntime: RuntimeOwner['readCapturedSession'];
   readCheckpoint: RuntimeOwner['readCheckpoint'];
   observe: RuntimeOwner['observeProviderActivity'];
+  observeProcessOutput?: RuntimeOwner['observeProcessOutput'];
   onProgress(entry: MemberEntry): void;
 }): RuntimeOwnerOptions['driverFactory'] {
   const beforeTeamAuthority = options.beforeTeamAuthority;
@@ -147,6 +148,11 @@ export function createRuntimeMemberProviderFactory(options: {
         capturedConfig = structuredClone(request),
         owner = entry.team.owner,
         principalId = entry.profile.principalId;
+      const observeProcessOutput = options.observeProcessOutput;
+      const assertProcessSource = () => {
+        if (options.isSealed()) throw new RuntimeOwnerError('forbidden');
+        authority.assertCurrent();
+      };
       const captureSource: MemberInputCapture = (requireLead = false) =>
         captureNativeInputAuthority({
           binding,
@@ -265,6 +271,14 @@ export function createRuntimeMemberProviderFactory(options: {
             ? { assertReadinessCredential: readiness.assertReadinessCredential } : {}),
           canCaptureRegisteredProcess: authority.isCurrent,
           readCheckpoint: options.readCheckpoint,
+          ...(observeProcessOutput && entry.profile.provider !== 'opencode' ? {
+            observeProcessOutput: (observation) => {
+              try {
+                assertProcessSource();
+                observeProcessOutput(binding, capturedConfig, observation, assertProcessSource);
+              } catch { /* Diagnostics cannot change the original process outcome. */ }
+            },
+          } : {}),
           ...(entry.profile.provider === 'claude' && request.checkpointRef !== undefined ? {
             readCheckpointSource: createClaudeCheckpointSource({
               entry, request, profileId: options.profileId, hostIncarnation: options.hostIncarnation,

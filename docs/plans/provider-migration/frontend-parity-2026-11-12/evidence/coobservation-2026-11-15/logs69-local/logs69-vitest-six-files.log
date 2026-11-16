@@ -1,0 +1,25 @@
+
+ RUN  v3.2.6 /workspace/scratch/c714f5bce554/agent-teams-reconciled-local
+
+ ✓ test/renderer/components/team/ClaudeLogsSection.test.ts (21 tests) 142ms
+stderr | test/renderer/components/team/members/hostLogStatsTabs.test.tsx
+Warning: KaTeX doesn't work in quirks mode. Make sure your website has a suitable doctype.
+
+ ✓ test/renderer/components/team/members/hostLogStatsTabs.test.tsx (5 tests) 189ms
+stderr | test/renderer/components/team/members/MemberLogsPolling.test.ts
+Warning: KaTeX doesn't work in quirks mode. Make sure your website has a suitable doctype.
+
+ ✓ test/renderer/components/team/members/MemberLogsPolling.test.ts (14 tests) 130ms
+ ✓ test/features/agent-backend/hostTaskActivity.test.ts (7 tests) 68ms
+stderr | test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx
+Warning: KaTeX doesn't work in quirks mode. Make sure your website has a suitable doctype.
+
+ ✓ test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx (2 tests) 48ms
+ ✓ test/features/agent-backend/runtimeActivityFacade.test.ts (10 tests) 605ms
+   ✓ finite Runtime activity facade > projects actual NDJSON Runtime activity through the production facade after a canonical Team input  593ms
+
+ Test Files  6 passed (6)
+      Tests  59 passed (59)
+   Start at  02:24:18
+   Duration  27.77s (transform 8.59s, setup 229ms, collect 24.38s, tests 1.18s, environment 793ms, prepare 251ms)
+

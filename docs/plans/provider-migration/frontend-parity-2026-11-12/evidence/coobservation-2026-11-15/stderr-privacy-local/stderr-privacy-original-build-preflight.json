@@ -1,0 +1,31 @@
+{
+  "head": "a3a9f56baf00a67f18256caea7721c3f6b954ca3",
+  "status": "",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "files": [
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "bytes": 7855,
+      "sha256": "df315063bd119870f52b932daf72880ac4ea40340e023049a236fed79e505c37",
+      "gitBlob": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+      "mtimeNs": 1794788574015183018,
+      "lines": 165
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "bytes": 14242,
+      "sha256": "e6f1a2d049117442bbdc26ad2c525b0f95d1080740bd5caec59a50930e0de45c",
+      "gitBlob": "e52785444caebdc8c698d87ac122f4a13742b5cc",
+      "mtimeNs": 1794788574021642829,
+      "lines": 247
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/adapters/providers/observeMemberProcessStderr.js",
+      "bytes": 8126,
+      "sha256": "352833eba40dc6c8e463ea4888d30c967a591bea439814d7e529a5027ac80965",
+      "gitBlob": "28d5b215c56bc1e664c6c257cc26c888aeaf235a",
+      "mtimeNs": 1794788625983090701,
+      "lines": 193
+    }
+  ]
+}

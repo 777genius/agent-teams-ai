@@ -7,7 +7,7 @@ import { runtimeDigest } from '../../packages/legacy-agent-host/dist/runtime/ide
 import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
 import { fileDigest } from './desktop-backend-fixture.ts';
 import { createDesktopUiControls, desktopJsLiteral as literal } from './desktop-ui-controls.ts';
-import { record, rows } from './desktop-resume-records.ts';
+import { json, record, rows } from './desktop-resume-records.ts';
 import { prepareNativeChatAttachments, verifyNativeChatAttachmentMessage } from './desktop-native-chat-attachments-ui.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import { readDesktopEmulatedCollaborationEffects, verifyDesktopEmulatedCollaborationFixture } from './desktop-emulated-collaboration-fixture.ts';
@@ -244,7 +244,41 @@ export async function runDesktopEmulatedCollaborationUi(cdp: UiCdpPort, options:
   await revealDesktopReply(cdp, 'TEST_UI_COLLAB_GROUP_REPLY', { assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value) });
   proof.group = { ...groupProof, calls: collaborationCalls, observedInputs: groupsObserved, screenshot: await screenshot('group') };
 
-  const beforeRemoveSessions = await sessions(); await back(); const beforeRemove = await records.owner();
+  const beforeRemoveSessions = await sessions(); await back();
+  const logs = '[data-section-id="claude-logs"]', expandLogs = logs + ' button[aria-label="Expand section"]';
+  if (await cdp.evaluate(`Boolean(document.querySelector(${literal(expandLogs)}))`)) {
+    await ui.scrollTo(expandLogs, 'original collaboration Logs'); await ui.click(expandLogs, 'expand original collaboration Logs');
+  }
+  await ui.waitRead(`document.querySelector(${literal(logs)})?.textContent.includes('alice · Captured runtime activity')`, 'original default Lead Logs');
+  const beforeLogCommands = await records.commands(), beforeLogEffects = await effects();
+  await ui.scrollTo(logs + ' button[aria-label="Log source"]', 'original log source selector');
+  await ui.click(logs + ' button[aria-label="Log source"]', 'open original log source selector');
+  await ui.click('[data-radix-popper-content-wrapper] [role="option"] > span.font-medium', 'select original Bob Logs', 'bob');
+  await ui.waitRead(`(()=>{const e=document.querySelector(${literal(logs)});return e?.textContent.includes('bob · Captured runtime activity')&&
+    !e.textContent.includes('alice · Captured runtime activity')})()`, 'only selected actual member Logs');
+  const bobSession = byMember(beforeRemoveSessions, 'bob-id');
+  const bobActivity = await json(join(fixture.root, 'hoststore/runtime-events', runtimeDigest(bobSession.binding) + '.json'));
+  const bobReply = array(bobActivity.events).filter(event => record(event.data).kind === 'text' &&
+    record(event.data).text === 'TEST group reply sent').at(-1);
+  assert.ok(bobReply, 'original Bob provider reply is retained');
+  const bobRow = logs + ' [data-host-log-event-id=' + literal(bobReply.eventId) + ']';
+  await ui.scrollTo(bobRow + ' [role="button"]', 'original selected member output');
+  await ui.click(bobRow + ' [role="button"]', 'expand original selected member output');
+  await ui.scrollTo(bobRow + ' [data-host-log-content] p', 'actual selected member output', String(record(bobReply.data).text));
+  await ui.waitRead(`(()=>{const e=document.querySelector(${literal(bobRow)});return e&&
+    e.dataset.hostLogSequence===${literal(String(bobReply.sequence))}&&e.dataset.hostLogKind==='text'&&
+    [...e.querySelectorAll('[data-host-log-content] p')].some(p=>p.textContent===${literal(record(bobReply.data).text)})})()`,
+    'exact Bob output cannot come from Lead or conversation');
+  proof.memberLogs = { memberId: 'bob-id', binding: bobSession.binding, eventId: bobReply.eventId,
+    sequence: bobReply.sequence, text: record(bobReply.data).text, screenshot: await screenshot('member-logs') };
+  await ui.scrollTo(logs + ' button[aria-label="Log source"]', 'original Lead source selector');
+  await ui.click(logs + ' button[aria-label="Log source"]', 'reopen original log sources');
+  await ui.click('[data-radix-popper-content-wrapper] [role="option"] > span.font-medium', 'restore original Lead Logs', 'Lead');
+  await ui.waitRead(`document.querySelector(${literal(logs)})?.textContent.includes('alice · Captured runtime activity')`, 'original Lead route restored');
+  assert.deepEqual(await records.commands(), beforeLogCommands, 'member log selection adds no command');
+  assert.deepEqual(await effects(), beforeLogEffects, 'member log selection adds no provider action');
+  assert.deepEqual(await sessions(), beforeRemoveSessions, 'member log selection cannot allocate or alter Runtime inputs');
+  const beforeRemove = await records.owner();
   await ui.scrollTo('[data-section-id="team"] [role="button"] span.font-medium', 'original Carol detail', 'carol');
   await ui.click('[data-section-id="team"] [role="button"] span.font-medium', 'open original Carol detail', 'carol');
   await ui.click('[role="dialog"] button', 'request original Carol removal once', 'Remove');

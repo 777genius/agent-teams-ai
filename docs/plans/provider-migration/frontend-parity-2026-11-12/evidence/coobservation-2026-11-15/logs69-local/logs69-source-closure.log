@@ -1,0 +1,24 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ '5d50c085c587fe9aede8c523b23786cc3a14c0d6b72d337e05d3a416df75f8d7'
+- '2e4566fa4aafd7b6db99195177385ffa96c2b1e50b72f260dd13fb61181473eb'
+
+    at file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/[eval1]:10:172
+    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
+    at async node:internal/modules/esm/loader:223:26
+    at async ModuleLoader.executeModuleJob (node:internal/modules/esm/loader:220:20)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: '5d50c085c587fe9aede8c523b23786cc3a14c0d6b72d337e05d3a416df75f8d7',
+  expected: '2e4566fa4aafd7b6db99195177385ffa96c2b1e50b72f260dd13fb61181473eb',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

@@ -1648,3 +1648,202 @@ for (const label of ['missing selected A', 'non-string A handle', 'empty A handl
     assert.deepEqual(f.steps, []);
   });
 }
+
+
+type NavigationState = { paneLayout: { focusedPaneId: unknown; panes: Record<string, unknown>[] }; selectedTeamName: unknown; secret: string };
+function navigationState(team = hostTeamSelectionKey('TEST-A'), paneId = 'pane-1', tabId = 'tab-A'): NavigationState {
+  return { paneLayout: { focusedPaneId: paneId, panes: [{ id: paneId, activeTabId: tabId,
+    tabs: [{ id: tabId, type: 'team', teamName: team }] }] }, selectedTeamName: team, secret: 'TEST-private-unrelated-value' };
+}
+async function passiveNavigationFixture() {
+  const counts = { reads: 0, target: 0, attribute: 0, clock: 0, queries: 0, send: 0, evaluate: 0, micro: 0, timer: 0 };
+  const listeners = new Map<string, (event: Record<string, unknown>) => void>(), microtasks: (() => void)[] = [], timers: (() => void)[] = [];
+  let state: unknown = navigationState();
+  class TestElement {
+    tagName = 'DIV'; id = ''; className = 'team-row-zebra-card'; name: unknown = hostTeamSelectionKey('TEST-A');
+    card: TestElement | null = this; targetThrows = false; attributeThrows = false; isCard = true;
+    closest(selector: string): TestElement | null {
+      if (selector === '[data-team-name]') { counts.target++; if (this.targetThrows) throw new Error('TEST target read'); return this.card; }
+      assert.ok(['button', '.kanban-task-card', '[role="dialog"]'].includes(selector)); return null;
+    }
+    matches(selector: string) { assert.equal(selector, '.team-row-zebra-card'); return this.isCard; }
+    getAttribute(name: string): unknown {
+      if (name === 'data-team-name') { counts.attribute++; if (this.attributeThrows) throw new Error('TEST target attribute'); return this.name; }
+      assert.equal(name, 'aria-label'); return null;
+    }
+  }
+  const element = new TestElement();
+  const store: (() => never) & { getState(this: unknown): unknown } = Object.assign(() => assert.fail('never invoke the Zustand bound hook'), {
+    getState(this: unknown): unknown { assert.equal(this, store); counts.reads++; return state; },
+  });
+  const window: Record<string, unknown> = { __agentTeamsDevStore: store };
+  const document = {
+    activeElement: element as TestElement | null,
+    addEventListener(name: string, listener: (event: Record<string, unknown>) => void, options: unknown) {
+      assert.deepEqual(JSON.parse(JSON.stringify(options)), { capture: true, passive: true });
+      assert.equal(listeners.has(name), false); listeners.set(name, listener);
+    },
+    querySelectorAll(selector: string) {
+      assert.ok(['[aria-roledescription="sortable"][aria-pressed="true"]', '[id^="DndLiveRegion-"]'].includes(selector));
+      counts.queries++; return [];
+    },
+  };
+  const json = { stringify(value: unknown): string { const text = JSON.stringify(value); assert.ok(typeof text === 'string'); return text; } };
+  const context = { window, document, Element: TestElement, HTMLButtonElement: TestElement, JSON: json,
+    performance: { now() { counts.clock++; return 123.4; } },
+    queueMicrotask(callback: () => void) { counts.micro++; microtasks.push(callback); },
+    setTimeout(callback: () => void, delay: number) { assert.equal(delay, 0); counts.timer++; timers.push(callback); return 1; } };
+  const ui = createDesktopUiControls({
+    async send(method, params) { counts.send++; assert.equal(method, 'Emulation.setFocusEmulationEnabled'); assert.deepEqual(params, { enabled: true }); return {}; },
+    async evaluate(expression) { counts.evaluate++; return expression === 'document.visibilityState' ? 'visible' : runInNewContext(expression, context); },
+  }, { assertOwnedRenderer() { assert.fail('observer adds no action-owner reads'); }, step() { assert.fail('observer adds no input action'); } });
+  await ui.observeInput();
+  assert.deepEqual([...listeners.keys()], ['pointerdown', 'pointerup', 'pointercancel', 'pointermove', 'click', 'keydown', 'keyup', 'focusin', 'focusout']);
+  assert.deepEqual([counts.send, counts.evaluate, counts.reads, counts.clock, counts.micro, counts.timer], [1, 2, 0, 0, 0, 0]);
+  const events = () => window.__TEST_desktopInputEvents as Record<string, unknown>[];
+  const dragEvents = () => window.__TEST_desktopDragEvents as Record<string, unknown>[];
+  const emit = (type = 'click', target: unknown = element, buttons = 0) => {
+    const event = { target, clientX: 191, clientY: 228, button: 0, buttons, key: 'TEST-key', code: 'TEST-code', isTrusted: true, defaultPrevented: false };
+    const listener = listeners.get(type); assert.ok(listener); listener(event);
+    return { event, row: (type === 'pointermove' || type === 'pointercancel' ? dragEvents() : events()).at(-1)! };
+  };
+  const micro = () => { const callback = microtasks.shift(); assert.ok(callback); callback(); };
+  const timer = () => { const callback = timers.shift(); assert.ok(callback); callback(); };
+  const flush = () => { while (microtasks.length) micro(); while (timers.length) timer(); };
+  return { counts, element, store, window, document, json, emit, micro, timer, flush, events, dragEvents, setState(value: unknown) { state = value; } };
+}
+const navigationPlain = (value: unknown): Record<string, unknown> => JSON.parse(JSON.stringify(value));
+const navigationSample = (team: string, pane = 'pane-1', tab = 'tab-A') => ({
+  status: 'available', focusedPaneId: pane, activeTabId: tab, activeTabType: 'team', activeTabTeamName: team, selectedTeamName: team,
+});
+
+test('passive input keeps its actual Team target and three separate original navigation samples', async () => {
+  const a = hostTeamSelectionKey('TEST-A'), b = hostTeamSelectionKey('TEST-B');
+  const f = await passiveNavigationFixture(); f.element.name = b;
+  const initial = navigationState(a, 'pane-1', 'tab-teams'); initial.paneLayout.panes[0]!.tabs = [{ id: 'tab-teams', type: 'teams' }]; f.setState(initial);
+  const teamsA = { status: 'available', focusedPaneId: 'pane-1', activeTabId: 'tab-teams', activeTabType: 'other', activeTabTeamName: null, selectedTeamName: a };
+  const { event, row } = f.emit('pointerdown');
+  assert.deepEqual(navigationPlain(row), { type: 'pointerdown', timeMs: 123, x: 191, y: 228, button: 0, buttons: 0,
+    key: 'TEST-key', code: 'TEST-code', trusted: true, buttonClass: null, target: { tag: 'DIV', id: '', ariaLabel: null, className: 'team-row-zebra-card' },
+    focusBefore: { tag: 'DIV', id: '', ariaLabel: null, className: 'team-row-zebra-card' }, defaultPreventedBefore: false,
+    sidebarRow: false, taskId: null, activeSortable: [], dragAnnouncement: [], taskClarification: null,
+    teamNavigation: { schemaVersion: 1, status: 'available', source: 'original-passive-input', atomicWithNavigation: false,
+      targetTeamName: b, before: teamsA, microtask: null, afterDispatch: null } });
+  assert.deepEqual([f.counts.reads, f.counts.target, f.counts.attribute, f.counts.clock, f.counts.micro, f.counts.timer], [1, 1, 1, 1, 1, 0]);
+  f.element.name = a; f.element.card = null; f.setState(navigationState(b)); event.defaultPrevented = true; f.micro();
+  assert.deepEqual(navigationPlain(row.teamNavigation).microtask, navigationSample(b));
+  f.setState(navigationState(a)); f.document.activeElement = null; f.timer();
+  const observation = navigationPlain(row.teamNavigation);
+  assert.equal(observation.targetTeamName, b); assert.deepEqual(observation.before, teamsA); assert.deepEqual(observation.afterDispatch, navigationSample(a));
+  assert.deepEqual([row.defaultPreventedAfterMicrotask, row.defaultPreventedAfterDispatch, row.focusAfterDispatch], [true, true, null]);
+  assert.deepEqual([f.counts.reads, f.counts.target, f.counts.attribute, f.counts.clock, f.counts.queries, f.counts.send, f.counts.evaluate, f.counts.micro, f.counts.timer], [3, 1, 1, 1, 2, 1, 2, 1, 1]);
+  assert.equal(JSON.stringify(observation).includes('TEST-private-unrelated-value'), false);
+  const g = await passiveNavigationFixture(); const original = g.emit().row; g.element.name = b; g.element.card = null; g.setState(navigationState(b)); g.flush();
+  assert.equal(navigationPlain(original.teamNavigation).targetTeamName, a); assert.deepEqual(navigationPlain(original.teamNavigation).afterDispatch, navigationSample(b));
+});
+
+test('passive navigation preserves non-card events, the original ring bounds and null or non-Team state', async () => {
+  const f = await passiveNavigationFixture(); f.element.card = null;
+  for (const type of ['pointerdown', 'pointerup', 'click']) { const { row } = f.emit(type); f.flush(); assert.equal(row.teamNavigation, null); }
+  assert.deepEqual([f.counts.reads, f.counts.target, f.counts.attribute], [0, 3, 0]);
+  for (const type of ['keydown', 'keyup', 'focusin', 'focusout', 'pointercancel']) { const { row } = f.emit(type); f.flush(); assert.equal(Object.hasOwn(row, 'teamNavigation'), false); }
+  const count = f.counts.clock; f.emit('pointermove'); assert.equal(f.counts.clock, count);
+  for (let index = 0; index < 100; index++) f.emit('keydown');
+  for (let index = 0; index < 35; index++) f.emit('pointermove', f.element, 1);
+  f.flush(); assert.equal(f.events().length, 96); assert.equal(f.dragEvents().length, 32); assert.equal(f.counts.reads, 0);
+  assert.deepEqual([f.counts.target, f.counts.attribute, f.counts.clock, f.counts.micro, f.counts.timer, f.counts.queries], [3, 0, 143, 143, 143, 286]);
+  assert.ok(f.dragEvents().every(row => !Object.hasOwn(row, 'teamNavigation')));
+  const g = await passiveNavigationFixture(), state = navigationState(); const pane = state.paneLayout.panes[0]!;
+  pane.activeTabId = null; state.selectedTeamName = null; g.setState(state);
+  const absent = g.emit().row; g.flush();
+  assert.deepEqual(navigationPlain(absent.teamNavigation).before, { status: 'available', focusedPaneId: 'pane-1', activeTabId: null, activeTabType: null, activeTabTeamName: null, selectedTeamName: null });
+  pane.activeTabId = 'tab-A'; pane.tabs = [{ id: 'tab-A', type: 'dashboard', get teamName() { assert.fail('non-Team metadata is not read'); } }];
+  const other = g.emit().row; g.flush();
+  assert.deepEqual(navigationPlain(other.teamNavigation).before, { status: 'available', focusedPaneId: 'pane-1', activeTabId: 'tab-A', activeTabType: 'other', activeTabTeamName: null, selectedTeamName: null });
+});
+
+test('passive navigation refuses malformed target and store facts without losing original callbacks', async () => {
+  for (const name of [null, undefined, 12, 'host-team:', 'host-team:%', 'host-team:%41', 'host-team:%00', 'host-team:' + 'x'.repeat(247), { toString() { assert.fail('no target coercion'); } }]) {
+    const f = await passiveNavigationFixture(); f.element.name = name; const { row } = f.emit(); f.flush();
+    assert.deepEqual(navigationPlain(row.teamNavigation), { schemaVersion: 1, status: 'unavailable', reason: 'target' });
+    assert.equal(f.counts.reads, 0); assert.equal(Object.hasOwn(row, 'focusAfterDispatch'), true);
+  }
+  const throwing = await passiveNavigationFixture(); throwing.element.targetThrows = true; const target = throwing.emit().row; throwing.flush();
+  assert.deepEqual(navigationPlain(target.teamNavigation), { schemaVersion: 1, status: 'unavailable', reason: 'target' });
+  const attr = await passiveNavigationFixture(); attr.element.attributeThrows = true; const attrRow = attr.emit().row; attr.flush();
+  assert.deepEqual(navigationPlain(attrRow.teamNavigation), { schemaVersion: 1, status: 'unavailable', reason: 'target' }); assert.equal(attr.counts.reads, 0);
+  let accessorCalls = 0; const operandAccessor = (): never => { accessorCalls++; throw new Error('TEST operand accessor'); };
+  const mutations: ((state: NavigationState) => void)[] = [
+    s => { s.selectedTeamName = undefined; }, s => { s.selectedTeamName = 'host-team:%41'; },
+    s => { s.paneLayout.panes[0] = Object.create({ id: 'pane-1' }) as Record<string, unknown>; },
+    s => { const tab = (s.paneLayout.panes[0]!.tabs as Record<string, unknown>[])[0]!; tab.teamName = 'host-team:%00'; },
+    s => { s.paneLayout.focusedPaneId = 'pane\n'; }, s => { s.paneLayout.focusedPaneId = 'p'.repeat(129); },
+    s => { s.paneLayout.panes = []; }, s => { s.paneLayout.panes = Array.from({ length: 5 }, (_, i) => ({ id: 'p' + i })); },
+    s => { s.paneLayout.panes.push(s.paneLayout.panes[0]!); }, s => { s.paneLayout.focusedPaneId = 'missing'; },
+    s => { s.paneLayout.panes[0]!.activeTabId = 'missing'; },
+    s => { const p = s.paneLayout.panes[0]!, tabs = p.tabs as Record<string, unknown>[]; p.tabs = [...tabs, ...tabs]; },
+    s => { s.paneLayout.panes[0]!.tabs = Array.from({ length: 129 }, (_, i) => ({ id: 'tab-' + i })); },
+    s => { Object.defineProperty(s, 'selectedTeamName', { get: operandAccessor }); },
+    s => { Object.defineProperty(s.paneLayout, 'panes', { get: operandAccessor }); },
+    s => { Object.defineProperty(s.paneLayout.panes, '0', { get: operandAccessor }); },
+    s => { Object.defineProperty(s.paneLayout.panes[0]!, 'activeTabId', { get: operandAccessor }); },
+    s => { Object.defineProperty(s.paneLayout.panes[0]!.tabs as object, '0', { get: operandAccessor }); },
+    s => { const tab = (s.paneLayout.panes[0]!.tabs as Record<string, unknown>[])[0]!; Object.defineProperty(tab, 'type', { get: operandAccessor }); },
+  ];
+  for (const mutate of mutations) {
+    const f = await passiveNavigationFixture(), state = navigationState(); accessorCalls = 0; mutate(state); f.setState(state);
+    const { row } = f.emit(); f.flush(); const record = navigationPlain(row.teamNavigation);
+    for (const phase of ['before', 'microtask', 'afterDispatch']) assert.deepEqual(record[phase], { status: 'unavailable' });
+    assert.equal(f.counts.reads, 3); assert.equal(accessorCalls, 0, 'operand getters are never invoked'); assert.equal(Object.hasOwn(row, 'focusAfterDispatch'), true);
+  }
+  for (const invalid of [null, 'TEST-state', new Proxy({}, { getOwnPropertyDescriptor() { throw new Error('TEST reflection'); } })]) {
+    const f = await passiveNavigationFixture(); f.setState(invalid); const { row } = f.emit(); f.flush();
+    assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' }); assert.equal(Object.hasOwn(row, 'defaultPreventedAfterDispatch'), true);
+  }
+  for (const method of [null, 'TEST-method', () => { throw new Error('TEST store read'); }]) {
+    const f = await passiveNavigationFixture(); Object.defineProperty(f.store, 'getState', { value: method });
+    const { row } = f.emit(); f.flush(); assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' });
+  }
+  const missing = await passiveNavigationFixture(); delete missing.window.__agentTeamsDevStore;
+  const row = missing.emit().row; missing.flush(); assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' });
+});
+
+test('passive navigation remains bounded and cannot interrupt original writes on diagnostic failure', async () => {
+  const f = await passiveNavigationFixture(), key = hostTeamSelectionKey('x'.repeat(246)), id = 'p'.repeat(128);
+  f.element.name = key; const maximum = navigationState(key, id, id); const pane = maximum.paneLayout.panes[0]!;
+  (pane.tabs as Record<string, unknown>[]).push(...Array.from({ length: 127 }, (_, i) => ({ id: 'other-' + i })));
+  maximum.paneLayout.panes.push(...Array.from({ length: 3 }, (_, i) => ({ id: 'other-pane-' + i })));
+  f.setState(maximum); const { row } = f.emit(); f.flush();
+  const observation = navigationPlain(row.teamNavigation); assert.equal(Buffer.byteLength(JSON.stringify(observation), 'utf8'), 3101);
+  assert.deepEqual(observation.before, observation.microtask); assert.deepEqual(observation.before, observation.afterDispatch);
+  assert.deepEqual([f.counts.reads, f.counts.target, f.counts.attribute, f.counts.clock, f.counts.send, f.counts.evaluate], [3, 1, 1, 1, 1, 2]);
+  const g = await passiveNavigationFixture(); const captured = g.emit().row; let getter = 0, setter = 0;
+  Object.defineProperty(captured, 'teamNavigation', { configurable: true, get() { getter++; throw new Error('TEST read'); }, set() { setter++; throw new Error('TEST write'); } });
+  g.flush(); assert.deepEqual([getter, setter, g.counts.reads], [0, 2, 3]);
+  assert.equal(Object.hasOwn(captured, 'defaultPreventedAfterMicrotask'), true); assert.equal(Object.hasOwn(captured, 'focusAfterDispatch'), true);
+  const h = await passiveNavigationFixture(); h.json.stringify = () => { throw new Error('TEST serialization'); };
+  const failed = h.emit().row; h.flush(); assert.equal(Object.hasOwn(failed, 'teamNavigation'), false); assert.equal(Object.hasOwn(failed, 'focusAfterDispatch'), true);
+  const over = await passiveNavigationFixture(); over.json.stringify = () => 'x'.repeat(4097);
+  const limited = over.emit().row; over.flush();
+  assert.deepEqual(navigationPlain(limited.teamNavigation), { schemaVersion: 1, status: 'unavailable', reason: 'projection-limit' });
+  assert.equal(Object.hasOwn(limited, 'focusAfterDispatch'), true);
+});
+
+
+test('passive navigation uses only the callable store own method and ignores unrelated card surfaces', async () => {
+  const f = await passiveNavigationFixture(); f.element.isCard = false;
+  const nonCard = f.emit().row; f.flush(); assert.equal(nonCard.teamNavigation, null);
+  assert.deepEqual([f.counts.target, f.counts.attribute, f.counts.reads], [1, 0, 0]);
+  const nonElement = f.emit('click', null).row; f.flush(); assert.equal(nonElement.teamNavigation, null); assert.equal(f.counts.reads, 0);
+  for (const location of ['store', 'getState']) {
+    const g = await passiveNavigationFixture(); let getter = 0;
+    Object.defineProperty(location === 'store' ? g.window : g.store, location === 'store' ? '__agentTeamsDevStore' : 'getState',
+      { configurable: true, get() { getter++; throw new Error('TEST accessor'); } });
+    const row = g.emit().row; g.flush(); assert.equal(getter, 0);
+    assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' }); assert.equal(Object.hasOwn(row, 'focusAfterDispatch'), true);
+  }
+  const g = await passiveNavigationFixture();
+  g.window.__agentTeamsDevStore = new Proxy(g.store, { getOwnPropertyDescriptor() { throw new Error('TEST callable reflection'); } });
+  const row = g.emit().row; g.flush(); assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' });
+  assert.equal(Object.hasOwn(row, 'focusAfterDispatch'), true);
+});
