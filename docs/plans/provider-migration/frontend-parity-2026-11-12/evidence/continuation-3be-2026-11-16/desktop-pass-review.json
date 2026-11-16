@@ -1,0 +1,124 @@
+{
+  "kind": "ROOT_ORIGINAL_3BE_PASS_ARTIFACT_REVIEW",
+  "inertArchiveInspectionOnly": true,
+  "codex": {
+    "sourceHead": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+    "job": 133531814165,
+    "run": 43933487563,
+    "artifact": 14263303211,
+    "receiptSha256": "c096c0451eb5d5601213c6d95955223ce303c9ec1ee15dc52ab42e9d0276344d",
+    "status": "PASS",
+    "mode": "emulated-codex-runtime-ui",
+    "scope": "Original Launch, Composer stream, permission/question controls, cost/Stats, schedules, Task Activity/detail/Stream, renderer reload and Team Stop through original Host/D and finite TEST protocol peers",
+    "originalPeerCount": 42,
+    "peerAbsent": true,
+    "remainingPeers": [],
+    "runtimePids": [
+      6102
+    ],
+    "stopReleased": true,
+    "stoppedInput": {
+      "inputId": "a29c119d-0211-51a1-9a7c-34b4090f78b2",
+      "phase": "unknown",
+      "terminalConfirmed": false
+    },
+    "quitRequested": true,
+    "originalQuit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "cleanup": {
+      "processGroup": 4465,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "sourceArraysEqual": true,
+    "sourceHashCount": 1776,
+    "reloadWithoutReplay": true,
+    "fixtureVendorsAllowed": false,
+    "stoppedImage": {
+      "sha256": "31311854e28f8f5c67de429c62002f1e700c7377a64ae764ba2b0b8e8e163ce7",
+      "visualReview": "Original full PNG inspected. Team is offline banner, Launch action, member offline chip and retained held partial transcript visible; no old ready banner."
+    },
+    "scopeLimit": "Finite TEST Codex protocol peer, not genuine Codex or vendor authentication; 3be source only."
+  },
+  "packagedDarwinArm": {
+    "sourceHead": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+    "job": 133564286482,
+    "run": 43933487470,
+    "artifact": 14263562629,
+    "relaunchReceiptSha256": "1710149924849800a192c9ed9897bd8dc7e8e56361f1f5a82a7a608e8ab10ce3",
+    "nativeReceiptSha256": "d3a573d3e3172375a5362b8e1490a26b77dc6554af4daae6f6f11065bbc678b1",
+    "qualificationReceiptSha256": "ce1f42110f14b13da5764fcbd048ce00d9c4d546ef0fd942ee4a2d8ed76f8a05",
+    "native": {
+      "status": "PASS",
+      "cleanup": true,
+      "modelRequests": 11,
+      "modelFailures": [],
+      "vendorAuthQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    },
+    "relaunch": {
+      "status": "PASS",
+      "scope": "Automatic packed app.relaunch, observer-only successor and one guarded public Quit",
+      "originalExit": {
+        "exitCode": 0,
+        "signalCode": null,
+        "HostExitCode": "unavailable",
+        "HostSignalCode": "unavailable"
+      },
+      "originalLeaseAfterExit": null,
+      "successorObservationOnly": true,
+      "writerOrdering": {
+        "originalHostAbsent": true,
+        "originalLease": {
+          "pid": 9171,
+          "token": "f9333cbe-dac1-4900-a843-e61b0c912672",
+          "dev": 16777231,
+          "ino": 2661320
+        },
+        "newExclusiveLease": {
+          "pid": 9821,
+          "token": "c34f08ad-e848-41fb-a471-1b6dace5cccc",
+          "dev": 16777231,
+          "ino": 2672783
+        },
+        "rule": "Existing no-replace PID/token publication forbids overlap; original release versus dead-owner recovery is not inferred from a missed absence sample"
+      },
+      "successorQuitAttempted": true,
+      "successorQuitReply": "unconfirmed; no retry or signal",
+      "successorAbsence": {
+        "listenerAbsent": true,
+        "observedPidAbsent": true,
+        "HostPidAbsent": true,
+        "writerLockAbsent": true,
+        "exitCode": "unavailable",
+        "signalCode": "unavailable",
+        "naturalExitQualified": false
+      },
+      "successorNativeCustody": false,
+      "numericPidSignalsAuthorized": false,
+      "cleanup": {
+        "remaining": [],
+        "capturedHostAbsent": true,
+        "hostPid": 9171
+      },
+      "sourceArraysEqual": true,
+      "sourceHashCount": 1779,
+      "realVendorExecutions": 0,
+      "packagedInputsUnchanged": true
+    },
+    "successorImage": {
+      "sha256": "e0dcaaf67c5b6b55b259158b3cb2fa0cb3af5b03a09e339525614065c3164c96",
+      "visualReview": "Original PNG inspected. Successor dashboard visible with retained TEST sidebar Task; provider indicators still loading at this snapshot. This image does not qualify provider status readiness or Resume."
+    },
+    "scopeLimit": "Original packaged native proof and observer-only automatic relaunch only; unconfirmed successor Quit reply is retained, physical absence observed, successor exit code and natural exit remain unqualified. Not P08 same-Main recovery, native Resume, vendor or release proof."
+  }
+}

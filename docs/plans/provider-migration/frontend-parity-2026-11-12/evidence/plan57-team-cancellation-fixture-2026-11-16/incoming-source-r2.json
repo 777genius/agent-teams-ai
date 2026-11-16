@@ -1,0 +1,35 @@
+{
+  "decision": "ACCEPT_INCOMING_PLAN57_EQUIVALENT_ONE_FIELD_SOURCE",
+  "reviewer": "installer_review",
+  "officialRef": "769078797e96df86ceadd0c3bdf563abc265932f",
+  "descendantReportedByRoot": "03242bf1063cc7fdbaf9e1ee633ce607debf9fdc",
+  "selectedPlanCommit": "14bdd395516d9a520c4e558cf6640365e76879ef",
+  "path": "test/renderer/components/team/TeamProvisioningCancellation.test.ts",
+  "before": {
+    "gitBlob": "d3a363bcecb304583851fe7da2b625da5569e775",
+    "sha256": "334cfed75ead368c9ce5f046fa372db73406b2929dca0fccfce312362bb3b93f",
+    "bytes": 11324,
+    "lines": 305
+  },
+  "incoming": {
+    "gitBlob": "2743d4ba336bd02e5abdb600e24ca2a086b8e6c7",
+    "sha256": "28d0452258c4add89c6256cf97b872da1e7fd41d6dcd74361589bdf18e3ee10d",
+    "bytes": 11369,
+    "lines": 306
+  },
+  "checks": {
+    "exact_original_preimage": true,
+    "official_incoming_matches_root_blob": true,
+    "one_exact_mock_field": true,
+    "single_field_removal_restores_every_original_byte": true,
+    "entire_original_describe_suffix_preserved": true,
+    "four_original_cases_no_extra": true,
+    "unchanged_fixture_state": true,
+    "original_fixtures_have_no_isAlive": true,
+    "incoming_returns_same_unknown_liveness": true,
+    "our_comment_and_field_removal_restores_same_original": true,
+    "no_runtime_import_timer_assertion_changes": true
+  },
+  "judgment": "The incoming field is the exact selected undefined-returning selector, placed after selectTeamDataForName and without the optional comment. These are object-literal function values with no initialization side effect or duplicate key. It is semantically equivalent to the reviewed6aab candidate for all unchanged fixtures. Preserve incoming2743d4; no overwrite or additional source change is warranted.",
+  "limits": "Static official immutable source readback and byte review only. Every original test body/assertion/state/teardown is preserved; no project/compiler/provider/test/GUI/CI execution, no remote mutation and no runtime PASS claim."
+}
