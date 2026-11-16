@@ -20,7 +20,10 @@ import {
   allocateIsolatedCdpPort,
   assertPortAvailable,
   windowsProcessListenerSnapshot,
+  windowsProcessSnapshot,
+  windowsQueryChildren,
 } from './platform.mjs';
+import { retainPackagedLineage, packagedOrphanObservation } from './packaged.mjs';
 
 test('OS process and listener output parsing fails closed', () => {
   assert.deepEqual(
@@ -393,4 +396,137 @@ test('actual live Windows renderer guard refuses empty, foreign and stale listen
     assert.throws(refused.run, error => error === failure);
     assert.deepEqual(refused.calls, expected, 'the original refusal stops before caller admission');
   }
+});
+
+test('Windows observer capture binds the executing query inside each original read', () => {
+  const driver = { pid: 100, parent: 90, birth: '2026-01-01T00:00:01.0000000Z' };
+  const observer = { pid: 300, parent: 100, birth: '2026-01-01T00:00:03.0000000Z' };
+  const child = { pid: 301, parent: 300, birth: '2026-01-01T00:00:03.0000001Z' };
+  const census = [driver, observer, child], scripts = [];
+  const execute = script => {
+    scripts.push(script);
+    assert.equal(script.split('Get-CimInstance Win32_Process').length, 2);
+    assert.equal(script.split('observerPid = [int]$PID').length, 2);
+    assert.doesNotMatch(script, /Get-Process|Start-Process|Start-Sleep/);
+    const listeners = script.includes('MSFT_NetTCPConnection');
+    assert.equal(script.split('MSFT_NetTCPConnection').length, listeners ? 2 : 1);
+    if (listeners) assert.ok(script.indexOf('Win32_Process') < script.indexOf('MSFT_NetTCPConnection'));
+    return '\uFEFF' + JSON.stringify({
+      processes: JSON.stringify(census), observerPid: observer.pid,
+      ...(listeners ? { listeners: '100\r\n' } : {}),
+    });
+  };
+  const processOnly = windowsProcessSnapshot(execute);
+  assert.deepEqual(processOnly, { processes: census, observer });
+  const combined = windowsProcessListenerSnapshot(9222, execute, true);
+  assert.deepEqual(combined, { processes: census, listeners: [100], observer });
+  assert.equal(scripts.length, 2, 'one existing query per call, without fallback');
+  assert.deepEqual(windowsQueryChildren(combined.processes, combined.observer, driver), [child]);
+  assert.deepEqual(census, [driver, observer, child], 'observations do not alter the original rows');
+});
+
+test('Windows observer envelopes reject absent, ambiguous and malformed query identities', () => {
+  const observer = { pid: 300, parent: 100, birth: '2026-01-01T00:00:03.0000000Z' };
+  const valid = { processes: JSON.stringify([observer]), observerPid: observer.pid };
+  const invalid = [
+    { ...valid, observerPid: undefined }, { ...valid, observerPid: null },
+    { ...valid, observerPid: '300' }, { ...valid, observerPid: 0 }, { ...valid, observerPid: 300.5 },
+    { ...valid, observerPid: 301 }, { ...valid, processes: '[]' },
+    { ...valid, processes: JSON.stringify([observer, observer]) },
+    { ...valid, processes: JSON.stringify([{ ...observer, parent: 0 }]) },
+    { ...valid, processes: JSON.stringify([{ ...observer, birth: 'reused' }]) },
+    { ...valid, processes: JSON.stringify([{ ...observer, birth: '2026-02-30T00:00:03.0000000Z' }]) },
+    { ...valid, processes: JSON.stringify([{ ...observer, birth: '2026-01-01T00:00:03Z' }]) },
+    { ...valid, extra: true }, { ...valid, processes: [] },
+  ];
+  for (const value of invalid) for (const combined of [false, true]) {
+    let calls = 0;
+    const execute = () => {
+      calls++;
+      return JSON.stringify({ ...value, ...(combined ? { listeners: '' } : {}) });
+    };
+    assert.throws(() => combined ? windowsProcessListenerSnapshot(9222, execute, true) : windowsProcessSnapshot(execute));
+    assert.equal(calls, 1, 'invalid self evidence cannot trigger another query');
+  }
+  let calls = 0;
+  assert.throws(() => windowsProcessListenerSnapshot(9222, () => { calls++; }, 'true'));
+  assert.equal(calls, 0, 'observer mode must be explicit before observation');
+  const failure = new Error('TEST original observer interpreter refusal');
+  for (const combined of [false, true]) {
+    calls = 0;
+    const execute = () => { calls++; throw failure; };
+    assert.throws(() => combined ? windowsProcessListenerSnapshot(9222, execute, true) : windowsProcessSnapshot(execute),
+      error => error === failure);
+    assert.equal(calls, 1, 'original executor failure propagates unchanged');
+  }
+});
+
+test('actual Windows census guard explains only current query children without App or signal authority', () => {
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeWindowsAppGate.mjs', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const start = 'const validateCensus = (snapshot, observer) => {', end = 'const observeCensus = (operation, read) => {';
+  assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
+  const from = source.indexOf(start), to = source.indexOf(end); assert.ok(to > from);
+  const create = runInThisContext('(function(assert, controllerIdentity, driverIdentity, main, proof, history,' +
+    'ownedTree, sameIdentity, retainPackagedLineage, packagedOrphanObservation, windowsQueryChildren, remaining) {' +
+    "let lineage=history; const acceptingExit=false, activePhase='TEST original phase';" +
+    source.slice(from, to) + 'return { validate: validateCensus, lineage: () => lineage };})');
+  const controller = { pid: 90, parent: 80, birth: '2026-01-01T00:00:00.0000000Z' };
+  const driver = { pid: 100, parent: 90, birth: '2026-01-01T00:00:01.0000000Z' };
+  const main = { pid: 200, parent: 100, birth: '2026-01-01T00:00:02.0000000Z' };
+  const oldParent = { pid: 300, parent: 200, birth: '2026-01-01T00:00:03.0000000Z' };
+  const observer = { pid: 300, parent: 100, birth: '2026-01-01T00:00:04.0000000Z' };
+  const child = { pid: 301, parent: 300, birth: '2026-01-01T00:00:04.0000001Z' };
+  const census = [controller, driver, main, observer, child];
+  const originalHistory = retainPackagedLineage([], [main, oldParent], 100).records;
+  const original = packagedOrphanObservation(originalHistory, census);
+  assert.equal(original.candidates.length, 1);
+  assert.equal(original.candidates[0].relation, 'ambiguous-parent-identity', 'generic ambiguity oracle stays strict');
+  const exercise = ({ snapshot = census, self = observer, history = originalHistory, entries = [] } = {}) => {
+    const proof = { queryExplanations: entries }, calls = [];
+    const guard = create(assert, controller, driver, main, proof, history,
+      ownedTree, sameIdentity, (previous, proven) => retainPackagedLineage(previous, proven, 200),
+      packagedOrphanObservation, windowsQueryChildren, () => { calls.push('original cutoff'); });
+    return { proof, calls, lineage: guard.lineage, run: () => guard.validate(snapshot, self) };
+  };
+  const current = exercise();
+  assert.equal(current.run(), census, 'full current census remains the returned observation');
+  assert.deepEqual(current.calls, ['original cutoff']);
+  assert.deepEqual(current.proof.queryExplanations, [{
+    phase: 'TEST original phase', observer, driver, children: [child],
+    observationOnly: true, signalAuthorized: false,
+  }]);
+  assert.deepEqual(current.lineage().map(({ pid, birth }) => ({ pid, birth })),
+    [main, oldParent].map(({ pid, birth }) => ({ pid, birth })), 'query identities never enter App custody');
+  const noChild = exercise({ snapshot: census.filter(row => row !== child) });
+  noChild.run(); assert.deepEqual(noChild.proof.queryExplanations, []);
+  const otherParent = { pid: 400, parent: 200, birth: oldParent.birth };
+  const foreignChild = { pid: 401, parent: 400, birth: child.birth };
+  const otherQuery = { pid: 500, parent: 100, birth: observer.birth };
+  const refused = [
+    { self: null }, { self: { ...observer, birth: oldParent.birth } },
+    { self: { ...observer, extra: true } },
+    { snapshot: census.filter(row => row !== observer) },
+    { snapshot: [...census, { ...observer }] },
+    { snapshot: census.map(row => row === driver ? { ...row, birth: 'reused' } : row) },
+    { snapshot: census.map(row => row === driver ? { ...row, parent: 999 } : row) },
+    { snapshot: census.map(row => row === observer ? { ...row, parent: 999 } : row),
+      self: { ...observer, parent: 999 } },
+    { snapshot: census.map(row => row === child ? { ...row, birth: observer.birth } : row) },
+    { snapshot: census.map(row => row === child ? { ...row, birth: '2026-01-01T00:00:03.9999999Z' } : row) },
+    { snapshot: census.map(row => row === child ? { ...row, birth: 'invalid' } : row) },
+    { snapshot: census.map(row => row === child ? { ...row, birth: '2026-02-30T00:00:04.0000000Z' } : row) },
+    { snapshot: [...census, foreignChild], history: [...originalHistory, otherParent] },
+    { snapshot: [...census, otherQuery], self: otherQuery },
+    { entries: Array(512).fill(null) }, { entries: Object.freeze([]) },
+  ];
+  for (const input of refused) {
+    const result = exercise(input);
+    assert.throws(result.run);
+    assert.deepEqual(result.calls, [], 'no original admission follows unresolved provenance or overflow');
+    assert.ok(!result.lineage().some(row => row.pid === child.pid), 'no query-child cleanup authority');
+  }
+  const previous = exercise({ snapshot: [...census.filter(row => row !== observer), otherQuery], self: otherQuery,
+    entries: current.proof.queryExplanations });
+  assert.throws(previous.run, 'an earlier explanation never authorizes a later query');
+  assert.equal(packagedOrphanObservation(originalHistory, census).candidates[0].signalAuthorized, false);
 });

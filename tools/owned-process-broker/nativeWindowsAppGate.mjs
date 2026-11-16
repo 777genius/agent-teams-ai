@@ -20,6 +20,7 @@ import {
 } from '../../scripts/e2e/opencode-diagnostics/packaged.mjs';
 import {
   assertPortAvailable, processes, ownedTree, sameIdentity, listeners, windowsProcessListenerSnapshot,
+  windowsProcessSnapshot, windowsQueryChildren,
 } from '../../scripts/e2e/opencode-diagnostics/platform.mjs';
 import { readPackagedOpenCodeV2 } from '../../scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts';
 import { captureDesktopSourceHashes, verifyDesktopSourceFreeze } from '../../scripts/legacy-agent-host/desktop-source-freeze.ts';
@@ -163,7 +164,7 @@ const proof = {
   selectedSourceHashes: sourceHashes, originalInputPins: fixture.pins,
   counts: { mainStarts: 0, initialRuntimeOpen: 0, businessInput: 0, refreshClicks: 0, retryClicks: 0, uiStops: 0, quit: 0 },
   phases: [], uiSteps: [], screenshots: [], appLog: logPath,
-  censusReads: [], censusReadsTruncated: false,
+  censusReads: [], censusReadsTruncated: false, queryExplanations: [],
 };
 let app, cdp, appLog, main, hostA, hostB, writerA, exit, exitPromise, binding;
 let lineage = [], startedAt, outerDeadline, activeDeadline, activePhase = 'prepare';
@@ -212,7 +213,7 @@ const poll = async (read, label) => {
     await delay(Math.min(100, remaining()));
   }
 };
-const validateCensus = snapshot => {
+const validateCensus = (snapshot, observer) => {
   assert.ok(snapshot.length <= 10000, 'Complete original Windows process census');
   sameIdentity(controllerIdentity, snapshot.find(row => row.pid === controllerIdentity.pid));
   const currentDriver = snapshot.find(row => row.pid === driverIdentity.pid);
@@ -224,9 +225,25 @@ const validateCensus = snapshot => {
     const retained = retainPackagedLineage(lineage, ownedTree(snapshot, main));
     assert.equal(retained.truncated, false); lineage = retained.records;
   }
+  const queryChildren = windowsQueryChildren(snapshot, observer, driverIdentity);
+  assert.ok(!lineage.some(row => row.pid === observer.pid && row.birth === observer.birth),
+    'Current query must remain outside the original App lineage');
   const orphans = packagedOrphanObservation(lineage, snapshot);
   assert.equal(orphans.censusTruncated, false); assert.equal(orphans.candidatesTruncated, false);
-  assert.deepEqual(orphans.candidates, [], 'No unexplained child of any original retained ancestor');
+  const explained = orphans.candidates.filter(candidate =>
+    candidate.currentParent?.pid === observer.pid && candidate.currentParent.birth === observer.birth &&
+    queryChildren.some(child => child.pid === candidate.pid && child.parent === candidate.parent && child.birth === candidate.birth));
+  assert.deepEqual(orphans.candidates.filter(candidate => !explained.includes(candidate)), [],
+    'No unexplained child of any original retained ancestor');
+  if (explained.length) {
+    assert.ok(proof.queryExplanations.length < 512, 'Original query explanation bound');
+    proof.queryExplanations.push({
+      phase: activePhase, observer: { ...observer },
+      driver: { pid: driverIdentity.pid, parent: driverIdentity.parent, birth: driverIdentity.birth },
+      children: explained.map(({ pid, parent, birth }) => ({ pid, parent, birth })),
+      observationOnly: true, signalAuthorized: false,
+    });
+  }
   remaining();
   return snapshot;
 };
@@ -250,12 +267,13 @@ const observeCensus = (operation, read) => {
 };
 const captureCensus = () => {
   check();
-  return validateCensus(observeCensus('process-census', processes));
+  const observation = observeCensus('process-census', windowsProcessSnapshot);
+  return validateCensus(observation.processes, observation.observer);
 };
 const assertOwnedRenderer = () => {
   check();
-  const observation = observeCensus('process-listener-snapshot', windowsProcessListenerSnapshot);
-  const snapshot = validateCensus(observation.processes), ids = observation.listeners;
+  const observation = observeCensus('process-listener-snapshot', () => windowsProcessListenerSnapshot(9222, undefined, true));
+  const snapshot = validateCensus(observation.processes, observation.observer), ids = observation.listeners;
   assert.ok(ids.length > 0 && ids.every(pid => snapshot.some(current =>
     current.pid === pid && lineage.some(original => original.pid === pid && original.birth === current.birth))),
   'CDP listener belongs to this original Main family');

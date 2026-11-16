@@ -39,6 +39,59 @@ export function parseWindowsProcesses(output) {
     };
   });
 }
+function assertWindowsBirth(birth) {
+  assert.equal(typeof birth, 'string');
+  assert.match(birth, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z$/);
+  const milliseconds = Date.parse(birth);
+  assert.ok(Number.isFinite(milliseconds), 'Invalid Windows creation identity');
+  assert.equal(new Date(milliseconds).toISOString(), birth.slice(0, 23) + 'Z', 'Canonical Windows creation date');
+}
+function windowsQueryObserver(snapshot, observerPid) {
+  assert.ok(Number.isSafeInteger(observerPid) && observerPid > 0, 'Missing current query PID');
+  const matches = snapshot.filter(row => row.pid === observerPid);
+  assert.equal(matches.length, 1, 'One current query identity in the original census');
+  const { pid, parent, birth } = matches[0];
+  assert.ok(Number.isSafeInteger(parent) && parent > 0);
+  assertWindowsBirth(birth);
+  return { pid, parent, birth };
+}
+/** Identify this executing query from its own $PID; no second process observation. */
+export function windowsProcessSnapshot(execute = powershell) {
+  const output = execute(
+    `$TESTProcessOutput = ${windowsProcessQuery};\n` +
+    '[pscustomobject]@{ processes = [string]$TESTProcessOutput; observerPid = [int]$PID } | ConvertTo-Json -Compress'
+  );
+  const value = JSON.parse(output.replace(/^\uFEFF/, '').trim());
+  assert.ok(value && typeof value === 'object' && !Array.isArray(value), 'Invalid Windows observation envelope');
+  assert.deepEqual(Object.keys(value).sort(), ['observerPid', 'processes']);
+  assert.equal(typeof value.processes, 'string');
+  const snapshot = parseWindowsProcesses(value.processes);
+  return { processes: snapshot, observer: windowsQueryObserver(snapshot, value.observerPid) };
+}
+/** Current-query children are observations only; never add them to App ownership or cleanup. */
+export function windowsQueryChildren(snapshot, observer, driver) {
+  assert.ok(Array.isArray(snapshot) && snapshot.length <= 10000, 'Complete current query census');
+  assert.ok(observer && typeof observer === 'object' && !Array.isArray(observer));
+  assert.deepEqual(Object.keys(observer).sort(), ['birth', 'parent', 'pid']);
+  assert.deepEqual(observer, windowsQueryObserver(snapshot, observer.pid));
+  const byPid = new Map();
+  for (const row of snapshot) {
+    assert.ok(!byPid.has(row.pid), 'Duplicate process PID in current query census');
+    byPid.set(row.pid, row);
+  }
+  const currentDriver = byPid.get(driver.pid);
+  sameIdentity(driver, currentDriver);
+  assert.equal(currentDriver.parent, driver.parent, 'Same original query driver parent');
+  assert.notEqual(observer.pid, driver.pid);
+  assert.notEqual(observer.pid, driver.parent);
+  assert.equal(observer.parent, driver.pid, 'Current query belongs to the original driver');
+  return snapshot.filter(child => {
+    if (child.parent !== observer.pid) return false;
+    assert.ok(Number.isSafeInteger(child.pid) && child.pid > 0);
+    assertWindowsBirth(child.birth);
+    return child.birth > observer.birth;
+  });
+}
 export function parseUnixProcesses(output) {
   return output
     .trim()
@@ -133,8 +186,9 @@ export function listeners(port = 9222) {
   }
 }
 /** Fresh ordered observations, not an atomic snapshot or retained authority. */
-export function windowsProcessListenerSnapshot(port = 9222, execute = powershell) {
+export function windowsProcessListenerSnapshot(port = 9222, execute = powershell, captureObserver = false) {
   assertCdpPort(port);
+  assert.equal(typeof captureObserver, 'boolean');
   const output = execute(
     `$TESTProcessOutput = ${windowsProcessQuery};\n` +
     // Empty listeners can only refuse the live guard; standalone absence queries stay unchanged.
@@ -142,14 +196,19 @@ export function windowsProcessListenerSnapshot(port = 9222, execute = powershell
     `-ClassName MSFT_NetTCPConnection -Filter "State = 2 AND LocalPort = ${port}" ` +
     '-Property OwningProcess | Select-Object -ExpandProperty OwningProcess;\n' +
     '[pscustomobject]@{ processes = [string]$TESTProcessOutput; ' +
-    'listeners = [string]($TESTListenerOutput -join [Environment]::NewLine) } | ConvertTo-Json -Compress'
+    'listeners = [string]($TESTListenerOutput -join [Environment]::NewLine)' +
+    (captureObserver ? '; observerPid = [int]$PID' : '') +
+    ' } | ConvertTo-Json -Compress'
   );
   const value = JSON.parse(output.replace(/^\uFEFF/, '').trim());
   assert.ok(value && typeof value === 'object' && !Array.isArray(value), 'Invalid Windows observation envelope');
-  assert.deepEqual(Object.keys(value).sort(), ['listeners', 'processes']);
+  assert.deepEqual(Object.keys(value).sort(), captureObserver ? ['listeners', 'observerPid', 'processes'] : ['listeners', 'processes']);
   assert.equal(typeof value.processes, 'string');
   assert.equal(typeof value.listeners, 'string');
-  return { processes: parseWindowsProcesses(value.processes), listeners: parseListeners(value.listeners) };
+  const snapshot = parseWindowsProcesses(value.processes);
+  return { processes: snapshot, listeners: parseListeners(value.listeners),
+    ...(captureObserver ? { observer: windowsQueryObserver(snapshot, value.observerPid) } : {}),
+  };
 }
 export function assertListenerOwnership(ids, owned) {
   assert(
