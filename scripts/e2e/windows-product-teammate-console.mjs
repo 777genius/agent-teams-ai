@@ -620,18 +620,21 @@ try {
     try {
       const live = await getProcess(identity.pid);
       if (!live) continue;
-      if (live.creation !== identity.creation ||
-          !live.command.toLowerCase().includes(marker.toLowerCase()))
-        throw new Error('Original Windows process identity changed');
+      // A different process birth proves the original exited. Never signal a
+      // successor that reused its numeric PID, and do not misreport that safe
+      // retirement as a failure of owned fixture cleanup.
+      if (live.creation !== identity.creation) continue;
+      if (!live.command.toLowerCase().includes(marker.toLowerCase()))
+        throw new Error('Original Windows process command no longer matches owner');
       const killed = spawnSync('taskkill.exe', ['/PID', String(identity.pid), '/T', '/F'], {
         windowsHide: true, timeout: 15_000, encoding: 'utf8',
       });
-      if (killed.error || killed.status !== 0) {
-        if (await ownedStillAlive(identity))
-          throw new Error('Original Windows process tree termination failed');
+      const remaining = await getProcess(identity.pid);
+      if (remaining?.creation === identity.creation) {
+        throw new Error(killed.error || killed.status !== 0
+          ? 'Original Windows process tree termination failed'
+          : 'Original Windows PID survived verified termination');
       }
-      if (await ownedStillAlive(identity))
-        throw new Error('Original Windows PID survived verified termination');
     } catch (error) {
       cleanupOk = false;
       process.stderr.write('Owned Windows E2E cleanup failed: ' + String(error) + '\n');
