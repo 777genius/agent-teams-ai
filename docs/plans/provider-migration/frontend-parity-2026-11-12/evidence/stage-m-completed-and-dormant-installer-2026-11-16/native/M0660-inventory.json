@@ -1,0 +1,417 @@
+{
+  "schema": "recoverable-original-native-evidence-bundle/v1",
+  "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "checkpoint": "native-audit-M0660/checkpoint-20261116-0055.json",
+  "snapshotUtc": "2026-11-16T00:55:34Z",
+  "payloadCount": 57,
+  "payloadBytes": 2578346,
+  "officialArchiveCount": 8,
+  "officialArchiveMembers": 66,
+  "rows": [
+    {
+      "bundlePath": "native-audit-M0660/14188584538-archive-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/14188584538-archive-audit.json",
+      "bytes": 2192,
+      "blob": "be5c0e8fb0ee5cea15ed8a4c449d660d75e595be",
+      "sha256": "cde34b3f11d284d0219317c99596d0820701a4465ce1c7b3feed4560041d2244"
+    },
+    {
+      "bundlePath": "native-audit-M0660/14188584538.zip",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/14188584538.zip",
+      "bytes": 10491,
+      "blob": "a1926a189504f0f5b349a08946ff16d1e27ad5f2",
+      "sha256": "0a5ac885a88c1a32058b2b37186130318f9f2a47ea3650e258ae3d92e7f4c728"
+    },
+    {
+      "bundlePath": "native-audit-M0660/14188901109-archive-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/14188901109-archive-audit.json",
+      "bytes": 2982,
+      "blob": "1cd694fd45392f5e6ffe21170c19e676dc29e503",
+      "sha256": "2921264b18a475eb34042d878d88e1164247d19f1a698ff9d00243be3681edb6"
+    },
+    {
+      "bundlePath": "native-audit-M0660/14188901109.zip",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/14188901109.zip",
+      "bytes": 13412,
+      "blob": "f7bb099940f7a8b0ff4f0e285af9f722203df50e",
+      "sha256": "368902783b006d92f5e3544243bc717555e50003f767ddd8e39d301dfeb6c206"
+    },
+    {
+      "bundlePath": "native-audit-M0660/14188945123-archive-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/14188945123-archive-audit.json",
+      "bytes": 6947,
+      "blob": "a6722e92379b8a1517cf4714e448b19b2f2f8087",
+      "sha256": "1af71d5aeb379211e3c73fa8063ad614bc256bfe6c1e796a899cff09a8ffe0e2"
+    },
+    {
+      "bundlePath": "native-audit-M0660/14188945123.zip",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/14188945123.zip",
+      "bytes": 71877,
+      "blob": "746e958f968c3c32bec32c18fea00ec0905fbb22",
+      "sha256": "c863ca101e561eab48a512b9b9c80436d6a5357ac84003c0721fa4577e7afee3"
+    },
+    {
+      "bundlePath": "native-audit-M0660/14188946160-archive-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/14188946160-archive-audit.json",
+      "bytes": 6949,
+      "blob": "299135d1462a89c8600abb2e18ebb68793fce539",
+      "sha256": "960446c41846abbe254d647e6d4419b4a4c0fcad3c21655dfbc0ba80cda2916d"
+    },
+    {
+      "bundlePath": "native-audit-M0660/14188946160.zip",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/14188946160.zip",
+      "bytes": 72001,
+      "blob": "ccbc921c0d25080f5ecc1de7d85f5b2f44b3f871",
+      "sha256": "602bfa7230b29c4f19112935975cf775da8f9b0c3265ccc667eeb5cafe61188a"
+    },
+    {
+      "bundlePath": "native-audit-M0660/14189015721-archive-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/14189015721-archive-audit.json",
+      "bytes": 2200,
+      "blob": "d56d5e30e7460f688d35ca9bf1c9e1a87e1ae425",
+      "sha256": "9a80656e38a2533083c82cd907d6ae97e0967af03613e53e136710dfb0822cca"
+    },
+    {
+      "bundlePath": "native-audit-M0660/14189015721.zip",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/14189015721.zip",
+      "bytes": 13407,
+      "blob": "851c3eb88d23428a653d9a9f0edff8178c1e5eb2",
+      "sha256": "31d780cc64556a2669f949bec301ba10bdd16e6a5bfdb6b527d05e15a73508bf"
+    },
+    {
+      "bundlePath": "native-audit-M0660/14189065331-archive-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/14189065331-archive-audit.json",
+      "bytes": 2198,
+      "blob": "ceccbe33ab4cff74979f6919b6c13ff090b59d75",
+      "sha256": "b036a92f3c8c8241b8e7fd1e219f1890ad755aaf93365d1a0949171aea8976a8"
+    },
+    {
+      "bundlePath": "native-audit-M0660/14189065331.zip",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/14189065331.zip",
+      "bytes": 13300,
+      "blob": "8fa772c18e0e134ebf459953ad4fa220caa0a973",
+      "sha256": "bbfe178ee5502817c050d9002f9910a2a97ff7a10a408f74206cb24b29b279cf"
+    },
+    {
+      "bundlePath": "native-audit-M0660/14189605297-archive-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/14189605297-archive-audit.json",
+      "bytes": 2983,
+      "blob": "03ddf65da494d5c731770ef745264c620c39cf48",
+      "sha256": "70935207e616bf3bca624db0a8f59c6d1a16fc919d59db06503ce17cef5607ae"
+    },
+    {
+      "bundlePath": "native-audit-M0660/14189605297.zip",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/14189605297.zip",
+      "bytes": 12809,
+      "blob": "376cde43fde97916b64c129a8590664d7a8890dc",
+      "sha256": "1af26ad15b4ab8a9a33dd0c66fd087a6ef6fcc6b441e11b991e85dce6035f44a"
+    },
+    {
+      "bundlePath": "native-audit-M0660/14189670006-archive-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/14189670006-archive-audit.json",
+      "bytes": 2194,
+      "blob": "a42d1f676592bee0fa555c450a2b0a4323f8faac",
+      "sha256": "c7caefc41358117c946e9adcec0a53fb982d39db8b64132091a506ab503fd030"
+    },
+    {
+      "bundlePath": "native-audit-M0660/14189670006.zip",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/14189670006.zip",
+      "bytes": 10503,
+      "blob": "4e78f2de47f79632e88115b18f5c3245d2c678c6",
+      "sha256": "20db589280aa28c313bb56703b69441740c2c98f5fd42d58fddc13be9912fb1c"
+    },
+    {
+      "bundlePath": "native-audit-M0660/Plan29-completed-native-appendix.md",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/Plan29-completed-native-appendix.md",
+      "bytes": 12041,
+      "blob": "38c566d461715ca2dedab07502a1fe9af227e071",
+      "sha256": "b9e0c6789fdcefcee25d8aa9b0466e83adf281ad10ef10349d921796f5ae03f7"
+    },
+    {
+      "bundlePath": "native-audit-M0660/checkpoint-20261116-0055.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/checkpoint-20261116-0055.json",
+      "bytes": 25513,
+      "blob": "cdd652e911d5d730bb7b5f613c1aa479aefb6380",
+      "sha256": "bb31bde02b230091cc7ba8f228246bf22a218a48820ddf92b854c468ff8377d7"
+    },
+    {
+      "bundlePath": "native-audit-M0660/host-source-M0660-git-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/host-source-M0660-git-audit.json",
+      "bytes": 163123,
+      "blob": "c6f687fc66ecfbd5ab750c1fa657af628e2329e7",
+      "sha256": "05d5046c29097f54d9fb6c48bb8ab4236240a883d5ebfda4854269c5779a2893"
+    },
+    {
+      "bundlePath": "native-audit-M0660/p09-darwin-arm-qualification-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/p09-darwin-arm-qualification-audit.json",
+      "bytes": 28333,
+      "blob": "8255d90068c194c5c683e96074539fe77a2475a7",
+      "sha256": "ffe841df1d0d5ce9171e5daa43424f7f5d60aedeb3a3399c2182b480820716c7"
+    },
+    {
+      "bundlePath": "native-audit-M0660/p09-darwin-x64-qualification-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/p09-darwin-x64-qualification-audit.json",
+      "bytes": 28227,
+      "blob": "8e23ffc41085655d124fda2a5464120273639901",
+      "sha256": "153351d4016047f0bae97a6d6f4feeb391d154aefa92e06301f0135c83381c47"
+    },
+    {
+      "bundlePath": "native-audit-M0660/process-artifacts-api-0045.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/process-artifacts-api-0045.json",
+      "bytes": 917,
+      "blob": "6a24ad5394472a078e371fffe6759d7d217a92db",
+      "sha256": "e105f2aa62aa3e6cc8f1bc3bb34f921a3a45bebac042d642b6ef9ee3aa47cb69"
+    },
+    {
+      "bundlePath": "native-audit-M0660/process-artifacts-api-0050.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/process-artifacts-api-0050.json",
+      "bytes": 2706,
+      "blob": "d8d1dba979f517a3a5b4a7c1fdb33b48f8a1e95a",
+      "sha256": "01272b19863a8cc50268d82cecc5f02f3a258cd00138372e7623a1ce7e44a2ba"
+    },
+    {
+      "bundlePath": "native-audit-M0660/process-artifacts-api-0055.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/process-artifacts-api-0055.json",
+      "bytes": 3602,
+      "blob": "112dfd4300092be62e2cd3e9dd0fe54997fa1853",
+      "sha256": "c6a663f675a0f67848764de7683332bf4fd400e9b96e6bcb47c865bc385a7c34"
+    },
+    {
+      "bundlePath": "native-audit-M0660/process-darwin-arm-job.log",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/process-darwin-arm-job.log",
+      "bytes": 110552,
+      "blob": "5262f112ff02d752cfffa530a4b1a0f5f6d3c301",
+      "sha256": "3bb05d652742f8ef1d208b3b0bbdf2aac5b77cf9602887d18f675d155183137f"
+    },
+    {
+      "bundlePath": "native-audit-M0660/process-darwin-arm-qualification-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/process-darwin-arm-qualification-audit.json",
+      "bytes": 7304,
+      "blob": "54c6c8b6acf6e95d0d546b78919cbd4824505e77",
+      "sha256": "78010122d312f1fbd205e20839806649cfe22c63834c701ab2da0c769a5511ae"
+    },
+    {
+      "bundlePath": "native-audit-M0660/process-darwin-x64-job.log",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/process-darwin-x64-job.log",
+      "bytes": 119521,
+      "blob": "53236fe2d912d634cb93fbb4074ab84e78ebb43c",
+      "sha256": "15dab42070f96ab255685d90433171dcf79dbdedfdbf6904083ba3fd2cba397d"
+    },
+    {
+      "bundlePath": "native-audit-M0660/process-darwin-x64-qualification-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/process-darwin-x64-qualification-audit.json",
+      "bytes": 7299,
+      "blob": "b6f2d0557fd7fe2c596a9e95e84339dc77faa181",
+      "sha256": "0d6fd45bef51b9e43b3aaeba9793ad07767502900bbcf74582ea10b7c72199f2"
+    },
+    {
+      "bundlePath": "native-audit-M0660/process-jobs-api-0045.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/process-jobs-api-0045.json",
+      "bytes": 18738,
+      "blob": "67b2c79794ed5868399cd9ee9d108b3b6666a78f",
+      "sha256": "aaeb65e0644aaef1706dca8f1ea2d739e3dd17ca39ffb14e870d850385fb1bf8"
+    },
+    {
+      "bundlePath": "native-audit-M0660/process-jobs-api-0050.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/process-jobs-api-0050.json",
+      "bytes": 24269,
+      "blob": "366aff5d5acf0961bf3969fa9a3e1ef7381a2860",
+      "sha256": "4b67f449a1ae659a1a5c3966b62e3b23bacf8a6f7cf529869d12ad03970790f8"
+    },
+    {
+      "bundlePath": "native-audit-M0660/process-jobs-api-0055.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/process-jobs-api-0055.json",
+      "bytes": 25239,
+      "blob": "4fa4ace092146425b76b5f6c4136e0a22b3ce004",
+      "sha256": "52b2742c56c92bb33481e677bed0e764eeaa25b669613a86d30070268707a5cf"
+    },
+    {
+      "bundlePath": "native-audit-M0660/process-jobs-api-initial-0038.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/process-jobs-api-initial-0038.json",
+      "bytes": 13231,
+      "blob": "7a1bb9ea6ec5663cb88858c348bd9fdbf46f96ee",
+      "sha256": "d5ddba84b11f4117ce2d6462945f2bd0531fc57bf90e2dd6bcbeda5a671ab2c7"
+    },
+    {
+      "bundlePath": "native-audit-M0660/process-run-api-initial-0038.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/process-run-api-initial-0038.json",
+      "bytes": 13837,
+      "blob": "1fd88052cc78e49cd3a8d6b95c1df7df318433a5",
+      "sha256": "b34ead4cf5baccd24bfdafc77dc08c8f7f728adf3004cdadc526eb214248cf48"
+    },
+    {
+      "bundlePath": "native-audit-M0660/process-source-pin-audit-arm.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/process-source-pin-audit-arm.json",
+      "bytes": 36268,
+      "blob": "f3f1f59d68a77d254125400ba0f0c29cc02da47b",
+      "sha256": "5459d229be677d52d6176d56acbd3d23c7c5c8197ac5ce65b895d51329fe1029"
+    },
+    {
+      "bundlePath": "native-audit-M0660/process-source-pin-audit-x64.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/process-source-pin-audit-x64.json",
+      "bytes": 36182,
+      "blob": "534a7a81c11738b748b2440c476d8876696e8a36",
+      "sha256": "a6622fbe2c37f1b39c5f6fda4cb8db75a7129b0f25b45099bbe29ae31522902c"
+    },
+    {
+      "bundlePath": "native-audit-M0660/process-windows-arm-job.log",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/process-windows-arm-job.log",
+      "bytes": 429057,
+      "blob": "9f3bf5045c04e66fad50cc61b89173bd0dd18713",
+      "sha256": "7820d389433aae587b5925de02a90f3c2697cdf91b06adef875745cb94c300ce"
+    },
+    {
+      "bundlePath": "native-audit-M0660/process-windows-arm-qualification-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/process-windows-arm-qualification-audit.json",
+      "bytes": 38592,
+      "blob": "336a7d6d1050971cf0a9aa55264c87967dc1b593",
+      "sha256": "8b53e1ecb3b07351ce37d5a13b711fcdfbc7846021317241c4452987b1079052"
+    },
+    {
+      "bundlePath": "native-audit-M0660/process-windows-x64-job.log",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/process-windows-x64-job.log",
+      "bytes": 417172,
+      "blob": "0f8d178f48aa2b5eaf41a47f444d1ad690cc092a",
+      "sha256": "4ec29542283033d4255fd4d0ff0bd61c5ecf43fab665776daa2d45324fa3607d"
+    },
+    {
+      "bundlePath": "native-audit-M0660/process-windows-x64-qualification-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/process-windows-x64-qualification-audit.json",
+      "bytes": 38568,
+      "blob": "a175d2ad22b39108825dc5d86f77f2563e5a97b9",
+      "sha256": "7ff20c78be281b587227fd79336353cf6693b10f34719702108b046b5331a7ad"
+    },
+    {
+      "bundlePath": "native-audit-M0660/root-independent-x64-original-review.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/root-independent-x64-original-review.json",
+      "bytes": 30887,
+      "blob": "864a98ae2a9361ce08865c09d565463b9fe3cbe6",
+      "sha256": "62e92a8f016b9e0985f3307215de5ad1fadc1c5cf63663895af53b0c33786146"
+    },
+    {
+      "bundlePath": "native-audit-M0660/static-windows-independent-review.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/static-windows-independent-review.json",
+      "bytes": 5839,
+      "blob": "73baf23a2193095bc538988632ac8c1a11545aef",
+      "sha256": "bc3d1d83f235e97529766cca9fbe7c628fb1c2ba821b4eb869200fa52a326843"
+    },
+    {
+      "bundlePath": "native-audit-M0660/static-windows-job.log",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/static-windows-job.log",
+      "bytes": 102169,
+      "blob": "e5e8c70cf5b7841ccc0633b678e9f1b16c286120",
+      "sha256": "c209a97934a0b049aa4d6ff36bdc58ad53725e8098e106d1041d3d461786afd8"
+    },
+    {
+      "bundlePath": "native-audit-M0660/static-windows-qualification-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/static-windows-qualification-audit.json",
+      "bytes": 4997,
+      "blob": "d2df4ed720fb23f25d1641379ef73e1de3f4b273",
+      "sha256": "f7e9c65b18bf3b96c43cef7d7fb7a7661ed21e85c023edab15d708fe274d93a1"
+    },
+    {
+      "bundlePath": "native-audit-M0660/v2-artifacts-api-0045.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/v2-artifacts-api-0045.json",
+      "bytes": 882,
+      "blob": "684b6a48bcd5dc748cf8aa4ab94b2358579a6f93",
+      "sha256": "550b27317930105a768305bfeb50ecc4f5bc8e9eceb51fcc8ada057f57383179"
+    },
+    {
+      "bundlePath": "native-audit-M0660/v2-artifacts-api-0050.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/v2-artifacts-api-0050.json",
+      "bytes": 2601,
+      "blob": "c672bee39a25f8021e6b2287ad1374a06e3db32b",
+      "sha256": "680115e6ac3a3ca4cfd36ffd907de5ef72572a5e6b98e6547567f1c199923a2b"
+    },
+    {
+      "bundlePath": "native-audit-M0660/v2-artifacts-api-0055.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/v2-artifacts-api-0055.json",
+      "bytes": 3462,
+      "blob": "52ebd566ad2e2adaee46cf90369375e873b09ab7",
+      "sha256": "509aa16550da75f34e2c421f7461f7af52a20b259d29249837e9f4b43b519680"
+    },
+    {
+      "bundlePath": "native-audit-M0660/v2-darwin-arm-job.log",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/v2-darwin-arm-job.log",
+      "bytes": 106145,
+      "blob": "8fffd5b8cfb7143d3cf77423ecd0680df2ea911f",
+      "sha256": "b12cce50ce3b971a89a01a5fdfc37999f7fe9faf09c9ebc5be16c7e4e6cd3384"
+    },
+    {
+      "bundlePath": "native-audit-M0660/v2-darwin-x64-job.log",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/v2-darwin-x64-job.log",
+      "bytes": 113857,
+      "blob": "db29fe5f78c09728d85e8c7331b9505960cfb9bd",
+      "sha256": "9624d8dcc3aa64a9f5d99d1e3fd9a085571c2c112c9732476b4b90fab6aa923d"
+    },
+    {
+      "bundlePath": "native-audit-M0660/v2-jobs-api-0045.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/v2-jobs-api-0045.json",
+      "bytes": 27502,
+      "blob": "8079df369dee7a059ff062026c0e563cfb62ac0a",
+      "sha256": "fda20655c48a97ba8effc7b0ea097df46d47780b90cfb5739ab86526e9815ad7"
+    },
+    {
+      "bundlePath": "native-audit-M0660/v2-jobs-api-0050.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/v2-jobs-api-0050.json",
+      "bytes": 34116,
+      "blob": "e91bbff07fc6e4593b241a1f1cf1bcf968ef0839",
+      "sha256": "a110c12f72bc538eb988a9fd2c2ff599d92cf984f5582cf8aa1c6a97ec02eab0"
+    },
+    {
+      "bundlePath": "native-audit-M0660/v2-jobs-api-0055.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/v2-jobs-api-0055.json",
+      "bytes": 34828,
+      "blob": "0e840f4f3a7bf94bd4df3b37a3d871e96ba93b8c",
+      "sha256": "6bb588965400074016301da8a6815a7bc43a009103089e10891e70165c155cb0"
+    },
+    {
+      "bundlePath": "native-audit-M0660/v2-jobs-api-initial-0038.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/v2-jobs-api-initial-0038.json",
+      "bytes": 21686,
+      "blob": "1f4c6a507167e6652f40072bc4e839f96ec6e0fa",
+      "sha256": "811ab17f552358898061bdae2bb35b8e2351f8ffcfa8b8512be6921b8eb30508"
+    },
+    {
+      "bundlePath": "native-audit-M0660/v2-run-api-initial-0038.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/v2-run-api-initial-0038.json",
+      "bytes": 13859,
+      "blob": "448a5b657e349075171d1ef8b067c59af8fec48b",
+      "sha256": "ce6df4fb63154b36b6e6fd8975d26bdf8a1b4fd3b775760d4d7c7c181eb5768c"
+    },
+    {
+      "bundlePath": "native-audit-M0660/v2-windows-arm-job.log",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/v2-windows-arm-job.log",
+      "bytes": 102132,
+      "blob": "db967e2bbaae2ab88045325b1b4094318a6f287e",
+      "sha256": "51968791e9bc3de974666bb213887d085e2a7301dde7ec1f724d2462c0285544"
+    },
+    {
+      "bundlePath": "native-audit-M0660/v2-windows-arm-qualification-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/v2-windows-arm-qualification-audit.json",
+      "bytes": 18382,
+      "blob": "a0a93ed7f43282184d152a9f8a41b987d46b33ca",
+      "sha256": "16aed825703f44b2d5e244045dad18c7add21cab3c59e7fc6b98e8eb7d82f94b"
+    },
+    {
+      "bundlePath": "native-audit-M0660/v2-windows-x64-job.log",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/v2-windows-x64-job.log",
+      "bytes": 89895,
+      "blob": "155d84884ac96d06b00077f947e69a7ff9dc6681",
+      "sha256": "7f2e2b2c377b943ec5de2704d81678fb72b6da2de016ac3997dd597c93c41167"
+    },
+    {
+      "bundlePath": "native-audit-M0660/v2-windows-x64-qualification-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/v2-windows-x64-qualification-audit.json",
+      "bytes": 18371,
+      "blob": "4e697ff6a2593cf8509092e0e19282122a9c6a2e",
+      "sha256": "e2d1dfebd44d21d1d3d4980ae7a7708938f31e5b2fdcad82ffc3ef759a935c9b"
+    }
+  ],
+  "limits": [
+    "This is a source0660 snapshot, not a workflow aggregate or merge qualification. Five queued leaves remain unqualified.",
+    "P09 failures and all original skips stay failures/skips. Prior source results are not transferred.",
+    "The successful static/Process/V2 commands do not execute the original full Team privacy canary command or qualify all93 lint operands.",
+    "No reviewer project tests, builds, installation, native or real provider commands, CI mutation, or Git ref/source changes were performed."
+  ]
+}

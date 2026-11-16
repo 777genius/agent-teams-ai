@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "kind": "original-M0660-linux-V2-completed-checkpoint",
+  "createdAtUtc": "2026-11-16T01:52:49.733786+00:00",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997620,
+  "jobId": 133017915135,
+  "artifactId": 14190847461,
+  "payloads": [
+    {
+      "path": "v2-linux-x64/job-api.json",
+      "bytes": 4837,
+      "blob": "e64e4e852c6ffda19f0380509783c3602cbc8e0f",
+      "sha256": "2112c2bf9c4ee91bdc2b21bfc6640a5b3ab0c3283cfbb5a427a60d0e49e2b26b"
+    },
+    {
+      "path": "v2-linux-x64/artifact-api.json",
+      "bytes": 781,
+      "blob": "99d8cbc0f2f9ed7e325c8645ed426e5a610c639f",
+      "sha256": "6b95b891a680605afcf54a17cb561c0a87ee6a4fada5df50731d9c4050f3fc94"
+    },
+    {
+      "path": "v2-linux-x64/artifact-14190847461.zip",
+      "bytes": 23381,
+      "blob": "31f3054bfbd2240d4e9f572acbe400a43dbb5951",
+      "sha256": "83ca24eef71341586fe1b6f4de73d5f8ae2137517b66e6055eea63d1fbd84143"
+    },
+    {
+      "path": "v2-linux-x64/archive-audit.json",
+      "bytes": 2117,
+      "blob": "41d39fda430d6088002c4a0a89fe0795c6dffb31",
+      "sha256": "d8fa090fe1216b2899a2abff90deb51fd8d87baf84da22d4ea01b6bee94202b5"
+    },
+    {
+      "path": "v2-linux-x64/job-133017915135.log",
+      "bytes": 115540,
+      "blob": "58edcb94c9ae0734a13385585093ec3cc75ba314",
+      "sha256": "72e2101eac33e1e4a448d97168f4eb1b2a6e1b61a58fc840d7b8d513afdbbe9c"
+    },
+    {
+      "path": "v2-linux-x64/source-audit.json",
+      "bytes": 7340,
+      "blob": "abe8418cf17ad883df6895f92a49bb58a1090157",
+      "sha256": "fddccfd416600ebaf74bfe03ad18f4261d9838c334e89a370d10c86c6003b00b"
+    },
+    {
+      "path": "v2-linux-x64/audit.json",
+      "bytes": 50591,
+      "blob": "1caeee97d39d7762c97fb51bb89f374fa39e784c",
+      "sha256": "1b31f48e787548922621103ea3aaef693c4d3f3e3c8bcb7f002f5c21b0c7f7fc"
+    },
+    {
+      "path": "v2-linux-x64/Plan29-linux-v2-appendix-v2.md",
+      "bytes": 6688,
+      "blob": "4dde9192dc40e01f19622b4f83f86de7aa3dd42b",
+      "sha256": "5debd49b9a707b43fca45a2cf20472edd28867847c4efc348f130a7cca3f3fbb"
+    }
+  ],
+  "recoverability": "Seven original receipts are byte-recoverable from the exact official ZIP and indexed by archive-audit.json; no need to duplicate extracted members. The pre-existing619 Host source rows are separately frozen/published and identified below.",
+  "existingDependency": {
+    "path": "host-source-M0660-git-audit.json",
+    "bytes": 163123,
+    "blob": "c6f687fc66ecfbd5ab750c1fa657af628e2329e7",
+    "sha256": "05d5046c29097f54d9fb6c48bb8ab4236240a883d5ebfda4854269c5779a2893"
+  },
+  "qualification": "Original Linux V2 native/controller/source/negative assertions only; all original broader false flags and the script COUNTEREXAMPLE retained.",
+  "signedDownloadUrlsRetained": false,
+  "executionByReviewer": false,
+  "supersedesUnpublishedCheckpoint": "v2-linux-x64/checkpoint.json; only prose corrects process-count versus member-count and inserts spaces, all raw/audit/source payloads unchanged."
+}

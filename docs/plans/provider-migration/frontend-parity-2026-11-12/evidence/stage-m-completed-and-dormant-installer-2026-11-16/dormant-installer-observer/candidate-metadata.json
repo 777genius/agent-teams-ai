@@ -1,0 +1,79 @@
+{
+  "kind": "prospective-only-M-Installer-passive-Team-observation",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "sourceTree": "e70ccffc6d55ad42c2249518bf142e2ed32ddf91",
+  "paths": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "preimage": {
+        "bytes": 25052,
+        "lines": 456,
+        "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+        "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7"
+      },
+      "candidate": {
+        "bytes": 26553,
+        "lines": 481,
+        "blob": "3e1ed4b3671f55b013067d932296b69163416481",
+        "sha256": "de783eb70fcef27364e0e2d2b8c0eb065b8a21b5c77471801a992c58e433dd34"
+      },
+      "addedLines": 27,
+      "removedLines": 2
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "preimage": {
+        "bytes": 103573,
+        "lines": 1766,
+        "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+      },
+      "candidate": {
+        "bytes": 113222,
+        "lines": 1919,
+        "blob": "24f14355aabbcf72274256a18a33331e9fcc9296",
+        "sha256": "0358780b7c4778e9332e6b4aeff072026a3798075fcc8aa1bac78033023759f9"
+      },
+      "addedLines": 153,
+      "removedLines": 0
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "preimage": {
+        "bytes": 101741,
+        "lines": 1312,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+      },
+      "candidate": {
+        "bytes": 101804,
+        "lines": 1313,
+        "blob": "db3508eb2b853d7b2bfba565145507758c47aaf4",
+        "sha256": "0b47c07069e5d5f8388b1a3ed039b8103526c15be920544089c16323d903f027"
+      },
+      "addedLines": 1,
+      "removedLines": 0
+    }
+  ],
+  "bounds": {
+    "controlsMaximumSourceLines": 800,
+    "metadataASCIIBytesMaximum": 860,
+    "standaloneFieldWrapperBytesMaximum": 879,
+    "inputRingOriginal": 96,
+    "dragRingOriginal": 32,
+    "newCallbacks": 0,
+    "newCDPRequests": 0,
+    "newTimers": 0,
+    "additionalTargetLookupsPerPointerDownUpClick": 1,
+    "additionalStoreSamplesPerPointerDownUpClick": 3,
+    "perKeyMaximumASCIICharacters": 192
+  },
+  "exactProofs": {
+    "originalControlsWaitReadToEOFUnchanged": true,
+    "entireOriginalTeamTestPrefixUnchanged": true,
+    "workflowInverseRemovesOnlyOneOperandLine": true
+  },
+  "notExecuted": true,
+  "notApplied": true,
+  "qualification": false
+}

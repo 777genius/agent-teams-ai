@@ -1,0 +1,13 @@
+{
+  "observedAtUTC": "2026-11-16 02:12:53 UTC",
+  "response": {
+    "ref": "refs/heads/fix/frontend-parity-e2e-followups-20261115",
+    "node_id": "REF_kwDORVTEtNoANXJlZnMvaGVhZHMvZml4L2Zyb250ZW5kLXBhcml0eS1lMmUtZm9sbG93dXBzLTIwMjYxMTE1",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs/heads/fix/frontend-parity-e2e-followups-20261115",
+    "object": {
+      "sha": "85355e11fcd08ffe87f96be5003675305458a354",
+      "type": "commit",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/85355e11fcd08ffe87f96be5003675305458a354"
+    }
+  }
+}

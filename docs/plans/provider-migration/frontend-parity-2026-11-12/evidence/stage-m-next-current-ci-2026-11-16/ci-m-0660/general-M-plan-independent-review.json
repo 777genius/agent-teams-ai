@@ -1,0 +1,530 @@
+{
+  "schema": "independent-original-M-General-plan-R2/v1",
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUTC": "2026-11-16T01:42:59.494408+00:00",
+  "result": "APPROVE original completed plan job only",
+  "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997502,
+  "jobId": 133017912464,
+  "actualConclusion": "success",
+  "originalInputs": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-M-plan-original.log",
+      "bytes": 117532,
+      "blob": "c134edada4731379f114fc07515ad096ddbb3d1d",
+      "sha256": "d1b155f0b23d7bbb1039ab8c71a5e5bdbd1e69abc693f3e89ce2feea61ada8dc"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-M-plan-original-log-response.json",
+      "bytes": 118721,
+      "blob": "91324302591f97a4c3959f3c9ed3ee5c218f91e1",
+      "sha256": "1b2efd4c5c1d79c867404a6b2703cb403bb4583b0bda271bae915db0ee11b2c6"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-M-plan-source-review.json",
+      "bytes": 6404,
+      "blob": "1b5507dabe1e2029841a25a6afb11cd7af52e36f",
+      "sha256": "0a88cd89c4bf73cca53805ee12cd300041df52ed693b772aee2ebc754a590835"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-M-merge-commit-original.json",
+      "bytes": 6362,
+      "blob": "897d1de9f2e0df346d594b545ab5f244e0c1f82e",
+      "sha256": "654b3856c88aa84bd54f78cfcf888ec918fa8f1ea1879323a969f5cf65f555f9"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-M-jobs-0129.json",
+      "bytes": 5864,
+      "blob": "2f6a910085fc8e620236470843beab7309e9d7ae",
+      "sha256": "d757e5972f83f5d4781771237dbf48167c1a5a272155a6d0aacb3e17ad2e3654"
+    }
+  ],
+  "decodedLogByteExactToFullOriginalResponse": true,
+  "actualCheckout": {
+    "result": "APPROVE immutable synthetic merge source identity",
+    "merge": "a0e9dd786b88abdbe72e6c0e2bdf2a1ca1d83cbe",
+    "parents": [
+      "def734338f13bcc3209e78079a0cedbc48f05a5b",
+      "0660c748f88675063e3051fb0f8b2022e8f6f056"
+    ],
+    "tree": "e70ccffc6d55ad42c2249518bf142e2ed32ddf91",
+    "truncated": false,
+    "recursiveEntries": 11525,
+    "leafCount": 10056,
+    "allRemoteDirectoryObjectsRehashed": 1470,
+    "rootTreeReconstructedFromFullAPIEntries": "e70ccffc6d55ad42c2249518bf142e2ed32ddf91",
+    "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "scope": "No workflow-job polling or project execution; immutable commit/tree GETs and pure byte hashing only."
+  },
+  "fullTreeSourceJoin": "Independent immutable Git commit GET plus untruncated full recursive Git tree GET; all1470 directory tree objects rehashed. Root tree exactly equals the independently read actual10056-leaf0660 Git tree.",
+  "actualRuntime": {
+    "node": "26.12.1",
+    "platform": "Linux x64 from original Setup Node log",
+    "Node24Qualification": false,
+    "sourceVersionFile": {
+      "path": ".node-version",
+      "bytes": 8,
+      "blob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5"
+    }
+  },
+  "actualOriginalRunBlock": [
+    "node --test test/scripts/ciOptionalWorkflows.test.mts",
+    "node scripts/ci/ci-feedback.mts plan"
+  ],
+  "actualTestCounts": {
+    "tests": 17,
+    "suites": 0,
+    "pass": 17,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "originalNodeReportedDurationMs": 92.305318,
+  "actual17Cases": [
+    {
+      "name": "codeql: defer drafts and run on Ready",
+      "originalReportedMs": 1.180021
+    },
+    {
+      "name": "codex-runtime-smoke: defer drafts and run on Ready",
+      "originalReportedMs": 1.046799
+    },
+    {
+      "name": "runtime-bootstrap-smoke: defer drafts and run on Ready",
+      "originalReportedMs": 0.14479
+    },
+    {
+      "name": "opencode-desktop-e2e: defer drafts and run on Ready",
+      "originalReportedMs": 0.106902
+    },
+    {
+      "name": "opencode-packaged-e2e: defer drafts and run on Ready",
+      "originalReportedMs": 0.154605
+    },
+    {
+      "name": "anthropic-compatible-status-e2e: defer drafts and run on Ready",
+      "originalReportedMs": 0.08563
+    },
+    {
+      "name": "anthropic-env-portability: defer drafts and run on Ready",
+      "originalReportedMs": 0.143919
+    },
+    {
+      "name": "sentry-owned-process-native: defer drafts and run on Ready",
+      "originalReportedMs": 0.17094
+    },
+    {
+      "name": "windows-backfill-diagnostic: defer drafts and run on Ready",
+      "originalReportedMs": 0.165061
+    },
+    {
+      "name": "native packaged dispatch guards remain intact",
+      "originalReportedMs": 0.422872
+    },
+    {
+      "name": "security schedules and main push triggers remain available",
+      "originalReportedMs": 0.35586
+    },
+    {
+      "name": "announcement validation still runs on drafts",
+      "originalReportedMs": 0.149077
+    },
+    {
+      "name": "automatic checks use the canonical run supersession policy verbatim",
+      "originalReportedMs": 0.562724
+    },
+    {
+      "name": "only Host Desktop retains its exact isolated v2 namespace and canonical cancellation",
+      "originalReportedMs": 0.856831
+    },
+    {
+      "name": "policy tests run before main CI planning, without dependency installation",
+      "originalReportedMs": 0.427268
+    },
+    {
+      "name": "selected native Desktop acceptance is required by the existing Full qualification",
+      "originalReportedMs": 1.081072
+    },
+    {
+      "name": "GitHub Pages: production deployment requires the main branch",
+      "originalReportedMs": 0.336551
+    }
+  ],
+  "allActualCaseNamesMatchExactSource": true,
+  "actualPlanningReason": "Draft feedback",
+  "planModeSourceInference": {
+    "full": false,
+    "metadata": false,
+    "reuse": false,
+    "basis": "Observed exact Draft feedback message identifies the source branch returning fallback with full:false. This is not a claim that a raw GITHUB_OUTPUT file was retained."
+  },
+  "sourceInputsRead": [
+    {
+      "path": ".github/workflows/announcements-content.yml",
+      "bytes": 2301,
+      "blob": "d7d1c6fde200971f29defe95c2c0436a0318b499",
+      "sha256": "4380473bf81c1e8762e11d1803bb023e60308c5525c6c409531d9749ec7661d8"
+    },
+    {
+      "path": ".github/workflows/anthropic-compatible-status-e2e.yml",
+      "bytes": 8602,
+      "blob": "6ec8f76ef4036fde31daab73db1205cf9f7dfdd2",
+      "sha256": "037e94e79d2b13136a2209f2a1dac2c65ee5bee117c8dcfcf11e71c106b2e8a0"
+    },
+    {
+      "path": ".github/workflows/anthropic-env-portability.yml",
+      "bytes": 4713,
+      "blob": "d3fa7512b79b79dc64c1580dfdc42d63361ae68a",
+      "sha256": "fee75fc9544498e419c45ddb3acdf6df20a387dc29c04009e8d450bea2fb5359"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 175238,
+      "blob": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+      "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce"
+    },
+    {
+      "path": ".github/workflows/codeql.yml",
+      "bytes": 2479,
+      "blob": "406b6f790f1e1a260a9f974bf85e9cc6441ed1c1",
+      "sha256": "d35b6d96c6d3582415b4feaf3144575f5d3a520c6e058c673ec15f95ddae5a7b"
+    },
+    {
+      "path": ".github/workflows/codex-runtime-smoke.yml",
+      "bytes": 3229,
+      "blob": "cef44447c47e39a7da678f37e2518952e218da08",
+      "sha256": "2d9b2fb19cb3d1e2797611254104bf5ab433b588427350747f0c0c6196f4490d"
+    },
+    {
+      "path": ".github/workflows/dependency-review.yml",
+      "bytes": 1527,
+      "blob": "4a5f2ab17b3daf4ffdf6992ee85d159adf2c46c6",
+      "sha256": "52570674031aecbba23cf8725e5aa09b58495421c8c9b21cef0e14a791ce27d0"
+    },
+    {
+      "path": ".github/workflows/electron-dev-profile-cross-platform.yml",
+      "bytes": 3218,
+      "blob": "490c2048dfbd9f275f784d7a0f1a6eeba0a9f361",
+      "sha256": "c85dd3daa63c0d31b8c87e5fe4b935456f6c47dbf9a0be1f06b6b8fbfaf84d25"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "bytes": 30399,
+      "blob": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+      "sha256": "a7e59eb17ee93d15ffad248322d79e536d9d9c0b02c83a30a31687fd6e618ce0"
+    },
+    {
+      "path": ".github/workflows/kanban-table-desktop-e2e.yml",
+      "bytes": 3335,
+      "blob": "95d681fe04abd838dd11799d7791fa59444c6e32",
+      "sha256": "572df7cb9de920ed0685febc94f6ddd08f18d7d96312e8ed946933a63ccbcdb3"
+    },
+    {
+      "path": ".github/workflows/landing-hetzner-release.yml",
+      "bytes": 7306,
+      "blob": "4b54f229156f9d347e1a33da0d83b3374acc4078",
+      "sha256": "ad5337b9e4a36797703c0e340a9539f0c12f2739eed6805851fcfa8cb00d1290"
+    },
+    {
+      "path": ".github/workflows/landing.yml",
+      "bytes": 5592,
+      "blob": "4a1ad9ae59ff2e338930a195d54fdff62da1ebc5",
+      "sha256": "1bda852e705b3b744b5b001e0fe3cb2d8fd80eaa3108d17787c076ad3b753b32"
+    },
+    {
+      "path": ".github/workflows/opencode-desktop-e2e.yml",
+      "bytes": 6719,
+      "blob": "3d2a90a0e335155d435bd4eae4f2bd2842425983",
+      "sha256": "ea78e9c6002db433bb57087c3d4eac3d652412746b3a3d5d2aad0cb02e76d17e"
+    },
+    {
+      "path": ".github/workflows/opencode-packaged-e2e.yml",
+      "bytes": 19616,
+      "blob": "458e165ef020a1f8b05806b9ae7edc839134e1b4",
+      "sha256": "80a7c110468f22670a541dcf8cd452c6de754376f4ff970bbdf2888bd91fc2fe"
+    },
+    {
+      "path": ".github/workflows/opencode-v2-cold-dashboard-e2e.yml",
+      "bytes": 2756,
+      "blob": "be6a9ae5a88efadca344773ed4aa962d42823d28",
+      "sha256": "2bd119e64866ae18519f01be6e7bffc138d0ce7b1e32ce2329a35e59de5a87a3"
+    },
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36013,
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14"
+    },
+    {
+      "path": ".github/workflows/prepare-updater-native-inputs.yml",
+      "bytes": 8825,
+      "blob": "51beb92ade4931fe04336c7d3908bacfc932269e",
+      "sha256": "6f69a0083fd03597029533db66f2f44fda629b2b3a127c62978809eb990db229"
+    },
+    {
+      "path": ".github/workflows/provider-real-runtime-e2e.yml",
+      "bytes": 8958,
+      "blob": "4ee30807aa18f043fe53d090bfb6211bb5458ce0",
+      "sha256": "9903545813f74656b4e78e53641449a7c4c09b6b3564263f83aa7f2f2f8f0737"
+    },
+    {
+      "path": ".github/workflows/runtime-bootstrap-smoke.yml",
+      "bytes": 5079,
+      "blob": "4020f668ab2a9a7b16fcb0aa7fd2d79a061f1d44",
+      "sha256": "65e296bb4946582ca3745930f1ecf0b16df481d38fb591a06c26f80529881f15"
+    },
+    {
+      "path": ".github/workflows/sentry-owned-process-native.yml",
+      "bytes": 39878,
+      "blob": "1188fa5b89d59b739d927082d1b6954a57181819",
+      "sha256": "2d84faae57ad758575935dc760df6561d219f16ee8c0bd615006ca3d88837357"
+    },
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "bytes": 6522,
+      "blob": "ef939f224a1642cb596906324c8d61441780ccc7",
+      "sha256": "f57bf21347769c79b9c8c21f6f35b40b772fbfe9cb5f8155d7daabb54499d15f"
+    },
+    {
+      "path": ".github/workflows/updater-linux-packages.yml",
+      "bytes": 21602,
+      "blob": "60d214756c640b7925cfe11ba45ed4009f27ca3c",
+      "sha256": "37710e0293dcb00b31df74062b52a52a77f1c22f2e37d8ce2150c668baa98074"
+    },
+    {
+      "path": ".github/workflows/updater-native-feasibility.yml",
+      "bytes": 13476,
+      "blob": "b55e6cbcb4de61e2e8688e1ff4b4529b043a4ada",
+      "sha256": "8fe371aab977f9ce0d54086c11e508ed7b370780db344b93efd3592d3b4a09ce"
+    },
+    {
+      "path": ".github/workflows/updater-windows-ota.yml",
+      "bytes": 27610,
+      "blob": "10ffcd79e48a71346df7545af638208ce039ad83",
+      "sha256": "3dcf1d333467391acd418869d6676c18d1193bb81d36040da358bd7e0f62743f"
+    },
+    {
+      "path": ".github/workflows/updater-windows.yml",
+      "bytes": 11849,
+      "blob": "a4e9375cb95c4129c503f1d7be82de1e3926ea62",
+      "sha256": "1be54468be42e72674c01f5b94c58789fbf75a3e4d7ac6deff312738f2b1f5e2"
+    },
+    {
+      "path": ".github/workflows/windows-backfill-diagnostic.yml",
+      "bytes": 14471,
+      "blob": "44bec5d82998468d48ac539f3624d0c2de1c6648",
+      "sha256": "adfdc03d5de437d308916da76774a1e4ca31aa5786f4ea2fe2fae4e1a2127c2c"
+    },
+    {
+      "path": ".node-version",
+      "bytes": 8,
+      "blob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5"
+    },
+    {
+      "path": "scripts/ci/ci-change-scope.mts",
+      "bytes": 11121,
+      "blob": "e78f5300e6eea7b8afbd4f0dfaa82a23e36af1cb",
+      "sha256": "bc930956661e5d129a225dc356bf21b70bd2dd779ebe6084ddff37595698499e"
+    },
+    {
+      "path": "scripts/ci/ci-feedback-metadata-proof.mts",
+      "bytes": 20920,
+      "blob": "985fd739df859bb747da75087f24219628e1063f",
+      "sha256": "342c42a9c25ffb6876bcbd51acad00a60bc5ecc9f5006d4a62a23a036a9a1a2a"
+    },
+    {
+      "path": "scripts/ci/ci-feedback-reuse.mts",
+      "bytes": 25400,
+      "blob": "5d67c89b142b4cfe211e6d3f46375e444bfd0cf2",
+      "sha256": "b910431c726b2f4506ac5edaa1691616f8a5ae1ec6c4958d347cbc3b127fd6b2"
+    },
+    {
+      "path": "scripts/ci/ci-feedback.mts",
+      "bytes": 19265,
+      "blob": "9d734783b4e273a4e4fbad27d4e51984646d436d",
+      "sha256": "c89f9b195d5efb183db154f87f3fee0c4e30345e4f24c6797b9a99e09311e40e"
+    },
+    {
+      "path": "test/scripts/ciOptionalWorkflows.test.mts",
+      "bytes": 8284,
+      "blob": "20fcd7ae72fc5ca98d4693a2ddf59326ff8afd4d",
+      "sha256": "477e9b4bf56104f868874d6ea2e8e81dfa8318566f98895a25e24af0d33c92b6"
+    },
+    {
+      "path": "test/workflows/runSupersession.mts",
+      "bytes": 12264,
+      "blob": "958006e504fa87e9b6a1cfc738929f77fbee7d74",
+      "sha256": "279fa3cab0f3769bb4b448005461bc789f6abbc9ad13cf1058c446492d5acd50"
+    }
+  ],
+  "sourceInputCount": 34,
+  "sourceInputScope": "Named plan modules, exact test, dependency-free run supersession module and every workflow text named by those17 source/policy assertions. Whole immutable checkout tree is M; no exhaustive external Actions/toolchain rebuild claim.",
+  "observedJobsAtFrozen0129": {
+    "total": 15,
+    "planSuccess": 1,
+    "queuedJobIds": [
+      133033794740,
+      133033795297
+    ],
+    "skippedJobIds": [
+      133017913491,
+      133017913830,
+      133017913863,
+      133033796167,
+      133033796272,
+      133033796518,
+      133033796520,
+      133033796685,
+      133033796875,
+      133033796876,
+      133033797144,
+      133033797270
+    ],
+    "noLaterSnapshotInThisReview": true
+  },
+  "evidenceLines": [
+    {
+      "line": 845,
+      "text": "2026-11-16T01:23:53.5966305Z HEAD is now at a0e9dd786 Merge 0660c748f88675063e3051fb0f8b2022e8f6f056 into def734338f13bcc3209e78079a0cedbc48f05a5b"
+    },
+    {
+      "line": 866,
+      "text": "2026-11-16T01:23:58.9587755Z node: v26.12.1"
+    },
+    {
+      "line": 877,
+      "text": "2026-11-16T01:23:58.9888242Z ##[group]Run node --test test/scripts/ciOptionalWorkflows.test.mts"
+    },
+    {
+      "line": 878,
+      "text": "2026-11-16T01:23:58.9888541Z node --test test/scripts/ciOptionalWorkflows.test.mts"
+    },
+    {
+      "line": 879,
+      "text": "2026-11-16T01:23:58.9888758Z node scripts/ci/ci-feedback.mts plan"
+    },
+    {
+      "line": 886,
+      "text": "2026-11-16T01:23:59.0968758Z ✔ codeql: defer drafts and run on Ready (1.180021ms)"
+    },
+    {
+      "line": 887,
+      "text": "2026-11-16T01:23:59.0970447Z ✔ codex-runtime-smoke: defer drafts and run on Ready (1.046799ms)"
+    },
+    {
+      "line": 888,
+      "text": "2026-11-16T01:23:59.0984435Z ✔ runtime-bootstrap-smoke: defer drafts and run on Ready (0.14479ms)"
+    },
+    {
+      "line": 889,
+      "text": "2026-11-16T01:23:59.0985439Z ✔ opencode-desktop-e2e: defer drafts and run on Ready (0.106902ms)"
+    },
+    {
+      "line": 890,
+      "text": "2026-11-16T01:23:59.0986281Z ✔ opencode-packaged-e2e: defer drafts and run on Ready (0.154605ms)"
+    },
+    {
+      "line": 891,
+      "text": "2026-11-16T01:23:59.0987019Z ✔ anthropic-compatible-status-e2e: defer drafts and run on Ready (0.08563ms)"
+    },
+    {
+      "line": 892,
+      "text": "2026-11-16T01:23:59.0987738Z ✔ anthropic-env-portability: defer drafts and run on Ready (0.143919ms)"
+    },
+    {
+      "line": 893,
+      "text": "2026-11-16T01:23:59.0988483Z ✔ sentry-owned-process-native: defer drafts and run on Ready (0.17094ms)"
+    },
+    {
+      "line": 894,
+      "text": "2026-11-16T01:23:59.0989230Z ✔ windows-backfill-diagnostic: defer drafts and run on Ready (0.165061ms)"
+    },
+    {
+      "line": 895,
+      "text": "2026-11-16T01:23:59.0989931Z ✔ native packaged dispatch guards remain intact (0.422872ms)"
+    },
+    {
+      "line": 896,
+      "text": "2026-11-16T01:23:59.0990794Z ✔ security schedules and main push triggers remain available (0.35586ms)"
+    },
+    {
+      "line": 897,
+      "text": "2026-11-16T01:23:59.0991450Z ✔ announcement validation still runs on drafts (0.149077ms)"
+    },
+    {
+      "line": 898,
+      "text": "2026-11-16T01:23:59.0992217Z ✔ automatic checks use the canonical run supersession policy verbatim (0.562724ms)"
+    },
+    {
+      "line": 899,
+      "text": "2026-11-16T01:23:59.0993132Z ✔ only Host Desktop retains its exact isolated v2 namespace and canonical cancellation (0.856831ms)"
+    },
+    {
+      "line": 900,
+      "text": "2026-11-16T01:23:59.0994067Z ✔ policy tests run before main CI planning, without dependency installation (0.427268ms)"
+    },
+    {
+      "line": 901,
+      "text": "2026-11-16T01:23:59.0994992Z ✔ selected native Desktop acceptance is required by the existing Full qualification (1.081072ms)"
+    },
+    {
+      "line": 902,
+      "text": "2026-11-16T01:23:59.0995903Z ✔ GitHub Pages: production deployment requires the main branch (0.336551ms)"
+    },
+    {
+      "line": 903,
+      "text": "2026-11-16T01:23:59.1065111Z ℹ tests 17"
+    },
+    {
+      "line": 904,
+      "text": "2026-11-16T01:23:59.1065549Z ℹ suites 0"
+    },
+    {
+      "line": 905,
+      "text": "2026-11-16T01:23:59.1065829Z ℹ pass 17"
+    },
+    {
+      "line": 906,
+      "text": "2026-11-16T01:23:59.1066026Z ℹ fail 0"
+    },
+    {
+      "line": 907,
+      "text": "2026-11-16T01:23:59.1066312Z ℹ cancelled 0"
+    },
+    {
+      "line": 908,
+      "text": "2026-11-16T01:23:59.1066559Z ℹ skipped 0"
+    },
+    {
+      "line": 909,
+      "text": "2026-11-16T01:23:59.1066781Z ℹ todo 0"
+    },
+    {
+      "line": 910,
+      "text": "2026-11-16T01:23:59.1067038Z ℹ duration_ms 92.305318"
+    },
+    {
+      "line": 911,
+      "text": "2026-11-16T01:23:59.1902312Z Draft feedback"
+    }
+  ],
+  "limits": [
+    "The17 original Node tests assert workflow text/policy. They do not execute their referenced native, packaged, vendor, provider, renderer or product journeys. Test names mentioning Ready do not authorize a Ready transition.",
+    "The planning script itself also actually ran after the17-case test command and logged Draft feedback; both exact commands are retained here.",
+    "Fast feedback and Full qualification were queued in the frozen01:29 snapshot, while12 dependent jobs were skipped. No result for either queued job or any skipped producer is inferred.",
+    "No old9e Windows1523/7 result transfers to M, and no Host full-ten-file privacyRED/GREEN,93-file lint, full frontend/runtime/types/P08/P09 or overall merge/release qualification follows from this plan job.",
+    "Actual Node26.12.1 is not relabelled captured Node24.21; the local K SIGKILL remains a separate failed attempt.",
+    "This ordinary valid Draft source route differs from the old9e EDITED fallback. No metadata editing, manual dispatch/rerun/cancel, gate bypass or Ready action is proposed.",
+    "This later original result remains outside the already frozen/published65-doc checkpoint; root may retain it in a later evidence-only cut.",
+    "Reviewer ran only Git/API immutable reads, file/JSON/string/hash inspection. No Node/project tests/compiler/lint/install/provider/native execution, CI polling/action, source/ref change or checkout."
+  ]
+}

@@ -1,0 +1,215 @@
+--- a/scripts/legacy-agent-host/desktop-ui-controls.ts
++++ b/scripts/legacy-agent-host/desktop-ui-controls.ts
+@@ -123,6 +123,24 @@
+           return finish();
+         }catch{return null;}
+       };
++      const teamKey=value=>typeof value==='string'&&value.length<=192&&
++        /^host-team:(?:TEST-[A-Za-z0-9_-]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/.exec(value)?.[0]===value?value:'unknown';
++      const teamOwn=(value,key)=>{
++        if(!value||(typeof value!=='object'&&typeof value!=='function'))return undefined;
++        const descriptor=Object.getOwnPropertyDescriptor(value,key);
++        return descriptor&&'value' in descriptor?descriptor.value:undefined;
++      };
++      const selectedTeamKey=()=>{
++        try{
++          const getState=teamOwn(teamOwn(window,'__agentTeamsDevStore'),'getState');
++          if(typeof getState!=='function')return 'unknown';
++          const value=teamOwn(getState(),'selectedTeamName');return value===null?'none':teamKey(value);
++        }catch{return 'unknown';}
++      };
++      const targetTeamKey=e=>{
++        try{const card=e.target instanceof Element?e.target.closest('[data-team-name]'):null;
++          return card?teamKey(card.getAttribute('data-team-name')):'none';}catch{return 'unknown';}
++      };
+       for(const type of ['pointerdown','pointerup','pointercancel','pointermove','click','keydown','keyup','focusin','focusout'])document.addEventListener(type,e=>{
+         if(type==='pointermove'&&!e.buttons)return;
+         const dragging=type==='pointermove'||type==='pointercancel';
+@@ -135,9 +153,16 @@
+           taskId:e.target instanceof Element?e.target.closest('.kanban-task-card')?.getAttribute('data-task-id')??null:null,
+           activeSortable:[...document.querySelectorAll('[aria-roledescription="sortable"][aria-pressed="true"]')].map(el=>({taskId:el.querySelector('.kanban-task-card')?.getAttribute('data-task-id'),transform:el.style.transform})),
+           dragAnnouncement:[...document.querySelectorAll('[id^="DndLiveRegion-"]')].map(el=>el.textContent)};
+-        if(type==='pointerdown'||type==='pointerup'||type==='click')row.taskClarification=taskClarification(e);
++        if(type==='pointerdown'||type==='pointerup'||type==='click'){
++          row.taskClarification=taskClarification(e);
++          try{row.teamNavigation={targetTeam:targetTeamKey(e),selectedBefore:selectedTeamKey(),
++            selectedAfterMicrotask:'unknown',selectedAfterDispatch:'unknown'};}catch{}
++        }
+         rows.push(row);queueMicrotask(()=>{row.defaultPreventedAfterMicrotask=e.defaultPrevented;row.focusAfterMicrotask=describe(document.activeElement);
+-          setTimeout(()=>{row.defaultPreventedAfterDispatch=e.defaultPrevented;row.focusAfterDispatch=describe(document.activeElement);},0);});
++          try{if(row.teamNavigation)row.teamNavigation.selectedAfterMicrotask=selectedTeamKey();}catch{}
++          setTimeout(()=>{row.defaultPreventedAfterDispatch=e.defaultPrevented;row.focusAfterDispatch=describe(document.activeElement);
++            try{if(row.teamNavigation)row.teamNavigation.selectedAfterDispatch=selectedTeamKey();}catch{}
++          },0);});
+       },{capture:true,passive:true});return true;
+     })()`);
+     assert.equal(
+--- a/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
++++ b/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
+@@ -1764,3 +1764,156 @@
+   await assert.rejects(mismatch.run(true), { code: 'ERR_ASSERTION' });
+   assert.deepEqual(mismatch.values, [true], 'the original exact stopped binding assertion remains after the UI read');
+ });
++
++async function passiveTeamNavigationFixture() {
++  const a = 'host-team:TEST-desktop-handle-TEST-observer';
++  const b = 'host-team:110ff390-0cbc-5ed7-936b-804bb4555b6b';
++  const state: Record<string, unknown> = { selectedTeamName: a };
++  const counts = { state: 0, clock: 0, guard: 0, step: 0, target: 0, attribute: 0 };
++  const fault = { state: false, target: false, attribute: false };
++  const input = { teamKey: b as unknown, hasCard: true };
++  const refusal = new Error('TEST passive observation failure');
++  const getState = () => { counts.state++; if (fault.state) throw refusal; return state; };
++  const store: Record<string, unknown> = { getState };
++  const window: Record<string, unknown> = { __agentTeamsDevStore: store };
++  const microtasks: (() => void)[] = [], timeouts: (() => void)[] = [];
++  const listeners = new Map<string, (event: Record<string, unknown>) => void>();
++  const registrations: { type: string; options: unknown }[] = [];
++  const expressions: string[] = [], sends: { method: string; params: unknown }[] = [];
++  class ObservedElement {
++    tagName = 'DIV'; id = ''; className = 'TEST-original-card-child';
++    closest(selector: string): ObservedElement | null {
++      if (selector !== '[data-team-name]') return null;
++      counts.target++; if (fault.target) throw refusal;
++      return input.hasCard ? card : null;
++    }
++    getAttribute(name: string) {
++      if (name !== 'data-team-name') return null;
++      counts.attribute++; if (fault.attribute) throw refusal;
++      return input.teamKey;
++    }
++  }
++  const card = new ObservedElement(), child = new ObservedElement();
++  const ui = createDesktopUiControls({
++    async send(method, params) { sends.push({ method, params }); return {}; },
++    async evaluate(expression) {
++      expressions.push(expression);
++      if (expression === 'document.visibilityState') return 'visible';
++      return runInNewContext(expression, {
++        window, Element: ObservedElement, HTMLButtonElement: ObservedElement,
++        performance: { now() { counts.clock++; return 123; } },
++        document: {
++          activeElement: null, querySelectorAll() { return []; },
++          addEventListener(type: string, listener: (event: Record<string, unknown>) => void, options: unknown) {
++            assert.equal(listeners.has(type), false); listeners.set(type, listener);
++            registrations.push({ type, options: JSON.parse(JSON.stringify(options)) });
++          },
++        },
++        queueMicrotask(callback: () => void) { microtasks.push(callback); },
++        setTimeout(callback: () => void, delay: number) { assert.equal(delay, 0); timeouts.push(callback); return 1; },
++      });
++    },
++  }, { assertOwnedRenderer() { counts.guard++; }, step() { counts.step++; } });
++  await ui.observeInput();
++  assert.deepEqual(sends, [{ method: 'Emulation.setFocusEmulationEnabled', params: { enabled: true } }]);
++  assert.equal(expressions.length, 2); assert.equal(expressions[1], 'document.visibilityState');
++  assert.deepEqual(registrations, ['pointerdown', 'pointerup', 'pointercancel', 'pointermove',
++    'click', 'keydown', 'keyup', 'focusin', 'focusout'].map(type => ({ type, options: { capture: true, passive: true } })));
++  const rows = () => {
++    const value = window.__TEST_desktopInputEvents;
++    assert.ok(Array.isArray(value)); return value as Record<string, unknown>[];
++  };
++  const emit = (type: string) => {
++    const listener = listeners.get(type); assert.ok(listener);
++    listener({ type, target: child, clientX: 191, clientY: 228, button: 0, buttons: 1,
++      isTrusted: true, defaultPrevented: false });
++    return rows().at(-1)!;
++  };
++  const microtask = () => { assert.equal(microtasks.length, 1); microtasks.shift()!(); assert.equal(timeouts.length, 1); };
++  const dispatch = () => { assert.equal(timeouts.length, 1); timeouts.shift()!(); };
++  const copy = (row: Record<string, unknown>) => row.teamNavigation === undefined
++    ? undefined : JSON.parse(JSON.stringify(row.teamNavigation)) as Record<string, unknown>;
++  return { a, b, state, store, window, getState, counts, fault, input, refusal, rows, emit,
++    microtask, dispatch, copy, expressions, sends, microtasks, timeouts };
++}
++
++test('passive original Team events retain the actual target and A-to-B-to-A observations in existing windows', async () => {
++  const f = await passiveTeamNavigationFixture();
++  for (const type of ['pointerdown', 'pointerup', 'click']) {
++    f.input.teamKey = f.b; f.state.selectedTeamName = f.a;
++    const row = f.emit(type);
++    assert.equal(row.type, type); assert.equal(row.trusted, true); assert.equal(row.taskClarification, null);
++    assert.equal(f.microtasks.length, 1); assert.equal(f.timeouts.length, 0);
++    assert.deepEqual(f.copy(row), { targetTeam: f.b, selectedBefore: f.a,
++      selectedAfterMicrotask: 'unknown', selectedAfterDispatch: 'unknown' });
++    f.input.teamKey = f.a; f.state.selectedTeamName = f.b; f.microtask();
++    assert.deepEqual(f.copy(row), { targetTeam: f.b, selectedBefore: f.a,
++      selectedAfterMicrotask: f.b, selectedAfterDispatch: 'unknown' });
++    f.state.selectedTeamName = f.a; f.dispatch();
++    assert.deepEqual(f.copy(row), { targetTeam: f.b, selectedBefore: f.a,
++      selectedAfterMicrotask: f.b, selectedAfterDispatch: f.a },
++    'the captured target is not reread after layout changes; these phases do not assert navigation settlement');
++    assert.equal(row.defaultPreventedAfterMicrotask, false); assert.equal(row.defaultPreventedAfterDispatch, false);
++  }
++  assert.deepEqual(f.counts, { state: 9, clock: 3, guard: 0, step: 0, target: 3, attribute: 3 });
++  const other = f.emit('keydown'); f.microtask(); f.dispatch();
++  assert.equal('teamNavigation' in other, false); assert.equal(f.counts.state, 9); assert.equal(f.counts.target, 3);
++  assert.equal(f.counts.clock, 4); assert.equal(f.expressions.length, 2); assert.equal(f.sends.length, 1);
++});
++
++test('passive Team metadata remains bounded and independently unknown on unreadable or unqualified input', async () => {
++  const f = await passiveTeamNavigationFixture();
++  const sample = () => { const row = f.emit('click'); f.microtask(); f.dispatch(); return f.copy(row); };
++  f.input.hasCard = false; f.state.selectedTeamName = null;
++  assert.deepEqual(sample(), { targetTeam: 'none', selectedBefore: 'none',
++    selectedAfterMicrotask: 'none', selectedAfterDispatch: 'none' });
++  f.input.hasCard = true;
++  for (const value of [undefined, null, 17, {}, Object(f.b), 'TEST-private text', 'host-team:foreign',
++    'host-team:TEST-private\u0000suffix', 'host-team:TEST-space suffix', 'host-team:TEST-%2Fprivate',
++    'host-team:TEST-private\n', 'host-team:TEST-private\r', 'host-team:TEST-private\u2028',
++    'host-team:TEST-' + 'A'.repeat(178)]) {
++    f.input.teamKey = value; f.state.selectedTeamName = value;
++    const actual = sample();
++    assert.deepEqual(actual, { targetTeam: 'unknown', selectedBefore: value === null ? 'none' : 'unknown',
++      selectedAfterMicrotask: value === null ? 'none' : 'unknown', selectedAfterDispatch: value === null ? 'none' : 'unknown' });
++    assert.equal(JSON.stringify(actual).includes('private'), false);
++  }
++  const maximum = 'host-team:TEST-' + 'A'.repeat(177);
++  f.input.teamKey = maximum; f.state.selectedTeamName = maximum;
++  assert.equal(maximum.length, 192); assert.equal(Buffer.byteLength(JSON.stringify(sample())), 860);
++  f.input.teamKey = f.b; f.state.selectedTeamName = f.a;
++  for (const field of ['target', 'attribute'] as const) {
++    f.fault[field] = true;
++    assert.deepEqual(sample(), { targetTeam: 'unknown', selectedBefore: f.a,
++      selectedAfterMicrotask: f.a, selectedAfterDispatch: f.a });
++    f.fault[field] = false;
++  }
++  f.fault.state = true;
++  assert.deepEqual(sample(), { targetTeam: f.b, selectedBefore: 'unknown',
++    selectedAfterMicrotask: 'unknown', selectedAfterDispatch: 'unknown' });
++  f.fault.state = false;
++  f.store.getState = () => new Proxy({}, { getOwnPropertyDescriptor() { throw f.refusal; } });
++  assert.deepEqual(sample(), { targetTeam: f.b, selectedBefore: 'unknown',
++    selectedAfterMicrotask: 'unknown', selectedAfterDispatch: 'unknown' });
++  f.store.getState = f.getState;
++  let getterCalls = 0;
++  for (const [object, key, value] of [[f.window, '__agentTeamsDevStore', f.store],
++    [f.store, 'getState', f.getState], [f.state, 'selectedTeamName', f.a]] as const) {
++    Object.defineProperty(object, key, { configurable: true, get() { getterCalls++; return assert.fail('passive getter must not execute'); } });
++    assert.deepEqual(sample(), { targetTeam: f.b, selectedBefore: 'unknown',
++      selectedAfterMicrotask: 'unknown', selectedAfterDispatch: 'unknown' });
++    Object.defineProperty(object, key, { configurable: true, writable: true, value });
++  }
++  assert.equal(getterCalls, 0);
++  const row = f.emit('click'), retained = row.teamNavigation as Record<string, unknown>;
++  assert.deepEqual(f.copy(row), { targetTeam: f.b, selectedBefore: f.a,
++    selectedAfterMicrotask: 'unknown', selectedAfterDispatch: 'unknown' });
++  row.teamNavigation = new Proxy(retained, { set() { throw f.refusal; } });
++  assert.doesNotThrow(() => f.microtask()); assert.doesNotThrow(() => f.dispatch());
++  assert.equal(row.defaultPreventedAfterMicrotask, false); assert.equal(row.defaultPreventedAfterDispatch, false);
++  assert.equal(row.focusAfterMicrotask, null); assert.equal(row.focusAfterDispatch, null);
++  assert.deepEqual(f.copy(row), { targetTeam: f.b, selectedBefore: f.a,
++    selectedAfterMicrotask: 'unknown', selectedAfterDispatch: 'unknown' });
++  assert.equal(f.expressions.length, 2); assert.equal(f.sends.length, 1);
++  assert.equal(f.counts.guard, 0); assert.equal(f.counts.step, 0);
++});
+--- a/.github/workflows/host-emulated-acceptance.yml
++++ b/.github/workflows/host-emulated-acceptance.yml
+@@ -134,6 +134,7 @@
+             scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts \
+             scripts/legacy-agent-host/desktop-task-comment-input-target.ts \
+             scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts \
++            scripts/legacy-agent-host/desktop-ui-controls.ts \
+             scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts \
+             scripts/legacy-agent-host/qualify-linux-process-sdk.ts \
+             scripts/legacy-agent-host/run-packaged-opencode-v2.ts \

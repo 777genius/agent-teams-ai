@@ -1,0 +1,371 @@
+{
+  "archive": {
+    "path": "artifact-14191426901.zip",
+    "bytes": 1523241,
+    "blob": "a234dc6df38c6bd1efbddb53542a0893b9502fb3",
+    "sha256": "fd901e1748e031dac4b06ad2758f2f72d1d34f2aabe9faff93f7a0c12b9c4507"
+  },
+  "apiDigestAndSizeMatch": true,
+  "crcAllValid": true,
+  "safeUniqueNonsymlinkNames": true,
+  "members": [
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "crc32": "9a5b8b0e",
+      "bytes": 20699,
+      "blob": "90fcefdb01b6775f522c2608edb0de94c1edf301",
+      "sha256": "905816116662918134499815072f016e00d48e6b4a6335a534ef68b1a81ad72f"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/artifact/registered-process.node",
+      "crc32": "54f3fc63",
+      "bytes": 36104,
+      "blob": "57c127f01e3510ea9ad8bb6fc8028b06e9cdfd37",
+      "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/artifact/manifest.json",
+      "crc32": "222febbc",
+      "bytes": 1170,
+      "blob": "c5a238b73e94f4ba56fa1ace5933ce3179eb7a8e",
+      "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/linux-child-exec/linux-child-exec",
+      "crc32": "bdcb7dc9",
+      "bytes": 789792,
+      "blob": "26cd7246d5b74d2f14464fe82b8ba566e77f3d97",
+      "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/linux-child-exec/manifest.json",
+      "crc32": "0168806d",
+      "bytes": 2408,
+      "blob": "2f3526beb8e45f35f6f34188a71bd287274d430f",
+      "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/native.log",
+      "crc32": "abb3c96e",
+      "bytes": 233,
+      "blob": "6b89bfaf3691c6772aa6511999865ae7ca269c04",
+      "sha256": "9331e77dbe728680c6ffee24645fa8d9e39bebfde0a0d03855258fd904bf7db5"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/proof.ndjson",
+      "crc32": "1d92c0b9",
+      "bytes": 4081,
+      "blob": "1fd7237ff3e4931f913862e029c89791161410b2",
+      "sha256": "39ef4e9cee2d9786a1ccbd94e945f738971507671511fdf54ad5a41f51aefa23"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/registered-process-actor",
+      "crc32": "5e95f969",
+      "bytes": 17288,
+      "blob": "cc293fa68010718e8ebbc606002657e28342b46a",
+      "sha256": "8026a8cdb44dfa74a29ddc80b632759a0375313b5d9289050b15e581598e550b"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/selection.json",
+      "crc32": "2c5f984b",
+      "bytes": 589,
+      "blob": "e44117941270b10f1137126488616ecd07906f4b",
+      "sha256": "a94197e52deef716e2c254c58acb4af780fab2f63953f8c009a93746a849332d"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/warm-native.log",
+      "crc32": "4c387b11",
+      "bytes": 233,
+      "blob": "61a5f5bbad341490c1c6716dacee2f86e00e376f",
+      "sha256": "37ac3a8265a4e68ff3a374cce88264c0a00db767f11194520455c494afff30f3"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron/warm-proof.ndjson",
+      "crc32": "787a2545",
+      "bytes": 4577,
+      "blob": "812b566c4c56d23f8e4bccaab9f0119bfeef3df8",
+      "sha256": "f7a3adb0a9f36400e2dd07823ad701fd455a8a79aefb3e7791f48f4a95a268a4"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-electron.log",
+      "crc32": "7c3a2e39",
+      "bytes": 854,
+      "blob": "1fca8b41434e17b6f5d5bc784dcf4486b9c98bef",
+      "sha256": "ee5c32733e898bab151a8529e17387cec34d1b12390363ac84a197b087f98dc5"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node-exec-electron.log",
+      "crc32": "e953bcf5",
+      "bytes": 753,
+      "blob": "9cb69c64a30e43489cdee88fb56afbc01063276f",
+      "sha256": "4805e15be0caafbab7e06a4dbe3149e00253ada50f4b9873a5ad0d0a7d266975"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node-exec-packaging.log",
+      "crc32": "f19a3632",
+      "bytes": 6529,
+      "blob": "48dab8055d9b24220cf7f96ffe24af4ce549bc8a",
+      "sha256": "7a7b250892be6f0d515a4a655898635eb60213a10ec99c3b43a4596732e393b6"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node-exec-node24.log",
+      "crc32": "d55ef4b7",
+      "bytes": 756,
+      "blob": "4ff1e6812d8e363661a26b6b7b4c810f0b9fd0d2",
+      "sha256": "ca0ac8b134445b714e33b5bd5db1f85a5b9907e82d1634d1787376735c5403a6"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/artifact/manifest.json",
+      "crc32": "222febbc",
+      "bytes": 1170,
+      "blob": "c5a238b73e94f4ba56fa1ace5933ce3179eb7a8e",
+      "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/artifact/registered-process.node",
+      "crc32": "54f3fc63",
+      "bytes": 36104,
+      "blob": "57c127f01e3510ea9ad8bb6fc8028b06e9cdfd37",
+      "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/linux-child-exec/linux-child-exec",
+      "crc32": "bdcb7dc9",
+      "bytes": 789792,
+      "blob": "26cd7246d5b74d2f14464fe82b8ba566e77f3d97",
+      "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/linux-child-exec/manifest.json",
+      "crc32": "0168806d",
+      "bytes": 2408,
+      "blob": "2f3526beb8e45f35f6f34188a71bd287274d430f",
+      "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/native.log",
+      "crc32": "bfaec69f",
+      "bytes": 233,
+      "blob": "83153af374f89836b1c65ab32d68c904308a0b2b",
+      "sha256": "17c579faccd82606f4adc997baf422052dee4d0f36de22a9a20f63a04a81709c"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/proof.ndjson",
+      "crc32": "66ea325b",
+      "bytes": 4039,
+      "blob": "65a3e5171370f8f15c4535667468eb4525a54870",
+      "sha256": "c1fa4e04a81ce7251ad549b61d0292e6716d0649c0b210197e98283d1f505241"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/registered-process-actor",
+      "crc32": "5e95f969",
+      "bytes": 17288,
+      "blob": "cc293fa68010718e8ebbc606002657e28342b46a",
+      "sha256": "8026a8cdb44dfa74a29ddc80b632759a0375313b5d9289050b15e581598e550b"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/selection.json",
+      "crc32": "390bb5f8",
+      "bytes": 583,
+      "blob": "b48dee596c012dd858c65b06b7055df9008a9b02",
+      "sha256": "af26c77f97f933c1a3fedf2f782843235705314135c8c0a9336d66b68c55c033"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/warm-native.log",
+      "crc32": "c5127b90",
+      "bytes": 233,
+      "blob": "21d175c7fa91f35f2061dcf3f2c8ae7d20750371",
+      "sha256": "87b66d86a49b4070577cf97b9829bdb7c2c49a4d7c8f78d73308e3961fbecb5f"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24/warm-proof.ndjson",
+      "crc32": "6d462799",
+      "bytes": 4534,
+      "blob": "c543d9a2082edf001a40b10dbf413aae9e3c0c78",
+      "sha256": "edfe92e8c6c43d7001c6a12445c02ace78610c191d5113b6f32b28d35b0e59a6"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/linux-node24.log",
+      "crc32": "873aa1f9",
+      "bytes": 848,
+      "blob": "5dd63656a6c84d40e677957b06b2d39943d4b3e0",
+      "sha256": "350586d6006a73706144e383fdc729b7d24d8ea03f35a4e34973d2040b549349"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log",
+      "crc32": "f70d383f",
+      "bytes": 5165,
+      "blob": "a6b4615dc60a603e6ae551379cac6d885d64ca6d",
+      "sha256": "3df32eee5903563c1dfed36a63f6ee91ac266614ac9e4ff75cff87dabd8d4f44"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "crc32": "08125613",
+      "bytes": 769,
+      "blob": "26e3c4feb9a7aa5962e90dcd0b735d52fefded82",
+      "sha256": "c390a323c27593bf703e36e8d269948579903d81d3289bbb7efff289f83d93a5"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+      "crc32": "0b77dbd9",
+      "bytes": 2810,
+      "blob": "c3aec269becd48122f8da34fc16e97e543cf1a21",
+      "sha256": "c5324cebf34a4d2b972d86dcc9b19ab174ef22d036bdc44f7f20ba0c147fe812"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "crc32": "4499b00c",
+      "bytes": 41,
+      "blob": "773a8225a2fbcd1ef6fc246f11e817d4d2e5447c",
+      "sha256": "340bb727c5c76bddb02ac891f27911ecf7977030ce1dfe2444a74771be67b182"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43780997272/artifact/manifest.json",
+      "crc32": "222febbc",
+      "bytes": 1170,
+      "blob": "c5a238b73e94f4ba56fa1ace5933ce3179eb7a8e",
+      "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "crc32": "3790621a",
+      "bytes": 9382,
+      "blob": "9d9620093ec5a88d43c5980cb840084ab109807e",
+      "sha256": "9404d0db0658d100ca1445b765d7fadd4530b5131fa5771cf54587e07ee6b105"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43780997272/artifact/registered-process.node",
+      "crc32": "54f3fc63",
+      "bytes": 36104,
+      "blob": "57c127f01e3510ea9ad8bb6fc8028b06e9cdfd37",
+      "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43780997272/linux-child-exec/linux-child-exec",
+      "crc32": "bdcb7dc9",
+      "bytes": 789792,
+      "blob": "26cd7246d5b74d2f14464fe82b8ba566e77f3d97",
+      "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43780997272/linux-child-exec/manifest.json",
+      "crc32": "0168806d",
+      "bytes": 2408,
+      "blob": "2f3526beb8e45f35f6f34188a71bd287274d430f",
+      "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43780997272/native.log",
+      "crc32": "bfaec69f",
+      "bytes": 233,
+      "blob": "83153af374f89836b1c65ab32d68c904308a0b2b",
+      "sha256": "17c579faccd82606f4adc997baf422052dee4d0f36de22a9a20f63a04a81709c"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43780997272/proof.ndjson",
+      "crc32": "66ea325b",
+      "bytes": 4039,
+      "blob": "65a3e5171370f8f15c4535667468eb4525a54870",
+      "sha256": "c1fa4e04a81ce7251ad549b61d0292e6716d0649c0b210197e98283d1f505241"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43780997272/registered-process-actor",
+      "crc32": "5e95f969",
+      "bytes": 17288,
+      "blob": "cc293fa68010718e8ebbc606002657e28342b46a",
+      "sha256": "8026a8cdb44dfa74a29ddc80b632759a0375313b5d9289050b15e581598e550b"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43780997272/selection.json",
+      "crc32": "390bb5f8",
+      "bytes": 583,
+      "blob": "b48dee596c012dd858c65b06b7055df9008a9b02",
+      "sha256": "af26c77f97f933c1a3fedf2f782843235705314135c8c0a9336d66b68c55c033"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43780997272/warm-native.log",
+      "crc32": "c5127b90",
+      "bytes": 233,
+      "blob": "21d175c7fa91f35f2061dcf3f2c8ae7d20750371",
+      "sha256": "87b66d86a49b4070577cf97b9829bdb7c2c49a4d7c8f78d73308e3961fbecb5f"
+    },
+    {
+      "name": "_temp/TEST-process-node24-43780997272/warm-proof.ndjson",
+      "crc32": "6d462799",
+      "bytes": 4534,
+      "blob": "c543d9a2082edf001a40b10dbf413aae9e3c0c78",
+      "sha256": "edfe92e8c6c43d7001c6a12445c02ace78610c191d5113b6f32b28d35b0e59a6"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43780997272/artifact/manifest.json",
+      "crc32": "222febbc",
+      "bytes": 1170,
+      "blob": "c5a238b73e94f4ba56fa1ace5933ce3179eb7a8e",
+      "sha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43780997272/artifact/registered-process.node",
+      "crc32": "54f3fc63",
+      "bytes": 36104,
+      "blob": "57c127f01e3510ea9ad8bb6fc8028b06e9cdfd37",
+      "sha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43780997272/linux-child-exec/linux-child-exec",
+      "crc32": "bdcb7dc9",
+      "bytes": 789792,
+      "blob": "26cd7246d5b74d2f14464fe82b8ba566e77f3d97",
+      "sha256": "be3b1edbb1efd30897a9dbfa3e55b610a6e6f560d6fac5f1ea5b753c920a1110"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43780997272/linux-child-exec/manifest.json",
+      "crc32": "0168806d",
+      "bytes": 2408,
+      "blob": "2f3526beb8e45f35f6f34188a71bd287274d430f",
+      "sha256": "c7a9de31f589d168495922a21a4d769cdd81ee33492961eef4d25ddfc2fbf484"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43780997272/native.log",
+      "crc32": "abb3c96e",
+      "bytes": 233,
+      "blob": "6b89bfaf3691c6772aa6511999865ae7ca269c04",
+      "sha256": "9331e77dbe728680c6ffee24645fa8d9e39bebfde0a0d03855258fd904bf7db5"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43780997272/proof.ndjson",
+      "crc32": "1d92c0b9",
+      "bytes": 4081,
+      "blob": "1fd7237ff3e4931f913862e029c89791161410b2",
+      "sha256": "39ef4e9cee2d9786a1ccbd94e945f738971507671511fdf54ad5a41f51aefa23"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43780997272/registered-process-actor",
+      "crc32": "5e95f969",
+      "bytes": 17288,
+      "blob": "cc293fa68010718e8ebbc606002657e28342b46a",
+      "sha256": "8026a8cdb44dfa74a29ddc80b632759a0375313b5d9289050b15e581598e550b"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43780997272/selection.json",
+      "crc32": "2c5f984b",
+      "bytes": 589,
+      "blob": "e44117941270b10f1137126488616ecd07906f4b",
+      "sha256": "a94197e52deef716e2c254c58acb4af780fab2f63953f8c009a93746a849332d"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43780997272/warm-native.log",
+      "crc32": "4c387b11",
+      "bytes": 233,
+      "blob": "61a5f5bbad341490c1c6716dacee2f86e00e376f",
+      "sha256": "37ac3a8265a4e68ff3a374cce88264c0a00db767f11194520455c494afff30f3"
+    },
+    {
+      "name": "_temp/TEST-process-electron-43780997272/warm-proof.ndjson",
+      "crc32": "787a2545",
+      "bytes": 4577,
+      "blob": "812b566c4c56d23f8e4bccaab9f0119bfeef3df8",
+      "sha256": "f7a3adb0a9f36400e2dd07823ad701fd455a8a79aefb3e7791f48f4a95a268a4"
+    }
+  ],
+  "signedUrlRetained": false
+}

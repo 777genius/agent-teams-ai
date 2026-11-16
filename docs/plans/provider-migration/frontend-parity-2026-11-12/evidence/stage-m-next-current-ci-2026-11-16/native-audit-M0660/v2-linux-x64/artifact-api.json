@@ -1,0 +1,19 @@
+{
+  "id": 14190847461,
+  "name": "opencode-v2-embedded-native-linux-x64",
+  "size_in_bytes": 23381,
+  "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14190847461",
+  "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14190847461/zip",
+  "expired": false,
+  "created_at": "2026-11-16T01:44:40Z",
+  "expires_at": "2026-11-23T01:44:39Z",
+  "updated_at": "2026-11-16T01:44:40Z",
+  "digest": "sha256:83ca24eef71341586fe1b6f4de73d5f8ae2137517b66e6055eea63d1fbd84143",
+  "workflow_run": {
+    "id": 43780997620,
+    "repository_id": 1163183284,
+    "head_repository_id": 1163183284,
+    "head_branch": "fix/frontend-parity-completion-20261113",
+    "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+  }
+}
