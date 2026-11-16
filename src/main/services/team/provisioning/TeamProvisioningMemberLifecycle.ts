@@ -60,7 +60,6 @@ import {
   matchesTeamMemberIdentity,
 } from './TeamProvisioningMemberIdentity';
 import { isMemberLifecycleOperationInProgressError } from './TeamProvisioningMemberLifecycleKeys';
-import { spawnWindowsTeamRuntimeCli } from './TeamProvisioningWindowsRuntimeLauncher';
 import { type MemberLifecycleOperationKind } from './TeamProvisioningMemberLifecycleOperationRunner';
 import { parseOptionalIsoMs } from './TeamProvisioningMemberSpawnStatusPolicy';
 import { buildDirectRestartPromptMessage } from './TeamProvisioningMessagePersistence';
@@ -91,6 +90,7 @@ import {
   createNodeUpdateDirectTmuxRestartMemberConfigUseCase,
   type DirectTmuxRestartMemberConfigInput,
 } from './TeamProvisioningUpdateDirectTmuxRestartMemberConfigUseCase';
+import { spawnWindowsTeamRuntimeCli } from './TeamProvisioningWindowsRuntimeLauncher';
 
 import type { NativeAppManagedBootstrapSpec } from '../bootstrap/NativeAppManagedBootstrapContextBuilder';
 import type { TeamLaunchRuntimeAdapter } from '../runtime';

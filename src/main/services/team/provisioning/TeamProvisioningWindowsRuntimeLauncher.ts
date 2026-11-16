@@ -1,8 +1,9 @@
-import type { SpawnOptions } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
 import { spawnCli } from '@main/utils/childProcess';
+
+import type { SpawnOptions } from 'node:child_process';
 
 const WRAPPER_PATH = ['runtime', 'teammate-console', 'teammate.exe'] as const;
 const TARGET_ENV = 'AGENT_TEAMS_TEAMMATE_WRAPPER_TARGET';
