@@ -4574,3 +4574,36 @@ Import only copied versions of the four pure roster modules with pinned Node. Re
 Validation manifest SHA256 `28dd7cd3866133ae4ce755d5135998404d2b360bce2a03455f9551882e8ed632`; exact text patch SHA256 `0c22a30e11703602538dc7e5e8a2f78d2fdabdeafad7f3d40295181e72083de6`. Existing coherent closure manifest SHA256 `0a5fb1a10b3925a7b5615560a4b37b4f9ff4ae39b62c89da243fdbbe9f6417c8` stays in force. Use pinned Node24.21.0/TypeScript7.0.2/app pnpm11.25.0, original environment unsets, generic TEST Node and180-second local subprocess ceiling. No fake product/native clocks, real Claude/Codex (including version), paid inference, ambient credentials, user projects, native/GUI rebuild or new workflow action.
 
 All original15-second qualifying deadlines, source/authority/currentness/effect/no-replay/physical-cleanup oracles remain. Resulting-source full CI/types/typed lint, Desktop/native/packaged, P08, P09, full public C++/I386 policy and genuine donor/M16 gates remain separate; author/source review and prior-source PASS do not close them. No main merge/release/default activation/Stage2. No selected source or new checks were applied/executed while preparing this proposal.
+
+
+## Prospective R1 amendment: finite no-endpoint stderr counterexample
+
+Parent `b51e092d3bfe25054895010f8da7170d5c4c9b3a` / tree `ddb6f6b7abbd90f56685d94f72fbf90ffd55bec4`. The original scheduled17-path R1 was published/full-readback at00:05:07UTC before controlled RED application at00:06:00. Working RED tree `5f9e4af224f91a304ed49f9a9112c1791fd94fa7` retains the five old executable production bodies and old Task oracle exactly as planned. Its original canonical Host/ledger build passed, exit0/9.405seconds, before either test command.
+
+### Actual outcomes retained without qualification
+
+The complete old Task-tab file finished1PASS/1FAIL, exit1/8.744seconds. Failure is precisely the old literal raw-JSON isError expectation while actual result text remains visible; the stale-context case passed. Raw2368B/SHA256 `a087ad1a4c14739054a157b5939ab654110b18c8f30a13db7ae71592aea9be96`. This remains the already described obsolete-oracle refusal and need not be repeated on unchanged source.
+
+The five-file Host RED command did not finish. Its published180-second local ceiling killed the command process group: elapsed180.007seconds, exitCode−9/shell137, timedOut:true. Raw3447B/SHA256 `ee0650bd0192c47d8512278c4db6933e5cc2768d664d14bc91cb662a22358fc2`. The partial output contains the two new standalone adapter assertion failures and preceding original cases, then the first existing stderr case; it has no complete suite counters. Do not count that command as PASS, a complete regression inventory, or a new native cleanup witness. The raw log and receipt remain unmodified.
+
+Read-only source diagnosis explains the subsequent pending case. In original helper3b2b, privateValues dereferences the absent endpoint; its catch synchronously emits {kind:'gap',reason:'oversized'} and returns before installing stderr data/end listeners. The new valid standalone test writes/ends its PassThrough and waits for end, but the returned observer never starts readable flow. This prevents reaching its behavioral assertions; it does not justify a larger timeout or forcing artificial data flow.
+
+### Only one additional test assertion
+
+After exact R2/publication/readback, insert this immediate semantic assertion directly after the existing observeMemberProcessStderr call in the standalone case, before writing any bytes:
+
+```ts
+assert.deepEqual(f.observations, [], 'no diagnostic is synthesized before original stderr arrives');
+```
+
+A valid standalone context has not observed any stderr yet and cannot synthesize a diagnostic. The old helper's synchronous gap now fails finitely at that boundary; the complete observer then proceeds through every original canary, stdout-exclusion, UTF-8 stream, final-tail and listener-cleanup assertion. This observes behavior, not an implementation-specific listener requirement. It adds no fake clock, deadline, stream resume/drain, invented event, test skip or suppression.
+
+Only the selected after-image for `packages/legacy-agent-host/tests/member-process-stderr.test.ts` changes: e52785444caebdc8c698d87ac122f4a13742b5cc → `2fdf5fd36b188a5fd9ec50193815d25880512dd4`,247→248lines,14345B/SHA256 `3102b5d0b73adcb45c1326508fc5141d6e44f8fb413cafaa7308144c9b360e1b`. All other16 candidate images, all preimages and every original/new assertion are preserved. The existing15-path code/test scope and two plan appends remain; no production file is modified by this amendment.
+
+### Bound execution continuation
+
+Publish/read back this documentation-only amendment before the one-line test application or any further check. Keep the five old production bodies and old Task test for the renewed controlled RED. The previous complete RED Host build remains valid for its identical executable source; preserve its original source tree/receipt instead of manufacturing a new build result. Run the same five complete Host files once with the unchanged command/config/environment and180-second subprocess bound. Record the actual terminal result; if another cause appears, investigate it rather than weakening a check or claiming planned counts.
+
+Then the previously approved GREEN changes remain exactly the five selected production bodies plus the selected Task-test correction. Build the resulting canonical Host, run all five Host and four app files, strict11/16-root projects, original script compiler, scoped15-path lint, original guards, actual pure roster exports, source/index and265-member dependency postflight exactly as the original scheduled R1 prescribes. There is no further automatic retry or source fix in this amendment.
+
+Full refined17-path patch SHA256 `87d641215e2025a80c0fe60a2d0c0ba306680f22e615e9c8a541d0e175795d98`. Unchanged command manifest SHA256 `28dd7cd3866133ae4ce755d5135998404d2b360bce2a03455f9551882e8ed632`, Host configd3f58336 and appcaa12040 retain their full original reviewed bytes/options. Preserve previous source manifests, candidates, raw logs and preflight separately; this one-line refinement does not rewrite the earlier prospective or failed evidence. No private package/link/hoist change, full compiler retry, native/GUI/vendor execution, workflow action, product deadline change or acceptance exception. All previously recorded Draft/base/P08/P09/I386/M16/full-resulting-source gates remain.
