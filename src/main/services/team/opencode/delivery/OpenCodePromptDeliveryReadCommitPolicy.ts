@@ -334,6 +334,7 @@ export async function isLegacyOpenCodeMemberWorkSyncReadCommitAllowed(input: {
       return (
         normalized === 'review_start' ||
         normalized === 'review_approve' ||
+        normalized === 'review_complete' ||
         normalized === 'review_request_changes'
       );
     });
