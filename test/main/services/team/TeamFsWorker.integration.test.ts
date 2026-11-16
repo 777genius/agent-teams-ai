@@ -528,6 +528,44 @@ describe('team-fs-worker integration', () => {
     }
   });
 
+  it('projects reviewed and human-approved state from durable review history in the real worker', async () => {
+    const workerPath = await getWorkerPath();
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-fs-review-state-'));
+    const tasksBase = path.join(tempDir, 'tasks');
+    const teamName = 'review-history-team';
+    const tasksDir = path.join(tasksBase, teamName);
+    await fs.mkdir(tasksDir, { recursive: true });
+    const taskPath = path.join(tasksDir, 'reviewed.json');
+    const timestamp = '2026-11-16T00:00:00.000Z';
+    const events = [
+      { id: 'request-1', timestamp, type: 'review_requested', from: 'none', to: 'review', reviewer: 'alice' },
+      { id: 'completed-1', timestamp: '2026-11-16T00:01:00.000Z',
+        type: 'review_completed', from: 'review', to: 'reviewed',
+        reviewRequestId: 'request-1', actor: 'alice', note: 'Verified working E2E flow' },
+    ];
+    const writeTask = async (): Promise<void> => {
+      await fs.writeFile(taskPath, JSON.stringify({
+        id: 'reviewed', subject: 'Reviewed task', status: 'completed',
+        reviewState: 'review', createdAt: timestamp, historyEvents: events,
+      }), 'utf8');
+    };
+    await writeTask();
+    const worker = createWorker(workerPath);
+    try {
+      const first = await callGetAllTasks(worker, tasksBase);
+      expect(first.tasks).toHaveLength(1);
+      expect(first.tasks[0]).toMatchObject({ id: 'reviewed', reviewState: 'reviewed' });
+      events.push({ id: 'approved-1', timestamp: '2026-11-16T00:02:00.000Z',
+        type: 'human_approved', from: 'reviewed', to: 'approved',
+        actor: 'user', reviewRequestId: undefined, note: undefined });
+      await writeTask();
+      const second = await callGetAllTasks(worker, tasksBase);
+      expect(second.tasks[0]).toMatchObject({ id: 'reviewed', reviewState: 'approved' });
+    } finally {
+      await worker.terminate();
+    }
+  });
+
   it('reuses unchanged parsed tasks and rereads changed task files by fingerprint', async () => {
     const workerPath = await getWorkerPath();
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'team-fs-worker-'));
