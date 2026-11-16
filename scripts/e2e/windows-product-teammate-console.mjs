@@ -57,6 +57,7 @@ let stopped = false;
 let originalMember;
 let initialMember;
 let appManagedRosterAttachConfirmed = false;
+let teamAliveBeforeAttach = null;
 let addMemberIpcReceipt = null;
 let forceExitMember;
 let hwndObserver;
@@ -333,6 +334,11 @@ async function run() {
   }, 45_000);
   phase = 'app-managed-teammate-attach';
   initialMember = originalMember;
+  // The product IPC treats an inactive team as a config-only add. Verify the
+  // same runtime liveness gate before expecting a genuine member spawn event.
+  teamAliveBeforeAttach = await api(`window.electronAPI.teams.processAlive(${literal(teamName)})`);
+  assert.equal(teamAliveBeforeAttach, true,
+    'Product runtime became inactive before app-managed member attachment');
   const attachedName = 'bob';
   const attachedSpec = {
     name: attachedName, providerId: 'anthropic', model: 'claude-sonnet-4-6',
@@ -533,6 +539,7 @@ try {
     schemaVersion: 1, success: false, phase, error: String(error),
     realProductTeammateLaunch: Boolean(originalMember),
     appManagedRosterAttachConfirmed,
+    teamAliveBeforeAttach,
     addMemberIpcReceipt,
     toolResults: [...proofs.values()], usageImporterProcesses,
     stopFailurePidEvidence,
