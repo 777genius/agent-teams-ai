@@ -400,13 +400,13 @@ try {
       ? '.kanban-grid-item-wrapper button[aria-label="Approved column settings"]'
       : 'button[aria-label="Approved column settings"]';
     await until(() => cdp!.evaluate(
-      `(()=>{const b=document.querySelector(${JSON.stringify(selector)});return b instanceof HTMLButtonElement&&b.getBoundingClientRect().width>0;})()`
+      `(()=>{const b=document.querySelector(${JSON.stringify(selector)});return b instanceof HTMLButtonElement&&!b.disabled&&b.getBoundingClientRect().width>0;})()`
     ), `loaded ${layout} Approved-column settings button`);
     await cdp!.evaluate(
       `(()=>{const b=document.querySelector(${JSON.stringify(selector)});if(!(b instanceof HTMLButtonElement))throw Error('Approved settings missing');b.click();})()`
     );
     await until(() => cdp!.evaluate(
-      "!!document.querySelector('[role=menuitemcheckbox]')"
+      `(()=>{const item=document.querySelector('[role=menuitemcheckbox]');return item?.getAttribute('aria-checked')===${JSON.stringify(String(!checked))};})()`
     ), `${layout} approval policy menu opened`);
     await cdp!.evaluate(
       "(()=>{const item=document.querySelector('[role=menuitemcheckbox]');if(!(item instanceof HTMLElement))throw Error('Approval policy checkbox missing');item.click();})()"
