@@ -1,0 +1,1354 @@
+{
+  "kind": "logs-35cb-repaired-pair-source-review",
+  "repository": "777genius/agent-teams-ai",
+  "authorization": {
+    "publishedCommit": "833d9aecec227a7afc263b7dd60b1bd4781d1c6e",
+    "publishedTree": "39c6325fd10ff29d18e7e0ee1bb32cffc2e12991",
+    "r1Blob": "1b76c7a0b20603de0d97075d8141785e1716e74e",
+    "r1SHA256": "8132b428a79ea6ceadbbd0cbb62befa2a0232d1a6f10da954cc30bef569a6bc5",
+    "publishedFullReadbackAccepted": true
+  },
+  "candidate": {
+    "minimalSourceTree": "e7b0e5902671eb0ce34332a043cb708f61e2183e",
+    "fullMinimalTreeReadbackExact": true,
+    "base": "39c6325fd10ff29d18e7e0ee1bb32cffc2e12991",
+    "baseLeaves": 9675,
+    "candidateLeaves": 9686,
+    "changed": 61,
+    "added": 11,
+    "fixedTemplates": 46,
+    "transformed": 10,
+    "artifactLeaves": 5,
+    "preserved12": 12,
+    "commonBefore": 1702,
+    "commonAfter": 1754,
+    "windowsBefore": 1795,
+    "windowsAfter": 1795,
+    "packagedLocal": 1756,
+    "compositeConstruction": "The exact full intended leaf map preserves every unlisted 833d leaf; root must compose on its fresh current head. A full-tree object creation request returned ReadTimeout; no commit/ref operation occurred."
+  },
+  "frozenSources": {
+    "implementationCommit": "35cbd6e99b620e9b41802af936143d900f5e2aca",
+    "latestPlanOnlyCommit": "1f9242563bec2641b25077c3aa83a999bd7f4871",
+    "later9eSourceExcluded": true
+  },
+  "inventory": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "ownPreimage": "be8ce36916e7b0def4bb3659be6d92d0356deaf4",
+      "template": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+      "postimage": "a93ff6ba1e5656523668694bca24910a468aebc7",
+      "selection": "bounded-transform",
+      "physicalLines": 2633,
+      "bytes": 175238,
+      "sha256": "8cac831e00dd87f656a971c6496b8278c7cfddc261f1eb48573a7e2acf83c2d1"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "ownPreimage": "c956c196e4208c11b421b1eb5b68d4850ac50d43",
+      "template": "bf268bbeedf1d985cb1f7ceae35716dae3b3d40c",
+      "postimage": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+      "selection": "bounded-transform",
+      "physicalLines": 1248,
+      "bytes": 96872,
+      "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d"
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "ownPreimage": "063d101c59bbdcc9a6bb9d9961d12b468a5a944b",
+      "template": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "postimage": "42093f5cb1be431e383a2bbf97223a2bd8d54b49",
+      "selection": "bounded-transform",
+      "physicalLines": 304,
+      "bytes": 12355,
+      "sha256": "4e567d64af0c5a0d85e155e90fd4eec9a6ca720e89edfe9923d7e4cc9a1b4f81"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+      "ownPreimage": "4d1ff99143e5ddfb157ddaa7ee5ed48caa608e91",
+      "template": "a2158e62d439c0ee0b29ffd28df64cf848cee99f",
+      "postimage": "a2158e62d439c0ee0b29ffd28df64cf848cee99f",
+      "selection": "exact-template",
+      "physicalLines": 196,
+      "bytes": 9039,
+      "sha256": "5a7e5ab19c9f486c21e518c117c2637e0125b38f7ef2850ee6e1295bbad2123d"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "ownPreimage": "537cc17c207699eadba99bfae09b5853a3eaf1be",
+      "template": "2fe449639596cdb07bf5ef39d8040c65d9d6538c",
+      "postimage": "2fe449639596cdb07bf5ef39d8040c65d9d6538c",
+      "selection": "exact-template",
+      "physicalLines": 294,
+      "bytes": 11592,
+      "sha256": "b5c6b9e8924c4eb897f14c2ac4a355e6d505f515fe811c86667144bba4e362f9"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts",
+      "ownPreimage": "4169f9ed08441561bda739ab79eedfca32b62e73",
+      "template": "1fc098d27f67825b7cf48318329d1a809e41e1f4",
+      "postimage": "1fc098d27f67825b7cf48318329d1a809e41e1f4",
+      "selection": "exact-template",
+      "physicalLines": 62,
+      "bytes": 3589,
+      "sha256": "bb9963c1a45be8e59ff9b257b1d560d6355ddcdc4bc7665b27e7e378fed61ab9"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "ownPreimage": null,
+      "template": "3b2b960722f878cf60ba94bae27176fb9e7d0bba",
+      "postimage": "3b2b960722f878cf60ba94bae27176fb9e7d0bba",
+      "selection": "exact-template",
+      "physicalLines": 164,
+      "bytes": 7826,
+      "sha256": "c30d9a9d7357275864ede578ec9a4c66e335ffb1a613a5d916c6aced9061e1bc"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "ownPreimage": "0482d11bb2a051a0710905c5393495ee7cec64bf",
+      "template": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d",
+      "postimage": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d",
+      "selection": "exact-template",
+      "physicalLines": 315,
+      "bytes": 15423,
+      "sha256": "189b8a98f8708d22b1ffabc84ef235efd320a910bf7a9ee19c266846ccd3f1ac"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/readTeamActivity.ts",
+      "ownPreimage": "774f2453b5ced1698046e0f0724bc9bbb034ebb1",
+      "template": "f6243d55f628833ef797cce0afa2e1339a01e609",
+      "postimage": "f6243d55f628833ef797cce0afa2e1339a01e609",
+      "selection": "exact-template",
+      "physicalLines": 289,
+      "bytes": 12110,
+      "sha256": "47f2d9a185d618e35fce54b27dec45102d4600c5184771f25758e7109fc713ab"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts",
+      "ownPreimage": "1fa667f3513afd9065ecc6ac7b9402855ccab73a",
+      "template": "4a7d1e5330d4de65f95c9cd2cfc5c87e8027b773",
+      "postimage": "4a7d1e5330d4de65f95c9cd2cfc5c87e8027b773",
+      "selection": "exact-template",
+      "physicalLines": 171,
+      "bytes": 6110,
+      "sha256": "1b9edac01901dda2f4b01eb39bc4268064163f402608d3be00d2dd63c13730c3"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "ownPreimage": "879c120b7d9b2226701f58e832914adde5a3dd58",
+      "template": "0f5e2258b2af33c55673aa0fdc4c660e3629e784",
+      "postimage": "0f5e2258b2af33c55673aa0fdc4c660e3629e784",
+      "selection": "exact-template",
+      "physicalLines": 800,
+      "bytes": 35008,
+      "sha256": "1d86d1616645c2c0169806777415097e1523e294322b047699294ddfac03f1e0"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts",
+      "ownPreimage": null,
+      "template": "5fe2b1c75dc79aff685c9ef281b6cffd19e3a55b",
+      "postimage": "5fe2b1c75dc79aff685c9ef281b6cffd19e3a55b",
+      "selection": "exact-template",
+      "physicalLines": 50,
+      "bytes": 1836,
+      "sha256": "ce6281ee65275c72fc67d540bfb3fd70d902276ef0fabcefc4d471fa3df5efe2"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+      "ownPreimage": null,
+      "template": "b82e437c1e8f04726982af5d50fc54394725f138",
+      "postimage": "b82e437c1e8f04726982af5d50fc54394725f138",
+      "selection": "exact-template",
+      "physicalLines": 134,
+      "bytes": 5376,
+      "sha256": "a1c2499af3048c0e656f66131ffa76540fe7493c1f3643e0486c8ffe6358d940"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts",
+      "ownPreimage": null,
+      "template": "49183056d50b7815bde238e758c47c13302117f3",
+      "postimage": "49183056d50b7815bde238e758c47c13302117f3",
+      "selection": "exact-template",
+      "physicalLines": 60,
+      "bytes": 2888,
+      "sha256": "6c8d7217b45893446430419d689185c0d3420183e6d003324c1f4cf5d7838c5e"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+      "ownPreimage": "195541f5f1e98746728b11844dd68fdf845721b4",
+      "template": "338f38de5b4ee60d5fa982aa895dd2f71fde981b",
+      "postimage": "338f38de5b4ee60d5fa982aa895dd2f71fde981b",
+      "selection": "exact-template",
+      "physicalLines": 161,
+      "bytes": 5840,
+      "sha256": "2c2b72f7b9bea0e7f50cf4e95512ab022dbab50c8bcc6a697320aa35c823aede"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/providerActivityContracts.ts",
+      "ownPreimage": "01b12ef6f147495d72c46145d8e85622e78de77b",
+      "template": "d0ee6a31ded14c9af572a12ecc2dee4352f4eacf",
+      "postimage": "d0ee6a31ded14c9af572a12ecc2dee4352f4eacf",
+      "selection": "exact-template",
+      "physicalLines": 13,
+      "bytes": 557,
+      "sha256": "e235782823b292c8ec51ae467c49684a348254e4fb9e7744cab3adce5ad766e4"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+      "ownPreimage": "504be286f7ef7eb147310503a2a5ed3a6f339381",
+      "template": "48f51dc20a9253c81c9b231b6aa115f6244bd18f",
+      "postimage": "48f51dc20a9253c81c9b231b6aa115f6244bd18f",
+      "selection": "exact-template",
+      "physicalLines": 589,
+      "bytes": 25074,
+      "sha256": "c43e4da640daed957b098161fd0f85479eb24df4f7b1ccfe4b03c4d9690009cb"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "ownPreimage": "7ef05204eb696e2b498595a5f04a544fe20d0036",
+      "template": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+      "postimage": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+      "selection": "exact-template",
+      "physicalLines": 757,
+      "bytes": 30469,
+      "sha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "ownPreimage": "1bdd368dc281a59fb1a5b2fca629a18e201945a5",
+      "template": "f84153e49a9ace1f07a5d1f7bb9cea486f5617af",
+      "postimage": "f84153e49a9ace1f07a5d1f7bb9cea486f5617af",
+      "selection": "exact-template",
+      "physicalLines": 314,
+      "bytes": 14002,
+      "sha256": "30c863da3e66b2d2e4be13e8a3394d09e75ade9e84ee38a7775806cd60acc868"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "ownPreimage": "13cba7f4f29acc4edc08e5ae582773564c160d15",
+      "template": "414525958b459ccb9d4c20e4b185e03d71d46867",
+      "postimage": "414525958b459ccb9d4c20e4b185e03d71d46867",
+      "selection": "exact-template",
+      "physicalLines": 1028,
+      "bytes": 38315,
+      "sha256": "b328bdcfbbf8eb92e6b2215ee413fd0f723f3c85ac535e9d2cd470030dbf9905"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+      "ownPreimage": "ddf61eccc2d1385cf1b19c45581594ef49ce01be",
+      "template": "c640bd2a538f3f063b764174b71d365574925345",
+      "postimage": "c640bd2a538f3f063b764174b71d365574925345",
+      "selection": "exact-template",
+      "physicalLines": 269,
+      "bytes": 15811,
+      "sha256": "c06390dfcc504efdb693c1c7e3aa52375ea0916245f20461cd8be352a3a500d5"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "ownPreimage": null,
+      "template": "c073ab7b8c6025313747f75e50e8b0a14985d589",
+      "postimage": "c073ab7b8c6025313747f75e50e8b0a14985d589",
+      "selection": "exact-template",
+      "physicalLines": 226,
+      "bytes": 12742,
+      "sha256": "f2c89ada2f51d13e42af390229cc6b2fc58e2c82a48bf64154c006c5feedc573"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+      "ownPreimage": "df2deba6e265720b59227a5afba9a3086557e8d5",
+      "template": "011875b3a5bcab4d6f0775fdbc419157e0d48cba",
+      "postimage": "011875b3a5bcab4d6f0775fdbc419157e0d48cba",
+      "selection": "exact-template",
+      "physicalLines": 564,
+      "bytes": 33047,
+      "sha256": "e535ebe42ecbc8bb1904d9b3636985c2029c17f3c109430164fb4fe4b491dae2"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+      "ownPreimage": "c1708d23c9c958f2e0d73c6b3641b93b83ded853",
+      "template": "b0174217485fa7dadb4ba9692a3056798e2e3e9f",
+      "postimage": "aadc051d5514773ee81d76758c6bbd40c705df5e",
+      "selection": "bounded-transform",
+      "physicalLines": 518,
+      "bytes": 39595,
+      "sha256": "3f6833f360b93fcf9d24cedac2d9527768cc04ca8a67b52db3cf2152e816824b"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+      "ownPreimage": "23fac76661c04db7514e5f7cb5cb7f0fefe89ab9",
+      "template": "0b179a8b5fcf089de2f42dd90f8eef9a9160b992",
+      "postimage": "b19c8ff5a815a2c2034358f102e2af2cedc212e6",
+      "selection": "bounded-transform",
+      "physicalLines": 790,
+      "bytes": 40907,
+      "sha256": "d383c72806dc9a36b1b26ee0bd2246276556426f31333ed1974643765ba9f90c"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+      "ownPreimage": "c52c8cf9349798754192b2faf92a201186dbfb2b",
+      "template": "1a202377edc9f57c62eb757e9fcdc8718479e3d1",
+      "postimage": "1a202377edc9f57c62eb757e9fcdc8718479e3d1",
+      "selection": "exact-template",
+      "physicalLines": 164,
+      "bytes": 9208,
+      "sha256": "ee1ba17e9fd9f52dc825c067a17038a5de36af4541ede3201621e62007614dec"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "ownPreimage": "c506a68f03167abfc674c4fc109796fffcf985aa",
+      "template": "5a4a258d7802ff54fc2d4c405fc95c2e8e48e86e",
+      "postimage": "5a4a258d7802ff54fc2d4c405fc95c2e8e48e86e",
+      "selection": "exact-template",
+      "physicalLines": 1100,
+      "bytes": 54523,
+      "sha256": "2b0b8accbaf951b00d86537d6a0eb793e7ef1859d1ab401b06e93624f97269cb"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "ownPreimage": "aed70893add6ddf460ce7d13231511be4113b86e",
+      "template": "ac07c852895c6cfbabb5015f0c1ef0abe13b3a7c",
+      "postimage": "26871fb59d09594beff568994b85cf6cb5a00b00",
+      "selection": "bounded-transform",
+      "physicalLines": 3989,
+      "bytes": 215794,
+      "sha256": "f4fae2d035c68b53d15f16fee64821f8c9c2b0fe3740860fed7424712bc26d5f"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "ownPreimage": "ebe99d411da6689282ff499f936d40479dc36a35",
+      "template": "4f2de43f25fa57005dec41cd9f3501b72d17eb6f",
+      "postimage": "4f2de43f25fa57005dec41cd9f3501b72d17eb6f",
+      "selection": "exact-template",
+      "physicalLines": 373,
+      "bytes": 13673,
+      "sha256": "ec56b1bea503eae250a4c2e7c9c3e7e8fc7fa53775b200a3c12a85bea43837be"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "ownPreimage": "1d2de1cff41f77932e3fbc6e88a3c4cfdb697cb7",
+      "template": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "postimage": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+      "selection": "bounded-transform",
+      "physicalLines": 26665,
+      "bytes": 956788,
+      "sha256": "055c24af3466eaf5c48bb2c214f77187ebde76a60c1ad4849d551b5699464841"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "ownPreimage": "d93f661224946a540596594db88fe2053a02b5df",
+      "template": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "postimage": "a049a862742a85ba77faafea329fc221b3e500e4",
+      "selection": "bounded-transform",
+      "physicalLines": 169,
+      "bytes": 6946,
+      "sha256": "581c6a5ada272bf4fd370efccf5398c63a3abd32782cf82021cfa11d94a0e1a5"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+      "ownPreimage": "805941d9da3fffdac8c6e04c57e2eb46710bbcd7",
+      "template": "797cf587243a6c6ba1cd466ed105d5bb6d81772e",
+      "postimage": "797cf587243a6c6ba1cd466ed105d5bb6d81772e",
+      "selection": "exact-template",
+      "physicalLines": 446,
+      "bytes": 22826,
+      "sha256": "6677695937f2c532da1867df1b91afa43856229badf98035a6aa7467102d1791"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "ownPreimage": "04ed8641e43ba4cefd95fedca712522c2061b78d",
+      "template": "aff6e19ec4cf492841aa667442c1b7d71541c7c5",
+      "postimage": "aff6e19ec4cf492841aa667442c1b7d71541c7c5",
+      "selection": "exact-template",
+      "physicalLines": 377,
+      "bytes": 34086,
+      "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "ownPreimage": "55a7973806202dcca4b3cbcbadf621d4b7664f34",
+      "template": "345dc9a6b3fb9d197eaf2982e60840682d7b8fbd",
+      "postimage": "d37854de1c7cbd8eaf7ee4a15b21123bc659ce51",
+      "selection": "bounded-transform",
+      "physicalLines": 735,
+      "bytes": 63770,
+      "sha256": "e2c7912c7f8a738816e4c0392e2ea2e67043d5e83672236a9bef72fc3b9264b3"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "ownPreimage": "5c8d6a2ee1555257a4f83fa074a4e0de6549b14c",
+      "template": "9ebf57607eb1ca52fa4d7e29213bba99624167c8",
+      "postimage": "4f48e31f1fb4372064198ba01300518e5070feca",
+      "selection": "bounded-transform",
+      "physicalLines": 320,
+      "bytes": 20778,
+      "sha256": "6b85a372b0457547a7a941b9ad83694a45b93255a2a7ea9b1a3c82bd61339a61"
+    },
+    {
+      "path": "src/features/agent-backend/contracts/operations.ts",
+      "ownPreimage": "2a8959f75a70a76d85bea32a20ccb1277a8a16f2",
+      "template": "788c1ff6bb4a2a737c0a8d1399ffd43e134e6a38",
+      "postimage": "788c1ff6bb4a2a737c0a8d1399ffd43e134e6a38",
+      "selection": "exact-template",
+      "physicalLines": 538,
+      "bytes": 17358,
+      "sha256": "29ef5c69ce683182bde2085fcbf10290f61a2eb6a3c317d2ac4572a627eff26b"
+    },
+    {
+      "path": "src/features/agent-backend/main/adapters/output/projectBackendResult.ts",
+      "ownPreimage": "87ca79e7a3d0d1bc219ad79385f231f2ffe4dd0b",
+      "template": "dbeb14ba7d4a0de1ae97662e74d2929a51f9106c",
+      "postimage": "dbeb14ba7d4a0de1ae97662e74d2929a51f9106c",
+      "selection": "exact-template",
+      "physicalLines": 500,
+      "bytes": 20076,
+      "sha256": "b34c2c8ac933fa322792c75934a7a8675c66e6809955f4c48f7f116bc58d1d55"
+    },
+    {
+      "path": "src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts",
+      "ownPreimage": null,
+      "template": "4df980788dc6b990fcd555439c53bb4a329cef36",
+      "postimage": "4df980788dc6b990fcd555439c53bb4a329cef36",
+      "selection": "exact-template",
+      "physicalLines": 317,
+      "bytes": 11387,
+      "sha256": "fb686dd83830031ae319f646b50a9df9c5e0ab8d51e3b8914dfb9cec75dbf1db"
+    },
+    {
+      "path": "src/features/agent-backend/renderer/createHostTaskActivityApi.ts",
+      "ownPreimage": "a27af9116111f4366651c97c76201f66ebbac8d5",
+      "template": "8a35885a868140481e0b9d374fd3bd07f2742083",
+      "postimage": "8a35885a868140481e0b9d374fd3bd07f2742083",
+      "selection": "exact-template",
+      "physicalLines": 164,
+      "bytes": 6046,
+      "sha256": "216316cc70cbd609fb27a2e85823d26366d5da44009c90c844bc61abba7e2d10"
+    },
+    {
+      "path": "src/renderer/components/team/ClaudeLogsPanel.tsx",
+      "ownPreimage": "829b1ec065212ee20f0fdf57147977770e184eb8",
+      "template": "5255eb491789a5e2fd0cf11c338934b46ac7ae7b",
+      "postimage": "5255eb491789a5e2fd0cf11c338934b46ac7ae7b",
+      "selection": "exact-template",
+      "physicalLines": 243,
+      "bytes": 8203,
+      "sha256": "053f9c4e6c8109ffd48bb745821eb59ff0b013671c1e602762bc9af420bafd53"
+    },
+    {
+      "path": "src/renderer/components/team/ClaudeLogsSection.tsx",
+      "ownPreimage": "0632e20213f52663eef0e7f3bee3f93a92a51348",
+      "template": "06245cd010f4bdcca1ad0ed1177163c743343a3b",
+      "postimage": "06245cd010f4bdcca1ad0ed1177163c743343a3b",
+      "selection": "exact-template",
+      "physicalLines": 586,
+      "bytes": 21034,
+      "sha256": "965106c5d406e60dfbfa87218d30bd73ce18452210d64576f26098f2d89964e5"
+    },
+    {
+      "path": "src/renderer/components/team/members/HostMemberActivityLog.tsx",
+      "ownPreimage": "fea2c35c61000827cebb626d83e9c68e5a289a04",
+      "template": "b0095b83b3544988b7b6d5ba10163c93411868f5",
+      "postimage": "b0095b83b3544988b7b6d5ba10163c93411868f5",
+      "selection": "exact-template",
+      "physicalLines": 370,
+      "bytes": 14275,
+      "sha256": "3b0e5e8d661f1cf992d17a45e563f6348c9de33b32ee2795bfe4fe06394f2eba"
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberLogsTab.tsx",
+      "ownPreimage": "806fe6c45b47e68fa3df56ba5feae61c59f9c8c7",
+      "template": "9aa14dbd08d23f75c91ceb38d25ce5161fc6be37",
+      "postimage": "9aa14dbd08d23f75c91ceb38d25ce5161fc6be37",
+      "selection": "exact-template",
+      "physicalLines": 755,
+      "bytes": 28174,
+      "sha256": "7b1f49b1d53e461dfb120ec95b469259d57f178c4b9baf63628f5d1c2a5b886c"
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx",
+      "ownPreimage": "54f77b51f045451c6afdccf2a36f8e33688a19e3",
+      "template": "65f23ad13df71b514a11a97152b3d3324f0da5c5",
+      "postimage": "65f23ad13df71b514a11a97152b3d3324f0da5c5",
+      "selection": "exact-template",
+      "physicalLines": 65,
+      "bytes": 1975,
+      "sha256": "1dabc02dc7661ddedfb40d4f9e1bff941d3e953049c6bca0949a0a4c8e8f1998"
+    },
+    {
+      "path": "src/shared/types/teamActivity.ts",
+      "ownPreimage": "f61cd8757f9d4926e11a3f6e24812a469da8f4d8",
+      "template": "4bd34ac1435cab2472104203c00ecc4be3889630",
+      "postimage": "4bd34ac1435cab2472104203c00ecc4be3889630",
+      "selection": "exact-template",
+      "physicalLines": 134,
+      "bytes": 4045,
+      "sha256": "c7e772c925928a4d900f0c90b02f0e7b75e60c8745e9690103a54491a7b157e0"
+    },
+    {
+      "path": "src/shared/utils/diagnosticsRedaction.ts",
+      "ownPreimage": "5fe2b1c75dc79aff685c9ef281b6cffd19e3a55b",
+      "template": "2e345624c752ebac3024d579c1501dff7fe84a9e",
+      "postimage": "2e345624c752ebac3024d579c1501dff7fe84a9e",
+      "selection": "exact-template",
+      "physicalLines": 1,
+      "bytes": 126,
+      "sha256": "b34a34f5dece120ef8f93aa23cf63b15b35675bdd52394b0b8654117a2c580d8"
+    },
+    {
+      "path": "src/shared/utils/redactDiagnosticAssignments.ts",
+      "ownPreimage": "b82e437c1e8f04726982af5d50fc54394725f138",
+      "template": "0a1bd348ab98e6f33af2577cad33e9f2be44e745",
+      "postimage": "0a1bd348ab98e6f33af2577cad33e9f2be44e745",
+      "selection": "exact-template",
+      "physicalLines": 1,
+      "bytes": 102,
+      "sha256": "8cfd0fa9fa6680e69c49ebabd4c8b0fd04771768677ad6ca8ec44da2d2de0e51"
+    },
+    {
+      "path": "src/shared/utils/runtimeDiagnosticText.ts",
+      "ownPreimage": "1444ee99085670ffb786b5419dd9cd6e5fc29579",
+      "template": "1410cd6d6d9accf6f3c29802884b8acd58dc0568",
+      "postimage": "1410cd6d6d9accf6f3c29802884b8acd58dc0568",
+      "selection": "exact-template",
+      "physicalLines": 1,
+      "bytes": 105,
+      "sha256": "8a60c16fdac834916afd006104e328fcb2936e1e665d86c4253f26f2fe7f491c"
+    },
+    {
+      "path": "test/features/agent-backend/hostTaskActivity.test.ts",
+      "ownPreimage": "ce18eb8fd54dc1029eb53e44e7c68d722b818832",
+      "template": "66508376c5c12fe35cbedcbc6cba84a9f6720966",
+      "postimage": "66508376c5c12fe35cbedcbc6cba84a9f6720966",
+      "selection": "exact-template",
+      "physicalLines": 395,
+      "bytes": 13948,
+      "sha256": "e2c6d7b0670813744d414cf226005e44cf56c608c8567600519250967181db91"
+    },
+    {
+      "path": "test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "ownPreimage": "380bad2bc70dccf793255cc8998ca9b629aa10f9",
+      "template": "3233fc10c6f598345f566e542c1f47b5acc18d33",
+      "postimage": "3233fc10c6f598345f566e542c1f47b5acc18d33",
+      "selection": "exact-template",
+      "physicalLines": 1022,
+      "bytes": 36912,
+      "sha256": "3c9d81c0d7e81ee8fea671a2b1b814295363213a0b79af611ee28d13ec2af265"
+    },
+    {
+      "path": "test/features/agent-backend/tsconfig.json",
+      "ownPreimage": "84f05e170dc7ba5d5880588712fef782f91bd10e",
+      "template": "de2814ddc27524ac335f9f6c174aace1c7b1387c",
+      "postimage": "de2814ddc27524ac335f9f6c174aace1c7b1387c",
+      "selection": "exact-template",
+      "physicalLines": 12,
+      "bytes": 379,
+      "sha256": "4b6372a0f31b366a07f02aa7e70d106dcc98d3cacdbad9c57bb4856a88b74f79"
+    },
+    {
+      "path": "test/renderer/components/team/ClaudeLogsSection.test.ts",
+      "ownPreimage": "3ba7a08fbf4c9dd5125958cdd8c556af828e9114",
+      "template": "f60ad1bca4efa3af874080c6acd8cfc7a46745ac",
+      "postimage": "f60ad1bca4efa3af874080c6acd8cfc7a46745ac",
+      "selection": "exact-template",
+      "physicalLines": 1229,
+      "bytes": 38842,
+      "sha256": "e31e2296cc7db26add9b2ba0b27ac136338398f08f49b341be4861d57b6edb69"
+    },
+    {
+      "path": "test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+      "ownPreimage": "5722926c371b7bd8506e452522358ac3d08c19f7",
+      "template": "95bfc28a93043836fc08811dc129fb34492fe0a5",
+      "postimage": "95bfc28a93043836fc08811dc129fb34492fe0a5",
+      "selection": "exact-template",
+      "physicalLines": 586,
+      "bytes": 21056,
+      "sha256": "c74aac40488ad0a971de188f35bda2d973c5c0b64612c2b40528b1f2cc4c6b73"
+    },
+    {
+      "path": "test/renderer/components/team/members/MemberLogsPolling.test.ts",
+      "ownPreimage": "1f5820a4e7a0b0ee611ed9c990d8e0497236c928",
+      "template": "27610578158b6eb0b810e1a79e9624e8da6e53a4",
+      "postimage": "27610578158b6eb0b810e1a79e9624e8da6e53a4",
+      "selection": "exact-template",
+      "physicalLines": 480,
+      "bytes": 19002,
+      "sha256": "a7c536da9ad51ef4eca441d3da7fcda74bcd9589ee6aa4207fc3d10cd76d18c7"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "ownPreimage": "45cc6900fbc5ce462ccaa4da512fcc34174f1386",
+      "template": "6cdba0b52141348d97c593bf2ae6c224cdce5d73",
+      "postimage": "6cdba0b52141348d97c593bf2ae6c224cdce5d73",
+      "selection": "exact-template",
+      "physicalLines": 458,
+      "bytes": 31783,
+      "sha256": "03f92320d8646353540bcea7a3626a0a35634b803a6af1599d23c1d882a6d962"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "ownPreimage": "77b2f17c47b1bda1506aaf124ea079db1680199f",
+      "template": "76f5d1953816fd125f576a966c42caefcfc297e2",
+      "postimage": "76f5d1953816fd125f576a966c42caefcfc297e2",
+      "selection": "exact-template",
+      "physicalLines": 562,
+      "bytes": 39026,
+      "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a"
+    }
+  ],
+  "transformations": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "baseKind": "template",
+      "beforeSha": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+      "afterSha": "a93ff6ba1e5656523668694bca24910a468aebc7",
+      "beforeLines": 2633,
+      "afterLines": 2633,
+      "beforeChars": 175238,
+      "afterChars": 175238,
+      "bytes": 175238,
+      "sha256": "8cac831e00dd87f656a971c6496b8278c7cfddc261f1eb48573a7e2acf83c2d1",
+      "inverseExact": true,
+      "beforeHash": {
+        "bytes": 175238,
+        "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce"
+      },
+      "literalTransformations": [
+        {
+          "label": "provider directory",
+          "mode": "all",
+          "before": "vendor/provider-migration/host-logs-thinking-9423f600",
+          "after": "vendor/provider-migration/host-logs-thinking-c79b81bf",
+          "count": 2
+        },
+        {
+          "label": "implementation SHA256",
+          "mode": "all",
+          "before": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+          "after": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+          "count": 5
+        }
+      ],
+      "edits": {
+        "inserted": 7,
+        "deleted": 7,
+        "changedLines": [
+          {
+            "line": 774,
+            "before": "          assert.equal(r.build.providerDigest, '24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267');",
+            "after": "          assert.equal(r.build.providerDigest, 'a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8');"
+          },
+          {
+            "line": 1259,
+            "before": "          assert.equal(currentProvider.sha256, '24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267');",
+            "after": "          assert.equal(currentProvider.sha256, 'a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8');"
+          },
+          {
+            "line": 1454,
+            "before": "            path: 'vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz',",
+            "after": "            path: 'vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz',"
+          },
+          {
+            "line": 1455,
+            "before": "            sha256: '24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267',",
+            "after": "            sha256: 'a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8',"
+          },
+          {
+            "line": 1488,
+            "before": "          LEGACY_NATIVE_PROVIDER_ARTIFACT=vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz \\",
+            "after": "          LEGACY_NATIVE_PROVIDER_ARTIFACT=vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz \\"
+          },
+          {
+            "line": 1489,
+            "before": "          LEGACY_NATIVE_PROVIDER_SHA256=24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267 \\",
+            "after": "          LEGACY_NATIVE_PROVIDER_SHA256=a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8 \\"
+          },
+          {
+            "line": 1503,
+            "before": "          assert.equal(receipt.artifacts.provider.sha256, '24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267');",
+            "after": "          assert.equal(receipt.artifacts.provider.sha256, 'a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8');"
+          }
+        ]
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "baseKind": "template",
+      "beforeSha": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "afterSha": "42093f5cb1be431e383a2bbf97223a2bd8d54b49",
+      "beforeLines": 304,
+      "afterLines": 304,
+      "beforeChars": 12355,
+      "afterChars": 12355,
+      "bytes": 12355,
+      "sha256": "4e567d64af0c5a0d85e155e90fd4eec9a6ca720e89edfe9923d7e4cc9a1b4f81",
+      "inverseExact": true,
+      "beforeHash": {
+        "bytes": 12355,
+        "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b"
+      },
+      "literalTransformations": [
+        {
+          "label": "provider directory",
+          "mode": "all",
+          "before": "vendor/provider-migration/host-logs-thinking-9423f600",
+          "after": "vendor/provider-migration/host-logs-thinking-c79b81bf",
+          "count": 2
+        }
+      ],
+      "edits": {
+        "inserted": 2,
+        "deleted": 2,
+        "changedLines": [
+          {
+            "line": 296,
+            "before": "    \"@agent-teams/provider-implementations\": \"file:../../vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz\",",
+            "after": "    \"@agent-teams/provider-implementations\": \"file:../../vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz\","
+          },
+          {
+            "line": 297,
+            "before": "    \"@agent-teams/provider-session-contracts\": \"file:../../vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz\",",
+            "after": "    \"@agent-teams/provider-session-contracts\": \"file:../../vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz\","
+          }
+        ]
+      }
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "baseKind": "template",
+      "beforeSha": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "afterSha": "a049a862742a85ba77faafea329fc221b3e500e4",
+      "beforeLines": 169,
+      "afterLines": 169,
+      "beforeChars": 6946,
+      "afterChars": 6946,
+      "bytes": 6946,
+      "sha256": "581c6a5ada272bf4fd370efccf5398c63a3abd32782cf82021cfa11d94a0e1a5",
+      "inverseExact": true,
+      "beforeHash": {
+        "bytes": 6946,
+        "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea"
+      },
+      "literalTransformations": [
+        {
+          "label": "provider directory",
+          "mode": "all",
+          "before": "vendor/provider-migration/host-logs-thinking-9423f600",
+          "after": "vendor/provider-migration/host-logs-thinking-c79b81bf",
+          "count": 1
+        }
+      ],
+      "edits": {
+        "inserted": 1,
+        "deleted": 1,
+        "changedLines": [
+          {
+            "line": 38,
+            "before": "  '@agent-teams/provider-session-contracts': 'file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz'",
+            "after": "  '@agent-teams/provider-session-contracts': 'file:vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz'"
+          }
+        ]
+      }
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "baseKind": "template",
+      "beforeSha": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "afterSha": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+      "beforeLines": 26665,
+      "afterLines": 26665,
+      "beforeChars": 956788,
+      "afterChars": 956788,
+      "bytes": 956788,
+      "sha256": "055c24af3466eaf5c48bb2c214f77187ebde76a60c1ad4849d551b5699464841",
+      "inverseExact": true,
+      "beforeHash": {
+        "bytes": 956788,
+        "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c"
+      },
+      "literalTransformations": [
+        {
+          "label": "provider directory",
+          "mode": "all",
+          "before": "vendor/provider-migration/host-logs-thinking-9423f600",
+          "after": "vendor/provider-migration/host-logs-thinking-c79b81bf",
+          "count": 12
+        },
+        {
+          "label": "implementation integrity",
+          "mode": "all",
+          "before": "sha512-97w75rWGES5ITobUIXcPu2S4JNgsd4HH3IpyQLECi68+iCNr/BYj9W+Uc8h7gDtKHU5o6sW+mueG2VDiNvBFcQ==",
+          "after": "sha512-1QxsR0b5zRvHBjE0oQFVTEadYmpUmO1ElixO0Y0L3EuVDUXxkvhlE8KXUR0sTRplYVNV37n8jZ7+pSDYCGS2jA==",
+          "count": 1
+        }
+      ],
+      "edits": {
+        "inserted": 12,
+        "deleted": 12,
+        "changedLines": [
+          {
+            "line": 8,
+            "before": "  '@agent-teams/provider-session-contracts': file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+            "after": "  '@agent-teams/provider-session-contracts': file:vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz"
+          },
+          {
+            "line": 840,
+            "before": "        specifier: file:../../vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+            "after": "        specifier: file:../../vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz"
+          },
+          {
+            "line": 841,
+            "before": "        version: file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)",
+            "after": "        version: file:vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)"
+          },
+          {
+            "line": 843,
+            "before": "        specifier: file:../../vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+            "after": "        specifier: file:../../vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz"
+          },
+          {
+            "line": 844,
+            "before": "        version: file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+            "after": "        version: file:vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz"
+          },
+          {
+            "line": 900,
+            "before": "  '@agent-teams/provider-implementations@file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz':",
+            "after": "  '@agent-teams/provider-implementations@file:vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz':"
+          },
+          {
+            "line": 901,
+            "before": "    resolution: {integrity: sha512-97w75rWGES5ITobUIXcPu2S4JNgsd4HH3IpyQLECi68+iCNr/BYj9W+Uc8h7gDtKHU5o6sW+mueG2VDiNvBFcQ==, tarball: file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz}",
+            "after": "    resolution: {integrity: sha512-1QxsR0b5zRvHBjE0oQFVTEadYmpUmO1ElixO0Y0L3EuVDUXxkvhlE8KXUR0sTRplYVNV37n8jZ7+pSDYCGS2jA==, tarball: file:vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz}"
+          },
+          {
+            "line": 905,
+            "before": "  '@agent-teams/provider-session-contracts@file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz':",
+            "after": "  '@agent-teams/provider-session-contracts@file:vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz':"
+          },
+          {
+            "line": 906,
+            "before": "    resolution: {integrity: sha512-ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g==, tarball: file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz}",
+            "after": "    resolution: {integrity: sha512-ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g==, tarball: file:vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz}"
+          },
+          {
+            "line": 12791,
+            "before": "  '@agent-teams/provider-implementations@file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)':",
+            "after": "  '@agent-teams/provider-implementations@file:vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz(supports-color@10.2.2)':"
+          },
+          {
+            "line": 12793,
+            "before": "      '@agent-teams/provider-session-contracts': file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+            "after": "      '@agent-teams/provider-session-contracts': file:vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz"
+          },
+          {
+            "line": 12802,
+            "before": "  '@agent-teams/provider-session-contracts@file:vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz': {}",
+            "after": "  '@agent-teams/provider-session-contracts@file:vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz': {}"
+          }
+        ]
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+      "baseKind": "template",
+      "beforeSha": "b0174217485fa7dadb4ba9692a3056798e2e3e9f",
+      "afterSha": "aadc051d5514773ee81d76758c6bbd40c705df5e",
+      "beforeLines": 518,
+      "afterLines": 518,
+      "beforeChars": 39595,
+      "afterChars": 39595,
+      "bytes": 39595,
+      "sha256": "3f6833f360b93fcf9d24cedac2d9527768cc04ca8a67b52db3cf2152e816824b",
+      "inverseExact": true,
+      "beforeHash": {
+        "bytes": 39595,
+        "sha256": "3e93bd4ac4c0555d8f149781835584a7fd998c5e7e8f906669498e9cba7840eb"
+      },
+      "literalTransformations": [
+        {
+          "label": "implementation SHA256",
+          "mode": "all",
+          "before": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+          "after": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+          "count": 1
+        }
+      ],
+      "edits": {
+        "inserted": 1,
+        "deleted": 1,
+        "changedLines": [
+          {
+            "line": 23,
+            "before": "const CURRENT_SHA256 = '24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267';",
+            "after": "const CURRENT_SHA256 = 'a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8';"
+          }
+        ]
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+      "baseKind": "template",
+      "beforeSha": "0b179a8b5fcf089de2f42dd90f8eef9a9160b992",
+      "afterSha": "b19c8ff5a815a2c2034358f102e2af2cedc212e6",
+      "beforeLines": 790,
+      "afterLines": 790,
+      "beforeChars": 40907,
+      "afterChars": 40907,
+      "bytes": 40907,
+      "sha256": "d383c72806dc9a36b1b26ee0bd2246276556426f31333ed1974643765ba9f90c",
+      "inverseExact": true,
+      "beforeHash": {
+        "bytes": 40907,
+        "sha256": "1420bc3f28eae122436a520a8b85e4e23c21c674636548a37bd88570f80f1636"
+      },
+      "literalTransformations": [
+        {
+          "label": "implementation SHA256",
+          "mode": "all",
+          "before": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+          "after": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+          "count": 1
+        }
+      ],
+      "edits": {
+        "inserted": 1,
+        "deleted": 1,
+        "changedLines": [
+          {
+            "line": 151,
+            "before": "      assert.equal(expectedProviderSha, '24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267');",
+            "after": "      assert.equal(expectedProviderSha, 'a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8');"
+          }
+        ]
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "baseKind": "template",
+      "beforeSha": "345dc9a6b3fb9d197eaf2982e60840682d7b8fbd",
+      "afterSha": "d37854de1c7cbd8eaf7ee4a15b21123bc659ce51",
+      "beforeLines": 739,
+      "afterLines": 735,
+      "beforeChars": 63951,
+      "afterChars": 63768,
+      "bytes": 63770,
+      "sha256": "e2c7912c7f8a738816e4c0392e2ea2e67043d5e83672236a9bef72fc3b9264b3",
+      "inverseExact": true,
+      "beforeHash": {
+        "bytes": 63953,
+        "sha256": "62be20083316c423e9f0814593aa8815b7abd56507138e84a473de3cd8791c92"
+      },
+      "literalTransformations": [
+        {
+          "label": "optional title",
+          "before": "  const visibleLogFact = async (scope: string, event: Row) => {",
+          "after": "  const visibleLogFact = async (scope: string, event: Row, sourceTitle?: string) => {"
+        },
+        {
+          "label": "same evaluation title and identity",
+          "before": "      if(!e)return null;\n      const bodies=[...e.querySelectorAll('[data-host-log-content] p')].filter(p=>p.textContent.trim()===${literal(text)});",
+          "after": "      if(!e)return null;\n      const sourceTitle=${literal(sourceTitle ?? null)};\n      const sources=sourceTitle===null?[]:[...document.querySelectorAll(${literal(scope + ' button[aria-expanded=\"true\"]')})]\n        .filter(button=>button.textContent.trim()===sourceTitle);\n      if(sourceTitle!==null&&(sources.length!==1||!sources[0].getClientRects().length||\n        document.querySelectorAll(${literal(selector)}).length!==1||e.dataset.hostLogEventId!==${literal(event.eventId)}||\n        e.dataset.hostLogSequence!==${literal(String(event.sequence))}||e.dataset.hostLogKind!==${literal(record(event.data).kind)}))return null;\n      const bodies=[...e.querySelectorAll('[data-host-log-content] p')].filter(p=>p.textContent.trim()===${literal(text)});"
+        },
+        {
+          "label": "observed source title",
+          "before": "      return {eventId:e.dataset.hostLogEventId,sequence:Number(e.dataset.hostLogSequence),text:bodies[0].textContent.trim()}})()`,",
+          "after": "      return {eventId:e.dataset.hostLogEventId,sequence:Number(e.dataset.hostLogSequence),text:bodies[0].textContent.trim(),\n        ...(sourceTitle===null?{}:{source:sources[0].textContent.trim()})}})()`,"
+        },
+        {
+          "label": "both original Task tabs",
+          "before": "    let rendered: unknown;\n    if (tab === 'Task Log Stream') rendered = await visibleLogFact(panel, completion);\n    else {\n      await ui.scrollTo(`${panel} pre`, 'original retained completion in ' + tab,\n        String(record(completion.data).text), 12, { requireCenterHit: true });\n      rendered = await ui.waitRead(`(()=>{const panel=document.querySelector(${literal(panel)});if(!panel)return null;\n        const facts=[...panel.querySelectorAll('pre')].filter(e=>e.textContent===${literal(record(completion.data).text)}&&\n          e.parentElement.querySelector('span')?.textContent.trim()===${literal('#' + completion.sequence + ' text')});\n        if(facts.length!==1||!facts[0].getClientRects().length)return null;\n        return {sequence:${literal(completion.sequence)},text:facts[0].textContent,\n          source:panel.querySelector('button[aria-expanded=\"true\"]')?.textContent.trim()}})()`, 'exact original retained event in ' + tab);\n    }",
+          "after": "    const rendered = await visibleLogFact(panel, completion, title);"
+        }
+      ],
+      "edits": {
+        "inserted": 10,
+        "deleted": 14,
+        "hunks": [
+          " 143/143   };\n 144/144   const logFactSelector = (scope: string, event: Row) => `${scope} [data-host-log-event-id=${literal(event.eventId)}]`;\n+/145   const visibleLogFact = async (scope: string, event: Row, sourceTitle?: string) => {\n-145/   const visibleLogFact = async (scope: string, event: Row) => {\n 146/146     const selector = logFactSelector(scope, event), data = record(event.data), text = String(data.text);\n 147/147     assert.ok(['text', 'thinking', 'process-output'].includes(String(data.kind)));",
+          " 160/160     return record(await ui.waitRead(`(()=>{const e=document.querySelector(${literal(selector)});\n 161/161       if(!e)return null;\n+/162       const sourceTitle=${literal(sourceTitle ?? null)};\n+/163       const sources=sourceTitle===null?[]:[...document.querySelectorAll(${literal(scope + ' button[aria-expanded=\"true\"]')})]\n+/164         .filter(button=>button.textContent.trim()===sourceTitle);\n+/165       if(sourceTitle!==null&&(sources.length!==1||!sources[0].getClientRects().length||\n+/166         document.querySelectorAll(${literal(selector)}).length!==1||e.dataset.hostLogEventId!==${literal(event.eventId)}||\n+/167         e.dataset.hostLogSequence!==${literal(String(event.sequence))}||e.dataset.hostLogKind!==${literal(record(event.data).kind)}))return null;\n 162/168       const bodies=[...e.querySelectorAll('[data-host-log-content] p')].filter(p=>p.textContent.trim()===${literal(text)});\n 163/169       if(bodies.length!==1||!bodies[0].getClientRects().length)return null;\n+/170       return {eventId:e.dataset.hostLogEventId,sequence:Number(e.dataset.hostLogSequence),text:bodies[0].textContent.trim(),\n+/171         ...(sourceTitle===null?{}:{source:sources[0].textContent.trim()})}})()`,\n-164/       return {eventId:e.dataset.hostLogEventId,sequence:Number(e.dataset.hostLogSequence),text:bodies[0].textContent.trim()}})()`,\n 165/172       'actual retained output is visible inside Logs'));\n 166/173   };",
+          " 691/698     await ui.scrollTo(`${panel} button[aria-expanded=\"false\"]`, 'original ' + tab + ' disclosure', title);\n 692/699     await ui.click(`${panel} button[aria-expanded=\"false\"]`, 'open original ' + tab + ' facts', title);\n+/700     const rendered = await visibleLogFact(panel, completion, title);\n-693/     let rendered: unknown;\n-694/     if (tab === 'Task Log Stream') rendered = await visibleLogFact(panel, completion);\n-695/     else {\n-696/       await ui.scrollTo(`${panel} pre`, 'original retained completion in ' + tab,\n-697/         String(record(completion.data).text), 12, { requireCenterHit: true });\n-698/       rendered = await ui.waitRead(`(()=>{const panel=document.querySelector(${literal(panel)});if(!panel)return null;\n-699/         const facts=[...panel.querySelectorAll('pre')].filter(e=>e.textContent===${literal(record(completion.data).text)}&&\n-700/           e.parentElement.querySelector('span')?.textContent.trim()===${literal('#' + completion.sequence + ' text')});\n-701/         if(facts.length!==1||!facts[0].getClientRects().length)return null;\n-702/         return {sequence:${literal(completion.sequence)},text:facts[0].textContent,\n-703/           source:panel.querySelector('button[aria-expanded=\"true\"]')?.textContent.trim()}})()`, 'exact original retained event in ' + tab);\n-704/     }\n 705/701     assert.equal(await cdp.evaluate(`document.querySelector(${literal(panel)})?.textContent.includes(${literal(stderrText)})`), false,\n 706/702       'unattributed member stderr cannot enter exact Task logs');"
+        ]
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "baseKind": "template",
+      "beforeSha": "9ebf57607eb1ca52fa4d7e29213bba99624167c8",
+      "afterSha": "4f48e31f1fb4372064198ba01300518e5070feca",
+      "beforeLines": 320,
+      "afterLines": 320,
+      "beforeChars": 20778,
+      "afterChars": 20778,
+      "bytes": 20778,
+      "sha256": "6b85a372b0457547a7a941b9ad83694a45b93255a2a7ea9b1a3c82bd61339a61",
+      "inverseExact": true,
+      "beforeHash": {
+        "bytes": 20778,
+        "sha256": "4e278c7717ae10c6208dfa1658042b07861af63000e0c02900a735d423986898"
+      },
+      "literalTransformations": [
+        {
+          "label": "remove exact Windows-only Logs block",
+          "before": "  'scripts/e2e/opencode-diagnostics/packaged.test.mjs',\n  // Original Logs presentation, read ownership and selected-member stderr observations.\n  'packages/legacy-agent-host/tests/captured-claude-process.test.ts',\n  'packages/legacy-agent-host/tests/codex-member-provider.test.ts',\n  'packages/legacy-agent-host/tests/member-provider-authority.test.ts',\n  'packages/legacy-agent-host/tests/owned-process-facade.test.ts',\n  'packages/legacy-agent-host/tests/runtime-activity.test.ts',\n  'packages/legacy-agent-host/tests/team-activity-read.test.ts',\n  'src/renderer/components/team/ClaudeLogsPanel.tsx',\n  'src/renderer/components/team/ClaudeLogsSection.tsx',\n  'src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx',\n  'src/shared/utils/diagnosticsRedaction.ts',\n  'src/shared/utils/runtimeDiagnosticText.ts',\n  'test/features/agent-backend/hostTaskActivity.test.ts',\n  'test/features/agent-backend/runtimeActivityFacade.test.ts',\n  'test/renderer/components/team/ClaudeLogsSection.test.ts',\n  'test/renderer/components/team/members/MemberLogsPolling.test.ts',\n  'test/renderer/components/team/members/hostLogStatsTabs.test.tsx',\n  'packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts',\n  'packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts',\n  'packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts',\n  'packages/legacy-agent-host/tests/member-process-stderr.test.ts',\n  'src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts',\n  'src/renderer/components/team/ClaudeLogsFilterPopover.tsx',\n  'src/renderer/components/team/claudeLogsFilterState.ts',\n  'src/renderer/components/team/teamLogSources.ts',\n  'src/renderer/components/team/useClaudeLogsController.ts',\n  'src/renderer/components/team/CliLogsRichView.tsx',\n  'src/renderer/components/chat/items/BaseItem.tsx',\n  'src/renderer/components/chat/items/baseItemHelpers.ts',\n  'src/renderer/components/chat/items/linkedTool/renderHelpers.tsx',\n  'src/renderer/components/chat/viewers/MarkdownViewer.tsx',\n  'src/renderer/components/chat/searchHighlightUtils.ts',\n  'src/renderer/components/common/CopyButton.tsx',\n  'src/renderer/components/chat/markdownCopyUtils.ts',\n  'src/renderer/components/chat/viewers/syntaxHighlighter.ts',\n  'src/renderer/components/chat/viewers/FileLink.tsx',\n  'src/renderer/components/chat/viewers/MarkdownPre.tsx',\n  'src/renderer/components/chat/viewers/MarkdownPreContext.ts',\n  'src/renderer/components/chat/viewers/useResolvedViewerTeamContext.ts',\n  'src/renderer/utils/markdownLimits.ts',\n  'src/renderer/utils/markdownPlugins.ts',\n  'src/renderer/utils/syntaxHighlighter.ts',\n  'src/shared/utils/toolSummary.ts',\n  'src/features/member-log-reads/renderer/index.ts',\n  'src/features/member-log-reads/renderer/useCompletionRead.ts',\n  'src/features/member-log-reads/renderer/memberLogReadScope.ts',\n  'src/features/member-log-reads/renderer/useReadRefreshing.ts',\n  'src/features/member-log-reads/renderer/readMemberLogDetail.ts',\n  'src/features/member-log-reads/core/application/DetailReadCoordinator.ts',\n  'src/features/member-log-reads/core/application/DetailCacheFillFence.ts',\n  'test/features/agent-backend/tsconfig.json',\n  'src/renderer/vite-env.d.ts',\n  'test/types/better-sqlite3-node.d.ts',\n];",
+          "after": "  'scripts/e2e/opencode-diagnostics/packaged.test.mjs',\n];"
+        },
+        {
+          "label": "append same Logs block to common supplementary",
+          "before": "  'src/renderer/components/team/sidebar/teamSidebarUiState.ts',\n];\n",
+          "after": "  'src/renderer/components/team/sidebar/teamSidebarUiState.ts',\n  // Original Logs presentation, read ownership and selected-member stderr observations.\n  'packages/legacy-agent-host/tests/captured-claude-process.test.ts',\n  'packages/legacy-agent-host/tests/codex-member-provider.test.ts',\n  'packages/legacy-agent-host/tests/member-provider-authority.test.ts',\n  'packages/legacy-agent-host/tests/owned-process-facade.test.ts',\n  'packages/legacy-agent-host/tests/runtime-activity.test.ts',\n  'packages/legacy-agent-host/tests/team-activity-read.test.ts',\n  'src/renderer/components/team/ClaudeLogsPanel.tsx',\n  'src/renderer/components/team/ClaudeLogsSection.tsx',\n  'src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx',\n  'src/shared/utils/diagnosticsRedaction.ts',\n  'src/shared/utils/runtimeDiagnosticText.ts',\n  'test/features/agent-backend/hostTaskActivity.test.ts',\n  'test/features/agent-backend/runtimeActivityFacade.test.ts',\n  'test/renderer/components/team/ClaudeLogsSection.test.ts',\n  'test/renderer/components/team/members/MemberLogsPolling.test.ts',\n  'test/renderer/components/team/members/hostLogStatsTabs.test.tsx',\n  'packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts',\n  'packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts',\n  'packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts',\n  'packages/legacy-agent-host/tests/member-process-stderr.test.ts',\n  'src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts',\n  'src/renderer/components/team/ClaudeLogsFilterPopover.tsx',\n  'src/renderer/components/team/claudeLogsFilterState.ts',\n  'src/renderer/components/team/teamLogSources.ts',\n  'src/renderer/components/team/useClaudeLogsController.ts',\n  'src/renderer/components/team/CliLogsRichView.tsx',\n  'src/renderer/components/chat/items/BaseItem.tsx',\n  'src/renderer/components/chat/items/baseItemHelpers.ts',\n  'src/renderer/components/chat/items/linkedTool/renderHelpers.tsx',\n  'src/renderer/components/chat/viewers/MarkdownViewer.tsx',\n  'src/renderer/components/chat/searchHighlightUtils.ts',\n  'src/renderer/components/common/CopyButton.tsx',\n  'src/renderer/components/chat/markdownCopyUtils.ts',\n  'src/renderer/components/chat/viewers/syntaxHighlighter.ts',\n  'src/renderer/components/chat/viewers/FileLink.tsx',\n  'src/renderer/components/chat/viewers/MarkdownPre.tsx',\n  'src/renderer/components/chat/viewers/MarkdownPreContext.ts',\n  'src/renderer/components/chat/viewers/useResolvedViewerTeamContext.ts',\n  'src/renderer/utils/markdownLimits.ts',\n  'src/renderer/utils/markdownPlugins.ts',\n  'src/renderer/utils/syntaxHighlighter.ts',\n  'src/shared/utils/toolSummary.ts',\n  'src/features/member-log-reads/renderer/index.ts',\n  'src/features/member-log-reads/renderer/useCompletionRead.ts',\n  'src/features/member-log-reads/renderer/memberLogReadScope.ts',\n  'src/features/member-log-reads/renderer/useReadRefreshing.ts',\n  'src/features/member-log-reads/renderer/readMemberLogDetail.ts',\n  'src/features/member-log-reads/core/application/DetailReadCoordinator.ts',\n  'src/features/member-log-reads/core/application/DetailCacheFillFence.ts',\n  'test/features/agent-backend/tsconfig.json',\n  'src/renderer/vite-env.d.ts',\n  'test/types/better-sqlite3-node.d.ts',\n];\n"
+        }
+      ],
+      "edits": {
+        "inserted": 53,
+        "deleted": 53,
+        "basis": "Literal move of exact comment plus 52 entries. Equivalent LCS output can select surrounding unchanged section instead."
+      }
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "baseKind": "template",
+      "beforeSha": "bf268bbeedf1d985cb1f7ceae35716dae3b3d40c",
+      "afterSha": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+      "beforeLines": 1248,
+      "afterLines": 1248,
+      "beforeChars": 96552,
+      "afterChars": 96872,
+      "bytes": 96872,
+      "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d",
+      "inverseExact": true,
+      "beforeHash": {
+        "bytes": 96552,
+        "sha256": "2aa609c4dd7e068fcd8f0ca469ac8c0c1bd6602aa2eb1d983be3a837479cf8ae"
+      },
+      "literalTransformations": [
+        {
+          "label": "five complete existing Host suites on same Team command",
+          "before": "          node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts",
+          "after": "          node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts"
+        }
+      ],
+      "edits": {
+        "inserted": 1,
+        "deleted": 1,
+        "hunks": [
+          " 107/107         run: |\n 108/108           set -euo pipefail\n+/109           node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts\n-109/           node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts\n 110/110       - name: Verify complete workspace types and original typed lint scopes\n 111/111         if: matrix.lane == 'team'"
+        ]
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "baseKind": "own",
+      "beforeSha": "aed70893add6ddf460ce7d13231511be4113b86e",
+      "afterSha": "26871fb59d09594beff568994b85cf6cb5a00b00",
+      "beforeLines": 3870,
+      "afterLines": 3989,
+      "beforeChars": 207271,
+      "afterChars": 215790,
+      "bytes": 215794,
+      "sha256": "f4fae2d035c68b53d15f16fee64821f8c9c2b0fe3740860fed7424712bc26d5f",
+      "inverseExact": true,
+      "beforeHash": {
+        "bytes": 207275,
+        "sha256": "008f3372c051b15303242abd326a682e32342f480c4eaffdab42c1e0d0479ac1"
+      },
+      "literalTransformations": [
+        {
+          "label": "preserve incoming RuntimeTeam insertion 1",
+          "before": "  }\n);\n\ntest(\n  'activity RPC pages normalized native observations with opaque cursor, bounded snapshots and explicit gaps',\n  // Persisting and paging this bounded native event fixture validates correctness, not latency.",
+          "after": "  }\n);\n\ntest('composed original stderr survives failed startup before Runtime installs a native session', async t => {\n  const opening = deferred<void>();\n  let observations = 0;\n  const f = await fixture(t, {\n    open: opening.promise.then(() => { throw new Error('TEST original startup failed'); }),\n    onProvider(context) {\n      const binding = normalizeBinding(context.endpoint.binding), store = new FileRuntimeStore(context.profile.cwd);\n      const before = store.fenced(binding, tx => tx.get())!;\n      assert.equal(before.phase, 'opening'); assert.equal(before.sessionRef, undefined);\n      assert.deepEqual(before.inputs, []);\n      const conversation = store.readConversation(binding), observe = context.observeProcessOutput;\n      assert.ok(observe, 'the actual provider composition must supply the retained callback');\n      observe({ kind: 'process-output', stream: 'stderr', text: 'TEST original startup diagnostic' });\n      const after = store.fenced(binding, tx => tx.get())!;\n      assert.equal(after.phase, before.phase); assert.equal(after.custody, before.custody);\n      assert.equal(after.nativeReady, before.nativeReady); assert.equal(after.sessionRef, undefined);\n      assert.deepEqual(after.inputs, before.inputs); assert.deepEqual(after.interactions, before.interactions);\n      assert.deepEqual(store.readConversation(binding), conversation);\n      observations++;\n    },\n  });\n  const pending = f.rpc('runtime.open', { memberId: 'alice-id' });\n  try {\n    await eventually(() => f.opens() === 1, 'the original provider open remains pending');\n    assert.equal(observations, 1);\n    opening.resolve(); await pending;\n    const store = new FileRuntimeStore(f.root), record = store.fenced(f.runtimeBinding, tx => tx.get())!;\n    assert.equal(record.phase, 'held'); assert.equal(record.diagnostic, 'open-unknown');\n    assert.equal(record.custody, 'unknown'); assert.equal(record.nativeReady, false);\n    assert.equal(record.sessionRef, undefined); assert.deepEqual(record.inputs, []);\n    const diagnostics = store.readActivity(f.runtimeBinding)!.events.filter(row => row.data.kind === 'process-output');\n    assert.equal(diagnostics.length, 1);\n    assert.equal(diagnostics[0]!.data.text, 'TEST original startup diagnostic');\n    assert.equal(diagnostics[0]!.inputId, undefined); assert.equal(diagnostics[0]!.operationRef, undefined);\n    assert.equal(store.readConversation(f.runtimeBinding), undefined);\n    assert.equal(f.handoffs(), 0); assert.equal(f.session().submits.length, 0);\n  } finally { opening.resolve(); await pending; }\n});\n\ntest('composed original stderr accepts closing diagnostics without settling Runtime state or inputs', async t => {\n  const f = await fixture(t);\n  assert.equal((await f.rpc('runtime.open', { memberId: 'alice-id' }) as { ok: boolean }).ok, true);\n  const context = f.contexts[0]!, observe = context.observeProcessOutput, store = new FileRuntimeStore(f.root);\n  assert.ok(observe);\n  const conversation = store.readConversation(f.runtimeBinding), close = f.session().close;\n  let observations = 0;\n  f.session().close = async () => {\n    const before = store.fenced(f.runtimeBinding, tx => tx.get())!;\n    assert.equal(before.phase, 'closing'); assert.equal(before.sealed, true);\n    assert.equal(before.custody, 'owned'); assert.equal(before.nativeReady, false);\n    assert.equal(context.isCurrent(), true, 'the original source grant remains valid while closing');\n    observe({ kind: 'process-output', stream: 'stderr', text: 'TEST original closing diagnostic' });\n    const after = store.fenced(f.runtimeBinding, tx => tx.get())!;\n    assert.equal(after.phase, before.phase); assert.equal(after.custody, before.custody);\n    assert.equal(after.sealed, before.sealed); assert.equal(after.nativeReady, before.nativeReady);\n    assert.deepEqual(after.inputs, before.inputs); assert.deepEqual(after.interactions, before.interactions);\n    assert.deepEqual(store.readConversation(f.runtimeBinding), conversation);\n    observations++;\n    return close();\n  };\n  const stopped = await f.rpc('runtime.stop', { memberId: 'alice-id' }) as {\n    ok: boolean; value: { phase: string; custody: string };\n  };\n  assert.equal(stopped.ok, true); assert.equal(stopped.value.phase, 'closed');\n  assert.equal(stopped.value.custody, 'released'); assert.equal(observations, 1);\n  const activity = store.readActivity(f.runtimeBinding)!;\n  const diagnostics = activity.events.filter(row => row.data.kind === 'process-output');\n  assert.equal(diagnostics.length, 1); assert.equal(diagnostics[0]!.data.text, 'TEST original closing diagnostic');\n  assert.equal(diagnostics[0]!.inputId, undefined); assert.equal(diagnostics[0]!.operationRef, undefined);\n  observe({ kind: 'process-output', stream: 'stderr', text: 'TEST after original release' });\n  assert.deepEqual(store.readActivity(f.runtimeBinding), activity);\n  assert.deepEqual(store.readConversation(f.runtimeBinding), conversation);\n  assert.equal(f.session().submits.length, 0); assert.equal(f.session().closeCalls, 1);\n});\n\ntest('composed original stderr rejects changed member authority, revocation and a sealed Host', async t => {\n  const f = await fixture(t);\n  assert.equal((await f.rpc('runtime.open', { memberId: 'alice-id' }) as { ok: boolean }).ok, true);\n  const context = f.contexts[0]!, observe = context.observeProcessOutput, store = new FileRuntimeStore(f.root);\n  assert.ok(observe);\n  observe({ kind: 'process-output', stream: 'stderr', text: 'TEST original current diagnostic' });\n  const activity = store.readActivity(f.runtimeBinding), record = store.fenced(f.runtimeBinding, tx => tx.get());\n  const conversation = store.readConversation(f.runtimeBinding), memberId = context.profile.memberId;\n  try {\n    context.profile.memberId = 'bob-id';\n    assert.doesNotThrow(() => observe({ kind: 'process-output', stream: 'stderr', text: 'TEST wrong member' }));\n  } finally { context.profile.memberId = memberId; }\n  const path = join(f.root, 'teams/test-runtime-host/.host-owner/state.json'), original = readFileSync(path, 'utf8');\n  const state = JSON.parse(original) as { grants: { principalId: string; revoked?: boolean }[] };\n  state.grants.find(grant => grant.principalId === context.profile.principalId)!.revoked = true;\n  try {\n    writeFileSync(path, JSON.stringify(state));\n    assert.doesNotThrow(() => observe({ kind: 'process-output', stream: 'stderr', text: 'TEST revoked source' }));\n  } finally { writeFileSync(path, original); }\n  assert.deepEqual(store.readActivity(f.runtimeBinding), activity);\n  assert.deepEqual(store.fenced(f.runtimeBinding, tx => tx.get()), record);\n  assert.deepEqual(store.readConversation(f.runtimeBinding), conversation);\n  assert.equal(context.isCurrent(), true, 'restoring the exact original grant restores the same authority');\n  assert.equal((await f.dispose()).cleanup, 'completed');\n  const closed = store.readActivity(f.runtimeBinding);\n  observe({ kind: 'process-output', stream: 'stderr', text: 'TEST sealed Host diagnostic' });\n  assert.deepEqual(store.readActivity(f.runtimeBinding), closed);\n  assert.equal(f.session().submits.length, 0); assert.equal(f.opens(), 1);\n});\n\ntest(\n  'activity RPC pages normalized native observations with opaque cursor, bounded snapshots and explicit gaps',\n  // Persisting and paging this bounded native event fixture validates correctness, not latency.",
+          "insertedLines": 105
+        },
+        {
+          "label": "preserve incoming RuntimeTeam insertion 2",
+          "before": "  assert.notEqual(result.value.generation, opened.value.generation);\n  assert.deepEqual(f.restored, [{ history: ['TEST_HISTORY_A'] }]);\n  assert.equal(f.contexts.at(-1)?.request.generation, 2);\n  const restoredProfile = f.contexts.at(-1)!.profile;\n  assert.equal(restoredProfile.model, 'TEST-selected-model');\n  assert.equal(restoredProfile.provider, 'claude');",
+          "after": "  assert.notEqual(result.value.generation, opened.value.generation);\n  assert.deepEqual(f.restored, [{ history: ['TEST_HISTORY_A'] }]);\n  assert.equal(f.contexts.at(-1)?.request.generation, 2);\n  const restoredContext = f.contexts.at(-1)!, restoredBinding = normalizeBinding(restoredContext.endpoint.binding);\n  const diagnosticStore = new FileRuntimeStore(f.root), beforeDiagnostic = diagnosticStore.fenced(restoredBinding, tx => tx.get())!;\n  assert.equal(beforeDiagnostic.config?.checkpointRef, captured.value.reference);\n  assert.ok(restoredContext.observeProcessOutput);\n  const restoredConversation = diagnosticStore.readConversation(restoredBinding);\n  restoredContext.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text: 'TEST exact restored process diagnostic' });\n  const restoredDiagnostic = diagnosticStore.readActivity(restoredBinding)!.events.find(row => row.data.kind === 'process-output')!;\n  assert.equal(restoredDiagnostic.data.text, 'TEST exact restored process diagnostic');\n  assert.equal(restoredDiagnostic.inputId, undefined); assert.equal(restoredDiagnostic.operationRef, undefined);\n  const afterDiagnostic = diagnosticStore.fenced(restoredBinding, tx => tx.get())!;\n  assert.deepEqual(afterDiagnostic.inputs, beforeDiagnostic.inputs);\n  assert.equal(afterDiagnostic.phase, beforeDiagnostic.phase); assert.equal(afterDiagnostic.nativeReady, beforeDiagnostic.nativeReady);\n  assert.equal(afterDiagnostic.custody, beforeDiagnostic.custody);\n  assert.deepEqual(diagnosticStore.readConversation(restoredBinding), restoredConversation);\n  const restoredProfile = f.contexts.at(-1)!.profile;\n  assert.equal(restoredProfile.model, 'TEST-selected-model');\n  assert.equal(restoredProfile.provider, 'claude');",
+          "insertedLines": 14
+        }
+      ],
+      "edits": {
+        "inserted": 119,
+        "deleted": 0,
+        "insertions": [
+          105,
+          14
+        ]
+      }
+    }
+  ],
+  "vendorArtifacts": [
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6e94db07c6ef01f38458abbdcba067f766229be9"
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3"
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8"
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/checked-artifact-receipt.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2136bb2a37863e4182ff264bf012220a8ae1bc13"
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/source-receipt.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a78d8a6619a358c79f88fc66886754eb2b6de9b2"
+    }
+  ],
+  "providerArchiveVerification": {
+    "verifiedAt": "2026-11-15T23:32:25.448270+00:00",
+    "artifactId": 14184699852,
+    "sourceCommit": "c79b81bf002eaac95436da71c7049d7f309906a9",
+    "archive": "/workspace/scratch/c714f5bce554/verified-ci-archives-20261115/provider-c79-checked.zip",
+    "zipBytes": 193546,
+    "zipSha256": "df8a1e825c2d2e7cd1578b3e7307f78977b2a6cff8771836cf90df644229a80c",
+    "zipCRC": "all entries passed",
+    "uniqueSafeZipMembers": [
+      "agent-teams-provider-implementations-0.0.0.tgz",
+      "agent-teams-provider-session-contracts-0.0.0.tgz",
+      "receipt.json"
+    ],
+    "packages": [
+      {
+        "file": "agent-teams-provider-implementations-0.0.0.tgz",
+        "bytes": 186398,
+        "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+        "sha512Integrity": "sha512-1QxsR0b5zRvHBjE0oQFVTEadYmpUmO1ElixO0Y0L3EuVDUXxkvhlE8KXUR0sTRplYVNV37n8jZ7+pSDYCGS2jA==",
+        "tarMembers": 253,
+        "tarUncompressedBytes": 796929,
+        "name": "@agent-teams/provider-implementations",
+        "version": "0.0.0"
+      },
+      {
+        "file": "agent-teams-provider-session-contracts-0.0.0.tgz",
+        "bytes": 6230,
+        "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+        "sha512Integrity": "sha512-ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g==",
+        "tarMembers": 12,
+        "tarUncompressedBytes": 18153,
+        "name": "@agent-teams/provider-session-contracts",
+        "version": "0.0.0"
+      }
+    ],
+    "receipt": {
+      "schemaVersion": 1,
+      "sourceCommit": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "packages": [
+        {
+          "file": "agent-teams-provider-implementations-0.0.0.tgz",
+          "bytes": 186398,
+          "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+        },
+        {
+          "file": "agent-teams-provider-session-contracts-0.0.0.tgz",
+          "bytes": 6230,
+          "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+        }
+      ],
+      "qualification": "source-and-packed-consumer-only",
+      "nativeHostQualified": false,
+      "packagedElectronQualified": false
+    },
+    "receiptBytes": 597,
+    "receiptSha256": "7a0fa91e187e337e315820cade9790b089c2c001f197594345aa6b11ac12575b"
+  },
+  "sourceClosure": {
+    "root": {
+      "sha": "a8be2617b2c765091cecce789f028ef2bf67af60",
+      "physicalLines": 800,
+      "unchanged": true
+    },
+    "integrated": {
+      "sha": "083522612dd93e77dbb0e79c966103b03a71fe87",
+      "unchanged": true
+    },
+    "management": {
+      "sha": "762570da8b4fc492065b217303a3da169bf627cf",
+      "unchanged": true
+    },
+    "supplementary": {
+      "template": "9ebf57607eb1ca52fa4d7e29213bba99624167c8",
+      "postimage": "4f48e31f1fb4372064198ba01300518e5070feca",
+      "lines": 320,
+      "oldFiveEntriesPreserved": "  'packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts',\n  'src/shared/utils/redactDiagnosticAssignments.ts',\n  'packages/legacy-agent-host/tests/runtime-team-host.test.ts',\n  'packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts',\n  'src/renderer/components/team/sidebar/teamSidebarUiState.ts',\n",
+      "movedExactBlock": "  // Original Logs presentation, read ownership and selected-member stderr observations.\n  'packages/legacy-agent-host/tests/captured-claude-process.test.ts',\n  'packages/legacy-agent-host/tests/codex-member-provider.test.ts',\n  'packages/legacy-agent-host/tests/member-provider-authority.test.ts',\n  'packages/legacy-agent-host/tests/owned-process-facade.test.ts',\n  'packages/legacy-agent-host/tests/runtime-activity.test.ts',\n  'packages/legacy-agent-host/tests/team-activity-read.test.ts',\n  'src/renderer/components/team/ClaudeLogsPanel.tsx',\n  'src/renderer/components/team/ClaudeLogsSection.tsx',\n  'src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx',\n  'src/shared/utils/diagnosticsRedaction.ts',\n  'src/shared/utils/runtimeDiagnosticText.ts',\n  'test/features/agent-backend/hostTaskActivity.test.ts',\n  'test/features/agent-backend/runtimeActivityFacade.test.ts',\n  'test/renderer/components/team/ClaudeLogsSection.test.ts',\n  'test/renderer/components/team/members/MemberLogsPolling.test.ts',\n  'test/renderer/components/team/members/hostLogStatsTabs.test.tsx',\n  'packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts',\n  'packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts',\n  'packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts',\n  'packages/legacy-agent-host/tests/member-process-stderr.test.ts',\n  'src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts',\n  'src/renderer/components/team/ClaudeLogsFilterPopover.tsx',\n  'src/renderer/components/team/claudeLogsFilterState.ts',\n  'src/renderer/components/team/teamLogSources.ts',\n  'src/renderer/components/team/useClaudeLogsController.ts',\n  'src/renderer/components/team/CliLogsRichView.tsx',\n  'src/renderer/components/chat/items/BaseItem.tsx',\n  'src/renderer/components/chat/items/baseItemHelpers.ts',\n  'src/renderer/components/chat/items/linkedTool/renderHelpers.tsx',\n  'src/renderer/components/chat/viewers/MarkdownViewer.tsx',\n  'src/renderer/components/chat/searchHighlightUtils.ts',\n  'src/renderer/components/common/CopyButton.tsx',\n  'src/renderer/components/chat/markdownCopyUtils.ts',\n  'src/renderer/components/chat/viewers/syntaxHighlighter.ts',\n  'src/renderer/components/chat/viewers/FileLink.tsx',\n  'src/renderer/components/chat/viewers/MarkdownPre.tsx',\n  'src/renderer/components/chat/viewers/MarkdownPreContext.ts',\n  'src/renderer/components/chat/viewers/useResolvedViewerTeamContext.ts',\n  'src/renderer/utils/markdownLimits.ts',\n  'src/renderer/utils/markdownPlugins.ts',\n  'src/renderer/utils/syntaxHighlighter.ts',\n  'src/shared/utils/toolSummary.ts',\n  'src/features/member-log-reads/renderer/index.ts',\n  'src/features/member-log-reads/renderer/useCompletionRead.ts',\n  'src/features/member-log-reads/renderer/memberLogReadScope.ts',\n  'src/features/member-log-reads/renderer/useReadRefreshing.ts',\n  'src/features/member-log-reads/renderer/readMemberLogDetail.ts',\n  'src/features/member-log-reads/core/application/DetailReadCoordinator.ts',\n  'src/features/member-log-reads/core/application/DetailCacheFillFence.ts',\n  'test/features/agent-backend/tsconfig.json',\n  'src/renderer/vite-env.d.ts',\n  'test/types/better-sqlite3-node.d.ts',\n",
+      "movedPaths": [
+        "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+        "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+        "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+        "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+        "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+        "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+        "src/renderer/components/team/ClaudeLogsPanel.tsx",
+        "src/renderer/components/team/ClaudeLogsSection.tsx",
+        "src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx",
+        "src/shared/utils/diagnosticsRedaction.ts",
+        "src/shared/utils/runtimeDiagnosticText.ts",
+        "test/features/agent-backend/hostTaskActivity.test.ts",
+        "test/features/agent-backend/runtimeActivityFacade.test.ts",
+        "test/renderer/components/team/ClaudeLogsSection.test.ts",
+        "test/renderer/components/team/members/MemberLogsPolling.test.ts",
+        "test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+        "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+        "packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts",
+        "packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts",
+        "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+        "src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts",
+        "src/renderer/components/team/ClaudeLogsFilterPopover.tsx",
+        "src/renderer/components/team/claudeLogsFilterState.ts",
+        "src/renderer/components/team/teamLogSources.ts",
+        "src/renderer/components/team/useClaudeLogsController.ts",
+        "src/renderer/components/team/CliLogsRichView.tsx",
+        "src/renderer/components/chat/items/BaseItem.tsx",
+        "src/renderer/components/chat/items/baseItemHelpers.ts",
+        "src/renderer/components/chat/items/linkedTool/renderHelpers.tsx",
+        "src/renderer/components/chat/viewers/MarkdownViewer.tsx",
+        "src/renderer/components/chat/searchHighlightUtils.ts",
+        "src/renderer/components/common/CopyButton.tsx",
+        "src/renderer/components/chat/markdownCopyUtils.ts",
+        "src/renderer/components/chat/viewers/syntaxHighlighter.ts",
+        "src/renderer/components/chat/viewers/FileLink.tsx",
+        "src/renderer/components/chat/viewers/MarkdownPre.tsx",
+        "src/renderer/components/chat/viewers/MarkdownPreContext.ts",
+        "src/renderer/components/chat/viewers/useResolvedViewerTeamContext.ts",
+        "src/renderer/utils/markdownLimits.ts",
+        "src/renderer/utils/markdownPlugins.ts",
+        "src/renderer/utils/syntaxHighlighter.ts",
+        "src/shared/utils/toolSummary.ts",
+        "src/features/member-log-reads/renderer/index.ts",
+        "src/features/member-log-reads/renderer/useCompletionRead.ts",
+        "src/features/member-log-reads/renderer/memberLogReadScope.ts",
+        "src/features/member-log-reads/renderer/useReadRefreshing.ts",
+        "src/features/member-log-reads/renderer/readMemberLogDetail.ts",
+        "src/features/member-log-reads/core/application/DetailReadCoordinator.ts",
+        "src/features/member-log-reads/core/application/DetailCacheFillFence.ts",
+        "test/features/agent-backend/tsconfig.json",
+        "src/renderer/vite-env.d.ts",
+        "test/types/better-sqlite3-node.d.ts"
+      ],
+      "own58LineInverseTo5c8Exact": true
+    },
+    "commonBefore": {
+      "count": 1702,
+      "sortedJSON": {
+        "bytes": 113881,
+        "sha256": "eeef8eb31c1fb811b19dd88498fe043d922396ca6582e63cb3f310cf550827f2"
+      }
+    },
+    "commonAfter": {
+      "count": 1754,
+      "sortedJSON": {
+        "bytes": 116874,
+        "sha256": "91998b7ce2f81da4b04313f9d5c287a1489663c6f8cb4ff77169fe8f53c02674"
+      }
+    },
+    "windowsBefore": {
+      "count": 1795,
+      "sortedJSON": {
+        "bytes": 119086,
+        "sha256": "911bfe6399f0acca72bbf75fadecaae3507b4f9fa9bd57d5032366219eb580d9"
+      }
+    },
+    "windowsAfter": {
+      "count": 1795,
+      "sortedJSON": {
+        "bytes": 119086,
+        "sha256": "911bfe6399f0acca72bbf75fadecaae3507b4f9fa9bd57d5032366219eb580d9"
+      }
+    },
+    "packagedLocal": {
+      "script": "3cc13374bce3c0337e113b5ff201f556a9211b42",
+      "count": 1756,
+      "sortedJSON": {
+        "bytes": 117002,
+        "sha256": "55d3776a9ce5df8672df5c3c0e3833f33074b4fd1281c33cbb3a1423028ea1d6"
+      },
+      "additionalPaths": [
+        "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "packages/legacy-agent-host/tests/opencode-v1-version-source.ts"
+      ],
+      "sameArrayUsedForCaptureAndFreeze": true
+    },
+    "allCommonAndPackagedPathsExistInIntendedTree": true,
+    "allOriginalArrayOrderPreservedExceptMovedBlock": true,
+    "windowsSetUnchanged": true,
+    "receiptIterationOrderEquivalenceNotClaimed": true
+  },
+  "teamWholeFileGate": {
+    "originalLine": "          node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts",
+    "proposedLine": "          node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+    "completeFiles": [
+      "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "packages/legacy-agent-host/tests/team-snapshot.test.ts",
+      "packages/legacy-agent-host/tests/team-product-changes.test.ts",
+      "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+      "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "packages/legacy-agent-host/tests/owned-process-facade.test.ts"
+    ],
+    "unchangedFlagsConditionMatrixTimeoutAndSurroundingBytes": true,
+    "backToOwnC956Exact": true
+  },
+  "preserved": {
+    "runtimeTeam": {
+      "own": "aed70893add6ddf460ce7d13231511be4113b86e",
+      "incoming": "ac07c852895c6cfbabb5015f0c1ef0abe13b3a7c",
+      "post": "26871fb59d09594beff568994b85cf6cb5a00b00",
+      "insertions": [
+        105,
+        14
+      ],
+      "deleted": 0,
+      "ownImportsAndAllOtherBytesRecoveredByInverse": true
+    },
+    "ui": {
+      "own": "55a7973806202dcca4b3cbcbadf621d4b7664f34",
+      "priorPrimary": "5ee2b9275536815e7669a4e9a58c813ab7f7a9e5",
+      "incoming27": "cb3974254caf54d40d560eff2ad5419adcedae3c",
+      "incoming35": "345dc9a6b3fb9d197eaf2982e60840682d7b8fbd",
+      "post": "d37854de1c7cbd8eaf7ee4a15b21123bc659ce51",
+      "oldThreeWayAudit": "49826b3ae8e6905dfd615d0f0d334edbab05da10",
+      "all35OraclesRecoveredByFourUniqueInverseEdits": true,
+      "optionalTitleObservedInSameFinalEvaluation": true,
+      "taskActivityNowUsesExistingRichHelperInteractions": true,
+      "unchangedDeadlineValues": true,
+      "noTotalReadOrTimingEquivalenceClaim": true
+    },
+    "allTwelvePublishedOtherScopeFilesExact": true,
+    "allUnlistedOwnLeafModesAndSHAsExact": true,
+    "noDeletions": true,
+    "noModeChanges": true,
+    "filesOutside61Changed": 0,
+    "plansAndEvidenceUnchanged": true,
+    "sourceSizePoliciesAndExceptionsUnchanged": true,
+    "nativeFunctionCallsACK15sAndHelper64Untouched": true
+  },
+  "qualification": {
+    "sourceOnly": true,
+    "childSourceApplied": false,
+    "commitsCreated": false,
+    "refsMoved": false,
+    "buildsTestsOrCompilerExecuted": false,
+    "CIAction": false,
+    "realClaudeOrCodexExecuted": false,
+    "originalResultingSourceCIGatesRequired": true,
+    "existingLocalCompilerRetryHoldPreserved": true,
+    "localEightNodeFiveVitestOnlyIfRootExecutorAvailableAfterPublication": true,
+    "providerQualificationDoesNotQualifyApplicationNativeOrPackaged": true,
+    "new9eRequiresSeparateReviewedReconciliation": true
+  }
+}
