@@ -1764,3 +1764,133 @@ test('Selection stopped convergence refuses wrong identity, unaccepted progress,
   await assert.rejects(mismatch.run(true), { code: 'ERR_ASSERTION' });
   assert.deepEqual(mismatch.values, [true], 'the original exact stopped binding assertion remains after the UI read');
 });
+
+
+test('the existing passive click recorder distinguishes the actual Team from later navigation without new actions', async () => {
+  const teamA = 'host-team:TEST-A', teamB = 'host-team:TEST-B';
+  type NavigationState = { selectedTeamName: string | null; activeTabId: string; openTabs: unknown[] };
+  const state = (selectedTeamName: string | null, activeTabId = 'list'): NavigationState => ({
+    selectedTeamName, activeTabId,
+    openTabs: [{ id: 'list', type: 'teams' }, { id: 'a', type: 'team', teamName: teamA },
+      { id: 'b', type: 'team', teamName: teamB }],
+  });
+  const setup = async () => {
+    const listeners = new Map<string, (event: Record<string, unknown>) => void>();
+    const microtasks: Array<() => void> = [], timers: Array<() => void> = [];
+    let current = state(teamA), failRead = false, failTarget = false;
+    const calls = { send: 0, evaluate: 0, stateReads: 0, microtasks: 0, timers: 0, business: 0 };
+    class Target {
+      tagName = 'DIV'; id = ''; className = 'TEST-card-body';
+      readonly team: string | null;
+      constructor(team: string | null) { this.team = team; }
+      getAttribute(name: string) { return name === 'data-team-name' ? this.team : null; }
+      closest(selector: string) {
+        if (selector === '[data-team-name]') {
+          if (failTarget) throw new Error('PRIVATE-target');
+          return this.team === null ? null : this;
+        }
+        assert.ok(['button', '[role="dialog"]', '.kanban-task-card'].includes(selector));
+        return null;
+      }
+    }
+    const passiveWindow: Record<string, unknown> = {
+      __agentTeamsDevStore: { getState: () => {
+        calls.stateReads++;
+        if (failRead) throw new Error('PRIVATE-store');
+        return current;
+      } },
+    };
+    const document = {
+      activeElement: new Target(null),
+      querySelectorAll(selector: string) {
+        assert.ok(['[aria-roledescription="sortable"][aria-pressed="true"]', '[id^="DndLiveRegion-"]'].includes(selector));
+        return [];
+      },
+      addEventListener(type: string, listener: (event: Record<string, unknown>) => void,
+        options: { capture: boolean; passive: boolean }) {
+        assert.equal(options.capture, true); assert.equal(options.passive, true);
+        assert.equal(listeners.has(type), false); listeners.set(type, listener);
+      },
+    };
+    const cdp = {
+      async send(method: string, params?: Record<string, unknown>) {
+        calls.send++;
+        assert.equal(method, 'Emulation.setFocusEmulationEnabled'); assert.deepEqual(params, { enabled: true });
+      },
+      async evaluate(expression: string) {
+        calls.evaluate++;
+        if (expression === 'document.visibilityState') return 'visible';
+        assert.equal(calls.evaluate, 1, 'execute only the actual existing observer installation');
+        return runInNewContext(expression, {
+          window: passiveWindow, document, Element: Target, TextEncoder,
+          performance: { now: () => 17 },
+          queueMicrotask: (callback: () => void) => { calls.microtasks++; microtasks.push(callback); },
+          setTimeout: (callback: () => void, delay: number) => {
+            assert.equal(delay, 0); calls.timers++; timers.push(callback);
+          },
+        });
+      },
+    };
+    await createDesktopUiControls(cdp, {
+      assertOwnedRenderer: () => assert.fail('observer does not add an ownership call'),
+      step: () => assert.fail('passive observer does not dispatch an action'),
+    }).observeInput();
+    assert.equal(listeners.size, 9); assert.equal(calls.send, 1); assert.equal(calls.evaluate, 2);
+    const rows = (name = '__TEST_desktopInputEvents') => passiveWindow[name] as Array<Record<string, unknown>>;
+    const fire = (team: string | null, type = 'click', trusted = true) => {
+      const blocked = () => { calls.business++; assert.fail('observer cannot change or redispatch input'); };
+      listeners.get(type)!({ type, target: new Target(team), isTrusted: trusted, clientX: 191, clientY: 228,
+        button: 0, buttons: type === 'pointermove' ? 1 : 0, defaultPrevented: false,
+        preventDefault: blocked, stopPropagation: blocked, stopImmediatePropagation: blocked, dispatchEvent: blocked });
+      return rows(type === 'pointermove' ? '__TEST_desktopDragEvents' : undefined).at(-1)!;
+    };
+    return { calls, rows, fire, update: (next: NavigationState) => { current = next; },
+      failRead: () => { failRead = true; }, failTarget: () => { failTarget = true; },
+      microtask: () => { assert.equal(microtasks.length, 1); microtasks.shift()!(); },
+      dispatch: () => { assert.equal(timers.length, 1); timers.shift()!(); },
+    };
+  };
+  const normalized = (value: unknown) => JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+  for (const actualTarget of [teamA, teamB]) {
+    const f = await setup(), row = f.fire(actualTarget);
+    // The original physical step retains intended B separately; this observer records actual A or B.
+    assert.ok(row.teamNavigation, 'the original passive click must retain its actual Team ancestor');
+    assert.deepEqual(normalized(row.teamNavigation), { targetTeamKey: actualTarget,
+      before: { selectedTeamKey: teamA, activeSurface: 'teams', activeTeamKey: null } });
+    f.update(state(actualTarget, actualTarget === teamA ? 'a' : 'b')); f.microtask();
+    f.update(state(teamA, 'a')); f.dispatch();
+    const navigation = normalized(row.teamNavigation);
+    assert.deepEqual(navigation.afterMicrotask, { selectedTeamKey: actualTarget, activeSurface: 'team', activeTeamKey: actualTarget });
+    assert.deepEqual(navigation.afterDispatch, { selectedTeamKey: teamA, activeSurface: 'team', activeTeamKey: teamA });
+    assert.equal(navigation.targetTeamKey, actualTarget, 'a later selected Team cannot rewrite the actual clicked ancestor');
+    assert.deepEqual(f.calls, { send: 1, evaluate: 2, stateReads: 3, microtasks: 1, timers: 1, business: 0 });
+  }
+  for (const mode of ['read-throws', 'duplicate-tab', 'too-many-tabs', 'bad-selected', 'bad-target', 'target-throws', 'untrusted', 'no-card', 'utf8-cap']) {
+    const f = await setup();
+    let target: string | null = teamB;
+    if (mode === 'read-throws') f.failRead();
+    if (mode === 'target-throws') f.failTarget();
+    if (mode === 'duplicate-tab') f.update({ ...state(teamA), openTabs: [{ id: 'list', type: 'teams' }, { id: 'list', type: 'teams' }] });
+    if (mode === 'too-many-tabs') f.update({ ...state(teamA), openTabs: Array.from({ length: 65 }, () => ({ id: 'list', type: 'teams' })) });
+    if (mode === 'bad-selected') f.update(state('PRIVATE-selected'));
+    if (mode === 'bad-target') target = 'host-team:' + 'x'.repeat(247);
+    if (mode === 'no-card') target = null;
+    if (mode === 'utf8-cap') {
+      target = 'host-team:' + '文'.repeat(246);
+      f.update({ selectedTeamName: target, activeTabId: 'a', openTabs: [{ id: 'a', type: 'team', teamName: target }] });
+    }
+    const row = f.fire(target, 'click', mode !== 'untrusted'); f.microtask(); f.dispatch();
+    if (['read-throws', 'duplicate-tab', 'too-many-tabs', 'bad-selected'].includes(mode))
+      assert.deepEqual(normalized(row.teamNavigation), { targetTeamKey: teamB, before: null, afterMicrotask: null, afterDispatch: null });
+    else assert.equal(row.teamNavigation, null);
+    assert.equal(JSON.stringify(row).includes('PRIVATE-'), false);
+    assert.ok(Buffer.byteLength(JSON.stringify(row.teamNavigation), 'utf8') <= 4096);
+    assert.equal(f.calls.send, 1); assert.equal(f.calls.evaluate, 2); assert.equal(f.calls.microtasks, 1);
+    assert.equal(f.calls.timers, 1); assert.equal(f.calls.business, 0);
+  }
+  const bounded = await setup();
+  for (let i = 0; i < 100; i++) { bounded.fire(null); bounded.microtask(); bounded.dispatch(); }
+  for (let i = 0; i < 35; i++) { bounded.fire(null, 'pointermove'); bounded.microtask(); bounded.dispatch(); }
+  assert.equal(bounded.rows().length, 96); assert.equal(bounded.rows('__TEST_desktopDragEvents').length, 32);
+  assert.deepEqual(bounded.calls, { send: 1, evaluate: 2, stateReads: 0, microtasks: 135, timers: 135, business: 0 });
+});

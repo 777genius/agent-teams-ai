@@ -6005,3 +6005,32 @@ After independent R2 and immediate ordinary publication/full readback of this do
 Reuse precisely the already bound public7 successful Host/ledger receipt a7cb56eaf66454cd5dc4706bfc2b5e96fc6319ac66b1de136809acca8165bdd4, source tree88e629173edbda5883be953d12778336deb251e8, raw log d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789, and controller50 receipt720705fed1cba6c5b43e8439f7b5cdc3b3e4596e481c5548a39bc54277d5176c. The complete 1504 inventory, 133 dependency links, 253+12 archive payloads, five edges, six workspace aliases and both normal indexes remain unchanged and checked before/after. The successful build source differs from this documentation parent only in Plan29. No build, install or new resolution/config link is selected.
 
 The final source publication remains exactly these three paths plus factual Plan append after actual-results R2, immediate normal expected-head push and complete readback. Preserve the first setup-failure evidence without counting its 40 repeated preservation passes as extra unique cases. This revision does not repair or qualify the original Installer/OpenCode GUI failures. Stage M helper6b6c/test072733 remain unchanged, with no local privacy commands. All original Draft/base, finite-provider-only, no manual Actions, full native/I386, P08/P09, original15s, M16/upgrade and Stage1 limits remain.
+
+
+## Actual Desktop observer preservation result — exact revised public source
+
+The root published and fully read back the corrected documentation R1 ffe008edb91e04470bd28290915315d56adb939b, tree 476d101d491d38d458e786cfdc1559d53ffec321, sole parent 482a6509ce5c6b07a8c027023b23cc953aa027cf, at 2026-11-16T02:17:29Z. Independent R2 approved the exact syntax-only fixture correction, unchanged helper/Darwin candidates and original execution closure. Its complete Plan29 720a4bc1a16d3a9a9e09f41bb5026e799bc9b171 (1,358,425 bytes) remains the unchanged prefix. The initial unsupported parameter-property run remains preserved separately: 40 backend cases passed and the smoke file failed before its cases; it was never accepted as semantic RED.
+
+After the documented restoration of only the two uncommitted test preimages, baseline source equalled the published R1 tree. The corrected test-only source 4c76a27d5dbdddba226e06398122972339d94b72 then ran the same two complete original files with pinned Node 24.21, one test worker, the retained finite Node sentinel/VM/mocked-observer boundaries and original 180-second group ceiling. Actual semantic RED was 87 cases, 86 PASS and one missing-observation assertion at desktop-team-ui-smoke.test.ts:1857: row.teamNavigation was undefined. It failed in the first actualTarget=A variant; later variants were not reached. Every other old outcome and the three complementary Darwin additions passed. Root and independent R2 read the complete raw failure, not merely exit 1.
+
+Applying only helper c634a627 yielded source tree 2c1bc3206cbd1d8f0728108f7aa0048311b392bd. The identical complete command passed all 87 distinct cases, zero failures/skips/cancellations/todos. Both actual-target variants, later independently changed navigation, bounded invalid/throwing/UTF8 cases and unchanged rings/callbacks now execute. This verifies the passive TEST recorder; it does not reproduce or repair a real browser navigation race. The original source-only Darwin preservation cases remain distinct from the previously audited source 0660 packaged artifact.
+
+| Original complete command phase | Exit | Seconds | Raw log bytes | Raw log SHA256 |
+| --- | --- | --- | --- | --- |
+| red-desktop-tests | 1 | 6.394 | 10162 | `02800b144ed6b8be0658be19372effb32e506284a396ec4699cb41becdf1e29b` |
+| green-desktop-tests | 0 | 7.077 | 9388 | `a864aa91a3a2efc6da211e3eb9ae0c19249b683b0512e63c80c11ff759edfd06` |
+| green-script-types | 0 | 8.779 | 97 | `497757da33976a6244e18944dec8185b370f08467b2b5ad675446e3ca3c3b015` |
+| green-lint | 0 | 6.561 | 279 | `ed8cdb94b0542e5221b573264f8233187168419e35288512ebdff81ae01a9dfc` |
+| green-source-size | 0 | 4.909 | 249 | `26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f` |
+
+All four GREEN commands succeeded without timeout: the two-file, 87-case command, original full scripts TypeScript configuration, fast lint of exactly three paths, and unchanged source-size guard. Five command executions occurred in the corrected context; the earlier setup-failing command is a separate sixth actual attempt, not 87 additional unique tests. No compiler flags/config roots, dependencies, deadlines, retries or scope were widened.
+
+Final postflight at 2026-11-16T02:19:33.928444+00:00 retained the exact tested source tree, all 1,504 controller/Host/ledger output files byte for byte (inventory f6f6335efc3c44cfbd7c2d93a1beba1fe2e061c6005bc930e04cb61b7c70f5b9), all 133 links, six workspace aliases, 253+12 original 9423 provider payloads and five dependency edges. Both normal indexes remain 7a2489dc/161fc514. The successful public7 build receipt/source and original 50 controller outputs remain joined exactly; no new build occurred.
+
+| Source path in the proposed ordinary child | Exact after-image | Bytes | Lines |
+| --- | --- | --- | --- |
+| scripts/legacy-agent-host/desktop-ui-controls.ts | `c634a6275a18c527d623e3de922634e1e75448ec` | 27188 | 489 |
+| scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts | `95b983dc9b53c9f74a4a551bf59bdae6acc91c6e` | 111672 | 1896 |
+| scripts/legacy-agent-host/desktop-backend-observations.test.ts | `e2b96672feefb924a39e20131514e0db5e347311` | 53683 | 1019 |
+
+The source child contains exactly these three existing paths and this factual Plan append. Relative to tested GREEN, only the appendix changes. Keep all earlier author/public/private histories and the initial setup-failure record. Stage M helper 6b6c / test 072733 remain untouched, and no local privacy execution occurred. Actual resulting-source Installer/OpenCode/Cross-team, full frontend/typed-workspace/native/packaged, original Windows 15 s, P08/P09, I386/root-policy and M16/upgrade qualifications remain required; no later source inherits source 0660 Darwin qualification. Draft/original base and no real-provider/manual-Actions/main/release/Stage2 limits remain.

@@ -914,6 +914,11 @@ function emulatedObserverFixture(t: TestContext, mode: string) {
   if (mode.startsWith('no-child-')) fs.writeFileSync(journal,
     mode === 'no-child-failure' ? JSON.stringify({ ...launch, event: 'failure' }) + '\n'
       : mode === 'no-child-malformed' ? '{\n' : '');
+  if (mode === 'no-child-provider-mismatch')
+    fs.writeFileSync(journal, JSON.stringify({ ...launch, provider: 'claude' }) + '\n');
+  if (mode === 'zero-host-failure')
+    fs.writeFileSync(journal, JSON.stringify({ ...launch, event: 'failure' }) + '\n');
+  if (mode === 'zero-host-clean') fs.writeFileSync(journal, '');
   let now = 0, censusReads = 0, journalReads = 0;
   t.mock.method(performance, 'now', () => now);
   const readFile = fsp.readFile;
@@ -940,6 +945,7 @@ function emulatedObserverFixture(t: TestContext, mode: string) {
       censusReads++; assert.ok(options?.timeout && options.timeout <= 3000);
       assert.equal(options.env?.LC_ALL, process.platform === 'linux' ? 'C.UTF-8' : 'en_US.UTF-8');
       const host = '4100 4000 4100 Sun Nov 15 00:00:00 2026 /TEST/electron\n4101 4100 4100 Sun Nov 15 00:00:00 2026 /TEST/node /TEST/host.js\n';
+      if (mode.startsWith('zero-host-')) return host.split('\n')[0]! + '\n';
       if (censusReads > 1 && mode === 'exit') return host;
       if (mode.startsWith('no-child-')) return host;
       const birth = censusReads > 1 && mode === 'reuse' ? '00:00:01' : '00:00:00';
@@ -956,7 +962,8 @@ function emulatedObserverFixture(t: TestContext, mode: string) {
   syncBuiltinESMExports();
   t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
   return { fixture, observe: () => observeDesktopEmulatedRuntimeChildren(4100,
-    fixture as unknown as Parameters<typeof observeDesktopEmulatedRuntimeChildren>[1], 'after-team-read'),
+    fixture as unknown as Parameters<typeof observeDesktopEmulatedRuntimeChildren>[1],
+    mode.startsWith('zero-host-') ? 'before-first-team-read' : 'after-team-read'),
     reads: () => ({ censusReads, journalReads }) };
 }
 
@@ -981,6 +988,7 @@ test('original peer observation accepts a valid empty journal with no current ch
   await f.observe();
   assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
   assert.equal(f.reads().censusReads, 1);
+  assert.equal(f.reads().journalReads, 1);
 });
 
 for (const [mode, error] of [
@@ -991,6 +999,21 @@ for (const [mode, error] of [
 test(`original peer observation validates ${mode} before returning without children`, async t => {
   const f = emulatedObserverFixture(t, mode);
   await assert.rejects(f.observe(), error);
+  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
+  assert.deepEqual(f.reads(), { censusReads: 1, journalReads: 1 });
+});
+
+for (const mode of ['no-child-provider-mismatch', 'zero-host-failure'])
+test(`empty peer census refuses ${mode} through the original journal oracle`, async t => {
+  const f = emulatedObserverFixture(t, mode);
+  await assert.rejects(f.observe());
+  assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
+  assert.deepEqual(f.reads(), { censusReads: 1, journalReads: 1 });
+});
+
+test('empty peer census validates its journal with no current Host before the first Team read', async t => {
+  const f = emulatedObserverFixture(t, 'zero-host-clean');
+  await f.observe();
   assert.deepEqual(f.fixture.emulatedRuntime.observedPeerPids, []);
   assert.deepEqual(f.reads(), { censusReads: 1, journalReads: 1 });
 });
