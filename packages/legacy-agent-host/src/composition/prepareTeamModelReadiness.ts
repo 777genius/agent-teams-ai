@@ -340,20 +340,41 @@ export function inspectMemberModelReadiness(options: {
   const observedAccount: { value?: NonNullable<ReturnType<typeof captureOpenCodeProbeAccount>> } = {};
   let refusalObserved = false;
   const currentCalls = { count: 0, totalMs: 0, maxMs: 0, lastMs: null as number | null, truncated: false };
+  let regions: Record<string, number> | undefined;
   const current = () => {
     let phase = 'initial-authority', reason: 'held' | 'threw' = 'threw';
     let cutoff: number | null = null, observedAt: number | null = null;
     let started: number | undefined, failed = false;
+    let boundary: ((next?: 'readConsumer' | 'reference' | 'finalAuthority', ended?: number) => void) | undefined;
     try {
       if (readinessRefusal.hasSubscribers && !refusalObserved) {
         currentCalls.lastMs = null;
-        if (currentCalls.count < 4096) { currentCalls.count++; started = performance.now(); }
+        if (currentCalls.count < 4096) {
+          currentCalls.count++; started = performance.now();
+          const totals = regions ??= { initialAuthorityCount: 0, initialAuthorityMs: 0, readConsumerCount: 0, readConsumerMs: 0,
+            referenceCount: 0, referenceMs: 0, finalAuthorityCount: 0, finalAuthorityMs: 0 };
+          let region: string | undefined = 'initialAuthority', entered = started;
+          boundary = (next, ended) => {
+            try {
+              const now = ended ?? performance.now(), elapsed = Math.round(now - entered);
+              if (region !== undefined) {
+                const count = totals[region + 'Count']!, total = totals[region + 'Ms']! + elapsed;
+                if (Number.isSafeInteger(elapsed) && elapsed >= 0 && Number.isSafeInteger(total)) {
+                  totals[region + 'Count'] = count + 1; totals[region + 'Ms'] = total;
+                } else currentCalls.truncated = true;
+              }
+              region = next; entered = now;
+            } catch { region = undefined; currentCalls.truncated = true; }
+          };
+        }
         else currentCalls.truncated = true;
       }
     } catch { currentCalls.truncated = true; }
     try {
       options.assertCurrent(); phase = 'read-consumer';
+      boundary?.('readConsumer');
       const current = launch.readModelReadiness(selected), consumer = current.consumer;
+      boundary?.();
       phase = 'identity';
       if (consumer.consumerId !== original.consumer.consumerId ||
           consumer.baseConfigurationDigest !== runtimeDigest(entry.baseProfile)) { reason = 'held'; held(); }
@@ -369,19 +390,23 @@ export function inspectMemberModelReadiness(options: {
       phase = 'cutoff';
       if ((observedAt = Date.now()) >= (cutoff = consumer.cutoff)) { reason = 'held'; held(); }
       phase = 'reference';
+      boundary?.('reference');
       const observed = readPreparedModelReference({ management: options.management, profile: entry.profile,
         commandId: current.reference.commandId, context: current.reference.context,
         ...(current.reference.purpose === 'ordinary' ? { kind: 'native' as const } : {}),
         observeAccount: value => { if (value) observedAccount.value = value; else delete observedAccount.value; },
         isCurrent: () => { try { options.assertCurrent(); return true; } catch { return false; } } }, true);
+      boundary?.();
       phase = 'equality';
       if (runtimeDigest(observed) !== runtimeDigest(current.reference)) { reason = 'held'; held(); }
+      boundary?.('finalAuthority');
       phase = 'final-authority'; options.assertCurrent();
     } catch (error) {
       failed = true; throw error;
     } finally {
       if (started !== undefined) try {
-        const elapsed = Math.round(performance.now() - started);
+        const ended = performance.now(), elapsed = Math.round(ended - started);
+        boundary?.(undefined, ended);
         if (!Number.isSafeInteger(elapsed) || elapsed < 0 || !Number.isSafeInteger(currentCalls.totalMs + elapsed))
           currentCalls.truncated = true;
         else { currentCalls.totalMs += elapsed; currentCalls.maxMs = Math.max(currentCalls.maxMs, elapsed); currentCalls.lastMs = elapsed; }
@@ -392,7 +417,8 @@ export function inspectMemberModelReadiness(options: {
           kind: 'consumer', actionDigest: runtimeDigest(original.consumer.actionId),
           groupDigest: runtimeDigest({ commandDigest: runtimeDigest(original.consumer.groupCommandId ?? null),
             contextDigest: runtimeDigest(original.reference?.context ?? null) }), bindingDigest: managementDigest(selected.binding),
-          consumerId: original.consumer.consumerId, phase, reason, cutoff, observedAt, currentCalls: { ...currentCalls },
+          consumerId: original.consumer.consumerId, phase, reason, cutoff, observedAt,
+          currentCalls: { ...currentCalls, ...(regions ? { regions: { ...regions } } : {}) },
         }); } catch { /* Original TEST subscriber handles its own errors; preserve this refusal. */ }
       }
     }

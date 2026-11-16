@@ -14,6 +14,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, parse as parsePath, sep } from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { test } from 'node:test';
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
@@ -1562,8 +1563,10 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
       runtime: { read: () => ({ attached: false, nativeReady: false }),
         open: async () => { businessOpens++; throw Error('TEST no business allocation during readiness inspection'); } } });
     let active = true, targetReads = 0, changed = false;
+    let diagnosticNow = 0, performanceReads = 0, authorityCalls = 0;
     const manager = { ...management, readinessTarget: (selected: ProviderManagementProfile) => {
       targetReads++;
+      if (change === 'unchanged') diagnosticNow += 23;
       if (!changed) {
         changed = true;
         if (change === 'main-origin') writeFileSync(consulted, '{}', { flag: 'wx', mode: 0o600 });
@@ -1576,9 +1579,20 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
     const observe = (value: unknown) => { observations.push(value); };
     if (change === 'unchanged') diagnostic.subscribe(observe);
     const inspection = { management: manager, launch, entry, hostIncarnation: 'TEST-retained-host',
-      assertCurrent() { if (!active) throw Error('TEST original member owner revoked'); } };
+      assertCurrent() {
+        if (change === 'unchanged') { diagnosticNow += 11; authorityCalls++; }
+        if (!active) throw Error('TEST original member owner revoked');
+      } };
     const read = (): ReturnType<TeamLaunchOwner['readModelReadiness']> => launch.readModelReadiness({ binding, configRevision: member.configRevision,
       configurationDigest: runtimeDigest(member) });
+    const originalRead = launch.readModelReadiness;
+    const measuredRead = change === 'unchanged' ? t.mock.method(launch, 'readModelReadiness',
+      (selected: Parameters<TeamLaunchOwner['readModelReadiness']>[0]) => {
+        diagnosticNow += 7; return originalRead.call(launch, selected);
+      }) : undefined;
+    const measuredClock = change === 'unchanged' ? t.mock.method(performance, 'now', () => {
+      performanceReads++; return diagnosticNow;
+    }) : undefined;
     try {
       attachMemberModelReadiness({ launch, entry, reference: selectedReference,
         commandId: 'TEST-private-consume-' + change, actorDigest: runtimeDigest('TEST-original-actor'),
@@ -1609,7 +1623,8 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
       inspected.assertCurrent();
       if (change === 'unchanged') {
         const originalCheck = inspection.assertCurrent, failure = Error('TEST exact original current refusal');
-        inspection.assertCurrent = () => { throw failure; };
+        const successfulAuthorityCalls = authorityCalls;
+        inspection.assertCurrent = () => { diagnosticNow += 11; throw failure; };
         try {
           assert.throws(inspected.assertCurrent, error => error === failure);
           assert.throws(inspected.assertCurrent, error => error === failure);
@@ -1620,12 +1635,22 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
         assert.equal(observed.reason, 'threw'); assert.equal(observed.bindingDigest, managementDigest(binding));
         assert.equal(observed.consumerId, pending.consumer.consumerId);
         assert.ok(observed.currentCalls && typeof observed.currentCalls === 'object', 'actual current calls retain bounded timings');
-        const timing = observed.currentCalls as { count: number; totalMs: number; maxMs: number; lastMs: number | null; truncated: boolean };
-        assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'totalMs', 'truncated']);
+        const timing = observed.currentCalls as { count: number; totalMs: number; maxMs: number; lastMs: number | null;
+          truncated: boolean; regions?: Record<string, number> };
+        assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'regions', 'totalMs', 'truncated']);
         assert.equal(timing.count, 3, 'initial inspection, explicit check, and first failed check are measured once');
         assert.equal(timing.truncated, false);
         assert.ok([timing.totalMs, timing.maxMs, timing.lastMs].every(value => Number.isSafeInteger(value) && value! >= 0));
         assert.ok(timing.totalMs >= timing.maxMs && timing.maxMs >= timing.lastMs!);
+        assert.equal(targetReads, 2);
+        assert.deepEqual(timing.regions, { initialAuthorityCount: 3, initialAuthorityMs: 33,
+          readConsumerCount: 2, readConsumerMs: 14,
+          referenceCount: 2, referenceMs: 11 * (successfulAuthorityCalls - 4) + 2 * 23,
+          finalAuthorityCount: 2, finalAuthorityMs: 22 });
+        assert.equal(timing.totalMs, 11 * (successfulAuthorityCalls + 1) + 2 * 7 + 2 * 23);
+        assert.equal(timing.lastMs, 11, 'the first timed partial throw retains its elapsed region');
+        assert.equal(performanceReads, 16, 'two seven-clock calls and the first two-clock refusal; no replay after first latch');
+        diagnostic.unsubscribe(observe);
         assert.deepEqual(read(), pending, 'observation and the unchanged error never consume readiness');
       }
       if (change === 'shadowed-native') {
@@ -1661,7 +1686,13 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
       assert.deepEqual(probes.readRetainedProbe(commandId, captured.context), original);
       assert.equal(runs, 1); assert.equal(closes, 1);
       assert.equal(allocations, 0); assert.equal(businessOpens, 0);
+      if (change === 'unchanged') {
+        assert.equal(performanceReads, 16, 'fresh original consumption checks add no diagnostic clocks without a subscriber');
+        assert.equal(targetReads, 5, 'the original three consumption checks still inspect the target freshly');
+      }
     } finally {
+      measuredRead?.mock.restore();
+      measuredClock?.mock.restore();
       diagnostic.unsubscribe(observe);
       launch.seal();
       if (change === 'shadowed-native') rmSync(shadowDirectory, { recursive: true, force: true });

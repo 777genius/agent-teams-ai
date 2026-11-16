@@ -114,6 +114,9 @@ jobs:
           pnpm lint:fast:files -- \
             packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts \
             packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts \
+            packages/legacy-agent-host/tests/saved-team-model-probe.test.ts \
+            tools/owned-process-broker/nativeEmulatedSourceProfile.ts \
+            tools/owned-process-broker/nativeEmulatedSourceScenario.ts \
             packages/legacy-agent-host/tests/opencode-configuration-source.test.ts \
             scripts/e2e/opencode-diagnostics/platform.mjs \
             scripts/e2e/opencode-diagnostics/platform.test.mjs \
