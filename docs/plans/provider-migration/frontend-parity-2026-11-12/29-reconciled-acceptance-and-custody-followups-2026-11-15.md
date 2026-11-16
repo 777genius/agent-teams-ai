@@ -11060,3 +11060,6 @@ The prospective139-case P11/Review scope9bc91 remains unpublished and blocked, w
 #### Clarification of the historical RED/GREEN summary — 2026-11-16
 
 The preceding recovery summary's phrase assigning binding020f/sourcee6 to both historical receipts is overbroad. Only GREEN receipt8e03dc33aca8c5dbd8ebc354e8a41a2361fa525f binds original020f6efa5dce4a1a5fe269836ce554d76792c and sourcee6a7764d01afc32631d6b4dd0f98fa9cd7c490cb. RED receipte49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a retains its original bindingcb12381b46948c807d443fc41581a9a48d18e051 and sourcec0ead43f21d5ed90776d4080fa372f48cf8270d5. The complete published R1e664, actual receipts, independent reviews and recovery admission mapping already preserve these distinct identities. This append corrects the summary only; no R1, source, test, runner, command, outcome or execution authority changes.
+
+
+Exact-literal correction: the GREEN binding in the preceding clarification is 020f6efa5dce4a1a5fe269836136ce554d76792c. Its manually transcribed long reference omitted three characters; the clarification manifest, original receipt and R1 already contain this exact 40-character identity. No outcome, scope or execution authority changes.
