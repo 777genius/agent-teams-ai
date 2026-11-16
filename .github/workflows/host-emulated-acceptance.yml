@@ -275,7 +275,10 @@ jobs:
             tools/owned-process-broker/nativeRetainedProviderFixture.ts \
             packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts \
             packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts \
-            tools/owned-process-broker/nativeEmulatedSourceCold.ts
+            tools/owned-process-broker/nativeEmulatedSourceCold.ts \
+            tools/owned-process-broker/nativeEmulatedProfile.ts \
+            tools/owned-process-broker/nativeEmulatedProviderGate.ts \
+            tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts
           pnpm typecheck:workspace
           node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json
           pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main

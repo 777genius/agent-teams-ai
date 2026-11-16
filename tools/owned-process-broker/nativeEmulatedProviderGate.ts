@@ -13,6 +13,7 @@ import { captureMainWindowsCustody } from '../../src/features/agent-backend/main
 import { capturedQueryableWitness, timeout } from './nativeGateContext';
 import { createNativeGateEvents } from './nativeGateEvents';
 import { fileHash, prepareEmulatedProfile } from './nativeEmulatedProfile';
+import { nativeEmulatedOwnerLossScenario } from './nativeEmulatedOwnerLossScenario';
 import { nativeEmulatedSourceScenario } from './nativeEmulatedSourceScenario';
 import { nativeLauncherScenarios } from './nativeLauncherScenario';
 
@@ -195,6 +196,10 @@ async function main() {
   const exited = new Promise<number | null>((resolveExit, reject) => { sentinel.once('exit', resolveExit); sentinel.once('error', reject); });
   void exited.catch(() => undefined);
   const providers: unknown[] = [], wrappers: string[] = [], sourceScenarios: Record<string, unknown>[] = [];
+  const ownerLoss: Record<string, unknown> | undefined = sourceProvider === undefined ? {
+    scenario: 'completed-install-before-physical-resume', provider: 'codex', status: 'INCOMPLETE',
+    stage: 'not-started', cleanup: false, realProviderExecuted: false, desktopQualified: false, releaseQualified: false,
+  } : undefined;
   let complete = false, cleanup = false, failure: unknown;
   try {
     await timeout(new Promise<void>((resolveReady, reject) => { sentinel.stdout!.once('data', () => resolveReady()); sentinel.once('error', reject); }));
@@ -202,6 +207,7 @@ async function main() {
       wrappers.push(...await nativeLauncherScenarios(realpathSync(sandbox), paths[0]!, paths[1]!));
       for (const provider of ['codex', 'opencode'] as const)
         providers.push(await providerScenario(realpathSync(sandbox), paths[2]!, paths[1]!, provider, sentinel));
+      await nativeEmulatedOwnerLossScenario(realpathSync(sandbox), paths[2]!, paths[1]!, sentinel, ownerLoss!);
     } else {
       const evidence: Record<string, unknown> = {};
       sourceScenarios.push(evidence);
@@ -220,7 +226,7 @@ async function main() {
       ? 'TEST_WINDOWS_EMULATED_PROVIDER_PARITY' : 'TEST_WINDOWS_EMULATED_SOURCE_PARITY',
       sourceHead: process.env.HOST_PROCESS_SOURCE_HEAD, platform: `${process.platform}-${process.arch}`,
       nodeVersion: process.version, status: complete && cleanup && !failure ? 'PASS' : 'INCOMPLETE',
-      pins, ...(sourceProvider === undefined ? { wrappers, providers } : { provider: sourceProvider, sourceScenarios }),
+      pins, ...(sourceProvider === undefined ? { wrappers, providers, ownerLoss } : { provider: sourceProvider, sourceScenarios }),
       cleanup, realProviderExecuted: false, desktopQualified: false,
       releaseQualified: false }, null, 2) + '\n', { flag: 'wx' });
   }
