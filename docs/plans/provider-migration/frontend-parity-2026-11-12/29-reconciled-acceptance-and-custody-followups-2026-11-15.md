@@ -8627,3 +8627,70 @@ Retain the current exact patch, scope, old observer source review, original72 AR
 Root publishes this documentation-only child with immediate ordinary expected-parent push, then fully reads back its complete bodies, parent/ref and untruncated tree. Independent published-binding R2 precedes the separate exact four-source child, which is likewise immediately ordinarily pushed and fully read back. A moved ref requires fresh reconciliation; no force, history replacement or lost author changes. Preserve useful already-started17a jobs before any later primary advancement and the minimum five-minute owned poll cadence. Queued-only work adds no gate.
 
 No local project compiler/test/lint/install/build/application/provider/native/GUI execution, local Git/index write, manual Actions dispatch/rerun/cancel, real Claude/Codex including version queries, Ready/main merge/release/default activation or Stage2 is selected. Original P08/P09, Windows15-second readiness, direct I386, genuine M16/native Resume, source-size limits and all other remaining frontend/native acceptance stay independent and open. This four-path cut is not completed migration or E2E success.
+
+## Bound prospective scoped lint closure for the existing direct-I386 TEST owners
+
+This prospective documentary amendment is bound exactly to parent 5628a6160d900cca41d5818253e67c6e626bf01e, tree f41d0d8662735e213452d44c71c944a633a49c34, with 11046 leaves. It selects only the one-workflow correction below, after this documentary child is published/read back and independently approved as the parent of the exact source child. Preparation and source review are not application, project execution or a native result. Preserve every incoming commit and source, including Plan42's eight files, its separately stated cumulative 66-helper amendment, all Observer source/evidence and all earlier plans.
+
+Incoming documentary commits bfb24fe6465210bf91af20d9343f2452903ec604, a0ae60b3b7f58ae0764b66ae6dd1d86adb79058f and 5628a6160d900cca41d5818253e67c6e626bf01e are retained exactly. They add and amend Plan43, current blob 386edc0641fc34612ea983dc2bcfed1313968f65, without changing any a07 source or the Plan29 prefix. Plan43's later Windows-environment implementation and its separately listed operands are not implemented or approved by this one-workflow child. If that source work lands first, reconcile its actual workflow bytes and independently rebind this correction before publication; do not overwrite it or silently combine prospective source cuts.
+
+### Observed coverage gap
+
+Plan42 changed nativeGate.ts, nativeGateDiagnostics.ts and nativeGateEvents.test.ts, but none is an operand of the current Team fast-lint command. The existing nativeDebugServiceScenario.ts operand is already present and must not be duplicated.
+
+This conclusion uses actual commands: package.json f80ec83172d0aec0dec8a8ab055426b4fca4a1f7 directs default/fast lint to src/; General CI da94c393b024d3c8a40159edbf9975cd528007a6 calls that fast command and typed scopes only for src/main, src/preload, src/shared, src/types, src/renderer, src/features; Process workflow 93606e49aedfe84b6452aee487efdf2055f45524 contains no lint command. Compiler and Vitest inclusion are distinct from lint execution. AGENTS 0c8a4a63abf24c1510c934990a025ebc99c9e435 lines 46–50 asks for changed-file fast lint and keeps type/full-lint qualification distinct. This is a routing gap, not an observed lint error.
+
+### Exact one-path change
+
+Only .github/workflows/host-emulated-acceptance.yml changes:
+
+- Before bdafbc763a97fee129c0ee576beddf402b4faf4a, 104865 bytes, 1351 lines.
+- After 94a3d304b8d07213c4b568d95cfe569fc7e82f88, 105052 bytes, 1354 lines, SHA256 e4f90921912ac4b83ca23005b50ed3bfb8cc726e09e2182a82bacfa39464c40f.
+- Exact patch 2d45fdf5e50fe219917b2dc747200bb31022113c, 952 bytes, SHA256 e999f0c261f59a50baddf5bc1edc969dd232192b7ec6bdc9e3075633470cda94.
+
+Append exactly these operands after the existing last desktop-task-review-cycle-ui-smoke.ts operand, in this order:
+
+1. tools/owned-process-broker/nativeGate.ts
+2. tools/owned-process-broker/nativeGateDiagnostics.ts
+3. tools/owned-process-broker/nativeGateEvents.test.ts
+
+All 108 existing distinct operands retain their exact order; the result is 111. Only the previous last line gains its continuation and the three new lines are appended. Removing that exact insertion and its continuation restores the complete original workflow byte for byte. No native fixture, business behavior, production policy, test body, lint rule, dependency or type configuration changes.
+
+The unchanged fast config 8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb has the existing TypeScript glob and does not globally ignore these paths. The original broker compiler 4936675ad8af5a71d8c001a414836e90250a5daf already includes all three paths; no selected compiler project is invented.
+
+### Validation, cost and unchanged qualification
+
+The complete original eight-file admission command, retry command, ten-file Runtime/Team command, reachable five-file harness, full workspace/dedicated compilers and typed-lint scopes stay byte-identical and ordered. No job, runner, command, environment, rule, timeout, source-size baseline or additional test is added. The original 45-minute Team ceiling and every native/GUI budget remain unchanged.
+
+The added work is static lint processing of three existing files inside the existing invocation; its duration has not been measured or guaranteed to fit. An actual resulting-source original Team run must retain the full invocation and exit outcome. The original compiler, full broker cases, four Windows Host/Electron native venues and all other original acceptance remain separate requirements. Syntax/config/setup failure or skip is not lint success, and lint cannot qualify native exception behavior or cleanup.
+
+No absent-operand RED cycle, mirrored list test, manual rerun/dispatch or local project command is selected. This is one positive validation closure in the existing natural CI sequence, not another mandatory CI cycle before unrelated work.
+
+### Publication boundary
+
+The exact documentary parent is 5628a6160d900cca41d5818253e67c6e626bf01e/tree f41d0d8662735e213452d44c71c944a633a49c34. Preserve the complete preceding Plan29 blob df4bf61833d38d13b44629f82e12dddb7c4558af, 1986824 bytes, SHA256 8afe7233f5d108fb2e4bce66e114a8671db4a2e95b22ca2f26080b3a5cbd789d, as an exact byte prefix and append only this amendment. The last retained delivery observation was 2026-11-16T15:39:49Z; it is not a fresh publication lease. Root alone must check the actual delivery/PR/base/Draft and preserve useful started original jobs before any primary advancement. A changed delivery parent requires exact reconciliation and rebinding, not force or a competing overwrite. The existing five-minute owned polling cadence remains.
+
+Only two documentary paths change: this Plan29 and evidence/direct-i386-lint-closure-2026-11-16/source-r2.json. The latter is the complete 6053-byte independent scoped source/prose R2, Git a843035e47dbe14d44071fdc502381c509a47e6a, SHA256 478047d6b1827758db035a916fdd50f600a239cd165a4f1418443258c7228d4f, copied without reserialization. Its earlier inert-parent wording describes the reviewed candidate and does not approve this new union or publication; independent current-union and actual published-R1 reviews remain required. The exact 952-byte patch is embedded below, with no separate canonical patch or scope file. All other parent leaves and modes, including Plan42 and every previous plan, remain unchanged.
+
+After independent exact-union R2, publish this two-path documentary child first, immediately ordinarily push it using the fresh expected parent, and read back both complete bodies, the full tree, commit/parent/ref. Independent published-R1 binding must approve the exact one-workflow child before source publication. That source child changes only bdafbc763a97fee129c0ee576beddf402b4faf4a to 94a3d304b8d07213c4b568d95cfe569fc7e82f88, preserves both documentary bodies and every other leaf, and receives its own immediate ordinary push/full readback. No source/ref publication occurs during this inert preparation.
+
+Actual direct-I386 native qualification, P08, strict P09/Plan40, Windows 15s, Linux cleanup, genuine scoped M16/Resume and remaining original UI/package requirements are not closed by this change. Keep Draft/original base, no Ready/main merge/release/default activation/Stage2, no real Claude/Codex and CI-only project execution. This preparation and review alone authorize no source/ref/Actions mutation; root alone performs the expressly staged documentary/source publication after those reviews and fresh leases.
+
+### Exact existing-command patch
+
+```diff
+--- a/.github/workflows/host-emulated-acceptance.yml
++++ b/.github/workflows/host-emulated-acceptance.yml
+@@ -220,7 +220,10 @@
+             scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts \
+             scripts/legacy-agent-host/desktop-mixed-native-fixture.ts \
+             scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts \
+-            scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts
++            scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts \
++            tools/owned-process-broker/nativeGate.ts \
++            tools/owned-process-broker/nativeGateDiagnostics.ts \
++            tools/owned-process-broker/nativeGateEvents.test.ts
+           pnpm typecheck:workspace
+           node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json
+           pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main
+```
