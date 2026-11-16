@@ -1,0 +1,169 @@
+{
+  "kind": "independent-cleanup1-actual-published-r1-review",
+  "verdict": "APPROVE actual documentary commit03242 and exact publishedR1 for the separately authorized one-path source child, subject to root fresh unchanged-parent lease.",
+  "reviewer": "native_failures",
+  "actualReadbackPacket": {
+    "path": "/tmp/migration-evidence-20261116/root/cleanup1-published-docs-03242-readback.json",
+    "bytes": 686771,
+    "git": "16267dfb22aa4e5c4aef75d7255bc0190738cca6",
+    "sha256": "127697867614fd19606f060fbadb87d231bed6137916e65a1c7bb69405b3ca92"
+  },
+  "approvedProspectivePacket": {
+    "path": "/tmp/migration-evidence-20261116/root/cleanup1-769-parent-selection.json",
+    "bytes": 3762562,
+    "git": "e7cae66fc5d8a0e0665fd61bb19295270f0a7b5f",
+    "sha256": "1f039254c89bc1f680fe9bd5148e48450c681f7ad6cb6c953e9e96258475c414"
+  },
+  "approvedProspectiveR2": {
+    "path": "/tmp/migration-evidence-20261116/native/cleanup1-769-union-independent-r2.json",
+    "bytes": 6360,
+    "git": "18885ab82523cfb0d562df7f15351451629ab9a1",
+    "sha256": "9369f5c8d708a5d27c5ed08b4a76e244b4a0c9c8c4b302295001ecba8fa9b132"
+  },
+  "sourceSemanticR2": {
+    "path": "/tmp/migration-evidence-20261116/native/3be1-cleanup-order-independent-r2.json",
+    "bytes": 11351,
+    "git": "4e39c889239b2aee3c4deebf7bcecf75e99bdba0",
+    "sha256": "e8ac254399f42a61f3cf12997427d795ea1c68a28972e6d7b5277cc5aadb78bf"
+  },
+  "actualCommit": {
+    "sha": "03242bf1063cc7fdbaf9e1ee633ce607debf9fdc",
+    "parents": [
+      "769078797e96df86ceadd0c3bdf563abc265932f"
+    ],
+    "tree": "49f5164376c1e4b4964eef521003c8b548d0e648",
+    "files": [
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/10-acceptance-recovery.md",
+        "status": "modified",
+        "git": "4e05d188a4ada8cf5aae78dfb475a7c96f8cb34a",
+        "bytes": 176961,
+        "sha256": "6128f2425612023def7c3eb1ba71bdf93583f115a04aff8ef3f8bef2146cda8a",
+        "rawApiStringExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/prospective-r1.md",
+        "status": "added",
+        "git": "3cc579c3e62d1bcea45a75c0f312bb13d0d22ed5",
+        "bytes": 11372,
+        "sha256": "366f86ae5e86be5dc6093aecce8e472e634e28a09a583551673f8c73799b4e46",
+        "rawApiStringExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/manifest.json",
+        "status": "added",
+        "git": "94040726094cbfe74388d7aa21d294d46b4d36b0",
+        "bytes": 5455,
+        "sha256": "52945167f7c723059d0bd5dc8cfb998c00c43e470f736a2b7607bcd26ff86cbe",
+        "rawApiStringExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/candidate.patch",
+        "status": "added",
+        "git": "96da4bd5b4277e58629f2116be867ba801b8a296",
+        "bytes": 1166,
+        "sha256": "533e3ff2b76b4754b232218c1d2dd9ebf2fb3676887449ee48a1cfcdea5c8425",
+        "rawApiStringExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/audit.json",
+        "status": "added",
+        "git": "828c841c6df604871a97cbd96861112a04cb762c",
+        "bytes": 15308,
+        "sha256": "57166c5e1d70d5a6046961e639e94922ff206246abc9ed69d7f4439e44c0b8e3",
+        "rawApiStringExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/preservation-proof.json",
+        "status": "added",
+        "git": "13f7263c3fa8dc6b957bffb61c041d0ea4a386d3",
+        "bytes": 1132,
+        "sha256": "a276262b8c4aa1e9f56e9b5763f99310bb3c61d2070df6cee1e37b1255aa30d6",
+        "rawApiStringExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/source-r2.json",
+        "status": "added",
+        "git": "4e39c889239b2aee3c4deebf7bcecf75e99bdba0",
+        "bytes": 11351,
+        "sha256": "e8ac254399f42a61f3cf12997427d795ea1c68a28972e6d7b5277cc5aadb78bf",
+        "rawApiStringExact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/root-selection.json",
+        "status": "added",
+        "git": "5f55381c10c0e01ce702dcbc2189c5386a2b8a48",
+        "bytes": 4511,
+        "sha256": "11d06cd573522928ad61c53877bdcd07c3df44e1dce095da720774314a3da523",
+        "rawApiStringExact": true
+      }
+    ]
+  },
+  "rawReadback": {
+    "fulfilledResponses": 9,
+    "fullOriginalApiTextBodies": 8,
+    "totalUtf8Bytes": 227256,
+    "jsonDocumentsComparedAsOriginalRawStrings": true,
+    "allBodiesEqualFrozenApprovedPayloads": true,
+    "actualCommitObjectMatchesRawResponse": true
+  },
+  "wholeTreeProof": {
+    "parentTree": "312e2de89c71fbd15363b6e3f9b8671209e0636c",
+    "actualDocumentaryTree": "49f5164376c1e4b4964eef521003c8b548d0e648",
+    "reconstructedLeafCount": 11107,
+    "onlyChangedPaths": [
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/10-acceptance-recovery.md",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/audit.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/candidate.patch",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/manifest.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/preservation-proof.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/prospective-r1.md",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/root-selection.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/source-r2.json"
+    ],
+    "newPaths": 7,
+    "allOtherCurrentParentLeavesPreserved": 11099,
+    "actualSourcePreimageStill": {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9b3a19c372ab3c52e28848b19f67c99fe8bab1f5",
+      "size": 59419
+    },
+    "entireP10PrefixGit": "1b017131e186f67ccaf62c4215de4bdb0f58af74",
+    "entireP10PrefixBytes": 174960,
+    "actualP10AfterGit": "4e05d188a4ada8cf5aae78dfb475a7c96f8cb34a",
+    "R1Git": "3cc579c3e62d1bcea45a75c0f312bb13d0d22ed5",
+    "publishedSourceR2Git": "4e39c889239b2aee3c4deebf7bcecf75e99bdba0"
+  },
+  "sourceChildBinding": {
+    "actualIntendedParent": "03242bf1063cc7fdbaf9e1ee633ce607debf9fdc",
+    "onlyPath": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+    "beforeGit": "9b3a19c372ab3c52e28848b19f67c99fe8bab1f5",
+    "afterGit": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+    "afterBytes": 59461,
+    "afterPhysicalLines": 800,
+    "projectedTree": "90786577faa427fa72520bc53e79066f605ddc8f",
+    "projectedLeaves": 11107,
+    "sourceNotChangedInAuditedR1Tree": true
+  },
+  "publicationBoundary": "The supplied9-read packet contains the immutable published commit and eight complete API blob responses. No branch-ref GET response is included; successful expected-parent CAS push is reported by root, and the fresh source-publication lease remains root-owned. No independent live-ref observation or unseen prior chronology is claimed.",
+  "retainedSemantics": [
+    "Original pre-wait custody is snapshotted unchanged; same memoized captured HANDLE must return zero before the flag, and original false conjunction still refuses.",
+    "Original readiness first error and successful-path guards remain; no historical slot2 HANDLE or15s PASS is inferred.",
+    "FullR1 retains actual failure-path work/error ordering and Host-only A/B versus Host+Electron Job/control routes.",
+    "No new test/helper/workflow/timeout/cap/native authority/real vendor/extraREDcycle is selected. Resulting-source original CI remains required."
+  ],
+  "remainingGates": [
+    "Root must use the actual current unchanged03242 lease or independently preserve/rebind further incoming changes.",
+    "Only the exact reviewedb1f source child is covered, followed by full actual source readback and independent preservation review.",
+    "No runtime/type/lint/native/GUI qualification or global completion is claimed."
+  ],
+  "actions": {
+    "networkCalls": 0,
+    "cohortPolls": 0,
+    "projectExecutions": 0,
+    "gitIndexOrRefMutation": 0,
+    "canonicalWrites": 0
+  }
+}
