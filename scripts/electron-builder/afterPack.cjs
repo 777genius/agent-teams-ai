@@ -430,12 +430,16 @@ function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatfor
     format === 'pe' && archs.size === 1 && archs.has('x64')
   ) return true;
 
+  // The exact wrapper path is an exception only for managed AnyCPU CLR images.
+  const isManagedWrapperPath = normalizedPath === OPENCODE_CONSOLE_WRAPPER_PATH ||
+    normalizedPath === TEAMMATE_CONSOLE_WRAPPER_PATH;
+  if (targetPlatform === 'win32' && isManagedWrapperPath && clrManaged &&
+      format === 'pe' && archs.size === 1 && archs.has('ia32')) return true;
+
   const ssh2PageantPath = 'node_modules/ssh2/util/pagent.exe';
   const isAllowedIa32Path =
     normalizedPath === ssh2PageantPath ||
     normalizedPath.endsWith(`/${ssh2PageantPath}`) ||
-    normalizedPath === OPENCODE_CONSOLE_WRAPPER_PATH ||
-    normalizedPath === TEAMMATE_CONSOLE_WRAPPER_PATH ||
     // Git for Windows contains this one 32-bit MSYS helper even in 64-bit archives.
     normalizedPath === 'resources/git/usr/libexec/getprocaddr32.exe';
 

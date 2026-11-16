@@ -1047,7 +1047,7 @@ describe('electron-builder afterPack', () => {
     ]);
   });
 
-  it('accepts the managed AnyCPU OpenCode console wrapper in Windows bundles', async () => {
+  it('accepts only managed AnyCPU OpenCode and teammate console wrappers in Windows bundles', async () => {
     for (const targetArch of ['x64', 'arm64'] as const) {
       const tempDir = createTempDir();
       tempDirs.push(tempDir);
@@ -1058,7 +1058,7 @@ describe('electron-builder afterPack', () => {
       ]) {
         writeFile(
           path.join(tempDir, ...wrapperPath.split('/')),
-          createPortableExecutableBuffer('ia32')
+          createClrManagedGitLibrary()
         );
       }
       writeFile(
@@ -1067,6 +1067,12 @@ describe('electron-builder afterPack', () => {
       );
 
       await expect(validateNativeBinaries(tempDir, 'win32', targetArch)).resolves.toEqual([]);
+      writeFile(path.join(tempDir, ...TEAMMATE_CONSOLE_WRAPPER_PATH.split('/')),
+        createPortableExecutableBuffer('ia32'));
+      await expect(validateNativeBinaries(tempDir, 'win32', targetArch)).resolves.toEqual([
+        { path: TEAMMATE_CONSOLE_WRAPPER_PATH.split('/').join(path.sep),
+          format: 'pe', archs: ['ia32'] },
+      ]);
     }
   });
 
@@ -1077,7 +1083,7 @@ describe('electron-builder afterPack', () => {
         OPENCODE_CONSOLE_WRAPPER_PATH.split('/').join(path.sep),
         'pe',
         ia32,
-        'win32'
+        'win32', true
       )
     ).toBe(true);
     expect(
@@ -1085,9 +1091,11 @@ describe('electron-builder afterPack', () => {
         TEAMMATE_CONSOLE_WRAPPER_PATH.split('/').join(path.sep),
         'pe',
         ia32,
-        'win32'
+        'win32', true
       )
     ).toBe(true);
+    expect(isKnownAllowedNativeMismatch(TEAMMATE_CONSOLE_WRAPPER_PATH, 'pe', ia32,
+      'win32', false)).toBe(false);
     // The same managed binary anywhere else in the bundle is still a mismatch.
     expect(
       isKnownAllowedNativeMismatch(
