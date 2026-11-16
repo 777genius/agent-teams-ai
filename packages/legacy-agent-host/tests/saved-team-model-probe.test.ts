@@ -1646,7 +1646,7 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
         assert.ok([timing.totalMs, timing.maxMs, timing.lastMs].every(value => Number.isSafeInteger(value) && value! >= 0));
         assert.ok(timing.totalMs >= timing.maxMs && timing.maxMs >= timing.lastMs!);
         assert.equal(targetReads, 2);
-        assert.equal(successfulAuthorityCalls, 38, 'two original inspections retain every authority callback');
+        assert.equal(successfulAuthorityCalls, 30, 'two V1 inspections share only adjacent checks around the same source read');
         assert.deepEqual(timing.regions, { initialAuthorityCount: 3, initialAuthorityMs: 33,
           readConsumerCount: 2, readConsumerMs: 14,
           referenceCount: 2, referenceMs: 11 * (successfulAuthorityCalls - 4) + 2 * 23,
@@ -1677,7 +1677,7 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
             const nested = consumer.currentCalls as { count: number; truncated: boolean; regions: Record<string, number> };
             assert.equal(nested.count, 1); assert.equal(nested.truncated, clockFailure);
             const callbacks = authorityCalls - previousAuthorityCalls;
-            assert.equal(callbacks, 15, 'the original target throws before the three closing authority callbacks');
+            assert.equal(callbacks, 12, 'the original target throws before the closing policy and final authority checks');
             assert.equal(nested.regions.referenceAccountAuthorityCount, 1);
             assert.equal(nested.regions.referenceAccountAuthorityMs, Math.round(authorityCost * (callbacks - 2)),
               'sum fractional nested intervals before the single outer-call rounding');

@@ -163,8 +163,12 @@ function captureOpenCodeProbeAccountInspection(
     : undefined;
   let fileProof: AcceptedOpenCodeV2FileKey | undefined;
   const nativeCurrent = () => {
-    try { return ownerCurrent() && source.isCurrent() && (configuration?.isCurrent() ?? true) &&
-      (key?.isCurrent() ?? true) && (fileProof?.filesCurrent() ?? true); } catch { return false; }
+    try {
+      // The private V1 bracket enters the same full owner check in source.isCurrent().
+      if (!bracket && !ownerCurrent()) return false;
+      return source.isCurrent() && (configuration?.isCurrent() ?? true) &&
+        (key?.isCurrent() ?? true) && (fileProof?.filesCurrent() ?? true);
+    } catch { return false; }
   };
   const current = () => {
     try { return nativeCurrent() && (policy?.isCurrent() ?? true); } catch { return false; }
@@ -198,10 +202,10 @@ function captureOpenCodeProbeAccountInspection(
   if (bracket) {
     // No weak currentness facet escapes: only the two intermediate origin reads
     // are grouped. Native files/account remain freshly captured on every call.
-    if (configuration || key || fileProof || !ownerCurrent() || !nativeCurrent()) held();
+    if (configuration || key || fileProof || !nativeCurrent()) held();
     const target = memberTarget!();
     return { account, origin: policy, memberReference: {
-      target, originCurrent: policy!.isCurrent() && ownerCurrent(), accountDigest: account.digest,
+      target, originCurrent: policy!.isCurrent(), accountDigest: account.digest,
     } };
   }
   return { account, origin: policy };
