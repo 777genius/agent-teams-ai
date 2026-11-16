@@ -287,6 +287,7 @@ const SortableKanbanTaskCard = ({
         columnId={columnId}
         kanbanTaskState={kanbanState.tasks[task.id]}
         hasReviewers={kanbanState.reviewers.length > 0}
+        humanOnlyApproval={kanbanState.humanOnlyApproval === true}
         compact={compact}
         showSeparator={showSeparator}
         taskMap={taskMap}
@@ -357,20 +358,24 @@ export const KanbanBoard = memo(function KanbanBoard({
     if (!onHumanOnlyApprovalChange) return null;
     return (
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            aria-label="Approved column settings"
-            title="Approved column settings"
-            className="kanban-grid-no-drag h-6 w-6 p-0 text-[var(--color-text-muted)]"
-            disabled={approvalPolicyPending}
-            onPointerDown={(event) => event.stopPropagation()}
-          >
-            <Settings2 size={13} />
-          </Button>
-        </DropdownMenuTrigger>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-label="Approved column settings"
+                className="kanban-grid-no-drag h-6 w-6 p-0 text-[var(--color-text-muted)]"
+                disabled={approvalPolicyPending}
+                onPointerDown={(event) => event.stopPropagation()}
+              >
+                <Settings2 size={13} />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="top">Approved column settings</TooltipContent>
+        </Tooltip>
         <DropdownMenuContent align="end">
           <DropdownMenuCheckboxItem
             checked={kanbanState.humanOnlyApproval === true}
@@ -385,7 +390,7 @@ export const KanbanBoard = memo(function KanbanBoard({
                 .finally(() => setApprovalPolicyPending(false));
             }}
           >
-            Require human approval
+            Only users can move tasks to Approved
           </DropdownMenuCheckboxItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -650,6 +655,7 @@ export const KanbanBoard = memo(function KanbanBoard({
               columnId={columnId}
               kanbanTaskState={kanbanState.tasks[task.id]}
               hasReviewers={hasReviewers}
+              humanOnlyApproval={kanbanState.humanOnlyApproval === true}
               compact={compact}
               showSeparator={index < visibleTasks.length - 1}
               taskMap={taskMap}

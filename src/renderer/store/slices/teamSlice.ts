@@ -3588,6 +3588,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       await get().refreshTeamData(teamName);
     } catch (error) {
       set({ reviewActionError: mapReviewError(error) });
+      try {
+        await get().refreshTeamData(teamName);
+      } catch {
+        // Keep the original policy-write error; a subsequent refresh will retry.
+      }
       throw error;
     }
   },

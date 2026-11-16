@@ -46,6 +46,7 @@ interface KanbanTaskCardProps {
   columnId: KanbanColumnId;
   kanbanTaskState?: KanbanTaskState;
   hasReviewers: boolean;
+  humanOnlyApproval?: boolean;
   compact?: boolean;
   flat?: boolean;
   showSeparator?: boolean;
@@ -498,6 +499,7 @@ interface TaskPrimaryActionsProps {
   taskId: string;
   columnId: KanbanColumnId;
   isReviewManual: boolean;
+  canRejectReviewed?: boolean;
   onRequestReview: (taskId: string) => void;
   onApprove: (taskId: string) => void;
   onRequestChanges: (taskId: string) => void;
@@ -513,6 +515,7 @@ const TaskPrimaryActions = memo(function TaskPrimaryActions({
   taskId,
   columnId,
   isReviewManual,
+  canRejectReviewed = false,
   onRequestReview,
   onApprove,
   onRequestChanges,
@@ -599,6 +602,18 @@ const TaskPrimaryActions = memo(function TaskPrimaryActions({
               onRequestReview(taskId);
             }}
           />
+          {canRejectReviewed ? (
+            <TaskActionIconButton
+              label={t('kanban.taskCard.requestChanges')}
+              icon={<FilePenLine size={11} />}
+              tooltipSide={toolbarMode ? 'left' : 'top'}
+              className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRequestChanges(taskId);
+              }}
+            />
+          ) : null}
         </>
       ) : null}
 
@@ -667,6 +682,7 @@ export const KanbanTaskCard = memo(
     columnId,
     kanbanTaskState,
     hasReviewers,
+    humanOnlyApproval = false,
     compact,
     flat = false,
     showSeparator = false,
@@ -739,6 +755,7 @@ export const KanbanTaskCard = memo(
           taskId={task.id}
           columnId={columnId}
           isReviewManual={isReviewManual}
+          canRejectReviewed={humanOnlyApproval && columnId === 'done' && task.reviewState === 'reviewed'}
           onRequestReview={onRequestReview}
           onApprove={onApprove}
           onRequestChanges={onRequestChanges}
@@ -859,6 +876,13 @@ export const KanbanTaskCard = memo(
               {task.needsClarification === 'user'
                 ? t('kanban.taskCard.awaitingUser')
                 : t('kanban.taskCard.awaitingLead')}
+            </span>
+          ) : null}
+          {columnId === 'done' && task.reviewState === 'reviewed' ? (
+            <span
+              className={`mt-1 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${REVIEW_STATE_DISPLAY.reviewed.bg} ${REVIEW_STATE_DISPLAY.reviewed.text}`}
+            >
+              {REVIEW_STATE_DISPLAY.reviewed.label}
             </span>
           ) : null}
           {isTeamTaskNeedsFixActionable(task) ? (
