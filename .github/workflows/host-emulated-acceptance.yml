@@ -208,7 +208,8 @@ jobs:
             tools/owned-process-broker/fixtures/providerDesktopPeer.mjs \
             tools/owned-process-broker/nativeDebugServiceScenario.ts \
             scripts/e2e/teams-create-page-desktop.mjs \
-            tools/owned-process-broker/nativeWindowsAppFixture.ts
+            tools/owned-process-broker/nativeWindowsAppFixture.ts \
+            test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts
           pnpm typecheck:workspace
           node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json
           pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main

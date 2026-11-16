@@ -101,8 +101,8 @@ export async function refreshRuntimeProviderView(
           request: requestSeq,
           phase,
           silent,
-          sequenceCurrent: phase === 'finished' && silent ? null : sequenceCurrent,
-          contextCurrent: phase === 'finished' && silent ? null : contextCurrent,
+          sequenceCurrent,
+          contextCurrent,
           viewPresent: view === undefined ? null : view !== null,
           inheritanceFields,
           loadingFalseSet,
@@ -165,7 +165,7 @@ export async function refreshRuntimeProviderView(
     return false;
   } finally {
     let loadingFalseSet = false;
-    if (!silent && requestIsCurrent()) {
+    if (requestIsCurrent()) {
       context.setLoading(false);
       loadingFalseSet = true;
     }
