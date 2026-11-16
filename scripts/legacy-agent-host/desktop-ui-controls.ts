@@ -351,37 +351,51 @@ export function createDesktopUiControls(
     point = await readPoint(label + ' after pointer enter');
     // Async Host hydration can shift the DOM after hover. Check the original
     // target is stable before ONE physical click, never replay an uncertain click.
-    let stableSamples = 0;
-    for (let sample = 0; sample < 15 && stableSamples < 2; sample++) {
+    let stableSamples = 0, remainingPointSamples = 16;
+    // Share the original 15 stability samples and final lookup, reserving that lookup.
+    while (remainingPointSamples > 1 && stableSamples < 2) {
       await new Promise<void>((done) => setTimeout(done, 100));
+      remainingPointSamples--;
       const next = await readPoint(label + ' stable target');
       stableSamples =
         next.x === point.x && next.y === point.y && next.tag === point.tag
           ? stableSamples + 1
           : 0;
       point = next;
+      if (stableSamples !== 2) continue;
+      assert.equal(typeof point.x, 'number');
+      assert.equal(typeof point.y, 'number');
+      options.assertOwnedRenderer();
+      remainingPointSamples--;
+      const finalPoint = record(await cdp.evaluate(expression));
+      observeGeometry('final', finalPoint);
+      let resample = false;
+      try {
+        assert.notEqual(finalPoint.unavailableTarget, true, 'Original UI target unavailable after ownership check');
+        resample = remainingPointSamples >= 3 &&
+          [point.x, point.y, finalPoint.x, finalPoint.y].every(value => typeof value === 'number' && Number.isFinite(value)) &&
+          finalPoint.tag === point.tag &&
+          (!Object.is(finalPoint.x, point.x) || !Object.is(finalPoint.y, point.y));
+        if (!resample) assert.deepEqual(
+          [finalPoint.x, finalPoint.y, finalPoint.tag],
+          [point.x, point.y, point.tag],
+          'Original UI target moved after ownership check'
+        );
+      } catch (error) {
+        try {
+          console.log(JSON.stringify({ kind: 'TEST_DESKTOP_CLICK_GEOMETRY', geometry: geometryTrace }));
+        } catch {
+          // The exact original final-target refusal remains authoritative.
+        }
+        throw error;
+      }
+      if (resample) {
+        options.assertOwnedRenderer();
+        point = finalPoint;
+        stableSamples = 0;
+      }
     }
     assert.ok(stableSamples === 2, 'Original UI target did not settle before one click');
-    assert.equal(typeof point.x, 'number');
-    assert.equal(typeof point.y, 'number');
-    options.assertOwnedRenderer();
-    const finalPoint = record(await cdp.evaluate(expression));
-    observeGeometry('final', finalPoint);
-    try {
-      assert.notEqual(finalPoint.unavailableTarget, true, 'Original UI target unavailable after ownership check');
-      assert.deepEqual(
-        [finalPoint.x, finalPoint.y, finalPoint.tag],
-        [point.x, point.y, point.tag],
-        'Original UI target moved after ownership check'
-      );
-    } catch (error) {
-      try {
-        console.log(JSON.stringify({ kind: 'TEST_DESKTOP_CLICK_GEOMETRY', geometry: geometryTrace }));
-      } catch {
-        // The exact original final-target refusal remains authoritative.
-      }
-      throw error;
-    }
     options.assertOwnedRenderer();
     step({
       action: 'mouseClick',

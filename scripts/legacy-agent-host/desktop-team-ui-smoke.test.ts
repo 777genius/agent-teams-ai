@@ -1319,10 +1319,14 @@ test('Taskboard focus diagnostics preserve last samples and bounded transitions 
 for (const [change, replacement] of [
   ['unavailable', { unavailableTarget: true, matches: 1 }],
   ['moved', { x: 100, y: 200, tag: 'BUTTON' }],
+  ['tag-changed', { x: 100, y: 200, tag: 'INPUT' }],
+  ['nonfinite', { x: 100, y: Number.POSITIVE_INFINITY, tag: 'BUTTON' }],
 ] as const) {
-  test(`original desktop click refuses a target ${change} during the final ownership check`, { timeout: 5000 }, async () => {
+  test(`original desktop click revalidates a target ${change} during the final ownership check`, { timeout: 5000 }, async t => {
     const expression = 'TEST_originalOwnerAndHitTestedTarget()';
     const expressions: string[] = [], dispatched: Record<string, unknown>[] = [];
+    const output: string[] = [];
+    t.mock.method(console, 'log', (value: unknown) => { output.push(String(value)); });
     let changed = false, guardChanges = 0;
     const ui = createDesktopUiControls({
       async evaluate(actual: string) {
@@ -1337,15 +1341,21 @@ for (const [change, replacement] of [
       // Initial point, pointer-enter point, and both original equal stable samples.
       if (!changed && expressions.length === 4) { changed = true; guardChanges++; }
     }, step() {} });
-    await assert.rejects(
+    if (change === 'moved') await ui.clickExpression(expression, 'TEST original final target');
+    else await assert.rejects(
       ui.clickExpression(expression, 'TEST original final target'),
-      new RegExp(`Original UI target ${change} after ownership check`)
+      new RegExp(`Original UI target ${change === 'unavailable' ? 'unavailable' : 'moved'} after ownership check`)
     );
     assert.equal(guardChanges, 1, 'the original final ownership guard changes the target once');
-    assert.deepEqual(expressions, Array.from({ length: 5 }, () => expression),
-      'one fresh complete target read follows the final guard');
-    assert.deepEqual(dispatched, [{ type: 'mouseMoved', x: 100, y: 100 }],
-      'no physical press or release after the original target changes');
+    assert.deepEqual(expressions, Array.from({ length: change === 'moved' ? 8 : 5 }, () => expression),
+      'only coordinate motion receives two fresh stable reads and another complete final lookup');
+    assert.deepEqual(dispatched, change === 'moved' ? [
+      { type: 'mouseMoved', x: 100, y: 100 },
+      { type: 'mousePressed', x: 100, y: 200, button: 'left', clickCount: 1 },
+      { type: 'mouseReleased', x: 100, y: 200, button: 'left', clickCount: 1 },
+    ] : [{ type: 'mouseMoved', x: 100, y: 100 }],
+    'one hover and at most one press/release, only at the fully revalidated point');
+    assert.equal(output.length, change === 'moved' ? 0 : 1);
   });
 }
 
@@ -1401,8 +1411,8 @@ for (const requireCenterHit of [false, true]) {
   });
 }
 
-for (const change of ['owner', 'cutoff'] as const) {
-  test('original desktop click rechecks ' + change + ' after its pending final target read', { timeout: 5000 }, async t => {
+for (const [change, moved] of [['owner', false], ['cutoff', false], ['owner', true], ['cutoff', true]] as const) {
+  test(`original desktop click rechecks ${change} after its pending final target read (moved=${moved})`, { timeout: 5000 }, async t => {
     if (change === 'cutoff') t.mock.timers.enable({ apis: ['Date'], now: 1000 });
     const originalCutoff = 1001, refusal = new Error('TEST original ' + change + ' no longer current');
     const point = { x: 100, y: 100, tag: 'BUTTON' }, started = deferred<void>(), release = deferred<typeof point>();
@@ -1429,7 +1439,7 @@ for (const change of ['owner', 'cutoff'] as const) {
       assert.deepEqual(dispatched, [{ type: 'mouseMoved', x: 100, y: 100 }]);
       if (change === 'owner') active = false;
       else t.mock.timers.setTime(originalCutoff);
-      release.resolve(point);
+      release.resolve(moved ? { ...point, y: 200 } : point);
       await assert.rejects(pending, error => {
         assert.equal(error, refusal, 'the exact original authority refusal remains authoritative');
         return true;
@@ -1445,6 +1455,30 @@ for (const change of ['owner', 'cutoff'] as const) {
     }
   });
 }
+
+test('original desktop click preserves a final transport rejection without more reads or input', { timeout: 5000 }, async () => {
+  const expression = 'TEST_originalFinalTransportTarget()', refusal = new Error('TEST original final CDP failure');
+  const commands: Record<string, unknown>[] = [];
+  let reads = 0;
+  const ui = createDesktopUiControls({
+    async evaluate(actual: string) {
+      assert.equal(actual, expression);
+      reads++;
+      if (reads === 5) throw refusal;
+      return { x: 100, y: 100, tag: 'BUTTON' };
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      commands.push({ method, ...params }); return {};
+    },
+  }, { assertOwnedRenderer() {}, step() {} });
+  await assert.rejects(ui.clickExpression(expression, 'TEST original final transport target'), error => {
+    assert.equal(error, refusal, 'the exact original transport failure remains authoritative');
+    return true;
+  });
+  assert.equal(reads, 5, 'a failed final read cannot start another observation');
+  assert.deepEqual(commands, [{ method: 'Page.bringToFront' },
+    { method: 'Input.dispatchMouseEvent', type: 'mouseMoved', x: 100, y: 100 }]);
+});
 
 test('original clarification lookup admits its retained read without completing the assignment prerequisite', async () => {
   for (const stage of [undefined, 'in-progress-comment'] as const) {
@@ -2084,15 +2118,17 @@ test('P11 actual poll retains timely acceptance, original cadence, currentness a
   assert.equal(noReady.reads(), 1); assert.deepEqual(noReady.trace, ['read']); assert.deepEqual(noReady.delays, []);
 });
 
-test('final click movement retains five original geometry reads and one closed diagnostic without a press', { timeout: 5000 }, async t => {
+test('repeated final click movement exhausts the original shared observations without a press', { timeout: 5000 }, async t => {
   const expression = 'TEST_originalGeometryTarget()', label = 'TEST original geometry target';
+  const positions = [100, 100, 100, 100, 101, 102, 102, 102, 103, 103, 103, 104, 104, 104, 105, 105, 105, 106];
   const expressions: string[] = [], commands: Record<string, unknown>[] = [];
   const steps: Record<string, unknown>[] = [], output: string[] = [];
   t.mock.method(console, 'log', (value: unknown) => { output.push(String(value)); });
   const ui = createDesktopUiControls({
     async evaluate(actual: string) {
       expressions.push(actual);
-      return { x: expressions.length === 5 ? 101 : 100, y: 100, tag: 'BUTTON',
+      assert.ok(expressions.length <= positions.length, 'the original observation allowance is never replenished');
+      return { x: positions[expressions.length - 1], y: 100, tag: 'BUTTON',
         text: 'TEST-private-original-target', geometry: {
           targetRect: [90, 90, 20, 20], dialogRect: [20, 30, 400, 300],
           targetAnimations: 1, dialogAnimations: 0, fonts: 'loaded',
@@ -2104,15 +2140,17 @@ test('final click movement retains five original geometry reads and one closed d
   }, { assertOwnedRenderer() {}, step(value) { steps.push(value); } });
   await assert.rejects(ui.clickExpression(expression, label),
     /Original UI target moved after ownership check/);
-  assert.deepEqual(expressions, Array.from({ length: 5 }, () => expression));
+  assert.deepEqual(expressions, Array.from({ length: 18 }, () => expression));
   assert.deepEqual(commands, [{ method: 'Page.bringToFront' },
     { method: 'Input.dispatchMouseEvent', type: 'mouseMoved', x: 100, y: 100 }]);
   assert.equal(steps.length, 1);
   assert.equal(steps[0]!.action, 'mouseMoved');
   const trace = steps[0]!.geometryTrace as { samples: Record<string, unknown>[]; overflow: boolean };
-  assert.deepEqual(trace.samples.map(row => row.phase), ['initial', 'after-hover', 'stable', 'stable', 'final']);
+  assert.deepEqual(trace.samples.map(row => row.phase), ['initial', 'after-hover', 'stable', 'stable', 'final',
+    'stable', 'stable', 'stable', 'final', 'stable', 'stable', 'final', 'stable', 'stable', 'final',
+    'stable', 'stable', 'final']);
   assert.equal(trace.overflow, false);
-  assert.deepEqual(trace.samples.map(row => row.x), [100, 100, 100, 100, 101]);
+  assert.deepEqual(trace.samples.map(row => row.x), positions);
   for (const row of trace.samples) {
     assert.deepEqual(Object.keys(row).sort(), ['dialogAnimations', 'dialogRect', 'fonts', 'phase',
       'tag', 'targetAnimations', 'targetRect', 'unavailable', 'x', 'y']);
