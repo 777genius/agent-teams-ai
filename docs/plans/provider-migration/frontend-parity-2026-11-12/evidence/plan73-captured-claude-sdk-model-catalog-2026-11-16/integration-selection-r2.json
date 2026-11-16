@@ -1,0 +1,73 @@
+{
+  "kind": "PLAN73_SDK_CATALOG_INTEGRATION_SELECTION_INDEPENDENT_R2",
+  "reviewer": "/root/migration_scope",
+  "disposition": "APPROVE_EXACT_PROSPECTIVE_INTEGRATION_ADDENDUM",
+  "blockers": [],
+  "document": {
+    "path": "/workspace/scratch/c2f5ff7c30ee/migration-recovery-20261116/settings-sdk-catalog/integration-selection.md",
+    "bytes": 2642,
+    "gitBlob": "77458f4fdbfe2dfa20d19243439eabe65ee0f2a0",
+    "sha256": "d74b1f28d1f175a8facf194c8b067e943bbd7c5a4831e8f58030fcaa7a7cb47e",
+    "fullTextRead": true
+  },
+  "unchangedApprovedR1": {
+    "gitBlob": "2e1b2d86535ab2bd6dd54a27834d781bd88c90ad",
+    "bytes": 12932,
+    "sha256": "bea6b2cb8d90915efece13035d147cdd7428fdd0053709b6018ad021f2bdc285",
+    "independentR2": "e081ac6108a5db18455b7f74235691baa34f52a3"
+  },
+  "retainedParent": {
+    "commit": "0bc2e80b09a41ecde1092a5067fdf64f28c77bf3",
+    "tree": "0ed95d6c0cf49c82f0bab4780e322db830f26757",
+    "leafCount": 11291,
+    "fullMapPath": "/workspace/scratch/c2f5ff7c30ee/migration-recovery-20261116/current-0bc2-whole-tree.json",
+    "mapGitBlob": "d061c02527114ee7eca050719b5d6c8d6b6140b4",
+    "mapBytes": 3489671,
+    "mapSha256": "5e3d8b355cf1d5549517b30dc37d905b7bb8bff1474b21c7613507f6c5e5e093",
+    "merkleIndependentlyRecomputed": true,
+    "deltaFrom8728": 30,
+    "removedPaths": 0,
+    "limits": "Complete leaf-map identity/preservation and four preimages checked independently. This addendum review does not re-review all incoming source semantics or claim a fresh ref lease."
+  },
+  "fourUnchangedPreimages": {
+    "src/renderer/utils/teamModelAvailability.ts": "167751c56f74c2869b8b3d9b128002d5bd642bcb",
+    "test/renderer/utils/teamModelAvailability.test.ts": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32",
+    "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts": "e191694db8ccd8bbd2e05bcdbcacd8cb1703e23c",
+    ".github/workflows/host-emulated-acceptance.yml": "d132a5e37cec1e62120571606f3f272f56b9b4af"
+  },
+  "numberAndScope": {
+    "plan71": "Published 88229f294a992aeabea0e4115b26644fc97f5f9f adds bounded post-failure TEST observation only; no overlapping SDK product correction. Draft9e862 is superseded by that frozen published selection.",
+    "plan72": "Published7084543a7c0d16ea0049d79892b619013acf23f6 corrects unsupported credential-copy promises in six paths. It is a distinct repair, with exactly one shared file: the supplementary roster.",
+    "recommendation": "Use Plan73. The addendum does not select Plan71/72 source or transfer their acceptance."
+  },
+  "rosterComposition": {
+    "fullOriginalBodyGitBlob": "e191694db8ccd8bbd2e05bcdbcacd8cb1703e23c",
+    "bytes": 22434,
+    "sha256": "651be27777eba7280304a791e52a088cec616e94b15d88734043c29c1adf234b",
+    "originalCount": 257,
+    "originalUnique": true,
+    "plan72OrderedAdditions": [
+      "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "src/shared/utils/opencodeModelRef.ts",
+      "test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts",
+      "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+    ],
+    "plan73OnlyAddition": "src/renderer/utils/teamModelAvailability.ts",
+    "allFiveAbsentInOriginal": true,
+    "allFiveUnique": true,
+    "if73First": "257 -> 258, then later72 must preserve the SDK entry and append its four ordered entries.",
+    "if72First": "257 -> 261, then73 must use actual261 preimage and append only its SDK entry.",
+    "finalCount": 262,
+    "preservation": "Retain the entire original257 ordered prefix, all selected incoming entries and both other arrays byte-for-byte. Never overwrite with an old whole image or infer arbitrary-roster-change approval."
+  },
+  "unchangedLimits": "Same four paths, one predicate clause, three tests,983 product cap,142->143 existing fast-lint append, strict types and original normal acceptance. No added clock/action/runtime/native execution, workflow lane or mandatory CI cycle.",
+  "publicationBoundary": "Independent actual published R1/addendum readback must precede source preparation. Actual four preimages/current parent and precise forward/inverse must be rebound before source publication; any other concrete delta needs review. This is prospective documentary approval only.",
+  "actions": {
+    "network": false,
+    "projectExecution": false,
+    "ciPolling": false,
+    "sourceAfterimages": false,
+    "canonicalWrites": false,
+    "gitIndexOrRefWrites": false
+  }
+}

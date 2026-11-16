@@ -1,0 +1,179 @@
+{
+  "kind": "SETTINGS_CLAUDE_SDK_CATALOG_PROSPECTIVE_INDEPENDENT_R2",
+  "reviewer": "/root/migration_scope",
+  "disposition": "APPROVE_PROSPECTIVE_R1_SCOPE_ONLY",
+  "concreteBlockers": [],
+  "reviewBoundary": "The complete revised R1 was recovered, read and independently byte-verified. This approval concerns its proposed four-path scope and original validation route. No afterimage, source application, runtime result, future parent lease or published-document identity is approved by this report.",
+  "document": {
+    "path": "/tmp/migration-evidence-20261116/frontend-recovery/settings-claude-sdk-catalog-r1-only/prospective-r1.md",
+    "savedCopy": "/tmp/migration-evidence-20261116/migration-scope/settings-claude-sdk-prospective-r2/reference/prospective-r1-2e1b.md",
+    "bytes": 12932,
+    "gitBlob": "2e1b2d86535ab2bd6dd54a27834d781bd88c90ad",
+    "sha256": "bea6b2cb8d90915efece13035d147cdd7428fdd0053709b6018ad021f2bdc285",
+    "naturalLines": 60,
+    "completeTextRead": true
+  },
+  "priorDocument": {
+    "bytes": 12269,
+    "gitBlob": "3431f267f0e93b44e816189c8b0c47f8865f4877",
+    "sha256": "8525e35922ef4af1258ba87d17d5be69940a5d0e3ba8096a8a6adae93ecfb9f5",
+    "completeTextReadBeforeEnvironmentReset": true,
+    "revision": "Exactly three paragraph replacements refine row-presence versus per-model availability and cover the same distinctions inside the existing second and third planned cases. All other bytes are preserved; no fifth path or fourth case."
+  },
+  "retainedParentBinding": {
+    "commit": "8728a7d32e7b879647d4190391f3df1cec635ac2",
+    "tree": "576fc2dc7ca7bc552d06f15c32d434374ca685e4",
+    "leafCount": 11263,
+    "basis": "All four full preimages were independently rehashed and matched the retained complete parent map before the environment reset. This is historical retained binding, not a fresh publication lease."
+  },
+  "preimages": [
+    {
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "gitBlob": "167751c56f74c2869b8b3d9b128002d5bd642bcb",
+      "bytes": 32055,
+      "sha256": "6e216e10c07e953472afb74045c3a976e9f4a1d4fcd3e9f5d46dc789d19022e6",
+      "scope": "One source-membership clause only; preserve provider/status guards and all other product code."
+    },
+    {
+      "path": "test/renderer/utils/teamModelAvailability.test.ts",
+      "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32",
+      "bytes": 49687,
+      "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8",
+      "scope": "Three meaningful cases in the existing imported public utility suite; retain every old case/assertion."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "gitBlob": "e191694db8ccd8bbd2e05bcdbcacd8cb1703e23c",
+      "bytes": 22434,
+      "sha256": "651be27777eba7280304a791e52a088cec616e94b15d88734043c29c1adf234b",
+      "scope": "Append causal product helper only, preserving the complete ordered 257-entry prefix; resulting 258."
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "gitBlob": "d132a5e37cec1e62120571606f3f272f56b9b4af",
+      "bytes": 142538,
+      "sha256": "2470e8c83d8e77eddb4d5156947c30fda993e5b3485b9fb238bc12d6e2be6839",
+      "scope": "Append existing utility test to the same fast-lint command, preserving all 142 old operands in order; resulting 143."
+    }
+  ],
+  "semanticFindings": [
+    {
+      "finding": "The source defect is real and independently bounded. The current predicate accepts only anthropic-models-api, while the actual captured Anthropic producer emits claude-sdk. An otherwise valid SDK catalog therefore falls through to static options and rejects its offered native TEST launch string.",
+      "sourceAnchors": [
+        "167751c5:322-329,400-407,611-647,750-788,889-906",
+        "c0bd1481:112-125,145-185",
+        "500b04c5:231-244"
+      ]
+    },
+    {
+      "finding": "Adding only claude-sdk to the existing first-party source membership, with the original catalog provider anthropic and status-not-unavailable guards, reaches the existing common options, enumeration, availability, exact membership, normalization and error paths together. No second implementation or TEST-only product exception is necessary.",
+      "sourceAnchors": [
+        "167751c5:400-447,479-512,611-647,688-788,842-954"
+      ]
+    },
+    {
+      "finding": "The actual finite producer offers alias sonnet, native resolved value TEST-claude-sonnet and label TEST Claude Sonnet. Catalog construction retains that value and label; selector hydration already recognizes SDK catalogs. Exact offered native values survive existing labels and normalization. Unoffered curated aliases are not added to a nonempty native catalog.",
+      "sourceAnchors": [
+        "920b40fa:170-171,343-351",
+        "c0bd1481:105-125",
+        "e54fd44a:590-599,1549-1575",
+        "5e1348a5:357-393,537-558,804-843"
+      ]
+    },
+    {
+      "finding": "Hidden rows are excluded from catalog options. Explicitly unavailable visible rows remain disabled options, are excluded from available-model enumeration, and fail normalization/selection. Unknown/nonmember values remain refused. The revised R1 correctly separates no visible nonempty rows from a nonempty all-unavailable list: the latter has no static fallback.",
+      "sourceAnchors": [
+        "167751c5:375-407,633-647,699-710,750-788,842-906"
+      ]
+    },
+    {
+      "finding": "Catalog absence, explicit catalog status unavailable, or no visible nonempty launch-model/id rows retains prior fallback. This does not establish authentication, fresh launch readiness, successful model execution or native custody. Actual captured metadata expressly separates auth and retains teamLaunch/oneShot false; the selected utility change does not promote them.",
+      "sourceAnchors": [
+        "c0bd1481:132,145-185",
+        "167751c5:173-213,663-677,688-710"
+      ]
+    },
+    {
+      "finding": "The existing removed-model filter remains API-only, as published. Compatible-endpoint custom-model behavior, alias-label protection, and Codex/OpenCode branches remain untouched. The separately fetched unsupported-route helper rejects only OpenCode cursor-acp/kiro; it does not add an Anthropic/TEST refusal.",
+      "sourceAnchors": [
+        "167751c5:313-339,387-393",
+        "5e1348a5:537-558,804-843",
+        "6bfd3918:complete 661-byte body"
+      ]
+    }
+  ],
+  "testsAndTypes": {
+    "plannedCases": [
+      "Ready SDK: exactly Default and the native offered value/label; same value accepted by enumeration, UI availability, normalization and selection-error helpers; no curated aliases or mutation of false auth/unknown verification.",
+      "Mixed valid, hidden and unavailable SDK rows, plus all-visible-unavailable edge within the same case: valid row survives, hidden absent, unavailable disabled, nonmembers refused, and no fallback when visible rows exist but all are unavailable.",
+      "Explicitly unavailable catalog and ready catalog with no visible nonempty rows preserve prior fallback and refuse the unoffered native TEST value."
+    ],
+    "typedFixture": "Use the complete existing TeamModelRuntimeProviderStatus Pick shape; capabilities is not in that narrower fixture type. Do not use any casts or incomplete DTOs to evade actual typing.",
+    "meaning": "The cases invoke existing exported consumer helpers and exercise selection/refusal behavior. Predicted failure of the first case on the old predicate is source reasoning only, not an executed RED result.",
+    "oldTestPreservation": "The full old test file was byte-verified and its relevant API/alias/fallback/compatible cases read. Exact all-case/assertion preservation remains a required check on the future source afterimage; no new test bytes were present in this R1-only review."
+  },
+  "limitsAndValidation": {
+    "productionSize": {
+      "naturalLines": 982,
+      "physicalSplitCount": 983,
+      "existingFrozenCap": 983,
+      "baselineGitBlob": "8f5deeed4e406894e1ee587ed541014bcb7dde77",
+      "requirement": "Preserve count with the single readable source-membership expression. No baseline change, unrelated compaction or new module; ordinary new-production cap remains 800."
+    },
+    "timeAndEffects": "Only the existing predicate gains a small synchronous membership comparison/allocation. No native/IPC/DOM/model request, clock read, wait, timer, cache/expiry/auth owner or timeout change is selected.",
+    "unitDiscovery": {
+      "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "evidence": "Existing Vitest includes test/**/*.test.ts with the real @renderer alias. The unchanged four complete safe frontend shards reach this suite, excluding only their original live/live-e2e/native patterns."
+    },
+    "strictTypes": {
+      "rootConfig": "568952f5025a88c16b0568c7279d8e85a4288b43",
+      "package": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "evidence": "Root config includes src/**/* and test/**/*; existing typecheck:workspace begins the root strict noEmit chain. No new type project or invocation is selected."
+    },
+    "lint": {
+      "fastConfig": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "evidence": "Existing typed renderer lint covers the product helper. The existing explicit fast-lint list lacks the utility test, and the exact additional test operand closes that invocation gap. Fast lint is non-type-aware; generic src-only lint is not claimed to cover the test."
+    },
+    "proofRoster": "The existing runtime source vector lacks this causal product helper, so append exactly that helper to the supplementary roster. The unit test is not introduced as a runtime source dependency.",
+    "acceptance": "Use the original normal resulting-source strict types/lints/safe shards and the original membership UI/native-action/receipt/cleanup route. Preceding management success stays separate. No new mandatory RED or CI cycle, manual dispatch, real-vendor execution, skip, timeout increase or weakened oracle."
+  },
+  "historicalEvidenceLimit": {
+    "source": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "run": "43959134362",
+    "job": "133621515611",
+    "auditGitBlob": "3c4c6632252204bbb42593a0d7be31dda3e1d5f5",
+    "readingBoundary": "Existing completed audit used as context; original logs/ZIP/PNG were not downloaded or re-audited for this prospective review. The receipt did not retain a completed renderer catalog DTO. The deterministic source defect is not a claim of sole historical cause or proof that resulting membership will pass."
+  },
+  "referenceReadPrecision": "All four full preimages and listed closure identities were rehashed before the environment reset. The complete product helper, producer, revised R1 and 661-byte route owner were read; the relevant downstream/test/config sections were inspected. This report does not claim every line of every hash-joined reference, including useEffectiveCliProviderStatus, was reread.",
+  "newlyRetainedReference": {
+    "sourcePath": "src/renderer/utils/teamModelLaunchSupport.ts",
+    "savedBody": "/tmp/migration-evidence-20261116/migration-scope/settings-claude-sdk-prospective-r2/reference/teamModelLaunchSupport.ts",
+    "bytes": 661,
+    "gitBlob": "6bfd39183a50ad02ce40a860b3affc9d83b64e9b",
+    "sha256": "2b2986a05c27ecdf648dd6c11b4b515964e5e9b41fcbabc4239fae3de84cfd2d",
+    "rawPath": "/tmp/migration-evidence-20261116/migration-scope/settings-claude-sdk-prospective-r2/reference/teamModelLaunchSupport-fetch-raw.json",
+    "rawIdentity": {
+      "bytes": 834,
+      "gitBlob": "3df2bb3bb60f4cdb19435ca9b78460bc340be6bc",
+      "sha256": "746bdc98f982be927c05ed5205d71ca4c6d19b12fd69744b74d31b44d6c746d6"
+    },
+    "retrieval": "One explicitly root-authorized immutable fetch after verifying no retained full body; no duplicate download."
+  },
+  "environmentRecovery": {
+    "priorCheckpoint": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/settings-claude-sdk-prospective-r2/review-checkpoint.json",
+      "gitBlob": "1bb17ff2211a67615140cf1c6deb2c69b2990383",
+      "sha256": "17505975fc6adb294b7d169e27797c89b7448e4b129049252cfa1c29f314dab2"
+    },
+    "effect": "Prior evidence directories disappeared after a transport/environment reset. Completed pre-reset source/hash observations were preserved in the checkpoint. The author recovered exact original and revised R1 strings without source GET; both were independently hashed and the exact three-paragraph diff read in this resumed review. No broad refetch or new execution was used."
+  },
+  "actions": {
+    "sourceAfterimagesCreated": false,
+    "canonicalWrites": false,
+    "gitOrRefActions": false,
+    "projectOrCompilerOrLintOrTestExecution": false,
+    "nativeProviderGuiExecution": false,
+    "ciPollingOrActions": false
+  },
+  "nextBoundary": "Root may bind/publish the approved R1 on the actual current parent, then obtain the required independent published-document review before source preparation. Future exact afterimages require narrow forward/inverse/source R2 and original normal resulting-source acceptance; neither is asserted by this prospective report."
+}
