@@ -287,7 +287,6 @@ const SortableKanbanTaskCard = ({
         columnId={columnId}
         kanbanTaskState={kanbanState.tasks[task.id]}
         hasReviewers={kanbanState.reviewers.length > 0}
-        humanOnlyApproval={kanbanState.humanOnlyApproval === true}
         compact={compact}
         showSeparator={showSeparator}
         taskMap={taskMap}
@@ -655,7 +654,6 @@ export const KanbanBoard = memo(function KanbanBoard({
               columnId={columnId}
               kanbanTaskState={kanbanState.tasks[task.id]}
               hasReviewers={hasReviewers}
-              humanOnlyApproval={kanbanState.humanOnlyApproval === true}
               compact={compact}
               showSeparator={index < visibleTasks.length - 1}
               taskMap={taskMap}

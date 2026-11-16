@@ -46,7 +46,6 @@ interface KanbanTaskCardProps {
   columnId: KanbanColumnId;
   kanbanTaskState?: KanbanTaskState;
   hasReviewers: boolean;
-  humanOnlyApproval?: boolean;
   compact?: boolean;
   flat?: boolean;
   showSeparator?: boolean;
@@ -682,7 +681,6 @@ export const KanbanTaskCard = memo(
     columnId,
     kanbanTaskState,
     hasReviewers,
-    humanOnlyApproval = false,
     compact,
     flat = false,
     showSeparator = false,
