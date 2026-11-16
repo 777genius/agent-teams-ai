@@ -1,0 +1,1083 @@
+﻿2026-11-16T03:15:47.7763120Z Current runner version: '2.338.1'
+2026-11-16T03:15:47.7780340Z Runner name: 'nsc-runner-h8o5tbeebrpqa'
+2026-11-16T03:15:47.7780720Z Runner group name: 'Default'
+2026-11-16T03:15:47.7781200Z Machine name: 'h8o5tbeebrpqa'
+2026-11-16T03:15:47.7808880Z ##[group]Namespace Runner Details
+2026-11-16T03:15:47.7809230Z ID: h8o5tbeebrpqa
+2026-11-16T03:15:47.7809490Z Operating System: macOS
+2026-11-16T03:15:47.7809730Z Machine Type: 6x14
+2026-11-16T03:15:47.7810020Z Architecture: arm64
+2026-11-16T03:15:47.7810380Z Instance URL: https://cloud.namespace.so/b0vdogg03un3g/instance/h8o5tbeebrpqa
+2026-11-16T03:15:47.7810740Z ##[endgroup]
+2026-11-16T03:15:47.7810980Z ##[group]Namespace Runner Profile Info
+2026-11-16T03:15:47.7811280Z Tag: namespace-profile-macos-15
+2026-11-16T03:15:47.7811770Z Profile URL: https://cloud.namespace.so/b0vdogg03un3g/actions/profile/namespace-profile-macos-15
+2026-11-16T03:15:47.7812190Z Remote Builder: Disabled.
+2026-11-16T03:15:47.7812610Z User Bundled Cache: github-namespace-profile-macos-15-777genius-agent-teams-ai with 20GB.
+2026-11-16T03:15:47.7813080Z Git Mirror Cache: Enabled.
+2026-11-16T03:15:47.7813350Z Runner Tools Cache: Enabled.
+2026-11-16T03:15:47.7813620Z GitHub Actions Cache: Enabled.
+2026-11-16T03:15:47.7813890Z ##[endgroup]
+2026-11-16T03:15:47.7814360Z ##[group]GITHUB_TOKEN Permissions
+2026-11-16T03:15:47.7815140Z Contents: read
+2026-11-16T03:15:47.7815360Z Metadata: read
+2026-11-16T03:15:47.7815580Z ##[endgroup]
+2026-11-16T03:15:47.7816540Z Secret source: Actions
+2026-11-16T03:15:47.7816890Z Cache mode: write
+2026-11-16T03:15:47.7817270Z Prepare workflow directory
+2026-11-16T03:15:47.8085340Z Prepare all required actions
+2026-11-16T03:15:47.8106780Z Getting action download info
+2026-11-16T03:15:47.9385010Z Download action repository 'actions/checkout@v6' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-11-16T03:15:47.9934250Z Download action repository 'pnpm/action-setup@v6' (SHA:73e46992e05b19abd31f2f3c20e0e7370d762115)
+2026-11-16T03:15:48.0297210Z Download action repository 'actions/setup-node@v6' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+2026-11-16T03:15:48.0797830Z Download action repository 'actions/setup-python@v6' (SHA:ece7cb06caefa5fff74198d8649806c4678c61a1)
+2026-11-16T03:15:48.1255100Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-16T03:15:48.4019150Z Complete job name: packaged smoke (darwin-arm64)
+2026-11-16T03:15:48.5961210Z ##[group]Run actions/checkout@v6
+2026-11-16T03:15:48.5961940Z with:
+2026-11-16T03:15:48.5962190Z   ref: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:15:48.5962480Z   persist-credentials: false
+2026-11-16T03:15:48.5962720Z   repository: 777genius/agent-teams-ai
+2026-11-16T03:15:48.5964470Z   token: ***
+2026-11-16T03:15:48.5964680Z   ssh-strict: true
+2026-11-16T03:15:48.5964880Z   ssh-user: git
+2026-11-16T03:15:48.5965080Z   clean: true
+2026-11-16T03:15:48.5965290Z   sparse-checkout-cone-mode: true
+2026-11-16T03:15:48.5965530Z   fetch-depth: 1
+2026-11-16T03:15:48.5965780Z   fetch-tags: false
+2026-11-16T03:15:48.5965990Z   show-progress: true
+2026-11-16T03:15:48.5966200Z   lfs: false
+2026-11-16T03:15:48.5966390Z   submodules: false
+2026-11-16T03:15:48.5966600Z   set-safe-directory: true
+2026-11-16T03:15:48.5966840Z   allow-unsafe-pr-checkout: false
+2026-11-16T03:15:48.5967190Z env:
+2026-11-16T03:15:48.5967470Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:15:48.5967810Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:15:48.5968060Z ##[endgroup]
+2026-11-16T03:15:48.7161240Z Syncing repository: 777genius/agent-teams-ai
+2026-11-16T03:15:48.7162010Z ##[group]Getting Git version info
+2026-11-16T03:15:48.7162350Z Working directory is '/Users/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-16T03:15:48.7162890Z [command]/opt/homebrew/bin/git version
+2026-11-16T03:15:48.7320240Z git version 2.53.0
+2026-11-16T03:15:48.7328480Z ##[endgroup]
+2026-11-16T03:15:48.7336200Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/adc69159-6f5a-4fc4-911b-aede42cab621/.gitconfig'
+2026-11-16T03:15:48.7341270Z Temporarily overriding HOME='/Users/runner/work/_temp/adc69159-6f5a-4fc4-911b-aede42cab621' before making global git config changes
+2026-11-16T03:15:48.7341920Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T03:15:48.7342590Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T03:15:48.7393480Z Deleting the contents of '/Users/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-16T03:15:48.7395370Z ##[group]Determining repository object format
+2026-11-16T03:15:48.7396300Z ##[endgroup]
+2026-11-16T03:15:48.7396680Z ##[group]Initializing the repository
+2026-11-16T03:15:48.7398420Z [command]/opt/homebrew/bin/git init /Users/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T03:15:48.7506460Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-16T03:15:48.7506990Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-16T03:15:48.7507490Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-16T03:15:48.7507870Z hint: call:
+2026-11-16T03:15:48.7508090Z hint:
+2026-11-16T03:15:48.7508380Z hint: 	git config --global init.defaultBranch <name>
+2026-11-16T03:15:48.7508690Z hint:
+2026-11-16T03:15:48.7508970Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-16T03:15:48.7509450Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-16T03:15:48.7509810Z hint:
+2026-11-16T03:15:48.7510020Z hint: 	git branch -m <name>
+2026-11-16T03:15:48.7510250Z hint:
+2026-11-16T03:15:48.7510560Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-16T03:15:48.7511140Z Initialized empty Git repository in /Users/runner/work/agent-teams-ai/agent-teams-ai/.git/
+2026-11-16T03:15:48.7512070Z [command]/opt/homebrew/bin/git remote add origin https://github.com/777genius/agent-teams-ai
+2026-11-16T03:15:48.7547570Z ##[endgroup]
+2026-11-16T03:15:48.7547980Z ##[group]Disabling automatic garbage collection
+2026-11-16T03:15:48.7548620Z [command]/opt/homebrew/bin/git config --local gc.auto 0
+2026-11-16T03:15:48.7581910Z ##[endgroup]
+2026-11-16T03:15:48.7582320Z ##[group]Setting up auth
+2026-11-16T03:15:48.7582650Z Removing SSH command configuration
+2026-11-16T03:15:48.7590900Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T03:15:48.7620190Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T03:15:48.8099330Z Removing HTTP extra header
+2026-11-16T03:15:48.8101020Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T03:15:48.8133420Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T03:15:48.8512980Z Removing includeIf entries pointing to credentials config files
+2026-11-16T03:15:48.8516140Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T03:15:48.8546280Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T03:15:48.8928110Z [command]/opt/homebrew/bin/git config --file /Users/runner/work/_temp/git-credentials-ce693c8b-11f2-48bd-8c0d-1ad600d93786.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-16T03:15:48.8965640Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git.path /Users/runner/work/_temp/git-credentials-ce693c8b-11f2-48bd-8c0d-1ad600d93786.config
+2026-11-16T03:15:48.8997880Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /Users/runner/work/_temp/git-credentials-ce693c8b-11f2-48bd-8c0d-1ad600d93786.config
+2026-11-16T03:15:48.9040560Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-ce693c8b-11f2-48bd-8c0d-1ad600d93786.config
+2026-11-16T03:15:48.9063120Z [command]/opt/homebrew/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-ce693c8b-11f2-48bd-8c0d-1ad600d93786.config
+2026-11-16T03:15:48.9093220Z ##[endgroup]
+2026-11-16T03:15:48.9093590Z ##[group]Fetching the repository
+2026-11-16T03:15:48.9096580Z [command]/opt/homebrew/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:15:53.7156160Z From https://github.com/777genius/agent-teams-ai
+2026-11-16T03:15:53.7156920Z  * branch            2abcf83fddacbc1efedee83f9c1d203d12ed656e -> FETCH_HEAD
+2026-11-16T03:15:53.7203690Z [command]/opt/homebrew/bin/git rev-parse --verify --quiet 2abcf83fddacbc1efedee83f9c1d203d12ed656e^{object}
+2026-11-16T03:15:53.7240540Z 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:15:53.7241830Z ##[endgroup]
+2026-11-16T03:15:53.7242410Z ##[group]Determining the checkout info
+2026-11-16T03:15:53.7243000Z ##[endgroup]
+2026-11-16T03:15:53.7244740Z [command]/opt/homebrew/bin/git sparse-checkout disable
+2026-11-16T03:15:53.7286880Z [command]/opt/homebrew/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-16T03:15:53.7318980Z ##[group]Checking out the ref
+2026-11-16T03:15:53.7320440Z [command]/opt/homebrew/bin/git checkout --progress --force 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:15:54.4369900Z Note: switching to '2abcf83fddacbc1efedee83f9c1d203d12ed656e'.
+2026-11-16T03:15:54.4370170Z 
+2026-11-16T03:15:54.4370300Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-16T03:15:54.4370600Z changes and commit them, and you can discard any commits you make in this
+2026-11-16T03:15:54.4371950Z state without impacting any branches by switching back to a branch.
+2026-11-16T03:15:54.4372100Z 
+2026-11-16T03:15:54.4372210Z If you want to create a new branch to retain commits you create, you may
+2026-11-16T03:15:54.4375540Z do so (now or later) by using -c with the switch command. Example:
+2026-11-16T03:15:54.4375740Z 
+2026-11-16T03:15:54.4375800Z   git switch -c <new-branch-name>
+2026-11-16T03:15:54.4375910Z 
+2026-11-16T03:15:54.4375980Z Or undo this operation with:
+2026-11-16T03:15:54.4376080Z 
+2026-11-16T03:15:54.4376150Z   git switch -
+2026-11-16T03:15:54.4376230Z 
+2026-11-16T03:15:54.4376350Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-16T03:15:54.4376530Z 
+2026-11-16T03:15:54.4376650Z HEAD is now at 2abcf83 test(desktop): observe original Team navigation phases
+2026-11-16T03:15:54.4378380Z ##[endgroup]
+2026-11-16T03:15:54.4423840Z [command]/opt/homebrew/bin/git log -1 --format=%H
+2026-11-16T03:15:54.4455970Z 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:15:54.4461250Z ##[group]Removing auth
+2026-11-16T03:15:54.4461500Z Removing SSH command configuration
+2026-11-16T03:15:54.4463130Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T03:15:54.4491880Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T03:15:54.4827090Z Removing HTTP extra header
+2026-11-16T03:15:54.4828980Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T03:15:54.4855450Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T03:15:54.5183360Z Removing includeIf entries pointing to credentials config files
+2026-11-16T03:15:54.5185040Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T03:15:54.5208640Z includeif.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-16T03:15:54.5209040Z includeif.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-16T03:15:54.5209320Z includeif.gitdir:/github/workspace/.git.path
+2026-11-16T03:15:54.5209520Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T03:15:54.5212290Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-16T03:15:54.5235140Z /Users/runner/work/_temp/git-credentials-ce693c8b-11f2-48bd-8c0d-1ad600d93786.config
+2026-11-16T03:15:54.5238990Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git.path /Users/runner/work/_temp/git-credentials-ce693c8b-11f2-48bd-8c0d-1ad600d93786.config
+2026-11-16T03:15:54.5267550Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-16T03:15:54.5293140Z /Users/runner/work/_temp/git-credentials-ce693c8b-11f2-48bd-8c0d-1ad600d93786.config
+2026-11-16T03:15:54.5296830Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/Users/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /Users/runner/work/_temp/git-credentials-ce693c8b-11f2-48bd-8c0d-1ad600d93786.config
+2026-11-16T03:15:54.5322890Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-11-16T03:15:54.5346000Z /github/runner_temp/git-credentials-ce693c8b-11f2-48bd-8c0d-1ad600d93786.config
+2026-11-16T03:15:54.5350400Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-ce693c8b-11f2-48bd-8c0d-1ad600d93786.config
+2026-11-16T03:15:54.5378560Z [command]/opt/homebrew/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T03:15:54.5402410Z /github/runner_temp/git-credentials-ce693c8b-11f2-48bd-8c0d-1ad600d93786.config
+2026-11-16T03:15:54.5408430Z [command]/opt/homebrew/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-ce693c8b-11f2-48bd-8c0d-1ad600d93786.config
+2026-11-16T03:15:54.5433340Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T03:15:54.5823310Z Removing credentials config '/Users/runner/work/_temp/git-credentials-ce693c8b-11f2-48bd-8c0d-1ad600d93786.config'
+2026-11-16T03:15:54.5828180Z ##[endgroup]
+2026-11-16T03:15:54.6123730Z ##[group]Run pnpm/action-setup@v6
+2026-11-16T03:15:54.6123910Z with:
+2026-11-16T03:15:54.6124020Z   dest: ~/setup-pnpm
+2026-11-16T03:15:54.6124130Z   run_install: null
+2026-11-16T03:15:54.6124240Z   cache: false
+2026-11-16T03:15:54.6124350Z   cache_dependency_path: pnpm-lock.yaml
+2026-11-16T03:15:54.6124490Z   package_json_file: package.json
+2026-11-16T03:15:54.6124610Z   standalone: false
+2026-11-16T03:15:54.6124710Z env:
+2026-11-16T03:15:54.6124860Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:15:54.6125050Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:15:54.6125180Z ##[endgroup]
+2026-11-16T03:15:54.6892200Z ##[group]Running self-installer...
+2026-11-16T03:15:55.3196190Z 
+2026-11-16T03:15:55.3196410Z added 1 package, and audited 2 packages in 435ms
+2026-11-16T03:15:55.3196660Z 
+2026-11-16T03:15:55.3196720Z 1 package is looking for funding
+2026-11-16T03:15:55.3196880Z   run `npm fund` for details
+2026-11-16T03:15:55.3199600Z 
+2026-11-16T03:15:55.3199840Z found 0 vulnerabilities
+2026-11-16T03:15:55.6216070Z Checking for updates...
+2026-11-16T03:15:55.6987930Z Switching pnpm from v11.28.10 to v11.22.0...
+2026-11-16T03:15:55.9800550Z .../v11/3f2-1a1e25aad5d-1dee52b1fbf577a0 | Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-16T03:15:55.9807030Z .../v11/3f2-1a1e25aad5d-1dee52b1fbf577a0 |   +1 +
+2026-11-16T03:15:56.1874410Z .../v11/3f2-1a1e25aad5d-1dee52b1fbf577a0 | Progress: resolved 1, reused 0, downloaded 1, added 1, done
+2026-11-16T03:15:56.4835490Z [WARN] Detected a pnpm v10 installation layout at PNPM_HOME. The pnpm shims at PNPM_HOME have been refreshed so the new version is active, but pnpm v11 expects bins in PNPM_HOME/bin. Run "pnpm setup" to migrate your PATH to the v11 layout.
+2026-11-16T03:15:56.4856510Z Successfully updated pnpm to v11.22.0
+2026-11-16T03:15:56.5079260Z ##[endgroup]
+2026-11-16T03:15:56.5079420Z Installation Completed!
+2026-11-16T03:15:56.5357550Z ##[group]Run actions/setup-node@v6
+2026-11-16T03:15:56.5357740Z with:
+2026-11-16T03:15:56.5357850Z   node-version-file: .node-version
+2026-11-16T03:15:56.5357980Z   cache: pnpm
+2026-11-16T03:15:56.5358070Z   check-latest: false
+2026-11-16T03:15:56.5359310Z   token: ***
+2026-11-16T03:15:56.5359440Z   package-manager-cache: true
+2026-11-16T03:15:56.5359570Z env:
+2026-11-16T03:15:56.5359730Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:15:56.5359960Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:15:56.5360140Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:15:56.5360280Z ##[endgroup]
+2026-11-16T03:15:56.6077660Z Node version file is not JSON file
+2026-11-16T03:15:56.6078010Z Resolved .node-version as 26.12.1
+2026-11-16T03:15:56.6084160Z Found in cache @ /Users/runner/hostedtoolcache/node/26.12.1/arm64
+2026-11-16T03:15:56.6086140Z ##[group]Environment details
+2026-11-16T03:15:56.8063400Z node: v26.12.1
+2026-11-16T03:15:56.8063660Z npm: 11.20.0
+2026-11-16T03:15:56.8063760Z yarn: 1.22.22
+2026-11-16T03:15:56.8064050Z ##[endgroup]
+2026-11-16T03:15:56.8076190Z [command]/Users/runner/setup-pnpm/node_modules/.bin/bin/pnpm store path --silent
+2026-11-16T03:15:57.0392660Z /Users/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-11-16T03:15:57.0908960Z Cache hit for: node-cache-macOS-arm64-pnpm-33b7283dc3ef217b641b14e26ce1a6d807c9880352847e1b431ffd461cf78c22
+2026-11-16T03:15:58.1352230Z Received 243269632 of 500431583 (48.6%), 232.0 MBs/sec
+2026-11-16T03:15:59.1349460Z Received 492042975 of 500431583 (98.3%), 234.6 MBs/sec
+2026-11-16T03:15:59.1459310Z Received 500431583 of 500431583 (100.0%), 237.3 MBs/sec
+2026-11-16T03:15:59.1461190Z Cache Size: ~477 MB (500431583 B)
+2026-11-16T03:15:59.1484800Z [command]/opt/homebrew/bin/gtar -xf /Users/runner/work/_temp/e22a612a-286c-4aa6-934f-53e6b9ad8cfb/cache.tzst -P -C /Users/runner/work/agent-teams-ai/agent-teams-ai --delay-directory-restore --use-compress-program unzstd
+2026-11-16T03:16:07.3740510Z Cache restored successfully
+2026-11-16T03:16:07.3775690Z Cache restored from key: node-cache-macOS-arm64-pnpm-33b7283dc3ef217b641b14e26ce1a6d807c9880352847e1b431ffd461cf78c22
+2026-11-16T03:16:07.4069450Z ##[group]Run for root in "$(pnpm store path)" "${PNPM_HOME:-}" "$(dirname "$(command -v pnpm)")"; do
+2026-11-16T03:16:07.4069850Z [36;1mfor root in "$(pnpm store path)" "${PNPM_HOME:-}" "$(dirname "$(command -v pnpm)")"; do[0m
+2026-11-16T03:16:07.4070040Z [36;1m  if [ -d "$root" ]; then[0m
+2026-11-16T03:16:07.4070240Z [36;1m    find "$root" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true[0m
+2026-11-16T03:16:07.4070430Z [36;1m  fi[0m
+2026-11-16T03:16:07.4070510Z [36;1mdone[0m
+2026-11-16T03:16:07.4092960Z shell: /opt/homebrew/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T03:16:07.4093130Z env:
+2026-11-16T03:16:07.4093270Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:16:07.4093470Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:16:07.4093630Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:16:07.4093770Z ##[endgroup]
+2026-11-16T03:16:08.0117230Z ##[group]Run node scripts/ci/packaged-ci-provider-integrity.ts
+2026-11-16T03:16:08.0117530Z [36;1mnode scripts/ci/packaged-ci-provider-integrity.ts[0m
+2026-11-16T03:16:08.0133280Z shell: /opt/homebrew/bin/bash -e {0}
+2026-11-16T03:16:08.0133460Z env:
+2026-11-16T03:16:08.0133630Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:16:08.0133820Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:16:08.0133990Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:16:08.0134140Z ##[endgroup]
+2026-11-16T03:16:08.0731820Z Selected provider archives match pnpm lock SHA-512
+2026-11-16T03:16:08.0890410Z ##[group]Run node ./scripts/ci/install-dependencies-with-retry.mjs
+2026-11-16T03:16:08.0890740Z [36;1mnode ./scripts/ci/install-dependencies-with-retry.mjs[0m
+2026-11-16T03:16:08.0906810Z shell: /opt/homebrew/bin/bash -e {0}
+2026-11-16T03:16:08.0906980Z env:
+2026-11-16T03:16:08.0907160Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:16:08.0907370Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:16:08.0907580Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:16:08.0907730Z ##[endgroup]
+2026-11-16T03:16:08.2731150Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:16:08.2732920Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:16:08.2814000Z Scope: all 7 workspace projects
+2026-11-16T03:16:08.3448840Z ? Verifying lockfile against supply-chain policies (2533 entries)...
+2026-11-16T03:16:08.3679570Z Lockfile is up to date, resolution step is skipped
+2026-11-16T03:16:08.4166200Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-16T03:16:08.4693450Z Packages: +2294
+2026-11-16T03:16:08.4693750Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-11-16T03:16:09.2111350Z Packages are cloned from the content-addressable store to the virtual store.
+2026-11-16T03:16:09.2123870Z   Content-addressable store is at: /Users/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-11-16T03:16:09.2124180Z   Virtual store is at:             node_modules/.pnpm
+2026-11-16T03:16:09.4175540Z Progress: resolved 2294, reused 2279, downloaded 0, added 76
+2026-11-16T03:16:10.4357220Z Progress: resolved 2294, reused 2279, downloaded 0, added 99
+2026-11-16T03:16:11.4528700Z Progress: resolved 2294, reused 2279, downloaded 0, added 215
+2026-11-16T03:16:12.0168020Z ✓ Lockfile passes supply-chain policies (2533 entries in 3.6s)
+2026-11-16T03:16:12.4538900Z Progress: resolved 2294, reused 2279, downloaded 0, added 327
+2026-11-16T03:16:13.4539870Z Progress: resolved 2294, reused 2279, downloaded 0, added 610
+2026-11-16T03:16:14.4552360Z Progress: resolved 2294, reused 2279, downloaded 0, added 967
+2026-11-16T03:16:15.4560360Z Progress: resolved 2294, reused 2279, downloaded 0, added 1500
+2026-11-16T03:16:16.2279370Z Progress: resolved 2294, reused 2279, downloaded 0, added 2294, done
+2026-11-16T03:16:16.5182810Z .../node-pty@1.1.0/node_modules/node-pty install$ node scripts/prebuild.js || node-gyp rebuild
+2026-11-16T03:16:16.5430690Z .../node-pty@1.1.0/node_modules/node-pty install: [32m> Checking prebuilds...[0m
+2026-11-16T03:16:16.5439160Z .../node-pty@1.1.0/node_modules/node-pty install: Done
+2026-11-16T03:16:16.5440660Z .../node-pty@1.1.0/node_modules/node-pty postinstall$ node scripts/post-install.js
+2026-11-16T03:16:16.5643890Z .../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Cleaning release folder...[0m
+2026-11-16T03:16:16.5644330Z .../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Moving conpty.dll...[0m
+2026-11-16T03:16:16.5644660Z .../node-pty@1.1.0/node_modules/node-pty postinstall:   SKIPPED (not Windows)
+2026-11-16T03:16:16.5650350Z .../node-pty@1.1.0/node_modules/node-pty postinstall: Done
+2026-11-16T03:16:16.7125610Z [WARN] Failed to create bin at /Users/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/Users/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js'
+2026-11-16T03:16:16.7777690Z 
+2026-11-16T03:16:16.7777930Z dependencies:
+2026-11-16T03:16:16.7778260Z + @agent-teams/legacy-agent-host 0.1.0 <- packages/legacy-agent-host
+2026-11-16T03:16:16.7778600Z + @agent-teams/task-change-ledger 0.1.0 <- packages/task-change-ledger
+2026-11-16T03:16:16.7778890Z + @claude-teams/agent-graph 0.1.0 <- packages/agent-graph
+2026-11-16T03:16:16.7787210Z + @codemirror/autocomplete 6.20.0
+2026-11-16T03:16:16.7787590Z + @codemirror/commands 6.10.2
+2026-11-16T03:16:16.7787750Z + @codemirror/lang-cpp 6.0.3
+2026-11-16T03:16:16.7787930Z + @codemirror/lang-css 6.3.1
+2026-11-16T03:16:16.7788060Z + @codemirror/lang-go 6.0.1
+2026-11-16T03:16:16.7789630Z + @codemirror/lang-html 6.4.11
+2026-11-16T03:16:16.7789790Z + @codemirror/lang-java 6.0.2
+2026-11-16T03:16:16.7790050Z + @codemirror/lang-javascript 6.2.4
+2026-11-16T03:16:16.7790210Z + @codemirror/lang-json 6.0.2
+2026-11-16T03:16:16.7790370Z + @codemirror/lang-less 6.0.2
+2026-11-16T03:16:16.7790590Z + @codemirror/lang-markdown 6.5.0
+2026-11-16T03:16:16.7790740Z + @codemirror/lang-php 6.0.2
+2026-11-16T03:16:16.7790920Z + @codemirror/lang-python 6.2.1
+2026-11-16T03:16:16.7791100Z + @codemirror/lang-rust 6.0.2
+2026-11-16T03:16:16.7791230Z + @codemirror/lang-sass 6.0.2
+2026-11-16T03:16:16.7791390Z + @codemirror/lang-sql 6.10.0
+2026-11-16T03:16:16.7791540Z + @codemirror/lang-xml 6.1.0
+2026-11-16T03:16:16.7791680Z + @codemirror/lang-yaml 6.1.2
+2026-11-16T03:16:16.7791810Z + @codemirror/language 6.12.1
+2026-11-16T03:16:16.7792010Z + @codemirror/language-data 6.5.2
+2026-11-16T03:16:16.7792160Z + @codemirror/lint 6.9.5
+2026-11-16T03:16:16.7792300Z + @codemirror/merge 6.12.0
+2026-11-16T03:16:16.7792460Z + @codemirror/search 6.6.0
+2026-11-16T03:16:16.7792690Z + @codemirror/state 6.5.4
+2026-11-16T03:16:16.7792880Z + @codemirror/theme-one-dark 6.1.3
+2026-11-16T03:16:16.7793070Z + @codemirror/view 6.39.15
+2026-11-16T03:16:16.7793210Z + @daypicker/react 10.0.1
+2026-11-16T03:16:16.7793350Z + @dnd-kit/core 6.3.1
+2026-11-16T03:16:16.7793500Z + @dnd-kit/sortable 10.0.0
+2026-11-16T03:16:16.7793680Z + @dnd-kit/utilities 3.2.2
+2026-11-16T03:16:16.7793820Z + @fastify/cors 11.2.0
+2026-11-16T03:16:16.7793940Z + @fastify/static 10.1.2
+2026-11-16T03:16:16.7794090Z + @file-viewer/preset-office 3.1.2
+2026-11-16T03:16:16.7794230Z + @file-viewer/react 3.1.2
+2026-11-16T03:16:16.7794380Z + @floating-ui/dom 1.7.6
+2026-11-16T03:16:16.7794510Z + @headless-tree/core 1.7.0
+2026-11-16T03:16:16.7794650Z + @headless-tree/react 1.7.0
+2026-11-16T03:16:16.7794790Z + @openuidev/lang-core 0.3.2
+2026-11-16T03:16:16.7795000Z + @openuidev/react-headless 0.17.0
+2026-11-16T03:16:16.7795160Z + @openuidev/react-lang 0.3.2
+2026-11-16T03:16:16.7795310Z + @openuidev/react-ui 0.17.0
+2026-11-16T03:16:16.7795480Z + @radix-ui/react-alert-dialog 1.1.15
+2026-11-16T03:16:16.7795700Z + @radix-ui/react-checkbox 1.3.3
+2026-11-16T03:16:16.7795860Z + @radix-ui/react-collapsible 1.1.12
+2026-11-16T03:16:16.7796040Z + @radix-ui/react-context-menu 2.2.16
+2026-11-16T03:16:16.7796200Z + @radix-ui/react-dialog 1.1.15
+2026-11-16T03:16:16.7796390Z + @radix-ui/react-dropdown-menu 2.1.16
+2026-11-16T03:16:16.7796560Z + @radix-ui/react-hover-card 1.1.15
+2026-11-16T03:16:16.7796690Z + @radix-ui/react-label 2.1.8
+2026-11-16T03:16:16.7796840Z + @radix-ui/react-popover 1.1.15
+2026-11-16T03:16:16.7797000Z + @radix-ui/react-presence 1.1.5
+2026-11-16T03:16:16.7797140Z + @radix-ui/react-select 2.2.6
+2026-11-16T03:16:16.7797300Z + @radix-ui/react-slot 1.2.4
+2026-11-16T03:16:16.7797470Z + @radix-ui/react-switch 1.3.7
+2026-11-16T03:16:16.7797610Z + @radix-ui/react-tabs 1.1.13
+2026-11-16T03:16:16.7797780Z + @radix-ui/react-tooltip 1.2.8
+2026-11-16T03:16:16.7797920Z + @sentry/electron 7.10.0
+2026-11-16T03:16:16.7798040Z + @sentry/react 10.45.0
+2026-11-16T03:16:16.7798170Z + @tanstack/react-table 9.3.1
+2026-11-16T03:16:16.7801090Z + @tanstack/react-virtual 3.13.24
+2026-11-16T03:16:16.7801350Z + @terminal-platform/design-tokens 0.1.0
+2026-11-16T03:16:16.7801570Z + @terminal-platform/foundation 0.1.0
+2026-11-16T03:16:16.7801740Z + @terminal-platform/runtime-types 0.1.0
+2026-11-16T03:16:16.7801970Z + @terminal-platform/workspace-adapter-websocket 0.1.0
+2026-11-16T03:16:16.7802220Z + @terminal-platform/workspace-contracts 0.1.0
+2026-11-16T03:16:16.7802420Z + @terminal-platform/workspace-core 0.1.0
+2026-11-16T03:16:16.7802630Z + @terminal-platform/workspace-elements 0.1.0
+2026-11-16T03:16:16.7805370Z + @terminal-platform/workspace-gateway-node 0.1.0
+2026-11-16T03:16:16.7805630Z + @terminal-platform/workspace-react 0.1.0
+2026-11-16T03:16:16.7805820Z + @tiptap/extension-placeholder 3.30.5
+2026-11-16T03:16:16.7805970Z + @tiptap/markdown 3.30.5
+2026-11-16T03:16:16.7806100Z + @tiptap/pm 3.30.5
+2026-11-16T03:16:16.7806220Z + @tiptap/react 3.30.5
+2026-11-16T03:16:16.7806350Z + @tiptap/starter-kit 3.30.5
+2026-11-16T03:16:16.7806470Z + @xterm/addon-fit 0.11.0
+2026-11-16T03:16:16.7806610Z + @xterm/addon-web-links 0.12.0
+2026-11-16T03:16:16.7806740Z + @xterm/xterm 6.0.0
+2026-11-16T03:16:16.7806920Z + agent-teams-controller 1.0.0 <- agent-teams-controller
+2026-11-16T03:16:16.7807080Z + better-sqlite3 12.11.1
+2026-11-16T03:16:16.7807220Z + builder-util-runtime 9.7.0
+2026-11-16T03:16:16.7807330Z + chokidar 4.0.3
+2026-11-16T03:16:16.7807480Z + class-variance-authority 0.7.1
+2026-11-16T03:16:16.7807600Z + clsx 2.1.1
+2026-11-16T03:16:16.7807700Z + cmdk 1.0.4
+2026-11-16T03:16:16.7807790Z + croner 10.0.1
+2026-11-16T03:16:16.7807890Z + cronstrue 3.13.0
+2026-11-16T03:16:16.7808010Z + date-fns 3.6.0
+2026-11-16T03:16:16.7808110Z + diff 8.0.3
+2026-11-16T03:16:16.7808210Z + dompurify 3.4.17
+2026-11-16T03:16:16.7808330Z + drizzle-orm 0.45.2
+2026-11-16T03:16:16.7808450Z + electron-updater 6.8.9
+2026-11-16T03:16:16.7808590Z + fast-json-stringify 6.4.0
+2026-11-16T03:16:16.7808710Z + fastify 5.12.5
+2026-11-16T03:16:16.7808820Z + highlight.js 11.11.1
+2026-11-16T03:16:16.7808940Z + i18next 26.2.0
+2026-11-16T03:16:16.7809040Z + idb-keyval 6.2.2
+2026-11-16T03:16:16.7809150Z + isbinaryfile 6.0.0
+2026-11-16T03:16:16.7809330Z + json-schema-ref-resolver 3.0.0
+2026-11-16T03:16:16.7809500Z + jsonc-parser 3.3.1
+2026-11-16T03:16:16.7809620Z + lucide-react 0.577.0
+2026-11-16T03:16:16.7809780Z + mdast-util-to-hast 13.2.1
+2026-11-16T03:16:16.7809920Z + mermaid 11.15.0
+2026-11-16T03:16:16.7815430Z + motion 12.38.0
+2026-11-16T03:16:16.7815580Z + node-diff3 3.2.0
+2026-11-16T03:16:16.7815680Z + node-pty 1.1.0
+2026-11-16T03:16:16.7815790Z + pica 9.0.1
+2026-11-16T03:16:16.7815900Z + pidusage 4.0.1
+2026-11-16T03:16:16.7816020Z + posthog-js 1.396.6
+2026-11-16T03:16:16.7816140Z + react 19.2.4
+2026-11-16T03:16:16.7816250Z + react-dom 19.2.4
+2026-11-16T03:16:16.7816360Z + react-grid-layout 2.2.2
+2026-11-16T03:16:16.7816480Z + react-i18next 17.0.8
+2026-11-16T03:16:16.7816590Z + react-markdown 10.1.0
+2026-11-16T03:16:16.7816700Z + react-modal-sheet 5.6.0
+2026-11-16T03:16:16.7816820Z + react-resizable 3.1.3
+2026-11-16T03:16:16.7816940Z + rehype-highlight 7.0.2
+2026-11-16T03:16:16.7817050Z + rehype-raw 7.0.0
+2026-11-16T03:16:16.7817160Z + rehype-sanitize 6.0.0
+2026-11-16T03:16:16.7817270Z + remark-gfm 4.0.1
+2026-11-16T03:16:16.7817390Z + remark-parse 11.0.0
+2026-11-16T03:16:16.7817510Z + simple-git 4.0.2
+2026-11-16T03:16:16.7817630Z + ssh-config 5.0.4
+2026-11-16T03:16:16.7817720Z + ssh2 1.17.0
+2026-11-16T03:16:16.7817820Z + strip-markdown 6.0.0
+2026-11-16T03:16:16.7817930Z + tailwind-merge 3.5.0
+2026-11-16T03:16:16.7818050Z + tailwindcss-animate 1.0.7
+2026-11-16T03:16:16.7818380Z + terminal-platform-node terminal-platform-node@file:vendor/terminal-platform/terminal-platform-node-stub
+2026-11-16T03:16:16.7818620Z + unified 11.0.5
+2026-11-16T03:16:16.7818710Z + ws 8.21.0
+2026-11-16T03:16:16.7818800Z + yaml 2.9.0
+2026-11-16T03:16:16.7818930Z + yet-another-react-lightbox 3.29.1
+2026-11-16T03:16:16.7819060Z + zod 4.6.7
+2026-11-16T03:16:16.7819140Z + zustand 4.5.7
+2026-11-16T03:16:16.7821960Z 
+2026-11-16T03:16:16.7822030Z devDependencies:
+2026-11-16T03:16:16.7822170Z + @electron/rebuild 4.2.0
+2026-11-16T03:16:16.7822380Z + @eslint-community/eslint-plugin-eslint-comments 4.6.0
+2026-11-16T03:16:16.7822560Z + @eslint/js 9.39.2
+2026-11-16T03:16:16.7822700Z + @file-viewer/vite-plugin 3.1.2
+2026-11-16T03:16:16.7822830Z + @sentry/vite-plugin 5.1.1
+2026-11-16T03:16:16.7822980Z + @tailwindcss/typography 0.5.19
+2026-11-16T03:16:16.7823140Z + @types/better-sqlite3 7.6.13
+2026-11-16T03:16:16.7823260Z + @types/hast 3.0.4
+2026-11-16T03:16:16.7823370Z + @types/mdast 4.0.4
+2026-11-16T03:16:16.7823490Z + @types/node 24.12.4
+2026-11-16T03:16:16.7827730Z + @types/pidusage 2.0.5
+2026-11-16T03:16:16.7827960Z + @types/react 19.2.14
+2026-11-16T03:16:16.7828100Z + @types/react-dom 19.2.3
+2026-11-16T03:16:16.7828230Z + @types/ssh2 1.15.5
+2026-11-16T03:16:16.7828380Z + @typescript/native <- typescript 7.0.2
+2026-11-16T03:16:16.7828520Z + @vitejs/plugin-react 4.7.0
+2026-11-16T03:16:16.7828650Z + @vitest/coverage-v8 3.2.6
+2026-11-16T03:16:16.7828780Z + autoprefixer 10.4.23
+2026-11-16T03:16:16.7828950Z + better-sqlite3-node <- better-sqlite3 12.10.1
+2026-11-16T03:16:16.7829120Z + electron 44.10.1
+2026-11-16T03:16:16.7829240Z + electron-builder 26.17.0
+2026-11-16T03:16:16.7829350Z + electron-vite 5.0.0
+2026-11-16T03:16:16.7829460Z + eslint 9.39.4
+2026-11-16T03:16:16.7829590Z + eslint-config-prettier 10.1.8
+2026-11-16T03:16:16.7829750Z + eslint-import-resolver-typescript 4.4.4
+2026-11-16T03:16:16.7829940Z + eslint-plugin-boundaries 5.3.1
+2026-11-16T03:16:16.7830110Z + eslint-plugin-import 2.32.0
+2026-11-16T03:16:16.7830270Z + eslint-plugin-jsx-a11y 6.10.2
+2026-11-16T03:16:16.7830400Z + eslint-plugin-react 7.37.5
+2026-11-16T03:16:16.7830550Z + eslint-plugin-react-hooks 7.0.1
+2026-11-16T03:16:16.7830740Z + eslint-plugin-react-refresh 0.4.26
+2026-11-16T03:16:16.7830890Z + eslint-plugin-security 3.0.1
+2026-11-16T03:16:16.7831050Z + eslint-plugin-simple-import-sort 12.1.1
+2026-11-16T03:16:16.7831210Z + eslint-plugin-sonarjs 3.0.6
+2026-11-16T03:16:16.7831370Z + eslint-plugin-tailwindcss 3.18.2
+2026-11-16T03:16:16.7831500Z + fake-indexeddb 6.2.5
+2026-11-16T03:16:16.7831610Z + globals 17.2.0
+2026-11-16T03:16:16.7831720Z + happy-dom 21.0.4
+2026-11-16T03:16:16.7831820Z + husky 9.1.7
+2026-11-16T03:16:16.7831920Z + i18next-cli 1.58.0
+2026-11-16T03:16:16.7832040Z + knip 5.82.1
+2026-11-16T03:16:16.7832150Z + lint-staged 16.2.7
+2026-11-16T03:16:16.7832270Z + oxfmt 0.72.0
+2026-11-16T03:16:16.7832360Z + oxlint 1.87.0
+2026-11-16T03:16:16.7832470Z + postcss 8.5.28
+2026-11-16T03:16:16.7832580Z + prettier 3.8.1
+2026-11-16T03:16:16.7832740Z + prettier-plugin-tailwindcss 0.7.2
+2026-11-16T03:16:16.7832870Z + tailwindcss 3.4.19
+2026-11-16T03:16:16.7832960Z + tsx 4.23.15
+2026-11-16T03:16:16.7833060Z + typescript 5.9.3
+2026-11-16T03:16:16.7833190Z + typescript-eslint 8.54.0
+2026-11-16T03:16:16.7833300Z + vite 6.4.4
+2026-11-16T03:16:16.7833380Z + vitest 3.2.6
+2026-11-16T03:16:16.7833430Z 
+2026-11-16T03:16:16.7834870Z landing postinstall$ node ./scripts/patch-minimatch-brace-expansion.mjs && node ../scripts/ci/transitive-security.ts --apply
+2026-11-16T03:16:16.8054710Z landing postinstall: [landing postinstall] skipped npm layout patch; pnpm patchedDependencies handles compatibility
+2026-11-16T03:16:16.8982300Z landing postinstall: Verified braces security backport in 1 package(s)
+2026-11-16T03:16:16.9442780Z landing postinstall: Verified http-cache-semantics security backport in 1 package(s)
+2026-11-16T03:16:16.9459010Z landing postinstall: Done
+2026-11-16T03:16:16.9680260Z [WARN] Failed to create bin at /Users/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/Users/runner/work/agent-teams-ai/agent-teams-ai/node_modules/@agent-teams/legacy-agent-host/dist/cli.js'
+2026-11-16T03:16:16.9702780Z . preinstall$ node ./scripts/ci/enforce-pnpm-install.mjs
+2026-11-16T03:16:16.9886830Z . preinstall: Done
+2026-11-16T03:16:16.9887080Z . postinstall$ node ./scripts/postinstall-electron.cjs
+2026-11-16T03:16:32.8906800Z . postinstall: Electron installation is incomplete, running installer: /Users/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/electron@44.10.1_supports-color@10.2.2/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron
+2026-11-16T03:16:34.4936980Z . postinstall: Done
+2026-11-16T03:16:34.4937150Z . prepare$ husky
+2026-11-16T03:16:34.5273270Z . prepare: Done
+2026-11-16T03:16:34.5461820Z Done in 26.4s using pnpm v11.22.0
+2026-11-16T03:16:34.5818250Z ##[group]Run node --test scripts/stage-managed-git.test.mjs
+2026-11-16T03:16:34.5818500Z [36;1mnode --test scripts/stage-managed-git.test.mjs[0m
+2026-11-16T03:16:34.5907910Z shell: /opt/homebrew/bin/bash -e {0}
+2026-11-16T03:16:34.5908070Z env:
+2026-11-16T03:16:34.5908240Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:16:34.5908420Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:16:34.5908570Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:16:34.5908730Z ##[endgroup]
+2026-11-16T03:16:34.6532200Z ✔ pinned Git runtime includes every desktop release target and immutable digests (0.538583ms)
+2026-11-16T03:16:34.6532680Z ✔ archive path validator rejects traversal and absolute names (0.476875ms)
+2026-11-16T03:16:34.6534480Z ✔ packaged Git entrypoints match Dugite Native native layouts (0.067333ms)
+2026-11-16T03:16:34.6604500Z [managed-git] transient pinned archive transport failure; retry 2/3
+2026-11-16T03:16:34.6627000Z ✔ retries a 503 response once, writing only the successful pinned archive (10.523166ms)
+2026-11-16T03:16:34.6629160Z [managed-git] transient pinned archive transport failure; retry 2/3
+2026-11-16T03:16:34.6639590Z ✔ retries only an HTTP/2 REFUSED_STREAM transport failure (1.253333ms)
+2026-11-16T03:16:34.6647810Z ✔ permanent HTTP failure never retries and deletes partial archive data (0.779833ms)
+2026-11-16T03:16:34.6650050Z [managed-git] transient pinned archive transport failure; retry 2/3
+2026-11-16T03:16:34.6651820Z [managed-git] transient pinned archive transport failure; retry 3/3
+2026-11-16T03:16:34.6657510Z ✔ retry budget stops after three transient failures and leaves no archive (0.965167ms)
+2026-11-16T03:16:34.6663190Z ✔ non-refused HTTP/2 stream errors do not retry (0.540208ms)
+2026-11-16T03:16:34.6669080Z [managed-git] transient pinned archive transport failure; retry 2/3
+2026-11-16T03:16:34.6678310Z ✔ retries if a native AggregateError contains a transient timeout (1.500333ms)
+2026-11-16T03:16:34.6683940Z ✔ does not retry an AggregateError containing only permanent connection failures (0.50075ms)
+2026-11-16T03:16:34.6693520Z [managed-git] transient pinned archive transport failure; retry 2/3
+2026-11-16T03:16:34.6701930Z ✔ clears a partial response body before a successful transport retry (1.8375ms)
+2026-11-16T03:16:34.6727450Z ℹ tests 11
+2026-11-16T03:16:34.6727590Z ℹ suites 0
+2026-11-16T03:16:34.6727720Z ℹ pass 11
+2026-11-16T03:16:34.6727820Z ℹ fail 0
+2026-11-16T03:16:34.6727930Z ℹ cancelled 0
+2026-11-16T03:16:34.6728060Z ℹ skipped 0
+2026-11-16T03:16:34.6728160Z ℹ todo 0
+2026-11-16T03:16:34.6728280Z ℹ duration_ms 46.230042
+2026-11-16T03:16:34.6880570Z ##[group]Run node --check scripts/e2e/opencode-project-path-packaged.mjs
+2026-11-16T03:16:34.6880860Z [36;1mnode --check scripts/e2e/opencode-project-path-packaged.mjs[0m
+2026-11-16T03:16:34.6896600Z shell: /opt/homebrew/bin/bash -e {0}
+2026-11-16T03:16:34.6896760Z env:
+2026-11-16T03:16:34.6896940Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:16:34.6897190Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:16:34.6897340Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:16:34.6897500Z ##[endgroup]
+2026-11-16T03:16:34.7355490Z ##[group]Run node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.packaged-ci.json
+2026-11-16T03:16:34.7355940Z [36;1mnode ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.packaged-ci.json[0m
+2026-11-16T03:16:34.7372450Z shell: /opt/homebrew/bin/bash -e {0}
+2026-11-16T03:16:34.7372610Z env:
+2026-11-16T03:16:34.7372760Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:16:34.7372980Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:16:34.7373150Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:16:34.7373290Z ##[endgroup]
+2026-11-16T03:16:34.8451980Z ##[group]Run node -e "const fs=require('node:fs'); const path=require('node:path'); const root=path.dirname(require.resolve('electron/package.json')); const marker=path.join(root,'path.txt'); if(!fs.existsSync(marker) || !fs.existsSync(path.join(root,'dist',fs.readFileSync(marker,'utf8')))) process.exit(1)"
+2026-11-16T03:16:34.8452900Z [36;1mnode -e "const fs=require('node:fs'); const path=require('node:path'); const root=path.dirname(require.resolve('electron/package.json')); const marker=path.join(root,'path.txt'); if(!fs.existsSync(marker) || !fs.existsSync(path.join(root,'dist',fs.readFileSync(marker,'utf8')))) process.exit(1)"[0m
+2026-11-16T03:16:34.8469500Z shell: /opt/homebrew/bin/bash -e {0}
+2026-11-16T03:16:34.8469670Z env:
+2026-11-16T03:16:34.8469830Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:16:34.8470030Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:16:34.8470220Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:16:34.8470370Z ##[endgroup]
+2026-11-16T03:16:34.8972320Z ##[group]Run node --test test/scripts/verify-bundled-undici.test.cjs
+2026-11-16T03:16:34.8972630Z [36;1mnode --test test/scripts/verify-bundled-undici.test.cjs[0m
+2026-11-16T03:16:34.8987470Z shell: /opt/homebrew/bin/bash -e {0}
+2026-11-16T03:16:34.8987630Z env:
+2026-11-16T03:16:34.8987810Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:16:34.8988000Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:16:34.8988150Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:16:34.8988310Z ##[endgroup]
+2026-11-16T03:16:34.9597940Z CI Node: Node 26.12.1, undici 8.12.2 (patched)
+2026-11-16T03:16:34.9598640Z CI Node: Node 26.12.1, undici 8.12.2 (patched)
+2026-11-16T03:16:34.9600250Z Electron Node: Node 24.22.1, undici 7.30.1 (patched)
+2026-11-16T03:16:34.9609920Z ✔ reject vulnerable Node and Electron undici, accept patched releases (0.3515ms)
+2026-11-16T03:16:34.9610980Z ✔ verifyRuntime checks the actual Electron subprocess result (0.951916ms)
+2026-11-16T03:16:34.9635290Z ℹ tests 2
+2026-11-16T03:16:34.9635480Z ℹ suites 0
+2026-11-16T03:16:34.9635610Z ℹ pass 2
+2026-11-16T03:16:34.9635720Z ℹ fail 0
+2026-11-16T03:16:34.9635860Z ℹ cancelled 0
+2026-11-16T03:16:34.9635980Z ℹ skipped 0
+2026-11-16T03:16:34.9636080Z ℹ todo 0
+2026-11-16T03:16:34.9636210Z ℹ duration_ms 28.58375
+2026-11-16T03:16:34.9787520Z ##[group]Run node scripts/ci/verify-bundled-undici.cjs
+2026-11-16T03:16:34.9787780Z [36;1mnode scripts/ci/verify-bundled-undici.cjs[0m
+2026-11-16T03:16:34.9805450Z shell: /opt/homebrew/bin/bash -e {0}
+2026-11-16T03:16:34.9805640Z env:
+2026-11-16T03:16:34.9805800Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:16:34.9805990Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:16:34.9806150Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:16:34.9806300Z ##[endgroup]
+2026-11-16T03:16:35.0137670Z CI Node: Node 26.12.1, undici 8.12.2 (patched)
+2026-11-16T03:16:35.0611480Z Electron Node: Node 24.22.1, undici 7.30.1 (patched)
+2026-11-16T03:16:35.0749940Z ##[group]Run pnpm exec electron-rebuild -f -o node-pty,ssh2,cpu-features,better-sqlite3
+2026-11-16T03:16:35.0750270Z [36;1mpnpm exec electron-rebuild -f -o node-pty,ssh2,cpu-features,better-sqlite3[0m
+2026-11-16T03:16:35.0767760Z shell: /opt/homebrew/bin/bash -e {0}
+2026-11-16T03:16:35.0767920Z env:
+2026-11-16T03:16:35.0768100Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:16:35.0768290Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:16:35.0768460Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:16:35.0770740Z ##[endgroup]
+2026-11-16T03:16:35.2863940Z Searching dependency tree
+2026-11-16T03:16:35.4026540Z Building modules: cpu-features, better-sqlite3, node-pty
+2026-11-16T03:16:48.0736310Z ✔ Rebuild Complete
+2026-11-16T03:16:48.0958260Z ##[group]Run node ./scripts/stage-runtime.mjs --platform darwin-arm64
+2026-11-16T03:16:48.0958530Z [36;1mnode ./scripts/stage-runtime.mjs --platform darwin-arm64[0m
+2026-11-16T03:16:48.0974220Z shell: /opt/homebrew/bin/bash -e {0}
+2026-11-16T03:16:48.0974390Z env:
+2026-11-16T03:16:48.0974540Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:16:48.0974730Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:16:48.0974900Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:16:48.0975250Z   GH_TOKEN: ***
+2026-11-16T03:16:48.0975350Z ##[endgroup]
+2026-11-16T03:16:48.1537060Z Downloading agent-teams-runtime-darwin-arm64-v0.0.160.tar.gz from 777genius/agent_teams_orchestrator_binaries@runtime-v0.0.160
+2026-11-16T03:16:49.0894780Z Verified agent-teams-runtime-darwin-arm64-v0.0.160.tar.gz sha256
+2026-11-16T03:16:49.0895150Z Extracting agent-teams-runtime-darwin-arm64-v0.0.160.tar.gz
+2026-11-16T03:16:49.3759440Z Staged runtime 0.0.160 for darwin-arm64
+2026-11-16T03:16:49.3965340Z ##[group]Run node ./scripts/stage-terminal-platform-runtime.mjs --platform darwin-arm64
+2026-11-16T03:16:49.3965700Z [36;1mnode ./scripts/stage-terminal-platform-runtime.mjs --platform darwin-arm64[0m
+2026-11-16T03:16:49.3981960Z shell: /opt/homebrew/bin/bash -e {0}
+2026-11-16T03:16:49.3982120Z env:
+2026-11-16T03:16:49.3982280Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:16:49.3982470Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:16:49.3982630Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:16:49.3983930Z   GH_TOKEN: ***
+2026-11-16T03:16:49.3984030Z ##[endgroup]
+2026-11-16T03:16:49.4578910Z Downloading terminal-platform-runtime-darwin-arm64-v0.3.4.tar.gz from 777genius/terminal-platform@v0.3.4
+2026-11-16T03:16:49.9813570Z Extracting terminal-platform-runtime-darwin-arm64-v0.3.4.tar.gz
+2026-11-16T03:16:50.0138850Z Staged terminal-platform runtime 0.3.4 for darwin-arm64
+2026-11-16T03:16:50.0340860Z ##[group]Run pnpm build
+2026-11-16T03:16:50.0341020Z [36;1mpnpm build[0m
+2026-11-16T03:16:50.0357470Z shell: /opt/homebrew/bin/bash -e {0}
+2026-11-16T03:16:50.0357640Z env:
+2026-11-16T03:16:50.0357850Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:16:50.0358050Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:16:50.0358210Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:16:50.0358380Z   NODE_OPTIONS: --max-old-space-size=8192
+2026-11-16T03:16:50.0358520Z ##[endgroup]
+2026-11-16T03:16:50.2127980Z $ node ./scripts/build/buildLinuxNodeExec.mjs && pnpm --filter @agent-teams/legacy-agent-host build && node ./scripts/ci/verify-radix-presence-patch.mjs && tsx scripts/fetch-pricing-data.ts && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build
+2026-11-16T03:16:50.4157210Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:16:50.4159120Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:16:50.4254770Z $ pnpm --filter @agent-teams/task-change-ledger build
+2026-11-16T03:16:50.5847480Z .                                        | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:16:50.5849420Z ../task-change-ledger                    | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:16:50.5945110Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
+2026-11-16T03:16:50.7030680Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
+2026-11-16T03:16:51.4473090Z Fetching pricing data for models...
+2026-11-16T03:16:51.4473730Z Fetching pricing data from LiteLLM...
+2026-11-16T03:16:51.4941640Z Fetched pricing for 5994 models
+2026-11-16T03:16:51.4956170Z Filtered to 429 supported models
+2026-11-16T03:16:51.4966010Z ✓ Wrote pricing data to /Users/runner/work/agent-teams-ai/agent-teams-ai/resources/pricing.json
+2026-11-16T03:16:51.4966300Z   Bundle size: 503.00 KB
+2026-11-16T03:16:51.6610130Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:16:51.6612050Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:16:51.6715700Z $ node ./scripts/build.mjs
+2026-11-16T03:16:51.8655540Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:16:51.8657510Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {"node":">=24.21.0 <25"} (current: {"node":"v26.12.1","pnpm":"11.22.0"})
+2026-11-16T03:16:51.8758210Z $ tsup
+2026-11-16T03:16:52.0174440Z [34mCLI[39m Building entry: src/index.ts
+2026-11-16T03:16:52.0174720Z [34mCLI[39m Using tsconfig: tsconfig.json
+2026-11-16T03:16:52.0174950Z [34mCLI[39m tsup v8.5.1
+2026-11-16T03:16:52.0175340Z [34mCLI[39m Using tsup config: /Users/runner/work/agent-teams-ai/agent-teams-ai/mcp-server/tsup.config.ts
+2026-11-16T03:16:52.0180260Z [34mCLI[39m Target: node24
+2026-11-16T03:16:52.0182530Z [34mCLI[39m Cleaning output folder
+2026-11-16T03:16:52.0185960Z [34mESM[39m Build start
+2026-11-16T03:16:52.1461450Z [32mESM[39m [1mdist/index.js     [22m[32m3.04 MB[39m
+2026-11-16T03:16:52.1461820Z [32mESM[39m [1mdist/index.js.map [22m[32m4.78 MB[39m
+2026-11-16T03:16:52.1462100Z [32mESM[39m ⚡️ Build success in 128ms
+2026-11-16T03:16:52.1537630Z $ node --max-old-space-size=8192 ./node_modules/electron-vite/bin/electron-vite.js build
+2026-11-16T03:16:52.3499940Z [36mvite v6.4.4 [32mbuilding SSR bundle for production...[36m[39m
+2026-11-16T03:16:52.4749260Z transforming...
+2026-11-16T03:16:53.0265570Z [33mnode_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js (74:0): A comment
+2026-11-16T03:16:53.0265770Z 
+2026-11-16T03:16:53.0266000Z "/** Anchors a pattern source. The interpolation lives here rather than at the call site because
+2026-11-16T03:16:53.0266370Z  * esbuild will not drop a `@__PURE__` call whose own argument interpolates a variable, but it
+2026-11-16T03:16:53.0266680Z  * will drop `anchor(dateSource)`. Keeping it inline pinned `date` into every bundle. */"
+2026-11-16T03:16:53.0266900Z 
+2026-11-16T03:16:53.0267420Z in "node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.[39m
+2026-11-16T03:16:53.0317470Z [33mnode_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js (400:0): A comment
+2026-11-16T03:16:53.0317660Z 
+2026-11-16T03:16:53.0318090Z "// Wrapped in a `@__PURE__` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle."
+2026-11-16T03:16:53.0318420Z 
+2026-11-16T03:16:53.0318940Z in "node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.[39m
+2026-11-16T03:16:57.5081530Z [33m"fchmodSync", "ftruncateSync", "renameSync" and "unlinkSync" are imported from external module "fs" but never used in "node_modules/.pnpm/@anthropic-ai+claude-agent-sdk@0.3.305_@anthropic-ai+sdk@0.122.0_zod@4.6.7__@modelconte_62c9a77da74e02db303bb50cb88ff403/node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs".[39m
+2026-11-16T03:16:57.5087080Z [32m✓[39m 4012 modules transformed.
+2026-11-16T03:16:57.9080440Z rendering chunks...
+2026-11-16T03:16:59.1372850Z [2mdist-electron/main/[22m[32msentry-artifact-inventory.json                  [39m[1m[2m     0.22 kB[22m[1m[22m
+2026-11-16T03:16:59.1373520Z [2mdist-electron/main/[22m[36mtask-change-worker.cjs                          [39m[1m[2m     2.35 kB[22m[1m[22m[2m │ map:      2.29 kB[22m
+2026-11-16T03:16:59.1374230Z [2mdist-electron/main/[22m[2mchunks/[22m[36mmemberWorkSyncTeamIdentity-BKWiAXQn.cjs  [39m[1m[2m     4.25 kB[22m[1m[22m[2m │ map:      7.76 kB[22m
+2026-11-16T03:16:59.1374960Z [2mdist-electron/main/[22m[2mchunks/[22m[36mindex-yaJFGvjB.cjs                       [39m[1m[2m     4.30 kB[22m[1m[22m[2m │ map:      6.10 kB[22m
+2026-11-16T03:16:59.1375540Z [2mdist-electron/main/[22m[36mteam-data-worker.cjs                            [39m[1m[2m     6.59 kB[22m[1m[22m[2m │ map:     10.78 kB[22m
+2026-11-16T03:16:59.1376170Z [2mdist-electron/main/[22m[2mchunks/[22m[36mteamTaskSnapshotCompaction-mUovQwio.cjs  [39m[1m[2m     9.72 kB[22m[1m[22m[2m │ map:     19.61 kB[22m
+2026-11-16T03:16:59.1376850Z [2mdist-electron/main/[22m[2mchunks/[22m[36mindex-CegexFRg.cjs                       [39m[1m[2m    28.61 kB[22m[1m[22m[2m │ map:     38.45 kB[22m
+2026-11-16T03:16:59.1377440Z [2mdist-electron/main/[22m[36mteam-fs-worker.cjs                              [39m[1m[2m    56.73 kB[22m[1m[22m[2m │ map:    108.01 kB[22m
+2026-11-16T03:16:59.1378040Z [2mdist-electron/main/[22m[2mchunks/[22m[36mTaskBoundaryParser-1Z_DADz-.cjs          [39m[1m[2m    68.95 kB[22m[1m[22m[2m │ map:    135.17 kB[22m
+2026-11-16T03:16:59.1378650Z [2mdist-electron/main/[22m[36minternal-storage-worker.cjs                     [39m[1m[2m   212.54 kB[22m[1m[22m[2m │ map:    417.54 kB[22m
+2026-11-16T03:16:59.1379250Z [2mdist-electron/main/[22m[2mchunks/[22m[36mTeamDataService-BNOsXwau.cjs             [39m[1m[33m   800.65 kB[39m[22m[2m │ map:  1,744.24 kB[22m
+2026-11-16T03:16:59.1379890Z [2mdist-electron/main/[22m[2mchunks/[22m[36mtaskChangeState-6-0xt71y.cjs             [39m[1m[33m   806.50 kB[39m[22m[2m │ map:    792.63 kB[22m
+2026-11-16T03:16:59.1383610Z [2mdist-electron/main/[22m[2mchunks/[22m[36mtaskHistory-2kbwfqIg.cjs                 [39m[1m[33m 1,646.70 kB[39m[22m[2m │ map:  3,906.02 kB[22m
+2026-11-16T03:16:59.1384370Z [2mdist-electron/main/[22m[36mindex.cjs                                       [39m[1m[33m11,697.63 kB[39m[22m[2m │ map: 24,436.30 kB[22m
+2026-11-16T03:16:59.1384690Z [32m✓ built in 6.78s[39m
+2026-11-16T03:16:59.1396250Z [36mvite v6.4.4 [32mbuilding SSR bundle for production...[36m[39m
+2026-11-16T03:16:59.1454050Z transforming...
+2026-11-16T03:16:59.1809110Z [32m✓[39m 109 modules transformed.
+2026-11-16T03:16:59.1873250Z rendering chunks...
+2026-11-16T03:16:59.1878210Z [2mdist-electron/preload/[22m[36mindex.js  [39m[1m[2m96.17 kB[22m[1m[22m
+2026-11-16T03:16:59.1878500Z [32m✓ built in 48ms[39m
+2026-11-16T03:16:59.6397330Z [36mvite v6.4.4 [32mbuilding for production...[36m[39m
+2026-11-16T03:16:59.6561730Z transforming...
+2026-11-16T03:17:01.1701810Z [33m[plugin vite:resolve] Module "stream" has been externalized for browser compatibility, imported by "/Users/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/jszip@3.10.2/node_modules/jszip/lib/readable-stream-browser.js". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.[39m
+2026-11-16T03:17:04.8277690Z [33mnode_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js (400:0): A comment
+2026-11-16T03:17:04.8277900Z 
+2026-11-16T03:17:04.8278410Z "// Wrapped in a `@__PURE__` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle."
+2026-11-16T03:17:04.8278760Z 
+2026-11-16T03:17:04.8279340Z in "node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.[39m
+2026-11-16T03:17:04.8283710Z [33mnode_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js (74:0): A comment
+2026-11-16T03:17:04.8283890Z 
+2026-11-16T03:17:04.8284110Z "/** Anchors a pattern source. The interpolation lives here rather than at the call site because
+2026-11-16T03:17:04.8284450Z  * esbuild will not drop a `@__PURE__` call whose own argument interpolates a variable, but it
+2026-11-16T03:17:04.8284780Z  * will drop `anchor(dateSource)`. Keeping it inline pinned `date` into every bundle. */"
+2026-11-16T03:17:04.8285010Z 
+2026-11-16T03:17:04.8285560Z in "node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.[39m
+2026-11-16T03:17:17.6806050Z [32m✓[39m 12471 modules transformed.
+2026-11-16T03:17:20.5099170Z rendering chunks...
+2026-11-16T03:17:27.8579430Z [2m../../out/renderer/[22m[32msentry-artifact-inventory.json                           [39m[1m[2m     0.22 kB[22m[1m[22m
+2026-11-16T03:17:27.8652060Z [2m../../out/renderer/[22m[2massets/[22m[32mfavicon-DAteR9-k.png                              [39m[1m[2m     1.13 kB[22m[1m[22m
+2026-11-16T03:17:27.8652730Z [2m../../out/renderer/[22m[32mdocument-preview.html                                    [39m[1m[2m     1.24 kB[22m[1m[22m
+2026-11-16T03:17:27.8653370Z [2m../../out/renderer/[22m[2massets/[22m[32matlascloud-logo-fnPwNPHa.svg                      [39m[1m[2m     8.44 kB[22m[1m[22m
+2026-11-16T03:17:27.8654210Z [2m../../out/renderer/[22m[32mindex.html                                               [39m[1m[2m    48.91 kB[22m[1m[22m
+2026-11-16T03:17:27.8654910Z [2m../../out/renderer/[22m[2massets/[22m[32mlogo-mark-BV2k8mf7.png                            [39m[1m[2m    51.03 kB[22m[1m[22m
+2026-11-16T03:17:27.8655590Z [2m../../out/renderer/[22m[2massets/[22m[32mworker-C5LZNsKY.mjs                               [39m[1m[2m    54.95 kB[22m[1m[22m
+2026-11-16T03:17:27.8660350Z [2m../../out/renderer/[22m[2massets/[22m[32m10-B5GNfk8m.png                                   [39m[1m[2m    57.50 kB[22m[1m[22m
+2026-11-16T03:17:27.8661150Z [2m../../out/renderer/[22m[2massets/[22m[32m07-7BxQMMhG.png                                   [39m[1m[2m    59.19 kB[22m[1m[22m
+2026-11-16T03:17:27.8661950Z [2m../../out/renderer/[22m[2massets/[22m[32m12-DARsYJm_.png                                   [39m[1m[2m    59.96 kB[22m[1m[22m
+2026-11-16T03:17:27.8662620Z [2m../../out/renderer/[22m[2massets/[22m[32m08-D1oye4Ns.png                                   [39m[1m[2m    61.59 kB[22m[1m[22m
+2026-11-16T03:17:27.8742050Z [2m../../out/renderer/[22m[2massets/[22m[32m03-BbprADBN.png                                   [39m[1m[2m    68.17 kB[22m[1m[22m
+2026-11-16T03:17:27.8742680Z [2m../../out/renderer/[22m[2massets/[22m[32m04-BeBlLROS.png                                   [39m[1m[2m    68.89 kB[22m[1m[22m
+2026-11-16T03:17:27.8743260Z [2m../../out/renderer/[22m[2massets/[22m[32m01-BWMrrFB0.png                                   [39m[1m[2m    69.20 kB[22m[1m[22m
+2026-11-16T03:17:27.8743840Z [2m../../out/renderer/[22m[2massets/[22m[32m13-DzlG9zAg.png                                   [39m[1m[2m    69.44 kB[22m[1m[22m
+2026-11-16T03:17:27.8744390Z [2m../../out/renderer/[22m[2massets/[22m[32m06-CeeDoLym.png                                   [39m[1m[2m    71.91 kB[22m[1m[22m
+2026-11-16T03:17:27.8744990Z [2m../../out/renderer/[22m[2massets/[22m[32m09-DpzqveEn.png                                   [39m[1m[2m    72.68 kB[22m[1m[22m
+2026-11-16T03:17:27.8745540Z [2m../../out/renderer/[22m[2massets/[22m[32m02-CXukHBHG.png                                   [39m[1m[2m    75.68 kB[22m[1m[22m
+2026-11-16T03:17:27.8750770Z [2m../../out/renderer/[22m[2massets/[22m[32m05-CRUSRkfk.png                                   [39m[1m[2m    75.93 kB[22m[1m[22m
+2026-11-16T03:17:27.8751420Z [2m../../out/renderer/[22m[2massets/[22m[32m11-bjKEQuOe.png                                   [39m[1m[2m    81.15 kB[22m[1m[22m
+2026-11-16T03:17:27.8752020Z [2m../../out/renderer/[22m[2massets/[22m[32mheader-field-DF2njI05.webp                        [39m[1m[2m   143.98 kB[22m[1m[22m
+2026-11-16T03:17:27.8752680Z [2m../../out/renderer/[22m[2massets/[22m[32mpptx.worker-CtaL8LO_.js                           [39m[1m[2m   580.60 kB[22m[1m[22m
+2026-11-16T03:17:27.8753250Z [2m../../out/renderer/[22m[2massets/[22m[32mppt-native-Cz5DBbag.wasm                          [39m[1m[2m 1,557.73 kB[22m[1m[22m
+2026-11-16T03:17:27.8753930Z [2m../../out/renderer/[22m[2massets/[22m[32mppt-font-cjk-DxgKpThH.otf                         [39m[1m[2m16,437.36 kB[22m[1m[22m
+2026-11-16T03:17:27.8754540Z [2m../../out/renderer/[22m[2massets/[22m[35mWorktreeGitReadinessBanner-RBdZ1iFz.css           [39m[1m[2m     0.77 kB[22m[1m[22m
+2026-11-16T03:17:27.8755250Z [2m../../out/renderer/[22m[2massets/[22m[35museProviderAuthenticationActions-oZJEQQr3.css     [39m[1m[2m     7.70 kB[22m[1m[22m
+2026-11-16T03:17:27.8756960Z [2m../../out/renderer/[22m[2massets/[22m[35mindex-L5SjM-JN.css                                [39m[1m[2m    10.68 kB[22m[1m[22m
+2026-11-16T03:17:27.8757560Z [2m../../out/renderer/[22m[2massets/[22m[35mTeamGraphTab-Djtbzfqw.css                         [39m[1m[2m    10.99 kB[22m[1m[22m
+2026-11-16T03:17:27.8758150Z [2m../../out/renderer/[22m[2massets/[22m[35mmain-Dh22HooC.css                                 [39m[1m[2m   608.89 kB[22m[1m[22m
+2026-11-16T03:17:27.8758870Z [2m../../out/renderer/[22m[2massets/[22m[36mchannel-C61VdAO5.js                               [39m[1m[2m     0.19 kB[22m[1m[22m[2m │ map:      0.56 kB[22m
+2026-11-16T03:17:27.8759800Z [2m../../out/renderer/[22m[2massets/[22m[36mdocument-preview-CYgTYnra.js                      [39m[1m[2m     0.19 kB[22m[1m[22m[2m │ map:      0.31 kB[22m
+2026-11-16T03:17:27.8763090Z [2m../../out/renderer/[22m[2massets/[22m[36m_commonjs-dynamic-modules-TGKdzP3c.js             [39m[1m[2m     0.29 kB[22m[1m[22m[2m │ map:      0.12 kB[22m
+2026-11-16T03:17:27.8763960Z [2m../../out/renderer/[22m[2massets/[22m[36mchunk-4BX2VUAB-CKX-25fm.js                        [39m[1m[2m     0.36 kB[22m[1m[22m[2m │ map:      0.90 kB[22m
+2026-11-16T03:17:27.8764680Z [2m../../out/renderer/[22m[2massets/[22m[36mchunk-QZHKN3VN-wkFiE9Dz.js                        [39m[1m[2m     0.37 kB[22m[1m[22m[2m │ map:      0.89 kB[22m
+2026-11-16T03:17:27.8765440Z [2m../../out/renderer/[22m[2massets/[22m[36mchunk-FMBD7UC4-CVY8i5hY.js                        [39m[1m[2m     0.43 kB[22m[1m[22m[2m │ map:      0.84 kB[22m
+2026-11-16T03:17:27.8766030Z [2m../../out/renderer/[22m[2massets/[22m[36mclock-3-DFBIEagu.js                               [39m[1m[2m     0.45 kB[22m[1m[22m[2m │ map:      0.98 kB[22m
+2026-11-16T03:17:27.8766690Z [2m../../out/renderer/[22m[2massets/[22m[36mcheck-check-B-uyG6fS.js                           [39m[1m[2m     0.47 kB[22m[1m[22m[2m │ map:      0.99 kB[22m
+2026-11-16T03:17:27.8767360Z [2m../../out/renderer/[22m[2massets/[22m[36mchunk-55IACEB6-BKZZEx-U.js                        [39m[1m[2m     0.48 kB[22m[1m[22m[2m │ map:      1.08 kB[22m
+2026-11-16T03:17:27.8768050Z [2m../../out/renderer/[22m[2massets/[22m[36mcode-xml-UfPHwWEE.js                              [39m[1m[2m     0.50 kB[22m[1m[22m[2m │ map:      1.07 kB[22m
+2026-11-16T03:17:27.8768770Z [2m../../out/renderer/[22m[2massets/[22m[36mcircle-x-DpKI3oO6.js                              [39m[1m[2m     0.50 kB[22m[1m[22m[2m │ map:      1.09 kB[22m
+2026-11-16T03:17:27.8769400Z [2m../../out/renderer/[22m[2massets/[22m[36mpause-Cdk0j2My.js                                 [39m[1m[2m     0.50 kB[22m[1m[22m[2m │ map:      1.10 kB[22m
+2026-11-16T03:17:27.8772500Z [2m../../out/renderer/[22m[2massets/[22m[36mlink-2-KVYD4t2Y.js                                [39m[1m[2m     0.53 kB[22m[1m[22m[2m │ map:      1.13 kB[22m
+2026-11-16T03:17:27.8773140Z [2m../../out/renderer/[22m[2massets/[22m[36mzap-HBqjNGBL.js                                   [39m[1m[2m     0.55 kB[22m[1m[22m[2m │ map:      1.02 kB[22m
+2026-11-16T03:17:27.8773740Z [2m../../out/renderer/[22m[2massets/[22m[36mchart-column-C2gGXhP-.js                          [39m[1m[2m     0.56 kB[22m[1m[22m[2m │ map:      1.20 kB[22m
+2026-11-16T03:17:27.8774390Z [2m../../out/renderer/[22m[2massets/[22m[36mcircle-question-mark-pQ46ICVj.js                  [39m[1m[2m     0.56 kB[22m[1m[22m[2m │ map:      1.19 kB[22m
+2026-11-16T03:17:27.8775060Z [2m../../out/renderer/[22m[2massets/[22m[36mcircle-alert-DahQPfaa.js                          [39m[1m[2m     0.56 kB[22m[1m[22m[2m │ map:      1.24 kB[22m
+2026-11-16T03:17:27.8775680Z [2m../../out/renderer/[22m[2massets/[22m[36mpen-line-DEj9cOdv.js                              [39m[1m[2m     0.59 kB[22m[1m[22m[2m │ map:      1.13 kB[22m
+2026-11-16T03:17:27.8776290Z [2m../../out/renderer/[22m[2massets/[22m[36minbox-BDCbc-HK.js                                 [39m[1m[2m     0.59 kB[22m[1m[22m[2m │ map:      1.13 kB[22m
+2026-11-16T03:17:27.8776920Z [2m../../out/renderer/[22m[2massets/[22m[36msend-BZuFQHGk.js                                  [39m[1m[2m     0.59 kB[22m[1m[22m[2m │ map:      1.13 kB[22m
+2026-11-16T03:17:27.8777560Z [2m../../out/renderer/[22m[2massets/[22m[36mmultimodelProviderVisibility-B9nQeIFT.js          [39m[1m[2m     0.63 kB[22m[1m[22m[2m │ map:      1.25 kB[22m
+2026-11-16T03:17:27.8778220Z [2m../../out/renderer/[22m[2massets/[22m[36mfolder-plus-DVQUPM-_.js                           [39m[1m[2m     0.63 kB[22m[1m[22m[2m │ map:      1.24 kB[22m
+2026-11-16T03:17:27.8778820Z [2m../../out/renderer/[22m[2massets/[22m[36msave-BVzChsxR.js                                  [39m[1m[2m     0.64 kB[22m[1m[22m[2m │ map:      1.23 kB[22m
+2026-11-16T03:17:27.8781810Z [2m../../out/renderer/[22m[2massets/[22m[36mserver-D4SOzGkM.js                                [39m[1m[2m     0.67 kB[22m[1m[22m[2m │ map:      1.47 kB[22m
+2026-11-16T03:17:27.8782480Z [2m../../out/renderer/[22m[2massets/[22m[36mfile-search-CsJL15dk.js                           [39m[1m[2m     0.71 kB[22m[1m[22m[2m │ map:      1.40 kB[22m
+2026-11-16T03:17:27.8783080Z [2m../../out/renderer/[22m[2massets/[22m[36mdocumentPolicy-BITuLMxP.js                        [39m[1m[2m     0.72 kB[22m[1m[22m[2m │ map:      1.53 kB[22m
+2026-11-16T03:17:27.8783710Z [2m../../out/renderer/[22m[2massets/[22m[36mshield-question-mark-DoUaR-jg.js                  [39m[1m[2m     0.73 kB[22m[1m[22m[2m │ map:      1.37 kB[22m
+2026-11-16T03:17:27.8784320Z [2m../../out/renderer/[22m[2massets/[22m[36mstar-BMiODXO3.js                                  [39m[1m[2m     0.77 kB[22m[1m[22m[2m │ map:      1.24 kB[22m
+2026-11-16T03:17:27.8784910Z [2m../../out/renderer/[22m[2massets/[22m[36meye-off-BIb30_yH.js                               [39m[1m[2m     0.78 kB[22m[1m[22m[2m │ map:      1.48 kB[22m
+2026-11-16T03:17:27.8785570Z [2m../../out/renderer/[22m[2massets/[22m[36mhandshake-Cw7hF26-.js                             [39m[1m[2m     0.79 kB[22m[1m[22m[2m │ map:      1.51 kB[22m
+2026-11-16T03:17:27.8786220Z [2m../../out/renderer/[22m[2massets/[22m[36msliders-horizontal-CABNhkHt.js                    [39m[1m[2m     0.79 kB[22m[1m[22m[2m │ map:      1.74 kB[22m
+2026-11-16T03:17:27.8786850Z [2m../../out/renderer/[22m[2massets/[22m[36msparkles-CUK4XrOl.js                              [39m[1m[2m     0.83 kB[22m[1m[22m[2m │ map:      1.51 kB[22m
+2026-11-16T03:17:27.8787450Z [2m../../out/renderer/[22m[2massets/[22m[36mtextarea-BBS7esR0.js                              [39m[1m[2m     0.84 kB[22m[1m[22m[2m │ map:      1.17 kB[22m
+2026-11-16T03:17:27.8790770Z [2m../../out/renderer/[22m[2massets/[22m[36mstateDiagram-v2-BHNVJYJU-DfTmU9fS.js              [39m[1m[2m     0.93 kB[22m[1m[22m[2m │ map:      1.52 kB[22m
+2026-11-16T03:17:27.8791470Z [2m../../out/renderer/[22m[2massets/[22m[36mformatDistanceToNowStrict-BeVXYnIF.js             [39m[1m[2m     0.96 kB[22m[1m[22m[2m │ map:      4.59 kB[22m
+2026-11-16T03:17:27.8792140Z [2m../../out/renderer/[22m[2massets/[22m[36mindex-DeIeGix6.js                                 [39m[1m[2m     0.98 kB[22m[1m[22m[2m │ map:      0.71 kB[22m
+2026-11-16T03:17:27.8792740Z [2m../../out/renderer/[22m[2massets/[22m[36mindex-TZYP1Xhr.js                                 [39m[1m[2m     0.99 kB[22m[1m[22m[2m │ map:      0.79 kB[22m
+2026-11-16T03:17:27.8793390Z [2m../../out/renderer/[22m[2massets/[22m[36mclassDiagram-4FO5ZUOK-DSDTqCoW.js                 [39m[1m[2m     1.00 kB[22m[1m[22m[2m │ map:      1.57 kB[22m
+2026-11-16T03:17:27.8794070Z [2m../../out/renderer/[22m[2massets/[22m[36mclassDiagram-v2-Q7XG4LA2-DSDTqCoW.js              [39m[1m[2m     1.00 kB[22m[1m[22m[2m │ map:      1.58 kB[22m
+2026-11-16T03:17:27.8794780Z [2m../../out/renderer/[22m[2massets/[22m[36mchunk-2J33WTMH-i8Nm2EkU.js                        [39m[1m[2m     1.06 kB[22m[1m[22m[2m │ map:      2.13 kB[22m
+2026-11-16T03:17:27.8795450Z [2m../../out/renderer/[22m[2massets/[22m[36mAnnouncementNewsButton-Cgc25mKP.js                [39m[1m[2m     1.14 kB[22m[1m[22m[2m │ map:      1.74 kB[22m
+2026-11-16T03:17:27.8796080Z [2m../../out/renderer/[22m[2massets/[22m[36mswitch-COag-JlC.js                                [39m[1m[2m     1.20 kB[22m[1m[22m[2m │ map:      1.74 kB[22m
+2026-11-16T03:17:27.8796700Z [2m../../out/renderer/[22m[2massets/[22m[36minfoDiagram-5YYISTIA-Voat9I8M.js                  [39m[1m[2m     1.24 kB[22m[1m[22m[2m │ map:      2.17 kB[22m
+2026-11-16T03:17:27.8799560Z [2m../../out/renderer/[22m[2massets/[22m[36mprotocol-DZPo7p8d.js                              [39m[1m[2m     1.25 kB[22m[1m[22m[2m │ map:      2.57 kB[22m
+2026-11-16T03:17:27.8800240Z [2m../../out/renderer/[22m[2massets/[22m[36museTeamStartupCopy-DNePsWBd.js                    [39m[1m[2m     1.56 kB[22m[1m[22m[2m │ map:      2.69 kB[22m
+2026-11-16T03:17:27.8800890Z [2m../../out/renderer/[22m[2massets/[22m[36mOngoingIndicator-fPNOgUyV.js                      [39m[1m[2m     1.84 kB[22m[1m[22m[2m │ map:      3.27 kB[22m
+2026-11-16T03:17:27.8801540Z [2m../../out/renderer/[22m[2massets/[22m[36mruntimeDisplayName-CnjEl3EH.js                    [39m[1m[2m     2.15 kB[22m[1m[22m[2m │ map:      4.44 kB[22m
+2026-11-16T03:17:27.8802160Z [2m../../out/renderer/[22m[2massets/[22m[36museConnectionInfo-DYPFV2cA.js                     [39m[1m[2m     2.27 kB[22m[1m[22m[2m │ map:      4.39 kB[22m
+2026-11-16T03:17:27.8802820Z [2m../../out/renderer/[22m[2massets/[22m[36mskillRoots-wzP1c5Lb.js                            [39m[1m[2m     2.49 kB[22m[1m[22m[2m │ map:      4.71 kB[22m
+2026-11-16T03:17:27.8803540Z [2m../../out/renderer/[22m[2massets/[22m[36mmemberPolicy-BEcQ35Qv.js                          [39m[1m[2m     2.53 kB[22m[1m[22m[2m │ map:      5.38 kB[22m
+2026-11-16T03:17:27.8804190Z [2m../../out/renderer/[22m[2massets/[22m[36mTerminalLogPanel--QKg_Wtf.js                      [39m[1m[2m     2.62 kB[22m[1m[22m[2m │ map:      3.96 kB[22m
+2026-11-16T03:17:27.8804850Z [2m../../out/renderer/[22m[2massets/[22m[36mLaunchTeamDialogLoadingFallback-6xYTj15-.js       [39m[1m[2m     2.74 kB[22m[1m[22m[2m │ map:      4.26 kB[22m
+2026-11-16T03:17:27.8805490Z [2m../../out/renderer/[22m[2massets/[22m[36mprintLayout-C9WlKlMB.js                           [39m[1m[2m     3.17 kB[22m[1m[22m[2m │ map:      5.35 kB[22m
+2026-11-16T03:17:27.8808510Z [2m../../out/renderer/[22m[2massets/[22m[36mchunk-ND2GUHAM-1je3KGG1.js                        [39m[1m[2m     3.74 kB[22m[1m[22m[2m │ map:      6.96 kB[22m
+2026-11-16T03:17:27.8809150Z [2m../../out/renderer/[22m[2massets/[22m[36museMarkdownScrollSync-DIZG3zo8.js                 [39m[1m[2m     4.23 kB[22m[1m[22m[2m │ map:     10.15 kB[22m
+2026-11-16T03:17:27.8809830Z [2m../../out/renderer/[22m[2massets/[22m[36mproviderModelSelection-CrbfCLg4.js                [39m[1m[2m     4.62 kB[22m[1m[22m[2m │ map:      9.41 kB[22m
+2026-11-16T03:17:27.8810520Z [2m../../out/renderer/[22m[2massets/[22m[36mDocumentPreview-BfsVD_bq.js                       [39m[1m[2m     5.16 kB[22m[1m[22m[2m │ map:      8.74 kB[22m
+2026-11-16T03:17:27.8811180Z [2m../../out/renderer/[22m[2massets/[22m[36museTeamTaskReferenceNavigation-BwgvnJ5M.js        [39m[1m[2m     5.43 kB[22m[1m[22m[2m │ map:     10.68 kB[22m
+2026-11-16T03:17:27.8811840Z [2m../../out/renderer/[22m[2massets/[22m[36mutils-Dc6SEdFb.js                                 [39m[1m[2m     5.44 kB[22m[1m[22m[2m │ map:     11.71 kB[22m
+2026-11-16T03:17:27.8812490Z [2m../../out/renderer/[22m[2massets/[22m[36mdiagram-5GNKFQAL-caJxrxWJ.js                      [39m[1m[2m     5.73 kB[22m[1m[22m[2m │ map:      9.87 kB[22m
+2026-11-16T03:17:27.8813110Z [2m../../out/renderer/[22m[2massets/[22m[36mfileTreeBuilder-BSj1ggll.js                       [39m[1m[2m     5.76 kB[22m[1m[22m[2m │ map:     13.91 kB[22m
+2026-11-16T03:17:27.8813710Z [2m../../out/renderer/[22m[2massets/[22m[36mindex-BvB52Hwj.js                                 [39m[1m[2m     5.79 kB[22m[1m[22m[2m │ map:     14.38 kB[22m
+2026-11-16T03:17:27.8814340Z [2m../../out/renderer/[22m[2massets/[22m[36museBranchSync-DL_ceipi.js                         [39m[1m[2m     5.87 kB[22m[1m[22m[2m │ map:     13.29 kB[22m
+2026-11-16T03:17:27.8814990Z [2m../../out/renderer/[22m[2massets/[22m[36museTeamSuggestions-Cim4-Ogn.js                    [39m[1m[2m     6.23 kB[22m[1m[22m[2m │ map:     13.08 kB[22m
+2026-11-16T03:17:27.8820000Z [2m../../out/renderer/[22m[2massets/[22m[36mdiagram-LMA3HP47-BV1OlUZ7.js                      [39m[1m[2m     7.61 kB[22m[1m[22m[2m │ map:     13.08 kB[22m
+2026-11-16T03:17:27.8820760Z [2m../../out/renderer/[22m[2massets/[22m[36mGlobalTaskDetailDialog-BC7XBUqn.js                [39m[1m[2m     7.80 kB[22m[1m[22m[2m │ map:     12.42 kB[22m
+2026-11-16T03:17:27.8821520Z [2m../../out/renderer/[22m[2massets/[22m[36mpieDiagram-4H26LBE5-D0Uz1xeP.js                   [39m[1m[2m     7.88 kB[22m[1m[22m[2m │ map:     13.59 kB[22m
+2026-11-16T03:17:27.8822280Z [2m../../out/renderer/[22m[2massets/[22m[36mresetCreateTeamDraft-CaIfYM5X.js                  [39m[1m[2m     7.97 kB[22m[1m[22m[2m │ map:     18.19 kB[22m
+2026-11-16T03:17:27.8823030Z [2m../../out/renderer/[22m[2massets/[22m[36mmemberSettingsRelaunch-ZR8m_srG.js                [39m[1m[2m     8.78 kB[22m[1m[22m[2m │ map:     20.65 kB[22m
+2026-11-16T03:17:27.8823680Z [2m../../out/renderer/[22m[2massets/[22m[36mindex-DZUcbe7b.js                                 [39m[1m[2m     8.96 kB[22m[1m[22m[2m │ map:     14.11 kB[22m
+2026-11-16T03:17:27.8824370Z [2m../../out/renderer/[22m[2massets/[22m[36mindex-CqRlKKW3.js                                 [39m[1m[2m     9.06 kB[22m[1m[22m[2m │ map:     14.71 kB[22m
+2026-11-16T03:17:27.8825070Z [2m../../out/renderer/[22m[2massets/[22m[36mindex-wo65ZIJI.js                                 [39m[1m[2m     9.09 kB[22m[1m[22m[2m │ map:     12.61 kB[22m
+2026-11-16T03:17:27.8825760Z [2m../../out/renderer/[22m[2massets/[22m[36museGatewayMemberBindings-DxKysG1k.js              [39m[1m[2m     9.39 kB[22m[1m[22m[2m │ map:     19.29 kB[22m
+2026-11-16T03:17:27.8826450Z [2m../../out/renderer/[22m[2massets/[22m[36mprintMask-DJ1oOfTt.js                             [39m[1m[2m     9.71 kB[22m[1m[22m[2m │ map:     17.47 kB[22m
+2026-11-16T03:17:27.8829820Z [2m../../out/renderer/[22m[2massets/[22m[36mwordperfect-BSj_zBX-.js                           [39m[1m[2m    10.25 kB[22m[1m[22m[2m │ map:     17.64 kB[22m
+2026-11-16T03:17:27.8830630Z [2m../../out/renderer/[22m[2massets/[22m[36mRosterParticipantFrame-CtpVeSB2.js                [39m[1m[2m    10.42 kB[22m[1m[22m[2m │ map:     19.60 kB[22m
+2026-11-16T03:17:27.8831280Z [2m../../out/renderer/[22m[2massets/[22m[36mdiagram-2AECGRRQ-D-a1r-Vh.js                      [39m[1m[2m    11.14 kB[22m[1m[22m[2m │ map:     19.75 kB[22m
+2026-11-16T03:17:27.8832010Z [2m../../out/renderer/[22m[2massets/[22m[36mwordMl-D-5yqEy6.js                                [39m[1m[2m    11.21 kB[22m[1m[22m[2m │ map:     19.70 kB[22m
+2026-11-16T03:17:27.8832720Z [2m../../out/renderer/[22m[2massets/[22m[36mLastOutputDisplay-CChmEzrJ.js                     [39m[1m[2m    11.32 kB[22m[1m[22m[2m │ map:     21.88 kB[22m
+2026-11-16T03:17:27.8833360Z [2m../../out/renderer/[22m[2massets/[22m[36mTaskDetailDialog-ed6d3WBC.js                      [39m[1m[2m    11.54 kB[22m[1m[22m[2m │ map:     18.33 kB[22m
+2026-11-16T03:17:27.8834020Z [2m../../out/renderer/[22m[2massets/[22m[36mhangul-B9bYoInB.js                                [39m[1m[2m    12.24 kB[22m[1m[22m[2m │ map:     20.01 kB[22m
+2026-11-16T03:17:27.8834600Z [2m../../out/renderer/[22m[2massets/[22m[36mimage-BSLEXmM5.js                                 [39m[1m[2m    12.34 kB[22m[1m[22m[2m │ map:     20.33 kB[22m
+2026-11-16T03:17:27.8835250Z [2m../../out/renderer/[22m[2massets/[22m[36mindex-DncdJ5V6.js                                 [39m[1m[2m    12.69 kB[22m[1m[22m[2m │ map:     16.27 kB[22m
+2026-11-16T03:17:27.8835870Z [2m../../out/renderer/[22m[2massets/[22m[36mopenDocument-COpQK0wz.js                          [39m[1m[2m    12.71 kB[22m[1m[22m[2m │ map:     22.16 kB[22m
+2026-11-16T03:17:27.8836520Z [2m../../out/renderer/[22m[2massets/[22m[36mMemberSelect-LWeIACwP.js                          [39m[1m[2m    12.73 kB[22m[1m[22m[2m │ map:     19.71 kB[22m
+2026-11-16T03:17:27.8839270Z [2m../../out/renderer/[22m[2massets/[22m[36mindex-BBpupC3G.js                                 [39m[1m[2m    12.92 kB[22m[1m[22m[2m │ map:     31.99 kB[22m
+2026-11-16T03:17:27.8840000Z [2m../../out/renderer/[22m[2massets/[22m[36mattachmentUtils-CBWfOv5M.js                       [39m[1m[2m    14.68 kB[22m[1m[22m[2m │ map:     37.91 kB[22m
+2026-11-16T03:17:27.8840660Z [2m../../out/renderer/[22m[2massets/[22m[36mwordDoc-BGzxdkIg.js                               [39m[1m[2m    14.90 kB[22m[1m[22m[2m │ map:     23.70 kB[22m
+2026-11-16T03:17:27.8841300Z [2m../../out/renderer/[22m[2massets/[22m[36museTeamStopControl-VH7uFDF1.js                    [39m[1m[2m    16.74 kB[22m[1m[22m[2m │ map:     32.04 kB[22m
+2026-11-16T03:17:27.8841960Z [2m../../out/renderer/[22m[2massets/[22m[36museScheduleActions-DYq9zKWu.js                    [39m[1m[2m    18.12 kB[22m[1m[22m[2m │ map:     32.30 kB[22m
+2026-11-16T03:17:27.8842670Z [2m../../out/renderer/[22m[2massets/[22m[36museChipDraftPersistence-BgWqJz2k.js               [39m[1m[2m    18.55 kB[22m[1m[22m[2m │ map:     36.76 kB[22m
+2026-11-16T03:17:27.8843310Z [2m../../out/renderer/[22m[2massets/[22m[36museRuntimeProviderQuickConnect-gzKJTzGt.js        [39m[1m[2m    18.97 kB[22m[1m[22m[2m │ map:     34.01 kB[22m
+2026-11-16T03:17:27.8844030Z [2m../../out/renderer/[22m[2massets/[22m[36mstateDiagram-AJRCARHV-DRXFwgk6.js                 [39m[1m[2m    19.29 kB[22m[1m[22m[2m │ map:     35.17 kB[22m
+2026-11-16T03:17:27.8844670Z [2m../../out/renderer/[22m[2massets/[22m[36mprint-mask-8ZaYrlBc.js                            [39m[1m[2m    19.91 kB[22m[1m[22m[2m │ map:     34.87 kB[22m
+2026-11-16T03:17:27.8845280Z [2m../../out/renderer/[22m[2massets/[22m[36mNotificationsView-C7K0rC5a.js                     [39m[1m[2m    20.99 kB[22m[1m[22m[2m │ map:     33.42 kB[22m
+2026-11-16T03:17:27.8848290Z [2m../../out/renderer/[22m[2massets/[22m[36mdiagram-KO2AKTUF-Db0wd-F6.js                      [39m[1m[2m    21.83 kB[22m[1m[22m[2m │ map:     37.77 kB[22m
+2026-11-16T03:17:27.8849090Z [2m../../out/renderer/[22m[2massets/[22m[36mofd-BV6Q7Gfs.js                                   [39m[1m[2m    22.36 kB[22m[1m[22m[2m │ map:     36.28 kB[22m
+2026-11-16T03:17:27.8849740Z [2m../../out/renderer/[22m[2massets/[22m[36mdagre-BM42HDAG-DgV7BgoJ.js                        [39m[1m[2m    23.17 kB[22m[1m[22m[2m │ map:     46.87 kB[22m
+2026-11-16T03:17:27.8850470Z [2m../../out/renderer/[22m[2massets/[22m[36mindex-BDDInYaZ.js                                 [39m[1m[2m    23.58 kB[22m[1m[22m[2m │ map:     36.16 kB[22m
+2026-11-16T03:17:27.8851160Z [2m../../out/renderer/[22m[2massets/[22m[36mmergeCodexProviderStatusWithSnapshot-DJzRDqE3.js  [39m[1m[2m    24.54 kB[22m[1m[22m[2m │ map:     42.16 kB[22m
+2026-11-16T03:17:27.8851950Z [2m../../out/renderer/[22m[2massets/[22m[36miwork-BUAg10vj.js                                 [39m[1m[2m    24.66 kB[22m[1m[22m[2m │ map:     41.63 kB[22m
+2026-11-16T03:17:27.8852720Z [2m../../out/renderer/[22m[2massets/[22m[36mSchedulesView-BtmDZgiC.js                         [39m[1m[2m    25.42 kB[22m[1m[22m[2m │ map:     33.80 kB[22m
+2026-11-16T03:17:27.8853410Z [2m../../out/renderer/[22m[2massets/[22m[36msplashScene-Nb3BIfs6.js                           [39m[1m[2m    27.17 kB[22m[1m[22m[2m │ map:     53.69 kB[22m
+2026-11-16T03:17:27.8854080Z [2m../../out/renderer/[22m[2massets/[22m[36mppt-Dwcx65P9.js                                   [39m[1m[2m    27.67 kB[22m[1m[22m[2m │ map:     46.44 kB[22m
+2026-11-16T03:17:27.8854770Z [2m../../out/renderer/[22m[2massets/[22m[36mexport-Boiz9wl-.js                                [39m[1m[2m    31.10 kB[22m[1m[22m[2m │ map:     48.22 kB[22m
+2026-11-16T03:17:27.8855460Z [2m../../out/renderer/[22m[2massets/[22m[36mdiagram-OG6HWLK6-CP1QuBQP.js                      [39m[1m[2m    32.03 kB[22m[1m[22m[2m │ map:     60.27 kB[22m
+2026-11-16T03:17:27.8858950Z [2m../../out/renderer/[22m[2massets/[22m[36mSendMessageDialog-CmKZl9AE.js                     [39m[1m[2m    34.06 kB[22m[1m[22m[2m │ map:     56.37 kB[22m
+2026-11-16T03:17:27.8859840Z [2m../../out/renderer/[22m[2massets/[22m[36mishikawaDiagram-YF4QCWOH-laUOHea1.js              [39m[1m[2m    35.33 kB[22m[1m[22m[2m │ map:     63.07 kB[22m
+2026-11-16T03:17:27.8860520Z [2m../../out/renderer/[22m[2massets/[22m[36mindex-DzcApGLi.js                                 [39m[1m[2m    35.57 kB[22m[1m[22m[2m │ map:     58.32 kB[22m
+2026-11-16T03:17:27.8861160Z [2m../../out/renderer/[22m[2massets/[22m[36mwordDocx-HUiUQDs5.js                              [39m[1m[2m    36.14 kB[22m[1m[22m[2m │ map:     60.97 kB[22m
+2026-11-16T03:17:27.8861850Z [2m../../out/renderer/[22m[2massets/[22m[36mkanban-definition-UN3LZRKU-B2F8zl2f.js            [39m[1m[2m    38.37 kB[22m[1m[22m[2m │ map:     68.91 kB[22m
+2026-11-16T03:17:27.8862570Z [2m../../out/renderer/[22m[2massets/[22m[36mCodexRuntimeUpdateDialog-Cp0zV4sa.js              [39m[1m[2m    40.50 kB[22m[1m[22m[2m │ map:     76.34 kB[22m
+2026-11-16T03:17:27.8863260Z [2m../../out/renderer/[22m[2massets/[22m[36mmindmap-definition-RKZ34NQL-psvEf9ex.js           [39m[1m[2m    43.95 kB[22m[1m[22m[2m │ map:     78.70 kB[22m
+2026-11-16T03:17:27.8864020Z [2m../../out/renderer/[22m[2massets/[22m[36mwardleyDiagram-YWT4CUSO-CCLsp3Gp.js               [39m[1m[2m    44.77 kB[22m[1m[22m[2m │ map:     79.99 kB[22m
+2026-11-16T03:17:27.8864720Z [2m../../out/renderer/[22m[2massets/[22m[36mjourneyDiagram-JHISSGLW-BnYPgDq9.js               [39m[1m[2m    45.51 kB[22m[1m[22m[2m │ map:     80.11 kB[22m
+2026-11-16T03:17:27.8865400Z [2m../../out/renderer/[22m[2massets/[22m[36msankeyDiagram-5OEKKPKP-j2Q-aX49.js                [39m[1m[2m    46.33 kB[22m[1m[22m[2m │ map:     88.28 kB[22m
+2026-11-16T03:17:27.8868270Z [2m../../out/renderer/[22m[2massets/[22m[36merDiagram-TEJ5UH35-GQHPUyc3.js                    [39m[1m[2m    48.68 kB[22m[1m[22m[2m │ map:     91.04 kB[22m
+2026-11-16T03:17:27.8869030Z [2m../../out/renderer/[22m[2massets/[22m[36mrequirementDiagram-4Y6WPE33-CpJDB834.js           [39m[1m[2m    52.82 kB[22m[1m[22m[2m │ map:     99.70 kB[22m
+2026-11-16T03:17:27.8869810Z [2m../../out/renderer/[22m[2massets/[22m[36mgitGraphDiagram-PVQCEYII-CXlUbbid.js              [39m[1m[2m    57.73 kB[22m[1m[22m[2m │ map:    117.09 kB[22m
+2026-11-16T03:17:27.8870510Z [2m../../out/renderer/[22m[2massets/[22m[36mtimeline-definition-PNZ67QCA-B0CpmIvB.js          [39m[1m[2m    60.71 kB[22m[1m[22m[2m │ map:    106.95 kB[22m
+2026-11-16T03:17:27.8871300Z [2m../../out/renderer/[22m[2massets/[22m[36mquadrantDiagram-W4KKPZXB-B-iOgTDy.js              [39m[1m[2m    61.81 kB[22m[1m[22m[2m │ map:    111.54 kB[22m
+2026-11-16T03:17:27.8872040Z [2m../../out/renderer/[22m[2massets/[22m[36mgraph-BlBUp_nR.js                                 [39m[1m[2m    64.56 kB[22m[1m[22m[2m │ map:    197.66 kB[22m
+2026-11-16T03:17:27.8872710Z [2m../../out/renderer/[22m[2massets/[22m[36mMemberDetailDialog-D305vODv.js                    [39m[1m[2m    66.62 kB[22m[1m[22m[2m │ map:    113.10 kB[22m
+2026-11-16T03:17:27.8873440Z [2m../../out/renderer/[22m[2massets/[22m[36mpurify.es-xeAwHSFW.js                             [39m[1m[2m    67.93 kB[22m[1m[22m[2m │ map:    137.30 kB[22m
+2026-11-16T03:17:27.8874110Z [2m../../out/renderer/[22m[2massets/[22m[36mchunk-AQP2D5EJ-CcQjVol_.js                        [39m[1m[2m    71.31 kB[22m[1m[22m[2m │ map:    125.38 kB[22m
+2026-11-16T03:17:27.8874770Z [2m../../out/renderer/[22m[2massets/[22m[36mxychartDiagram-2RQKCTM6-BiWj-1hc.js               [39m[1m[2m    72.98 kB[22m[1m[22m[2m │ map:    130.21 kB[22m
+2026-11-16T03:17:27.8875550Z [2m../../out/renderer/[22m[2massets/[22m[36mExecutionLogStreamView-MyQ8ptyV.js                [39m[1m[2m    74.82 kB[22m[1m[22m[2m │ map:    138.48 kB[22m
+2026-11-16T03:17:27.8878510Z [2m../../out/renderer/[22m[2massets/[22m[36mindex-uqjHjc0s.js                                 [39m[1m[2m    78.21 kB[22m[1m[22m[2m │ map:    146.61 kB[22m
+2026-11-16T03:17:27.8879280Z [2m../../out/renderer/[22m[2massets/[22m[36mlayout-DhBzV1Hi.js                                [39m[1m[2m    78.99 kB[22m[1m[22m[2m │ map:    233.15 kB[22m
+2026-11-16T03:17:27.8885150Z [2m../../out/renderer/[22m[2massets/[22m[36mchunk-727SXJPM-B86Q9ezT.js                        [39m[1m[2m    84.08 kB[22m[1m[22m[2m │ map:    153.36 kB[22m
+2026-11-16T03:17:27.8886100Z [2m../../out/renderer/[22m[2massets/[22m[36mvennDiagram-CIIHVFJN-DG4hyqn4.js                  [39m[1m[2m    87.91 kB[22m[1m[22m[2m │ map:    184.09 kB[22m
+2026-11-16T03:17:27.8886830Z [2m../../out/renderer/[22m[2massets/[22m[36mUTIF-Ctp8z6d0.js                                  [39m[1m[2m    91.35 kB[22m[1m[22m[2m │ map:    130.06 kB[22m
+2026-11-16T03:17:27.8887500Z [2m../../out/renderer/[22m[2massets/[22m[36mflowDiagram-I6XJVG4X-BIkO5dJ6.js                  [39m[1m[2m   102.34 kB[22m[1m[22m[2m │ map:    191.40 kB[22m
+2026-11-16T03:17:27.8888200Z [2m../../out/renderer/[22m[2massets/[22m[36mpptx-DdC-jMbw.js                                  [39m[1m[2m   105.72 kB[22m[1m[22m[2m │ map:    189.88 kB[22m
+2026-11-16T03:17:27.8888900Z [2m../../out/renderer/[22m[2massets/[22m[36mlexer-Cmql2Gsg.js                                 [39m[1m[2m   110.83 kB[22m[1m[22m[2m │ map:    241.21 kB[22m
+2026-11-16T03:17:27.8889510Z [2m../../out/renderer/[22m[2massets/[22m[36mproviderConnectionUi-BUN7sfe9.js                  [39m[1m[2m   112.97 kB[22m[1m[22m[2m │ map:    160.80 kB[22m
+2026-11-16T03:17:27.8890250Z [2m../../out/renderer/[22m[2massets/[22m[36mindex-RZnsP028.js                                 [39m[1m[2m   117.60 kB[22m[1m[22m[2m │ map:    228.72 kB[22m
+2026-11-16T03:17:27.8893090Z [2m../../out/renderer/[22m[2massets/[22m[36mc4Diagram-AAUBKEIU-C5DBykOg.js                    [39m[1m[2m   118.73 kB[22m[1m[22m[2m │ map:    203.92 kB[22m
+2026-11-16T03:17:27.8893750Z [2m../../out/renderer/[22m[2massets/[22m[36mindex-CXE7rfQG.js                                 [39m[1m[2m   120.89 kB[22m[1m[22m[2m │ map:    308.72 kB[22m
+2026-11-16T03:17:27.8894470Z [2m../../out/renderer/[22m[2massets/[22m[36mTeamListView-DyNQIJVe.js                          [39m[1m[2m   129.44 kB[22m[1m[22m[2m │ map:    204.34 kB[22m
+2026-11-16T03:17:27.8895170Z [2m../../out/renderer/[22m[2massets/[22m[36mganttDiagram-6RSMTGT7-B3WorbKd.js                 [39m[1m[2m   133.25 kB[22m[1m[22m[2m │ map:    244.07 kB[22m
+2026-11-16T03:17:27.8895880Z [2m../../out/renderer/[22m[2massets/[22m[36mblockDiagram-GPEHLZMM-05OSapXn.js                 [39m[1m[2m   140.32 kB[22m[1m[22m[2m │ map:    255.90 kB[22m
+2026-11-16T03:17:27.8896570Z [2m../../out/renderer/[22m[2massets/[22m[36mSessionTabContent-DXQJjNYr.js                     [39m[1m[2m   151.24 kB[22m[1m[22m[2m │ map:    269.81 kB[22m
+2026-11-16T03:17:27.8897260Z [2m../../out/renderer/[22m[2massets/[22m[36mTaskDetailReviewActivationFeedback-Bu4ECN3K.js    [39m[1m[2m   155.26 kB[22m[1m[22m[2m │ map:    270.64 kB[22m
+2026-11-16T03:17:27.8898060Z [2m../../out/renderer/[22m[2massets/[22m[36mTiptapEditor-BxY9uQlL.js                          [39m[1m[2m   158.39 kB[22m[1m[22m[2m │ map:    392.87 kB[22m
+2026-11-16T03:17:27.8898680Z [2m../../out/renderer/[22m[2massets/[22m[36mCreateTeamDialog-C-7aMksv.js                      [39m[1m[2m   167.74 kB[22m[1m[22m[2m │ map:    272.41 kB[22m
+2026-11-16T03:17:27.8899490Z [2m../../out/renderer/[22m[2massets/[22m[36mProjectEditorOverlay-BkE5d-GB.js                  [39m[1m[2m   168.78 kB[22m[1m[22m[2m │ map:    303.66 kB[22m
+2026-11-16T03:17:27.8902290Z [2m../../out/renderer/[22m[2massets/[22m[36mspreadsheet-KqOtM1_g.js                           [39m[1m[2m   179.15 kB[22m[1m[22m[2m │ map:    330.17 kB[22m
+2026-11-16T03:17:27.8902940Z [2m../../out/renderer/[22m[2massets/[22m[36mindex-BLUDADYH.js                                 [39m[1m[2m   200.04 kB[22m[1m[22m[2m │ map:    342.25 kB[22m
+2026-11-16T03:17:27.8903540Z [2m../../out/renderer/[22m[2massets/[22m[36msequenceDiagram-3UESZ5HK-DTrL3H2l.js              [39m[1m[2m   201.77 kB[22m[1m[22m[2m │ map:    349.49 kB[22m
+2026-11-16T03:17:27.8904170Z [2m../../out/renderer/[22m[2massets/[22m[36mcose-bilkent-S5V4N54A-Dlk35Bbw.js                 [39m[1m[2m   214.89 kB[22m[1m[22m[2m │ map:    312.42 kB[22m
+2026-11-16T03:17:27.8904790Z [2m../../out/renderer/[22m[2massets/[22m[36mviewer-BGL8_3eV.js                                [39m[1m[2m   235.36 kB[22m[1m[22m[2m │ map:    453.21 kB[22m
+2026-11-16T03:17:27.8905390Z [2m../../out/renderer/[22m[2massets/[22m[36mWorktreeGitReadinessBanner-CTJnnUq0.js            [39m[1m[2m   245.83 kB[22m[1m[22m[2m │ map:    464.89 kB[22m
+2026-11-16T03:17:27.8906040Z [2m../../out/renderer/[22m[2massets/[22m[36mLaunchTeamDialog-VjompS6a.js                      [39m[1m[2m   245.95 kB[22m[1m[22m[2m │ map:    406.60 kB[22m
+2026-11-16T03:17:27.8906690Z [2m../../out/renderer/[22m[2massets/[22m[36mindex-BOjgh007.js                                 [39m[1m[2m   258.27 kB[22m[1m[22m[2m │ map:    528.41 kB[22m
+2026-11-16T03:17:27.8907310Z [2m../../out/renderer/[22m[2massets/[22m[36mSettingsContent-BDFIxlAs.js                       [39m[1m[2m   340.88 kB[22m[1m[22m[2m │ map:    552.71 kB[22m
+2026-11-16T03:17:27.8907910Z [2m../../out/renderer/[22m[2massets/[22m[36mindex.es-BqZBvtbW.js                              [39m[1m[2m   342.40 kB[22m[1m[22m[2m │ map:    632.41 kB[22m
+2026-11-16T03:17:27.8910960Z [2m../../out/renderer/[22m[2massets/[22m[36mscheduleFormatters-BYnwMPuw.js                    [39m[1m[2m   368.69 kB[22m[1m[22m[2m │ map:    464.07 kB[22m
+2026-11-16T03:17:27.8911620Z [2m../../out/renderer/[22m[2massets/[22m[36mCliStatusBanner-D3u2ZhQm.js                       [39m[1m[2m   372.99 kB[22m[1m[22m[2m │ map:    568.34 kB[22m
+2026-11-16T03:17:27.8912200Z [2m../../out/renderer/[22m[2massets/[22m[36mdocx-preview-B3pfLDEI.js                          [39m[1m[2m   376.06 kB[22m[1m[22m[2m │ map:    596.33 kB[22m
+2026-11-16T03:17:27.8912880Z [2m../../out/renderer/[22m[2massets/[22m[36mExtensionStoreView-BhD2zJo1.js                    [39m[1m[2m   387.31 kB[22m[1m[22m[2m │ map:    670.63 kB[22m
+2026-11-16T03:17:27.8913550Z [2m../../out/renderer/[22m[2massets/[22m[36mofd-JRYQaJQa.js                                   [39m[1m[2m   402.19 kB[22m[1m[22m[2m │ map:    765.23 kB[22m
+2026-11-16T03:17:27.8914290Z [2m../../out/renderer/[22m[2massets/[22m[36mGraphView-DuWIwHGz.js                             [39m[1m[2m   408.04 kB[22m[1m[22m[2m │ map:    796.05 kB[22m
+2026-11-16T03:17:27.8915050Z [2m../../out/renderer/[22m[2massets/[22m[36marchitectureDiagram-3BPJPVTR-Bipl6qCi.js          [39m[1m[2m   418.99 kB[22m[1m[22m[2m │ map:    602.19 kB[22m
+2026-11-16T03:17:27.8915760Z [2m../../out/renderer/[22m[2massets/[22m[36mmemberWorkspace-BI-oWNd_.js                       [39m[1m[2m   426.55 kB[22m[1m[22m[2m │ map:    743.23 kB[22m
+2026-11-16T03:17:27.8916500Z [2m../../out/renderer/[22m[2massets/[22m[36mChangeReviewDialog--jNK3k3Q.js                    [39m[1m[2m   449.83 kB[22m[1m[22m[2m │ map:    788.11 kB[22m
+2026-11-16T03:17:27.8917100Z [2m../../out/renderer/[22m[2massets/[22m[36mviewerFrame-Bp5vZgyK.js                           [39m[1m[2m   470.74 kB[22m[1m[22m[2m │ map:    882.36 kB[22m
+2026-11-16T03:17:27.8917740Z [2m../../out/renderer/[22m[2massets/[22m[36mkatex-BTNdvpyU.js                                 [39m[1m[2m   484.01 kB[22m[1m[22m[2m │ map:  1,003.22 kB[22m
+2026-11-16T03:17:27.8920640Z [2m../../out/renderer/[22m[2massets/[22m[36mclient-Li3s9VGB.js                                [39m[1m[33m   529.27 kB[39m[22m[2m │ map:    835.90 kB[22m
+2026-11-16T03:17:27.8921320Z [2m../../out/renderer/[22m[2massets/[22m[36mSessionReportTab-CPGQLmYA.js                      [39m[1m[33m   581.89 kB[39m[22m[2m │ map:    216.15 kB[22m
+2026-11-16T03:17:27.8921940Z [2m../../out/renderer/[22m[2massets/[22m[36mhangul.parser-DCQuOGgN.js                         [39m[1m[33m   672.93 kB[39m[22m[2m │ map:  1,169.10 kB[22m
+2026-11-16T03:17:27.8922560Z [2m../../out/renderer/[22m[2massets/[22m[36mTeamDetailView-BKlpE3j1.js                        [39m[1m[33m   763.93 kB[39m[22m[2m │ map:  1,409.72 kB[22m
+2026-11-16T03:17:27.8923210Z [2m../../out/renderer/[22m[2massets/[22m[36museProviderAuthenticationActions-DI4ec7rM.js      [39m[1m[33m   889.91 kB[39m[22m[2m │ map:  1,471.51 kB[22m
+2026-11-16T03:17:27.8923850Z [2m../../out/renderer/[22m[2massets/[22m[36mcytoscape.esm-B21BBmP6.js                         [39m[1m[33m   958.45 kB[39m[22m[2m │ map:  1,866.25 kB[22m
+2026-11-16T03:17:27.8924440Z [2m../../out/renderer/[22m[2massets/[22m[36mparser-DCV3FYjI.js                                [39m[1m[33m 1,071.19 kB[39m[22m[2m │ map:  2,307.82 kB[22m
+2026-11-16T03:17:27.8925020Z [2m../../out/renderer/[22m[2massets/[22m[36mwardley-L42UT6IY-CicmWC1S.js                      [39m[1m[33m 1,209.58 kB[39m[22m[2m │ map:  2,004.11 kB[22m
+2026-11-16T03:17:27.8925590Z [2m../../out/renderer/[22m[2massets/[22m[36mopenui-icons-B9rbVAKY.js                          [39m[1m[33m 1,333.86 kB[39m[22m[2m │ map:  2,052.63 kB[22m
+2026-11-16T03:17:27.8926160Z [2m../../out/renderer/[22m[2massets/[22m[36mpdf-CQRzUwvY.js                                   [39m[1m[33m 1,541.27 kB[39m[22m[2m │ map:  2,662.80 kB[22m
+2026-11-16T03:17:27.8929390Z [2m../../out/renderer/[22m[2massets/[22m[36mTeamGraphTab-BeeRtj_w.js                          [39m[1m[33m 2,064.84 kB[39m[22m[2m │ map:  3,841.24 kB[22m
+2026-11-16T03:17:27.8930010Z [2m../../out/renderer/[22m[2massets/[22m[36mpdf.worker-BR9eSIUN.js                            [39m[1m[33m 2,106.38 kB[39m[22m[2m │ map:  3,767.60 kB[22m
+2026-11-16T03:17:27.8930630Z [2m../../out/renderer/[22m[2massets/[22m[36mvendor-codemirror-DKflSiuX.js                     [39m[1m[33m 2,581.39 kB[39m[22m[2m │ map:  4,555.32 kB[22m
+2026-11-16T03:17:27.8931290Z [2m../../out/renderer/[22m[2massets/[22m[36miwork.parser-xwjAETkh.js                          [39m[1m[33m 5,461.58 kB[39m[22m[2m │ map:  8,507.61 kB[22m
+2026-11-16T03:17:27.8931950Z [2m../../out/renderer/[22m[2massets/[22m[36mmain-CUD9Tf8C.js                                  [39m[1m[33m 9,593.34 kB[39m[22m[2m │ map: 17,589.51 kB[22m
+2026-11-16T03:17:27.8932570Z [2m../../out/renderer/[22m[2massets/[22m[36museTheme-CtjFJL8r.js                              [39m[1m[33m12,760.32 kB[39m[22m[2m │ map:  7,898.61 kB[22m
+2026-11-16T03:17:27.8933560Z [32m✓ built in 28.22s[39m
+2026-11-16T03:17:27.9733900Z [file-viewer:vite-plugin] Copied 18/18 renderer assets to /Users/runner/work/agent-teams-ai/agent-teams-ai/out/renderer/file-viewer
+2026-11-16T03:17:28.4215820Z $ node ./scripts/ci/verify-radix-renderer-bundle.mjs
+2026-11-16T03:17:28.7172360Z ##[group]Run actions/setup-node@v6
+2026-11-16T03:17:28.7172510Z with:
+2026-11-16T03:17:28.7172610Z   node-version: 24.21.0
+2026-11-16T03:17:28.7172710Z   check-latest: false
+2026-11-16T03:17:28.7173870Z   token: ***
+2026-11-16T03:17:28.7173970Z   package-manager-cache: true
+2026-11-16T03:17:28.7174080Z env:
+2026-11-16T03:17:28.7174210Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:17:28.7174390Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:17:28.7174540Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:17:28.7174680Z ##[endgroup]
+2026-11-16T03:17:28.8207870Z Found in cache @ /Users/runner/hostedtoolcache/node/24.21.0/arm64
+2026-11-16T03:17:28.8209620Z ##[group]Environment details
+2026-11-16T03:17:28.9697820Z [warning]This project is configured to use pnpm because /Users/runner/work/agent-teams-ai/agent-teams-ai/package.json has a "packageManager" field
+2026-11-16T03:17:28.9698160Z 
+2026-11-16T03:17:29.0132700Z node: v24.21.0
+2026-11-16T03:17:29.0133230Z npm: 11.19.0
+2026-11-16T03:17:29.0133470Z yarn: 
+2026-11-16T03:17:29.0133750Z ##[endgroup]
+2026-11-16T03:17:29.0296880Z ##[group]Run node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
+2026-11-16T03:17:29.0297190Z [36;1mnode --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts[0m
+2026-11-16T03:17:29.0323380Z shell: /opt/homebrew/bin/bash -e {0}
+2026-11-16T03:17:29.0323550Z env:
+2026-11-16T03:17:29.0323720Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:17:29.0323930Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:17:29.0324100Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:17:29.0324400Z   GH_TOKEN: ***
+2026-11-16T03:17:29.0324590Z   OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: /Users/runner/work/_temp/opencode-v2-packaged-inputs.json
+2026-11-16T03:17:29.0324830Z ##[endgroup]
+2026-11-16T03:17:41.5029630Z ##[group]Run node scripts/ci/prefill-legacy-host-macos-node.mts
+2026-11-16T03:17:41.5029880Z [36;1mnode scripts/ci/prefill-legacy-host-macos-node.mts[0m
+2026-11-16T03:17:41.5046040Z shell: /opt/homebrew/bin/bash -e {0}
+2026-11-16T03:17:41.5046210Z env:
+2026-11-16T03:17:41.5046370Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:17:41.5046570Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:17:41.5046740Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:17:41.5046980Z   OPENCODE_V2_EMBEDDED_BUN: /Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun
+2026-11-16T03:17:41.5049400Z   OPENCODE_V2_EMBEDDED_BUN_SHA256: 0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc
+2026-11-16T03:17:41.5049640Z   OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED: 1
+2026-11-16T03:17:41.5049940Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_DIRECTORY: /Users/runner/work/_temp/TEST-opencode-v2-inputs-M8pirC/process-artifact
+2026-11-16T03:17:41.5050320Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256: afb52333b1f61c01ea563928dfb0fcf1b83f3ce2fed478d01ee559ab2fa431e6
+2026-11-16T03:17:41.5050650Z   OPENCODE_V2_EMBEDDED_GRAPH: /Users/runner/work/_temp/TEST-opencode-v2-inputs-M8pirC/engine
+2026-11-16T03:17:41.5050960Z   OPENCODE_V2_EMBEDDED_MANIFEST_SHA256: a6091937d1c8686b7e1f125b2ef69c52146867b208517eb0fab4cb7ea18c2204
+2026-11-16T03:17:41.5051170Z ##[endgroup]
+2026-11-16T03:17:41.8106410Z {"nodePrefill":"single-download","archive":"node-v24.21.0-darwin-arm64.tar.gz","source":"https://nodejs.org/download/release/v24.21.0/node-v24.21.0-darwin-arm64.tar.gz","transport":"http1.1","status":0,"signal":null,"statistics":"http_version=1.1 http_code=200 size_download=52909993 time_total=0.232843"}
+2026-11-16T03:17:41.8385230Z {"nodePrefill":"verified-download","archive":"node-v24.21.0-darwin-arm64.tar.gz","source":"https://nodejs.org/download/release/v24.21.0/node-v24.21.0-darwin-arm64.tar.gz","sha256":"bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057"}
+2026-11-16T03:17:41.8556260Z ##[group]Run node scripts/legacy-agent-host/stage-opencode-v2-packaged.ts
+2026-11-16T03:17:41.8556550Z [36;1mnode scripts/legacy-agent-host/stage-opencode-v2-packaged.ts[0m
+2026-11-16T03:17:41.8573070Z shell: /opt/homebrew/bin/bash -e {0}
+2026-11-16T03:17:41.8573230Z env:
+2026-11-16T03:17:41.8573390Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:17:41.8573590Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:17:41.8573750Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:17:41.8573990Z   OPENCODE_V2_EMBEDDED_BUN: /Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun
+2026-11-16T03:17:41.8574320Z   OPENCODE_V2_EMBEDDED_BUN_SHA256: 0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc
+2026-11-16T03:17:41.8574560Z   OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED: 1
+2026-11-16T03:17:41.8574870Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_DIRECTORY: /Users/runner/work/_temp/TEST-opencode-v2-inputs-M8pirC/process-artifact
+2026-11-16T03:17:41.8575260Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256: afb52333b1f61c01ea563928dfb0fcf1b83f3ce2fed478d01ee559ab2fa431e6
+2026-11-16T03:17:41.8575590Z   OPENCODE_V2_EMBEDDED_GRAPH: /Users/runner/work/_temp/TEST-opencode-v2-inputs-M8pirC/engine
+2026-11-16T03:17:41.8575890Z   OPENCODE_V2_EMBEDDED_MANIFEST_SHA256: a6091937d1c8686b7e1f125b2ef69c52146867b208517eb0fab4cb7ea18c2204
+2026-11-16T03:17:41.8576110Z ##[endgroup]
+2026-11-16T03:17:52.6029940Z {"kind":"TEST_PACKAGED_OPENCODE_V2_INPUTS","status":"STAGED","sourceHead":"2abcf83fddacbc1efedee83f9c1d203d12ed656e","platform":"darwin-arm64","manifestSha256":"8c23d6827198abe288db7a149b1ae4c6b1a479ca1dbe18353810187ffa757f59","packages":120,"files":8131,"artifacts":[{"name":"@agent-teams/provider-implementations","sha256":"a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"},{"name":"@agent-teams/provider-session-contracts","sha256":"0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"}]}
+2026-11-16T03:17:52.6232460Z ##[group]Run node node_modules/@typescript/native/bin/tsc -p tsconfig.legacy-agent-host-scripts.json
+2026-11-16T03:17:52.6232860Z [36;1mnode node_modules/@typescript/native/bin/tsc -p tsconfig.legacy-agent-host-scripts.json[0m
+2026-11-16T03:17:52.6233320Z [36;1mnode --test scripts/legacy-agent-host/candidate-closure.test.ts scripts/legacy-agent-host/packaged-opencode-v2-inputs.test.ts scripts/legacy-agent-host/stage-node.test.ts[0m
+2026-11-16T03:17:52.6249940Z shell: /opt/homebrew/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T03:17:52.6250160Z env:
+2026-11-16T03:17:52.6252360Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:17:52.6252550Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:17:52.6252710Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:17:52.6252950Z   OPENCODE_V2_EMBEDDED_BUN: /Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun
+2026-11-16T03:17:52.6253300Z   OPENCODE_V2_EMBEDDED_BUN_SHA256: 0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc
+2026-11-16T03:17:52.6253540Z   OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED: 1
+2026-11-16T03:17:52.6253820Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_DIRECTORY: /Users/runner/work/_temp/TEST-opencode-v2-inputs-M8pirC/process-artifact
+2026-11-16T03:17:52.6254210Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256: afb52333b1f61c01ea563928dfb0fcf1b83f3ce2fed478d01ee559ab2fa431e6
+2026-11-16T03:17:52.6254550Z   OPENCODE_V2_EMBEDDED_GRAPH: /Users/runner/work/_temp/TEST-opencode-v2-inputs-M8pirC/engine
+2026-11-16T03:17:52.6254850Z   OPENCODE_V2_EMBEDDED_MANIFEST_SHA256: a6091937d1c8686b7e1f125b2ef69c52146867b208517eb0fab4cb7ea18c2204
+2026-11-16T03:17:52.6255180Z   OPENCODE_V2_PACKAGED_MANIFEST_SHA256: 8c23d6827198abe288db7a149b1ae4c6b1a479ca1dbe18353810187ffa757f59
+2026-11-16T03:17:52.6255530Z   OPENCODE_V2_PACKAGED_HARNESS: /Users/runner/work/_temp/TEST-packaged-v2-host-20b28040-4a80-4f79-b12f-44eed399ccb8.mjs
+2026-11-16T03:17:52.6255790Z ##[endgroup]
+2026-11-16T03:17:53.0313100Z ##[error]scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts(1760,82): error TS2378: A 'get' accessor must return a value.
+2026-11-16T03:17:53.0343340Z ##[error]Process completed with exit code 1.
+2026-11-16T03:17:53.0837440Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-11-16T03:17:53.0837660Z with:
+2026-11-16T03:17:53.0837850Z   name: packaged-v2-host-darwin-arm64-2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:17:53.0838070Z   retention-days: 7
+2026-11-16T03:17:53.0838180Z   if-no-files-found: warn
+2026-11-16T03:17:53.0840010Z   path: /Users/runner/work/_temp/opencode-v2-packaged-inputs.json
+/Users/runner/work/_temp/opencode-v2-packaged.json
+/Users/runner/work/_temp/opencode-v2-packaged-native.json
+/Users/runner/work/agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json
+/Users/runner/work/_temp/windows-same-main-process-ui.json
+/Users/runner/work/_temp/windows-same-main-process-ui.app.log
+/Users/runner/work/_temp/windows-same-main-process-ui.controller.log
+/Users/runner/work/_temp/windows-same-main-process-ui.*.png
+/Users/runner/work/_temp/packaged-app-relaunch.json
+/Users/runner/work/_temp/packaged-app-relaunch.app.log
+/Users/runner/work/_temp/TEST-desktop-backend-*/ui-emulated-lifecycle-launch.png
+/Users/runner/work/_temp/TEST-desktop-backend-*/ui-emulated-lifecycle-stopped.png
+/Users/runner/work/_temp/TEST-desktop-backend-*/ui-automatic-app-relaunch-successor.png
+/Users/runner/work/_temp/TEST-desktop-backend-*/ui-packaged-relaunch-failure.png
+
+2026-11-16T03:17:53.0841650Z   compression-level: 6
+2026-11-16T03:17:53.0841750Z   overwrite: false
+2026-11-16T03:17:53.0841850Z   include-hidden-files: false
+2026-11-16T03:17:53.0841960Z env:
+2026-11-16T03:17:53.0842090Z   OPENCODE_V2_TEST_SOURCE_HEAD: 2abcf83fddacbc1efedee83f9c1d203d12ed656e
+2026-11-16T03:17:53.0842280Z   OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+2026-11-16T03:17:53.0842430Z   PNPM_HOME: /Users/runner/setup-pnpm/node_modules/.bin
+2026-11-16T03:17:53.0842660Z   OPENCODE_V2_EMBEDDED_BUN: /Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun
+2026-11-16T03:17:53.0842970Z   OPENCODE_V2_EMBEDDED_BUN_SHA256: 0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc
+2026-11-16T03:17:53.0843200Z   OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED: 1
+2026-11-16T03:17:53.0843460Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_DIRECTORY: /Users/runner/work/_temp/TEST-opencode-v2-inputs-M8pirC/process-artifact
+2026-11-16T03:17:53.0843830Z   OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256: afb52333b1f61c01ea563928dfb0fcf1b83f3ce2fed478d01ee559ab2fa431e6
+2026-11-16T03:17:53.0845730Z   OPENCODE_V2_EMBEDDED_GRAPH: /Users/runner/work/_temp/TEST-opencode-v2-inputs-M8pirC/engine
+2026-11-16T03:17:53.0846040Z   OPENCODE_V2_EMBEDDED_MANIFEST_SHA256: a6091937d1c8686b7e1f125b2ef69c52146867b208517eb0fab4cb7ea18c2204
+2026-11-16T03:17:53.0846350Z   OPENCODE_V2_PACKAGED_MANIFEST_SHA256: 8c23d6827198abe288db7a149b1ae4c6b1a479ca1dbe18353810187ffa757f59
+2026-11-16T03:17:53.0846700Z   OPENCODE_V2_PACKAGED_HARNESS: /Users/runner/work/_temp/TEST-packaged-v2-host-20b28040-4a80-4f79-b12f-44eed399ccb8.mjs
+2026-11-16T03:17:53.0846940Z ##[endgroup]
+2026-11-16T03:17:53.1650010Z (node:6525) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T03:17:53.1650430Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T03:17:53.1675780Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-11-16T03:17:53.1676460Z The least common ancestor is /Users/runner/work. This will be the root directory of the artifact
+2026-11-16T03:17:53.1676790Z With the provided path, there will be 2 files uploaded
+2026-11-16T03:17:53.1678300Z Artifact name is valid!
+2026-11-16T03:17:53.1678500Z Root directory input is valid!
+2026-11-16T03:17:53.3634360Z Beginning upload of artifact content to blob storage
+2026-11-16T03:17:53.3837220Z (node:6525) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-16T03:17:53.4511000Z Uploaded bytes 345083
+2026-11-16T03:17:53.4702480Z Finished uploading artifact content to blob storage!
+2026-11-16T03:17:53.4703080Z SHA256 digest of uploaded artifact zip is cefe5200a68e7cb8fb2417f7ed68e73ded1bdcaac2f12aca8ccebde4e341a917
+2026-11-16T03:17:53.4703370Z Finalizing artifact upload
+2026-11-16T03:17:53.7938880Z Artifact packaged-v2-host-darwin-arm64-2abcf83fddacbc1efedee83f9c1d203d12ed656e.zip successfully finalized. Artifact ID 14194563875
+2026-11-16T03:17:53.7941780Z Artifact packaged-v2-host-darwin-arm64-2abcf83fddacbc1efedee83f9c1d203d12ed656e has been successfully uploaded! Final size is 345083 bytes. Artifact ID is 14194563875
+2026-11-16T03:17:53.7952320Z Artifact download URL: https://github.com/777genius/agent-teams-ai/actions/runs/43790825796/artifacts/14194563875
+2026-11-16T03:17:53.8881980Z Post job cleanup.
+2026-11-16T03:17:53.9646540Z Pruning is unnecessary.
+2026-11-16T03:17:53.9944070Z Post job cleanup.
+2026-11-16T03:17:54.0463330Z [command]/opt/homebrew/bin/git version
+2026-11-16T03:17:54.0496760Z git version 2.53.0
+2026-11-16T03:17:54.0508570Z Copying '/Users/runner/.gitconfig' to '/Users/runner/work/_temp/1dfbd498-0238-4fdd-8995-048482905941/.gitconfig'
+2026-11-16T03:17:54.0512770Z Temporarily overriding HOME='/Users/runner/work/_temp/1dfbd498-0238-4fdd-8995-048482905941' before making global git config changes
+2026-11-16T03:17:54.0513220Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T03:17:54.0515470Z [command]/opt/homebrew/bin/git config --global --add safe.directory /Users/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T03:17:54.0548000Z Removing SSH command configuration
+2026-11-16T03:17:54.0551130Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T03:17:54.0581050Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T03:17:54.0956540Z Removing HTTP extra header
+2026-11-16T03:17:54.0959410Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T03:17:54.0989720Z [command]/opt/homebrew/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T03:17:54.1336510Z Removing includeIf entries pointing to credentials config files
+2026-11-16T03:17:54.1339640Z [command]/opt/homebrew/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T03:17:54.1366890Z [command]/opt/homebrew/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T03:17:54.1832980Z Cleaning up orphan processes
+2026-11-16T03:17:54.4933240Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "kind": "original-pr1211-packaged-first-compiler-failure",
+  "runId": 43790825796,
+  "attempt": 1,
+  "event": "pull_request",
+  "originalHead": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "originalTree": "0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103",
+  "jobId": 133068178223,
+  "tuple": "darwin-arm64",
+  "startedAt": "2026-11-16T03:15:47Z",
+  "completedAt": "2026-11-16T03:17:56Z",
+  "conclusion": "failure",
+  "firstFailure": {
+    "step": 25,
+    "name": "Typecheck and test packaged Host capture boundaries",
+    "at": "2026-11-16T03:17:53.031310Z",
+    "command": "node node_modules/@typescript/native/bin/tsc -p tsconfig.legacy-agent-host-scripts.json",
+    "exit": 1,
+    "code": "TS2378",
+    "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "line": 1760,
+    "column": 82,
+    "message": "A 'get' accessor must return a value.",
+    "frozenBlob": "a78bfc7d0d656cd2a785aeb0a9bdd59a7262769e",
+    "currentManagementBlob": "44cf93706a5b92be4296119810c7c07264cb4ccd",
+    "sameLineInBoth": true,
+    "exactOriginalLine": "  pane.activeTabId = 'tab-A'; pane.tabs = [{ id: 'tab-A', type: 'dashboard', get teamName() { assert.fail('non-Team metadata is not read'); } }];"
+  },
+  "prior": {
+    "appBuildStep20": "success",
+    "candidateStagingStep24": "success",
+    "actualC79ImplementationSha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+    "actualSpiSha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+  },
+  "notReached": "The later Node command in step25, unsigned packaging step27, packaged smoke/native/GUI/relaunch qualifications are not reached; API marks subsequent steps skipped.",
+  "classifier": {
+    "jobId": 133048604865,
+    "conclusion": "success",
+    "headAssociation": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "actualDefaultMergeCheckout": "441e76ffe1cc5e288645877e15b312caf7b8c109",
+    "scope": "full",
+    "run": true,
+    "reason": "change outside app-only allowlist",
+    "checkoutQualification": "Original classifier uses refs/pull/1211/merge; platform job separately explicitly checks out exact 2ab head."
+  },
+  "artifact": {
+    "id": 14194563875,
+    "name": "packaged-v2-host-darwin-arm64-2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+    "size_in_bytes": 345083,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14194563875",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14194563875/zip",
+    "expired": false,
+    "created_at": "2026-11-16T03:17:53Z",
+    "expires_at": "2026-11-23T03:17:53Z",
+    "updated_at": "2026-11-16T03:17:53Z",
+    "digest": "sha256:cefe5200a68e7cb8fb2417f7ed68e73ded1bdcaac2f12aca8ccebde4e341a917",
+    "workflow_run": {
+      "id": 43790825796,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "ci/frontend-parity-logs-native-green-c714-20261116",
+      "head_sha": "2abcf83fddacbc1efedee83f9c1d203d12ed656e"
+    }
+  },
+  "files": [
+    {
+      "path": "packaged-darwin-arm64-full.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "371606d4fcfa2645220bed83a07dcdb75d017f38",
+      "sha256": "a429a97ec77d5387f562c927a209d593ccc6f701cfff60c28ab98a1178b3c6df",
+      "bytes": 116006
+    },
+    {
+      "path": "packaged-classifier-full.log",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4f2febfefe005bd2f20e61cd5af3bf0e86c013bb",
+      "sha256": "492c30ebb6c50fbb41ed9085c8876b096d55bb86fc2d71d1307f9e917d86c6be",
+      "bytes": 119556
+    },
+    {
+      "path": "packaged-run-api.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a501a3aa3ab5a43d3e1f44e9d9f0bd92eb63ddd1",
+      "sha256": "316b402db1c7f2382a3b267d254d2c261564489d43bfdd70ea2fa997b250af3d",
+      "bytes": 13826
+    },
+    {
+      "path": "packaged-jobs-api.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "566621ee41ad1366ffbc2474c293752ca90cfe07",
+      "sha256": "16ba1f98604ba3b1d91d670afb87cf6263c4163de02942a776f8332f10986750",
+      "bytes": 35399
+    },
+    {
+      "path": "packaged-artifacts-api.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "12b2c7eaeff09a94f1febedcd4b4a4a9fd1fa65e",
+      "sha256": "5b543d8dff12eede81e0f5565289a79c2bed5be787e56ebe2db9ab005723381a",
+      "bytes": 927
+    }
+  ],
+  "limits": "Original run43790825796 only; edited-metadata run43792074232 is not substituted. Full raw/API/upload join, not a child ZIP read. This is a TEST source/type failure, not infrastructure/P09/15-second/native/UI cause. Prior Node runtime49/53 success remains distinct from this original whole compiler failure. No source/test object, compiler retry, rerun, cancellation or runtime action by this child."
+}
