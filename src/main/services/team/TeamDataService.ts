@@ -921,6 +921,7 @@ export class TeamDataService {
         }
         if (event.type === 'review_approved' ||
           event.type === 'review_completed' ||
+          event.type === 'human_approved' ||
           event.type === 'review_changes_requested') {
           break;
         }

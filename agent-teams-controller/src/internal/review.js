@@ -68,6 +68,7 @@ function getLatestReviewRequestedReviewer(task) {
       e.type === 'review_changes_requested' ||
       e.type === 'review_approved' ||
       e.type === 'review_completed' ||
+      e.type === 'human_approved' ||
       (e.type === 'status_changed' &&
         (e.to === 'in_progress' || e.to === 'pending' || e.to === 'deleted')) ||
       e.type === 'task_created'
@@ -210,6 +211,7 @@ function getLatestReviewStartedActor(task) {
       e.type === 'review_changes_requested' ||
       e.type === 'review_approved' ||
       e.type === 'review_completed' ||
+      e.type === 'human_approved' ||
       (e.type === 'status_changed' &&
         (e.to === 'in_progress' || e.to === 'pending' || e.to === 'deleted')) ||
       e.type === 'task_created'
@@ -273,6 +275,7 @@ function getLatestReviewLifecycleEvent(task) {
       e.type === 'review_changes_requested' ||
       e.type === 'review_approved' ||
       e.type === 'review_completed' ||
+      e.type === 'human_approved' ||
       e.type === 'review_started'
     ) {
       return e;
@@ -470,10 +473,10 @@ function requestReview(context, taskId, flags = {}) {
             `FIRST call review_start to signal you are beginning the review:\n` +
             `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>" }\n\n` +
             (humanOnlyApproval
-              ? `When review is complete, use MCP tool review_complete (not review_approve):\\n` +
-                `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", expectedReviewRequestId: "${reviewRequestId}", note?: "<optional note>" }\\n\\n`
-              : `When approved, use MCP tool review_approve:\\n` +
-                `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", note?: "<optional note>", notifyOwner: true }\\n\\n`) +
+              ? `When review is complete, use MCP tool review_complete (not review_approve):\n` +
+                `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", expectedReviewRequestId: "${reviewRequestId}", note?: "<optional note>" }\n\n`
+              : `When approved, use MCP tool review_approve:\n` +
+                `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", note?: "<optional note>", notifyOwner: true }\n\n`) +
             `If changes are needed, use MCP tool review_request_changes:\n` +
             `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", comment: "..." }`
         ),
@@ -496,6 +499,9 @@ function completeReview(context, taskId, flags = {}) {
     const expectedId = typeof flags.expectedReviewRequestId === 'string'
       ? flags.expectedReviewRequestId.trim() : '';
     if (!expectedId) throw new Error('review_complete requires expectedReviewRequestId');
+    if (kanban.getKanbanState(context).humanOnlyApproval !== true) {
+      throw new Error('review_complete requires human-only approval policy');
+    }
     const request = getLatestReviewRequestEvent(task);
     if (!request || request.id !== expectedId) {
       throw new Error(`Stale review request for task #${task.displayId || task.id}; review_complete rejected`);

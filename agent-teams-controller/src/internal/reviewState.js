@@ -5,6 +5,7 @@ const REVIEW_LIFECYCLE_EVENTS = new Set([
   'review_changes_requested',
   'review_approved',
   'review_completed',
+  'human_approved',
   'review_started',
 ]);
 const REVIEW_RESET_STATUSES = new Set(['in_progress', 'deleted']);
