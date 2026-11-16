@@ -9,6 +9,7 @@ const afterPackModule = require('../../../scripts/electron-builder/afterPack.cjs
 
 const {
   OPENCODE_CONSOLE_WRAPPER_PATH,
+  TEAMMATE_CONSOLE_WRAPPER_PATH,
   detectBinaryMetadata,
   isKnownAllowedNativeMismatch,
   parseElf,
@@ -1051,10 +1052,15 @@ describe('electron-builder afterPack', () => {
       const tempDir = createTempDir();
       tempDirs.push(tempDir);
 
-      writeFile(
-        path.join(tempDir, ...OPENCODE_CONSOLE_WRAPPER_PATH.split('/')),
-        createPortableExecutableBuffer('ia32')
-      );
+      for (const wrapperPath of [
+        OPENCODE_CONSOLE_WRAPPER_PATH,
+        TEAMMATE_CONSOLE_WRAPPER_PATH,
+      ]) {
+        writeFile(
+          path.join(tempDir, ...wrapperPath.split('/')),
+          createPortableExecutableBuffer('ia32')
+        );
+      }
       writeFile(
         path.join(tempDir, 'resources', 'runtime', 'claude-multimodel.exe'),
         createPortableExecutableBuffer(targetArch)
@@ -1074,7 +1080,23 @@ describe('electron-builder afterPack', () => {
         'win32'
       )
     ).toBe(true);
+    expect(
+      isKnownAllowedNativeMismatch(
+        TEAMMATE_CONSOLE_WRAPPER_PATH.split('/').join(path.sep),
+        'pe',
+        ia32,
+        'win32'
+      )
+    ).toBe(true);
     // The same managed binary anywhere else in the bundle is still a mismatch.
+    expect(
+      isKnownAllowedNativeMismatch(
+        path.join('resources', 'runtime', 'teammate.exe'),
+        'pe',
+        ia32,
+        'win32'
+      )
+    ).toBe(false);
     expect(
       isKnownAllowedNativeMismatch(
         path.join('resources', 'runtime', 'opencode.exe'),

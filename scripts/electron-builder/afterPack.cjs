@@ -410,6 +410,7 @@ async function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPla
 // every Windows architecture and reads back as ia32 here. verifyBundle.cjs
 // inherits this allowance through validateNativeBinaries.
 const OPENCODE_CONSOLE_WRAPPER_PATH = 'resources/runtime/opencode-console/opencode.exe';
+const TEAMMATE_CONSOLE_WRAPPER_PATH = 'resources/runtime/teammate-console/teammate.exe';
 
 function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatform, clrManaged = false, targetArch = null) {
   const normalizedPath = relativePath.split(path.sep).join('/');
@@ -434,6 +435,7 @@ function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatfor
     normalizedPath === ssh2PageantPath ||
     normalizedPath.endsWith(`/${ssh2PageantPath}`) ||
     normalizedPath === OPENCODE_CONSOLE_WRAPPER_PATH ||
+    normalizedPath === TEAMMATE_CONSOLE_WRAPPER_PATH ||
     // Git for Windows contains this one 32-bit MSYS helper even in 64-bit archives.
     normalizedPath === 'resources/git/usr/libexec/getprocaddr32.exe';
 
@@ -779,6 +781,7 @@ async function afterPack(context) {
 module.exports = afterPack;
 module.exports._internal = {
   OPENCODE_CONSOLE_WRAPPER_PATH,
+  TEAMMATE_CONSOLE_WRAPPER_PATH,
   detectBinaryMetadata,
   getArchLabel,
   getKnownPrunableNativeArtifactRoot,
