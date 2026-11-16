@@ -1,0 +1,158 @@
+{
+  "kind": "settings-load-view-observation-evidence-index",
+  "parent": "81fdadcc5c55a7d3a5862e7c710a4ae6f2b76e0b",
+  "parentTree": "17487b9eb967cc312bbfb9ebbee3210dfab72124",
+  "sourceFiles": [
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "before": {
+        "size": 74351,
+        "sha": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575"
+      },
+      "after": {
+        "size": 72914,
+        "sha": "48a951b2ddec9970fcaa1efa64be061e8e00b3d2",
+        "sha256": "346f753b0bf13234c21299631fca1c1cf15a3373ab1d62c59d058acc363237d2"
+      },
+      "lines": 2026
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderViewRefresh.ts",
+      "before": null,
+      "after": {
+        "size": 5784,
+        "sha": "ae36029a51a805c1a1a45e17fd08fa3874d8c85e",
+        "sha256": "7d8e0908290b88c0f0ee1a331d590680f32d9e810d075e09b54162b148eadab0"
+      },
+      "lines": 174
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "before": {
+        "size": 27829,
+        "sha": "9aa43a43d6186c62bc92dae60dab4fe57cc63fe6",
+        "sha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf"
+      },
+      "after": {
+        "size": 30843,
+        "sha": "602c2fe5d57cc67a8b18fe0c193b61e58293f508",
+        "sha256": "0bc2e2d5b3d36cc6e59dd1b91a2caf8c6ef8397719aca85bf4aa27321657509e"
+      },
+      "lines": 523
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "before": {
+        "size": 20996,
+        "sha": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+        "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b"
+      },
+      "after": {
+        "size": 21087,
+        "sha": "1bc8ea60755485af8f347f5b76b0556d675c4555",
+        "sha256": "4e5bbe2b1f78c41fb78724b6a1c833b33cb51274315ea6c73877086a027ae4c5"
+      },
+      "lines": 324
+    },
+    {
+      "path": "scripts/ci/source-file-size-baseline.json",
+      "before": {
+        "size": 9635,
+        "sha": "e827bccf455235b1ff7871e7b93450cdaa53eb54",
+        "sha256": "82080bdf23e0fae3ea087e8aea8c3622fa63a734fa9874e7d07e9d568087f072"
+      },
+      "after": {
+        "size": 9635,
+        "sha": "8f5deeed4e406894e1ee587ed541014bcb7dde77",
+        "sha256": "8e4e373812efb4556e6261353fe9c8808fc93e6393f095fd00476a11fb5a6cae"
+      },
+      "lines": 146
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "before": {
+        "size": 180091,
+        "sha": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+      },
+      "after": {
+        "size": 189367,
+        "sha": "7342e99150860ac599c3614973334509329ae9b8",
+        "sha256": "0a9b5850918d7c60c2fc9d2521b9b3254619b007ce95926c4edf42b348b8612b"
+      },
+      "lines": 5887
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "before": {
+        "size": 115936,
+        "sha": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+        "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076"
+      },
+      "after": {
+        "size": 123190,
+        "sha": "5ea26752689cbf9ef4307816ad7c739eb1dd5f4c",
+        "sha256": "9f51a90556cc9d96da3dcd9c7c271d9a97e6d693c0094181d279e9a80310c2c3"
+      },
+      "lines": 2085
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "before": {
+        "size": 101741,
+        "sha": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+      },
+      "after": {
+        "size": 101806,
+        "sha": "d53a2fda2f60c12526b0457cf7d25858f43dd8f2",
+        "sha256": "f01f6c588e2e5172f4b2c56f966cafe50acbf8459c86c8469109da6c9b5cf912"
+      },
+      "lines": 1313
+    }
+  ],
+  "documents": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "before": "db2acab0402968ef4be661beb0888fdd5d8ccde3",
+      "after": {
+        "size": 1944380,
+        "sha": "8d00e7cde59d8e4d42483067426e5b84914b4b01",
+        "sha256": "5e92db827a14b27c653683f602e2b48f30e1121442a0c50d5d2152e57202357c"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/settings-load-view-observation-2026-11-16/r1.md",
+      "before": null,
+      "after": {
+        "size": 10705,
+        "sha": "7c6a4a52d42c10e678fc3fc8b98ee4dd0e86db33",
+        "sha256": "e2ab33779862fdbd71cfa078cc4ee8b4a1d87697b9ff6dcb5ad9087fc7b4f5ea"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/settings-load-view-observation-2026-11-16/source.patch",
+      "before": null,
+      "after": {
+        "size": 38163,
+        "sha": "95e061ee520d3a56f64281a3f1d32ca71c5eac51",
+        "sha256": "afa1e962f4953a417d305d0683ff6a02f7f2c6a96ffd02e737fb53f374803d4a"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/settings-load-view-observation-2026-11-16/source-review.json",
+      "before": null,
+      "after": {
+        "size": 3720,
+        "sha": "ddcb5026a1f27f91ff8f2366fb557fa0d95d5eb7",
+        "sha256": "e280075e4a6b50f867fe2b3f12a25f615f2d5e2d460504c2bd42fbb37c7f637f"
+      }
+    }
+  ],
+  "selfReference": "This index does not hash itself; its exact identity and complete documentation/source trees are independently bound before publication.",
+  "proofScope": "Diagnostic-only original first Models request; no cause/repair/React-commit/native qualification claim.",
+  "execution": "NOT_RUN: existing automatic original CI only; source/data review is not test or runtime GREEN.",
+  "publication": "Documentation-only child then separately bound eight-source child; ordinary expected-parent immediate pushes, no force.",
+  "sequencing": "Primary integration waits for actual original B full GREEN/downstream/R2 and useful-job guard; C separately bound, existing Settings runner/verifier before P11 journey in same lane."
+}
