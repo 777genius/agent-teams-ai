@@ -2687,3 +2687,207 @@ test('finite V2 terminal completion retains original finally precedence and refu
   assert.equal(complete({ evidence: { status: 'PASS' }, finiteMembership: true }), 1);
   assert.equal(complete({ evidence: { status: 'INCOMPLETE' }, finiteMembership: false }), 1);
 });
+
+type NestedScrollNode = {
+  name: string; rect: [number, number, number, number]; parentElement: NestedScrollNode | null;
+  scrollHeight: number; readonly clientHeight: number; scrollTop: number;
+  overflowX: string; overflowY: string; textContent: string;
+  getBoundingClientRect(): { x: number; y: number; left: number; right: number;
+    top: number; bottom: number; width: number; height: number };
+  contains(node: NestedScrollNode | null): boolean;
+};
+function nestedScrollNode(name: string, rect: NestedScrollNode['rect'],
+  parentElement: NestedScrollNode | null = null, scrolling = false): NestedScrollNode {
+  return { name, rect, parentElement, scrollHeight: scrolling ? 2000 : rect[3],
+    get clientHeight() { return this.rect[3]; }, scrollTop: 100,
+    overflowX: 'visible', overflowY: scrolling ? 'auto' : 'visible', textContent: '',
+    getBoundingClientRect() {
+      const [x, y, width, height] = this.rect;
+      return { x, y, left: x, right: x + width, top: y, bottom: y + height, width, height };
+    },
+    contains(node) {
+      for (; node; node = node.parentElement) if (node === this) return true;
+      return false;
+    } };
+}
+function nestedScrollFixture() {
+  const selector = '#TEST-nested-model', text = 'TEST-model', label = 'TEST original nested model';
+  const root = nestedScrollNode('root', [0, 0, 1000, 700]);
+  const outer = nestedScrollNode('outer', [0, 50, 900, 600], root, true);
+  const inner = nestedScrollNode('inner', [80, 800, 700, 300], outer, true);
+  const target = nestedScrollNode('target', [100, 1200, 600, 40], inner);
+  target.textContent = ` ${text} `;
+  const state = { rows: [target], hit: outer as NestedScrollNode | null,
+    guardError: undefined as Error | undefined, afterRead() {},
+    onWheel: (() => {}) as (params: Record<string, unknown>) => void };
+  const expressions: string[] = [], selectors: string[] = [], trace: string[] = [];
+  const values: unknown[] = [], commands: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [];
+  const hits: { x: number; y: number; node: string | null }[] = [];
+  const ui = createDesktopUiControls({
+    async evaluate(expression: string) {
+      trace.push('read'); expressions.push(expression);
+      const value = runInNewContext(expression, {
+        innerWidth: 1000, innerHeight: 700,
+        getComputedStyle: (node: NestedScrollNode) => ({ overflowX: node.overflowX, overflowY: node.overflowY }),
+        document: { documentElement: root,
+          querySelectorAll(actual: string) { selectors.push(actual); return state.rows; },
+          elementFromPoint(x: number, y: number) { hits.push({ x, y, node: state.hit?.name ?? null }); return state.hit; } },
+      }) as Record<string, unknown> | null;
+      values.push(value === null ? null : { ...value }); state.afterRead(); return value;
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      assert.equal(method, 'Input.dispatchMouseEvent'); assert.equal(params.type, 'mouseWheel');
+      commands.push({ method, ...params }); trace.push('wheel'); state.onWheel(params); return {};
+    },
+  }, { assertOwnedRenderer() { trace.push('guard'); if (state.guardError) throw state.guardError; },
+    step(value) { steps.push(value); } });
+  return { selector, text, label, root, outer, inner, target, state, expressions, selectors, trace,
+    values, commands, steps, hits, ui };
+}
+
+test('original visible inner scroll keeps its no-hit path with one fresh guard before its only read', async () => {
+  const f = nestedScrollFixture(); f.inner.rect[1] = 200; f.target.rect[1] = 330; f.state.hit = null;
+  await f.ui.scrollTo(f.selector, f.label, f.text);
+  assert.deepEqual(f.trace, ['guard', 'read']); assert.deepEqual(f.selectors, [f.selector]);
+  assert.deepEqual(f.hits, []); assert.deepEqual(f.commands, []); assert.deepEqual(f.steps, []);
+  assert.deepEqual(f.values, [{ visible: true, x: 430, y: 350, delta: 0 }]);
+});
+
+for (const direction of ['below', 'above'] as const) {
+  test(`original nested scroll exposes the ${direction} inner port before scrolling its target`, { timeout: 5000 }, async () => {
+    const f = nestedScrollFixture();
+    if (direction === 'above') {
+      f.inner.rect[1] = -400; f.target.rect[1] = 600; f.outer.scrollTop = 1000;
+      f.state.hit = nestedScrollNode('outer-content', [400, 320, 100, 60], f.outer);
+    }
+    f.state.onWheel = ({ deltaY }) => {
+      assert.equal(typeof deltaY, 'number');
+      if (f.commands.length === 1) {
+        f.outer.scrollTop += deltaY as number; f.inner.rect[1] -= deltaY as number;
+      } else f.inner.scrollTop += deltaY as number;
+      f.target.rect[1] -= deltaY as number;
+    };
+    await f.ui.scrollTo(f.selector, f.label, f.text, 3);
+    const deltas = direction === 'above' ? [-600, 600, 270] : [600, 270];
+    assert.deepEqual(f.commands, deltas.map((deltaY, index) => ({ method: 'Input.dispatchMouseEvent',
+      type: 'mouseWheel', x: index === 0 ? 450 : 430, y: 350, deltaX: 0, deltaY })));
+    assert.deepEqual(f.hits, [{ x: 450, y: 350, node: direction === 'above' ? 'outer-content' : 'outer' }],
+      'only the new outer path hit-tests; a self-hit and a non-scrolling descendant both resolve to the original owner');
+    assert.deepEqual(f.values.map(value => (value as { visible: boolean }).visible), [...deltas.map(() => false), true]);
+    assert.deepEqual(f.trace, [...deltas.flatMap(() => ['guard', 'read', 'wheel']), 'guard', 'read']);
+    assert.deepEqual(f.selectors, Array.from({ length: deltas.length + 1 }, () => f.selector));
+    assert.ok(f.expressions.every(expression => expression === f.expressions[0]));
+    assert.deepEqual(f.steps, deltas.map(deltaY => ({ action: 'mouseWheel', label: f.label, selector: f.selector, deltaY })));
+    assert.equal(f.target.rect[1], 330); assert.equal(f.inner.rect[1], 200);
+  });
+}
+
+test('nested scrolling exposes each intervening offscreen scrollport in order with the original wheel loop', { timeout: 5000 }, async () => {
+  const f = nestedScrollFixture(), middle = nestedScrollNode('middle', [40, 700, 820, 300], f.outer, true);
+  f.inner.parentElement = middle; f.inner.rect = [80, 1400, 700, 100]; f.target.rect[1] = 1500;
+  f.state.onWheel = ({ deltaY }) => {
+    assert.equal(typeof deltaY, 'number');
+    if (f.commands.length === 1) {
+      f.outer.scrollTop += deltaY as number; middle.rect[1] -= deltaY as number;
+      f.inner.rect[1] -= deltaY as number; f.state.hit = middle;
+    } else if (f.commands.length === 2) {
+      middle.scrollTop += deltaY as number; f.inner.rect[1] -= deltaY as number;
+    } else f.inner.scrollTop += deltaY as number;
+    f.target.rect[1] -= deltaY as number;
+  };
+  await f.ui.scrollTo(f.selector, f.label, f.text, 3);
+  assert.deepEqual(f.commands, [500, 600, 70].map((deltaY, index) => ({ method: 'Input.dispatchMouseEvent',
+    type: 'mouseWheel', x: index === 2 ? 430 : 450, y: 350, deltaX: 0, deltaY })),
+    'the first 500px aims at the middle scrollport; aiming at inner content would clamp to 600px');
+  assert.deepEqual(f.hits, [{ x: 450, y: 350, node: 'outer' }, { x: 450, y: 350, node: 'middle' }]);
+  assert.deepEqual(f.trace, ['guard', 'read', 'wheel', 'guard', 'read', 'wheel', 'guard', 'read', 'wheel', 'guard', 'read']);
+  assert.deepEqual(f.values.map(value => (value as { visible: boolean }).visible), [false, false, false, true]);
+  assert.deepEqual([middle.rect[1], f.inner.rect[1], f.target.rect[1]], [200, 300, 330]);
+});
+
+test('the outer wheel uses the intersection of every original clipping ancestor on both axes', { timeout: 5000 }, async () => {
+  const f = nestedScrollFixture();
+  const far = nestedScrollNode('far-clip', [200, 100, 600, 400], f.root);
+  const near = nestedScrollNode('near-clip', [100, 150, 800, 500], far);
+  far.overflowX = 'hidden'; far.overflowY = 'clip'; near.overflowX = 'auto'; near.overflowY = 'hidden';
+  f.outer.parentElement = near;
+  f.state.onWheel = ({ deltaY }) => {
+    assert.equal(typeof deltaY, 'number');
+    if (f.commands.length === 1) { f.outer.scrollTop += deltaY as number; f.inner.rect[1] -= deltaY as number; }
+    else f.inner.scrollTop += deltaY as number;
+    f.target.rect[1] -= deltaY as number;
+  };
+  await f.ui.scrollTo(f.selector, f.label, f.text, 2);
+  assert.deepEqual(f.hits, [{ x: 500, y: 325, node: 'outer' }]);
+  assert.deepEqual(f.commands, [
+    { method: 'Input.dispatchMouseEvent', type: 'mouseWheel', x: 500, y: 325, deltaX: 0, deltaY: 600 },
+    { method: 'Input.dispatchMouseEvent', type: 'mouseWheel', x: 430, y: 350, deltaX: 0, deltaY: 270 },
+  ]);
+  assert.deepEqual(f.values.map(value => (value as { visible: boolean }).visible), [false, false, true]);
+});
+
+test('nested scrolling refuses missing targets, immutable clipping and foreign or exhausted wheel owners', { timeout: 5000 }, async t => {
+  for (const variant of ['missing', 'duplicate', 'wrong-text', 'zero-size', 'no-outer', 'inner-clipped',
+    'outer-clipped', 'horizontal-exclusion', 'overlay', 'nested-owner', 'no-hit', 'boundary'] as const) {
+    await t.test(variant, async context => {
+      context.mock.timers.enable({ apis: ['Date'], now: 1000 });
+      const f = nestedScrollFixture();
+      if (variant === 'missing') f.state.rows = [];
+      if (variant === 'duplicate') f.state.rows = [f.target, f.target];
+      if (variant === 'wrong-text') f.target.textContent = 'not the selected TEST model';
+      if (variant === 'zero-size') f.target.rect[2] = 0;
+      if (variant === 'no-outer') f.inner.parentElement = f.root;
+      if (variant === 'inner-clipped') {
+        const clip = nestedScrollNode('fixed-inner-clip', [80, 100, 700, 300], f.outer);
+        clip.overflowY = 'hidden'; f.inner.parentElement = clip;
+      }
+      if (variant === 'outer-clipped') {
+        const clip = nestedScrollNode('fixed-outer-clip', [0, -300, 900, 200], f.root);
+        clip.overflowY = 'hidden'; f.outer.parentElement = clip;
+      }
+      if (variant === 'horizontal-exclusion') { f.inner.rect[0] = 1100; f.target.rect[0] = 1120; }
+      if (variant === 'overlay') f.state.hit = nestedScrollNode('foreign-overlay', [0, 50, 900, 600], f.root);
+      if (variant === 'nested-owner') f.state.hit = nestedScrollNode('foreign-scroll-owner', [400, 300, 100, 100], f.outer, true);
+      if (variant === 'no-hit') f.state.hit = null;
+      if (variant === 'boundary') f.outer.scrollTop = f.outer.scrollHeight - f.outer.clientHeight;
+      f.state.afterRead = () => context.mock.timers.setTime(31_001);
+      try {
+        await assert.rejects(f.ui.scrollTo(f.selector, f.label, f.text), {
+          message: `UI read timed out: ${f.label}; no mutation retry`,
+        });
+        assert.deepEqual(f.values, [null]); assert.deepEqual(f.trace, ['guard', 'read']);
+        assert.deepEqual(f.selectors, [f.selector]); assert.deepEqual(f.commands, []); assert.deepEqual(f.steps, []);
+        assert.equal(f.hits.length, ['overlay', 'nested-owner', 'no-hit', 'boundary'].includes(variant) ? 1 : 0,
+          'no alternate hit point or input probes after the original read refuses');
+      } finally { context.mock.timers.reset(); }
+    });
+  }
+});
+
+test('nested progress keeps the final read but cannot exceed the original explicit wheel budget', { timeout: 5000 }, async () => {
+  const f = nestedScrollFixture();
+  f.state.onWheel = ({ deltaY }) => {
+    assert.equal(typeof deltaY, 'number'); f.outer.scrollTop += deltaY as number;
+    f.inner.rect[1] -= deltaY as number; f.target.rect[1] -= deltaY as number;
+  };
+  await assert.rejects(f.ui.scrollTo(f.selector, f.label, f.text, 1), {
+    message: `UI scroll timed out: ${f.label}; no effect retry`,
+  });
+  assert.deepEqual(f.trace, ['guard', 'read', 'wheel', 'guard', 'read']);
+  assert.deepEqual(f.values.map(value => (value as { visible: boolean }).visible), [false, false]);
+  assert.deepEqual(f.commands, [{ method: 'Input.dispatchMouseEvent', type: 'mouseWheel',
+    x: 450, y: 350, deltaX: 0, deltaY: 600 }]);
+  assert.equal(f.steps.length, 1);
+});
+
+test('the retained read guard refuses changed ownership after the first nested wheel before another read or input', { timeout: 5000 }, async () => {
+  const f = nestedScrollFixture(), refusal = new Error('TEST renderer owner changed after original wheel');
+  f.state.onWheel = () => { f.state.guardError = refusal; };
+  await assert.rejects(f.ui.scrollTo(f.selector, f.label, f.text), error => error === refusal);
+  assert.deepEqual(f.trace, ['guard', 'read', 'wheel', 'guard']);
+  assert.deepEqual(f.selectors, [f.selector]); assert.equal(f.expressions.length, 1);
+  assert.deepEqual(f.hits, [{ x: 450, y: 350, node: 'outer' }]);
+  assert.deepEqual(f.commands, [{ method: 'Input.dispatchMouseEvent', type: 'mouseWheel',
+    x: 450, y: 350, deltaX: 0, deltaY: 600 }]);
+  assert.equal(f.steps.length, 1);
+});

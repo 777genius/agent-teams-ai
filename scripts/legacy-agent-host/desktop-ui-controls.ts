@@ -437,7 +437,6 @@ export function createDesktopUiControls(
     // Allow one final visibility read after the last wheel; never dispatch
     // an extra input event after reaching the TEST-only bounded budget.
     for (let attempt = 0; attempt <= maxWheelEvents; attempt++) {
-      options.assertOwnedRenderer();
       const found = record(
         await waitRead(
           `(() => {
@@ -448,6 +447,44 @@ export function createDesktopUiControls(
         while(parent&&!(parent.scrollHeight>parent.clientHeight&&/auto|scroll/.test(getComputedStyle(parent).overflowY)))parent=parent.parentElement;
         const p=(parent??document.documentElement).getBoundingClientRect();
         const top=Math.max(0,p.top),bottom=Math.min(innerHeight,p.bottom);
+        if(bottom<=top&&r.width&&r.height){
+          const box=b=>({left:b.left,right:b.right,top:b.top,bottom:b.bottom});
+          const area=b=>[b.left,b.right,b.top,b.bottom].every(Number.isFinite)&&b.right>b.left&&b.bottom>b.top;
+          const scrollable=node=>node.scrollHeight>node.clientHeight&&/auto|scroll/.test(getComputedStyle(node).overflowY);
+          const clip=(b,limit,style)=>{
+            if(/auto|scroll|hidden|clip/.test(style.overflowX)){b.left=Math.max(b.left,limit.left);b.right=Math.min(b.right,limit.right);}
+            if(/auto|scroll|hidden|clip/.test(style.overflowY)){b.top=Math.max(b.top,limit.top);b.bottom=Math.min(b.bottom,limit.bottom);}
+          };
+          let reveal=box(p);
+          if(!area(reveal))return null;
+          for(let candidate=parent?.parentElement;candidate;candidate=candidate.parentElement){
+            const bounds=box(candidate.getBoundingClientRect()),style=getComputedStyle(candidate);
+            if(scrollable(candidate)){
+              const exposed={left:Math.max(0,bounds.left),right:Math.min(innerWidth,bounds.right),
+                top:Math.max(0,bounds.top),bottom:Math.min(innerHeight,bounds.bottom)};
+              for(let ancestor=candidate.parentElement;ancestor;ancestor=ancestor.parentElement)
+                clip(exposed,box(ancestor.getBoundingClientRect()),getComputedStyle(ancestor));
+              if(area(exposed)){
+                if(reveal.right<=exposed.left||reveal.left>=exposed.right)return null;
+                const x=(exposed.left+exposed.right)/2,y=(exposed.top+exposed.bottom)/2;
+                const hit=document.elementFromPoint(x,y);
+                if(!hit||!(hit===candidate||candidate.contains(hit)))return null;
+                let owner=hit;
+                while(owner&&!scrollable(owner))owner=owner.parentElement;
+                if(owner!==candidate)return null;
+                const delta=Math.max(-600,Math.min(600,(reveal.top+reveal.bottom)/2-y));
+                if(!delta||!Number.isFinite(candidate.scrollTop)||
+                  delta>0&&candidate.scrollTop>=candidate.scrollHeight-candidate.clientHeight||
+                  delta<0&&candidate.scrollTop<=0)return null;
+                return {visible:false,x,y,delta};
+              }
+              // Expose this offscreen scrollport first; the original loop then retries the inner one.
+              reveal=bounds;
+            }else clip(reveal,bounds,style);
+            if(!area(reveal))return null;
+          }
+          return null;
+        }
         if(bottom<=top||!r.width||!r.height)return null;
         const x=Math.max(1,Math.min(innerWidth-1,p.x+p.width/2)),y=(top+bottom)/2;
         const hit=${scrollOptions.requireCenterHit === true ? 'document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)' : 'e'};
