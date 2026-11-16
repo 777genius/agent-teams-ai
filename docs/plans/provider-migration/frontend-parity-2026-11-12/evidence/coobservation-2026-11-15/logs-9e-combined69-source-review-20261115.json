@@ -1,0 +1,1463 @@
+{
+  "kind": "logs-9e-scheduled-completion-combined69-source-review",
+  "repository": "777genius/agent-teams-ai",
+  "authorization": {
+    "publishedCommit": "0b3fa6117b1856b947d799f95bae7aae0238061c",
+    "publishedTree": "6c697970d954f2ef4534e01487b2faf54d2a14e0",
+    "publishedFullReadbackAccepted": true,
+    "r1Blob": "8bf9438dbfe01edce003eed370b8d95aa176aa76",
+    "r1SHA256": "b1743d1121cc4043d2fe0a6b13fffa86321404cb6d134269253e8cbab278990a",
+    "priorLogsR1": "1b76c7a0b20603de0d97075d8141785e1716e74e"
+  },
+  "candidate": {
+    "minimalSourceTree": "28f6922857988a899727771ed8209d1893fb97bc",
+    "fullMinimalReadbackExact": true,
+    "baseCommit": "0b3fa6117b1856b947d799f95bae7aae0238061c",
+    "baseTree": "6c697970d954f2ef4534e01487b2faf54d2a14e0",
+    "baseLeaves": 9677,
+    "intendedPostLeaves": 9688,
+    "changed": 69,
+    "added": 11,
+    "overlaps": 9,
+    "incomingExact": 16,
+    "uiComposed": 1,
+    "preserved61Leaves": 52,
+    "preservedPublished12": 12,
+    "common": 1757,
+    "windows": 1798,
+    "packagedLocal": 1759,
+    "noDeletesOrModeChanges": true,
+    "compositeRequirement": "Root composes exactly these69 leaves on a fresh own base preserving every unlisted current source/doc/evidence leaf. This immutable tree is not a commit or applied checkout."
+  },
+  "incoming": {
+    "commit": "9e542899f36c47598a88c764c9e6745589fea3e1",
+    "parent": "1f9242563bec2641b25077c3aa83a999bd7f4871",
+    "tree": "dc7e07838cef3f0b6bf83ffce8b5a34f6e7484e4",
+    "sourceLeaves": 17,
+    "planLeaves": 2,
+    "all17FullSourceBlobReadbacksAndGitHashesExact": true,
+    "plansAlreadyPreservedByPublishedR1": true
+  },
+  "frozen61": {
+    "tree": "e7b0e5902671eb0ce34332a043cb708f61e2183e",
+    "fullAuditBlob": "6c7d4d0beb416919cc26297c534cf33c31613bc4",
+    "fullAuditSHA256": "c1694d3ea258ce8b434433863a65d54fb302e51ec211b52d72a58c3d20b644b7",
+    "fullAuditReadbackExact": true,
+    "independentSourceR2Accepted": true,
+    "unchanged52": [
+      {
+        "path": ".github/workflows/ci.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a93ff6ba1e5656523668694bca24910a468aebc7"
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9ec6dfb68e98480a12224528e2637153f4274a6b"
+      },
+      {
+        "path": "packages/legacy-agent-host/package.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "42093f5cb1be431e383a2bbf97223a2bd8d54b49"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a2158e62d439c0ee0b29ffd28df64cf848cee99f"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2fe449639596cdb07bf5ef39d8040c65d9d6538c"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1fc098d27f67825b7cf48318329d1a809e41e1f4"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/readTeamActivity.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f6243d55f628833ef797cce0afa2e1339a01e609"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4a7d1e5330d4de65f95c9cd2cfc5c87e8027b773"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0f5e2258b2af33c55673aa0fdc4c660e3629e784"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5fe2b1c75dc79aff685c9ef281b6cffd19e3a55b"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b82e437c1e8f04726982af5d50fc54394725f138"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "49183056d50b7815bde238e758c47c13302117f3"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "338f38de5b4ee60d5fa982aa895dd2f71fde981b"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/providerActivityContracts.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d0ee6a31ded14c9af572a12ecc2dee4352f4eacf"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a566efc5987b6859d004a8531cb8e6bac80bec30"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "414525958b459ccb9d4c20e4b185e03d71d46867"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c640bd2a538f3f063b764174b71d365574925345"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "011875b3a5bcab4d6f0775fdbc419157e0d48cba"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "aadc051d5514773ee81d76758c6bbd40c705df5e"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b19c8ff5a815a2c2034358f102e2af2cedc212e6"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1a202377edc9f57c62eb757e9fcdc8718479e3d1"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "26871fb59d09594beff568994b85cf6cb5a00b00"
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9d2ce04a1bbf743e49403d2520873134b08b68de"
+      },
+      {
+        "path": "pnpm-workspace.yaml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a049a862742a85ba77faafea329fc221b3e500e4"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "797cf587243a6c6ba1cd466ed105d5bb6d81772e"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "aff6e19ec4cf492841aa667442c1b7d71541c7c5"
+      },
+      {
+        "path": "src/features/agent-backend/contracts/operations.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "788c1ff6bb4a2a737c0a8d1399ffd43e134e6a38"
+      },
+      {
+        "path": "src/features/agent-backend/main/adapters/output/projectBackendResult.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "dbeb14ba7d4a0de1ae97662e74d2929a51f9106c"
+      },
+      {
+        "path": "src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4df980788dc6b990fcd555439c53bb4a329cef36"
+      },
+      {
+        "path": "src/features/agent-backend/renderer/createHostTaskActivityApi.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8a35885a868140481e0b9d374fd3bd07f2742083"
+      },
+      {
+        "path": "src/renderer/components/team/ClaudeLogsPanel.tsx",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "5255eb491789a5e2fd0cf11c338934b46ac7ae7b"
+      },
+      {
+        "path": "src/renderer/components/team/ClaudeLogsSection.tsx",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "06245cd010f4bdcca1ad0ed1177163c743343a3b"
+      },
+      {
+        "path": "src/renderer/components/team/members/HostMemberActivityLog.tsx",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b0095b83b3544988b7b6d5ba10163c93411868f5"
+      },
+      {
+        "path": "src/renderer/components/team/members/MemberLogsTab.tsx",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9aa14dbd08d23f75c91ceb38d25ce5161fc6be37"
+      },
+      {
+        "path": "src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "65f23ad13df71b514a11a97152b3d3324f0da5c5"
+      },
+      {
+        "path": "src/shared/types/teamActivity.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4bd34ac1435cab2472104203c00ecc4be3889630"
+      },
+      {
+        "path": "src/shared/utils/diagnosticsRedaction.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2e345624c752ebac3024d579c1501dff7fe84a9e"
+      },
+      {
+        "path": "src/shared/utils/redactDiagnosticAssignments.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0a1bd348ab98e6f33af2577cad33e9f2be44e745"
+      },
+      {
+        "path": "src/shared/utils/runtimeDiagnosticText.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1410cd6d6d9accf6f3c29802884b8acd58dc0568"
+      },
+      {
+        "path": "test/features/agent-backend/hostTaskActivity.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "66508376c5c12fe35cbedcbc6cba84a9f6720966"
+      },
+      {
+        "path": "test/features/agent-backend/runtimeActivityFacade.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3233fc10c6f598345f566e542c1f47b5acc18d33"
+      },
+      {
+        "path": "test/features/agent-backend/tsconfig.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "de2814ddc27524ac335f9f6c174aace1c7b1387c"
+      },
+      {
+        "path": "test/renderer/components/team/ClaudeLogsSection.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f60ad1bca4efa3af874080c6acd8cfc7a46745ac"
+      },
+      {
+        "path": "test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "95bfc28a93043836fc08811dc129fb34492fe0a5"
+      },
+      {
+        "path": "test/renderer/components/team/members/MemberLogsPolling.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "27610578158b6eb0b810e1a79e9624e8da6e53a4"
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "76f5d1953816fd125f576a966c42caefcfc297e2"
+      },
+      {
+        "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3"
+      },
+      {
+        "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8"
+      },
+      {
+        "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/checked-artifact-receipt.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2136bb2a37863e4182ff264bf012220a8ae1bc13"
+      },
+      {
+        "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6e94db07c6ef01f38458abbdcba067f766229be9"
+      },
+      {
+        "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/source-receipt.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a78d8a6619a358c79f88fc66886754eb2b6de9b2"
+      }
+    ]
+  },
+  "inventory": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "ownPreimage": "be8ce36916e7b0def4bb3659be6d92d0356deaf4",
+      "frozen61Postimage": "a93ff6ba1e5656523668694bca24910a468aebc7",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "a93ff6ba1e5656523668694bca24910a468aebc7",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 2633,
+      "bytes": 175238,
+      "sha256": "8cac831e00dd87f656a971c6496b8278c7cfddc261f1eb48573a7e2acf83c2d1"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "ownPreimage": "c956c196e4208c11b421b1eb5b68d4850ac50d43",
+      "frozen61Postimage": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 1248,
+      "bytes": 96872,
+      "sha256": "5379894007246368728c518c08222be329d58bb2755dc80235709a033017805d"
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "ownPreimage": "063d101c59bbdcc9a6bb9d9961d12b468a5a944b",
+      "frozen61Postimage": "42093f5cb1be431e383a2bbf97223a2bd8d54b49",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "42093f5cb1be431e383a2bbf97223a2bd8d54b49",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 304,
+      "bytes": 12355,
+      "sha256": "4e567d64af0c5a0d85e155e90fd4eec9a6ca720e89edfe9923d7e4cc9a1b4f81"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+      "ownPreimage": "4d1ff99143e5ddfb157ddaa7ee5ed48caa608e91",
+      "frozen61Postimage": "a2158e62d439c0ee0b29ffd28df64cf848cee99f",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "a2158e62d439c0ee0b29ffd28df64cf848cee99f",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 196,
+      "bytes": 9039,
+      "sha256": "5a7e5ab19c9f486c21e518c117c2637e0125b38f7ef2850ee6e1295bbad2123d"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "ownPreimage": "537cc17c207699eadba99bfae09b5853a3eaf1be",
+      "frozen61Postimage": "2fe449639596cdb07bf5ef39d8040c65d9d6538c",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "2fe449639596cdb07bf5ef39d8040c65d9d6538c",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 294,
+      "bytes": 11592,
+      "sha256": "b5c6b9e8924c4eb897f14c2ac4a355e6d505f515fe811c86667144bba4e362f9"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts",
+      "ownPreimage": "4169f9ed08441561bda739ab79eedfca32b62e73",
+      "frozen61Postimage": "1fc098d27f67825b7cf48318329d1a809e41e1f4",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "1fc098d27f67825b7cf48318329d1a809e41e1f4",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 62,
+      "bytes": 3589,
+      "sha256": "bb9963c1a45be8e59ff9b257b1d560d6355ddcdc4bc7665b27e7e378fed61ab9"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "ownPreimage": null,
+      "frozen61Postimage": "3b2b960722f878cf60ba94bae27176fb9e7d0bba",
+      "incoming9eParent": "3b2b960722f878cf60ba94bae27176fb9e7d0bba",
+      "incoming9ePostimage": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+      "postimage": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+      "selection": "exact incoming9e",
+      "physicalLines": 165,
+      "bytes": 7855,
+      "sha256": "df315063bd119870f52b932daf72880ac4ea40340e023049a236fed79e505c37"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts",
+      "ownPreimage": "ed25bfd57ff19730328fd13c4d338e8a3649e2a3",
+      "frozen61Postimage": null,
+      "incoming9eParent": "ed25bfd57ff19730328fd13c4d338e8a3649e2a3",
+      "incoming9ePostimage": "186171f456cc99a18e12f0b87c4bd508936d6243",
+      "postimage": "186171f456cc99a18e12f0b87c4bd508936d6243",
+      "selection": "exact incoming9e",
+      "physicalLines": 454,
+      "bytes": 25689,
+      "sha256": "895d895fb8b28e4007240389055e1b6405fc4d02093fe7eff1f95cdb51835a05"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts",
+      "ownPreimage": "85929131823d19197651cc5f984096cde9b1fd6e",
+      "frozen61Postimage": null,
+      "incoming9eParent": "85929131823d19197651cc5f984096cde9b1fd6e",
+      "incoming9ePostimage": "e6861511417070c9202458253a16a3ffb20216ae",
+      "postimage": "e6861511417070c9202458253a16a3ffb20216ae",
+      "selection": "exact incoming9e",
+      "physicalLines": 166,
+      "bytes": 10051,
+      "sha256": "77cb82d6c1938b3f858b4b65484c9ab123ec6b0c8e4bab2c20793b6708f51c08"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "ownPreimage": "0482d11bb2a051a0710905c5393495ee7cec64bf",
+      "frozen61Postimage": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 315,
+      "bytes": 15423,
+      "sha256": "189b8a98f8708d22b1ffabc84ef235efd320a910bf7a9ee19c266846ccd3f1ac"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/HostScheduledRuns.ts",
+      "ownPreimage": "1db38b33e308071130543fecb62e8caaaa2c90b2",
+      "frozen61Postimage": null,
+      "incoming9eParent": "1db38b33e308071130543fecb62e8caaaa2c90b2",
+      "incoming9ePostimage": "13fd4d190e0a50267a295cb75cbf50320fa36d5a",
+      "postimage": "13fd4d190e0a50267a295cb75cbf50320fa36d5a",
+      "selection": "exact incoming9e",
+      "physicalLines": 297,
+      "bytes": 17375,
+      "sha256": "69b605e0720613e17b20dbe82c3fa2213f8f7e075359dd451c0a975b8b732e02"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/readTeamActivity.ts",
+      "ownPreimage": "774f2453b5ced1698046e0f0724bc9bbb034ebb1",
+      "frozen61Postimage": "f6243d55f628833ef797cce0afa2e1339a01e609",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "f6243d55f628833ef797cce0afa2e1339a01e609",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 289,
+      "bytes": 12110,
+      "sha256": "47f2d9a185d618e35fce54b27dec45102d4600c5184771f25758e7109fc713ab"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts",
+      "ownPreimage": "1fa667f3513afd9065ecc6ac7b9402855ccab73a",
+      "frozen61Postimage": "4a7d1e5330d4de65f95c9cd2cfc5c87e8027b773",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "4a7d1e5330d4de65f95c9cd2cfc5c87e8027b773",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 171,
+      "bytes": 6110,
+      "sha256": "1b9edac01901dda2f4b01eb39bc4268064163f402608d3be00d2dd63c13730c3"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "ownPreimage": "879c120b7d9b2226701f58e832914adde5a3dd58",
+      "frozen61Postimage": "0f5e2258b2af33c55673aa0fdc4c660e3629e784",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "0f5e2258b2af33c55673aa0fdc4c660e3629e784",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 800,
+      "bytes": 35008,
+      "sha256": "1d86d1616645c2c0169806777415097e1523e294322b047699294ddfac03f1e0"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/scheduledRunProjection.ts",
+      "ownPreimage": "86d4ec120fb4deba4c53bb5426fc771f4e1ee5b7",
+      "frozen61Postimage": null,
+      "incoming9eParent": "86d4ec120fb4deba4c53bb5426fc771f4e1ee5b7",
+      "incoming9ePostimage": "46613a43c30311321280f11129ed02df18ef527a",
+      "postimage": "46613a43c30311321280f11129ed02df18ef527a",
+      "selection": "exact incoming9e",
+      "physicalLines": 74,
+      "bytes": 5047,
+      "sha256": "ebf66eda6dfcd1cb907f6ce52ec1b4e3d3303774869e76e893063fd68302e8a3"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts",
+      "ownPreimage": null,
+      "frozen61Postimage": "5fe2b1c75dc79aff685c9ef281b6cffd19e3a55b",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "5fe2b1c75dc79aff685c9ef281b6cffd19e3a55b",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 50,
+      "bytes": 1836,
+      "sha256": "ce6281ee65275c72fc67d540bfb3fd70d902276ef0fabcefc4d471fa3df5efe2"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+      "ownPreimage": null,
+      "frozen61Postimage": "b82e437c1e8f04726982af5d50fc54394725f138",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "b82e437c1e8f04726982af5d50fc54394725f138",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 134,
+      "bytes": 5376,
+      "sha256": "a1c2499af3048c0e656f66131ffa76540fe7493c1f3643e0486c8ffe6358d940"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts",
+      "ownPreimage": null,
+      "frozen61Postimage": "49183056d50b7815bde238e758c47c13302117f3",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "49183056d50b7815bde238e758c47c13302117f3",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 60,
+      "bytes": 2888,
+      "sha256": "6c8d7217b45893446430419d689185c0d3420183e6d003324c1f4cf5d7838c5e"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/activityContracts.ts",
+      "ownPreimage": "22503cf7430200a8e221c7495a320740bbe7a474",
+      "frozen61Postimage": null,
+      "incoming9eParent": "22503cf7430200a8e221c7495a320740bbe7a474",
+      "incoming9ePostimage": "d6a001c625d4369147811ee4d97b9853ff1c86c1",
+      "postimage": "d6a001c625d4369147811ee4d97b9853ff1c86c1",
+      "selection": "exact incoming9e",
+      "physicalLines": 130,
+      "bytes": 4476,
+      "sha256": "84fa611fad41f75be7c3cc9798572db2c3e8d488c28258fbcd37c8408d0deb6f"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+      "ownPreimage": "195541f5f1e98746728b11844dd68fdf845721b4",
+      "frozen61Postimage": "338f38de5b4ee60d5fa982aa895dd2f71fde981b",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "338f38de5b4ee60d5fa982aa895dd2f71fde981b",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 161,
+      "bytes": 5840,
+      "sha256": "2c2b72f7b9bea0e7f50cf4e95512ab022dbab50c8bcc6a697320aa35c823aede"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/providerActivityContracts.ts",
+      "ownPreimage": "01b12ef6f147495d72c46145d8e85622e78de77b",
+      "frozen61Postimage": "d0ee6a31ded14c9af572a12ecc2dee4352f4eacf",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "d0ee6a31ded14c9af572a12ecc2dee4352f4eacf",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 13,
+      "bytes": 557,
+      "sha256": "e235782823b292c8ec51ae467c49684a348254e4fb9e7744cab3adce5ad766e4"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+      "ownPreimage": "504be286f7ef7eb147310503a2a5ed3a6f339381",
+      "frozen61Postimage": "48f51dc20a9253c81c9b231b6aa115f6244bd18f",
+      "incoming9eParent": "48f51dc20a9253c81c9b231b6aa115f6244bd18f",
+      "incoming9ePostimage": "ba90e3e6895bf7f85d7ca3de7d9608fe433fcadf",
+      "postimage": "ba90e3e6895bf7f85d7ca3de7d9608fe433fcadf",
+      "selection": "exact incoming9e",
+      "physicalLines": 610,
+      "bytes": 26288,
+      "sha256": "a801ffb0e299ab25dbdd66353d7be904f471571f679008c5c21a84ac317389c7"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "ownPreimage": "7ef05204eb696e2b498595a5f04a544fe20d0036",
+      "frozen61Postimage": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 757,
+      "bytes": 30469,
+      "sha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "ownPreimage": "1bdd368dc281a59fb1a5b2fca629a18e201945a5",
+      "frozen61Postimage": "f84153e49a9ace1f07a5d1f7bb9cea486f5617af",
+      "incoming9eParent": "f84153e49a9ace1f07a5d1f7bb9cea486f5617af",
+      "incoming9ePostimage": "d2b952c9e6ac2281a14a00665cf4689d9c7d4b5c",
+      "postimage": "d2b952c9e6ac2281a14a00665cf4689d9c7d4b5c",
+      "selection": "exact incoming9e",
+      "physicalLines": 366,
+      "bytes": 17005,
+      "sha256": "12be8f565712c09537d99ba75b63aa6e01774708ad1967c7ee2fdd964d747712"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "ownPreimage": "13cba7f4f29acc4edc08e5ae582773564c160d15",
+      "frozen61Postimage": "414525958b459ccb9d4c20e4b185e03d71d46867",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "414525958b459ccb9d4c20e4b185e03d71d46867",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 1028,
+      "bytes": 38315,
+      "sha256": "b328bdcfbbf8eb92e6b2215ee413fd0f723f3c85ac535e9d2cd470030dbf9905"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+      "ownPreimage": "ddf61eccc2d1385cf1b19c45581594ef49ce01be",
+      "frozen61Postimage": "c640bd2a538f3f063b764174b71d365574925345",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "c640bd2a538f3f063b764174b71d365574925345",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 269,
+      "bytes": 15811,
+      "sha256": "c06390dfcc504efdb693c1c7e3aa52375ea0916245f20461cd8be352a3a500d5"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "ownPreimage": "06bdfb8243c035f10f82b6025fbe98e171716831",
+      "frozen61Postimage": null,
+      "incoming9eParent": "06bdfb8243c035f10f82b6025fbe98e171716831",
+      "incoming9ePostimage": "d13aa0c846dbf97aff99786e1165aa214aab93c7",
+      "postimage": "d13aa0c846dbf97aff99786e1165aa214aab93c7",
+      "selection": "exact incoming9e",
+      "physicalLines": 850,
+      "bytes": 47440,
+      "sha256": "5a1e781f3d910b97cb3e4bfdc8592897bce69861b6200421355ed9f047f85f89"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "ownPreimage": null,
+      "frozen61Postimage": "c073ab7b8c6025313747f75e50e8b0a14985d589",
+      "incoming9eParent": "c073ab7b8c6025313747f75e50e8b0a14985d589",
+      "incoming9ePostimage": "e52785444caebdc8c698d87ac122f4a13742b5cc",
+      "postimage": "e52785444caebdc8c698d87ac122f4a13742b5cc",
+      "selection": "exact incoming9e",
+      "physicalLines": 247,
+      "bytes": 14242,
+      "sha256": "e6f1a2d049117442bbdc26ad2c525b0f95d1080740bd5caec59a50930e0de45c"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+      "ownPreimage": "df2deba6e265720b59227a5afba9a3086557e8d5",
+      "frozen61Postimage": "011875b3a5bcab4d6f0775fdbc419157e0d48cba",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "011875b3a5bcab4d6f0775fdbc419157e0d48cba",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 564,
+      "bytes": 33047,
+      "sha256": "e535ebe42ecbc8bb1904d9b3636985c2029c17f3c109430164fb4fe4b491dae2"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+      "ownPreimage": "c1708d23c9c958f2e0d73c6b3641b93b83ded853",
+      "frozen61Postimage": "aadc051d5514773ee81d76758c6bbd40c705df5e",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "aadc051d5514773ee81d76758c6bbd40c705df5e",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 518,
+      "bytes": 39595,
+      "sha256": "3f6833f360b93fcf9d24cedac2d9527768cc04ca8a67b52db3cf2152e816824b"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+      "ownPreimage": "23fac76661c04db7514e5f7cb5cb7f0fefe89ab9",
+      "frozen61Postimage": "b19c8ff5a815a2c2034358f102e2af2cedc212e6",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "b19c8ff5a815a2c2034358f102e2af2cedc212e6",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 790,
+      "bytes": 40907,
+      "sha256": "d383c72806dc9a36b1b26ee0bd2246276556426f31333ed1974643765ba9f90c"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+      "ownPreimage": "c52c8cf9349798754192b2faf92a201186dbfb2b",
+      "frozen61Postimage": "1a202377edc9f57c62eb757e9fcdc8718479e3d1",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "1a202377edc9f57c62eb757e9fcdc8718479e3d1",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 164,
+      "bytes": 9208,
+      "sha256": "ee1ba17e9fd9f52dc825c067a17038a5de36af4541ede3201621e62007614dec"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "ownPreimage": "c506a68f03167abfc674c4fc109796fffcf985aa",
+      "frozen61Postimage": "5a4a258d7802ff54fc2d4c405fc95c2e8e48e86e",
+      "incoming9eParent": "5a4a258d7802ff54fc2d4c405fc95c2e8e48e86e",
+      "incoming9ePostimage": "077ad7ea54675a4782984fcb5399f9964d5ec5e6",
+      "postimage": "077ad7ea54675a4782984fcb5399f9964d5ec5e6",
+      "selection": "exact incoming9e",
+      "physicalLines": 1186,
+      "bytes": 60689,
+      "sha256": "a559b1b184c4f79f76fbcd99998d689cfc31158609051100c1f5cfdcc3b37c77"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "ownPreimage": "aed70893add6ddf460ce7d13231511be4113b86e",
+      "frozen61Postimage": "26871fb59d09594beff568994b85cf6cb5a00b00",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "26871fb59d09594beff568994b85cf6cb5a00b00",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 3989,
+      "bytes": 215794,
+      "sha256": "f4fae2d035c68b53d15f16fee64821f8c9c2b0fe3740860fed7424712bc26d5f"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+      "ownPreimage": "96a7f6ac29bbd830dffb60d80a910e3f26e76949",
+      "frozen61Postimage": null,
+      "incoming9eParent": "96a7f6ac29bbd830dffb60d80a910e3f26e76949",
+      "incoming9ePostimage": "dbbd17b11db24a9dc3fb989e0266101847f0a778",
+      "postimage": "dbbd17b11db24a9dc3fb989e0266101847f0a778",
+      "selection": "exact incoming9e",
+      "physicalLines": 598,
+      "bytes": 41863,
+      "sha256": "f3f9147184700663c24d85a2a81ff6ab54724b7883a9e6fcc9bf9c324f473ab5"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "ownPreimage": "ebe99d411da6689282ff499f936d40479dc36a35",
+      "frozen61Postimage": "4f2de43f25fa57005dec41cd9f3501b72d17eb6f",
+      "incoming9eParent": "4f2de43f25fa57005dec41cd9f3501b72d17eb6f",
+      "incoming9ePostimage": "881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb",
+      "postimage": "881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb",
+      "selection": "exact incoming9e",
+      "physicalLines": 381,
+      "bytes": 14327,
+      "sha256": "56be5d699948e7142fc94bc5b0776b675683e3c16a9a68a72e9e5b148146e0c5"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "ownPreimage": "1d2de1cff41f77932e3fbc6e88a3c4cfdb697cb7",
+      "frozen61Postimage": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 26665,
+      "bytes": 956788,
+      "sha256": "055c24af3466eaf5c48bb2c214f77187ebde76a60c1ad4849d551b5699464841"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "ownPreimage": "d93f661224946a540596594db88fe2053a02b5df",
+      "frozen61Postimage": "a049a862742a85ba77faafea329fc221b3e500e4",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "a049a862742a85ba77faafea329fc221b3e500e4",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 169,
+      "bytes": 6946,
+      "sha256": "581c6a5ada272bf4fd370efccf5398c63a3abd32782cf82021cfa11d94a0e1a5"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+      "ownPreimage": "805941d9da3fffdac8c6e04c57e2eb46710bbcd7",
+      "frozen61Postimage": "797cf587243a6c6ba1cd466ed105d5bb6d81772e",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "797cf587243a6c6ba1cd466ed105d5bb6d81772e",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 446,
+      "bytes": 22826,
+      "sha256": "6677695937f2c532da1867df1b91afa43856229badf98035a6aa7467102d1791"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "ownPreimage": "04ed8641e43ba4cefd95fedca712522c2061b78d",
+      "frozen61Postimage": "aff6e19ec4cf492841aa667442c1b7d71541c7c5",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "aff6e19ec4cf492841aa667442c1b7d71541c7c5",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 377,
+      "bytes": 34086,
+      "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "ownPreimage": "55a7973806202dcca4b3cbcbadf621d4b7664f34",
+      "frozen61Postimage": "d37854de1c7cbd8eaf7ee4a15b21123bc659ce51",
+      "incoming9eParent": "345dc9a6b3fb9d197eaf2982e60840682d7b8fbd",
+      "incoming9ePostimage": "d1a43bae56a2bceceb450d01a2544cdbe801e06e",
+      "postimage": "d52680f4d848e58dee54f8a9a4beae9435c2b14c",
+      "selection": "four reviewed Task-title edits on incoming9e",
+      "physicalLines": 791,
+      "bytes": 69089,
+      "sha256": "a3d8fadfe7d7fc91eb848909a50a40d5d2a3af28d9a25d2e585a6e9bf9e825ca"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "ownPreimage": "5c8d6a2ee1555257a4f83fa074a4e0de6549b14c",
+      "frozen61Postimage": "4f48e31f1fb4372064198ba01300518e5070feca",
+      "incoming9eParent": "9ebf57607eb1ca52fa4d7e29213bba99624167c8",
+      "incoming9ePostimage": "b52876e3215910eba3a3a24756f61c289a0965f9",
+      "postimage": "b52876e3215910eba3a3a24756f61c289a0965f9",
+      "selection": "exact incoming9e",
+      "physicalLines": 323,
+      "bytes": 20996,
+      "sha256": "cc5fa1a4c6a2f841145b0e4f33709fd1b2d8c405dae7151477a8a8aac5fce02e"
+    },
+    {
+      "path": "src/features/agent-backend/contracts/operations.ts",
+      "ownPreimage": "2a8959f75a70a76d85bea32a20ccb1277a8a16f2",
+      "frozen61Postimage": "788c1ff6bb4a2a737c0a8d1399ffd43e134e6a38",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "788c1ff6bb4a2a737c0a8d1399ffd43e134e6a38",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 538,
+      "bytes": 17358,
+      "sha256": "29ef5c69ce683182bde2085fcbf10290f61a2eb6a3c317d2ac4572a627eff26b"
+    },
+    {
+      "path": "src/features/agent-backend/main/adapters/output/projectBackendResult.ts",
+      "ownPreimage": "87ca79e7a3d0d1bc219ad79385f231f2ffe4dd0b",
+      "frozen61Postimage": "dbeb14ba7d4a0de1ae97662e74d2929a51f9106c",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "dbeb14ba7d4a0de1ae97662e74d2929a51f9106c",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 500,
+      "bytes": 20076,
+      "sha256": "b34c2c8ac933fa322792c75934a7a8675c66e6809955f4c48f7f116bc58d1d55"
+    },
+    {
+      "path": "src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts",
+      "ownPreimage": null,
+      "frozen61Postimage": "4df980788dc6b990fcd555439c53bb4a329cef36",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "4df980788dc6b990fcd555439c53bb4a329cef36",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 317,
+      "bytes": 11387,
+      "sha256": "fb686dd83830031ae319f646b50a9df9c5e0ab8d51e3b8914dfb9cec75dbf1db"
+    },
+    {
+      "path": "src/features/agent-backend/renderer/createHostTaskActivityApi.ts",
+      "ownPreimage": "a27af9116111f4366651c97c76201f66ebbac8d5",
+      "frozen61Postimage": "8a35885a868140481e0b9d374fd3bd07f2742083",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "8a35885a868140481e0b9d374fd3bd07f2742083",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 164,
+      "bytes": 6046,
+      "sha256": "216316cc70cbd609fb27a2e85823d26366d5da44009c90c844bc61abba7e2d10"
+    },
+    {
+      "path": "src/renderer/components/team/ClaudeLogsPanel.tsx",
+      "ownPreimage": "829b1ec065212ee20f0fdf57147977770e184eb8",
+      "frozen61Postimage": "5255eb491789a5e2fd0cf11c338934b46ac7ae7b",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "5255eb491789a5e2fd0cf11c338934b46ac7ae7b",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 243,
+      "bytes": 8203,
+      "sha256": "053f9c4e6c8109ffd48bb745821eb59ff0b013671c1e602762bc9af420bafd53"
+    },
+    {
+      "path": "src/renderer/components/team/ClaudeLogsSection.tsx",
+      "ownPreimage": "0632e20213f52663eef0e7f3bee3f93a92a51348",
+      "frozen61Postimage": "06245cd010f4bdcca1ad0ed1177163c743343a3b",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "06245cd010f4bdcca1ad0ed1177163c743343a3b",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 586,
+      "bytes": 21034,
+      "sha256": "965106c5d406e60dfbfa87218d30bd73ce18452210d64576f26098f2d89964e5"
+    },
+    {
+      "path": "src/renderer/components/team/members/HostMemberActivityLog.tsx",
+      "ownPreimage": "fea2c35c61000827cebb626d83e9c68e5a289a04",
+      "frozen61Postimage": "b0095b83b3544988b7b6d5ba10163c93411868f5",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "b0095b83b3544988b7b6d5ba10163c93411868f5",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 370,
+      "bytes": 14275,
+      "sha256": "3b0e5e8d661f1cf992d17a45e563f6348c9de33b32ee2795bfe4fe06394f2eba"
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberLogsTab.tsx",
+      "ownPreimage": "806fe6c45b47e68fa3df56ba5feae61c59f9c8c7",
+      "frozen61Postimage": "9aa14dbd08d23f75c91ceb38d25ce5161fc6be37",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "9aa14dbd08d23f75c91ceb38d25ce5161fc6be37",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 755,
+      "bytes": 28174,
+      "sha256": "7b1f49b1d53e461dfb120ec95b469259d57f178c4b9baf63628f5d1c2a5b886c"
+    },
+    {
+      "path": "src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx",
+      "ownPreimage": "54f77b51f045451c6afdccf2a36f8e33688a19e3",
+      "frozen61Postimage": "65f23ad13df71b514a11a97152b3d3324f0da5c5",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "65f23ad13df71b514a11a97152b3d3324f0da5c5",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 65,
+      "bytes": 1975,
+      "sha256": "1dabc02dc7661ddedfb40d4f9e1bff941d3e953049c6bca0949a0a4c8e8f1998"
+    },
+    {
+      "path": "src/shared/types/teamActivity.ts",
+      "ownPreimage": "f61cd8757f9d4926e11a3f6e24812a469da8f4d8",
+      "frozen61Postimage": "4bd34ac1435cab2472104203c00ecc4be3889630",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "4bd34ac1435cab2472104203c00ecc4be3889630",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 134,
+      "bytes": 4045,
+      "sha256": "c7e772c925928a4d900f0c90b02f0e7b75e60c8745e9690103a54491a7b157e0"
+    },
+    {
+      "path": "src/shared/utils/diagnosticsRedaction.ts",
+      "ownPreimage": "5fe2b1c75dc79aff685c9ef281b6cffd19e3a55b",
+      "frozen61Postimage": "2e345624c752ebac3024d579c1501dff7fe84a9e",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "2e345624c752ebac3024d579c1501dff7fe84a9e",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 1,
+      "bytes": 126,
+      "sha256": "b34a34f5dece120ef8f93aa23cf63b15b35675bdd52394b0b8654117a2c580d8"
+    },
+    {
+      "path": "src/shared/utils/redactDiagnosticAssignments.ts",
+      "ownPreimage": "b82e437c1e8f04726982af5d50fc54394725f138",
+      "frozen61Postimage": "0a1bd348ab98e6f33af2577cad33e9f2be44e745",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "0a1bd348ab98e6f33af2577cad33e9f2be44e745",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 1,
+      "bytes": 102,
+      "sha256": "8cfd0fa9fa6680e69c49ebabd4c8b0fd04771768677ad6ca8ec44da2d2de0e51"
+    },
+    {
+      "path": "src/shared/utils/runtimeDiagnosticText.ts",
+      "ownPreimage": "1444ee99085670ffb786b5419dd9cd6e5fc29579",
+      "frozen61Postimage": "1410cd6d6d9accf6f3c29802884b8acd58dc0568",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "1410cd6d6d9accf6f3c29802884b8acd58dc0568",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 1,
+      "bytes": 105,
+      "sha256": "8a60c16fdac834916afd006104e328fcb2936e1e665d86c4253f26f2fe7f491c"
+    },
+    {
+      "path": "test/features/agent-backend/hostTaskActivity.test.ts",
+      "ownPreimage": "ce18eb8fd54dc1029eb53e44e7c68d722b818832",
+      "frozen61Postimage": "66508376c5c12fe35cbedcbc6cba84a9f6720966",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "66508376c5c12fe35cbedcbc6cba84a9f6720966",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 395,
+      "bytes": 13948,
+      "sha256": "e2c6d7b0670813744d414cf226005e44cf56c608c8567600519250967181db91"
+    },
+    {
+      "path": "test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "ownPreimage": "380bad2bc70dccf793255cc8998ca9b629aa10f9",
+      "frozen61Postimage": "3233fc10c6f598345f566e542c1f47b5acc18d33",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "3233fc10c6f598345f566e542c1f47b5acc18d33",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 1022,
+      "bytes": 36912,
+      "sha256": "3c9d81c0d7e81ee8fea671a2b1b814295363213a0b79af611ee28d13ec2af265"
+    },
+    {
+      "path": "test/features/agent-backend/tsconfig.json",
+      "ownPreimage": "84f05e170dc7ba5d5880588712fef782f91bd10e",
+      "frozen61Postimage": "de2814ddc27524ac335f9f6c174aace1c7b1387c",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "de2814ddc27524ac335f9f6c174aace1c7b1387c",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 12,
+      "bytes": 379,
+      "sha256": "4b6372a0f31b366a07f02aa7e70d106dcc98d3cacdbad9c57bb4856a88b74f79"
+    },
+    {
+      "path": "test/renderer/components/team/ClaudeLogsSection.test.ts",
+      "ownPreimage": "3ba7a08fbf4c9dd5125958cdd8c556af828e9114",
+      "frozen61Postimage": "f60ad1bca4efa3af874080c6acd8cfc7a46745ac",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "f60ad1bca4efa3af874080c6acd8cfc7a46745ac",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 1229,
+      "bytes": 38842,
+      "sha256": "e31e2296cc7db26add9b2ba0b27ac136338398f08f49b341be4861d57b6edb69"
+    },
+    {
+      "path": "test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+      "ownPreimage": "5722926c371b7bd8506e452522358ac3d08c19f7",
+      "frozen61Postimage": "95bfc28a93043836fc08811dc129fb34492fe0a5",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "95bfc28a93043836fc08811dc129fb34492fe0a5",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 586,
+      "bytes": 21056,
+      "sha256": "c74aac40488ad0a971de188f35bda2d973c5c0b64612c2b40528b1f2cc4c6b73"
+    },
+    {
+      "path": "test/renderer/components/team/members/MemberLogsPolling.test.ts",
+      "ownPreimage": "1f5820a4e7a0b0ee611ed9c990d8e0497236c928",
+      "frozen61Postimage": "27610578158b6eb0b810e1a79e9624e8da6e53a4",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "27610578158b6eb0b810e1a79e9624e8da6e53a4",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 480,
+      "bytes": 19002,
+      "sha256": "a7c536da9ad51ef4eca441d3da7fcda74bcd9589ee6aa4207fc3d10cd76d18c7"
+    },
+    {
+      "path": "test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx",
+      "ownPreimage": "eb380c206e9d2c49984a1bf732ceddaddb9449ae",
+      "frozen61Postimage": null,
+      "incoming9eParent": "eb380c206e9d2c49984a1bf732ceddaddb9449ae",
+      "incoming9ePostimage": "a367866923405e4d584fac1145b56fe27bf37b5a",
+      "postimage": "a367866923405e4d584fac1145b56fe27bf37b5a",
+      "selection": "exact incoming9e",
+      "physicalLines": 232,
+      "bytes": 7490,
+      "sha256": "b5ed7faf0d728baed07f1d25f2cc5bbcc29c87987667d382df065434b861676f"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "ownPreimage": "45cc6900fbc5ce462ccaa4da512fcc34174f1386",
+      "frozen61Postimage": "6cdba0b52141348d97c593bf2ae6c224cdce5d73",
+      "incoming9eParent": "6cdba0b52141348d97c593bf2ae6c224cdce5d73",
+      "incoming9ePostimage": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+      "postimage": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+      "selection": "exact incoming9e",
+      "physicalLines": 463,
+      "bytes": 32221,
+      "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "ownPreimage": "77b2f17c47b1bda1506aaf124ea079db1680199f",
+      "frozen61Postimage": "76f5d1953816fd125f576a966c42caefcfc297e2",
+      "incoming9eParent": null,
+      "incoming9ePostimage": null,
+      "postimage": "76f5d1953816fd125f576a966c42caefcfc297e2",
+      "selection": "exact preserved frozen61",
+      "physicalLines": 562,
+      "bytes": 39026,
+      "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a"
+    }
+  ],
+  "artifactLeaves": [
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6e94db07c6ef01f38458abbdcba067f766229be9"
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-implementations-0.0.0.tgz",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3"
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8"
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/checked-artifact-receipt.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2136bb2a37863e4182ff264bf012220a8ae1bc13"
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-c79b81bf/source-receipt.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a78d8a6619a358c79f88fc66886754eb2b6de9b2"
+    }
+  ],
+  "uiComposition": {
+    "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+    "template9e": "d1a43bae56a2bceceb450d01a2544cdbe801e06e",
+    "own61": "d37854de1c7cbd8eaf7ee4a15b21123bc659ce51",
+    "postimage": "d52680f4d848e58dee54f8a9a4beae9435c2b14c",
+    "chars": 69087,
+    "bytes": 69089,
+    "sha256": "a3d8fadfe7d7fc91eb848909a50a40d5d2a3af28d9a25d2e585a6e9bf9e825ca",
+    "physicalLines": 791,
+    "added": 10,
+    "deleted": 14,
+    "incomingInsertions": [
+      2,
+      3,
+      2,
+      12,
+      2,
+      34,
+      1
+    ],
+    "incomingTotalInserted": 56,
+    "bothInversesExact": true,
+    "compositionCommutes": true,
+    "original35": "345dc9a6b3fb9d197eaf2982e60840682d7b8fbd",
+    "exactFourTaskTitleTransformations": [
+      {
+        "label": "optional title",
+        "before": "  const visibleLogFact = async (scope: string, event: Row) => {",
+        "after": "  const visibleLogFact = async (scope: string, event: Row, sourceTitle?: string) => {"
+      },
+      {
+        "label": "same evaluation title and identity",
+        "before": "      if(!e)return null;\n      const bodies=[...e.querySelectorAll('[data-host-log-content] p')].filter(p=>p.textContent.trim()===${literal(text)});",
+        "after": "      if(!e)return null;\n      const sourceTitle=${literal(sourceTitle ?? null)};\n      const sources=sourceTitle===null?[]:[...document.querySelectorAll(${literal(scope + ' button[aria-expanded=\"true\"]')})]\n        .filter(button=>button.textContent.trim()===sourceTitle);\n      if(sourceTitle!==null&&(sources.length!==1||!sources[0].getClientRects().length||\n        document.querySelectorAll(${literal(selector)}).length!==1||e.dataset.hostLogEventId!==${literal(event.eventId)}||\n        e.dataset.hostLogSequence!==${literal(String(event.sequence))}||e.dataset.hostLogKind!==${literal(record(event.data).kind)}))return null;\n      const bodies=[...e.querySelectorAll('[data-host-log-content] p')].filter(p=>p.textContent.trim()===${literal(text)});"
+      },
+      {
+        "label": "observed source title",
+        "before": "      return {eventId:e.dataset.hostLogEventId,sequence:Number(e.dataset.hostLogSequence),text:bodies[0].textContent.trim()}})()`,",
+        "after": "      return {eventId:e.dataset.hostLogEventId,sequence:Number(e.dataset.hostLogSequence),text:bodies[0].textContent.trim(),\n        ...(sourceTitle===null?{}:{source:sources[0].textContent.trim()})}})()`,"
+      },
+      {
+        "label": "both original Task tabs",
+        "before": "    let rendered: unknown;\n    if (tab === 'Task Log Stream') rendered = await visibleLogFact(panel, completion);\n    else {\n      await ui.scrollTo(`${panel} pre`, 'original retained completion in ' + tab,\n        String(record(completion.data).text), 12, { requireCenterHit: true });\n      rendered = await ui.waitRead(`(()=>{const panel=document.querySelector(${literal(panel)});if(!panel)return null;\n        const facts=[...panel.querySelectorAll('pre')].filter(e=>e.textContent===${literal(record(completion.data).text)}&&\n          e.parentElement.querySelector('span')?.textContent.trim()===${literal('#' + completion.sequence + ' text')});\n        if(facts.length!==1||!facts[0].getClientRects().length)return null;\n        return {sequence:${literal(completion.sequence)},text:facts[0].textContent,\n          source:panel.querySelector('button[aria-expanded=\"true\"]')?.textContent.trim()}})()`, 'exact original retained event in ' + tab);\n    }",
+        "after": "    const rendered = await visibleLogFact(panel, completion, title);"
+      }
+    ],
+    "exactSevenIncomingInsertionTransformations": [
+      {
+        "label": "retain incoming9e UI insertion 1",
+        "before": "  const partialThought = provider === 'codex' ? null : await streamEvent('TEST stream thought partial', 'thinking');\n  if (partialThought) {\n    assert.equal(record(partialThought.data).phase, 'snapshot');\n    await visibleLogFact(leadLogs, partialThought);\n  }\n  assert.notEqual(array((await session()).inputs).find(row => record(row.intent).inputId === stream.inputId)?.phase, 'terminal');",
+        "after": "  const partialThought = provider === 'codex' ? null : await streamEvent('TEST stream thought partial', 'thinking');\n  if (partialThought) {\n    assert.equal(record(partialThought.data).phase, 'snapshot');\n    assert.equal(record(partialThought.data).block, 1);\n    assert.equal(record(partialThought.data).messageRef, record(partialEvent.data).messageRef);\n    await visibleLogFact(leadLogs, partialThought);\n  }\n  assert.notEqual(array((await session()).inputs).find(row => record(row.intent).inputId === stream.inputId)?.phase, 'terminal');",
+        "insertedLines": 2
+      },
+      {
+        "label": "retain incoming9e UI insertion 2",
+        "before": "  await ui.waitRead(`!document.querySelector(${literal(leadLogs + ' [data-host-log-kind=\"text\"]')})`, 'Logs search excludes nonmatching output');\n  if (stderrEvent) await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, stderrEvent))})`,\n    'Logs search also excludes nonmatching captured stderr');\n  await ui.click(leadLogs + ' button[aria-label=\"Clear search\"]', 'clear original Logs search');\n  await visibleLogFact(leadLogs, completeEvent);\n  if (stderrEvent) await visibleLogFact(leadLogs, stderrEvent);\n  const filterLogs = async () => {\n    await ui.scrollTo(leadLogs + ' button[aria-label=\"Filter logs\"]', 'original Logs filters');",
+        "after": "  await ui.waitRead(`!document.querySelector(${literal(leadLogs + ' [data-host-log-kind=\"text\"]')})`, 'Logs search excludes nonmatching output');\n  if (stderrEvent) await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, stderrEvent))})`,\n    'Logs search also excludes nonmatching captured stderr');\n  if (completeThought) await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, completeThought))})`,\n    'Logs search excludes nonmatching Thinking');\n  await ui.click(leadLogs + ' button[aria-label=\"Clear search\"]', 'clear original Logs search');\n  await visibleLogFact(leadLogs, completeEvent);\n  if (completeThought) await visibleLogFact(leadLogs, completeThought);\n  if (stderrEvent) await visibleLogFact(leadLogs, stderrEvent);\n  const filterLogs = async () => {\n    await ui.scrollTo(leadLogs + ' button[aria-label=\"Filter logs\"]', 'original Logs filters');",
+        "insertedLines": 3
+      },
+      {
+        "label": "retain incoming9e UI insertion 3",
+        "before": "  await ui.click('#filter-stream-stdout', 'select stderr while native protocol facts remain unmarked');\n  await ui.click('[data-radix-popper-content-wrapper] button', 'save original stream filter', 'Save');\n  await visibleLogFact(leadLogs, completeEvent);\n  if (stderrEvent) await visibleLogFact(leadLogs, stderrEvent);\n  await filterLogs(); await ui.click('#filter-stream-stdout', 'restore stdout');\n  await ui.click('#filter-stream-stderr', 'select stdout while native protocol facts remain unmarked');\n  await ui.click('[data-radix-popper-content-wrapper] button', 'save original stdout filter', 'Save');\n  await visibleLogFact(leadLogs, completeEvent);\n  if (stderrEvent) await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, stderrEvent))})`,\n    'actual stderr provenance is excluded by stdout-only filter');\n  await filterLogs(); await ui.click('#filter-kind-output', 'exclude Output');",
+        "after": "  await ui.click('#filter-stream-stdout', 'select stderr while native protocol facts remain unmarked');\n  await ui.click('[data-radix-popper-content-wrapper] button', 'save original stream filter', 'Save');\n  await visibleLogFact(leadLogs, completeEvent);\n  if (completeThought) await visibleLogFact(leadLogs, completeThought);\n  if (stderrEvent) await visibleLogFact(leadLogs, stderrEvent);\n  await filterLogs(); await ui.click('#filter-stream-stdout', 'restore stdout');\n  await ui.click('#filter-stream-stderr', 'select stdout while native protocol facts remain unmarked');\n  await ui.click('[data-radix-popper-content-wrapper] button', 'save original stdout filter', 'Save');\n  await visibleLogFact(leadLogs, completeEvent);\n  if (completeThought) await visibleLogFact(leadLogs, completeThought);\n  if (stderrEvent) await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, stderrEvent))})`,\n    'actual stderr provenance is excluded by stdout-only filter');\n  await filterLogs(); await ui.click('#filter-kind-output', 'exclude Output');",
+        "insertedLines": 2
+      },
+      {
+        "label": "retain incoming9e UI insertion 4",
+        "before": "  await ui.click(disclosure, 'collapse original output');\n  await ui.waitRead(`!document.querySelector(${literal(logFactSelector(logsDialog, fullscreenEvent) + ' [data-host-log-content]')})`, 'rich content collapses');\n  await ui.click(disclosure, 'restore original expanded output');\n  proof.leadLogsScreenshot = await screenshot('lead-logs');\n  await escape(); await visibleLogFact(leadLogs, fullscreenEvent);\n  await ui.click(leadLogs + ' button[aria-label=\"Clear search\"]', 'restore unfiltered Lead Logs');",
+        "after": "  await ui.click(disclosure, 'collapse original output');\n  await ui.waitRead(`!document.querySelector(${literal(logFactSelector(logsDialog, fullscreenEvent) + ' [data-host-log-content]')})`, 'rich content collapses');\n  await ui.click(disclosure, 'restore original expanded output');\n  if (completeThought) {\n    const thoughtText = String(record(completeThought.data).text), thoughtRow = logFactSelector(logsDialog, completeThought);\n    await fill(logsDialog + ' input', thoughtText); await visibleLogFact(logsDialog, completeThought);\n    const thoughtCopy = thoughtRow + ' button[title=\"Copy to clipboard\"]';\n    await ui.scrollTo(thoughtCopy, 'original Thinking copy'); await ui.click(thoughtCopy, 'copy actual retained Thinking');\n    await ui.waitRead(`Boolean(document.querySelector(${literal(thoughtCopy + ' svg.lucide-check')}))`, 'Thinking clipboard write acknowledged');\n    assert.equal(await cdp.evaluate('navigator.clipboard.readText()'), thoughtText);\n    await ui.click(thoughtRow + ' [role=\"button\"]', 'collapse original Thinking');\n    await ui.waitRead(`!document.querySelector(${literal(thoughtRow + ' [data-host-log-content]')})`, 'Thinking rich content collapses');\n    await ui.click(thoughtRow + ' [role=\"button\"]', 'restore original expanded Thinking');\n    await fill(logsDialog + ' input', fullscreenText); await visibleLogFact(logsDialog, fullscreenEvent);\n  }\n  proof.leadLogsScreenshot = await screenshot('lead-logs');\n  await escape(); await visibleLogFact(leadLogs, fullscreenEvent);\n  await ui.click(leadLogs + ' button[aria-label=\"Clear search\"]', 'restore unfiltered Lead Logs');",
+        "insertedLines": 12
+      },
+      {
+        "label": "retain incoming9e UI insertion 5",
+        "before": "  proof.leadLogsAfterReload = await visibleLogFact(leadLogs, completeEvent);\n  if (stderrEvent) proof.stderrLogsAfterReload = await visibleLogFact(leadLogs, stderrEvent);\n  if (completeThought) proof.thinkingLogsAfterReload = await visibleLogFact(leadLogs, completeThought);\n  assert.deepEqual((await session()).inputs, reloadInputs); assert.equal((await effects()).filter(row => row.event === 'input').length, reloadEffects);\n  proof.reloadedScreenshot = await screenshot('reloaded'); proof.reloadWithoutReplay = true;\n",
+        "after": "  proof.leadLogsAfterReload = await visibleLogFact(leadLogs, completeEvent);\n  if (stderrEvent) proof.stderrLogsAfterReload = await visibleLogFact(leadLogs, stderrEvent);\n  if (completeThought) proof.thinkingLogsAfterReload = await visibleLogFact(leadLogs, completeThought);\n  if (partialThought) await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, partialThought))})`,\n    'cold Thinking read retains complete precedence');\n  assert.deepEqual((await session()).inputs, reloadInputs); assert.equal((await effects()).filter(row => row.event === 'input').length, reloadEffects);\n  proof.reloadedScreenshot = await screenshot('reloaded'); proof.reloadWithoutReplay = true;\n",
+        "insertedLines": 2
+      },
+      {
+        "label": "retain incoming9e UI insertion 6",
+        "before": "    assert.equal(input.scheduleId, LEGACY_SCHEDULE_ID); assert.equal(input.maxTurns, 6); assert.equal(input.maxBudgetUsd, 0.25);\n    assert.equal(record(input.config).prompt, 'TEST_UI_STANDALONE_DONE');\n    assert.deepEqual(await rows(taskDirectory), beforeStandaloneTasks, 'standalone creates no hidden Team task');\n    await ui.scrollTo(`${scheduleRow(EDITED_SCHEDULE_LABEL)} button[aria-label=${literal(EDITED_SCHEDULE_LABEL)}]`, 'original standalone history');\n    await ui.click(`${scheduleRow(EDITED_SCHEDULE_LABEL)} button[aria-label=${literal(EDITED_SCHEDULE_LABEL)}]`, 'expand original standalone history');\n    await ui.scrollTo(`${scheduleRow(EDITED_SCHEDULE_LABEL)} div[role=\"button\"]`, 'reveal original completed standalone log');\n    await ui.click(`${scheduleRow(EDITED_SCHEDULE_LABEL)} div[role=\"button\"]`, 'open original completed standalone log');\n    await ui.waitRead(`document.querySelector('[role=\"dialog\"]')?.textContent.includes('TEST standalone complete')`, 'original completed standalone stdout');\n    proof.standaloneCompletedScreenshot = await screenshot('standalone-completed');\n    await escape(); await ui.waitRead(`!document.querySelector('[role=\"dialog\"]')`, 'original standalone log closed');\n    await menu(EDITED_SCHEDULE_LABEL, 'Edit'); await fill('[role=\"dialog\"] #dialog-prompt', 'TEST_UI_STANDALONE_HOLD'); await save();",
+        "after": "    assert.equal(input.scheduleId, LEGACY_SCHEDULE_ID); assert.equal(input.maxTurns, 6); assert.equal(input.maxBudgetUsd, 0.25);\n    assert.equal(record(input.config).prompt, 'TEST_UI_STANDALONE_DONE');\n    assert.deepEqual(await rows(taskDirectory), beforeStandaloneTasks, 'standalone creates no hidden Team task');\n    const completedSession = (await readDesktopNativeStopSessions(fixture.root)).find(row =>\n      record(row.binding).runId === 'scheduled-standalone' && record(row.binding).generation === completedRunId);\n    assert.ok(completedSession);\n    const standaloneBinding = record(completedSession.binding);\n    const retained = await json(join(fixture.root, 'hoststore/runtime-events', runtimeDigest(standaloneBinding) + '.json'));\n    const { digest, ...body } = retained;\n    assert.equal(runtimeDigest(body), digest); assert.deepEqual(retained.binding, standaloneBinding);\n    const thought = array(retained.events).find(row => record(row.data).kind === 'thinking');\n    const output = array(retained.events).find(row => record(row.data).kind === 'text' && record(row.data).text === 'TEST standalone complete');\n    const diagnostic = array(retained.events).find(row => record(row.data).kind === 'process-output');\n    assert.ok(thought && output && diagnostic);\n    assert.deepEqual(record(thought.data), { kind: 'thinking', messageRef: record(output.data).messageRef,\n      block: 1, text: 'TEST standalone thought complete', phase: 'complete' });\n    assert.equal(thought.inputId, completedRunId);\n    assert.equal(array(completedSession.inputs).length, 1);\n    assert.equal(thought.operationRef, array(completedSession.inputs)[0]!.operationRef);\n    assert.deepEqual(diagnostic.data, { kind: 'process-output', stream: 'stderr', text: 'TEST standalone stderr' });\n    assert.equal(diagnostic.inputId, undefined); assert.equal(diagnostic.operationRef, undefined);\n    const savedLogs = record(await cdp.evaluate(`window.electronAPI.schedules.getRunLogs(${literal(LEGACY_SCHEDULE_ID)},${literal(completedRunId)})`));\n    const savedThought = String(savedLogs.stdout).split('\\n').map(line => record(JSON.parse(line))).filter(row => row.uuid === thought.eventId);\n    assert.equal(savedThought.length, 1);\n    assert.deepEqual(record(savedThought[0]!.message).content, [{ type: 'thinking', thinking: record(thought.data).text }]);\n    assert.ok(String(savedLogs.stderr).split('\\n').includes(String(record(diagnostic.data).text)));\n    assert.equal(completedRuns[0]!.summary, 'TEST standalone complete');\n    await ui.scrollTo(`${scheduleRow(EDITED_SCHEDULE_LABEL)} button[aria-label=${literal(EDITED_SCHEDULE_LABEL)}]`, 'original standalone history');\n    await ui.click(`${scheduleRow(EDITED_SCHEDULE_LABEL)} button[aria-label=${literal(EDITED_SCHEDULE_LABEL)}]`, 'expand original standalone history');\n    await ui.scrollTo(`${scheduleRow(EDITED_SCHEDULE_LABEL)} div[role=\"button\"]`, 'reveal original completed standalone log');\n    await ui.click(`${scheduleRow(EDITED_SCHEDULE_LABEL)} div[role=\"button\"]`, 'open original completed standalone log');\n    await ui.waitRead(`document.querySelector('[role=\"dialog\"]')?.textContent.includes('TEST standalone complete')`, 'original completed standalone stdout');\n    const thoughtRow = '[role=\"dialog\"] div.rounded:has(> [role=\"button\"] svg.lucide-brain)';\n    await ui.scrollTo(thoughtRow + ' [role=\"button\"]', 'original scheduled Thinking');\n    await ui.click(thoughtRow + ' [role=\"button\"]', 'expand original scheduled Thinking');\n    await ui.scrollTo(thoughtRow + ' p', 'actual scheduled Thinking Markdown', String(record(thought.data).text), 12, { requireCenterHit: true });\n    const thoughtCopy = thoughtRow + ' button[title=\"Copy to clipboard\"]';\n    await ui.scrollTo(thoughtCopy, 'original scheduled Thinking copy'); await ui.click(thoughtCopy, 'copy scheduled Thinking');\n    await ui.waitRead(`Boolean(document.querySelector(${literal(thoughtCopy + ' svg.lucide-check')}))`, 'scheduled Thinking clipboard acknowledged');\n    assert.equal(await cdp.evaluate('navigator.clipboard.readText()'), record(thought.data).text);\n    await ui.scrollTo('[role=\"dialog\"] pre', 'original scheduled stderr', String(savedLogs.stderr).trim(), 12, { requireCenterHit: true });\n    await ui.waitRead(`document.querySelector('[role=\"dialog\"] pre')?.textContent===${literal(savedLogs.stderr)}`, 'saved stderr renders unchanged');\n    proof.standaloneCompletedScreenshot = await screenshot('standalone-completed');\n    await escape(); await ui.waitRead(`!document.querySelector('[role=\"dialog\"]')`, 'original standalone log closed');\n    await menu(EDITED_SCHEDULE_LABEL, 'Edit'); await fill('[role=\"dialog\"] #dialog-prompt', 'TEST_UI_STANDALONE_HOLD'); await save();",
+        "insertedLines": 34
+      },
+      {
+        "label": "retain incoming9e UI insertion 7",
+        "before": "    assert.deepEqual(await rows(taskDirectory), beforeStandaloneTasks);\n    proof.standaloneDeletedScreenshot = await screenshot('standalone-deleted');\n    proof.standalone = { scheduleId: LEGACY_SCHEDULE_ID, completedRunId, heldRunId, logVisible: true,\n      limits: { maxTurns: 6, maxBudgetUsd: 0.25 }, originalPids, deletedWhileActive: true, cleanup: 'confirmed',\n      releasedRecord: heldRecord, capture: selected[0], taskWrites: 0 };\n  }",
+        "after": "    assert.deepEqual(await rows(taskDirectory), beforeStandaloneTasks);\n    proof.standaloneDeletedScreenshot = await screenshot('standalone-deleted');\n    proof.standalone = { scheduleId: LEGACY_SCHEDULE_ID, completedRunId, heldRunId, logVisible: true,\n      thinkingEventId: thought.eventId, stderrEventId: diagnostic.eventId, activityDigest: digest, actualThinkingClipboard: true,\n      limits: { maxTurns: 6, maxBudgetUsd: 0.25 }, originalPids, deletedWhileActive: true, cleanup: 'confirmed',\n      releasedRecord: heldRecord, capture: selected[0], taskWrites: 0 };\n  }",
+        "insertedLines": 1
+      }
+    ],
+    "fullForwardAndReverseProof": {
+      "fourTitleEditsOn9eProduceFinal": true,
+      "reverseFourTitleEditsRecoversD1a43ByteForByte": true,
+      "sevenIncomingHunksOn345ProduceD1a43ByteForByte": true,
+      "sevenIncomingHunksOnD378ProduceSameFinal": true,
+      "reverseSevenIncomingHunksRecoversD378ByteForByte": true,
+      "allBeforeAfterStringsUniqueAtEachStep": true
+    },
+    "boundaries": [
+      "The exact same four title transformations are reused, with no additional correction hunk.",
+      "All56 incoming added lines and all earlier35/original own proof assertions remain.",
+      "Optional source-title conditions use the existing final evaluation; applying the established rich helper to Task Activity includes its original waits/check/disclosure behavior.",
+      "All original deadline values and no-business-input/no-command/no-provider-replay assertions remain. No total read-count or timing equivalence is claimed."
+    ]
+  },
+  "roster": {
+    "frozen61": "4f48e31f1fb4372064198ba01300518e5070feca",
+    "postimage": "b52876e3215910eba3a3a24756f61c289a0965f9",
+    "physicalLines": 323,
+    "sourceSelection": "Exact incoming blob; no authored roster source.",
+    "exactThreeLineAddition": "  'packages/legacy-agent-host/src/composition/scheduledRunProjection.ts',\n  'packages/legacy-agent-host/src/composition/scheduledRunCapture.ts',\n  'packages/legacy-agent-host/src/composition/scheduledRunContracts.ts',\n",
+    "removeThoseThreeLinesRecoversFrozen61ByteForByte": true,
+    "originalMoved52BlockPreserved": true,
+    "otherOriginalEntriesAndOrderPreserved": true,
+    "rootUnchanged": {
+      "sha": "a8be2617b2c765091cecce789f028ef2bf67af60",
+      "physicalLines": 800
+    },
+    "commonBefore": {
+      "count": 1754,
+      "sortedJSON": {
+        "bytes": 116874,
+        "sha256": "91998b7ce2f81da4b04313f9d5c287a1489663c6f8cb4ff77169fe8f53c02674"
+      }
+    },
+    "commonAfter": {
+      "count": 1757,
+      "sortedJSON": {
+        "bytes": 117083,
+        "sha256": "2e4566fa4aafd7b6db99195177385ffa96c2b1e50b72f260dd13fb61181473eb"
+      }
+    },
+    "windowsBefore": {
+      "count": 1795,
+      "sortedJSON": {
+        "bytes": 119086,
+        "sha256": "911bfe6399f0acca72bbf75fadecaae3507b4f9fa9bd57d5032366219eb580d9"
+      }
+    },
+    "windowsAfter": {
+      "count": 1798,
+      "sortedJSON": {
+        "bytes": 119295,
+        "sha256": "2c8ba366802fe193a354ec13a4ec39b2231e6bfccbd3462f6fec0b60797dc9f6"
+      }
+    },
+    "packagedLocal": {
+      "count": 1759,
+      "sortedJSON": {
+        "bytes": 117211,
+        "sha256": "a0ceedded66acc074e7242228e15a6aac364c00133d3577c3962cae1ec23ac2f"
+      },
+      "extras": [
+        "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "packages/legacy-agent-host/tests/opencode-v1-version-source.ts"
+      ]
+    },
+    "allSelectedSourcePathsExist": true,
+    "originalSetMembershipRetained": true,
+    "noReceiptOrderEquivalenceClaim": true,
+    "testsOutsideCommon": [
+      "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+      "test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx"
+    ]
+  },
+  "preservedCriticalLeaves": {
+    "sixPairPins": [
+      {
+        "path": ".github/workflows/ci.yml",
+        "sha": "a93ff6ba1e5656523668694bca24910a468aebc7"
+      },
+      {
+        "path": "packages/legacy-agent-host/package.json",
+        "sha": "42093f5cb1be431e383a2bbf97223a2bd8d54b49"
+      },
+      {
+        "path": "pnpm-workspace.yaml",
+        "sha": "a049a862742a85ba77faafea329fc221b3e500e4"
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "sha": "9d2ce04a1bbf743e49403d2520873134b08b68de"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+        "sha": "aadc051d5514773ee81d76758c6bbd40c705df5e"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+        "sha": "b19c8ff5a815a2c2034358f102e2af2cedc212e6"
+      }
+    ],
+    "runtimeTeam": {
+      "sha": "26871fb59d09594beff568994b85cf6cb5a00b00",
+      "physicalLines": 3989,
+      "ownAEDFull119LineInverseUnchanged": true
+    },
+    "teamWorkflow": {
+      "sha": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+      "physicalLines": 1248,
+      "completeTenFileLineUnchanged": true
+    },
+    "twelvePublishedOtherScopeSources": [
+      {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "sha": "0938e9f31bad7520fec025ebde6aad8e071cfe69"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+        "sha": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "sha": "865494ab5f5e45c5158fbf74ac858987fb322608"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+        "sha": "b33e5290e4ed86a48b902a24ffc80509f1c89236"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "sha": "7b5edfbd4967debe454387c7a8b6246e67216dc8"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+        "sha": "3cc13374bce3c0337e113b5ff201f556a9211b42"
+      },
+      {
+        "path": "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+        "sha": "f6fdf6a32240c20d5e1cf6e4ea0ceaab9d38d242"
+      },
+      {
+        "path": "tools/owned-process-broker/debugServiceTest.h",
+        "sha": "f8a03669780c34de68010184ad6ca03a8440a2e4"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+        "sha": "cf20ceb57c06b71af1d25eac794fb92b15597930"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGate.ts",
+        "sha": "0d3c432774a928cd26ee0d27b2b5870cfe81f057"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeRetainedHostGate.ts",
+        "sha": "d7a56276a6baa63ee65a357a98fc52c7cfe03bdd"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeVendorGate.ts",
+        "sha": "f704852f8f01b03907502dbaba99fc16bcceeed4"
+      }
+    ],
+    "allUnlistedBaseLeavesUnchanged": true,
+    "noDeletionsOrModeChanges": true
+  },
+  "completeRequiredRuntimeGates": {
+    "localOnlyIfRootExecutorAvailableAfterSourcePublication": true,
+    "toolchain": "original captured Node24.21.0 and pinned pnpm11.22.0",
+    "freshHostBuild": "pnpm --filter @agent-teams/legacy-agent-host build",
+    "nodeFiles": [
+      "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+      "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+      "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "packages/legacy-agent-host/tests/scheduled-run-host.test.ts"
+    ],
+    "nodeFlags": "--test --test-concurrency=1",
+    "vitestFiles": [
+      "test/renderer/components/team/ClaudeLogsSection.test.ts",
+      "test/renderer/components/team/members/MemberLogsPolling.test.ts",
+      "test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+      "test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "test/features/agent-backend/hostTaskActivity.test.ts",
+      "test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx"
+    ],
+    "vitestFlags": "run --maxWorkers=1",
+    "existingScopedLintSizeProvisioningAndDiffInverseChecks": true,
+    "originalCompleteResultingSourceCIGatesStillRequired": true,
+    "noLocalCompilerRetry": true
+  },
+  "qualification": {
+    "sourceOnly": true,
+    "childSourceApplied": false,
+    "commitsCreated": false,
+    "refsMoved": false,
+    "buildsTestsOrCompilersExecuted": false,
+    "CIAction": false,
+    "realClaudeCodexExecuted": false,
+    "providerPackedGREENNotApplicationOrNativeQualification": true,
+    "incomingAuthorResultsRemainAttributed": true,
+    "staticSourceReviewNotRuntimePASS": true,
+    "allOriginalP08P09ReadinessCustodyDeadlinesAndVendorRestrictionsRetained": true
+  }
+}

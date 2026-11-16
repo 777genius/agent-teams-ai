@@ -277,6 +277,7 @@ async function runTurn(turn) {
     return finish(turn, marker === 'TEST_MODEL_PROBE' ? 'OK' : 'TEST boot ready');
   if (marker === 'TEST_UI_STREAM') {
     // Original Codex exposes completed text items before the enclosing turn terminal.
+    process.stderr.write('TEST selected member stderr\n');
     completeItem(turn, 'TEST stream partial'); effect({ event: 'partial', turnId: turn.id });
     turn.itemId += '-final'; turn.text = '';
     const deadline = Date.now() + 60_000;
@@ -413,6 +414,10 @@ lines.once('close', () => { void close(); });
   const finish = (turn, text, outcome = 'succeeded') => {
     assert.equal(active, turn); assert.equal(pending, undefined);
     if (text !== undefined) turn.assistant.parts[0].text = text;
+    if (turn.marker === 'TEST_UI_STREAM' && outcome === 'succeeded') {
+      const thought = turn.assistant.parts.find(part => part.type === 'reasoning');
+      assert.ok(thought); thought.text = 'TEST stream thought complete'; thought.time.end = Date.now();
+    }
     turn.assistant.info.time.completed = Date.now();
     if (outcome === 'succeeded') turn.assistant.info.finish = 'stop';
     else { assert.equal(outcome, 'cancelled'); turn.assistant.info.error = { name: 'MessageAbortedError', data: { message: 'TEST interrupted' } }; }
@@ -425,6 +430,9 @@ lines.once('close', () => { void close(); });
       marker, raw: turn.raw, inputId: turn.userId, mcp, tools, current: () => assert.equal(active, turn), effect }));
     if (marker === 'TEST_UI_BOOT') return finish(turn, 'TEST boot ready');
     if (marker === 'TEST_UI_STREAM') {
+      turn.assistant.parts.push({ id: `prt_reasoning${turns}`, sessionID: sessionId,
+        messageID: turn.assistant.info.id, type: 'reasoning', text: 'TEST stream thought partial',
+        time: { start: Date.now() } });
       partial(turn, 'TEST stream partial');
       const gate = join(root, 'release-stream'), deadline = Date.now() + 60_000;
       while (active === turn && !existsSync(gate)) {

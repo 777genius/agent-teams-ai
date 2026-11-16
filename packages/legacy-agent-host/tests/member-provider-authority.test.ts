@@ -15,6 +15,10 @@ import { captureNativeInputAuthority } from '../dist/composition/captureNativeIn
 import { fixture } from './native-member-actions-fixture.ts';
 import { nativeMcpFixture } from './nativeCreationFixture.ts';
 import type { OwnerState } from '../dist/team/ownerState.js';
+import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
+import { createRuntimeMemberProviderFactory } from '../dist/composition/createRuntimeMemberProviderFactory.js';
+import { ToolEvidenceWindows } from '../dist/evidence/ToolEvidenceWindows.js';
+import type { MemberProviderContext } from '../dist/adapters/providers/MemberProvider.js';
 
 test('closed provider authority reads one fresh state with three namespace traversals and keeps original refusals', async (t) => {
   const f = await fixture(t);
@@ -487,4 +491,74 @@ test('a prepared original lifecycle command refuses currentness before its state
     .find(row => row.commandId === input.commandId);
   assert.equal(pending?.family, 'lifecycle'); assert.equal(pending.phase, 'prepared');
   assert.throws(() => readCapturedProviderAuthority(entry.team, entry.profile.principalId, entry.binding), /forbidden/);
+});
+
+test('original factory stderr survives failed opening and cold read but cannot follow revoked or replaced sources', async t => {
+  const f = await fixture(t, false), entry = [...f.entries.values()].find(value => value.binding.memberId === 'A')!;
+  const writer = acquireProfileWriterLease(f.root);
+  let sealed = false, context: MemberProviderContext | undefined;
+  const factory = createRuntimeMemberProviderFactory({
+    entries: f.entries, storageRoot: f.root, profileId: 'TEST-profile', principalId: 'profile-admin',
+    hostIncarnation: 'TEST-host', windows: new ToolEvidenceWindows(),
+    isSealed: () => sealed, assertWriter: writer.assertCurrent,
+    assertCurrent() { writer.assertCurrent(); }, captureInteractions() {}, onProgress() {},
+    settleDeliveries: async () => {},
+    readRuntime: binding => runtime.readCapturedSession(binding),
+    readCheckpoint: (reference, request) => runtime.readCheckpoint(reference, request),
+    observe: (...args) => runtime.observeProviderActivity(...args),
+    observeProcessOutput: (...args) => runtime.observeProcessOutput(...args),
+    createProvider(captured) {
+      context = captured;
+      return {
+        factory: { open: async () => {
+          const opening = runtime.readSession(entry.binding).record!;
+          assert.equal(opening.phase, 'opening'); assert.equal(opening.sessionRef, undefined);
+          assert.deepEqual(opening.inputs, []);
+          assert.ok(captured.observeProcessOutput);
+          captured.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text: 'TEST startup failure' });
+          throw Error('TEST-original-open-failure');
+        } },
+        isReady: () => false, seal() {}, cleanup: async () => true,
+      };
+    },
+  });
+  const runtime = new RuntimeOwner({
+    store: f.runtimeStore, events: f.runtimeStore, profileId: 'TEST-profile', hostIncarnation: 'TEST-host',
+    authorize: (binding, action) => f.owner.authorizeMemberBinding(binding, action), driverFactory: factory,
+  });
+  try {
+    const held = await runtime.openSession({ binding: entry.binding, config: entry.config }, () => {});
+    assert.equal(held.phase, 'held'); assert.equal(held.diagnostic, 'open-unknown');
+    assert.equal(held.custody, 'unknown'); assert.equal(held.nativeReady, false);
+    assert.equal(held.sessionRef, undefined); assert.deepEqual(held.inputs, []); assert.deepEqual(held.interactions, []);
+    assert.ok(context?.observeProcessOutput);
+    const output = () => f.runtimeStore.readActivity(entry.binding)!.events.filter(event => event.data.kind === 'process-output');
+    assert.equal(output().length, 1);
+    assert.deepEqual(output()[0]!.data, { kind: 'process-output', stream: 'stderr', text: 'TEST startup failure' });
+    assert.equal(output()[0]!.inputId, undefined); assert.equal(output()[0]!.operationRef, undefined);
+    const originalConfig = entry.config;
+    Object.assign(context.request, { checkpointRef: 'TEST-mutated-caller' });
+    context.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text: 'TEST original held source' });
+    assert.equal(output().length, 2, 'the callback retains its full original request instead of following caller mutation');
+    const before = readFileSync(join(f.root, 'runtime-events', runtimeDigest(entry.binding) + '.json'), 'utf8');
+    const cold = new RuntimeOwner({ store: f.runtimeStore, events: f.runtimeStore, profileId: 'TEST-profile',
+      hostIncarnation: 'TEST-cold', authorize: () => true, driverFactory: { open: async () => { assert.fail('cold read must not allocate'); } } });
+    const snapshot = cold.readActivitySnapshot(entry.binding);
+    assert.equal(snapshot.gap?.reason, 'incarnation');
+    const retained = cold.readActivityFeed(entry.binding, { ...snapshot.cursor, sequence: 0 });
+    assert.deepEqual(retained.events.filter(event => event.data.kind === 'process-output'), output());
+    assert.deepEqual(cold.readConversation(entry.binding, 'messages').messages, []);
+    assert.equal(readFileSync(join(f.root, 'runtime-events', runtimeDigest(entry.binding) + '.json'), 'utf8'), before);
+    entry.config = { ...entry.config, configRevision: 'TEST-replaced' };
+    context.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text: 'TEST rejected config' });
+    entry.config = originalConfig;
+    sealed = true;
+    context.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text: 'TEST rejected seal' });
+    sealed = false;
+    f.human.revoke(entry.profile.principalId);
+    context.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text: 'TEST rejected grant' });
+    assert.equal(readFileSync(join(f.root, 'runtime-events', runtimeDigest(entry.binding) + '.json'), 'utf8'), before);
+  } finally {
+    writer.release();
+  }
 });

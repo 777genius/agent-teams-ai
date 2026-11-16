@@ -7,7 +7,7 @@ import { TaskActivitySection } from '@renderer/components/team/taskLogs/TaskActi
 import { TaskLogStreamSection } from '@renderer/components/team/taskLogs/TaskLogStreamSection';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { TaskResourceTestHost, resetTaskResourceTestState } from './taskResourceTestHost';
+import { resetTaskResourceTestState, TaskResourceTestHost } from './taskResourceTestHost';
 const mocks = vi.hoisted(() => ({
   activity: vi.fn(),
   detail: vi.fn(),
@@ -143,7 +143,18 @@ it('original Activity/Stream/Exact surfaces show actual source facts or stale re
     });
     expect(mocks.detail).toHaveBeenCalledWith('host-team:original', 'task', summary.id);
     expect(node.textContent).toContain('actual exit seven');
-    expect(node.textContent).toContain('"isError": true');
+    const failedResult = node.querySelector<HTMLElement>(
+      '[data-host-log-event-id="actual-source:3"]'
+    )!;
+    expect(failedResult.dataset.hostLogIsError).toBe('true');
+    expect(
+      failedResult.querySelector<HTMLElement>('.base-item-status-dot')?.style.backgroundColor
+    ).toBe('#ef4444');
+    expect(failedResult.querySelector('[data-host-log-content]')).toBeNull();
+    await act(async () => failedResult.querySelector<HTMLElement>('[role="button"]')!.click());
+    expect(failedResult.querySelector('[data-host-log-content]')?.textContent).toContain(
+      'actual exit seven'
+    );
     expect(node.textContent).toContain('timestamps unavailable');
     await act(async () => {
       root.render(

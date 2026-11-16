@@ -3,7 +3,7 @@ import { prepareSessionOpen } from './prepareSessionOpen.js';
 import { preparedInputProof, prepareRuntimeInput, recordContextEpoch } from './inputPreparation.js';
 import { randomUUID } from 'node:crypto';
 
-import type { RuntimeProviderActivity } from './providerActivityContracts.js';
+import type { RuntimeProcessOutput, RuntimeProviderActivity } from './providerActivityContracts.js';
 import { RuntimeOwnerError } from './contracts.js';
 import { CheckpointCoordinator } from './CheckpointCoordinator.js';
 import { RuntimeActivityCoordinator } from './RuntimeActivityCoordinator.js';
@@ -94,6 +94,11 @@ export class RuntimeOwner {
   /** Private Host composition input, not exposed by RPC or the provider Session SPI. */
   observeProviderActivity(binding: RuntimeBinding, sessionRef: string, observation: RuntimeProviderActivity): void {
     this.activity.observeProviderActivity(normalizeBinding(binding), sessionRef, observation);
+  }
+
+  /** Original process observation, including startup before a Session reference exists. */
+  observeProcessOutput(binding: RuntimeBinding, config: OpenConfig, observation: RuntimeProcessOutput, assertSourceCurrent: () => void): void {
+    this.activity.observeProcessOutput(normalizeBinding(binding), normalizeOpenConfig(config, true), observation, assertSourceCurrent);
   }
 
   captureCheckpoint(input: {

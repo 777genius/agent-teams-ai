@@ -13,6 +13,7 @@ import {
 } from '@agent-teams/provider-implementations/codex';
 
 import { codexByteTransport } from './codexByteTransport.js';
+import { observeMemberProcessStderr } from './observeMemberProcessStderr.js';
 import { CapturedProcess } from './CapturedProcess.js';
 import { createTeamMcpTools } from '../../mcp/tools.js';
 
@@ -157,11 +158,13 @@ export function createCodexMemberProvider(
       if (!capturedMcpSourceCurrent(profile) || !(await verifyCatalog())) return undefined;
       if (sealed || !context.isCurrent() || !context.canAllocate()) return undefined;
       allocated = true;
+      const args = codexLaunchArguments({ ...context, profile: captured });
       const child = custody.launch({
         command: profile.executable.path,
-        args: codexLaunchArguments({ ...context, profile: captured }),
+        args,
         cwd: profile.cwd,
       });
+      observeMemberProcessStderr(child, context, args);
       return {
         binding: {
           tenantId: request.tenantId,

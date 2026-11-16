@@ -4,6 +4,7 @@ import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
+import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { readTeamActivity, summarizeTeamActivity } from '../dist/composition/readTeamActivity.js';
 import type { TeamActivityReadOptions } from '../dist/composition/readTeamActivity.js';
 import type { TeamGrant } from '../dist/team/contracts.js';
@@ -12,7 +13,7 @@ import type {
   RuntimeActivityEvent,
   RuntimeActivitySnapshot,
 } from '../dist/runtime/activityContracts.js';
-import { deliveryFingerprint } from '../dist/runtime/identity.js';
+import { deliveryFingerprint, normalizeBinding, runtimeDigest } from '../dist/runtime/identity.js';
 import type { RuntimeSessionRecord } from '../dist/runtime/contracts.js';
 import type { TestContext } from 'node:test';
 
@@ -114,7 +115,14 @@ function fixture(t: TestContext) {
           events: [],
           hasMore: false,
           state: null,
-          latest: { text: [], tools: [], usage: [], compaction: null, interactions: [], subagents: [] },
+          latest: {
+            text: [],
+            tools: [],
+            usage: [],
+            compaction: null,
+            interactions: [],
+            subagents: [],
+          },
         } satisfies RuntimeActivitySnapshot;
       },
       readActivityFeed(_binding, from) {
@@ -129,7 +137,7 @@ function fixture(t: TestContext) {
       },
     },
   };
-  return { owner, connection, options, events, push, taskId, intent, record };
+  return { root, owner, connection, options, events, push, taskId, intent, record };
 }
 test('actual normalized content/tool/usage/compaction facts remain scoped to original task after reassignment', (t) => {
   const f = fixture(t);
@@ -180,9 +188,99 @@ test('actual normalized content/tool/usage/compaction facts remain scoped to ori
   assert.equal(stats.outputTokens, 7);
   assert.equal(stats.costUsd, 0.02, 'duplicate cumulative reports are not double-counted');
   assert.equal(stats.compactions, 1);
+  const snapshot = f.options.runtime.readActivitySnapshot.bind(f.options.runtime);
+  f.options.runtime.readActivitySnapshot = binding => ({ ...snapshot(binding),
+    logProjection: { thinking: [], stderr: [], truncated: true } });
+  const unchanged = readTeamActivity(f.options, { taskId: f.taskId });
+  assert.deepEqual(unchanged, logs, 'internal schedule-log trimming does not enter Team Logs');
+  const { computedAt: _originalClock, ...originalStats } = stats;
+  const { computedAt: _unchangedClock, ...unchangedStats } = summarizeTeamActivity('alice', unchanged);
+  assert.deepEqual(unchangedStats, originalStats, 'retained Stats cost stays known');
   f.connection.revoke('human');
   assert.throws(() => readTeamActivity(f.options, { taskId: f.taskId }), { code: 'forbidden' });
   assert.throws(() => f.owner.readTaskInputCause('human', f.intent), { code: 'forbidden' });
+});
+test('cold thinking and member stderr retain their exact scope without changing message, usage or preview counts', (t) => {
+  const f = fixture(t);
+  const thought = {
+    kind: 'thinking',
+    messageRef: 'TEST-message',
+    block: 0,
+    text: 'TEST thought',
+    phase: 'snapshot',
+  };
+  f.push({ ...thought, privateNative: 'PRIVATE-not-projected' });
+  f.push({ ...thought, text: 'TEST final thought', phase: 'complete' });
+  f.push({
+    kind: 'text',
+    messageRef: 'TEST-message',
+    block: 1,
+    text: 'TEST answer',
+    phase: 'complete',
+  });
+  f.push({ ...thought, messageRef: 'TEST-thinking-only', phase: 'complete' });
+  f.push({
+    kind: 'subagent',
+    phase: 'fact',
+    childId: `child-${'a'.repeat(64)}`,
+    parentToolRef: `tool-${'b'.repeat(64)}`,
+    fact: { ...thought, messageRef: 'TEST-child', phase: 'complete' },
+  });
+  f.push({ kind: 'usage', inputTokens: 3, outputTokens: 2, cumulativeCostUsd: 0.01 });
+  const stderr = { kind: 'process-output', stream: 'stderr', text: 'TEST captured stderr' };
+  f.events.push({
+    sequence: 7,
+    eventId: 'TEST-stderr',
+    data: { ...stderr, privateNative: 'PRIVATE-not-projected' },
+  });
+  // A retained JSON fixture enters the existing journal under its member fence.
+  // It does not add an unsupported thinking Event to the currently pinned SPI producer.
+  const store = new FileRuntimeStore(f.root),
+    binding = normalizeBinding(f.intent.binding),
+    key = runtimeDigest(binding);
+  const body = {
+    schemaVersion: 1 as const,
+    binding,
+    sequence: f.events.length,
+    writerIncarnation: 'TEST-incarnation',
+    stateDigest: runtimeDigest(f.record),
+    events: f.events.map((event) => ({ ...event, eventId: `${key}:${event.sequence}` })),
+  };
+  store.fenced(binding, () => store.writeActivity({ ...body, digest: runtimeDigest(body) }));
+  const cold = new FileRuntimeStore(f.root);
+  const retained = cold.fenced(binding, () => cold.readActivity(binding));
+  assert.ok(retained);
+  f.events.splice(0, f.events.length, ...retained.events);
+  f.options.runtime.readCapturedSession = () => ({ record: f.record, attached: false });
+  const logs = readTeamActivity(f.options, { taskId: f.taskId }),
+    log = logs[0]!;
+  assert.equal(log.memberId, 'alice');
+  assert.equal(log.taskId, f.taskId);
+  assert.equal(log.messageCount, 2);
+  assert.equal(log.isOngoing, false);
+  assert.deepEqual(
+    log.events.map((event) => event.data.kind),
+    ['thinking', 'thinking', 'text', 'thinking', 'subagent', 'usage']
+  );
+  assert.deepEqual(log.events[0]!.data, thought);
+  assert.equal(log.lastOutputPreview, 'TEST answer');
+  assert.equal(JSON.stringify(log).includes('PRIVATE-'), false);
+  const memberLog = readTeamActivity(f.options, { memberName: 'alice' })[0]!;
+  assert.deepEqual(memberLog.events.slice(0, -1), log.events);
+  assert.deepEqual(memberLog.events.at(-1), { eventId: `${key}:7`, sequence: 7, data: stderr });
+  assert.equal(memberLog.messageCount, log.messageCount);
+  assert.equal(memberLog.lastOutputPreview, 'TEST answer');
+  const stats = summarizeTeamActivity('alice', logs);
+  assert.equal(stats.observedMessages, 2);
+  assert.equal(stats.inputTokens, 3);
+  assert.equal(stats.outputTokens, 2);
+  assert.equal(stats.costUsd, 0.01);
+  const { computedAt: _taskClock, ...taskStats } = stats;
+  const { computedAt: _memberClock, ...memberStats } = summarizeTeamActivity('alice', [memberLog]);
+  assert.deepEqual(memberStats, taskStats);
+  // Even a malformed retained diagnostic cannot borrow a legitimate task input.
+  f.push(stderr);
+  assert.deepEqual(readTeamActivity(f.options, { taskId: f.taskId })[0]!.events, log.events);
 });
 test('unknown usage stays unknown; foreign operation/input cannot borrow task scope; finite page cap is visible', (t) => {
   const f = fixture(t);
@@ -203,6 +301,18 @@ test('unknown usage stays unknown; foreign operation/input cannot borrow task sc
       messageRef: 'FOREIGN',
       block: 0,
       text: 'must not leak',
+      phase: 'complete',
+    },
+  });
+  f.events.push({
+    ...f.events[1]!,
+    sequence: 3,
+    eventId: 'TEST-foreign-thinking',
+    data: {
+      kind: 'thinking',
+      messageRef: 'FOREIGN',
+      block: 0,
+      text: 'must not leak either',
       phase: 'complete',
     },
   });

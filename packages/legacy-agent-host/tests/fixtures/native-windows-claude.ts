@@ -218,7 +218,7 @@ export async function runNativeWindowsClaude(options: {
     // Only finite counters leave this TEST fixture; payload, paths, IDs and error text stay private.
     try {
       const kinds: Record<Event['kind'], number> = {
-        compaction: 0, text: 0, tool: 0, 'tool-result': 0, usage: 0, result: 0, interaction: 0, diagnostic: 0,
+        compaction: 0, text: 0, thinking: 0, tool: 0, 'tool-result': 0, usage: 0, result: 0, interaction: 0, diagnostic: 0,
       };
       for (const kind of Object.keys(kinds) as Event['kind'][])
         kinds[kind] = events.filter(event => event.kind === kind).length;

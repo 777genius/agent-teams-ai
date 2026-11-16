@@ -246,6 +246,8 @@ export class RuntimeTeamCoordinator {
         readCheckpoint: (reference, request) => this.runtime.readCheckpoint(reference, request),
         observe: (binding, sessionRef, activity) =>
           this.runtime.observeProviderActivity(binding, sessionRef, activity),
+        observeProcessOutput: (binding, config, observation, assertAuthority) =>
+          this.runtime.observeProcessOutput(binding, config, observation, assertAuthority),
         onProgress: (entry) => {
           try { if (!this.sealed) publishNativeCommandOutput(entry, this.runtime); } catch { /* Original output remains recoverable. */ }
           this.kick();
