@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "status": "prospective scope accepted by root; independent R2 and published selection required before source",
+  "planNumber": 71,
+  "sourceBase": "6e9d65e06d38cbd1e30099f4e38e3811512fd04f",
+  "sourceTree": "9a940587e595ef1933fd2b13d3fe3b92ab0486ce",
+  "plan": {
+    "bytes": 6786,
+    "lines": 35,
+    "sha256": "1437614eb9bec4320ccbf39859ffa1ed27ca4706a529635c8fd942ee60750e38",
+    "gitBlob": "88229f294a992aeabea0e4115b26644fc97f5f9f"
+  },
+  "preimages": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "local": "desktop-v2-management-75cf/source/scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "bytes": 30843,
+      "lines": 523,
+      "sha256": "0bc2e2d5b3d36cc6e59dd1b91a2caf8c6ef8397719aca85bf4aa27321657509e",
+      "gitBlob": "602c2fe5d57cc67a8b18fe0c193b61e58293f508"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "local": "frontend-proposal/nested-scroll-proposal/implementation/after/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 174969,
+      "lines": 2893,
+      "sha256": "ba573ef65142ec600ea0067c7dfdd48468bdcbd53b3172402481bbc93b3379e9",
+      "gitBlob": "3eb5191149ed77e27365af1193ece1b9a437f23d"
+    }
+  ],
+  "originalEvidenceR1": "5b5205bddf4ba05318611f564a20f8bae7264659a2a71788187ce2ed9abc6674",
+  "originalEvidenceR2": "cf6860b0564123997ca829ee0070a49d77173b1cb4fce5ca23af66116a3eb28d",
+  "decision": "Passive bounded post-failure provider status facts only; missing finite model cause remains unresolved.",
+  "preservationRequirements": [
+    "One original CDP evaluate and one existing store read; no extra RPC, status refresh, DOM query, subscription or write.",
+    "Existing startup optional race, every old returned property, ownership, four-second capture deadline, screenshots and business assertions preserved.",
+    "Finite enums/booleans/bounded numbers/null only; no secrets, scope keys, paths, free text, model IDs/names or provenance tokens.",
+    "At most four global providers, eight scoped observations and 64 model rows per catalogue.",
+    "Only new field catches its own read failure; prior snapshot remains available.",
+    "Real generated expression VM tests; all old cases, including Plan70, retained.",
+    "Two already captured TEST paths only; no workflow, roster, dependency or production change.",
+    "No diagnostic result is launch/custody authority or proof of earlier-input state."
+  ],
+  "execution": {
+    "localProject": false,
+    "localTests": false,
+    "compiler": false,
+    "provider": false,
+    "native": false,
+    "gui": false,
+    "ci": false
+  }
+}

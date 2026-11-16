@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "status": "ACCEPT_PROSPECTIVE_SOURCE_ONLY",
+  "reviewer": "/root/native_gaps",
+  "planNumber": 71,
+  "plan": {
+    "path": "/workspace/scratch/20ba97c23d57/provider-catalog-failure-proposal/plan.md",
+    "sha256": "1437614eb9bec4320ccbf39859ffa1ed27ca4706a529635c8fd942ee60750e38",
+    "gitBlob": "88229f294a992aeabea0e4115b26644fc97f5f9f",
+    "bytes": 6786,
+    "lines": 35
+  },
+  "rootR1Sha256": "52e0556c95cf238bb0a66a98640f755fc6035157d5db0da13a5d3ce1b345ad42",
+  "sourceBase": "6e9d65e06d38cbd1e30099f4e38e3811512fd04f",
+  "sourceTree": "9a940587e595ef1933fd2b13d3fe3b92ab0486ce",
+  "preimages": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "local": "desktop-v2-management-75cf/source/scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "bytes": 30843,
+      "lines": 523,
+      "sha256": "0bc2e2d5b3d36cc6e59dd1b91a2caf8c6ef8397719aca85bf4aa27321657509e",
+      "gitBlob": "602c2fe5d57cc67a8b18fe0c193b61e58293f508"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "local": "frontend-proposal/nested-scroll-proposal/implementation/after/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 174969,
+      "lines": 2893,
+      "sha256": "ba573ef65142ec600ea0067c7dfdd48468bdcbd53b3172402481bbc93b3379e9",
+      "gitBlob": "3eb5191149ed77e27365af1193ece1b9a437f23d"
+    }
+  ],
+  "additionalPrimaryTypeRead": {
+    "ref": "6e9d65e06d38cbd1e30099f4e38e3811512fd04f",
+    "path": "src/shared/types/cliInstaller.ts",
+    "gitBlob": "af81c3af93ae2a0e53a635daf16530a604c0fe39",
+    "sha256": "ce28995162a32167226dd7c7fb9e68ffc8b068d6bf1b8ec88355f76ceaae9c0e",
+    "localPath": "/workspace/scratch/20ba97c23d57/provider-catalog-failure-proposal/native-review/source/src/shared/types/cliInstaller.ts",
+    "url": "https://github.com/777genius/agent-teams-ai/blob/6e9d65e06d38cbd1e30099f4e38e3811512fd04f/src/shared/types/cliInstaller.ts"
+  },
+  "findings": [],
+  "assessment": [
+    "Useful bounded inventory distinguishes missing catalogues, model-only/partial status and post-failure freshness without changing product authority.",
+    "Existing helper provides a single-evaluate/single-store-read insertion seam; preserving that suffix and startup race is source-feasible.",
+    "Existing VM tests can execute the actual generated expression with an absent startup API and finite DOM/store/clock, not a fabricated output.",
+    "Only the new property may catch its own observer error; existing old fields remain observable."
+  ],
+  "actualSourceReviewObligations": [
+    "Assert exactly one cdp.evaluate and one store getState, no send/mutation, and one sampled diagnostic Date.now.",
+    "Bound value inspection itself: do not eagerly read all scope values/getters through Object.values before slicing; prove overflow stops inspection.",
+    "Bound global provider/model row inspection and timestamp input lengths as well as emitted finite numeric ranges; unknown/invalid inputs must produce only closed output.",
+    "Use canonical UTC parsing and exact fetchedAt <= sampledNow < staleAt; age/remaining values do not grant readiness.",
+    "Preserve every old returned property, startup optional race, existing ownership/capture deadline/screenshot sequence and all Plan70 test bytes.",
+    "Test missing versus model_only/partial_response, expiry equality/future fetch, overflow/invalid shape, absence of distinctive private strings, and getter failure with old snapshot fields intact."
+  ],
+  "limits": [
+    "Post-failure global/scoped inventory has no raw scope identity or matched input snapshot; it cannot prove which project scope supplied the earlier selector or the cause of its prior absence.",
+    "No earlier failed receipt is retroactively enriched and no launch, custody or cleanup authority is produced.",
+    "Actual postimages, compiler/lint/tests and resulting-source E2E are not reviewed or executed by this prospective report."
+  ],
+  "checks": [
+    {
+      "check": "final-plan-exact",
+      "passed": true
+    },
+    {
+      "check": "original-draft-exact",
+      "passed": true
+    },
+    {
+      "check": "root-r1-exact",
+      "passed": true
+    },
+    {
+      "check": "draft-final-only-status-and-suite-binding",
+      "passed": true
+    },
+    {
+      "check": "exact-preimage:scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "passed": true
+    },
+    {
+      "check": "exact-preimage:scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "passed": true
+    },
+    {
+      "check": "one-original-cdp-evaluate",
+      "passed": true
+    },
+    {
+      "check": "one-original-store-read",
+      "passed": true
+    },
+    {
+      "check": "existing-store-IIFE-seam",
+      "passed": true
+    },
+    {
+      "check": "existing-startup-optional-race",
+      "passed": true
+    },
+    {
+      "check": "helper-under-existing-cap",
+      "passed": true
+    },
+    {
+      "check": "suite-exact-Plan70-postimage",
+      "passed": true
+    },
+    {
+      "check": "real-expression-VM-seam-already-present",
+      "passed": true
+    },
+    {
+      "check": "Plan70-cases-present",
+      "passed": true
+    },
+    {
+      "check": "current-primary-type-definition-binding",
+      "passed": true
+    },
+    {
+      "check": "four-provider-identifiers-exact",
+      "passed": true
+    },
+    {
+      "check": "closed-projected-status-facts-exist",
+      "passed": true
+    },
+    {
+      "check": "freshness-boundary-from-original-authority",
+      "passed": true
+    },
+    {
+      "check": "global-and-scoped-status-both-relevant",
+      "passed": true
+    },
+    {
+      "check": "passive-only-output-in-original-expression",
+      "passed": true
+    },
+    {
+      "check": "no-new-business-or-observation-owner",
+      "passed": true
+    },
+    {
+      "check": "closed-redacted-output",
+      "passed": true
+    },
+    {
+      "check": "finite-collection-bounds",
+      "passed": true
+    },
+    {
+      "check": "postfailure-causality-limited",
+      "passed": true
+    },
+    {
+      "check": "property-local-error-containment",
+      "passed": true
+    },
+    {
+      "check": "meaningful-actual-expression-tests",
+      "passed": true
+    },
+    {
+      "check": "no-scope-expansion",
+      "passed": true
+    }
+  ],
+  "checkCount": 27,
+  "execution": {
+    "dataOnly": true,
+    "project": false,
+    "compiler": false,
+    "tests": false,
+    "provider": false,
+    "native": false,
+    "GUI": false,
+    "CI": false,
+    "sourceAfterimages": false,
+    "remoteMutation": false
+  }
+}
