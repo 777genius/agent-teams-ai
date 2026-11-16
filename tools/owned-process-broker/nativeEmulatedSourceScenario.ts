@@ -30,7 +30,7 @@ import { capturedQueryableWitness } from './nativeGateContext';
 import { createNativeGateEvents } from './nativeGateEvents';
 import { fileHash } from './nativeEmulatedProfile';
 import { finiteSourceProbe, prepareEmulatedSourceProfile } from './nativeEmulatedSourceProfile';
-import { readEmulatedSourceActionProbe } from './nativeEmulatedSourceReadiness';
+import { readEmulatedSourceActionProbe, readEmulatedCodexReadinessObservation } from './nativeEmulatedSourceReadiness';
 
 import { sameOwner } from '@agent-teams/legacy-agent-host/owned-process';
 import type { HostCustodyOwner, ProcessOwner, RuntimeSourceProcessOrigin, TreeReceipt } from '@agent-teams/legacy-agent-host/owned-process';
@@ -70,7 +70,7 @@ function validateSourceRefusal(value: Record<string, unknown>, persisted: boolea
   assert.ok(value && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value)));
   assert.ok(Object.getOwnPropertySymbols(value).length === 0 && Object.values(Object.getOwnPropertyDescriptors(value)).every(row => 'value' in row));
   const hash = (raw: unknown) => typeof raw === 'string' && /^[a-f0-9]{64}$/.test(raw), clock = (raw: unknown) => typeof raw === 'number' && Number.isSafeInteger(raw) && raw >= 0;
-  const fields: Record<string, string> = { native: 'capability phase reason dispatched staged rootCaptured deadlineExpired',
+  const fields: Record<string, string> = { native: 'capability phase reason dispatched staged rootCaptured deadlineExpired checkSite',
     consumer: 'actionDigest groupDigest bindingDigest consumerId phase reason cutoff observedAt',
     reference: 'commandDigest contextDigest phase reason probeCutoff probeNow scopeCutoff scopeNow preparationCutoff preparationNow', limit: '' };
   assert.ok(typeof value.kind === 'string' && Object.hasOwn(fields, value.kind));
@@ -83,6 +83,8 @@ function validateSourceRefusal(value: Record<string, unknown>, persisted: boolea
     assert.ok('sealed current-false current-threw launch-deadline refused unknown result-mismatch preparation-failed'.split(' ').includes(value.reason));
     assert.ok(['dispatched', 'staged', 'rootCaptured'].every(key => typeof value[key] === 'boolean'));
     assert.equal(value.deadlineExpired, value.reason === 'launch-deadline' ? true : null);
+    assert.ok(value.checkSite === null || typeof value.checkSite === 'string' && ['before-owner', 'after-owner', 'request-builder', 'after-reply'].includes(value.checkSite));
+    if (value.checkSite !== null) assert.ok(value.phase === 'resume' && ['sealed', 'current-false', 'current-threw', 'launch-deadline'].includes(value.reason));
   } else {
     assert.ok(value.reason === 'held' || value.reason === 'threw'); const consumer = value.kind === 'consumer';
     assert.ok((consumer ? ['actionDigest', 'groupDigest', 'bindingDigest', 'consumerId'] : ['commandDigest', 'contextDigest']).every(key => hash(value[key])));
@@ -753,6 +755,13 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
     } catch { evidence.runtimeProjection = { status: 'unknown', reason: 'missing-invalid-overflow-conflicting-or-unjoined' }; }
     // TEST_RUNTIME_PROJECTION_READER_END
     if (failure) try {
+      evidence.codexReadinessObservation = readEmulatedCodexReadinessObservation({
+        provider, ledgerPath: fixture.runtimeProjectionLedger + '.codex-readiness',
+        epochs: epochs.map(epoch => ({ mainEpoch: epoch.physical.mainEpoch, projectionHostExit: epoch.projectionHostExit })),
+        runtimeProjection: evidence.runtimeProjection, lastRuntimeViewDigest,
+        lastLaunchReadiness: evidence.lastLaunchReadiness, diagnosticLaunches });
+    } catch { /* Preserve the original failure if separate diagnostic publication is unavailable. */ }
+    if (failure) try {
       const stat = lstatSync(fixture.refusals); assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 65536);
       const raw = readFileSync(fixture.refusals, 'utf8'); assert.ok(raw === '' || raw.endsWith('\n'));
       assert.ok(Buffer.byteLength(raw) + Buffer.byteLength(JSON.stringify({ kind: 'limit', ordinal: 65 }) + '\n') <= 65536);
@@ -767,9 +776,12 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         assert.equal(matches.length, 1); return { row, launch: matches[0]! };
       });
       const observations = records.map(row => {
-        if (row.kind === 'native') { const matches = epochs.flatMap(epoch => epoch.jobs).filter(job => job.capability === row.capability);
-          assert.equal(matches.length, 1); assert.ok(matches[0]!.origin); const { capability: _capability, ...observed } = row;
-          return { ...observed, source: sourceRef(matches[0]!.origin) }; }
+        if (row.kind === 'native') { const matches = epochs.flatMap(epoch => epoch.jobs.map((job, jobSlot) => ({ epoch, job, jobSlot })))
+          .filter(value => value.job.capability === row.capability);
+          assert.equal(matches.length, 1); const match = matches[0]!; assert.ok(match.job.origin);
+          const mainEpoch = match.epoch.physical.mainEpoch; assert.ok(typeof mainEpoch === 'string' && mainEpoch.length > 0 && mainEpoch.length <= 256 && !mainEpoch.includes('\0'));
+          return { ...row, mainEpoch, jobSlot: match.jobSlot, source: sourceRef(match.job.origin) };
+        }
         const matches = row.kind === 'consumer' ? consumers.filter(value => value.row === row) :
           consumers.filter(value => value.row.groupDigest === runtimeDigest({ commandDigest: row.commandDigest, contextDigest: row.contextDigest }));
         assert.ok(matches.length > 0); assert.equal(new Set(matches.map(value => JSON.stringify(value.launch))).size, 1);
