@@ -58,3 +58,11 @@ The [machine-readable index](pr1213-terminal-retention-index-20261116.json) bind
 A fresh read of delivery [PR1192](https://github.com/777genius/agent-teams-ai/pull/1192) still resolved to `72e6ec04444969d343d73834c70bc4e261100fc9`; provider [PR8](https://github.com/agent-teams-ai/old-provider-implementations/pull/8) still resolved to `c79b81bf002eaac95436da71c7049d7f309906a9`. Neither branch was modified here.
 
 Frozen PR1206/1207/1208/1211/1212/1213, their original runs and all 42 workflows remain unchanged. No main/default merge, Ready, release, default activation or Stage2 action was selected. Real Claude/Codex commands, including version probes, were not invoked.
+
+## Later original Packaged result — 11:25:57 UTC snapshot
+
+The original [Darwin x64 packaged job](https://github.com/777genius/agent-teams-ai/actions/runs/43834444828/job/133212588425) completed successfully at 11:21:10 UTC. Its complete [late terminal record](pr1213-owned-06-20261116.json) preserves the raw log, job/run/artifact APIs and the exact original workflow and qualification sources. The earlier Darwin x64 active observation above remains a historical snapshot.
+
+The job passed the actual packaged V2 Host tools/MCP/Stop/cold Resume route and the separate finite SDK macOS app-relaunch route. Its capture tests report 25 PASS and one Windows-only SKIP. The V2 output reports cleanup and source/bundle restoration, while desktopJourneyQualified, vendorAuthQualified and releaseQualified remain false. The artifact upload and API agree on ID14220497882, 798186 bytes and SHA256 b4b06487be126cdee00f89a227478bf4db0142dfe66c76cc21710f40690c0da6; the ZIP, members, artifact receipts and images have not been independently inspected during the environment outage.
+
+At this later snapshot, the five Packaged platform jobs are two successful Darwin jobs, two failed Windows jobs and one Linux job still running. The classifier passed separately. This does not close either Windows failure or the overall end-to-end task. These results still qualify only frozen E; the 97-case conversation file remains unexecuted and neither UI producer has changed.
