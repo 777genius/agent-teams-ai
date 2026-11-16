@@ -1,0 +1,67 @@
+{
+  "kind": "Explicit author audit-only v2 correction; original raw/source/results unchanged",
+  "correctedAtUTC": "2026-11-16T08:47:53.721704+00:00",
+  "findingBy": "/root/migration_scope independent R2",
+  "oldAuditPreserved": {
+    "path": "ci-57885c/native/process-windows-x64/original-windows-process-failure-audit.json",
+    "bytes": 226589,
+    "blob": "8113090283e2cbdf6511999d257931b7edd29feb",
+    "sha256": "ba0be2724618f09ff3bf8d2057c383ee592cd5c7ef0b92bfc8623c9a96697bf1"
+  },
+  "correctedAudit": {
+    "path": "ci-57885c/native/process-windows-x64/original-windows-process-failure-audit-v2.json",
+    "bytes": 381922,
+    "blob": "be980dcafdffbf767e1a41ae1c09b207b0ae2e54",
+    "sha256": "f4616ad0d3aab8ef83c747588c05524358fbd15e7d6808847d44742eb615b486"
+  },
+  "onlySemanticFieldChanged": "originalNativeNodeAndElectron",
+  "oldIncorrectField": {
+    "kind": "native",
+    "phase": "prepare",
+    "reason": "current-false",
+    "dispatched": true,
+    "staged": true,
+    "rootCaptured": false,
+    "deadlineExpired": null,
+    "ordinal": 3,
+    "source": {
+      "sourceId": "7743f08278dfb36c34ff5128d3cf1d09e96971a0961c0239e2d68f8f731371e4",
+      "revision": "39b1dd91c6e145ca956cef80c50ac562838dd810fd1a446bc62e0f1c1b75bc72"
+    }
+  },
+  "causeInAnalysisReader": "audit_windows_originals.py line229 unpacks the OpenCode first-refusal row into local native, shadowing the earlier two-entry summary accumulator before line250 serialization. No project source or execution behavior is involved.",
+  "originalReaderPreserved": {
+    "path": "ci-57885c/native/audit_windows_originals.py",
+    "bytes": 20614,
+    "blob": "46469edd4eccba07f09cfeaef988195beddd7f65",
+    "sha256": "281ea667e44dc4cf8fb2061b83228d963c894555d61e818c2afc2e69bd818b38"
+  },
+  "correctedFieldRecoveredOnlyFromOriginalArchiveMembers": [
+    {
+      "path": "ci-57885c/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+      "bytes": 89866,
+      "blob": "6b64a0b3eaefbfaa89cf182abee3260e954ab753",
+      "sha256": "3a795d69c3cd245fb6a5b5b8ca9cf3c94363bca1b899c9ef7569bbcc39e7f925"
+    },
+    {
+      "path": "ci-57885c/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+      "bytes": 89912,
+      "blob": "0cc97ad8cd4edb81c85bd130a6f7c01acb0a413f",
+      "sha256": "d38cbd9fd1f8f0552b8d588a4335c7fea15e5cbd0ed498b3033acc63262fa9f1"
+    }
+  ],
+  "countsEach": {
+    "resultLabels": 25,
+    "completedPhases": 31,
+    "helpers": 64,
+    "retainedCapabilities": 9,
+    "i386Rows": 6,
+    "matchingChildRows": 4
+  },
+  "allOtherTopLevelValuesExact": true,
+  "originalRawAndArchiveUnmodified": true,
+  "oldCheckpointUnmodified": true,
+  "firstFailureAndCleanupUnchanged": true,
+  "result": "Whole x64 Process remains FAILURE with OpenCode Team-A probe-expiry and incomplete slot2 custody; separate original native Node/Electron results are now represented by their proper retained rows. No broader PASS or candidate execution claimed.",
+  "independentV2ReviewPending": true
+}

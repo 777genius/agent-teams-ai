@@ -1,0 +1,505 @@
+{
+  "kind": "Independent incoming E3 P11 Phase-A source and original-venue review",
+  "reviewedAtUTC": "2026-11-16T08:40:14.434698+00:00",
+  "reviewer": "/root/native_failures",
+  "verdict": "APPROVE exact incoming A-only source preservation and bounded semantic-test design; actual RED remains required before B",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "parentDocsCommit": "098a2a6788fcf4477e348ca669628e35f68517a9",
+  "priorSource": "57885c055a18b27c180c304762643eac632513ad",
+  "chronologyScope": "Fresh review after external author publication. This is not a retroactive claim that this reviewer approved the incoming commit before it was applied. Peer migration_scope owns complete incoming history/documentation/evidence authority review.",
+  "sourceMaps": {
+    "oldNonDocsCount": 8798,
+    "newNonDocsCount": 8798,
+    "identicalPathSet": true,
+    "soleNonDocsChange": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "before": {
+          "mode": "100644",
+          "type": "blob",
+          "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e"
+        },
+        "after": {
+          "mode": "100644",
+          "type": "blob",
+          "blob": "3c2548f7ede3f799a6426c81bb178e4895c790c2"
+        }
+      }
+    ],
+    "allOtherNonDocsIdentical": 8797,
+    "noWorkflowProductionDependencyOrCompilerDelta": true
+  },
+  "test": {
+    "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "before": {
+      "bytes": 111672,
+      "lines": 1896,
+      "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+      "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445"
+    },
+    "after": {
+      "bytes": 115936,
+      "lines": 1958,
+      "blob": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+      "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076"
+    },
+    "suffix": {
+      "bytes": 4264,
+      "lines": 62,
+      "blob": "08699c4890b2ef83bcbda53094c450c6a9c3b366",
+      "sha256": "a299b6ec1497dc542f675fd7868a430d8e9d4d0503199c9ff0343a7187b5312d"
+    },
+    "exactPriorReviewedCandidate": {
+      "path": "phase-a-composition-e1d/p11-test.ts.txt",
+      "bytes": 115936,
+      "lines": 1958,
+      "blob": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+      "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076"
+    },
+    "full111672Byte1896LinePrefixPreserved": true,
+    "incoming130LineRecorderSuffixPreserved": true,
+    "allOldAssertionsImportsOrderUnchanged": true,
+    "stripOnlyConstructorPreserved": true,
+    "exactRemovalRestores95b": true,
+    "addedLines": 62,
+    "removedLines": 0
+  },
+  "actualSourcePoll": {
+    "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+    "bytes": 45707,
+    "lines": 570,
+    "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+    "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+    "startLine": 89,
+    "endLineExclusive": 96,
+    "uniqueBeginAndEndMarkers": true,
+    "text": "  const poll = async <T>(observe: () => Promise<T>, accepts: (value: T) => boolean, label: string) => {\n    const cutoff = Date.now() + 90_000; let value = await observe();\n    while (!accepts(value) && Date.now() < cutoff) {\n      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();\n    }\n    assert.ok(accepts(value), label); return value;\n  };\n"
+  },
+  "fixtureMechanism": {
+    "actualSourceClosure": true,
+    "stripTypesWithExistingNodeApi": true,
+    "shadowEnvironment": [
+      "assert",
+      "current",
+      "Date",
+      "setTimeout"
+    ],
+    "globalClockMutation": false,
+    "driverImportedOrExecuted": false,
+    "readNativeSourceOnly": true,
+    "newProductionObservationsActionsOrTimers": false,
+    "finiteObservationTable": true
+  },
+  "newCases": [
+    {
+      "name": "first result at the exact cutoff",
+      "input": [
+        {
+          "at": 90000,
+          "value": true
+        }
+      ],
+      "predictedFailure": "Original closure returns true; assert.rejects fails for missing expected rejection.",
+      "assertionsAfterMissingRejectionUnexecutedInRed": true
+    },
+    {
+      "name": "first result after the cutoff",
+      "input": [
+        {
+          "at": 90001,
+          "value": true
+        }
+      ],
+      "predictedFailure": "Original closure returns true; assert.rejects fails for missing expected rejection.",
+      "assertionsAfterMissingRejectionUnexecutedInRed": true
+    },
+    {
+      "name": "polled result after the cutoff",
+      "input": [
+        {
+          "at": 0,
+          "value": false
+        },
+        {
+          "at": 90001,
+          "value": true
+        }
+      ],
+      "predictedFailure": "Original100ms timer and current callback occur; second true value bypasses further while/deadline check and returns true.",
+      "assertionsAfterMissingRejectionUnexecutedInRed": true
+    },
+    {
+      "name": "actual poll retains timely acceptance, cadence, currentness and read-error identity",
+      "predicted": "PASS control",
+      "covers": [
+        "true at89999",
+        "false0 then true101 with original100ms",
+        "read Error identity even after cutoff",
+        "currentness Error identity before timer/second read",
+        "false at90000 refusal"
+      ]
+    }
+  ],
+  "predictionsOnly": {
+    "newCases": 4,
+    "semanticRedCases": 3,
+    "controlCases": 1,
+    "sameOriginalLinuxEightFileBaselineCases": 119,
+    "sameSourceOriginalLinuxExpectedTotal": 123,
+    "expectedPass": 120,
+    "expectedFail": 3,
+    "actualAResult": null,
+    "notValidatedByApiStepStatus": true,
+    "otherPlatformsNotAssignedThisCountWithoutRaw": true
+  },
+  "originalVenue": {
+    "workflow": {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101741,
+      "lines": 1312,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+    },
+    "command": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "line": 103,
+    "installerLine": 104,
+    "teamTenFileLine": 109,
+    "staticStepFirstCommandLine": 114,
+    "runtime": "capturedNode24.21.0",
+    "setEFailStopsInstallerAndDownstream": true,
+    "completeEightFileRawRequired": true,
+    "noManualDispatchRerunCancel": true,
+    "noLocalProjectExecution": true,
+    "noSelectiveAlternativeCommand": true,
+    "sameExistingTestCompilerAndLintRoute": true
+  },
+  "actualPreABaseline": {
+    "source": "57885c055a18b27c180c304762643eac632513ad",
+    "jobId": 133150851331,
+    "runId": 43823212577,
+    "raw": {
+      "path": "ci-57885c/team/job.log",
+      "bytes": 2709748,
+      "lines": 16645,
+      "blob": "f8710649393df89727eedf54ac54e59b61c0ace0",
+      "sha256": "aa428b27236f3867f1cdf13c32494a61ec4fa4ffef02cce2a57794ae2024fa81"
+    },
+    "incomingStoredRawExact": true,
+    "independentFullReview": {
+      "path": "ci-57885c/team/independent-team-complete-review.json",
+      "bytes": 75096,
+      "lines": 2129,
+      "blob": "964204f443a3730cdeadade177d18093234ae2be",
+      "sha256": "2c68f6f08f5765e7701b6061bc9c3132c11ed98d7510437c52e7a57bec5f43cd"
+    },
+    "independentGateReview": {
+      "path": "ci-57885c/team/independent-team-gate-review.json",
+      "bytes": 159274,
+      "lines": 3429,
+      "blob": "804ec7abf5a1e22db11a4fc694457df9b7102936",
+      "sha256": "45d84a6af6c2ba1ec5276ba44e49f462f8619ae3ccae0efaedaa8428dbaf08c7"
+    },
+    "helperPass": 119,
+    "installerPass": 7,
+    "teamPass": 179,
+    "stderrCases": 24,
+    "stderrCurrentCe5cRetained": true,
+    "fullWorkspaceAndExplicitBackendTypes": true,
+    "allOriginalTypedScopes": true,
+    "warnings": [
+      5,
+      3338,
+      1416,
+      1483,
+      4
+    ],
+    "notHistorical177": true,
+    "noPassTransferToAorB": true
+  },
+  "currentPlanBinding": {
+    "planPrefix": {
+      "bytes": 1902427,
+      "lines": 8230,
+      "blob": "49587b36ed3bebbd9a766215ba0e00842db1b5a1",
+      "sha256": "fdb0d07f9850ffe364a13c6cc06c705a2314abe7c7e1d4857c1acbd9e3123bf6"
+    },
+    "planAfter": {
+      "bytes": 1915226,
+      "lines": 8297,
+      "blob": "bfcd6cbbb7ec293a568a61079bc60ed572979430",
+      "sha256": "406271bf95c71863fa6e488b4f447f7a4e5c659a15d92db263a003292a51ee4b"
+    },
+    "entireOldPrefixExact": true,
+    "docsPresentInParentBeforeSource": true,
+    "newPlanSelectsOnlyP11A": true,
+    "newBaseline179SupersedesHistoricalInertUnsatisfiedPrerequisiteTextOnlyForThisSelection": true,
+    "historicalProposalPreservedWithOldStatus": true,
+    "BRequiresActualSemanticRedAndIndependentR2": true,
+    "BRequiresFreshR1AndPublishedReadback": true,
+    "CRequiresActualBGreenAndFreshR1R2": true,
+    "ModelsNotApplied": true
+  },
+  "futureCompositionWarnings": [
+    "Old geometry whole-test8694096d is based on95b and lacks the incoming62-line P11 suffix. Preserve current3c254 when composing geometry; do not replace it wholesale.",
+    "Models after-copy48bf remains inert and absent; actual test6c311/hook1176/formatter907fb are unchanged by72e. A separate fresh selection/binding remains required.",
+    "Conditional P11 B5026 and C are not present. A genuine full original semantic RED, not build/setup/import/marker/timeout/cancel/skip, is mandatory before B."
+  ],
+  "freshSourceInputs": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 115936,
+      "lines": 1958,
+      "blob": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+      "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076",
+      "sameAs578": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 45707,
+      "lines": 570,
+      "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+      "sameAs578": true
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "mode": "100644",
+      "bytes": 101741,
+      "lines": 1312,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+      "sameAs578": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "mode": "100644",
+      "bytes": 53683,
+      "lines": 1019,
+      "blob": "e2b96672feefb924a39e20131514e0db5e347311",
+      "sha256": "ba36a5c01c6f670bcba92e6a155683385cd3eb33c871f94b8191b378b226f9d9",
+      "sameAs578": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+      "mode": "100644",
+      "bytes": 8676,
+      "lines": 164,
+      "blob": "e7731fd8ca546fd14ac6992d74ea78f3ad8e7981",
+      "sha256": "de8552ab68f316a41901b304e7315128c33ad848a059fd0d14a60de7d6bd4b9e",
+      "sameAs578": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "mode": "100644",
+      "bytes": 24968,
+      "lines": 333,
+      "blob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+      "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+      "sameAs578": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+      "mode": "100644",
+      "bytes": 20305,
+      "lines": 283,
+      "blob": "b8b6760f5623f55387dba4fec288947bce707bc7",
+      "sha256": "8d19cb46ef2729e862a37f13c32c0239d0fd7e0148b15873c1f0d1fad87cc6e7",
+      "sameAs578": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+      "mode": "100644",
+      "bytes": 3804,
+      "lines": 67,
+      "blob": "7c84fc0167171b2d0cce7c002c660a93060444b8",
+      "sha256": "cb6cd06a6773f9533357c501d551f3ed04144900787f39291caba0abc1980290",
+      "sameAs578": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "mode": "100644",
+      "bytes": 2115,
+      "lines": 46,
+      "blob": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+      "sha256": "26da6d6f0ad5e089fb59b6a57e7d102e434ea442cb5a1b9ef089f1362a139f21",
+      "sameAs578": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "mode": "100644",
+      "bytes": 20040,
+      "lines": 306,
+      "blob": "13229f20c93226ee5b3f4d07516d16f94b0d48d5",
+      "sha256": "460743df044eef3901653a6c4331a14bdf977ca644513a22386bf34907aaf13e",
+      "sameAs578": true
+    },
+    {
+      "path": "test/scripts/installDependenciesWithRetry.test.mjs",
+      "mode": "100644",
+      "bytes": 4939,
+      "lines": 112,
+      "blob": "c1c0232d09e5cd898d7acabcc48b87bab58f3c82",
+      "sha256": "3aab9d6568157c883993c43b8057193175e69c16c31129ce3867a14e686a8f00",
+      "sameAs578": true
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "mode": "100644",
+      "bytes": 180091,
+      "lines": 5678,
+      "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+      "sameAs578": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "mode": "100644",
+      "bytes": 74351,
+      "lines": 2068,
+      "blob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+      "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+      "sameAs578": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "mode": "100644",
+      "bytes": 6481,
+      "lines": 161,
+      "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+      "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0",
+      "sameAs578": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "mode": "100644",
+      "bytes": 16208,
+      "lines": 278,
+      "blob": "ce5c3a7511009501ca057f01957008a8ce3ef67b",
+      "sha256": "e52a7a6ec9af567c1ff9b8e5c82136d538b3ccffbb0803cdf1c5c9db909b2ae5",
+      "sameAs578": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "mode": "100644",
+      "bytes": 8310,
+      "lines": 172,
+      "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7",
+      "sameAs578": true
+    },
+    {
+      "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "mode": "100644",
+      "bytes": 8707,
+      "lines": 264,
+      "blob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+      "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10",
+      "sameAs578": true
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "mode": "100644",
+      "bytes": 646,
+      "lines": 20,
+      "blob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306",
+      "sameAs578": true
+    },
+    {
+      "path": ".node-version",
+      "mode": "100644",
+      "bytes": 8,
+      "lines": 1,
+      "blob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5",
+      "sameAs578": true
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "mode": "100644",
+      "bytes": 956788,
+      "lines": 26665,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+      "sameAs578": true
+    },
+    {
+      "path": "vitest.config.ts",
+      "mode": "100644",
+      "bytes": 1187,
+      "lines": 34,
+      "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+      "sameAs578": true
+    },
+    {
+      "path": "tsconfig.json",
+      "mode": "100644",
+      "bytes": 1235,
+      "lines": 40,
+      "blob": "568952f5025a88c16b0568c7279d8e85a4288b43",
+      "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a",
+      "sameAs578": true
+    }
+  ],
+  "reviewedIncomingDocs": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/phase-a/phase-order-proposal.md",
+      "bytes": 10323,
+      "lines": 49,
+      "blob": "0914c6acf7e7882785ad8c5af95bc970ea710efd",
+      "sha256": "1f32cbf094b732e75ce4536656f13015607b8a3d84826417b50deba9b474fc75"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/phase-a/phase-a-manifest.json",
+      "bytes": 14720,
+      "lines": 364,
+      "blob": "f74084e8e236d9b5dfe6ecae84000d2957200458",
+      "sha256": "cc216a766ef8db0cf227eb181fb53ff46fe6317b74201995bb5ebde1611ad912"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/phase-a/phase-a-current.patch",
+      "bytes": 4709,
+      "lines": 68,
+      "blob": "adda40c296f1b88f2f0a5e20cccb3444e4e8887d",
+      "sha256": "bc09f9098c3206ffc50ab80f452719f838a735586e19a732bc083676861d777a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/phase-a/phase-a-appended-suffix.txt",
+      "bytes": 4264,
+      "lines": 62,
+      "blob": "08699c4890b2ef83bcbda53094c450c6a9c3b366",
+      "sha256": "a299b6ec1497dc542f675fd7868a430d8e9d4d0503199c9ff0343a7187b5312d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/current-source-r2/review.md",
+      "bytes": 2893,
+      "lines": 11,
+      "blob": "e57482a890d5e77fecb7ec38ff6906e3b31d4b4f",
+      "sha256": "a9942a95590254f405871a4e79e4fc23daa42514ff125cb17ecfef281473f632"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/current-source-r2/review.json",
+      "bytes": 17996,
+      "lines": 476,
+      "blob": "0d4cb15fdda69ea2f34182d9fab804795dc7e78c",
+      "sha256": "080572c806da3e4267b514c6514b844871774dc35a9b5d9d5bcc8f52aaadc4f2"
+    }
+  ],
+  "retainedOldProposal": {
+    "path": "phase-a-composition-e1d/R1-phase-a-composition.md",
+    "bytes": 8976,
+    "lines": 38,
+    "blob": "689d937e205582b7c0975fa193401a9627df9352",
+    "sha256": "7958fbac6f00fcb10ccb47ac102da1ec6840ae71539d428a12f35620fc12306c"
+  },
+  "limits": [
+    "No native/live-membership/business/runtime/Models historical cause or qualification follows from these finite source tests.",
+    "Original90s/100ms and currentness/error/cleanup rules are unchanged in A.",
+    "No B source action or extra proof venue authorized by this review.",
+    "Existing actual Team/typed baseline is source578 only; newly expected red intentionally prevents downstream execution.",
+    "No test/compiler/lint/install/bootstrap/Node/driver/provider/native/UI process or source/index/ref/CI action was performed."
+  ]
+}

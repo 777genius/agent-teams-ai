@@ -1,0 +1,64 @@
+{
+  "kind": "original-artifact-retention-only",
+  "source": "57885c055a18b27c180c304762643eac632513ad",
+  "artifactId": 14205659983,
+  "artifact": "artifact-14205659983.zip",
+  "bytes": 13382,
+  "sha256": "21b299e48185238d799adcfc382c80635ade1e0c147112fcf987b8d6f6a533fb",
+  "gitBlob": "255dd84d3047b70d7cf5f988d9419bf9143b3f7f",
+  "checkedAt": "2026-11-16T07:49:19.854960+00:00",
+  "zipSafeUniqueNames": true,
+  "crcVerified": true,
+  "memberCount": 6,
+  "members": [
+    {
+      "member": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "crc32": "8d81cb0f",
+      "compressedBytes": 6746,
+      "bytes": 20823,
+      "sha256": "03404f5077168fe33dcc0c74ba31ebd4dae1624c41f1b9289dbdfb97d3bf1f30",
+      "gitBlob": "5dcdc15bb87886dd3d09ac09dbf809c2fd677e57"
+    },
+    {
+      "member": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "crc32": "7b49f10c",
+      "compressedBytes": 337,
+      "bytes": 772,
+      "sha256": "a4772efe67dad3e5cc85014119b5d087edec961f0bdb4dfa6a3f14ae06a39620",
+      "gitBlob": "7ace77fa0d86c81228fa1a077dcb92cfd57d157a"
+    },
+    {
+      "member": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log",
+      "crc32": "3f914d1a",
+      "compressedBytes": 2030,
+      "bytes": 5181,
+      "sha256": "7fc280671a47099a4b2d32d201921c208481f849d20139ee4a184ed6b1668cae",
+      "gitBlob": "e36604cfb769be5f7e7001ea6d1583928f651ac6"
+    },
+    {
+      "member": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "crc32": "8be3f3ae",
+      "compressedBytes": 2486,
+      "bytes": 10284,
+      "sha256": "fb634792b65dfe31edb876833abe64f533188332ed9b78cc90fbc3da3b2c6065",
+      "gitBlob": "bf30325486d8f6067531719f824b12ba72fc6bc5"
+    },
+    {
+      "member": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+      "crc32": "dc1d3b7f",
+      "compressedBytes": 291,
+      "bytes": 493,
+      "sha256": "9bc664c34d601077c1cb04393278af7bed4f7d046b75f99e8ec12f33ea671e2a",
+      "gitBlob": "dad67e1227cd7966d8df0a4ecddd86b18a2071f9"
+    },
+    {
+      "member": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "crc32": "543cb8e7",
+      "compressedBytes": 40,
+      "bytes": 41,
+      "sha256": "f2d72cb87853588bc0cb650131a65687c8ad3de1d55016cf1e46a227f02847bf",
+      "gitBlob": "32ddd36fc22451553828f4b67edcb8ff5d802e65"
+    }
+  ],
+  "qualification": "Not established by archive retention. No project, native, source, ref or CI action."
+}

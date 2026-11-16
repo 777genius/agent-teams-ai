@@ -1,0 +1,1556 @@
+{
+  "kind": "Independent E2 V2 Management original failure R2",
+  "createdAtUTC": "2026-11-16T08:32:33.612864+00:00",
+  "reviewer": "/root/native_failures",
+  "author": "/root/ui_failures",
+  "verdict": "APPROVE evidence retention and bounded failure interpretation; not UI PASS",
+  "sourceHead": "57885c055a18b27c180c304762643eac632513ad",
+  "runId": 43823212577,
+  "jobId": 133150851423,
+  "artifactId": 14206792564,
+  "reviewedCheckpoint": {
+    "path": "ci-57885c/v2-management/checkpoint.json",
+    "bytes": 2989,
+    "blob": "1fa5c1cb7a568c8259d395ceff5105ec5d352ec1",
+    "sha256": "af7aced70c40b6dcfac514121393ae1e4f73629112f05dd4df26bb1b0b2ea8f6"
+  },
+  "reviewedAuthorAudit": {
+    "path": "ci-57885c/v2-management/audit.json",
+    "bytes": 66201,
+    "blob": "79cafa573f8a3073c1205bd1f5b3e6d6ff49d19f",
+    "sha256": "e24223e2d034311d7b5f059155582d758d01afe5e3267516c893f8858c4a974f"
+  },
+  "reviewedAppendix": {
+    "path": "ci-57885c/v2-management/Plan29-appendix.md",
+    "bytes": 4570,
+    "blob": "08fe9a7c645c92f979ef1d3022c635e396fc124d",
+    "sha256": "518b6116d7cc92a20f52bbf87e8895f48cfaada92b144248694ac1d5e1a57b5e"
+  },
+  "byteSourceProof": {
+    "path": "ci-57885c/v2-management/independent-byte-source-proof.json",
+    "bytes": 488570,
+    "blob": "430e6e9e3685a7f91346815df186b4de508c2bbf",
+    "sha256": "63e6c43b13f88b2b7f6a5e96433b787b632716d271b5ac4dcc5be22c97a98a4f"
+  },
+  "freshSourceQualification": {
+    "selected": 1769,
+    "bytes": 20479730,
+    "selectedHostLeaves": 589,
+    "orderedPrePostEqual": true,
+    "everySelectedFreshGitByteMatched": true,
+    "common1757JoinedToSameE2TeamBytes": true,
+    "extraV2": 12,
+    "additionalOrRepeatedClaimLeaves": 27,
+    "fullHostCensusClaimed": false,
+    "sourceExecutedByReviewer": false
+  },
+  "originalApi": {
+    "terminalJob": {
+      "id": 133150851423,
+      "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+      "status": "completed",
+      "conclusion": "failure",
+      "run_id": 43823212577,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Verify original checkout and runner tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Prepare private Linux display",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Install frozen workspace and Electron",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Build existing Desktop prerequisites and verify admission",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Verify original Runtime and Team conversation contracts",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 9
+        },
+        {
+          "name": "Verify complete workspace types and original typed lint scopes",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10
+        },
+        {
+          "name": "Capture package-manager and Host inputs without vendor executables",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Capture original controlled Linux process input without a provider",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12
+        },
+        {
+          "name": "Exercise ordinary Team controls and renderer reload",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13
+        },
+        {
+          "name": "Exercise ordinary Taskboard controls and persistence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14
+        },
+        {
+          "name": "Exercise original Skills and cross-Team controls",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 15
+        },
+        {
+          "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 16
+        },
+        {
+          "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 17
+        },
+        {
+          "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 18
+        },
+        {
+          "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19
+        },
+        {
+          "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20
+        },
+        {
+          "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21
+        },
+        {
+          "name": "Exercise original Review after a cold Host and app restart",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22
+        },
+        {
+          "name": "Exercise saved next-launch selection while the original Team remains live",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 23
+        },
+        {
+          "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 24
+        },
+        {
+          "name": "Exercise stock Codex Update while the original Team retains its captured source",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 25
+        },
+        {
+          "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26
+        },
+        {
+          "name": "Prepare exact OpenCode V2 Bun and engine graph",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 27
+        },
+        {
+          "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 28
+        },
+        {
+          "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 29
+        },
+        {
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 30
+        },
+        {
+          "name": "Preserve original Desktop evidence, including failures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 31
+        },
+        {
+          "name": "Post Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 60
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 61
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 62
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 63
+        }
+      ]
+    },
+    "initialRun": {
+      "id": 43823212577,
+      "event": "pull_request",
+      "run_attempt": 1,
+      "head_sha": "57885c055a18b27c180c304762643eac632513ad",
+      "status": "queued",
+      "conclusion": null
+    },
+    "initialStatusIsHistoricalNotTerminal": true,
+    "officialArtifact": {
+      "id": 14206792564,
+      "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-opencode-v2-management",
+      "size_in_bytes": 846718,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206792564",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206792564/zip",
+      "expired": false,
+      "created_at": "2026-11-16T07:51:16Z",
+      "expires_at": "2026-11-30T07:51:15Z",
+      "updated_at": "2026-11-16T07:51:16Z",
+      "digest": "sha256:5ddecbc018c17032aed6ab4e72d6861999b9eb575dfc8b1805743cffe2c0ab50",
+      "workflow_run": {
+        "id": 43823212577,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+      }
+    }
+  },
+  "originalCommands": [
+    "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "node --test test/scripts/installDependenciesWithRetry.test.mjs"
+  ],
+  "prerequisiteCounts": {
+    "tests": [
+      119,
+      7
+    ],
+    "pass": [
+      119,
+      7
+    ],
+    "fail": [
+      0,
+      0
+    ],
+    "skipped": [
+      0,
+      0
+    ],
+    "cancelled": [
+      0,
+      0
+    ]
+  },
+  "node": "24.21.0",
+  "pnpm": "11.22.0",
+  "corepack": "0.36.0",
+  "electron": "44.10.1",
+  "runnerPreparedBun": {
+    "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+    "status": "READY",
+    "sourceHead": "57885c055a18b27c180c304762643eac632513ad",
+    "platform": "linux-x64",
+    "nodeVersion": "v24.21.0",
+    "productQualified": false,
+    "stage": "prepared",
+    "baseArchiveSha256": "09b174841e74c95337f8b1be986f1501a71582ce190671c548bf4c70ab814e10",
+    "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+    "bun": {
+      "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+      "sha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "version": "1.3.11"
+    },
+    "supportArchiveSha256": "c49a71cd1b4f253ed2d1392b44db419eaa28d91764f278c78b8c0fabe35a06ee",
+    "manifestSha256": "30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce"
+  },
+  "freshBuildClaim": "Original job build/install outputs retained; no independent rebuild or complete installed/output inventory.",
+  "rawClaimRows": [
+    {
+      "line": 38,
+      "text": "2026-11-16T07:43:11.4586606Z   ref: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 55,
+      "text": "2026-11-16T07:43:11.4599422Z   HOST_EMULATED_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 109,
+      "text": "2026-11-16T07:43:11.9030536Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 111,
+      "text": "2026-11-16T07:43:25.4148731Z  * branch            57885c055a18b27c180c304762643eac632513ad -> FETCH_HEAD"
+    },
+    {
+      "line": 112,
+      "text": "2026-11-16T07:43:25.4159705Z [command]/usr/bin/git rev-parse --verify --quiet 57885c055a18b27c180c304762643eac632513ad^{object}"
+    },
+    {
+      "line": 113,
+      "text": "2026-11-16T07:43:25.4188556Z 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 120,
+      "text": "2026-11-16T07:43:25.4295477Z [command]/usr/bin/git checkout --progress --force 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 164,
+      "text": "2026-11-16T07:43:26.7871406Z Note: switching to '57885c055a18b27c180c304762643eac632513ad'."
+    },
+    {
+      "line": 183,
+      "text": "2026-11-16T07:43:26.8021843Z [command]/usr/bin/git log -1 --format=%H"
+    },
+    {
+      "line": 184,
+      "text": "2026-11-16T07:43:26.8053194Z 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 223,
+      "text": "2026-11-16T07:43:26.9739028Z   HOST_EMULATED_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 253,
+      "text": "2026-11-16T07:43:30.9621062Z   HOST_EMULATED_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 286,
+      "text": "2026-11-16T07:43:45.0698189Z   HOST_EMULATED_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 298,
+      "text": "2026-11-16T07:43:45.1482949Z   HOST_EMULATED_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 343,
+      "text": "2026-11-16T07:43:48.8760388Z   HOST_EMULATED_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 716,
+      "text": "2026-11-16T07:45:19.7579833Z   HOST_EMULATED_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 858,
+      "text": "2026-11-16T07:45:37.3912883Z ℹ tests 119"
+    },
+    {
+      "line": 860,
+      "text": "2026-11-16T07:45:37.3913695Z ℹ pass 119"
+    },
+    {
+      "line": 861,
+      "text": "2026-11-16T07:45:37.3914090Z ℹ fail 0"
+    },
+    {
+      "line": 862,
+      "text": "2026-11-16T07:45:37.3914517Z ℹ cancelled 0"
+    },
+    {
+      "line": 863,
+      "text": "2026-11-16T07:45:37.3914949Z ℹ skipped 0"
+    },
+    {
+      "line": 873,
+      "text": "2026-11-16T07:45:37.6836809Z ℹ tests 7"
+    },
+    {
+      "line": 875,
+      "text": "2026-11-16T07:45:37.6838850Z ℹ pass 7"
+    },
+    {
+      "line": 876,
+      "text": "2026-11-16T07:45:37.6839291Z ℹ fail 0"
+    },
+    {
+      "line": 877,
+      "text": "2026-11-16T07:45:37.6839735Z ℹ cancelled 0"
+    },
+    {
+      "line": 878,
+      "text": "2026-11-16T07:45:37.6840213Z ℹ skipped 0"
+    },
+    {
+      "line": 939,
+      "text": "2026-11-16T07:45:37.7022353Z   HOST_EMULATED_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 964,
+      "text": "2026-11-16T07:45:41.0332966Z   HOST_EMULATED_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 991,
+      "text": "2026-11-16T07:45:43.2426786Z   HOST_EMULATED_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 1008,
+      "text": "2026-11-16T07:45:43.2436362Z   OPENCODE_V2_TEST_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 1020,
+      "text": "2026-11-16T07:46:07.9896225Z   HOST_EMULATED_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 1044,
+      "text": "2026-11-16T07:51:08.3572421Z {\"kind\":\"TEST_V2_MANAGEMENT_MODELS_WAIT_FAILURE\",\"observation\":{\"inheritanceCard\":false,\"modelsTabActive\":true,\"modelsTabDisabled\":false,\"refreshSpinner\":true,\"legacyModelsPanel\":true,\"projectContextSelector\":true,\"publicError\":false,\"publicWarning\":false}}"
+    },
+    {
+      "line": 1046,
+      "text": "2026-11-16T07:51:13.7597140Z file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-ui-controls.ts:204"
+    },
+    {
+      "line": 1051,
+      "text": "2026-11-16T07:51:13.7605710Z     at Object.waitRead (file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-ui-controls.ts:204:11)"
+    },
+    {
+      "line": 1052,
+      "text": "2026-11-16T07:51:13.7608142Z     at async modelsTab (file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts:138:7)"
+    },
+    {
+      "line": 1053,
+      "text": "2026-11-16T07:51:13.7610471Z     at async runDesktopV2ManagementUi (file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts:219:3)"
+    },
+    {
+      "line": 1054,
+      "text": "2026-11-16T07:51:13.7613447Z     at async main (file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts:102:7)"
+    },
+    {
+      "line": 1055,
+      "text": "2026-11-16T07:51:13.7615612Z     at async file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts:168:1"
+    },
+    {
+      "line": 1058,
+      "text": "2026-11-16T07:51:13.7892494Z ##[error]Process completed with exit code 1."
+    },
+    {
+      "line": 1064,
+      "text": "2026-11-16T07:51:13.8026633Z   HOST_EMULATED_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 1096,
+      "text": "2026-11-16T07:51:15.1568762Z     at verifyDesktopV2ManagementReceipt (file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/verify-desktop-v2-management-receipt.ts:69:67)"
+    },
+    {
+      "line": 1097,
+      "text": "2026-11-16T07:51:15.1570826Z     at async file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/verify-desktop-v2-management-receipt.ts:215:18 {"
+    },
+    {
+      "line": 1100,
+      "text": "2026-11-16T07:51:15.1572163Z   actual: 'INCOMPLETE',"
+    },
+    {
+      "line": 1101,
+      "text": "2026-11-16T07:51:15.1572430Z   expected: 'PASS',"
+    },
+    {
+      "line": 1107,
+      "text": "2026-11-16T07:51:15.1913805Z ##[error]Process completed with exit code 1."
+    },
+    {
+      "line": 1110,
+      "text": "2026-11-16T07:51:15.1988591Z   name: host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-opencode-v2-management"
+    },
+    {
+      "line": 1171,
+      "text": "2026-11-16T07:51:15.2020767Z   HOST_EMULATED_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 1204,
+      "text": "2026-11-16T07:51:16.2478132Z Artifact host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-opencode-v2-management.zip successfully finalized. Artifact ID 14206792564"
+    },
+    {
+      "line": 1205,
+      "text": "2026-11-16T07:51:16.2480347Z Artifact host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-opencode-v2-management has been successfully uploaded! Final size is 846718 bytes. Artifact ID is 14206792564"
+    }
+  ],
+  "firstFailure": {
+    "receipt": {
+      "name": "Error",
+      "message": "UI read timed out: original default inheritance; no mutation retry"
+    },
+    "stdout": {
+      "kind": "TEST_V2_MANAGEMENT_MODELS_WAIT_FAILURE",
+      "observation": {
+        "inheritanceCard": false,
+        "modelsTabActive": true,
+        "modelsTabDisabled": false,
+        "refreshSpinner": true,
+        "legacyModelsPanel": true,
+        "projectContextSelector": true,
+        "publicError": false,
+        "publicWarning": false
+      }
+    },
+    "stack": [
+      "desktop-ui-controls.ts:204:11",
+      "desktop-opencode-v2-management-ui.ts:138:7",
+      "desktop-opencode-v2-management-ui.ts:219:3",
+      "desktop-opencode-v2-management-smoke.ts:102:7"
+    ],
+    "configuredWaitMs": 30000,
+    "delayMs": 100,
+    "acceptance": "inheritanceCard === true",
+    "cutoffSemantics": "Original Date.now pre-read loop; the configured budget is not an independently measured exact wall-time or per-CDP-call ceiling.",
+    "lastDomObservation": {
+      "inheritanceCard": false,
+      "modelsTabActive": true,
+      "modelsTabDisabled": false,
+      "refreshSpinner": true,
+      "legacyModelsPanel": true,
+      "projectContextSelector": true,
+      "publicError": false,
+      "publicWarning": false
+    },
+    "modelsClick": {
+      "monotonicMs": 269254,
+      "action": "mouseClick",
+      "label": "original Models tab",
+      "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+      "target": {
+        "x": 269.5703125,
+        "y": 205,
+        "text": "Models",
+        "tag": "BUTTON"
+      },
+      "state": "attempted"
+    },
+    "notRetained": [
+      "request sequence",
+      "hook loading ownership",
+      "request overlap",
+      "private currentness",
+      "settled view result",
+      "native catalog stage",
+      "read count",
+      "last callback sample timestamp"
+    ],
+    "causalModelsAttribution": false,
+    "warning": "Visible spinner and legacy panel do not identify a pending Promise or establish the separately proposed loading-ownership counterexample as this historical cause."
+  },
+  "businessPrefix": {
+    "steps": [
+      {
+        "monotonicMs": 85122,
+        "action": "mouseMoved",
+        "label": "hover original Settings menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1384,
+          "y": 51.5,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 85684,
+        "action": "mouseClick",
+        "label": "original Settings menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1384,
+          "y": 51.5,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 85857,
+        "action": "mouseMoved",
+        "label": "hover original Settings",
+        "selector": "button",
+        "target": {
+          "x": 1272,
+          "y": 124.5,
+          "text": "Settings",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 86430,
+        "action": "mouseClick",
+        "label": "original Settings",
+        "selector": "button",
+        "expectedText": "Settings",
+        "target": {
+          "x": 1272,
+          "y": 124.5,
+          "text": "Settings",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 86749,
+        "action": "mouseMoved",
+        "label": "hover original Providers settings",
+        "selector": "[data-testid=\"settings-nav-providers\"]",
+        "target": {
+          "x": 95.5,
+          "y": 222,
+          "text": "Providers",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 87566,
+        "action": "mouseClick",
+        "label": "original Providers settings",
+        "selector": "[data-testid=\"settings-nav-providers\"]",
+        "target": {
+          "x": 95.5,
+          "y": 222,
+          "text": "Providers",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 88421,
+        "action": "mouseWheel",
+        "label": "original OpenCode Manage",
+        "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-opencode\"]",
+        "deltaY": 416.75
+      },
+      {
+        "monotonicMs": 88925,
+        "action": "mouseMoved",
+        "label": "hover original OpenCode Manage",
+        "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-opencode\"]",
+        "target": {
+          "x": 1005.9296875,
+          "y": 777.75,
+          "text": "Manage",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 89555,
+        "action": "mouseClick",
+        "label": "original OpenCode Manage",
+        "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-opencode\"]",
+        "target": {
+          "x": 1005.9296875,
+          "y": 777.75,
+          "text": "Manage",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 102393,
+        "action": "mouseMoved",
+        "label": "hover original provider directory",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-tab-providers\"]",
+        "target": {
+          "x": 349.7109375,
+          "y": 283,
+          "text": "Providers",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 103005,
+        "action": "mouseClick",
+        "label": "original provider directory",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-tab-providers\"]",
+        "target": {
+          "x": 349.7109375,
+          "y": 283,
+          "text": "Providers",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 127122,
+        "action": "mouseMoved",
+        "label": "hover open original API key form",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] button",
+        "target": {
+          "x": 1090.6484375,
+          "y": 388,
+          "text": "Connect",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 127972,
+        "action": "mouseClick",
+        "label": "open original API key form",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] button",
+        "expectedText": "Connect",
+        "target": {
+          "x": 1090.6484375,
+          "y": 388,
+          "text": "Connect",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 142818,
+        "action": "mouseMoved",
+        "label": "hover rejected TEST key",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form input[type=\"password\"]",
+        "target": {
+          "x": 692,
+          "y": 553.5,
+          "text": "",
+          "tag": "INPUT"
+        }
+      },
+      {
+        "monotonicMs": 143436,
+        "action": "mouseClick",
+        "label": "rejected TEST key",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form input[type=\"password\"]",
+        "target": {
+          "x": 692,
+          "y": 553.5,
+          "text": "",
+          "tag": "INPUT"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 144804,
+        "action": "mouseMoved",
+        "label": "hover submit rejected TEST key once",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form button[type=\"submit\"]",
+        "target": {
+          "x": 1069.9765625,
+          "y": 645.5,
+          "text": "Connect & verify",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 145455,
+        "action": "mouseClick",
+        "label": "submit rejected TEST key once",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form button[type=\"submit\"]",
+        "target": {
+          "x": 1069.9765625,
+          "y": 645.5,
+          "text": "Connect & verify",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 195718,
+        "action": "mouseMoved",
+        "label": "hover replacement TEST key",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form input[type=\"password\"]",
+        "target": {
+          "x": 687,
+          "y": 631.5,
+          "text": "",
+          "tag": "INPUT"
+        }
+      },
+      {
+        "monotonicMs": 196356,
+        "action": "mouseClick",
+        "label": "replacement TEST key",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form input[type=\"password\"]",
+        "target": {
+          "x": 687,
+          "y": 631.5,
+          "text": "",
+          "tag": "INPUT"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 197496,
+        "action": "mouseMoved",
+        "label": "hover submit replacement TEST key once",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form button[type=\"submit\"]",
+        "target": {
+          "x": 1059.9765625,
+          "y": 723.5,
+          "text": "Connect & verify",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 198079,
+        "action": "mouseClick",
+        "label": "submit replacement TEST key once",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form button[type=\"submit\"]",
+        "target": {
+          "x": 1059.9765625,
+          "y": 723.5,
+          "text": "Connect & verify",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 268033,
+        "action": "mouseMoved",
+        "label": "hover original Models tab",
+        "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+        "target": {
+          "x": 269.5703125,
+          "y": 283,
+          "text": "Models",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 269254,
+        "action": "mouseClick",
+        "label": "original Models tab",
+        "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+        "target": {
+          "x": 269.5703125,
+          "y": 205,
+          "text": "Models",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      }
+    ],
+    "actionCounts": {
+      "mouseMoved": 11,
+      "mouseClick": 11,
+      "mouseWheel": 1
+    },
+    "effects": [
+      {
+        "step": "reject-key",
+        "commandId": "6995c5df-5195-45ad-b8d9-e684ffdb6bda",
+        "kind": "credential.set",
+        "phase": "held",
+        "resourceHeld": false,
+        "source": {
+          "commandId": "41a07a56-f5d7-46af-8401-be0598797cd0",
+          "sourceId": "63ced3731184a89eed94ab01637fe0af8d85595b04ee6193c17c3ea39a35bfb7",
+          "revision": "d30e24c2ef8e34693ebb010d4d64305e369dbb9bc0c3a43dd14da0c177a4115b",
+          "previousRevision": "147ae94940d726fe40b0adb0b0c2a050adeb1a920cb536a65b99b7a073701c94",
+          "profileId": "runtime-source:d30e24c2ef8e34693ebb010d4d64305e369dbb9bc0c3a43dd14da0c177a4115b",
+          "configRevision": "runtime-source:d30e24c2ef8e34693ebb010d4d64305e369dbb9bc0c3a43dd14da0c177a4115b",
+          "projectPath": null,
+          "defaultModelId": null
+        }
+      },
+      {
+        "step": "connect-key",
+        "commandId": "d64ea3f0-06f3-4d68-856f-eddb1e0329d6",
+        "kind": "credential.set",
+        "phase": "completed",
+        "resourceHeld": false,
+        "source": {
+          "commandId": "41a07a56-f5d7-46af-8401-be0598797cd0",
+          "sourceId": "63ced3731184a89eed94ab01637fe0af8d85595b04ee6193c17c3ea39a35bfb7",
+          "revision": "d30e24c2ef8e34693ebb010d4d64305e369dbb9bc0c3a43dd14da0c177a4115b",
+          "previousRevision": "147ae94940d726fe40b0adb0b0c2a050adeb1a920cb536a65b99b7a073701c94",
+          "profileId": "runtime-source:d30e24c2ef8e34693ebb010d4d64305e369dbb9bc0c3a43dd14da0c177a4115b",
+          "configRevision": "runtime-source:d30e24c2ef8e34693ebb010d4d64305e369dbb9bc0c3a43dd14da0c177a4115b",
+          "projectPath": null,
+          "defaultModelId": null
+        }
+      }
+    ],
+    "finiteModel": {
+      "requests": [
+        {
+          "step": "reject-key",
+          "model": "TEST-model",
+          "tools": 0,
+          "authorizationMatched": true,
+          "promptMatched": true,
+          "outcome": "refused"
+        },
+        {
+          "step": "connect-key",
+          "model": "TEST-model",
+          "tools": 0,
+          "authorizationMatched": true,
+          "promptMatched": true,
+          "outcome": "OK"
+        }
+      ],
+      "failures": []
+    },
+    "unreached": [
+      "selectProject",
+      "global-default",
+      "project-default",
+      "project-test",
+      "inheritance/override clearing",
+      "renderer reload",
+      "five-intent success proof",
+      "proof.credentials"
+    ],
+    "sourcePassedPrivateAssertions": "UI208 and213 occur before retained screenshots and first modelsTab219. auth.json bytes are not archived.",
+    "sourceCopyMismatch": "Rejected screenshot still states the new credential was not kept. Public journal digests and original private assertions show retained-until-explicit-replacement; future copy correction is absent on this source."
+  },
+  "durableJournals": [
+    {
+      "file": {
+        "path": "ci-57885c/v2-management/extracted/TEST-desktop-backend-lDScrK/hoststore/management-commands/50eeac8b531edf0069dd11c18a1427b30ac74c9b665161370589a1099bc47f69.json",
+        "bytes": 1370,
+        "blob": "8e6d4126b64216bcd994afe9716bf716625e9115",
+        "sha256": "20727aaf8126869cf712617275fad99228b6bea947623dd8300147c7aabd23fa"
+      },
+      "body": {
+        "schemaVersion": 1,
+        "commandId": "6995c5df-5195-45ad-b8d9-e684ffdb6bda",
+        "profileId": "runtime-source:d30e24c2ef8e34693ebb010d4d64305e369dbb9bc0c3a43dd14da0c177a4115b",
+        "configRevision": "runtime-source:d30e24c2ef8e34693ebb010d4d64305e369dbb9bc0c3a43dd14da0c177a4115b",
+        "providerId": "test-local",
+        "fingerprint": "262dddd344cef15e752481578ae63cdd305584d174eb79b85e27dd2f424794b2",
+        "selectionDigest": "a6d15886d2f1bdcd743544b2e851eb6c75aaed7bfdbbffc1cde92a5a3a628253",
+        "resourceId": "54865bad43b7cc8f8e6cbaa3fc40fb07a91c05b0c2fde0459f4f8b97d763f414",
+        "resourceHeld": false,
+        "kind": "credential.set",
+        "phase": "held",
+        "finishedAtMs": 1794815362987,
+        "openCodeV2": {
+          "phase": "probe-completed",
+          "integrationId": "test-local",
+          "nativeNamespace": "9585d9764bd708eaf9b256b8f70d80a01c4e4fa3460761a1c0a8ca7c61a84f80",
+          "beforeAuthDigest": "842fb5d53a5f052277e699e813575e0444e75e24378fdd8a92898baa360eb8ce",
+          "credentialId": "cred_1e354922800117dJWtCDwaXtUU",
+          "authDigest": "ab5b5bfe6f469e723e9626651e8203d02fa5b79a96b11b37503a8c09c3f722e1",
+          "verification": {
+            "commandId": "connect-verify-50eeac8b531edf0069dd11c18a1427b30ac74c9b66516137",
+            "modelId": "test-local/TEST-model",
+            "ok": false
+          }
+        },
+        "terminalRejection": true
+      },
+      "canonicalDigest": "b75cfc668c6f3baff08d290e3f76425338b5231b73e654f832e1e94112724441"
+    },
+    {
+      "file": {
+        "path": "ci-57885c/v2-management/extracted/TEST-desktop-backend-lDScrK/hoststore/management-commands/767d43a442fafaa62502889a3431fe508a27e0475611e4f8bec430b9e91b6cbe.json",
+        "bytes": 1345,
+        "blob": "f2d146d4cad149801b26fea8828dc1e744264f86",
+        "sha256": "dfabadb8c5c3ed1a6f75336e039ef763bbd24f6caf158711099d26672b5e8ea5"
+      },
+      "body": {
+        "schemaVersion": 1,
+        "commandId": "d64ea3f0-06f3-4d68-856f-eddb1e0329d6",
+        "profileId": "runtime-source:d30e24c2ef8e34693ebb010d4d64305e369dbb9bc0c3a43dd14da0c177a4115b",
+        "configRevision": "runtime-source:d30e24c2ef8e34693ebb010d4d64305e369dbb9bc0c3a43dd14da0c177a4115b",
+        "providerId": "test-local",
+        "fingerprint": "eec938e426d586dacd33e3aa899ca4dc081ebb7a22df8d630af45dadf2b2e06b",
+        "selectionDigest": "a6d15886d2f1bdcd743544b2e851eb6c75aaed7bfdbbffc1cde92a5a3a628253",
+        "resourceId": "54865bad43b7cc8f8e6cbaa3fc40fb07a91c05b0c2fde0459f4f8b97d763f414",
+        "resourceHeld": false,
+        "kind": "credential.set",
+        "phase": "completed",
+        "finishedAtMs": 1794815397952,
+        "openCodeV2": {
+          "phase": "probe-completed",
+          "integrationId": "test-local",
+          "nativeNamespace": "c3e632405b6a41753fece4a554845e9be2a59ec9314d2059c3c9c1d87551188a",
+          "beforeAuthDigest": "ab5b5bfe6f469e723e9626651e8203d02fa5b79a96b11b37503a8c09c3f722e1",
+          "credentialId": "cred_1e35541f2001LS1ChjLovnfVWg",
+          "authDigest": "7633e7efe7100a698447f414034e7567add649ef3aaf3d518103182f5218ea80",
+          "verification": {
+            "commandId": "connect-verify-767d43a442fafaa62502889a3431fe508a27e0475611e4f8",
+            "modelId": "test-local/TEST-model",
+            "ok": true
+          }
+        }
+      },
+      "canonicalDigest": "b8de620e7fa298b4495b12941cbf27c0f555acd1dd5daee44505c5eb88c2d4a3"
+    },
+    {
+      "file": {
+        "path": "ci-57885c/v2-management/extracted/TEST-desktop-backend-lDScrK/hoststore/management-commands/ee375180d83b7840ddc08e07c2d825bae00bae6a7b2fa91e8843f33c0627cff1.json",
+        "bytes": 2811,
+        "blob": "e3d0c37de09a1e4ca1af0ccd9da92032ca7b061d",
+        "sha256": "899b0044910f049b1a46aeaee2127471d33dc3e1569f1a9cd8f1f9dbfede5a55"
+      },
+      "body": {
+        "schemaVersion": 1,
+        "commandId": "41a07a56-f5d7-46af-8401-be0598797cd0",
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "providerId": "opencode",
+        "fingerprint": "478ef5179aa7ff9604f1d59752fe9cd6397b3348491d928064a19564fb117b98",
+        "selectionDigest": "147ae94940d726fe40b0adb0b0c2a050adeb1a920cb536a65b99b7a073701c94",
+        "resourceId": "63ced3731184a89eed94ab01637fe0af8d85595b04ee6193c17c3ea39a35bfb7",
+        "resourceHeld": false,
+        "kind": "runtime.source",
+        "phase": "published",
+        "sourceId": "63ced3731184a89eed94ab01637fe0af8d85595b04ee6193c17c3ea39a35bfb7",
+        "revision": "d30e24c2ef8e34693ebb010d4d64305e369dbb9bc0c3a43dd14da0c177a4115b",
+        "expectedRevision": "147ae94940d726fe40b0adb0b0c2a050adeb1a920cb536a65b99b7a073701c94",
+        "publicationJson": "{\"grant\":{\"targetId\":\"63ced3731184a89eed94ab01637fe0af8d85595b04ee6193c17c3ea39a35bfb7\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-lDScrK\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":null,\"runtimeId\":\"opencode\",\"profileId\":\"TEST-v2-settings-management\",\"configRevision\":\"TEST-opencode-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-lDScrK\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-lDScrK\"}]},\"commandId\":\"41a07a56-f5d7-46af-8401-be0598797cd0\",\"expectedRevision\":\"147ae94940d726fe40b0adb0b0c2a050adeb1a920cb536a65b99b7a073701c94\",\"candidate\":{\"sourceKind\":\"captured\",\"executable\":{\"path\":\"/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun\",\"sha256\":\"45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675\"},\"openCodeConfiguration\":{\"scope\":\"global\",\"files\":[{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-lDScrK/providers/opencode-v2/home/.config/opencode/opencode.json\",\"digest\":\"2f746f3147ae6543e3051455e69d1aac620d1e700b969f38c35071239041e577\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-lDScrK/providers/opencode-v2/home/.config/opencode/opencode.jsonc\",\"digest\":\"3ef854752a8d27764134fa840f2c54090ffaaf63311e7909e9fe5628e0dac37e\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-lDScrK/providers/opencode-v2/config/opencode/opencode.json\",\"digest\":\"5ff09455a7adb68b50b18836012d03a963cfab327ae0b859adf39312f05e4177\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-lDScrK/providers/opencode-v2/config/opencode/opencode.jsonc\",\"digest\":\"ebb865306ba1a271c4d49676ab0b68c690981847b917bff61f3f55d8a027ab3b\"}],\"inlineDigest\":null},\"openCodePreferences\":{\"defaultModelId\":null,\"modelLimitOverrides\":{}}},\"intent\":\"configuration\"}"
+      },
+      "canonicalDigest": "ba1d347bd3640bc0b8ca63836f2d15531d12ee75deac4b28d6a5db26a4ce1ed6"
+    }
+  ],
+  "sourceIndex": {
+    "file": {
+      "path": "ci-57885c/v2-management/extracted/TEST-desktop-backend-lDScrK/hoststore/runtime-sources/index.json",
+      "bytes": 2201,
+      "blob": "d59e94b1083bde61b1009659a83fb29edcdb5c86",
+      "sha256": "48d4ca6bcfaad1b53bfe0a74f1f8a48138656655236507badea4efb8d1868e85"
+    },
+    "body": {
+      "schemaVersion": 1,
+      "records": [
+        {
+          "revision": "d30e24c2ef8e34693ebb010d4d64305e369dbb9bc0c3a43dd14da0c177a4115b",
+          "previousRevision": "147ae94940d726fe40b0adb0b0c2a050adeb1a920cb536a65b99b7a073701c94",
+          "commandId": "41a07a56-f5d7-46af-8401-be0598797cd0",
+          "grant": {
+            "targetId": "63ced3731184a89eed94ab01637fe0af8d85595b04ee6193c17c3ea39a35bfb7",
+            "ownerId": "TEST-desktop-owner-TEST-desktop-backend-lDScrK",
+            "ownerRevision": "TEST-desktop-revision-1",
+            "contextId": "local",
+            "projectPath": null,
+            "runtimeId": "opencode",
+            "profileId": "TEST-v2-settings-management",
+            "configRevision": "TEST-opencode-management",
+            "teamScopes": [
+              {
+                "teamId": "TEST-desktop-team",
+                "projectId": "TEST-project-TEST-desktop-backend-lDScrK",
+                "workspaceId": "TEST-workspace-TEST-desktop-backend-lDScrK"
+              }
+            ]
+          },
+          "candidate": {
+            "sourceKind": "captured",
+            "executable": {
+              "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+              "sha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675"
+            },
+            "openCodeConfiguration": {
+              "scope": "global",
+              "files": [
+                {
+                  "path": "/home/runner/work/_temp/TEST-desktop-backend-lDScrK/providers/opencode-v2/home/.config/opencode/opencode.json",
+                  "digest": "2f746f3147ae6543e3051455e69d1aac620d1e700b969f38c35071239041e577"
+                },
+                {
+                  "path": "/home/runner/work/_temp/TEST-desktop-backend-lDScrK/providers/opencode-v2/home/.config/opencode/opencode.jsonc",
+                  "digest": "3ef854752a8d27764134fa840f2c54090ffaaf63311e7909e9fe5628e0dac37e"
+                },
+                {
+                  "path": "/home/runner/work/_temp/TEST-desktop-backend-lDScrK/providers/opencode-v2/config/opencode/opencode.json",
+                  "digest": "5ff09455a7adb68b50b18836012d03a963cfab327ae0b859adf39312f05e4177"
+                },
+                {
+                  "path": "/home/runner/work/_temp/TEST-desktop-backend-lDScrK/providers/opencode-v2/config/opencode/opencode.jsonc",
+                  "digest": "ebb865306ba1a271c4d49676ab0b68c690981847b917bff61f3f55d8a027ab3b"
+                }
+              ],
+              "inlineDigest": null
+            },
+            "openCodePreferences": {
+              "defaultModelId": null,
+              "modelLimitOverrides": {}
+            }
+          },
+          "intent": "configuration"
+        }
+      ],
+      "current": [
+        {
+          "sourceId": "63ced3731184a89eed94ab01637fe0af8d85595b04ee6193c17c3ea39a35bfb7",
+          "revision": "d30e24c2ef8e34693ebb010d4d64305e369dbb9bc0c3a43dd14da0c177a4115b",
+          "commandId": "41a07a56-f5d7-46af-8401-be0598797cd0"
+        }
+      ]
+    },
+    "digest": "5f436f25e84ceb65ba01460dea37269f8e795556635f1d611b2f20a40d189e2a"
+  },
+  "durableJoins": {
+    "canonicalJournalDigestAndFilename": true,
+    "orderedIndexDigest": true,
+    "publicationFingerprint": true,
+    "revisionDigest": true,
+    "descriptorNormalizedTarget": true,
+    "ownerAndTeamScopeGrant": true,
+    "originalProfileSeedSelectionDigest": true,
+    "oneCurrentPointer": true,
+    "twoCredentialEffects": true,
+    "verificationFalseTrue": true,
+    "replacementBeforeAuthMatchesRejectedAuthDigest": true,
+    "privateAuthBytesReconstructed": false,
+    "authJsonArchived": false
+  },
+  "nativeObserved": {
+    "children": [
+      {
+        "pid": 7760,
+        "ppid": 4928,
+        "pgid": 7760,
+        "birth": "36934",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-lDScrK/providers/opencode-v2/data/agent-teams-v2-probe-fe6354319952c1a6-plS1qZ",
+        "role": "probe"
+      },
+      {
+        "pid": 7861,
+        "ppid": 4928,
+        "pgid": 7861,
+        "birth": "37378",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-lDScrK/providers/opencode-v2/data/agent-teams-v2-catalog-K8Ui2T",
+        "role": "catalog"
+      },
+      {
+        "pid": 8696,
+        "ppid": 4928,
+        "pgid": 8696,
+        "birth": "41111",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-lDScrK/providers/opencode-v2/data/agent-teams-v2-probe-8d0752e0b583c84d-OnwKjp",
+        "role": "probe"
+      }
+    ],
+    "probes": [
+      {
+        "step": "reject-key",
+        "pid": 7760,
+        "birth": "36934",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-lDScrK/providers/opencode-v2/data/agent-teams-v2-probe-fe6354319952c1a6-plS1qZ",
+        "absentAfterReceipt": true
+      },
+      {
+        "step": "connect-key",
+        "pid": 8696,
+        "birth": "41111",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-lDScrK/providers/opencode-v2/data/agent-teams-v2-probe-8d0752e0b583c84d-OnwKjp",
+        "absentAfterReceipt": true
+      }
+    ]
+  },
+  "nativeInputBeforeAfter": {
+    "generation": "v2",
+    "version": "2.1.4",
+    "bunSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+    "manifestSha256": "30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce",
+    "profileSha256": "7581948cc984da0abac5db54863cf93271e04c0f80cbcf809375a5f1f40a54e0",
+    "descriptorSha256": "c777cde4be068a71b4d9067a6a7a4b61a4426a55a950b74c8ba832d56bf3e5f6",
+    "runtimeConfigured": false,
+    "managementConfigured": true,
+    "managementProfiles": 2,
+    "codexOrClaudeExecutable": false
+  },
+  "cleanup": {
+    "app": {
+      "pid": 4570,
+      "processGroup": 4570,
+      "identity": "Mon Nov 16 07:46:18 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-GmGOXM/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox",
+      "invocation": [
+        "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+        "/home/runner/work/_temp/TEST-emulated-ui-inputs-GmGOXM/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "dev:mcp",
+        "--remoteDebuggingPort",
+        "9222",
+        "--noSandbox"
+      ]
+    },
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "quitRequested": true,
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [],
+    "cleanup": {
+      "remaining": [],
+      "capturedHostAbsent": true,
+      "hostPid": 4928
+    },
+    "nativeRemaining": [],
+    "finiteModelCompleteAfterCleanup": false,
+    "modelServerClosed": true
+  },
+  "cleanupInterpretation": {
+    "originalWrapperExit": "0/null",
+    "originalGroupEmptyBeforeHarnessCleanup": true,
+    "capturedHostObservedAbsent": 4928,
+    "probeBirthsAbsentAfterReceipts": true,
+    "allThreeRetainedNativeBirthsAbsentAfterCleanup": true,
+    "successOnlyHostChildAndOriginalCloseUnreached": true,
+    "separateHostExitCodeAvailable": false,
+    "nativeChildExitCodesAvailable": false,
+    "passiveMainChildCallbackAvailable": false,
+    "noSignalBranchReached": "Source cleanup sees beforeHarnessCleanup=[] and does not enter remaining.length signal branch.",
+    "limits": "Observed birth/group absence and the wrapper ChildProcess exit do not supply separate Host/native-child exit certificates or full UI success."
+  },
+  "sentinels": [
+    {
+      "executable": "claude-multimodel",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    },
+    {
+      "executable": "opencode",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    },
+    {
+      "executable": "shell-env",
+      "allowed": true,
+      "argc": 2,
+      "flags": [
+        "-lic"
+      ]
+    },
+    {
+      "executable": "opencode",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    },
+    {
+      "executable": "opencode",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    },
+    {
+      "executable": "opencode",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    }
+  ],
+  "linuxChildExec": {
+    "manifest": {
+      "path": "ci-57885c/v2-management/extracted/TEST-emulated-ui-inputs-GmGOXM/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+    },
+    "binary": {
+      "path": "ci-57885c/v2-management/extracted/TEST-emulated-ui-inputs-GmGOXM/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    "actualBinaryElfX64": true,
+    "receiptInput": {
+      "manifestPath": "/home/runner/work/_temp/TEST-emulated-ui-inputs-GmGOXM/linux-child-exec/manifest.json",
+      "manifestSha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "binarySha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    "verifiedAfterCleanup": true,
+    "executedByReviewer": false
+  },
+  "images": [
+    {
+      "path": "ci-57885c/v2-management/extracted/TEST-desktop-backend-lDScrK/ui-v2-management-rejected-key.png",
+      "bytes": 123144,
+      "blob": "4e840b3ce02c1aa20274cc8ee246542733e452b2",
+      "sha256": "13b32cd46c8f64dca4d20ed4fb39d12d1f4481addc307c0e58ffa8012a72e4d9",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewedIndependently": true,
+      "observation": "Configured; Providers selected; masked key; red not-kept sentence. This image is not evidence of private auth-byte absence."
+    },
+    {
+      "path": "ci-57885c/v2-management/extracted/TEST-desktop-backend-lDScrK/ui-v2-management-connected.png",
+      "bytes": 103555,
+      "blob": "b7ed3b5f2f1204f1e48dbe29dde2894e4b0cb60c",
+      "sha256": "9b2b93d0e26885e0cf6e9cd4d889399752bca705aaeba5a3fdbb0efb4ba6a1f8",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewedIndependently": true,
+      "observation": "Connected / From OpenCode settings; model area has loading placeholders and a spinner. A successful credential receipt is separate from a settled catalog/default view."
+    },
+    {
+      "path": "ci-57885c/v2-management/extracted/TEST-desktop-backend-lDScrK/ui-v2-management-failure.png",
+      "bytes": 65209,
+      "blob": "3dcf6a2cec41c1208607d9fd97037b214eb5fbc6",
+      "sha256": "a5d9901a542b0ee854681a121514933dac44572cbfd6a41e78d1ef6a8cc45a46",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewedIndependently": true,
+      "observation": "Models active; Refresh spinner; Select project context; empty legacy model-route panel; no visible inheritance card. Non-atomic with the last retained DOM observation."
+    }
+  ],
+  "sourceSeams": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "bytes": 20435,
+      "blob": "7f224d52e429bbdecb173d65b470a2ac154de475",
+      "sha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6",
+      "excerpts": [
+        {
+          "first": 72,
+          "last": 129,
+          "text": "  const originalStep = async (step: DesktopV2ManagementStep, selector: string, label: string) => {\n    options.assertOwnedRenderer(); await options.observeNative();\n    const before = new Set((await commands()).map(row => row.commandId));\n    model.begin(step);\n    await ui.scrollTo(selector, label); await ui.click(selector, label);\n    // The original effect is never resent. Default intents also join their existing saving presentation.\n    const deadline = Date.now() + 250_000;\n    let receipt: Awaited<ReturnType<typeof commands>>[number] | undefined;\n    do {\n      options.assertOwnedRenderer();\n      const observed = await commands();\n      assert.ok(observed.every(row => ['runtime.source', 'credential.set', 'model.probe'].includes(row.kind)));\n      const current = observed.filter(row => !before.has(row.commandId) && row.kind !== 'runtime.source');\n      assert.ok(current.length <= 1, 'one original command per Settings intent');\n      const selected = current[0];\n      if (selected && !selected.resourceHeld && (selected.phase === 'completed' ||\n          selected.kind === 'credential.set' && selected.phase === 'held' && selected.terminalRejection === true)) {\n        let intentComplete = true;\n        if (step === 'global-default' || step === 'project-default') {\n          assert.ok(Date.now() < deadline, 'original default intent remains within its deadline');\n          const modelId = step === 'global-default' ? modelA : modelB;\n          const row = dialog + ' [data-testid=' + JSON.stringify('runtime-provider-model-row-' + modelId) + ']';\n          options.assertOwnedRenderer();\n          intentComplete = await cdp.evaluate('(() => { const rows=[...document.querySelectorAll(' +\n            desktopJsLiteral(row) + ')]; if(rows.length!==1)return false;' +\n            'const buttons=[...rows[0].querySelectorAll(\"button[aria-pressed]\")]; if(buttons.length!==1)return false;' +\n            'const button=buttons[0], rect=button.getBoundingClientRect();' +\n            'return rect.width>0&&rect.height>0&&button.getAttribute(\"aria-pressed\")===\"true\"&&' +\n            '!button.querySelector(\":scope > svg.animate-spin\"); })()') === true;\n          options.assertOwnedRenderer();\n          assert.ok(Date.now() < deadline, 'original default intent completes before its deadline');\n        }\n        if (intentComplete) { receipt = selected; break; }\n      }\n      await new Promise<void>(resolve => setTimeout(resolve, 100));\n    } while (Date.now() < deadline);\n    assert.ok(receipt, 'original V2 Settings command settled before its deadline');\n    const selectedSource = bindDesktopV2ManagementReceipt(authority, await commands(), receipt, step);\n    assert.equal(receipt.providerId, desktopV2ProviderId);\n    if (step === 'reject-key') {\n      assert.equal(receipt.kind, 'credential.set'); assert.equal(receipt.phase, 'held');\n      if (receipt.kind !== 'credential.set') throw new Error('Original credential receipt unavailable');\n      assert.equal(receipt.terminalRejection, true);\n      assert.equal(receipt.openCodeV2?.phase, 'probe-completed');\n      assert.equal(receipt.openCodeV2.verification?.ok, false);\n    } else {\n      assert.equal(receipt.phase, 'completed');\n      if (step === 'connect-key') assert.equal(receipt.kind, 'credential.set');\n      else {\n        assert.equal(receipt.kind, 'model.probe');\n        if (receipt.kind !== 'model.probe') throw new Error('Original model receipt unavailable');\n        assert.equal(receipt.ok, true);\n        assert.equal(receipt.modelId, step === 'global-default' ? modelA : modelB);\n      }\n    }\n    model.finish(step); await options.observeNative();\n    effects.push({ step, commandId: receipt.commandId, kind: receipt.kind, phase: receipt.phase,\n      resourceHeld: receipt.resourceHeld, source: selectedSource.evidence });"
+        },
+        {
+          "first": 133,
+          "last": 164,
+          "text": "  const modelsTab = async () => {\n    const selector = `${dialog} [role=\"tab\"][id$=\"-trigger-models\"]`;\n    await ui.scrollTo(selector, 'original Models tab'); await ui.click(selector, 'original Models tab');\n    let last: Record<string, boolean> | null = null;\n    try {\n      await ui.waitRead(`(() => ({\n        inheritanceCard: Boolean(document.querySelector('${dialog} [data-testid=\"opencode-default-inheritance\"]')),\n        modelsTabActive: document.querySelector(${desktopJsLiteral(selector)})?.getAttribute('data-state') === 'active',\n        modelsTabDisabled: Boolean(document.querySelector(${desktopJsLiteral(selector)})?.matches(':disabled')),\n        refreshSpinner: Boolean(document.querySelector('${dialog} button.mb-1 .animate-spin')),\n        legacyModelsPanel: Boolean(document.querySelector('${dialog} [data-testid=\"runtime-provider-legacy-models\"]')),\n        projectContextSelector: Boolean(document.querySelector('${dialog} [data-testid=\"runtime-provider-project-context-trigger\"]')),\n        publicError: Boolean(document.querySelector('${dialog} [data-testid=\"runtime-provider-error\"]')),\n        publicWarning: Boolean(document.querySelector('${dialog} [data-testid=\"runtime-provider-warning\"]'))\n      }))()`, 'original default inheritance', 30_000, value => {\n        if (!value || typeof value !== 'object' || Array.isArray(value)) return false;\n        const observed = (key: string) => Object.getOwnPropertyDescriptor(value, key)?.value === true;\n        last = {\n          inheritanceCard: observed('inheritanceCard'), modelsTabActive: observed('modelsTabActive'),\n          modelsTabDisabled: observed('modelsTabDisabled'), refreshSpinner: observed('refreshSpinner'),\n          legacyModelsPanel: observed('legacyModelsPanel'), projectContextSelector: observed('projectContextSelector'),\n          publicError: observed('publicError'), publicWarning: observed('publicWarning'),\n        };\n        return last.inheritanceCard === true;\n      });\n    } catch (error) {\n      proof.modelsTabFailure = last;\n      try {\n        console.error(JSON.stringify({ kind: 'TEST_V2_MANAGEMENT_MODELS_WAIT_FAILURE', observation: last }));\n      } catch { /* Retain the original failed wait, including its original deadline. */ }\n      throw error;\n    }"
+        },
+        {
+          "first": 199,
+          "last": 219,
+          "text": "  await ui.observeInput(); await openSettings();\n  await ui.click(`${dialog} [data-testid=\"runtime-provider-tab-providers\"]`, 'original provider directory');\n  await ui.scrollTo(`${directoryRow} button`, 'original API key Connect', 'Connect');\n  await ui.click(`${directoryRow} button`, 'open original API key form', 'Connect');\n  const input = `${directoryRow} form input[type=\"password\"]`;\n  await ui.waitRead(`Boolean(document.querySelector(${desktopJsLiteral(input)}))`, 'original API key input', 150_000);\n  await replace(cdp, ui, input, desktopV2RejectedKey, 'rejected TEST key');\n  await originalStep('reject-key', `${directoryRow} form button[type=\"submit\"]`, 'submit rejected TEST key once');\n  await ui.waitRead(`Boolean(document.querySelector('[data-testid=\"runtime-provider-setup-submit-error\"]'))`, 'original key rejection visible');\n  assert.deepEqual(await privateJson(fixture.v2Management.authPath), { [desktopV2ProviderId]: { type: 'api', key: desktopV2RejectedKey } });\n  proof.rejectionScreenshot = await screenshot('ui-v2-management-rejected-key.png');\n  await replace(cdp, ui, input, desktopV2SelectedKey, 'replacement TEST key');\n  await originalStep('connect-key', `${directoryRow} form button[type=\"submit\"]`, 'submit replacement TEST key once');\n  await ui.waitRead(`!document.querySelector('${directoryRow} form')&&document.querySelector('${directoryRow}')?.textContent.includes('Connected')`, 'original successful connection visible', 150_000);\n  assert.deepEqual(await privateJson(fixture.v2Management.authPath), { [desktopV2ProviderId]: { type: 'api', key: desktopV2SelectedKey } });\n  const authSha256 = await fileDigest(fixture.v2Management.authPath);\n  assert.equal(await cdp.evaluate(`document.body.innerText.includes(${desktopJsLiteral(desktopV2SelectedKey)})`), false);\n  assert.equal(await cdp.evaluate(`Boolean(document.querySelector('${directoryRow} input[aria-label=\"Authorization code\"]'))`), false);\n  proof.connectedScreenshot = await screenshot('ui-v2-management-connected.png');\n  model.assertPassive(2);\n  await modelsTab(); await selectProject('workspace');"
+        },
+        {
+          "first": 250,
+          "last": 277,
+          "text": "  const finalPreferences = await preferences();\n  assert.equal(finalPreferences[0]!.sha256, global.sha256); assert.equal(finalPreferences[1]!.value.defaultModelId, null); assert.equal(finalPreferences[2], null);\n  model.assertComplete();\n  proof.inheritanceScreenshot = await screenshot('ui-v2-management-inherited.png');\n  const priorEpoch = await cdp.evaluate('performance.timeOrigin');\n  await cdp.send('Page.reload', { ignoreCache: false });\n  await ui.waitRead(`performance.timeOrigin!==${desktopJsLiteral(priorEpoch)}&&Boolean(window.electronAPI)&&!document.getElementById('splash')`, 'actual renderer reload');\n  await ui.observeInput(); await openSettings(); await modelsTab(); await selectProject('workspace');\n  await defaultId('base', modelA); await defaultId('project', modelA);\n  model.assertComplete(); assert.deepEqual(await preferences(), finalPreferences);\n  assert.equal(await fileDigest(fixture.v2Management.authPath), authSha256, 'passive settings reload never mutates credentials');\n  const finalCommands = await commands();\n  const intents = finalCommands.filter(row => row.kind !== 'runtime.source');\n  assert.equal(intents.length, 5); assert.ok(finalCommands.every(row => !row.resourceHeld));\n  assert.deepEqual(intents.map(row => row.commandId).sort(), effects.map(row => row.commandId).sort());\n  const sourceIndexPath = join(root, 'hoststore/runtime-sources/index.json');\n  proof.sourcePublications = assertDesktopV2ManagementSourceHistory(authority, finalCommands,\n    await readDesktopV2ManagementJson(sourceIndexPath, 8 * 1024 * 1024), true);\n  proof.sourceIndexSha256 = await fileDigest(sourceIndexPath);\n  proof.fixturePins = await verifyDesktopV2ManagementFixture(fixture);\n  proof.modelRequests = model.requests;\n  proof.preferences = finalPreferences.map((value, index) => ({ scope: ['global', 'project', 'other'][index], sha256: value?.sha256 ?? null,\n    defaultModelId: value?.value.defaultModelId ?? null }));\n  proof.credentials = { authSha256, rejectedKeyRetainedUntilExplicitReplacement: true, successfulReplacementVerified: true };\n  proof.reloadedScreenshot = await screenshot('ui-v2-management-reloaded.png');\n  await options.observeNative();\n  proof.visualReview = 'original screenshots retained for independent inspection';\n  proof.status = 'PASS';"
+        }
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts",
+      "bytes": 12302,
+      "blob": "6f8e3da7ba0cda6a13d5cfbafd1ecaf58ac738dd",
+      "sha256": "91bfb3b90c18e38af200e23d167811e526b339d1525ccc502db43759a5e6bf77",
+      "excerpts": [
+        {
+          "first": 61,
+          "last": 68,
+          "text": "    const sources = [...new Set([...desktopProofSources, 'scripts/legacy-agent-host/verify-desktop-v2-management-receipt.ts',\n      'packages/legacy-agent-host/src/composition/applyOpenCodeRuntimeSource.ts',\n      'packages/legacy-agent-host/src/composition/openCodeV2ModelSelection.ts',\n      'packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts',\n      'src/features/agent-backend/main/infrastructure/loadDesktopBackendDescriptor.ts',\n      'scripts/legacy-agent-host/fixtures/c226-opencode-v2-management.json', ...['fixture', 'model', 'process', 'records', 'records.test', 'smoke', 'ui']\n      .map(name => `scripts/legacy-agent-host/desktop-opencode-v2-management-${name}.ts`)])];\n    const sourceHashes = await captureDesktopSourceHashes(repo, sources);"
+        },
+        {
+          "first": 81,
+          "last": 88,
+          "text": "    const group = app.pid ?? 0, native = observeDesktopV2ManagementProcesses(group, fixture);\n    evidence.nativeProcesses = { children: native.children, probes: native.probes };\n    const assertOwnedRenderer = () => { assertOwnedCdpListener(group); };\n    const close = async (key: 'startupDiagnosticClose' | 'failureQuit') => {\n      assert.ok(cdp);\n      await requestObservedDesktopClose(cdp, { assertOwnedRenderer,\n        onAttempt: () => { quitRequested = true; },\n        listenerPresent: () => processTable().some(row => row.pid === evidence.cdpListener), evidence, key });"
+        },
+        {
+          "first": 100,
+          "last": 164,
+          "text": "      await verifyCapturedDesktopBinding({ cdp, group, mode, fixture, evidence, repo, packed: undefined, remainingStartupMs: remainingMs() });\n      await native.observe();\n      await runDesktopV2ManagementUi(cdp, { fixture, model, evidence, assertOwnedRenderer,\n        observeNative: step => native.observe(step) });\n      assert.equal(native.probes.length, 5);\n      evidence.hostChild = { ...native.hostIdentity(), observedBeforeShutdown: true };\n      // Passive native directory owners deliberately remain live until this Host closes.\n      evidence.nativeBeforeClose = await native.remaining();\n      await close('startupDiagnosticClose');\n      const deadline = Date.now() + 30_000;\n      while (Date.now() < deadline && (groupMembers(group).length || app.exitCode === null))\n        await new Promise<void>(resolve => setTimeout(resolve, 100));\n      assert.equal(processTable().some(row => row.pid === native.hostPid()), false, 'original Host retired on app close');\n      assert.deepEqual(await native.remaining(), [], 'original native directory and probe children retired on app close');\n      evidence.originalClose = { appExitCode: app.exitCode, appSignalCode: app.signalCode,\n        groupRemaining: groupMembers(group), hostAbsent: true, nativeRemaining: await native.remaining() };\n      assert.deepEqual(groupMembers(group), [], 'original app close empties its group before harness cleanup');\n      assert.equal(app.exitCode, 0); assert.equal(app.signalCode, null);\n      evidence.status = 'PASS';\n    } catch (error) {\n      evidence.status = 'INCOMPLETE';\n      evidence.failure = error instanceof Error ? { name: error.name, message: error.message.slice(0, 2000) } : 'original UI flow failed';\n      if (cdp && !quitRequested) {\n        try {\n          assertOwnedRenderer();\n          const capture = await bounded(cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true }), 5000, 'failure screenshot') as { data: string };\n          const path = join(fixture.root, 'ui-v2-management-failure.png');\n          await writeFile(path, Buffer.from(capture.data, 'base64'), { mode: 0o600, flag: 'wx' });\n          evidence.failureScreenshot = { path, sha256: await fileDigest(path) };\n        } catch { evidence.failureScreenshotUnavailable = true; }\n        await close('failureQuit').catch(() => { evidence.failureQuit = { attempted: quitRequested, unconfirmed: true }; });\n      }\n      throw error;\n    } finally {\n      evidence.quitRequested = quitRequested;\n      if (cdp) await bounded(cdp.close(), 3000, 'disconnect TEST renderer').catch(() => undefined);\n      evidence.cleanup = await cleanupCapturedDesktopApp({ app, group, fixture, evidence, appIdentity,\n        hostPid: native.hostPid(), packedRelaunchMode: false });\n      const cleanup = evidence.cleanup as Awaited<ReturnType<typeof cleanupCapturedDesktopApp>>;\n      if (cleanup.cleanupFailure || cleanup.remaining === null || cleanup.remaining.length || !cleanup.capturedHostAbsent)\n        evidence.status = 'INCOMPLETE';\n      if (!Array.isArray(evidence.beforeHarnessCleanup) || evidence.beforeHarnessCleanup.length !== 0 ||\n          app.exitCode !== 0 || app.signalCode !== null) evidence.status = 'INCOMPLETE';\n      try {\n        evidence.nativeRemaining = await native.remaining();\n        assert.deepEqual(evidence.nativeRemaining, []);\n        evidence.nativeV2InputAfterCleanup = await verifyDesktopV2ManagementFixture(fixture);\n        const census = (await readFile(fixture.sentinelLog, 'utf8')).trim().split('\\n').filter(Boolean).map(line => JSON.parse(line) as { allowed: boolean });\n        evidence.finalSentinelCensus = census;\n        assert.ok(census.length > 0 && census.every(row => row.allowed === true), 'only finite version/shell sentinels may execute');\n      } catch { evidence.status = 'INCOMPLETE'; evidence.finalObservationFailed = true; }\n      await verifyDesktopSourceFreeze(repo, sources, sourceHashes, evidence);\n      await verifyDesktopProofInputsAfterCleanup([], fixture, evidence);\n      try { model.assertComplete(); evidence.finiteModelCompleteAfterCleanup = true; }\n      catch { evidence.status = 'INCOMPLETE'; evidence.finiteModelCompleteAfterCleanup = false; }\n      modelCloseAttempted = true;\n      try { await model.close(); evidence.modelServerClosed = true; }\n      catch { evidence.status = 'INCOMPLETE'; evidence.modelServerClosed = false; }\n      app.stdout.unpipe(log); app.stderr.unpipe(log); app.stdout.resume(); app.stderr.resume();\n      await bounded(new Promise<void>(resolve => log.end(resolve)), 3000, 'close TEST log')\n        .catch(() => { evidence.status = 'INCOMPLETE'; evidence.logCleanupFailed = true; });\n      await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });\n      console.log(JSON.stringify({ mode, status: evidence.status, receipt: receiptPath }));\n    }\n    assert.equal(evidence.status, 'PASS', 'original V2 UI proof and cleanup must both pass; inspect retained receipt');"
+        }
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-process.ts",
+      "bytes": 5096,
+      "blob": "8463257cb866eed1f222e76aa4b23ae6b07440cf",
+      "sha256": "1a01a3b5538e2838f5926358c1c69bd0f0fe9b40537d26c355a457bc64451e92",
+      "excerpts": [
+        {
+          "first": 9,
+          "last": 17,
+          "text": "async function birth(pid: number): Promise<string | undefined> {\n  try {\n    const value = await readFile(`/proc/${pid}/stat`, 'utf8');\n    const fields = value.slice(value.lastIndexOf(')') + 2).trim().split(/\\s+/u);\n    assert.match(fields[19] ?? '', /^\\d+$/u);\n    return fields[19];\n  } catch (error) {\n    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;\n    throw error;"
+        },
+        {
+          "first": 31,
+          "last": 85,
+          "text": "    async observe(step?: DesktopV2ManagementStep) {\n      const table = processTable();\n      const hosts = table.filter(row => row.pgid === group && command(row.pid) === `${fixture.node} ${fixture.hostEntry}`);\n      assert.equal(hosts.length, 1, 'one original captured Host owns management');\n      const pid = hosts[0]!.pid, started = await birth(pid);\n      assert.ok(started);\n      if (!host) host = { pid, birth: started };\n      assert.deepEqual({ pid, birth: started }, host, 'management stays on the original Host');\n      const observed: typeof children = [];\n      for (const child of table.filter(row => row.ppid === pid)) {\n        const started = await birth(child.pid);\n        if (!started) continue;\n        let executable: string, args: string[], dataRoot: string;\n        try {\n          executable = await realpath(`/proc/${child.pid}/exe`);\n          args = (await readFile(`/proc/${child.pid}/cmdline`, 'utf8')).split('\\0').filter(Boolean);\n          const data = (await readFile(`/proc/${child.pid}/environ`, 'utf8')).split('\\0').filter(value => value.startsWith('XDG_DATA_HOME='));\n          assert.equal(data.length, 1); dataRoot = data[0]!.slice('XDG_DATA_HOME='.length);\n        } catch (error) {\n          if ((error as NodeJS.ErrnoException).code === 'ENOENT' && await birth(child.pid) === undefined) continue;\n          throw error;\n        }\n        if (await birth(child.pid) !== started) continue;\n        assert.equal(executable, selected.selection.bunPath, 'only the selected OpenCode Bun child may run');\n        assert.deepEqual(args, [executable, '--no-env-file', '--config=/dev/null', '--no-install', selected.childEntry]);\n        assert.equal(child.pgid, child.pid, 'original detached native custody group');\n        assert.equal(dirname(dataRoot), selected.management.environment.XDG_DATA_HOME);\n        const role = /^agent-teams-v2-(probe|catalog|key)-/u.exec(basename(dataRoot))?.[1];\n        assert.ok(role, 'native namespace belongs to the captured management operation');\n        if (!children.some(value => value.pid === child.pid && value.birth === started)) {\n          assert.equal(await fileDigest(executable), selected.selection.bunSha256);\n          if (await birth(child.pid) !== started) continue;\n          children.push({ ...child, birth: started, executableSha256: selected.selection.bunSha256, dataRoot, role });\n          assert.ok(children.length <= 32, 'finite original management children');\n        }\n        observed.push(children.find(value => value.pid === child.pid && value.birth === started)!);\n      }\n      if (step) {\n        const actual = observed.filter(child => child.role === 'probe');\n        assert.equal(actual.length, 1, 'the model response waits for the one original native probe child');\n        assert.ok(!probes.some(value => value.step === step));\n        const original = actual[0]!;\n        assert.ok(!probes.some(value => value.pid === original.pid && value.birth === original.birth));\n        probes.push({ step, pid: original.pid, birth: original.birth, dataRoot: original.dataRoot, absentAfterReceipt: false });\n      } else {\n        for (const probe of probes) {\n          assert.notEqual(await birth(probe.pid), probe.birth, 'each original durable receipt retired its native probe');\n          probe.absentAfterReceipt = true;\n        }\n      }\n    },\n    async remaining() {\n      const result = [];\n      for (const child of children) if (await birth(child.pid) === child.birth) result.push(child);\n      return result;"
+        }
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 27188,
+      "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+      "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a",
+      "excerpts": [
+        {
+          "first": 182,
+          "last": 204,
+          "text": "  const waitRead = async (\n    expression: string,\n    label: string,\n    timeoutMs = 30_000,\n    isReady: (value: unknown) => boolean = Boolean\n  ): Promise<unknown> => {\n    const deadline = Date.now() + timeoutMs;\n    while (Date.now() < deadline) {\n      options.assertOwnedRenderer();\n      try {\n        const value = await cdp.evaluate(expression);\n        if (isReady(value)) return value;\n      } catch (error) {\n        if (\n          !/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(\n            String(error)\n          )\n        )\n          throw error;\n      }\n      await new Promise<void>((done) => setTimeout(done, 100));\n    }\n    throw new Error(`UI read timed out: ${label}; no mutation retry`);"
+        }
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "bytes": 49613,
+      "blob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+      "excerpts": [
+        {
+          "first": 399,
+          "last": 439,
+          "text": "  try {\n    // Yield for ChildProcess exit/reaping before inspecting a just-closed dev wrapper.\n    await tick();\n    const observationDeadline = Date.now() + 3000;\n    if (evidence.quitRequested === true) {\n      const initialExitCode = app.exitCode, initialSignalCode = app.signalCode;\n      // Spend the original observation budget on the exact requested Quit first.\n      // Synchronous ps reads can otherwise outrun this ChildProcess's exit event.\n      while (app.exitCode === null && app.signalCode === null && Date.now() < observationDeadline)\n        await tick();\n      evidence.originalRequestedQuitExit = { initialExitCode, initialSignalCode,\n        exitCode: app.exitCode, signalCode: app.signalCode };\n    }\n    remaining = group > 0 ? await settledGroupMembers(group, observationDeadline) : [];\n    evidence.beforeHarnessCleanup = remaining;\n    if (hostPid === undefined) {\n      const hosts = remaining.filter(\n        (row) => command(row.pid) === `${fixture.node} ${fixture.hostEntry}`\n      );\n      if (hosts.length === 1) {\n        hostPid = hosts[0]!.pid;\n        evidence.hostChildOnFailure = {\n          ...hosts[0],\n          command: `${fixture.node} ${fixture.hostEntry}`,\n          observedBeforeHarnessCleanup: true,\n        };\n      }\n    }\n    if (!packedRelaunchMode && appIdentity && hostPid !== undefined && remaining.length &&\n        !remaining.some((row) => row.pid === group)) {\n      const observed = await observeExitedAppGroup({ child: app, group, hostPid,\n        initialMembers: remaining, deadline: observationDeadline });\n      evidence.originalExitedGroup = observed;\n      if (observed.settled) remaining = observed.remaining!;\n    }\n    if (remaining.length) {\n      assert.ok(!packedRelaunchMode, 'observer-only app relaunch keeps UNKNOWN debt; no old-group signal or retry');\n      // A numeric PGID alone never authorizes signaling after its leader exits.\n      assert.ok(\n        appIdentity && remaining.some((row) => row.pid === group),\n        'captured leader absent; retain cleanup debt without signaling'"
+        },
+        {
+          "first": 478,
+          "last": 507,
+          "text": "        let groupSignalPermissionError: unknown;\n        try {\n          process.kill(-group, 'SIGTERM');\n        } catch (error) {\n          const code = (error as NodeJS.ErrnoException).code;\n          if (code === 'EPERM') {\n            // On macOS a group of exiting/zombie descendants may reject killpg.\n            // Never infer success from EPERM or send a second, broader signal.\n            // Only a fresh complete group-absence census can clear this debt.\n            groupSignalPermissionError = error;\n            evidence.originalGroupSignal = 'EPERM: observing actual group absence';\n          } else if (code !== 'ESRCH') {\n            throw error;\n          }\n        }\n        const deadline = Date.now() + 30_000;\n        while (Date.now() < deadline && (remaining = groupMembers(group)).length) await tick();\n        if (groupSignalPermissionError) {\n          if (remaining.length > 0) throw groupSignalPermissionError;\n          evidence.originalGroupSignal = 'EPERM followed by verified full group absence';\n        }\n      }\n    }\n    capturedHostAbsent =\n      hostPid === undefined ? null : !processTable().some((row) => row.pid === hostPid);\n  } catch (error) {\n    cleanupFailure =\n      error instanceof Error ? error.message.slice(0, 4000) : 'unclassified cleanup failure';\n  }\n  return { remaining, cleanupFailure, capturedHostAbsent, hostPid };"
+        }
+      ]
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "bytes": 74351,
+      "blob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+      "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+      "excerpts": [
+        {
+          "first": 451,
+          "last": 511,
+          "text": "  const refresh = useCallback(\n    async (input: { silent?: boolean } = {}): Promise<boolean> => {\n      if (!options.enabled) {\n        return true;\n      }\n      viewRequestedRef.current = true;\n      const projectContext = getProjectContextSnapshot();\n      const requestSeq = viewLoadRequestSeq.current + 1;\n      viewLoadRequestSeq.current = requestSeq;\n      const requestIsCurrent = (): boolean =>\n        viewLoadRequestSeq.current === requestSeq && isProjectContextCurrent(projectContext);\n      const silent = input.silent === true;\n      if (!silent) {\n        setLoading(true);\n      }\n      setError(null);\n      setErrorDiagnostics(null);\n      try {\n        const response = await api.runtimeProviderManagement.loadView({\n          ...connectionForm.runtimeProviderContext(\n            options.runtimeId,\n            projectContext.path,\n            options.connectionContextToken\n          ),\n        });\n        if (!requestIsCurrent()) {\n          return false;\n        }\n        if (response.error) {\n          if (!silent) {\n            setView(null);\n          }\n          setError(response.error.message);\n          setErrorDiagnostics(response.error.diagnostics ?? null);\n          return false;\n        }\n        const nextView = presentManagementView(response.view ?? null);\n        setView(nextView);\n        setSelectedModelId(nextView?.defaultModel ?? null);\n        setSelectedProviderId((current) => {\n          if (current && nextView?.providers.some((provider) => provider.providerId === current)) {\n            return current;\n          }\n          return selectInitialProviderId(nextView);\n        });\n        return true;\n      } catch (loadError) {\n        if (!requestIsCurrent()) {\n          return false;\n        }\n        if (!silent) {\n          setView(null);\n        }\n        setError(loadError instanceof Error ? loadError.message : 'Failed to load providers');\n        setErrorDiagnostics(null);\n        return false;\n      } finally {\n        if (!silent && requestIsCurrent()) {\n          setLoading(false);\n        }\n      }"
+        }
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/identity.ts",
+      "bytes": 709,
+      "blob": "d4e5631330f08ccc4138353f6e2b5f49f7cac01f",
+      "sha256": "a795125fbf639552833eb3730d971b9de16437ed3507be303a5b42d541ba8bb7",
+      "excerpts": [
+        {
+          "first": 1,
+          "last": 19,
+          "text": "import { createHash } from 'node:crypto';\n\n/** Stable matching for private management intents. Raw auth inputs are never journaled. */\nexport function managementDigest(value: unknown): string {\n  const canonical = (entry: unknown): unknown => {\n    if (Array.isArray(entry)) return entry.map(canonical);\n    if (entry && typeof entry === 'object')\n      return Object.fromEntries(\n        Object.entries(entry)\n          .filter(([, item]) => item !== undefined)\n          .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))\n          .map(([key, item]) => [key, canonical(item)])\n      );\n    return entry;\n  };\n  return createHash('sha256')\n    .update(JSON.stringify(canonical(value)))\n    .digest('hex');\n}"
+        }
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/identity.ts",
+      "bytes": 1184,
+      "blob": "e2b5fc6216637c1d78ff807bf0e11c63d5ec5f63",
+      "sha256": "e42ca92261537a5882e2bd9ec456e257042f9ad42bbc465fb5bc020c2ac4cc3c",
+      "excerpts": [
+        {
+          "first": 21,
+          "last": 23,
+          "text": "export function runtimeDigest(value: unknown): string {\n  return createHash('sha256').update(JSON.stringify(value)).digest('hex');\n}"
+        }
+      ]
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/runtimeSourceGrantAuthority.ts",
+      "bytes": 8307,
+      "blob": "211a867ac614a93ec684b0757955e8215e9e3ac8",
+      "sha256": "dffd187830a2872f3656c99be7453816ee075485bdbd5cb49c016b86a606efef",
+      "excerpts": [
+        {
+          "first": 23,
+          "last": 42,
+          "text": "export function selectRuntimeSourceSeed(\n  profile: RuntimeSourceSeedProfile, raw: RuntimeSourceGrant, retained = false\n): ProviderManagementProfile {\n  const unavailable = (): never => {\n    if (retained) throw new RuntimeSourceUnavailable();\n    throw new ManagementCommandError('conflict');\n  };\n  const grant = runtimeSourceGrantSchema.parse(raw);\n  if (grant.ownerId !== profile.owner.ownerId || grant.ownerRevision !== profile.owner.revision)\n    return unavailable();\n  if (grant.teamScopes.some(scope => !profile.teams.some(team =>\n    team.scope.teamId === scope.teamId && team.scope.projectId === scope.projectId &&\n    team.scope.workspaceId === scope.workspaceId))) return unavailable();\n  const seeds = profile.management?.filter(row => row.profileId === grant.profileId &&\n    row.configRevision === grant.configRevision && row.provider === grant.runtimeId) ?? [];\n  if (seeds.length > 1) throw new ManagementCommandError('conflict');\n  const seed = seeds[0];\n  if (!seed || (grant.projectPath !== null && grant.projectPath !== seed.cwd)) return unavailable();\n  return seed;\n}"
+        },
+        {
+          "first": 99,
+          "last": 166,
+          "text": "      previousRevision: input.expectedRevision,\n      commandId: input.commandId,\n      grant: input.grant,\n      candidate: input.candidate,\n      ...(input.intent ? { intent: input.intent } : {}),\n    })\n  ) return held();\n  return input;\n}\n\n/** Original replay requires the same current private seed as well as intact recorded identity. */\nexport function readOriginalRuntimeSourcePublication(\n  saved: StoredRuntimeSourceCommand,\n  seedFor: (grant: RuntimeSourceGrant) => ProviderManagementProfile\n): PublishRuntimeSource {\n  const input = readStoredRuntimeSourcePublication(saved);\n  const seed = seedFor(input.grant);\n  if (saved.profileId !== seed.profileId || saved.configRevision !== seed.configRevision ||\n      saved.providerId !== seed.provider ||\n      saved.selectionDigest !== runtimeDigest({ grant: input.grant, seed })) return held();\n  return input;\n}\n\n/** Validate every original record and pointer, including currently ineligible sources. */\nexport function validateRuntimeSourceHistory(\n  index: ReturnType<FileRuntimeSourceIndex['read']>,\n  commands: Pick<ManagementCommandStore, 'read'>\n): void {\n  const previous = new Map<string, string>(), grants = new Map<string, string>(),\n    selections = new Map<string, string>();\n  for (const record of index.records) {\n    const sourceId = record.grant.targetId, grantDigest = runtimeDigest(record.grant),\n      receipt = commands.read(record.commandId);\n    if (!receipt || receipt.kind !== 'runtime.source') return held();\n    if (receipt.publicationJson) readStoredRuntimeSourcePublication(receipt);\n    if (\n      (grants.has(sourceId) && grants.get(sourceId) !== grantDigest) ||\n      (selections.has(sourceId) && selections.get(sourceId) !== receipt.selectionDigest) ||\n      record.previousRevision !== (previous.get(sourceId) ?? receipt.selectionDigest) ||\n      receipt.resourceHeld || receipt.phase === 'held' || receipt.phase === 'verifying' ||\n      (record.candidate.nativeCli && (!['verified', 'published'].includes(receipt.phase) ||\n        receipt.nativeVersion !== record.candidate.nativeCli.version)) ||\n      receipt.revision !== record.revision || receipt.sourceId !== sourceId ||\n      receipt.resourceId !== sourceId || receipt.profileId !== record.grant.profileId ||\n      receipt.configRevision !== record.grant.configRevision ||\n      receipt.providerId !== record.grant.runtimeId ||\n      receipt.expectedRevision !== record.previousRevision ||\n      receipt.fingerprint !== runtimeDigest({\n        grant: record.grant, commandId: record.commandId,\n        expectedRevision: record.previousRevision, candidate: record.candidate,\n        ...(record.intent ? { intent: record.intent } : {}),\n      })\n    ) held();\n    grants.set(sourceId, grantDigest);\n    selections.set(sourceId, receipt.selectionDigest);\n    previous.set(sourceId, record.revision);\n  }\n  if (previous.size !== index.current.length ||\n      index.current.some(pointer => previous.get(pointer.sourceId) !== pointer.revision)) held();\n}"
+        }
+      ]
+    }
+  ],
+  "appLogLimits": "Read full original app log; repeated codexAccount:refreshSnapshot unavailable diagnostics do not establish this Models-wait cause. No TEST_MAIN_CHILD_PROCESS record is retained.",
+  "wordingAndMapping": "Exact author checkpoint/audit/appendix approved without correction. API FAIL and receipt INCOMPLETE remain; cleanup does not promote the incomplete business flow.",
+  "limits": [
+    "Only two finite localhost TEST credential model requests; no real Claude/Codex or vendor authentication/inference qualification.",
+    "Management native pins/three child observations are separate from full native Process/V2 or packaged qualification.",
+    "The 1769 selected Git census includes589 Host source leaves, not the entire Host source or installed dependency universe.",
+    "Full compiled products/private auth/configuration bodies are not archived; compiled bundle digests are not an independent rebuild.",
+    "No result transfer to c763, geometry/copy/Models/P11 proposals or any later resulting source.",
+    "No source/ref/CI mutation, new download, project/native/vendor invocation, timer/read/click replay, or deadline/acceptance change."
+  ]
+}

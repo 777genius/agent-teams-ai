@@ -1,0 +1,431 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "artifacts": [
+      {
+        "id": 14207795182,
+        "name": "host-offline-tests-57885c055a18b27c180c304762643eac632513ad-4",
+        "size_in_bytes": 317499,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207795182",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207795182/zip",
+        "expired": false,
+        "created_at": "2026-11-16T08:00:59Z",
+        "expires_at": "2026-11-30T08:00:58Z",
+        "updated_at": "2026-11-16T08:00:59Z",
+        "digest": "sha256:4fe0bb55bfaa04f2482c469cc86f633c942d72d627c66501e1e2a410d88559bd",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14207237455,
+        "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-selection",
+        "size_in_bytes": 1306107,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207237455",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207237455/zip",
+        "expired": false,
+        "created_at": "2026-11-16T08:02:01Z",
+        "expires_at": "2026-11-30T08:02:00Z",
+        "updated_at": "2026-11-16T08:02:01Z",
+        "digest": "sha256:ae216a1ec3eda1cc8f40d750a2058a9eecd128cfb1bb969b42340e7ff3ec39cf",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14207200022,
+        "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-taskboard",
+        "size_in_bytes": 1614825,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207200022",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207200022/zip",
+        "expired": false,
+        "created_at": "2026-11-16T07:45:51Z",
+        "expires_at": "2026-11-30T07:45:49Z",
+        "updated_at": "2026-11-16T07:45:51Z",
+        "digest": "sha256:ae6956814385a33ee51980e1dd7ce8d19589ccd0d868040ab1a2733f2b4cdc0d",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14207187115,
+        "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-skills",
+        "size_in_bytes": 1377733,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207187115",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207187115/zip",
+        "expired": false,
+        "created_at": "2026-11-16T07:57:35Z",
+        "expires_at": "2026-11-30T07:57:34Z",
+        "updated_at": "2026-11-16T07:57:35Z",
+        "digest": "sha256:efdc0bdc86101649dc8e43ac0fc24d22a977631cca91da6f4927af0f5ced63f8",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14207180145,
+        "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-claude-lifecycle",
+        "size_in_bytes": 4224347,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207180145",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207180145/zip",
+        "expired": false,
+        "created_at": "2026-11-16T07:46:25Z",
+        "expires_at": "2026-11-30T07:46:24Z",
+        "updated_at": "2026-11-16T07:46:25Z",
+        "digest": "sha256:6d37049baa07df8c3652408a29f8ebf2694440e2dcec721654cdfe6e64d5eb46",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14207058971,
+        "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-opencode",
+        "size_in_bytes": 2455996,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207058971",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207058971/zip",
+        "expired": false,
+        "created_at": "2026-11-16T08:03:44Z",
+        "expires_at": "2026-11-30T08:03:43Z",
+        "updated_at": "2026-11-16T08:03:44Z",
+        "digest": "sha256:468b4a335aa0494c5d8ba58706d62b8b2dc45ee4c36efdff11ff22f5eed9a10f",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14207048848,
+        "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-team",
+        "size_in_bytes": 651631,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207048848",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207048848/zip",
+        "expired": false,
+        "created_at": "2026-11-16T08:04:18Z",
+        "expires_at": "2026-11-30T08:04:18Z",
+        "updated_at": "2026-11-16T08:04:18Z",
+        "digest": "sha256:d16e4dd4556eb2732788275367240825716bdb2f512eeacdd8aed1e5123e37b9",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14207007288,
+        "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-codex",
+        "size_in_bytes": 2980773,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207007288",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207007288/zip",
+        "expired": false,
+        "created_at": "2026-11-16T07:53:58Z",
+        "expires_at": "2026-11-30T07:53:57Z",
+        "updated_at": "2026-11-16T07:53:58Z",
+        "digest": "sha256:067e73a10151e3f95ce24d8a63a5585bacb601dc6b2c221a5029864674cd119a",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14206923000,
+        "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-review",
+        "size_in_bytes": 992803,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206923000",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206923000/zip",
+        "expired": false,
+        "created_at": "2026-11-16T08:00:31Z",
+        "expires_at": "2026-11-30T08:00:30Z",
+        "updated_at": "2026-11-16T08:00:31Z",
+        "digest": "sha256:73086d308e45c34ebff789d939de002d828d6db17bf7dfc86618aa3a46cc0885",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14206792564,
+        "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-opencode-v2-management",
+        "size_in_bytes": 846718,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206792564",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206792564/zip",
+        "expired": false,
+        "created_at": "2026-11-16T07:51:16Z",
+        "expires_at": "2026-11-30T07:51:15Z",
+        "updated_at": "2026-11-16T07:51:16Z",
+        "digest": "sha256:5ddecbc018c17032aed6ab4e72d6861999b9eb575dfc8b1805743cffe2c0ab50",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14206772547,
+        "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-collaboration",
+        "size_in_bytes": 1652347,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206772547",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206772547/zip",
+        "expired": false,
+        "created_at": "2026-11-16T07:50:17Z",
+        "expires_at": "2026-11-30T07:50:16Z",
+        "updated_at": "2026-11-16T07:50:17Z",
+        "digest": "sha256:980271e6a4a74b2b4df97f31acc9278b8ab44b56e2216a7b5e84dc31cec101e8",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14206652627,
+        "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-claude",
+        "size_in_bytes": 3722995,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206652627",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206652627/zip",
+        "expired": false,
+        "created_at": "2026-11-16T07:54:13Z",
+        "expires_at": "2026-11-30T07:54:12Z",
+        "updated_at": "2026-11-16T07:54:13Z",
+        "digest": "sha256:5976bf525e5e2b9127a0cd1fcd1a5d7f9b09fcbc1dca7b5adad954dcbe8f12fe",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14206641890,
+        "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-processes",
+        "size_in_bytes": 724980,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206641890",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206641890/zip",
+        "expired": false,
+        "created_at": "2026-11-16T07:44:43Z",
+        "expires_at": "2026-11-30T07:44:42Z",
+        "updated_at": "2026-11-16T07:44:43Z",
+        "digest": "sha256:b57cb4b57e6f43ee118b1cbd989b841f76fc4ff774ddda324492aaacf4a9a2fc",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14206587274,
+        "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-extensions",
+        "size_in_bytes": 982118,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206587274",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206587274/zip",
+        "expired": false,
+        "created_at": "2026-11-16T07:45:30Z",
+        "expires_at": "2026-11-30T07:45:29Z",
+        "updated_at": "2026-11-16T07:45:30Z",
+        "digest": "sha256:5dea2e1be38b946da08aed6ed9829125f487e4ce5ff062eba914c6048bbb7100",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14206571824,
+        "name": "host-emulated-darwin-arm64-57885c055a18b27c180c304762643eac632513ad-installer",
+        "size_in_bytes": 282086,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206571824",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206571824/zip",
+        "expired": false,
+        "created_at": "2026-11-16T07:46:23Z",
+        "expires_at": "2026-11-30T07:46:21Z",
+        "updated_at": "2026-11-16T07:46:23Z",
+        "digest": "sha256:0a1ba100d0dab3c481df55c61f7766a1abb86676241a98c2ddf680af619816ad",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14206571770,
+        "name": "host-offline-tests-57885c055a18b27c180c304762643eac632513ad-3",
+        "size_in_bytes": 297156,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206571770",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206571770/zip",
+        "expired": false,
+        "created_at": "2026-11-16T07:45:56Z",
+        "expires_at": "2026-11-30T07:45:55Z",
+        "updated_at": "2026-11-16T07:45:56Z",
+        "digest": "sha256:a2f2458462d2e50e2c48de96f0672fb89d28b76d44a986d24b3b68dd54b9645d",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14206432098,
+        "name": "host-offline-tests-57885c055a18b27c180c304762643eac632513ad-2",
+        "size_in_bytes": 311602,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206432098",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206432098/zip",
+        "expired": false,
+        "created_at": "2026-11-16T07:40:48Z",
+        "expires_at": "2026-11-30T07:40:48Z",
+        "updated_at": "2026-11-16T07:40:48Z",
+        "digest": "sha256:c74cdae047de0b4da27cd2789c5bdfdcda39f83d3485605916f941c71578d1ca",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14206377419,
+        "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-management",
+        "size_in_bytes": 1116460,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206377419",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206377419/zip",
+        "expired": false,
+        "created_at": "2026-11-16T07:46:53Z",
+        "expires_at": "2026-11-30T07:46:52Z",
+        "updated_at": "2026-11-16T07:46:53Z",
+        "digest": "sha256:a5f0c653700ba83fced1d62a3043013162622e4c5b708c0dedd1ffde7cb0282c",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14206308356,
+        "name": "host-offline-tests-57885c055a18b27c180c304762643eac632513ad-1",
+        "size_in_bytes": 294718,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206308356",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206308356/zip",
+        "expired": false,
+        "created_at": "2026-11-16T07:42:59Z",
+        "expires_at": "2026-11-30T07:42:58Z",
+        "updated_at": "2026-11-16T07:42:59Z",
+        "digest": "sha256:9e18bfa1fe9933f5bd9ae1e354422728342dbaf67f11e33e948cf8a65ea7585c",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14205928724,
+        "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-import",
+        "size_in_bytes": 1162520,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14205928724",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14205928724/zip",
+        "expired": false,
+        "created_at": "2026-11-16T07:42:55Z",
+        "expires_at": "2026-11-30T07:42:53Z",
+        "updated_at": "2026-11-16T07:42:55Z",
+        "digest": "sha256:45bdfd21215854f60f736d941dd692cac5a6cacac50f9c3a6d22fe6d33341761",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14205867596,
+        "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-cross-team",
+        "size_in_bytes": 882553,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14205867596",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14205867596/zip",
+        "expired": false,
+        "created_at": "2026-11-16T07:40:53Z",
+        "expires_at": "2026-11-30T07:40:52Z",
+        "updated_at": "2026-11-16T07:40:53Z",
+        "digest": "sha256:ff082d9867401acd239fbf1e5bb6e80f3837c0504e34feeeaf0e45ff8188c7f7",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      },
+      {
+        "id": 14205753613,
+        "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-codex-login",
+        "size_in_bytes": 679606,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14205753613",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14205753613/zip",
+        "expired": false,
+        "created_at": "2026-11-16T07:38:29Z",
+        "expires_at": "2026-11-30T07:38:28Z",
+        "updated_at": "2026-11-16T07:38:29Z",
+        "digest": "sha256:e1901257ad7269bb2381945e64152d3d9dfda9186fce77252dd8b527de695968",
+        "workflow_run": {
+          "id": 43823212577,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+        }
+      }
+    ]
+  },
+  "isError": false
+}

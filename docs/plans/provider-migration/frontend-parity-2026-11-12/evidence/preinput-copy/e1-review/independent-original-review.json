@@ -1,0 +1,447 @@
+{
+  "kind": "Independent original E1 Review failure evidence R2",
+  "result": "APPROVE",
+  "approvedMeaning": "Approve the frozen original failure packet, exact source attribution and bounded author prose. This is not a passing Review flow, complete cleanup, source fix, or later-source qualification.",
+  "reviewer": "/root/migration_scope",
+  "createdAtUTC": "2026-11-16T07:45:56.339064+00:00",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "runId": 43813731227,
+  "jobId": 133120928945,
+  "artifactId": 14204298663,
+  "originalOutcome": "FAIL / INCOMPLETE",
+  "reviewedAuthorPacket": {
+    "checkpoint": {
+      "path": "ci-e1d14b9/review/checkpoint.json",
+      "bytes": 2941,
+      "blob": "7ade9f1c2e1ef6525af4c212691d9bb6f3cdb837",
+      "sha256": "15cc3781272490d451a86b90b929a8cbdb5a97d0ff56738ce08da33c855bf094"
+    },
+    "audit": {
+      "path": "ci-e1d14b9/review/audit.json",
+      "bytes": 144547,
+      "blob": "c773fe28d469a1e6763b31f528c5b4435dd0538f",
+      "sha256": "9341e9ec98445db83733494a4a9f3f1b0ccbc6e0d3b26c49d0338ec5aeeb2b68"
+    },
+    "appendix": {
+      "path": "ci-e1d14b9/review/Plan29-appendix.md",
+      "bytes": 4976,
+      "blob": "a992766d8aa085bae1a5462b57cc747b1462bc59",
+      "sha256": "b632da17c642160588ca7dd7eb99e189096d6e602fa0e611f58b9a06c357adc7"
+    }
+  },
+  "independentByteSourceProof": {
+    "path": "ci-e1d14b9/review/independent-byte-source-proof.json",
+    "bytes": 609868,
+    "blob": "0da61cf9a4f6936c893207d967f1a0519239fb5a",
+    "sha256": "4b0ab32afc25d26e12f7f0d33433097decc951b5117ce6b29ed434f8de16efa8"
+  },
+  "byteAndSourceClosure": {
+    "all10Payloads": true,
+    "payloadBytes": 1779097,
+    "all14ArchiveMembersReadCrcAndExtractedExact": true,
+    "oneActualPngViewed": true,
+    "wholeOriginalMcpAndRawLogExact": true,
+    "wholeTeeTimestampAnsiJoin": true,
+    "all1757OrderedBeforeAfterAndFreshGitBytes": true,
+    "selectedGitBytes": 20343408,
+    "selectedHostSourceFiles": 586,
+    "additionalOrRepeatedClaimLeaves": 18,
+    "uniqueGitFilesRead": 1759,
+    "selectedScopeLimit": "The 586 Host src entries are part of the selected 1757-file census, not a complete619 Host source closure.14 post-startup compiled hashes are retained without independent archived bundle bodies or a source-to-build reconstruction."
+  },
+  "originalJobBoundary": {
+    "steps21And30": "failure",
+    "step22ColdReview": "skipped",
+    "steps9TeamAnd10FullStatic": "skipped",
+    "exactSourceCheckoutInRaw": true,
+    "capturedNode": "24.21.0",
+    "originalPrerequisiteCommands": [
+      "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "node --test test/scripts/installDependenciesWithRetry.test.mjs",
+      "node --test scripts/legacy-agent-host/desktop-review-fixture.test.ts"
+    ],
+    "counts": {
+      "tests": [
+        "119",
+        "7",
+        "2"
+      ],
+      "pass": [
+        "119",
+        "7",
+        "2"
+      ],
+      "fail": [
+        "0",
+        "0",
+        "0"
+      ],
+      "skipped": [
+        "0",
+        "0",
+        "0"
+      ],
+      "duration_ms": [
+        "9209.820646",
+        "212.624122",
+        "1339.704403"
+      ]
+    },
+    "caseRows": 128,
+    "nonTestBuildSuccessExcluded": "The unrelated raw line “✔ Rebuild Complete” is not a test case.",
+    "noTransferToTeamStaticOrNative": true
+  },
+  "firstFailure": {
+    "receipt": {
+      "path": "ci-e1d14b9/review/extracted/TEST-desktop-backend-B8oAL1/desktop-backend-receipt.json",
+      "bytes": 761599,
+      "blob": "fa1f90c8b0de3a026a30c4d9bf629fe4dff373ab",
+      "sha256": "82b4900542e8503edda7f508130fd4ace9d63752a28fbc5571335104bc6b51f5"
+    },
+    "message": "Original UI target moved after ownership check\n+ actual - expected\n\n  [\n    700,\n+   433.875,\n-   437.875,\n    'BUTTON'\n  ]\n",
+    "source": {
+      "kind": "assertion",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:321:12",
+        "scripts/legacy-agent-host/desktop-review-hunk-controls.ts:100:5",
+        "scripts/legacy-agent-host/desktop-review-ui-smoke.ts:84:3",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:480:7",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+      ]
+    },
+    "expectedStable": [
+      700,
+      437.875,
+      "BUTTON"
+    ],
+    "actualFinal": [
+      700,
+      433.875,
+      "BUTTON"
+    ],
+    "priorTaskCard": {
+      "monotonicMs": 63430,
+      "action": "mouseClick",
+      "label": "open original Task detail",
+      "selector": ".kanban-task-card[data-task-id=\"426e833b-e44e-537f-92bc-c14242b1db9a\"]",
+      "target": {
+        "x": 468.5,
+        "y": 522,
+        "width": 257,
+        "height": 92,
+        "taskId": "426e833b-e44e-537f-92bc-c14242b1db9a",
+        "hitTaskId": "426e833b-e44e-537f-92bc-c14242b1db9a"
+      },
+      "stableGeometrySamples": 3,
+      "state": "attempted"
+    },
+    "failedChangesHover": {
+      "monotonicMs": 63792,
+      "action": "mouseMoved",
+      "label": "hover expand original Changes section",
+      "selector": "[role=\"dialog\"] section:has(svg.lucide-file-diff) > div > button[aria-label=\"Expand section\"]",
+      "target": {
+        "x": 700,
+        "y": 437.875,
+        "text": "",
+        "tag": "BUTTON"
+      }
+    },
+    "sourceOrderConclusions": [
+      "The earlier Task-card helper returned through its separate stableSamples>=3 guard and one press/release, then the exact seeded Task dialog wait returned. These guard counters are not separately archived per-sample tuples.",
+      "The shared clickExpression reached and returned its two-match stable guard and fresh owner check; final raw target read existed, then exact tuple comparison failed.",
+      "The failed Changes click attempted journal record and its mousePressed/mouseReleased were not reached. The prior Task-card click uses a separate function and is not this failed press.",
+      "Later file selection, first file-content postcondition, Keep, Reject, Undo, Redo, review history, renderer reload, cold readback/stale-write branch and unrelated-workspace postconditions were not reached."
+    ],
+    "retainedActionJournalCounts": {
+      "mouseMoved": 3,
+      "mouseClick": 3,
+      "passive input delivery after sidebar click": 1
+    },
+    "journalLimit": "Seven recorded entries are not an exhaustive CDP-action count; the separate Task-card helper has its own hover behavior. The report does not equate all physical hover calls to the three journaled mouseMoved entries.",
+    "passiveInputEventCount": 23,
+    "rawVsReceipt": "The exact geometry message and diff are in the original receipt; the full job/tee retains source frames followed by the original INCOMPLETE assertion.",
+    "causationLimit": "No individual stable point history/final object snapshot, exact remaining observation budget, layout-trigger cause, animation or elapsed-failure duration is established. Later DOM/PNG observations are not atomic with the rejected input."
+  },
+  "syntheticSetup": {
+    "seed": {
+      "path": "ci-e1d14b9/review/extracted/TEST-desktop-backend-B8oAL1/review-ui-seed.json",
+      "bytes": 1328,
+      "blob": "8b495b89403fa8b842eefcf1f07204c2acafa768",
+      "sha256": "05f031f56feb8b97c32f1d58e345a5b611136c67f902c85a549b5c97b284a97a"
+    },
+    "initialDiff": {
+      "path": "ci-e1d14b9/review/extracted/TEST-desktop-backend-B8oAL1/review-ui-initial-git-diff.txt",
+      "bytes": 386,
+      "blob": "28933ce454c1c59e55945f9602bddc4bf4161d90",
+      "sha256": "2fc5ff53a4f545d632661526c2c791562ffb5e9d523eb659b08204fef3465383"
+    },
+    "taskCreateReceipt": {
+      "path": "ci-e1d14b9/review/extracted/TEST-desktop-backend-B8oAL1/ui-seed-receipt.json",
+      "bytes": 2037,
+      "blob": "c6b3702caf5f4db4bd786dbdafea73d7224214b2",
+      "sha256": "c51021c27df8b7b0073c54a62ecfcdb69bda175b12d960104670bd88d95bce32"
+    },
+    "taskId": "426e833b-e44e-537f-92bc-c14242b1db9a",
+    "beforeAfterMixedLiteralDerivationsExact": true,
+    "initialDiffGitBlobPrefixesReconstructed": true,
+    "initialIndexSha256": "f1f0349c9e4a64776773de2a7ce142599afb6c6f8cee95630bf7777119400e87",
+    "limits": [
+      "Archived seed and initial diff document synthetic setup, not executed review decisions.",
+      "Original workspace/index bodies, ledger blob files and final review snapshots are not independently archived.",
+      "No native tool capture or M13 attribution."
+    ]
+  },
+  "cleanup": {
+    "app": {
+      "pid": 4300,
+      "processGroup": 4300,
+      "identity": "Mon Nov 16 07:06:31 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-n0iZIM/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox",
+      "invocation": [
+        "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+        "/home/runner/work/_temp/TEST-emulated-ui-inputs-n0iZIM/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "dev:mcp",
+        "--remoteDebuggingPort",
+        "9222",
+        "--noSandbox"
+      ]
+    },
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "originalRequestedQuitExit": {
+      "initialExitCode": null,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [
+      {
+        "pid": 4374,
+        "ppid": 1,
+        "pgid": 4300
+      }
+    ],
+    "final": {
+      "processGroup": 4300,
+      "remaining": [
+        {
+          "pid": 4374,
+          "ppid": 1,
+          "pgid": 4300
+        }
+      ],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "cleanupFailure": "captured leader absent; retain cleanup debt without signaling",
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "originalExitedGroupPresent": false,
+    "sameReturnedCensusNotIndependentTwoSamples": true,
+    "reason": "Missing captured Host identity prevents the exited-group settlement path. The missing leader refusal occurs before later identity/zombie/signal branches.",
+    "retainedRowIdentity": "PID4374/PPID1/PGID4300 is not finally classified as a Host, esbuild or zombie. An earlier startup name does not prove final birth/exec identity.",
+    "passiveChildCallback": {
+      "spawn": {
+        "line": 89,
+        "mainPid": 4425,
+        "event": "async-spawn",
+        "pid": 4638,
+        "requestedCommand": "linux-child-exec",
+        "linuxChildExecTarget": "node",
+        "versionOnly": false,
+        "observedBirth": {
+          "startTicks": "21297",
+          "parentPid": 4425,
+          "processGroupId": 4300
+        },
+        "atomic": false,
+        "observedAtMs": 1794812818969
+      },
+      "exit": {
+        "line": 116,
+        "mainPid": 4425,
+        "event": "async-exit",
+        "pid": 4638,
+        "status": 0,
+        "signal": null,
+        "observedAtMs": 1794812855353
+      },
+      "summary": {
+        "line": 125,
+        "mainPid": 4425,
+        "event": "trace-summary",
+        "rows": 18,
+        "droppedObservations": 0,
+        "observedChildren": 8,
+        "unobservedChildren": 0,
+        "observationFailures": 0,
+        "limited": false,
+        "coverage": "node-async-and-unix-process-table-only"
+      },
+      "limit": "Main4425 original Node-target child4638 reports exit0/null through a passive callback. It does not supply the missing harness-captured Host identity, native custody or complete group cleanup."
+    },
+    "emulation": {
+      "only": true,
+      "runtimeConfigured": false,
+      "managementConfigured": false,
+      "noNativeHostChildrenBeforeUi": true
+    },
+    "finalSentinelCensus": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": null,
+      "postQuitOrCleanupInvocations": null,
+      "refusedInvocations": [],
+      "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+    },
+    "noRuntimePeerProof": "Runtime and management providers are not configured for this lane; no Runtime-peer effects/cleanup receipt exists.",
+    "cleanupQualified": false
+  },
+  "actualVisualReview": {
+    "path": "ci-e1d14b9/review/extracted/TEST-desktop-backend-B8oAL1/ui-failure.png",
+    "bytes": 87805,
+    "blob": "3289bfe80c45eaedb87fa97bcf4e7cfa1f9101de",
+    "sha256": "034b73f23ca4afa9a6ab691a97e0f3fd17c38757e2618f0dc53afcc0ffbddb1c",
+    "width": 1400,
+    "height": 900,
+    "actuallyViewed": true,
+    "observed": "Pending, Unassigned Task #426e833b with TEST persisted Host sidebar seed; Description expanded, Attachments0, Changes1 collapsed, Task Logs and Workflow History1 collapsed, Comments composer; same seed in background. No opened diff, Keep/Reject decision or post-reload view.",
+    "limit": "One after-failure image, not an input/layout/focus cause or timing witness."
+  },
+  "sourceAnchors": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 27188,
+      "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+      "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a",
+      "lineStart": 182,
+      "lineEnd": 205,
+      "interpretation": "Existing waitRead ownership/timeout path."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 27188,
+      "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+      "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a",
+      "lineStart": 207,
+      "lineEnd": 350,
+      "interpretation": "Original point selection, hover, two-match guard, fresh post-owner exact comparison, then attempted record and one press/release."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-review-hunk-controls.ts",
+      "bytes": 9637,
+      "blob": "27ad07bff0c9c89ecfc7dc572ac53e2e9e16e8ef",
+      "sha256": "ae6a85389e34559faf22a87320b940e0df5a80437d8f9ee7f2452131cfea95b4",
+      "lineStart": 12,
+      "lineEnd": 108,
+      "interpretation": "Separate Task-card guard requiring stableSamples>=3; taskId/hit join; input; dialog wait; first Changes expansion; file handling afterward."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-review-ui-smoke.ts",
+      "bytes": 7276,
+      "blob": "9395283cd2e88ddf40def6ee3cf25aaa6f4ff7c3",
+      "sha256": "b7bff873445aa7938b1a1d6e26067fb663205de8002ccca7d5a99745e61217ae",
+      "lineStart": 26,
+      "lineEnd": 176,
+      "interpretation": "Synthetic review scope, original first expansion, later effect/history/reload/stale-readback postconditions, and final PASS."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-review-fixture.ts",
+      "bytes": 4527,
+      "blob": "9eaebe0e9c4504ca90d33a68a3b6b977f6127e30",
+      "sha256": "fb7e0c83af387106290e578f9f1b88f857e304d2ad6ad6413b04150e937c1f8f",
+      "lineStart": 19,
+      "lineEnd": 126,
+      "interpretation": "Synthetic exact two-hunk seed, initial Git-index digest and initial diff, distinct from executed review effects."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "bytes": 49613,
+      "blob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+      "lineStart": 384,
+      "lineEnd": 508,
+      "interpretation": "Requested Quit callback wait, one returned group census, missing-Host guard, no signal when leader is absent."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 54778,
+      "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "lineStart": 450,
+      "lineEnd": 490,
+      "interpretation": "Review routing before later Host receipt/cleanup success."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 54778,
+      "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "lineStart": 620,
+      "lineEnd": 791,
+      "interpretation": "Original failure handling, Quit, source recapture, cleanup receipt, INCOMPLETE output and exit."
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+      "lineStart": 84,
+      "lineEnd": 115,
+      "interpretation": "Original helper8 and install-retry commands."
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+      "lineStart": 389,
+      "lineEnd": 418,
+      "interpretation": "Original Review fixture/run and cold readback sequence."
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+      "lineStart": 486,
+      "lineEnd": 590,
+      "interpretation": "Safe verifier requires flow and cleanup PASS before downstream assertions."
+    },
+    {
+      "path": "src/main/utils/testChildProcessTrace.ts",
+      "bytes": 9633,
+      "blob": "b3d2ec4b410de5df6d63075955fa8f89fc7c9b88",
+      "sha256": "bff51a48a14cc0d77f8c7233c034c1bbe0eb79b0f5f5270c9540faf70e6472eb",
+      "lineStart": 1,
+      "lineEnd": 185,
+      "interpretation": "Finite passive original-child callbacks/process-table observations, not native custody or harness Host adoption."
+    }
+  ],
+  "authorClaimsAssessment": {
+    "auditApproved": true,
+    "appendixApproved": true,
+    "correctionRequired": false,
+    "originalFilesUnchanged": true
+  },
+  "limits": [
+    "Review behavior and cleanup both remain failed on E1.",
+    "No execution or validation of the prospective geometry candidate, and no qualification transfer to578/current primary or other heads.",
+    "No retry, expanded deadline, selector workaround, signal-authority change or source repair is selected by this review.",
+    "No project tests, compiler, build, install, Node, vendor/native/UI command, CI poll, source edit or ref change by this reader."
+  ]
+}

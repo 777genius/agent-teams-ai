@@ -1,0 +1,40 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "jobs": [
+      {
+        "id": 133150850492,
+        "name": "classify packaged smoke",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "run_id": 43823212580,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 133178916405,
+        "name": "${{ (((github.event.action == 'edited') && !github.event.changes.base && ((github.event.changes.title || github.event.changes.body)) && 'metadata packaged smoke') || 'packaged smoke') }} (${{ matrix.platform }})",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "run_id": 43823212580,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 133178917655,
+        "name": "github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'metadata packaged gate' || 'packaged full gate'",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "run_id": 43823212580,
+        "logs_url": null,
+        "steps": null
+      }
+    ]
+  },
+  "isError": false
+}

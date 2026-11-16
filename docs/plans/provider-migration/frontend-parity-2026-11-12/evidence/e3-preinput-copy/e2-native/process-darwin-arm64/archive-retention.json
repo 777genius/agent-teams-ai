@@ -1,0 +1,57 @@
+{
+  "source": "57885c055a18b27c180c304762643eac632513ad",
+  "artifactId": 14206855210,
+  "archive": {
+    "bytes": 12899,
+    "sha256": "689bacf6b214c1a6a009480213d408fce79ad64fb998bacaa0796f83b1806892"
+  },
+  "safeNames": true,
+  "uniqueNames": true,
+  "crc": true,
+  "members": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log",
+      "bytes": 5173,
+      "sha256": "c6e65bb8a75cd6b5de7113b865fab42b108b54f8f17a2ce502fde2cb61484ec0",
+      "gitBlob": "ffd481755d04293613ef5a1939660759c226e3a8",
+      "crc32": "19f7e0b7"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "bytes": 20684,
+      "sha256": "b39278f4b0001af54eda600250b91d07d850319b75630ecc6e065906341d99c0",
+      "gitBlob": "2573d2deb8e36571b0eb9c16c2d875246bdd4f32",
+      "crc32": "c1d847c8"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "bytes": 9006,
+      "sha256": "b73136f35783986e365a142d81c112aa1243005acf44a5cdd7dc82ac7c212185",
+      "gitBlob": "5076c257fe2fb728b5eae2db5b93ea730b52fa1b",
+      "crc32": "fcb47f48"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "bytes": 771,
+      "sha256": "137b7166ca16267c73b43ce3ad0bd26b5c9db79dcb7bdef85c4328679244ad64",
+      "gitBlob": "1f17ce54061a73ecec79873efdba3c31f26006ca",
+      "crc32": "5bc2fb10"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+      "bytes": 495,
+      "sha256": "4bdbff2da10b14621dde69eca11f88595a95fe098b7797565397e58a2837e922",
+      "gitBlob": "75e752c3c7a2b84c6c3e2c0a00a39e90b4311bb2",
+      "crc32": "05340081"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "bytes": 41,
+      "sha256": "f2d72cb87853588bc0cb650131a65687c8ad3de1d55016cf1e46a227f02847bf",
+      "gitBlob": "32ddd36fc22451553828f4b67edcb8ff5d802e65",
+      "crc32": "543cb8e7"
+    }
+  ],
+  "downloadUrlRetained": false,
+  "qualification": "raw retention only; semantic audit pending"
+}

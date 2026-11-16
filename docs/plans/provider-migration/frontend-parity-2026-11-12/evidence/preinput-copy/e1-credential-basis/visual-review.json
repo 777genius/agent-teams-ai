@@ -1,0 +1,87 @@
+{
+  "kind": "E1 V2 Management original five image review",
+  "images": [
+    {
+      "receiptField": "rejectionScreenshot",
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/ui-v2-management-rejected-key.png",
+        "bytes": 123422,
+        "blob": "773cd8bd8c67865e8da8724305009b4b76854726",
+        "sha256": "fc8afb4fd125d073be89bcd3fa860cc20e7a6b7eb7f2cee839ba0b094149da12"
+      },
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewedSingly": true,
+      "receiptHashMatched": true,
+      "scope": "Masked TEST key, native catalog loaded, auth-failed diagnostic. Exact visible headline: test-local could not verify this credential with a real model request. The new credential was not kept. That persistence claim conflicts with the original source assertion of retention until explicit replacement; no auth.json bytes are archived."
+    },
+    {
+      "receiptField": "connectedScreenshot",
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/ui-v2-management-connected.png",
+        "bytes": 103684,
+        "blob": "b6d41cc8b26f9ac356644a7dba57ea44f2c28b0e",
+        "sha256": "0ea5b3dbaa9384dce0f683a7c0c5f5ef241dd493d7b730b9deab36a541ff14c9"
+      },
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewedSingly": true,
+      "receiptHashMatched": true,
+      "scope": "test-local Connected badge and no key form. Connect spinner, disabled-looking controls and model skeletons remain; no fully idle-settings claim."
+    },
+    {
+      "receiptField": "projectScreenshot",
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/ui-v2-management-project-override.png",
+        "bytes": 75402,
+        "blob": "76da20056b91199f4901730d50faf87c33c2e6d7",
+        "sha256": "637a6dc16bb24455ff910f8b77e328d025ce4acd1a651ad6c85d523f47c88051"
+      },
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewedSingly": true,
+      "receiptHashMatched": true,
+      "scope": "Models active; global default test-local/TEST-model and workspace Project override test-local/TEST-project-model visible with Change and Use default controls."
+    },
+    {
+      "receiptField": "inheritanceScreenshot",
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/ui-v2-management-inherited.png",
+        "bytes": 73447,
+        "blob": "67bea4628402ee8a40ea90884918b79cdc2521d1",
+        "sha256": "eefcdcfcc1d1841b43d9ecb062e55bd6bc85f73c5dcd50382a98f0edd60119fd"
+      },
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewedSingly": true,
+      "receiptHashMatched": true,
+      "scope": "Workspace Uses default test-local/TEST-model after clear; control text is dimmed. The frame does not establish all asynchronous work settled."
+    },
+    {
+      "receiptField": "reloadedScreenshot",
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/ui-v2-management-reloaded.png",
+        "bytes": 74158,
+        "blob": "361bda4af17db6ec7e71080c1f72b1faa4e9bdb8",
+        "sha256": "2251523caf811579289921741f364f38457c4eceea4c6d41515805105ff3790f"
+      },
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewedSingly": true,
+      "receiptHashMatched": true,
+      "scope": "After original renderer reload, global and workspace inherited test-local/TEST-model are visible. Providers tab still has a spinner; no all-idle or duration claim."
+    }
+  ],
+  "allActuallyViewedSingly": true,
+  "noAllIdleStateClaim": true
+}

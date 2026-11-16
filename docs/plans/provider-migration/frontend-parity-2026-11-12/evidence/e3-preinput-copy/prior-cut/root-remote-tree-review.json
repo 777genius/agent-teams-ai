@@ -1,0 +1,43 @@
+{
+  "schema": "root-preinput-copy-official-remote-tree-readback/v1",
+  "verifiedAtUTC": "2026-11-16T08:32:50.538466+00:00",
+  "manifest": {
+    "bytes": 275786,
+    "blob": "ddcb97cd74c77d7bd26f533bd561c531560f2892",
+    "sha256": "222174ae401a622ff877d772d15b15b6665a75b298428349aa9ad976e301681f"
+  },
+  "results": [
+    {
+      "kind": "docs",
+      "source": {
+        "bytes": 8103786,
+        "blob": "01ee72180a97925f7b9f62418d328e5e313823d4",
+        "sha256": "0cd4b3eaafa7a0c0cb87e6348f3c97d156be606ede4b29474cc4cc05cbb92ddc"
+      },
+      "tree": "010a100641c228169434065fd3bdd9f58f9cde66",
+      "entries": 13087,
+      "leaves": 11376,
+      "directoriesIncludingRoot": 1712,
+      "allModeTypeShaSizeExact": true
+    },
+    {
+      "kind": "source",
+      "source": {
+        "bytes": 8103786,
+        "blob": "5026bb65d5f8952eb10ae85a4d31f0338b93bd10",
+        "sha256": "a9b77037a4f9ae38a1285b37878436baea2128310b68416879d9450dc4fd4577"
+      },
+      "tree": "948a19a67800c3cb6b1cb2b539a38b5de9dac67c",
+      "entries": 13087,
+      "leaves": 11376,
+      "directoriesIncludingRoot": 1712,
+      "allModeTypeShaSizeExact": true
+    }
+  ],
+  "fullIndependentMerkleReview": {
+    "bytes": 2849,
+    "blob": "9431b112ce8c2ca75ce677c918966464c0315067",
+    "sha256": "96d8226632685f39acf34ccd7ac49cb7b6419e23b64b01ec8ac3b8f208775f11"
+  },
+  "sourceOrRefChanged": false
+}

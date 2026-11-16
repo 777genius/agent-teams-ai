@@ -1,0 +1,53 @@
+{
+  "kind": "original official artifact retention only",
+  "sourceHead": "57885c055a18b27c180c304762643eac632513ad",
+  "retainedAtUTC": "2026-11-16T07:48:24.729788+00:00",
+  "artifact": {
+    "id": 14206308356,
+    "name": "host-offline-tests-57885c055a18b27c180c304762643eac632513ad-1",
+    "size_in_bytes": 294718,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206308356",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206308356/zip",
+    "expired": false,
+    "created_at": "2026-11-16T07:42:59Z",
+    "expires_at": "2026-11-30T07:42:58Z",
+    "updated_at": "2026-11-16T07:42:59Z",
+    "digest": "sha256:9e18bfa1fe9933f5bd9ae1e354422728342dbaf67f11e33e948cf8a65ea7585c",
+    "workflow_run": {
+      "id": 43823212577,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+    }
+  },
+  "zip": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-57885c/frontend1/artifact-14206308356.zip",
+    "bytes": 294718,
+    "blob": "bc6be809faa0d6a13caeffe1359adedfbd78dab6",
+    "sha256": "9e18bfa1fe9933f5bd9ae1e354422728342dbaf67f11e33e948cf8a65ea7585c"
+  },
+  "memberCount": 2,
+  "pngCount": 0,
+  "safeUniquePathsAndCrc": true,
+  "members": [
+    {
+      "path": "host-offline-tests-1.json",
+      "bytes": 2168218,
+      "blob": "a0fb099bfa7be6f5e52b0009c42a97cc5ff3e1c8",
+      "sha256": "5515d8dd260a84a278601da5b40cdb762f8ed7ee505f22e884b0da8362e0a2ff",
+      "crc32": 1559347904
+    },
+    {
+      "path": "host-offline-tests-1.log",
+      "bytes": 98335,
+      "blob": "5ce1ec736815340de1cca13f11fd3468afb19920",
+      "sha256": "8a4d0446b60b1e4c2b9781aa100b2002192edaee70ffd6b3913a543f0503d917",
+      "crc32": 4024676973
+    }
+  ],
+  "limits": [
+    "No project code execution, semantic acceptance review or image inspection is claimed by this raw-retention record.",
+    "Temporary download transport URLs are excluded."
+  ]
+}

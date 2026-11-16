@@ -1,0 +1,567 @@
+{
+  "schema": "independent-geometry-copy-combined-prepublication-review/v1",
+  "reviewedAtUTC": "2026-11-16T08:26:07.163565+00:00",
+  "reviewer": "/root/migration_scope",
+  "result": "APPROVE",
+  "independentPrepublicationReviewExact": true,
+  "scope": "Exact root combined R1, full documentation assembly and prospective four-existing-file source child. This is not an actual publication/readback or resulting-source execution review.",
+  "manifest": {
+    "path": "/workspace/scratch/82d3f9ba6b85/geometry-copy-publication/upload-manifest.json",
+    "bytes": 275786,
+    "blob": "ddcb97cd74c77d7bd26f533bd561c531560f2892",
+    "sha256": "222174ae401a622ff877d772d15b15b6665a75b298428349aa9ad976e301681f"
+  },
+  "rootR1": {
+    "path": "/workspace/scratch/82d3f9ba6b85/geometry-copy-publication/R1-root-combined-cut.md",
+    "bytes": 15604,
+    "blob": "4e41f881a1ba86ccd2aebc637aba7638c0081353",
+    "sha256": "6ddcb569a49f97ee8777f529dbb843b25242f25d91875da04c3d54508b38c77b"
+  },
+  "independentByteTreeProof": {
+    "path": "/workspace/scratch/82d3f9ba6b85/geometry-copy-independent-byte-tree-proof.json",
+    "bytes": 218910,
+    "blob": "7355c503c5aca0b1d386a633acb34df113f1a912",
+    "sha256": "829ec18fa480c2e4d792c9abe534c2bf996038175f545d44dd2e3794a58ce41c"
+  },
+  "base": {
+    "head": "c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+    "tree": "c70232e34d2759ce287e2f224073205dcf9c18db",
+    "parents": [
+      "174e27e0178025f88608650347900daac49dcc58",
+      "57885c055a18b27c180c304762643eac632513ad"
+    ],
+    "commitBody": {
+      "bytes": 599,
+      "blob": "568ca6d5604627cc9ca4e480afd42da2770acbd6",
+      "sha256": "e308412280b22c1bb88b536cfcb8dfa3d0e5a5f29b4769dbb751598136965d40"
+    },
+    "leaves": 11269,
+    "directoriesIncludingRoot": 1701,
+    "originalPrimary": "57885c055a18b27c180c304762643eac632513ad",
+    "completeNonDocMapEqualsPrimary": true
+  },
+  "expectedDocumentationTree": "010a100641c228169434065fd3bdd9f58f9cde66",
+  "expectedFourSourceChildTree": "948a19a67800c3cb6b1cb2b539a38b5de9dac67c",
+  "sourceParentRule": "The sole parent must be the exact actual independently read-back documentation commit; no stale stand-alone geometry or copy tree may be applied.",
+  "publicationCustody": {
+    "documentationPayloadCount": 108,
+    "documentationPayloadBytes": 15631559,
+    "mappedReferenceCount": 122,
+    "distinctInheritedReferences": 7,
+    "identicalNewPayloadReuseReferences": 9,
+    "fullOriginalEquality": true,
+    "allStagedMode100644": true,
+    "sourcePreviewsAreNonExecutableDocumentationText": true,
+    "publicationIndex": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/publication-index.json",
+      "bytes": 144176,
+      "blob": "6205631b7df8e7b816021c3f3827c3ca8160a9ca",
+      "sha256": "d0762eb4069f2f0e0cd64b645cd16ac555ae3d43357d09ea922badfe97181399"
+    },
+    "indexAllGroupsAndSourceFlagsMatchManifest": true,
+    "losslessResponses": [
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/remote-docs-tree-response.json.gz",
+        "compressed": {
+          "bytes": 1139896,
+          "blob": "703103805a0731ed3d869d73eb2f3cc4a8f84052",
+          "sha256": "18983146c41ba3daefb60c21a7603ff675d0d7d50beefd3e754c355a7e10102c"
+        },
+        "decoded": {
+          "bytes": 8019555,
+          "blob": "8cbbad9832a9c70d2c20b44860e130217cdffc27",
+          "sha256": "f17ba9837a4e86477b45bdd3ba1137adfca41e27a812c815193692da4c0e51e5"
+        },
+        "fullOriginalExact": true,
+        "mtime": 0
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/remote-source-tree-response.json.gz",
+        "compressed": {
+          "bytes": 1139883,
+          "blob": "994cebc24190d41718000a792922b720785b8e25",
+          "sha256": "282870d9ddada2d637f247671065432803c5c8c7df854d3dea74eecdaf7a2137"
+        },
+        "decoded": {
+          "bytes": 8019557,
+          "blob": "d6e7ec6280748bc8af4d9a4787e58a1733d852d2",
+          "sha256": "9ff34eebcdea92ea092f5c04aff8e641d6a80fc7f6a04fea4a77a12db38aef97"
+        },
+        "fullOriginalExact": true,
+        "mtime": 0
+      }
+    ],
+    "archives": [
+      {
+        "repositoryPaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/artifact-14205700298.zip"
+        ],
+        "bytes": 1011280,
+        "blob": "04e1609fa83a12c3d90efa464f56ff3b1a737f6a",
+        "sha256": "fc92eb2535b413ccf4d1d126045879b57048fee42aad16e8099c58e2a99d0471",
+        "memberCount": 33,
+        "allSafeUniqueCrcAndExtractionEqual": true
+      },
+      {
+        "repositoryPaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o-team-phase-a/new-originals/collaboration/artifact-14200807020.zip"
+        ],
+        "bytes": 698291,
+        "blob": "13ed6559fc7191a08e510a1bb4c0f705b68c9c20",
+        "sha256": "1d2e1cb5f82d2f1931ff9a0b2413ceab125bba896210fe9aa0bd337d319a12f1",
+        "memberCount": 16,
+        "allSafeUniqueCrcAndExtractionEqual": true
+      },
+      {
+        "repositoryPaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/artifact-14205010690.zip"
+        ],
+        "bytes": 668772,
+        "blob": "2b186415105a6c51824cfcb9f950af2c83dbb43d",
+        "sha256": "cb135dc1436d1c1cf4eabd1ece501be84d15241809c127bb0818d9f277e17098",
+        "memberCount": 16,
+        "allSafeUniqueCrcAndExtractionEqual": true
+      },
+      {
+        "repositoryPaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/artifact-14204298663.zip"
+        ],
+        "bytes": 650542,
+        "blob": "cbf46f3661998a6eec4bd044d6704df96acd0339",
+        "sha256": "9e9dd46183fba4b5d56eeb85f525a94739c35e7d1c99cf257cb6e7c8dfe37803",
+        "memberCount": 14,
+        "allSafeUniqueCrcAndExtractionEqual": true
+      }
+    ],
+    "archiveCount": 4,
+    "safeUniqueRecoverableMemberCount": 79,
+    "allArchiveMembersReadCrcHashedAndComparedToOriginalExtraction": true,
+    "originalNoLongerReachableScratchPathDependencyIntroduced": false,
+    "note": "Full historic paths and origin mappings are retained; deduplicated references resolve to exact parent Git bytes or explicit identical newly staged bytes. Gzip preserves full original MCP response bytes and zero mtime, not a reduced tree summary."
+  },
+  "plan": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "prefix": {
+      "bytes": 2038188,
+      "blob": "d5cc38cc212f9757e841decd86db35fd322e358b",
+      "sha256": "e4f671d3dcf12d23564cf2c5317a2cb702638eb3c68ad803c3b52e94feec6687"
+    },
+    "parts": [
+      {
+        "label": "Original approved geometry R1 retained verbatim with historical examined-base boundary",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/R1-appendix.md",
+        "bytes": 20857,
+        "blob": "9bb3777ca076dea9dd60f76d9759dc1815e0dde0",
+        "sha256": "7d07956cc3f0d6929c2d3fd5907d121254c073294dfcae4573e37763b4b4510d",
+        "separatorOffset": 2038188,
+        "contentOffset": 2038190,
+        "fullPayloadEquality": true
+      },
+      {
+        "label": "Selected credential-copy v2 R1; supersedes inert v1 sequence",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/R1-appendix.md",
+        "bytes": 8590,
+        "blob": "0c2c2866685ef1270fe4052dbdb89be00ae6d3a5",
+        "sha256": "d68d1ca4269b68d5e9012a9312306a12b560ff6e9c456267123b9c4357f93647",
+        "separatorOffset": 2059047,
+        "contentOffset": 2059049,
+        "fullPayloadEquality": true
+      },
+      {
+        "label": "Root actual-c763 combined selection governs last",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/selection/R1-root-combined-cut.md",
+        "bytes": 15604,
+        "blob": "4e41f881a1ba86ccd2aebc637aba7638c0081353",
+        "sha256": "6ddcb569a49f97ee8777f529dbb843b25242f25d91875da04c3d54508b38c77b",
+        "separatorOffset": 2067639,
+        "contentOffset": 2067641,
+        "fullPayloadEquality": true
+      }
+    ],
+    "result": {
+      "bytes": 2083245,
+      "blob": "c062e0a00ad2b1c0d2c55721ab7a80c2e7b79d68",
+      "sha256": "e48600cc383500bdfe8aeaf1740cb3f1c8ba78cfc9f21c26b465334956bc7a26"
+    },
+    "allPrefixAndOrderedLiteralSegmentsExact": true
+  },
+  "treeClosure": {
+    "docs": {
+      "sha": "010a100641c228169434065fd3bdd9f58f9cde66",
+      "leaves": 11376,
+      "directoriesIncludingRoot": 1712,
+      "modifiedPriorPaths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md"
+      ],
+      "addedPaths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/R1-appendix.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/candidate-RuntimeProviderConnectErrorPresentation.test.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/candidate-metadata.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/candidate.patch",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/current-preimage-rebind.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/preimage-RuntimeProviderConnectErrorPresentation.test.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/source-and-venue-review.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/R1-appendix.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/candidate-metadata.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/candidate-runtimeProviderManagementPresentation.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/candidate-useRuntimeProviderManagement.test.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/candidate.patch",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/current-preimage-rebind.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/independent-source-r1-review.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/preimage-runtimeProviderManagementPresentation.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/preimage-useRuntimeProviderManagement.test.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/source-and-venue-review.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/Plan29-appendix.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/archive-retention.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/artifact-14205700298.zip",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/audit.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/checkpoint.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/credential-copy-boundary.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/credential-copy-source-assessment.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/job-original-response.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/job.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/official-host-artifacts-0724.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/source-pin-audit.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/visual-review.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/Plan29-appendix.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/archive-retention.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/artifact-14205010690.zip",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/audit.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/checkpoint.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/independent-byte-source-proof.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/independent-original-review.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/job-original-response.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/job.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/official-host-artifacts-0707.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/owned-jobs-0707.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/source-pin-audit.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/visual-review.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/Plan29-appendix.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/archive-retention.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/artifact-14204298663.zip",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/audit.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/checkpoint.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/independent-byte-source-proof.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/independent-original-review.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/job-original-response.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/job.log",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/official-host-artifacts-0713.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/owned-jobs-0712.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/source-pin-audit.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/visual-review.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/freeze-manifest.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/geometry-binding-metadata.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/p11-after-geometry-test.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/p11-after-geometry.patch",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/p11-composition-metadata.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/p11-regression-suffix.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/R1-appendix.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/candidate-desktop-team-ui-smoke.test.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/candidate-desktop-ui-controls.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/candidate-metadata.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/candidate.patch",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/freeze-manifest.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/independent-source-byte-proof.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/independent-source-r1-review.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/preimage-desktop-team-ui-smoke.test.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/preimage-desktop-ui-controls.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/source-and-venue-pins.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/source-evidence-analysis.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/Plan29-appendix.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/audit.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/checkpoint.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/independent-byte-source-proof.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/independent-original-review.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/owned-api-jobs-0602-terminal.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/pre-click-geometry-source-assessment.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/source-pin-audit.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/blob-upload-receipts.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-docs-commit-immutable-readback.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-docs-commit-response.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-docs-tree-response.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-source-commit-immutable-readback.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-source-commit-response.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-source-tree-response.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/fresh-docs-precommit-guards.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/fresh-source-precommit-guards.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-actual-docs-readback.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-actual-source-readback.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-prepublication-byte-tree-proof.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-prepublication-review.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-remote-tree-review.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/ordinary-docs-push-response.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/post-docs-push-readback.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/post-source-push-readback.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/remote-docs-tree-response.json.gz",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/remote-source-tree-response.json.gz",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/root-actual-docs-readback.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/root-actual-source-readback.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/root-prepublication-byte-review.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/root-remote-tree-review.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/upload-manifest.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/publication-index.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/selection/R1-root-combined-cut.md"
+      ],
+      "all11268OtherPriorLeavesExact": true,
+      "nonDocLeaves": 8798,
+      "nonDocMapSha256": "0aaf4203eeb6a9a0717139f5bfc843a238c26952ccee52572fda1c9c9e8067e2",
+      "maximumPath": 216,
+      "entireFrozenLeafAndDirectoryMapExact": true
+    },
+    "source": {
+      "sha": "948a19a67800c3cb6b1cb2b539a38b5de9dac67c",
+      "leaves": 11376,
+      "directoriesIncludingRoot": 1712,
+      "exactChangedPaths": [
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+        "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+      ],
+      "all11372OtherLeavesExact": true,
+      "allDocumentationExactToDocsProjection": true,
+      "nonDocLeaves": 8798,
+      "nonDocMapSha256": "75c3a4a9e66e1fe81fe09c91ea24b765894d6a0026c0dc1daacff1201c1f1eb3",
+      "maximumPath": 216,
+      "entireFrozenLeafAndDirectoryMapExact": true
+    },
+    "standaloneWithoutNewDocs": "92f1ac237821c43b137c0db4299d30b191648ef6"
+  },
+  "sourceChanges": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 27188,
+        "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+      },
+      "candidate": {
+        "bytes": 28094,
+        "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+        "sha256": "67a1e7413eff11ddc087f35a64cd3c8b242c061988b2fbd661497a9f6b5dfd11"
+      },
+      "preimageLines": 489,
+      "candidateLines": 506,
+      "addedLines": 30,
+      "removedLines": 13,
+      "fullForwardReverseExact": true,
+      "currentGitPreimageExact": true,
+      "completeCandidateRead": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 111672,
+        "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+        "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445"
+      },
+      "candidate": {
+        "bytes": 118885,
+        "blob": "8694096d0aafcd7130589d97f12ad5a4fd65a616",
+        "sha256": "9411c8171255880a187382e5ceef1c44e74172fe4c9eb6c357b3654388cceb70"
+      },
+      "preimageLines": 1896,
+      "candidateLines": 2010,
+      "addedLines": 118,
+      "removedLines": 4,
+      "fullForwardReverseExact": true,
+      "currentGitPreimageExact": true,
+      "completeCandidateRead": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 6481,
+        "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+        "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+      },
+      "candidate": {
+        "bytes": 6382,
+        "blob": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+        "sha256": "47c561887a1ea9a499f131a073c805be07a9a17343c1115b32ec173dcdf894c9"
+      },
+      "preimageLines": 161,
+      "candidateLines": 161,
+      "addedLines": 3,
+      "removedLines": 3,
+      "fullForwardReverseExact": true,
+      "currentGitPreimageExact": true,
+      "completeCandidateRead": true
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "mode": "100644",
+      "preimage": {
+        "bytes": 180091,
+        "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+      },
+      "candidate": {
+        "bytes": 180058,
+        "blob": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+        "sha256": "70597b6bb603515e31ec1239eb6543cc9f1fb18beb20ac20c6a357ee03f748ed"
+      },
+      "preimageLines": 5678,
+      "candidateLines": 5678,
+      "addedLines": 1,
+      "removedLines": 1,
+      "fullForwardReverseExact": true,
+      "currentGitPreimageExact": true,
+      "completeCandidateRead": true
+    }
+  ],
+  "strictPatchProofs": [
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/click-preinput-stabilization-r1/candidate.patch",
+      "bytes": 12271,
+      "blob": "d58db63706739f3d78dde1ec175881dce0f800b1",
+      "sha256": "ad63f15b0fd0f61a8fc3117e906a1162f4203472e57e4a62b5662844c86fb545",
+      "paths": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "addedLines": 30,
+          "removedLines": 13,
+          "fullForwardInverseExact": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "addedLines": 118,
+          "removedLines": 4,
+          "fullForwardInverseExact": true
+        }
+      ]
+    },
+    {
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1-v2/candidate.patch",
+      "bytes": 2277,
+      "blob": "99a267cc38ccb0fa944681a74eea5049f0b48fc2",
+      "sha256": "5ca43aedecbe843d3179cb87d9e7986411c699f0b839888f59f27b0dcba8027b",
+      "paths": [
+        {
+          "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+          "addedLines": 3,
+          "removedLines": 3,
+          "fullForwardInverseExact": true
+        },
+        {
+          "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+          "addedLines": 1,
+          "removedLines": 1,
+          "fullForwardInverseExact": true
+        }
+      ]
+    }
+  ],
+  "freshPins": {
+    "occurrencesAcrossUnderlyingGeometryAndCopyReviews": 43,
+    "uniqueFullCurrentGitBodies": 36,
+    "geometryPins": 21,
+    "copyPins": 22,
+    "allFreshCurrentGitBytesExact": true,
+    "fullListInProof": true
+  },
+  "independence": {
+    "rootCombinedAssemblyAndRootR1IndependentlyReviewed": true,
+    "geometryAuthor": "migration_scope",
+    "geometryIndependentSourceReview": {
+      "path": "/workspace/scratch/82d3f9ba6b85/click-preinput-stabilization-r1/independent-source-r1-review.json",
+      "bytes": 13132,
+      "blob": "6d69b6f30c2aca45254275fc1c380a38426a8ae5",
+      "sha256": "d7b07e1a76b1d03405feba1df12902321e669f5448028e9850fafd25a9ce68ae"
+    },
+    "geometryIndependentByteProof": {
+      "path": "/workspace/scratch/82d3f9ba6b85/click-preinput-stabilization-r1/independent-source-byte-proof.json",
+      "bytes": 10267,
+      "blob": "ac99bae999088f5d06d172e3e361a5651e50197e",
+      "sha256": "053381860c85c246ce950ad09c382d23e0d1d2f8e01ec09cfc2eddd39c241de8"
+    },
+    "copyIndependentSourceReview": {
+      "path": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1-v2/independent-source-r1-review.json",
+      "bytes": 16030,
+      "blob": "9a06f1b6a41c03ae82da98a26e7b2d5b42eaab33",
+      "sha256": "7e385a95d35464346776adfedcfa8903d4d71a16bcef9b55625ea74efb3eb49c"
+    },
+    "boundary": "The existing native_failures R2 supplies the independent geometry semantic review. This report does not relabel the geometry author as its independent source reviewer. It independently checks root combination, present preimages, full maps, authority order and evidence publication."
+  },
+  "geometryJudgment": {
+    "rootExplicitPolicyAmendment": true,
+    "oldImmediateCoordinateMismatchRefusalPreservedAsHistoryNotAsUnchangedOracle": true,
+    "selectedHelper": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+    "selectedTest": "8694096d0aafcd7130589d97f12ad5a4fd65a616",
+    "boundedObservations": "Two initial logical reads and one hover. Shared S+F <=16 subsequent logical observations; S<=15 and at most15 outer 100ms sleeps. Every continuation resets the comparison count to0, requires two newly charged matching comparisons then a newly charged direct final read, and may begin only with at least3 remaining shared slots. Therefore F<=5; no allowance is replenished.",
+    "freshAuthority": "Existing owner callback remains immediately before each direct final raw evaluation and again before the attempted click/first press. Material additional synchronous ps/lsof/birth work is explicitly accepted as bounded dynamic cost, not described as unchanged.",
+    "terminalRefusals": "Unavailable, changed tag, malformed/nonnumeric/nonfinite points, owner/CDP errors and post-input uncertainty remain refusal. No extra hover, coordinate epsilon, tag weakening, repeated press/release or input replay is selected.",
+    "limits": "The logical counters do not bound nested waitRead retries or impose an absolute1.5s wall-clock deadline. Existing per-read30s and transport/outer bounds remain; a non-atomic layout/input gap remains after the last observation.",
+    "coverage": "Eight appended actual-helper cases plus two extra existing final-refusal variants are ten statically added cases. No execution, observed count or manufactured RED phase is claimed. The independent Native R2 checks actual helper extraction, positive/negative seams and preserved incoming passive Team metadata.",
+    "historicalFailureScope": "O Collaboration and E1 OpenCode/Review remain their original FAIL/INCOMPLETE observations; none identifies the layout cause or proves future convergence or cleanup repair."
+  },
+  "copyJudgment": {
+    "selectedProduction": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+    "selectedExistingHookTest": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+    "exactProductionChange": "Delete only identical33-byte sentence \" The new credential was not kept.\" from three existing formatter strings. Full afterimage equals full preimage with those three occurrences removed.",
+    "exactTestChange": "Delete the same33 bytes from one existing expected literal only. All hook API arguments, unsuccessful result, retained entered key and telemetry assertions remain byte-exact.",
+    "sourceBasis": "The qualified Main rejection branch says the key was saved. The Host publishes before the model probe; generic failure classification does not establish storage outcome. The inspected Plan02 R4/R7 source contract retains published rejected credentials until a new explicitly guarded replacement. Removing the blanket assertion preserves the original diagnostic without guessing storage.",
+    "unchangedFormatterTest": "fa761c43af6d414b0f2be0338869891dc059f640",
+    "unchangedProductionHook": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+    "v1Disposition": "Complete three-file/four-extra-case/test-only-RED proposal retained as inert superseded history; none of its additional test selection is applied. Selected v2 is two files together.",
+    "fullManagementLaneScope": "The original E1 Management packet remains author-only for complete-lane acceptance. Native copy R2 is a narrower source/receipt/image contradiction check. Original auth.json is not archived; private values are not reconstructed."
+  },
+  "unchangedExecutionAndCoverage": {
+    "venue": "Original naturally triggered CI only. No local test/compiler/lint/build/install/import/vendor/native/UI execution, manual dispatch, rerun or replay was performed or selected here.",
+    "geometry": "Complete existing eight-file Node helper command and affected original Desktop journeys; original Team ten-file contracts, stderr, workspace and backend-test types, and all original typed-lint scopes remain.",
+    "frontend": "All four original offline frontend shards with unchanged discovery/exclusions/reporters/happy-dom and source/JSON/raw/tee joins remain the selected route for copy. API SUCCESS alone is insufficient.",
+    "timeoutPrecision": "The root R1 reference to the existing15-second timeout means the Vitest configuration default testTimeout:15000 in c57faa53a1bb869b4379bf888194806ef7e228e3. Every original per-test override remains byte-exact. It is not a universal per-case or job wall-clock cap.",
+    "runtimePins": "RunnerNode26.12.1 remains distinct from capturedHostNode24.21.0; compiler TypeScript7.0.2 remains distinct from typed-lint parser TypeScript5.9.3.",
+    "lintGap": "The unchanged93 fast-lint operands contain the helper test but omit desktop-ui-controls.ts; typed src scopes do not lint that helper. This explicit existing gap is not closed or promoted to PASS. Scripts compiler includes the two geometry files.",
+    "censusGap": "Copy formatter and hook-test are outside existing1757/1769 Desktop artifact census. No roster expansion or native compiled-body qualification is implied; fresh complete Git bodies and original frontend/types/typed-lint evidence are the stated route.",
+    "caps": "No cap change: helper506 and formatter161 lines are below default800; all141 existing exceptions and TeamSlice5017/5020 ratchet remain exact. Static comparison does not claim executed size/architecture PASS."
+  },
+  "deferredAndCurrentness": {
+    "modelsP11Selected": false,
+    "darwinAnchorSelected": false,
+    "oldV1CopySelected": false,
+    "p11Composition": {
+      "selected": false,
+      "preview": {
+        "bytes": 123149,
+        "blob": "1b0ad5b15b056857817858d1e85f6dfe81f6e782",
+        "sha256": "c73b55cbd07ef632b174609e99e05e536d584b8dae9c124c2fc1a14e1c76c4da"
+      },
+      "wholeSelectedGeometryPrefixExact": true,
+      "unchangedSuffix": {
+        "bytes": 4264,
+        "blob": "08699c4890b2ef83bcbda53094c450c6a9c3b366",
+        "sha256": "a299b6ec1497dc542f675fd7868a430d8e9d4d0503199c9ff0343a7187b5312d"
+      },
+      "suffixLines": 62
+    },
+    "laterWholeFileGuards": "P11 old3c254 would overwrite geometry and Models old370e would overwrite the selected credential literal. Future A must recompose full then-current test bodies, receive fresh R1/R2 and current fullTeam/static selection, and preserve actual semantic RED-before-B. Preview1b0ad is inert.",
+    "recentIncomingHistory": "All three recently reconciled source leaves, I386 Release-prefix handling, current Main diagnostic, all40 short-path relocations and all other source remain exact to the actual c763 parent except the four selected paths.",
+    "primaryRoute": "Primary move remains separate. Root must use fresh expected-ref/openDraft/base checks, preserve useful already-started original work until completion and retain useful terminal originals, with no all-queued-terminal barrier, forced update, manual dispatch or replay.",
+    "remainingAcceptance": "No resulting-source GREEN, native custody/physical cleanup, P08/P09, M16, release/defaultHost/Stage2, merge or goal completion follows from this R1/assembly approval."
+  },
+  "approvedSequence": [
+    "Retain exact manifest/source candidates/R1 and create only the reviewed immutable docs/source objects.",
+    "After independent complete remote-tree equality and fresh route guards, publish documentation as sole child of actual c763 with ordinary expected-parent force:false push.",
+    "Independently read back actual documentation commit/parent, all108payloads/122refs, archives, Plan and whole unchanged source before selecting the source child.",
+    "Publish the exact four-source child of that actual documentation commit, then independently read back all four complete afterimages and full unchanged/docs maps.",
+    "Only the separately assessed natural primary fast-forward/current-cohort route may produce resulting-source CI observations."
+  ],
+  "findings": [],
+  "nonBlockingInterpretiveClarification": "Frozen root R1 is retained byte-for-byte. Default15000ms plus original per-test overrides is explicit in this review and root byte review; no v2 was created or selected.",
+  "actionsPerformed": {
+    "readOnlyGit": true,
+    "fullFilesAndArchivesRead": true,
+    "standardLibraryEvidenceChecks": true,
+    "newExclusiveScratchReports": true,
+    "projectExecution": false,
+    "writerRerun": false,
+    "sourceOrRefMutation": false,
+    "apiOrCiPoll": false,
+    "remoteTreeReadbackPerformed": false,
+    "actualPublicationClaimed": false
+  }
+}

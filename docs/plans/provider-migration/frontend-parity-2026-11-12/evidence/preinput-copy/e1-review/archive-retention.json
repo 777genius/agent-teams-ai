@@ -1,0 +1,126 @@
+{
+  "kind": "original-E1-Review-terminal-byte-retention-only",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "artifactId": 14204298663,
+  "archive": {
+    "bytes": 650542,
+    "blob": "cbf46f3661998a6eec4bd044d6704df96acd0339",
+    "sha256": "9e9dd46183fba4b5d56eeb85f525a94739c35e7d1c99cf257cb6e7c8dfe37803"
+  },
+  "safeUniquePaths": true,
+  "crcAllMembers": true,
+  "memberCount": 14,
+  "pngCount": 1,
+  "members": [
+    {
+      "path": "TEST-desktop-backend-B8oAL1/desktop-backend-receipt.json",
+      "bytes": 761599,
+      "blob": "fa1f90c8b0de3a026a30c4d9bf629fe4dff373ab",
+      "sha256": "82b4900542e8503edda7f508130fd4ace9d63752a28fbc5571335104bc6b51f5",
+      "crc32": "15cb64e6"
+    },
+    {
+      "path": "TEST-desktop-backend-B8oAL1/desktop-descriptor.json",
+      "bytes": 1925,
+      "blob": "8bd6603b0ddde2b3ff39875df1fb3eccba887fbc",
+      "sha256": "abaa50944630c6390c0f35db6fda490b5f2d09ae93f4612a42201820ce19f709",
+      "crc32": "b7d34fd3"
+    },
+    {
+      "path": "TEST-desktop-backend-B8oAL1/desktop-app.log",
+      "bytes": 13238,
+      "blob": "1fca51487904ed5b7731ddfc7596eee5de63049d",
+      "sha256": "29c202c2a95de95893af902393f7494a97fa70abc857e54a44873fc734bc25d8",
+      "crc32": "8775d315"
+    },
+    {
+      "path": "TEST-desktop-backend-B8oAL1/host-profile.json",
+      "bytes": 1200,
+      "blob": "ee32e163f89e3cbbba96db175fbdd0204b39320c",
+      "sha256": "81b2aa694874da6a46894a553a9349a1d5bcef2cdc7161392d89b1a9284f4020",
+      "crc32": "6145d3b4"
+    },
+    {
+      "path": "TEST-desktop-backend-B8oAL1/review-ui-initial-git-diff.txt",
+      "bytes": 386,
+      "blob": "28933ce454c1c59e55945f9602bddc4bf4161d90",
+      "sha256": "2fc5ff53a4f545d632661526c2c791562ffb5e9d523eb659b08204fef3465383",
+      "crc32": "d14b3a2a"
+    },
+    {
+      "path": "TEST-desktop-backend-B8oAL1/review-ui-seed.json",
+      "bytes": 1328,
+      "blob": "8b495b89403fa8b842eefcf1f07204c2acafa768",
+      "sha256": "05f031f56feb8b97c32f1d58e345a5b611136c67f902c85a549b5c97b284a97a",
+      "crc32": "1547faeb"
+    },
+    {
+      "path": "TEST-desktop-backend-B8oAL1/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+      "crc32": "9fc3bdb4"
+    },
+    {
+      "path": "TEST-desktop-backend-B8oAL1/ui-failure.png",
+      "bytes": 87805,
+      "blob": "3289bfe80c45eaedb87fa97bcf4e7cfa1f9101de",
+      "sha256": "034b73f23ca4afa9a6ab691a97e0f3fd17c38757e2618f0dc53afcc0ffbddb1c",
+      "crc32": "4e36bd44"
+    },
+    {
+      "path": "TEST-desktop-backend-B8oAL1/ui-seed-receipt.json",
+      "bytes": 2037,
+      "blob": "c6b3702caf5f4db4bd786dbdafea73d7224214b2",
+      "sha256": "c51021c27df8b7b0073c54a62ecfcdb69bda175b12d960104670bd88d95bce32",
+      "crc32": "4b1756de"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-n0iZIM/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "crc32": "ed0ca14b"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-n0iZIM/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "crc32": "e06f2443"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1803,
+      "blob": "eb4e79aaa9ae110a836725d62c24efb248ed29b5",
+      "sha256": "26dae211f66cddfb8db98dec4e7a20c0dcb1c5fb1a984925040b3cacf9f5cc0e",
+      "crc32": "49f23391"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "blob": "c181d4a9d192c2269c25e961ffe996eca3d23772",
+      "sha256": "2ce0eee5f1d6f60ad3678b16bab4e7101b7449bd4fced9e3591e290842bc1ae3",
+      "crc32": "494ad171"
+    },
+    {
+      "path": "host-emulated-review-ui.log",
+      "bytes": 1362,
+      "blob": "f14cf89191d448a3b36896f2ccacf079b4f3eeab",
+      "sha256": "a66dc85816c886e1ada441b59d4effbf69b39084f2f425d0bdbe8d8f2b95ef28",
+      "crc32": "4019bb20"
+    }
+  ],
+  "semanticReview": "pending",
+  "visuallyReviewedImages": [],
+  "originalResponse": {
+    "bytes": 198287,
+    "blob": "fbef5f9028e95e8b241903b0182ecd64a510891a",
+    "sha256": "f9f4f433d6a826db3a12432bdba16d9b7cae1cef4ef4580458da49f0f3832d22"
+  },
+  "rawJobLog": {
+    "bytes": 188081,
+    "blob": "7cc514f1ad52cec3d686daa1b147ca558039f424",
+    "sha256": "7ebbc5901ff88148bc8e5c37edf459f74c80c5abc27a672937f2ddd331f69451"
+  }
+}

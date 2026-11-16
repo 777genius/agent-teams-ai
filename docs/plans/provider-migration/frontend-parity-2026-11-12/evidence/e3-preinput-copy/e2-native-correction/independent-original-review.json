@@ -1,0 +1,2442 @@
+{
+  "kind": "Independent bounded R2 of original E2 Windows x64 Process failure, with explicit author-v2 correction join",
+  "result": "APPROVE corrected author v2 and bounded original-evidence conclusions; original whole Process remains FAILURE",
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUTC": "2026-11-16T08:53:19.246258+00:00",
+  "source": {
+    "head": "57885c055a18b27c180c304762643eac632513ad",
+    "tree": "b1685b4993306f9cd509d832b72f2cd6f0418943",
+    "runId": 43823212637,
+    "jobId": 133150850768,
+    "artifactId": 14206178372,
+    "originalPlatform": "win32-x64",
+    "currentOrFutureResultTransfer": false
+  },
+  "canonicalAuthor": {
+    "path": "ci-57885c/native/process-windows-x64/original-windows-process-failure-audit-v2.json",
+    "bytes": 381922,
+    "blob": "be980dcafdffbf767e1a41ae1c09b207b0ae2e54",
+    "sha256": "f4616ad0d3aab8ef83c747588c05524358fbd15e7d6808847d44742eb615b486"
+  },
+  "preservedAuthorV1": {
+    "path": "ci-57885c/native/process-windows-x64/original-windows-process-failure-audit.json",
+    "bytes": 226589,
+    "blob": "8113090283e2cbdf6511999d257931b7edd29feb",
+    "sha256": "ba0be2724618f09ff3bf8d2057c383ee592cd5c7ef0b92bfc8623c9a96697bf1"
+  },
+  "authorCorrection": {
+    "path": "ci-57885c/native/process-windows-x64/audit-v2-correction.json",
+    "bytes": 3094,
+    "blob": "518a26617718d765f48e66a7a58de5c02535c340",
+    "sha256": "4c3357f7a324821c820440303c1fea6eaba673d67ff0da4093ed952680fa0dff"
+  },
+  "independentFullByteSourceProof": {
+    "path": "ci-57885c/native/process-windows-x64/independent-original-byte-source-proof.json",
+    "bytes": 497828,
+    "blob": "6b69925018a59c0fb9e6fe41fe4832d9f0d750b9",
+    "sha256": "dad472c6ff07f6ff45c6e466a072d143a1fd1e23937b1fa9473231871dd6acfe"
+  },
+  "v1FindingAndV2Disposition": {
+    "finding": "The v1 field originalNativeNodeAndElectron contains the OpenCode native/current-false refusal object instead of the two original native summaries. That field alone was not an acceptable native-summary representation.",
+    "v2Delta": "Independent structural comparison proves exactly one top-level field differs. Every other original fact, firstFailure and cleanup object is equal. The preserved v1, raw log, MCP response, ZIP and retained source census remain unchanged.",
+    "independentRecovery": "Both v2 summaries were reconstructed from complete original415-line tee files: gate, all31 completed phases, I386 and pending-create rows, all7 negative rows, both full cleanup snapshots and controller. All cited line/row contents match exactly.",
+    "readerCauseBoundary": "The author correction attributes the defect to local reader variable shadowing. This is evidence-reporting correction only; no project/source/runtime behavior change or rerun occurred.",
+    "remainingCorrectionsRequested": []
+  },
+  "originalBytesAndSource": {
+    "rawJob": {
+      "path": "ci-57885c/native/process-windows-x64/job-133150850768.log",
+      "bytes": 412533,
+      "blob": "919130bc885798cc0e2aabc68d74755f9dab9a38",
+      "sha256": "a5b25bd588192008a04b2adb946d6fdb85acc19b0d12fcd90c3905887370d4f0"
+    },
+    "rawMCP": {
+      "path": "ci-57885c/native/process-windows-x64/original-job-133150850768-response.json",
+      "bytes": 456138,
+      "blob": "c8e7df4060d8140c99c5fa1bc5513c205737e57b",
+      "sha256": "41ff885b36eb87bc85a1f61d852c3eddba8e5cff54964bf96158817143e347d8"
+    },
+    "completeMCPContentUTF8EqualsRaw": true,
+    "officialArtifact": {
+      "id": 14206178372,
+      "name": "host-process-fixtures-win32-x64-57885c055a18b27c180c304762643eac632513ad",
+      "size_in_bytes": 56395,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206178372",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206178372/zip",
+      "expired": false,
+      "created_at": "2026-11-16T07:41:05Z",
+      "expires_at": "2026-11-30T07:41:04Z",
+      "updated_at": "2026-11-16T07:41:05Z",
+      "digest": "sha256:00404ee5a794bb86de14b77fe01f5b8c1718162727dac8de127d2547635ab85a",
+      "workflow_run": {
+        "id": 43823212637,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+      }
+    },
+    "archive": {
+      "path": "ci-57885c/native/process-windows-x64/artifact-14206178372.zip",
+      "bytes": 56395,
+      "blob": "d0f520ff81531acd1d52dba108e93aea53f5c827",
+      "sha256": "00404ee5a794bb86de14b77fe01f5b8c1718162727dac8de127d2547635ab85a"
+    },
+    "members": 18,
+    "allSafeUniqueCRCAndFullExtractedBytesExact": true,
+    "fullTeeJoins": [
+      {
+        "file": {
+          "path": "ci-57885c/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+          "bytes": 20514,
+          "blob": "5d8f784acf8ba7d09315bdeec98c3d24a13fb5b4",
+          "sha256": "f3afb9c60fb2e3dff7fdd2fca1c787786e6d073010f573909c04e28c2339ffa1"
+        },
+        "normalizedLines": 181,
+        "rawStartLine": 617,
+        "rawEndLine": 797,
+        "fullContiguousExact": true,
+        "transform": "BOM/newline normalization and leading original ISO timestamp removal"
+      },
+      {
+        "file": {
+          "path": "ci-57885c/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+          "bytes": 758,
+          "blob": "67a761e67143d70cae4b980afe64d27bdb08d27a",
+          "sha256": "fe805ed23872f8d7bac448af77126814ee81690fd74ddaca89f1665faaa86810"
+        },
+        "normalizedLines": 12,
+        "rawStartLine": 798,
+        "rawEndLine": 809,
+        "fullContiguousExact": true,
+        "transform": "BOM/newline normalization and leading original ISO timestamp removal"
+      },
+      {
+        "file": {
+          "path": "ci-57885c/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+          "bytes": 9498,
+          "blob": "813d5cd78496e9f0f8ccf1185c8e6c0b638b9d34",
+          "sha256": "87d5166a74510d42617b365250e9ce7fa570168e29d3f7b023374e37bbe91565"
+        },
+        "normalizedLines": 62,
+        "rawStartLine": 810,
+        "rawEndLine": 871,
+        "fullContiguousExact": true,
+        "transform": "BOM/newline normalization and leading original ISO timestamp removal"
+      },
+      {
+        "file": {
+          "path": "ci-57885c/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+          "bytes": 89912,
+          "blob": "0cc97ad8cd4edb81c85bd130a6f7c01acb0a413f",
+          "sha256": "d38cbd9fd1f8f0552b8d588a4335c7fea15e5cbd0ed498b3033acc63262fa9f1"
+        },
+        "normalizedLines": 415,
+        "rawStartLine": 1468,
+        "rawEndLine": 1882,
+        "fullContiguousExact": true,
+        "transform": "BOM/newline normalization and leading original ISO timestamp removal; ANSI SGR removal on both sides"
+      },
+      {
+        "file": {
+          "path": "ci-57885c/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider.log",
+          "bytes": 1278,
+          "blob": "737373ed8190d9c930cb3cf27b42582fae42dfd1",
+          "sha256": "45bdccede608d626b66be8e6f088395f3ccc4a25e456542abd3581319d7bd02a"
+        },
+        "normalizedLines": 12,
+        "rawStartLine": 1903,
+        "rawEndLine": 1914,
+        "fullContiguousExact": true,
+        "transform": "BOM/newline normalization and leading original ISO timestamp removal"
+      },
+      {
+        "file": {
+          "path": "ci-57885c/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+          "bytes": 89866,
+          "blob": "6b64a0b3eaefbfaa89cf182abee3260e954ab753",
+          "sha256": "3a795d69c3cd245fb6a5b5b8ca9cf3c94363bca1b899c9ef7569bbcc39e7f925"
+        },
+        "normalizedLines": 415,
+        "rawStartLine": 1033,
+        "rawEndLine": 1447,
+        "fullContiguousExact": true,
+        "transform": "BOM/newline normalization and leading original ISO timestamp removal; ANSI SGR removal on both sides"
+      },
+      {
+        "file": {
+          "path": "ci-57885c/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude.log",
+          "bytes": 18989,
+          "blob": "a838eb86259d9dba9929f8a0b90ddcec819c921d",
+          "sha256": "afcd23499e7fa4de8ac502802aba4fcc0731a19dc1a4cdba037998dd147c73b5"
+        },
+        "normalizedLines": 34,
+        "rawStartLine": 2024,
+        "rawEndLine": 2057,
+        "fullContiguousExact": true,
+        "transform": "BOM/newline normalization and leading original ISO timestamp removal"
+      },
+      {
+        "file": {
+          "path": "ci-57885c/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+          "bytes": 48720,
+          "blob": "f9777803f9e9dce196346475d2d2ffb692f55e7c",
+          "sha256": "21161d534282c3a89924f7277deaa0299a061f8da3f54318460176b77cfc34a5"
+        },
+        "normalizedLines": 64,
+        "rawStartLine": 1937,
+        "rawEndLine": 2000,
+        "fullContiguousExact": true,
+        "transform": "BOM/newline normalization and leading original ISO timestamp removal"
+      },
+      {
+        "file": {
+          "path": "ci-57885c/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode.log",
+          "bytes": 11488,
+          "blob": "9fbae81b062c43601227d47b4a72ca38317b0fef",
+          "sha256": "c2c9cf0b3eb4d96aeaeb858dc717fac2ad554b0edf3d235b09b7afc202a585c3"
+        },
+        "normalizedLines": 60,
+        "rawStartLine": 2081,
+        "rawEndLine": 2140,
+        "fullContiguousExact": true,
+        "transform": "BOM/newline normalization and leading original ISO timestamp removal; ANSI SGR removal on both sides"
+      }
+    ],
+    "duplicateBinaryHashList": "The two1909-byte native/process binary-hash lists are byte-identical copies, not two independent binary acquisitions.",
+    "freshUniqueGitInputs": 646,
+    "selectedClaimLeaves": 36,
+    "completeHostSourceCensus": {
+      "file": {
+        "path": "ci-57885c/native/host-source-E2-git-audit.json",
+        "bytes": 217153,
+        "blob": "35d96ef2724a931d3c2d83ca98250188916c1a88",
+        "sha256": "29b68ca6a084007c056d5b49aad6a95755bc4bba916c190e790dd2dd3ac532cd"
+      },
+      "files": 619,
+      "bytes": 4114072,
+      "LF": "5c76bf6f2750c0070c59b8bf10db3dd83ea1a8c5c34aca5389c5c575bdc4a008",
+      "CRLF": "95d196f87beb284995d5518b0eafc0da5e92aaac4af21d1c465e6c54d2d0d474",
+      "freshAllSourcePathsExact": true
+    },
+    "capturedWindowsCRLFSourcePinOccurrences": 41,
+    "remainingDigestOnlyOccurrences": 59,
+    "everyReceiptPathDigestOccurrenceAccounted": 100,
+    "limits": "The complete619-source census and original build/source checks establish attribution. Installed Node, generated profiles/peer ledgers, every compiled dist/native binary and dependency body are not all archived; their captured digests are not an independent rebuild or installed-workspace freeze."
+  },
+  "originalExecution": {
+    "wholeJobConclusion": "failure",
+    "prerequisites": {
+      "originalWholeCommands": {
+        "host-contracts.log": {
+          "tests": 167,
+          "pass": 164,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 3,
+          "todo": 0
+        },
+        "protocol.log": {
+          "pass": 54,
+          "fail": 0,
+          "skip": 0,
+          "files": 3
+        },
+        "retained-main.log": {
+          "pass": 81,
+          "fail": 0,
+          "skip": 0,
+          "files": 8
+        }
+      },
+      "totalPass": 299,
+      "totalSkip": 3,
+      "totalFail": 0,
+      "wholeJobFailureIndependentOfPrerequisitePass": true
+    },
+    "stepDistinction": [
+      {
+        "number": 9,
+        "name": "Build existing controller and Host",
+        "conclusion": "success"
+      },
+      {
+        "number": 10,
+        "name": "Verify process contracts and retained Main Host transport",
+        "conclusion": "success"
+      },
+      {
+        "number": 16,
+        "name": "Build original Windows product broker and C++ fixtures",
+        "conclusion": "success"
+      },
+      {
+        "number": 17,
+        "name": "Qualify original Windows Job and control under Host Node",
+        "conclusion": "success"
+      },
+      {
+        "number": 18,
+        "name": "Qualify original Windows Job and control under Electron Node",
+        "conclusion": "success"
+      },
+      {
+        "number": 19,
+        "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+        "conclusion": "success"
+      },
+      {
+        "number": 20,
+        "name": "Qualify original codex source A B with TEST peer",
+        "conclusion": "success"
+      },
+      {
+        "number": 21,
+        "name": "Qualify original claude source A B with TEST peer",
+        "conclusion": "success"
+      },
+      {
+        "number": 22,
+        "name": "Qualify original opencode source A B with TEST peer",
+        "conclusion": "failure"
+      },
+      {
+        "number": 23,
+        "name": "Require completed original platform receipts and unchanged source",
+        "conclusion": "skipped"
+      },
+      {
+        "number": 24,
+        "name": "Preserve original process evidence including failures",
+        "conclusion": "success"
+      }
+    ],
+    "nativeNodeAndElectron": [
+      {
+        "file": {
+          "path": "ci-57885c/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+          "bytes": 89866,
+          "blob": "6b64a0b3eaefbfaa89cf182abee3260e954ab753",
+          "sha256": "3a795d69c3cd245fb6a5b5b8ca9cf3c94363bca1b899c9ef7569bbcc39e7f925"
+        },
+        "node": "24.21.0",
+        "electron": null,
+        "resultLabels": [
+          "tree",
+          "root-first-tail-held-pipe",
+          "blocked-output-independent-stop",
+          "breakaway-denied",
+          "pre-resume-cancel-first-nonce",
+          "facade-private-stdin-after-native-owner-tail-exit",
+          "facade-pre-resume-cancel-no-private-input",
+          "captured-provider-native-argv-env-cwd-and-stop",
+          "captured-root-first-original-descendants-and-neighbor",
+          "TEST-only-debug-service-prebirth-nested-job-feasibility",
+          "TEST-only-scoped-stop-pending-create-isolation",
+          "TEST-only-wow64-root-child-startup-and-application-exceptions",
+          "birth-failure-unknown-first-nonce",
+          "owner-eof",
+          "accounting-failure-latched-unknown-distinct-reconciliation",
+          "post-launch-pending-read-genuine-prepared",
+          "released-ack-eof-exit-zero",
+          "watcher-lock-contention-released-ack-exit-zero",
+          "failure-winner-after-complete-ack-exit-74",
+          "broker-crash",
+          "wrong-generation",
+          "malformed",
+          "truncated",
+          "lost-prepared-no-resume-first-nonce",
+          "sentinel-isolation"
+        ],
+        "completedInternalPhases": 31,
+        "helperRecordsAfterWait": 64,
+        "retainedCapabilityRecords": 9,
+        "allOriginalHelperStreamsEndedClosedWithZeroBuffers": true,
+        "negativeCaseRows": [
+          {
+            "line": 323,
+            "row": {
+              "nativeNegative": "failure-winner-after-complete-ack",
+              "completeAck": true,
+              "brokerExit": 74
+            }
+          },
+          {
+            "line": 335,
+            "row": {
+              "nativeNegative": "owner-eof",
+              "brokerExit": {
+                "code": 70,
+                "signal": null
+              }
+            }
+          },
+          {
+            "line": 347,
+            "row": {
+              "nativeNegative": "broker-crash",
+              "brokerExit": {
+                "code": null,
+                "signal": "SIGTERM"
+              }
+            }
+          },
+          {
+            "line": 359,
+            "row": {
+              "nativeNegative": "wrong-generation",
+              "brokerExit": {
+                "code": 75,
+                "signal": null
+              }
+            }
+          },
+          {
+            "line": 372,
+            "row": {
+              "nativeNegative": "lost-prepared",
+              "brokerExit": {
+                "code": 70,
+                "signal": null
+              }
+            }
+          },
+          {
+            "line": 384,
+            "row": {
+              "nativeNegative": "malformed",
+              "brokerExit": {
+                "code": 75,
+                "signal": null
+              }
+            }
+          },
+          {
+            "line": 396,
+            "row": {
+              "nativeNegative": "truncated",
+              "brokerExit": {
+                "code": 75,
+                "signal": null
+              }
+            }
+          }
+        ],
+        "pendingCreate": {
+          "line": 171,
+          "row": {
+            "nativeServicePendingCreate": {
+              "rootExited": false,
+              "activeProcesses": 0,
+              "queryError": 0,
+              "dispatchError": 0,
+              "stopReplied": false
+            }
+          }
+        },
+        "i386": {
+          "line": 115,
+          "row": {
+            "nativeI386ChildObservation": {
+              "status": "observed",
+              "fixtureSha256": "fb501a97a426a0b519cad627b7a31d5be4e6dae3a09dfc723e0c812ccd56f5ee",
+              "child": {
+                "pid": 2804,
+                "birth": "01dd759d7284b07d"
+              },
+              "observations": [
+                {
+                  "pid": 1304,
+                  "birth": "01dd759d727d3fb3",
+                  "code": 2147483651,
+                  "firstChance": 1,
+                  "handled": 1
+                },
+                {
+                  "pid": 1304,
+                  "birth": "01dd759d727d3fb3",
+                  "code": 1073741855,
+                  "firstChance": 1,
+                  "handled": 1
+                },
+                {
+                  "pid": 2804,
+                  "birth": "01dd759d7284b07d",
+                  "code": 2147483651,
+                  "firstChance": 1,
+                  "handled": 1
+                },
+                {
+                  "pid": 2804,
+                  "birth": "01dd759d7284b07d",
+                  "code": 1073741855,
+                  "firstChance": 1,
+                  "handled": 1
+                },
+                {
+                  "pid": 2804,
+                  "birth": "01dd759d7284b07d",
+                  "code": 1073741855,
+                  "firstChance": 1,
+                  "handled": 0
+                },
+                {
+                  "pid": 2804,
+                  "birth": "01dd759d7284b07d",
+                  "code": 1073741855,
+                  "firstChance": 1,
+                  "handled": 0
+                }
+              ],
+              "directI386RootLateHandler": "unqualified"
+            }
+          }
+        },
+        "writePrimitiveRows": [
+          {
+            "line": 401,
+            "row": {
+              "nativeWritePrimitive": "complete",
+              "binarySha256": "6d580eb1fba1e0ca5709907ef673ef3669e123aed1c5c9c88aa8f212c8f54140",
+              "facts": {
+                "schema": 1,
+                "mode": 0,
+                "writerExit": 0,
+                "activeProcesses": 0,
+                "readBytes": 1048576,
+                "header": [
+                  1,
+                  0,
+                  1,
+                  0,
+                  1,
+                  3456750,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  1,
+                  2,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  16,
+                  0,
+                  16,
+                  16,
+                  1048576,
+                  1,
+                  1,
+                  1,
+                  0,
+                  0,
+                  1,
+                  0,
+                  65536,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "operations": [
+                  [
+                    1,
+                    1048576,
+                    0,
+                    997,
+                    1,
+                    0,
+                    996,
+                    0,
+                    0,
+                    1,
+                    0,
+                    1048576,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    1,
+                    1,
+                    15,
+                    1,
+                    0,
+                    2
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ]
+                ]
+              }
+            }
+          },
+          {
+            "line": 406,
+            "row": {
+              "nativeWritePrimitive": "deadline",
+              "binarySha256": "6d580eb1fba1e0ca5709907ef673ef3669e123aed1c5c9c88aa8f212c8f54140",
+              "facts": {
+                "schema": 1,
+                "mode": 1,
+                "writerExit": 74,
+                "activeProcesses": 0,
+                "readBytes": 0,
+                "header": [
+                  1,
+                  1,
+                  1,
+                  0,
+                  1,
+                  3456796,
+                  0,
+                  74,
+                  74,
+                  0,
+                  0,
+                  0,
+                  4,
+                  1,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "operations": [
+                  [
+                    1,
+                    1048576,
+                    0,
+                    997,
+                    1,
+                    0,
+                    996,
+                    0,
+                    258,
+                    0,
+                    0,
+                    0,
+                    1,
+                    1,
+                    0,
+                    0,
+                    995,
+                    0,
+                    1,
+                    1,
+                    15,
+                    3,
+                    2,
+                    4
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ]
+                ]
+              }
+            }
+          }
+        ],
+        "controller": {
+          "line": 415,
+          "row": {
+            "gateController": "drained",
+            "rootExitCode": 0,
+            "activeProcesses": 0
+          }
+        },
+        "limits": [
+          "25 result labels,31 completed internal phases and64 helper records are separate counters;64 is not a test-PASS count.",
+          "Seven expected negative paths retain their original nonzero/signal exits. Original sentinel and broker-crash termination are not recast as ordinary exit0.",
+          "Only the captured child PID+birth matching four rows and retained original assertions are established. Direct I386 root late-handler status remains unqualified; this does not prove all possible event delivery/fsync/absence of later rows."
+        ]
+      },
+      {
+        "file": {
+          "path": "ci-57885c/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+          "bytes": 89912,
+          "blob": "0cc97ad8cd4edb81c85bd130a6f7c01acb0a413f",
+          "sha256": "d38cbd9fd1f8f0552b8d588a4335c7fea15e5cbd0ed498b3033acc63262fa9f1"
+        },
+        "node": "24.22.1",
+        "electron": "44.10.1",
+        "resultLabels": [
+          "tree",
+          "root-first-tail-held-pipe",
+          "blocked-output-independent-stop",
+          "breakaway-denied",
+          "pre-resume-cancel-first-nonce",
+          "facade-private-stdin-after-native-owner-tail-exit",
+          "facade-pre-resume-cancel-no-private-input",
+          "captured-provider-native-argv-env-cwd-and-stop",
+          "captured-root-first-original-descendants-and-neighbor",
+          "TEST-only-debug-service-prebirth-nested-job-feasibility",
+          "TEST-only-scoped-stop-pending-create-isolation",
+          "TEST-only-wow64-root-child-startup-and-application-exceptions",
+          "birth-failure-unknown-first-nonce",
+          "owner-eof",
+          "accounting-failure-latched-unknown-distinct-reconciliation",
+          "post-launch-pending-read-genuine-prepared",
+          "released-ack-eof-exit-zero",
+          "watcher-lock-contention-released-ack-exit-zero",
+          "failure-winner-after-complete-ack-exit-74",
+          "broker-crash",
+          "wrong-generation",
+          "malformed",
+          "truncated",
+          "lost-prepared-no-resume-first-nonce",
+          "sentinel-isolation"
+        ],
+        "completedInternalPhases": 31,
+        "helperRecordsAfterWait": 64,
+        "retainedCapabilityRecords": 9,
+        "allOriginalHelperStreamsEndedClosedWithZeroBuffers": true,
+        "negativeCaseRows": [
+          {
+            "line": 323,
+            "row": {
+              "nativeNegative": "failure-winner-after-complete-ack",
+              "completeAck": true,
+              "brokerExit": 74
+            }
+          },
+          {
+            "line": 335,
+            "row": {
+              "nativeNegative": "owner-eof",
+              "brokerExit": {
+                "code": 70,
+                "signal": null
+              }
+            }
+          },
+          {
+            "line": 347,
+            "row": {
+              "nativeNegative": "broker-crash",
+              "brokerExit": {
+                "code": null,
+                "signal": "SIGTERM"
+              }
+            }
+          },
+          {
+            "line": 359,
+            "row": {
+              "nativeNegative": "wrong-generation",
+              "brokerExit": {
+                "code": 75,
+                "signal": null
+              }
+            }
+          },
+          {
+            "line": 372,
+            "row": {
+              "nativeNegative": "lost-prepared",
+              "brokerExit": {
+                "code": 70,
+                "signal": null
+              }
+            }
+          },
+          {
+            "line": 384,
+            "row": {
+              "nativeNegative": "malformed",
+              "brokerExit": {
+                "code": 75,
+                "signal": null
+              }
+            }
+          },
+          {
+            "line": 396,
+            "row": {
+              "nativeNegative": "truncated",
+              "brokerExit": {
+                "code": 75,
+                "signal": null
+              }
+            }
+          }
+        ],
+        "pendingCreate": {
+          "line": 171,
+          "row": {
+            "nativeServicePendingCreate": {
+              "rootExited": false,
+              "activeProcesses": 0,
+              "queryError": 0,
+              "dispatchError": 0,
+              "stopReplied": false
+            }
+          }
+        },
+        "i386": {
+          "line": 115,
+          "row": {
+            "nativeI386ChildObservation": {
+              "status": "observed",
+              "fixtureSha256": "fb501a97a426a0b519cad627b7a31d5be4e6dae3a09dfc723e0c812ccd56f5ee",
+              "child": {
+                "pid": 7512,
+                "birth": "01dd759d78ca07f1"
+              },
+              "observations": [
+                {
+                  "pid": 7876,
+                  "birth": "01dd759d78c77d83",
+                  "code": 2147483651,
+                  "firstChance": 1,
+                  "handled": 1
+                },
+                {
+                  "pid": 7876,
+                  "birth": "01dd759d78c77d83",
+                  "code": 1073741855,
+                  "firstChance": 1,
+                  "handled": 1
+                },
+                {
+                  "pid": 7512,
+                  "birth": "01dd759d78ca07f1",
+                  "code": 2147483651,
+                  "firstChance": 1,
+                  "handled": 1
+                },
+                {
+                  "pid": 7512,
+                  "birth": "01dd759d78ca07f1",
+                  "code": 1073741855,
+                  "firstChance": 1,
+                  "handled": 1
+                },
+                {
+                  "pid": 7512,
+                  "birth": "01dd759d78ca07f1",
+                  "code": 1073741855,
+                  "firstChance": 1,
+                  "handled": 0
+                },
+                {
+                  "pid": 7512,
+                  "birth": "01dd759d78ca07f1",
+                  "code": 1073741855,
+                  "firstChance": 1,
+                  "handled": 0
+                }
+              ],
+              "directI386RootLateHandler": "unqualified"
+            }
+          }
+        },
+        "writePrimitiveRows": [
+          {
+            "line": 401,
+            "row": {
+              "nativeWritePrimitive": "complete",
+              "binarySha256": "6d580eb1fba1e0ca5709907ef673ef3669e123aed1c5c9c88aa8f212c8f54140",
+              "facts": {
+                "schema": 1,
+                "mode": 0,
+                "writerExit": 0,
+                "activeProcesses": 0,
+                "readBytes": 1048576,
+                "header": [
+                  1,
+                  0,
+                  1,
+                  0,
+                  1,
+                  3467328,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  1,
+                  2,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  16,
+                  0,
+                  16,
+                  16,
+                  1048576,
+                  1,
+                  1,
+                  1,
+                  0,
+                  0,
+                  1,
+                  0,
+                  65536,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "operations": [
+                  [
+                    1,
+                    1048576,
+                    0,
+                    997,
+                    1,
+                    0,
+                    996,
+                    0,
+                    0,
+                    1,
+                    0,
+                    1048576,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    1,
+                    1,
+                    15,
+                    1,
+                    0,
+                    2
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ]
+                ]
+              }
+            }
+          },
+          {
+            "line": 406,
+            "row": {
+              "nativeWritePrimitive": "deadline",
+              "binarySha256": "6d580eb1fba1e0ca5709907ef673ef3669e123aed1c5c9c88aa8f212c8f54140",
+              "facts": {
+                "schema": 1,
+                "mode": 1,
+                "writerExit": 74,
+                "activeProcesses": 0,
+                "readBytes": 0,
+                "header": [
+                  1,
+                  1,
+                  1,
+                  0,
+                  1,
+                  3467375,
+                  0,
+                  74,
+                  74,
+                  0,
+                  0,
+                  0,
+                  4,
+                  1,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "operations": [
+                  [
+                    1,
+                    1048576,
+                    0,
+                    997,
+                    1,
+                    0,
+                    996,
+                    0,
+                    258,
+                    0,
+                    0,
+                    0,
+                    1,
+                    1,
+                    0,
+                    0,
+                    995,
+                    0,
+                    1,
+                    1,
+                    15,
+                    3,
+                    2,
+                    4
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ]
+                ]
+              }
+            }
+          }
+        ],
+        "controller": {
+          "line": 415,
+          "row": {
+            "gateController": "drained",
+            "rootExitCode": 0,
+            "activeProcesses": 0
+          }
+        },
+        "limits": [
+          "25 result labels,31 completed internal phases and64 helper records are separate counters;64 is not a test-PASS count.",
+          "Seven expected negative paths retain their original nonzero/signal exits. Original sentinel and broker-crash termination are not recast as ordinary exit0.",
+          "Only the captured child PID+birth matching four rows and retained original assertions are established. Direct I386 root late-handler status remains unqualified; this does not prove all possible event delivery/fsync/absence of later rows."
+        ]
+      }
+    ],
+    "emulatedWrapperReceipt": {
+      "status": "PASS",
+      "cleanup": true,
+      "wrappers": [
+        "npm-node",
+        "generated-bun",
+        "opaque-cmd",
+        "positional-bat",
+        "npm-native"
+      ],
+      "providers": [
+        {
+          "provider": "codex",
+          "wrapper": "npm-node",
+          "pins": {
+            "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+            "peer": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+            "wrapper": "808f1868f1cb9649df4edf133c1f7d8da7e888b513b380868de8659ef46b90ca",
+            "cli": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+            "source": "4fee3013513a1dce46b02b3609b09c462bebfc13123e6efe240884e33b721d84"
+          },
+          "counts": {
+            "allocate": 1,
+            "prepare": 1,
+            "resume": 1,
+            "stop": 1,
+            "release": 1,
+            "serviceCapture": 2,
+            "serviceStop": 2,
+            "serviceSettle": 2
+          },
+          "nativeReady": true,
+          "inputCompleted": true,
+          "registeredServices": 2,
+          "scopedStops": 2,
+          "neighborSurvivedPrimary": true,
+          "providerSurvivedScopedStops": true,
+          "cleanup": true
+        },
+        {
+          "provider": "opencode",
+          "wrapper": "opaque-cmd",
+          "pins": {
+            "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+            "peer": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+            "wrapper": "fd4631ca06e32fe34da1b55f10ffac07eec775fe87127876d13592c4c983b1cf",
+            "cli": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+            "source": "4547d5d6928737e8744b3d44d7bdba4e1aec0c32e74aea068d759f9c4ba64d2d"
+          },
+          "counts": {
+            "allocate": 1,
+            "prepare": 1,
+            "resume": 1,
+            "stop": 1,
+            "release": 1,
+            "serviceCapture": 2,
+            "serviceStop": 2,
+            "serviceSettle": 2
+          },
+          "nativeReady": true,
+          "inputCompleted": true,
+          "registeredServices": 2,
+          "scopedStops": 2,
+          "neighborSurvivedPrimary": true,
+          "providerSurvivedScopedStops": true,
+          "cleanup": true
+        }
+      ],
+      "realProviderExecuted": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    },
+    "completedSourceReceipts": [
+      {
+        "receipt": "windows-source-codex-receipt.json",
+        "provider": "codex",
+        "status": "PASS",
+        "stage": "complete",
+        "scenarioCleanup": true,
+        "outerGateCleanup": true,
+        "epochJobCounts": [
+          25,
+          0
+        ],
+        "allFinalFiveCustodyFlagsTrue": true,
+        "lastLaunchReadiness": {
+          "source": {
+            "sourceId": "318c5315d850e2a337f61d0c9b299883977dc9da613592b86c70040141f02b99",
+            "revision": "52ae0274b03cafe360330c0ccd44b600fc6ed5860d30791da72386f098ed2f70"
+          },
+          "image": "B",
+          "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+          "readCount": 90,
+          "elapsedMs": 10525.1577,
+          "lastRuntimeRead": {
+            "viewDigest": "322d611415d1de09975bb832e4f366a34c8a315a2594c0d6f7e9444463a1c6a9",
+            "memberId": "alice-id",
+            "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+            "phase": "allocated",
+            "sealed": false,
+            "custody": "owned",
+            "nativeReady": true,
+            "attached": true
+          }
+        },
+        "lastStandaloneCompletion": {
+          "source": {
+            "sourceId": "318c5315d850e2a337f61d0c9b299883977dc9da613592b86c70040141f02b99",
+            "revision": "52ae0274b03cafe360330c0ccd44b600fc6ed5860d30791da72386f098ed2f70"
+          },
+          "runId": "TEST-source-standalone-B",
+          "scheduleId": "TEST-source-schedule-B",
+          "readCount": 113,
+          "elapsedMs": 10697.608199999995,
+          "lastRunRead": {
+            "phase": "completed",
+            "cleanup": "confirmed",
+            "exitCode": 0
+          }
+        },
+        "finiteFixtureVersions": {
+          "A": "0.162.0",
+          "B": "0.162.0"
+        },
+        "realProviderExecuted": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      },
+      {
+        "receipt": "windows-source-claude-receipt.json",
+        "provider": "claude",
+        "status": "PASS",
+        "stage": "complete",
+        "scenarioCleanup": true,
+        "outerGateCleanup": true,
+        "epochJobCounts": [
+          8,
+          1
+        ],
+        "allFinalFiveCustodyFlagsTrue": true,
+        "lastLaunchReadiness": {
+          "source": {
+            "sourceId": "46f6aba923eff2c7d755b1235eb8f62458fa0127d18aaea436c244069e37065c",
+            "revision": "c8faad0af2fa782d2ef420644822a4196502b9862176ebfcde7589bf2eea2775"
+          },
+          "image": "B",
+          "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+          "readCount": 22,
+          "elapsedMs": 3482.672200000001,
+          "lastRuntimeRead": {
+            "viewDigest": "e9c711bebe8d482154970603455182c2f6ea79e5fe18e55d8428109bec781af6",
+            "memberId": "alice-id",
+            "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+            "phase": "allocated",
+            "sealed": false,
+            "custody": "owned",
+            "nativeReady": true,
+            "attached": true
+          }
+        },
+        "lastStandaloneCompletion": {
+          "source": {
+            "sourceId": "46f6aba923eff2c7d755b1235eb8f62458fa0127d18aaea436c244069e37065c",
+            "revision": "c8faad0af2fa782d2ef420644822a4196502b9862176ebfcde7589bf2eea2775"
+          },
+          "runId": "TEST-source-standalone-B",
+          "scheduleId": "TEST-source-schedule-B",
+          "readCount": 21,
+          "elapsedMs": 1604.2767999999996,
+          "lastRunRead": {
+            "phase": "completed",
+            "cleanup": "confirmed",
+            "exitCode": 0
+          }
+        },
+        "finiteFixtureVersions": {
+          "A": "2.1.34",
+          "B": "2.1.34"
+        },
+        "realProviderExecuted": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      }
+    ]
+  },
+  "openCodeFirstFailure": {
+    "status": "INCOMPLETE",
+    "stage": "Team-A",
+    "originalPollAssertion": "nativeEmulatedSourceScenario.ts:62 pre-read deadline",
+    "readinessBudgetMs": 15000,
+    "anchor": "after the original Start acknowledgement; strict checks before and after each read",
+    "lastSavedReadiness": {
+      "source": {
+        "sourceId": "7743f08278dfb36c34ff5128d3cf1d09e96971a0961c0239e2d68f8f731371e4",
+        "revision": "39b1dd91c6e145ca956cef80c50ac562838dd810fd1a446bc62e0f1c1b75bc72"
+      },
+      "image": "A",
+      "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+      "readCount": 72,
+      "elapsedMs": 14976.174599999998,
+      "lastRuntimeRead": {
+        "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+        "memberId": "alice-id",
+        "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+        "phase": "held",
+        "sealed": false,
+        "custody": "unknown",
+        "nativeReady": false,
+        "attached": false,
+        "diagnostic": "open-unknown"
+      }
+    },
+    "projection": {
+      "status": "observed",
+      "atomicWithFailure": false,
+      "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+      "bindingMatches": true,
+      "recordReady": false,
+      "providerReady": null,
+      "ownerCurrent": null,
+      "nativeReady": false
+    },
+    "firstRefusal": {
+      "status": "observed",
+      "observations": [
+        {
+          "kind": "reference",
+          "commandDigest": "267e7110c52c9dc81cdcd827bca86e4729cbbce8104a2c6344c9041ea068cbbf",
+          "contextDigest": "cbadbea0a9b2f527dbd2b1632f94b5dc12d53c3635c07ead9c589f1efd6768e0",
+          "phase": "probe-expiry",
+          "reason": "held",
+          "probeCutoff": 1794814858465,
+          "probeNow": 1794814858697,
+          "scopeCutoff": null,
+          "scopeNow": null,
+          "preparationCutoff": null,
+          "preparationNow": null,
+          "ordinal": 1,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "7743f08278dfb36c34ff5128d3cf1d09e96971a0961c0239e2d68f8f731371e4",
+            "revision": "39b1dd91c6e145ca956cef80c50ac562838dd810fd1a446bc62e0f1c1b75bc72"
+          }
+        },
+        {
+          "kind": "consumer",
+          "actionDigest": "0999f35342307166abf6addfd3031950d31858d19f9b349ce1a23447a7d9253d",
+          "groupDigest": "c6787b2f7818f62792016062ff982e627e144268125e4b60d88adfb0a6cfb934",
+          "bindingDigest": "27330677a8e68c915a45332ea1838220c95a3b44505efb28271b3099ebf3e326",
+          "consumerId": "6e20fec98abb8597504a412155f389a5668aa8a6cc6f2d25d9ebd315c8acd8dc",
+          "phase": "reference",
+          "reason": "threw",
+          "cutoff": 1794814858465,
+          "observedAt": 1794814858116,
+          "currentCalls": {
+            "count": 17,
+            "totalMs": 10189,
+            "maxMs": 674,
+            "lastMs": 608,
+            "truncated": false
+          },
+          "ordinal": 2,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "7743f08278dfb36c34ff5128d3cf1d09e96971a0961c0239e2d68f8f731371e4",
+            "revision": "39b1dd91c6e145ca956cef80c50ac562838dd810fd1a446bc62e0f1c1b75bc72"
+          }
+        },
+        {
+          "kind": "native",
+          "phase": "prepare",
+          "reason": "current-false",
+          "dispatched": true,
+          "staged": true,
+          "rootCaptured": false,
+          "deadlineExpired": null,
+          "ordinal": 3,
+          "source": {
+            "sourceId": "7743f08278dfb36c34ff5128d3cf1d09e96971a0961c0239e2d68f8f731371e4",
+            "revision": "39b1dd91c6e145ca956cef80c50ac562838dd810fd1a446bc62e0f1c1b75bc72"
+          }
+        },
+        {
+          "kind": "opencode-open",
+          "bindingDigest": "27330677a8e68c915a45332ea1838220c95a3b44505efb28271b3099ebf3e326",
+          "phase": "native-ready",
+          "reason": "threw",
+          "ordinal": 4,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "7743f08278dfb36c34ff5128d3cf1d09e96971a0961c0239e2d68f8f731371e4",
+            "revision": "39b1dd91c6e145ca956cef80c50ac562838dd810fd1a446bc62e0f1c1b75bc72"
+          }
+        }
+      ]
+    },
+    "originalErrorRows": [
+      {
+        "line": 2095,
+        "text": "AggregateError: TEST source scenario cleanup incomplete"
+      },
+      {
+        "line": 2101,
+        "text": "    AssertionError [ERR_ASSERTION]: Original source Team readiness"
+      },
+      {
+        "line": 2102,
+        "text": "        at poll (D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts:62:12)"
+      },
+      {
+        "line": 2114,
+        "text": "    AggregateError: TEST original source epoch cleanup incomplete"
+      },
+      {
+        "line": 2121,
+        "text": "        AssertionError [ERR_ASSERTION]: Every original physical Job retains confirmed Stop/drain/release"
+      }
+    ],
+    "timestampArithmetic": {
+      "consumerObservedAt": 1794814858116,
+      "probeCutoff": 1794814858465,
+      "probeNow": 1794814858697,
+      "consumerBeforeCutoffMs": 349,
+      "probeAfterCutoffMs": 232,
+      "twoDateOperandDifferenceMs": 581
+    },
+    "currentCalls": {
+      "count": 17,
+      "totalMs": 10189,
+      "maxMs": 674,
+      "lastMs": 608,
+      "truncated": false
+    },
+    "interpretation": "The source confirms the guard order and aggregate synchronous current-callback intervals. It does not identify a particular RPC, catalog operation, file/device cost, caller route, native launch substage or scheduler as the cause. The581ms Date difference and rounded608ms performance interval have distinct endpoints/clocks. No deadline/TTL or fresh-currentness change is justified.",
+    "observationLimits": "The72-read last sample is not the later failed deadline operand. Matching viewDigest does not make exit-retained projection atomic with failure. recordReady:false short-circuits the remaining readiness operands; null values are unevaluated, not failed. Captured A/B CLI version strings are configuration evidence, not proof that B or an unsupported standalone flow completed.",
+    "standaloneCompletionFieldPresent": false
+  },
+  "openCodeCleanup": {
+    "outerGateCleanup": true,
+    "scenarioCleanup": false,
+    "epochs": 1,
+    "jobs": 3,
+    "finalRootRows": [
+      {
+        "slot": 0,
+        "root": {
+          "pid": 2976,
+          "birth": "01dd759dc87ab29e"
+        },
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "entryStart": 0,
+        "entryEnd": 1
+      },
+      {
+        "slot": 1,
+        "root": {
+          "pid": 3452,
+          "birth": "01dd759dc9d55cef"
+        },
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "entryStart": 1,
+        "entryEnd": 2
+      },
+      {
+        "slot": 2,
+        "root": null,
+        "resumed": false,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "entryStart": null,
+        "entryEnd": null
+      }
+    ],
+    "unobservedSlot2": {
+      "root": null,
+      "originalWitnessCaptured": false,
+      "resumed": false,
+      "originalHandleAbsent": false,
+      "actualMainPrepareCalls": 0,
+      "actualMainResumeCalls": 0,
+      "stagingLaunchChunkCalls": 1,
+      "stagingLaunchCommitCalls": 1,
+      "stopDrainReleaseRecordedTrue": true
+    },
+    "beforeWaitAndFinalDistinction": "The passive close row for slot1 still has originalHandleAbsent:false before its witness wait; the final receipt has true. Slot2 lacks original root/witness and fails the original conjunction before any witness.wait; its false absence remains in the final receipt.",
+    "controller": {
+      "line": 2140,
+      "row": {
+        "gateController": "drained",
+        "rootExitCode": 1,
+        "activeProcesses": 0
+      }
+    },
+    "sourceController": [
+      {
+        "line": 2141,
+        "row": {
+          "kind": "TEST_SOURCE_CONTROLLER_EXIT",
+          "provider": "opencode",
+          "exitCode": 104
+        }
+      }
+    ],
+    "roles": "The original readiness exception is retained inside the cleanup aggregate. Outer cleanup:true, enclosing controller activeProcesses:0, Stop/drain/release booleans and root-exit accounting do not replace the missing per-root HANDLE witness. The report proves incomplete custody, not that an unidentified root is alive or absent."
+  },
+  "freshSourceInterpretations": [
+    {
+      "source": {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "mode": "100644",
+        "bytes": 58249,
+        "blob": "dd1e8cd2f1ea052f0480833cfe1fca6be9b5d2e6",
+        "sha256": "442fc644470c06095932c89434cdd8d24ffb6971bdb475d2ca1a3e6257be760d",
+        "crlfSha256": "e3103796b8f9228821ee072b3531fa6a86519740008649d2a4cada6feb34f8cb"
+      },
+      "examinedLineRanges": [
+        [
+          59,
+          67
+        ],
+        [
+          201,
+          234
+        ],
+        [
+          290,
+          312
+        ],
+        [
+          469,
+          485
+        ]
+      ],
+      "interpretation": [
+        "The one non-Claude member-readiness absolute deadline is established after the original Start acknowledgement; both before-read and after-read assertions compare the same deadline. The retained x64 stack is line62, the pre-read assertion, not line64.",
+        "lastLaunchReadiness.elapsedMs is sampled inside the previous successful runtime.read callback using the distinct readinessStarted sample. Its14976.174599999998 value is not the failed comparison operand and does not establish a shorter configured deadline.",
+        "Jobs are appended on returned allocate. Root/witness are captured only on a returned prepare result. close prints each passive cleanup row before asserting root+witness+resume+stop/drain/release, then waits on the original witness and only then marks originalHandleAbsent true. No fallback witness or substitute accounting is present."
+      ]
+    },
+    {
+      "source": {
+        "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+        "mode": "100644",
+        "bytes": 44781,
+        "blob": "08552af73c0f67cd62fca0e5b773cde2281eb152",
+        "sha256": "eb985c1ba5f4a6d22a3816cd80795374f817645e8a59fb8ad70a1734f3e20fc3",
+        "crlfSha256": "8b70986b6011cd27206b4dd787a9b5c2b1131aade9a0a02593f8281a2193e6b7"
+      },
+      "examinedLineRanges": [
+        [
+          334,
+          409
+        ]
+      ],
+      "interpretation": [
+        "One retained accumulator belongs to the non-initial readiness closure. With an original subscriber present, it counts current() invocations before the first refusal, including the initial call and the failing call;4096 is the source cap, and the original snapshot reports truncated:false.",
+        "The finally block adds each rounded performance interval before the failure snapshot. Thus17/10189/674/608 is synchronous callback count/cumulative/max/last time, not an RPC count, caller-route census, full-launch duration or a measured substage.",
+        "The consumer Date.now operand is captured before nested readPreparedModelReference; the failure snapshot retains that earlier operand while rethrowing the original nested error. No caching/removal of fresh reads or guard/TTL amendment follows from these timings."
+      ]
+    },
+    {
+      "source": {
+        "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+        "mode": "100644",
+        "bytes": 30721,
+        "blob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+        "sha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+        "crlfSha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361"
+      },
+      "examinedLineRanges": [
+        [
+          188,
+          222
+        ]
+      ],
+      "interpretation": [
+        "The nested reference path reads the retained probe, inspects it and checks admission, target, scope, retired and completion before sampling probeNow at the expiry guard. Scope-cutoff/preparation-expiry operands remain null because the earlier expiry guard refused. The source establishes order, not the cost of each preceding operation."
+      ]
+    },
+    {
+      "source": {
+        "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+        "mode": "100644",
+        "bytes": 22408,
+        "blob": "3b5a244c27d004af6e82fffa092fa83e1894de73",
+        "sha256": "447a3ae82ab6ce0ec866305af2cd426619df3618fbec2397931212379d945784",
+        "crlfSha256": "564187147dd3bb26fe284929f67496b40d22b927202b19dcae079a961fae3748"
+      },
+      "examinedLineRanges": [
+        [
+          319,
+          388
+        ]
+      ],
+      "interpretation": [
+        "prepare sets its phase before both entry and lazy-request currentness checks. The retained phase prepare/current-false does not itself distinguish those checks. The receipt sees no actual Main prepare call for slot2; no particular RPC bottleneck or native process creation is proved."
+      ]
+    },
+    {
+      "source": {
+        "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+        "mode": "100644",
+        "bytes": 3398,
+        "blob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f",
+        "sha256": "352c62fcce347599a89658a5dc98d3d05d35d4a6d26618cc87faa6ece2f995df",
+        "crlfSha256": "1d319cb57b85ef47d22b0e4a99ee4960cbada129cd85d08fa924c79b672bf079"
+      },
+      "examinedLineRanges": [
+        [
+          19,
+          35
+        ],
+        [
+          71,
+          75
+        ]
+      ],
+      "interpretation": [
+        "Binding, recordReady, providerReady and ownerCurrent are short-circuited operands. On this observed view, recordReady:false means providerReady:null and ownerCurrent:null were not evaluated; neither null can be called a failed ownership/provider check. The retained observation is explicitly non-atomic with failure."
+      ]
+    },
+    {
+      "source": {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "mode": "100644",
+        "bytes": 32248,
+        "blob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+        "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c",
+        "crlfSha256": "e18fe47f23884ee48d6881d2f07e29714276bbc489ba939d35f335f5d76eb854"
+      },
+      "examinedLineRanges": [
+        [
+          102,
+          125
+        ],
+        [
+          191,
+          290
+        ],
+        [
+          291,
+          418
+        ]
+      ],
+      "interpretation": [
+        "The exact original18-operand Node prerequisite, original3-file protocol Vitest configuration and original8-operand retained-Main command are distinct from native scenario labels/helpers. Windows Node/Electron, wrappers, Codex and Claude steps precede the failing OpenCode step. The final completed-platform-receipt step was skipped; this audit does not execute or replace it."
+      ]
+    }
+  ],
+  "relatedAuthorSourceAssessment": {
+    "file": {
+      "path": "ci-57885c/native/windows-first-boundary-source-assessment.json",
+      "bytes": 18167,
+      "blob": "864a950e8dc5ad80085c7959557e99711b59f9fe",
+      "sha256": "ebf897215da50ea362b670cebcbedfacf4d0346c0e0db4e6c62cc3f376c906dd"
+    },
+    "scope": "Only the x64/OpenCode predicates and common observation law were independently joined here; this report is not a duplicate independent review of the ARM/Codex packet."
+  },
+  "qualificationLimits": [
+    "All results belong to the original57885c Process job. Whole Process FAILURE and final completed-platform gate SKIP remain explicit; earlier native/Codex/Claude success is not whole-job success.",
+    "No qualification transfers to72e6 P11A, current/future geometry/copy composition, a different source revision, Desktop/P08/P09, full migration, release or real vendor execution.",
+    "No new API request, download, CI poll, replay, source/ref mutation, project test/compiler/build/install, native or vendor execution was performed. Only original bytes and immutable Git were read; independent reports were written exclusively outside the repo.",
+    "No source correction is selected. Missing per-call attribution and missing original slot2 witness remain missing; they are not supplied by a hypothesis or by other passing lanes."
+  ]
+}

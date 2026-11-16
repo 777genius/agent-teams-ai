@@ -1,0 +1,82 @@
+{
+  "kind": "E1 OpenCode original failure author checkpoint",
+  "createdAtUTC": "2026-11-16T07:16:25.905807+00:00",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "runId": 43813731227,
+  "jobId": 133120928869,
+  "artifactId": 14205010690,
+  "originalOutcome": "FAIL / INCOMPLETE",
+  "payloadCount": 10,
+  "payloadBytes": 1736558,
+  "payloads": [
+    {
+      "path": "ci-e1d14b9/opencode/job-original-response.json",
+      "bytes": 198101,
+      "blob": "b48a1b24e417e89dfffa2798f61a9863d209478a",
+      "sha256": "4aa669cebb388f914d441ae77bac858d5458396a413f3a2245868f7c862cbd1b"
+    },
+    {
+      "path": "ci-e1d14b9/opencode/job.log",
+      "bytes": 188026,
+      "blob": "c210882dcb304f0f583d7bc41bbf9c12d3e0fec2",
+      "sha256": "e9b9cad5e9ef8103d7cfcf4b2a2a777a122a76b739482b93d5515249809d254a"
+    },
+    {
+      "path": "ci-e1d14b9/opencode/artifact-14205010690.zip",
+      "bytes": 668772,
+      "blob": "2b186415105a6c51824cfcb9f950af2c83dbb43d",
+      "sha256": "cb135dc1436d1c1cf4eabd1ece501be84d15241809c127bb0818d9f277e17098"
+    },
+    {
+      "path": "ci-e1d14b9/opencode/archive-retention.json",
+      "bytes": 5408,
+      "blob": "fb8be0276e83b020734d0041e8ba628cd47933c2",
+      "sha256": "db912f214b04df5a5cf2a1a9c32006f9eef4a8abbda7d6e6c8f70c63b22ec76f"
+    },
+    {
+      "path": "ci-e1d14b9/opencode/source-pin-audit.json",
+      "bytes": 458891,
+      "blob": "b8477e397dad053eb7376dee24f1b5b4e216e081",
+      "sha256": "ad37cec616cbbcce1c19bae0844fff96283ea26c4fa95a77a644dbfaa4084460"
+    },
+    {
+      "path": "ci-e1d14b9/opencode/visual-review.json",
+      "bytes": 870,
+      "blob": "6b8e8c11f034c00ec663bdf15ea1d43febb0cae3",
+      "sha256": "216b88bdae62e42d0e76c82faf5d6cdd74777c6e0f5805fcbfe2567d2842afac"
+    },
+    {
+      "path": "ci-e1d14b9/official-host-artifacts-0707.json",
+      "bytes": 3892,
+      "blob": "6183c3c0f88e8514d52fb19c822a5d59a85c60e7",
+      "sha256": "62905f37173c4858200bc05e17a29bc92b329efa70d402fd20299bbd4a31cdf7"
+    },
+    {
+      "path": "ci-e1d14b9/owned-jobs-0707.json",
+      "bytes": 53878,
+      "blob": "b2a21ccae083071c58239066e5d5a5eb63942cd6",
+      "sha256": "db33ebbfd25e7a5b7be07869a7ac6d9459b2bf73f3f93bbf851ad88a731f0e26"
+    },
+    {
+      "path": "ci-e1d14b9/opencode/audit.json",
+      "bytes": 153570,
+      "blob": "d1b1616a3f0d5a7b29e61c632865f6c2e48f675e",
+      "sha256": "251ce8e8338602e6e439ee40312529b35221f6a535dbeb0c4f84b2a7aa9f25a3"
+    },
+    {
+      "path": "ci-e1d14b9/opencode/Plan29-appendix.md",
+      "bytes": 5150,
+      "blob": "6f7ab3524700ffda49cbc17bb28aa6967efb8226",
+      "sha256": "566cad40b2333d8f0951cb206526744e682a215000cc82d34f4f26f98bedbc1c"
+    }
+  ],
+  "archiveMembers": 16,
+  "pngCount": 1,
+  "actuallyViewedPngs": 1,
+  "selectedSourceCount": 1757,
+  "selectedSourceBytes": 20343408,
+  "overallCleanupQualified": false,
+  "nativeOrReleaseQualified": false,
+  "independentReview": "pending",
+  "originalBytesFrozen": true
+}

@@ -1,0 +1,69 @@
+{
+  "kind": "geometry-c763-binding-and-inert-p11-preview-freeze",
+  "author": "/root/migration_scope",
+  "createdAtUTC": "2026-11-16T08:10:51.128503+00:00",
+  "status": "SOURCE_ONLY_PENDING_INDEPENDENT_REVIEW; NO_ROOT_SELECTION; P11_DORMANT",
+  "sourceHead": "c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+  "sourceTree": "c70232e34d2759ce287e2f224073205dcf9c18db",
+  "files": [
+    {
+      "file": "preimage-geometry-helper.ts.txt",
+      "bytes": 27188,
+      "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+      "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+    },
+    {
+      "file": "preimage-geometry-test.ts.txt",
+      "bytes": 111672,
+      "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+      "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445"
+    },
+    {
+      "file": "geometry-helper.ts.txt",
+      "bytes": 28094,
+      "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+      "sha256": "67a1e7413eff11ddc087f35a64cd3c8b242c061988b2fbd661497a9f6b5dfd11"
+    },
+    {
+      "file": "geometry-test.ts.txt",
+      "bytes": 118885,
+      "blob": "8694096d0aafcd7130589d97f12ad5a4fd65a616",
+      "sha256": "9411c8171255880a187382e5ceef1c44e74172fe4c9eb6c357b3654388cceb70"
+    },
+    {
+      "file": "p11-after-geometry-test.ts.txt",
+      "bytes": 123149,
+      "blob": "1b0ad5b15b056857817858d1e85f6dfe81f6e782",
+      "sha256": "c73b55cbd07ef632b174609e99e05e536d584b8dae9c124c2fc1a14e1c76c4da"
+    },
+    {
+      "file": "p11-regression-suffix.ts.txt",
+      "bytes": 4264,
+      "blob": "08699c4890b2ef83bcbda53094c450c6a9c3b366",
+      "sha256": "a299b6ec1497dc542f675fd7868a430d8e9d4d0503199c9ff0343a7187b5312d"
+    },
+    {
+      "file": "p11-after-geometry.patch",
+      "bytes": 4617,
+      "blob": "ab14668b079eacdc2ddd8b0ffb298c334503d297",
+      "sha256": "c71388877cd144ffa09dfd53421b814a722766d61d0ad61e84b80004b2153862"
+    },
+    {
+      "file": "geometry-binding-metadata.json",
+      "bytes": 22752,
+      "blob": "78b1d8e0047824819121b2258f4478fefb34a788",
+      "sha256": "e1367e514b833af08b233d7d2b061b1d8c83da342fcc52a6ec97a54c39491773"
+    },
+    {
+      "file": "p11-composition-metadata.json",
+      "bytes": 6546,
+      "blob": "642010d58fb1d29e542ac05f637fdba0a38cf293",
+      "sha256": "5a96cc8c3492939e9e90301e6a674f39f3620bd99a0dffe5d1e0a958d4849305"
+    }
+  ],
+  "geometrySourceOnlyProjection": "e6f38630fa4709b9ae6583ed7e44d8efe55d2fb8",
+  "dormantP11AfterGeometryProjection": "f40f7f8f16ed316398b21945a37e40d8b361e91d",
+  "noProjectExecution": true,
+  "frozenOldPacketsUntouched": true,
+  "modelsAndCopyExcluded": true
+}

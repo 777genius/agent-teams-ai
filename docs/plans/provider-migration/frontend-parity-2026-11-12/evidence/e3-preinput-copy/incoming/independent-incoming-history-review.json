@@ -1,0 +1,310 @@
+{
+  "schema": "independent-incoming72e6-history-plan-baseline-review/v1",
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUTC": "2026-11-16T08:43:19.860365+00:00",
+  "result": "APPROVE",
+  "scope": "Preserve exact incoming two-commit history, full15-document delta and one-source-path A afterimage under fresh root reconciliation. This review validates original578 actual typed baseline authority and exact evidence correspondence; it does not approve actual72e6 RED, a B/C fix, or a newly composed geometry/copy application.",
+  "proof": {
+    "path": "/workspace/scratch/82d3f9ba6b85/external-primary-0833/independent-incoming-history-byte-proof.json",
+    "bytes": 112808,
+    "blob": "0d988e26da67bc915749c8135abf7b3900324773",
+    "sha256": "190c586356a87f426f80310a5c4f578ae9db07cfa7c73d8ab6f163350140661f"
+  },
+  "exactIncomingCommits": [
+    {
+      "head": "57885c055a18b27c180c304762643eac632513ad",
+      "tree": "b1685b4993306f9cd509d832b72f2cd6f0418943",
+      "parents": [
+        "f3948bee8f5e14b0e7332bd266fd197b44228d32"
+      ],
+      "body": {
+        "bytes": 549,
+        "blob": "1f9be84ed300a294ed58a2748b12fa624383248c",
+        "sha256": "4aa30376c2815d00a8d77e945088d7fded5da6baa894e36873eb88dc3b8fff78"
+      },
+      "author": "Илия <iliyazelenkog@gmail.com> 1794812079 +0200",
+      "committer": "Илия <iliyazelenkog@gmail.com> 1794812079 +0200"
+    },
+    {
+      "head": "098a2a6788fcf4477e348ca669628e35f68517a9",
+      "tree": "185b837963f2e14bd03e1274acbfac7f7faeb320",
+      "parents": [
+        "57885c055a18b27c180c304762643eac632513ad"
+      ],
+      "body": {
+        "bytes": 282,
+        "blob": "6aa58b8752bee86ecf0baad17fb81cba4d17a93d",
+        "sha256": "bd57f14394dd396ba22b09c13a94a15066db0419afc1679c4669875e354895b5"
+      },
+      "author": "Илия <iliyazelenkog@gmail.com> 1794817524 +0200",
+      "committer": "Илия <iliyazelenkog@gmail.com> 1794817524 +0200"
+    },
+    {
+      "head": "72e6ec04444969d343d73834c70bc4e261100fc9",
+      "tree": "de80fbfbffb3fe4daabf6cc9be258cc8df534524",
+      "parents": [
+        "098a2a6788fcf4477e348ca669628e35f68517a9"
+      ],
+      "body": {
+        "bytes": 295,
+        "blob": "893671467f03f45701f2052d94d0d5b0709eeb14",
+        "sha256": "3268b62e0a37a14ae1f98b57e0914d3ef493c365467fcb6c94eea408a79e03bc"
+      },
+      "author": "Илия <iliyazelenkog@gmail.com> 1794817733 +0200",
+      "committer": "Илия <iliyazelenkog@gmail.com> 1794817733 +0200"
+    }
+  ],
+  "actualFollowup": {
+    "head": "c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+    "tree": "c70232e34d2759ce287e2f224073205dcf9c18db",
+    "parents": [
+      "174e27e0178025f88608650347900daac49dcc58",
+      "57885c055a18b27c180c304762643eac632513ad"
+    ],
+    "body": {
+      "bytes": 599,
+      "blob": "568ca6d5604627cc9ca4e480afd42da2770acbd6",
+      "sha256": "e308412280b22c1bb88b536cfcb8dfa3d0e5a5f29b4769dbb751598136965d40"
+    },
+    "author": "Илия <iliyazelenkog@gmail.com> 1794816146 +0200",
+    "committer": "Илия <iliyazelenkog@gmail.com> 1794816146 +0200"
+  },
+  "history": {
+    "onlyIncomingCommits": [
+      "098a2a6788fcf4477e348ca669628e35f68517a9",
+      "72e6ec04444969d343d73834c70bc4e261100fc9"
+    ],
+    "firstCommit": "Sole child of578, documentation only: Plan29 modified and14 new evidence files; all non-documentation and every unrelated prior leaf unchanged.",
+    "secondCommit": "Sole child of098a, exactly one existing test path adds4264 bytes/62lines; all documentation and every other source leaf unchanged.",
+    "sourceAfterimage": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+    "topologyLimit": "Immutable Git topology establishes docs-before-source commit ancestry. It does not independently reconstruct every remote ref mutation or reviewer timing during the other author publication."
+  },
+  "newDocumentation": {
+    "newFiles": 14,
+    "newFileBytes": 3033300,
+    "indexPayloads": 13,
+    "indexItselfAdditional": true,
+    "allFullGitBodiesAndIndexIdentitiesVerified": true,
+    "fullPayloadMapInProof": true,
+    "incomingPlan": {
+      "before": {
+        "bytes": 1902427,
+        "blob": "49587b36ed3bebbd9a766215ba0e00842db1b5a1",
+        "sha256": "fdb0d07f9850ffe364a13c6cc06c705a2314abe7c7e1d4857c1acbd9e3123bf6"
+      },
+      "after": {
+        "bytes": 1915226,
+        "blob": "bfcd6cbbb7ec293a568a61079bc60ed572979430",
+        "sha256": "406271bf95c71863fa6e488b4f447f7a4e5c659a15d92db263a003292a51ee4b"
+      },
+      "exactAppendedBody": {
+        "bytes": 12799,
+        "blob": "5af5c105b0e95576ef89d3d7487815322ce2fd9a",
+        "sha256": "3f70c79d12e5851be2c044209ecdfd4dc743e4d05cae68388c373a8d5cd685d9"
+      },
+      "appendedLines": 67,
+      "strictOldPrefix": true,
+      "docsSourceEqual": true
+    },
+    "exactAppendedBody": {
+      "path": "/workspace/scratch/82d3f9ba6b85/external-primary-0833/independent-incoming-plan29-suffix.txt",
+      "bytes": 12799,
+      "blob": "5af5c105b0e95576ef89d3d7487815322ce2fd9a",
+      "sha256": "3f70c79d12e5851be2c044209ecdfd4dc743e4d05cae68388c373a8d5cd685d9"
+    }
+  },
+  "actualBaseline": {
+    "source": "57885c055a18b27c180c304762643eac632513ad",
+    "tree": "b1685b4993306f9cd509d832b72f2cd6f0418943",
+    "run": 43823212577,
+    "attempt": 1,
+    "event": "pull_request",
+    "job": 133150851331,
+    "raw": {
+      "bytes": 2709748,
+      "blob": "f8710649393df89727eedf54ac54e59b61c0ace0",
+      "sha256": "aa428b27236f3867f1cdf13c32494a61ec4fa4ffef02cce2a57794ae2024fa81"
+    },
+    "fullOriginalAndMcpByteEquality": true,
+    "bomRetained": true,
+    "rawLines": 16645,
+    "independentExistingGateAndCompleteReview": [
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-57885c/team/independent-team-complete-review.json",
+        "bytes": 75096,
+        "blob": "964204f443a3730cdeadade177d18093234ae2be",
+        "sha256": "2c68f6f08f5765e7701b6061bc9c3132c11ed98d7510437c52e7a57bec5f43cd"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-57885c/team/independent-team-gate-review.json",
+        "bytes": 159274,
+        "blob": "804ec7abf5a1e22db11a4fc694457df9b7102936",
+        "sha256": "45d84a6af6c2ba1ec5276ba44e49f462f8619ae3ccae0efaedaa8428dbaf08c7"
+      }
+    ],
+    "fullOriginalReporterRecount": [
+      {
+        "counts": {
+          "tests": 119,
+          "suites": 0,
+          "pass": 119,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0,
+          "duration_ms": 9323.497629
+        },
+        "summaryFirstLine": 831,
+        "summaryLastLine": 838
+      },
+      {
+        "counts": {
+          "tests": 7,
+          "suites": 0,
+          "pass": 7,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0,
+          "duration_ms": 222.29307
+        },
+        "summaryFirstLine": 846,
+        "summaryLastLine": 853
+      },
+      {
+        "counts": {
+          "tests": 179,
+          "suites": 0,
+          "pass": 179,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0,
+          "duration_ms": 91180.100707
+        },
+        "summaryFirstLine": 1058,
+        "summaryLastLine": 1065
+      }
+    ],
+    "stderr": "All24 literal source/report rows pass inside the179 count; the private pre-stream zero-observation assertion is inside a passing existing case, not a25th test.",
+    "workspaceTypes": "Original full workspace expansion is present and completes. The separate backend test-project compiler is explicitly invoked in the same set-e step, with no output; its successful exit is established by subsequent commands and terminal step10 success, without inventing a standalone receipt.",
+    "lint": "Original93 unique fast operands and every main/preload/shared/types, renderer, features and MCP typed scope are preserved. Five warning totals5/3338/1416/1483/4 all report0errors; no error annotation/TS diagnostic in the full log.",
+    "toolchain": "Original capturedNode24.21.0/pnpm11.22.0/Electron44.10.1; compiler TypeScript7.0.2 remains separate from TypeScript5.9.3 parser/dependency. No local venue or invocation.",
+    "terminal": "Step7/8/9/10/13/30 SUCCESS, Team job SUCCESS; Host run aggregate FAILURE from other lanes. Historical terminal snapshot is source/event/attempt joined and does not assert current72e6 outcomes.",
+    "coverageLimit": "The incoming baseline packet conservatively does not claim a downloaded TeamZIP/PNG or independent cleanup forensic audit. Our separately frozen native_failures complete TeamR2 is identity-joined; its broader artifact work is not silently attributed to the incoming author."
+  },
+  "sourceAndContext": {
+    "fullFreshSelectedGitPins": 35,
+    "fullUnchangedWorkflowBodies": 42,
+    "fullDependencyContextBodies": 9,
+    "uniqueFreshFullGitBodies": 78,
+    "uniqueFreshGitBytes": 2713070,
+    "commandPreservation": "Original entire8-file helper command, separate install retry file, ten-file Team command,93 fast operands and all source/config/type/lint source identities match immutable578. Only the A test changes at72e6.",
+    "historicalPhasePreparation": "Historical-static-r2 and phase-order-proposal retain their exact e1d inert status and old prerequisite wording. The new67-line current578 root appendix explicitly supersedes that currentness for A selection using the actual578 baseline. No future result is inferred from static prediction.",
+    "independentP11SourceOrderReview": {
+      "path": "/workspace/scratch/82d3f9ba6b85/external-primary-0833/independent-incoming-p11-phase-a-source-review.json",
+      "bytes": 19635,
+      "blob": "13c89fcd420f1ddbbccb13fc44c141520fe51d63",
+      "sha256": "29a4d6231aac527f28431d7a44b290d4d2dfe3815c41ab00ba6ac5a362b99f89"
+    }
+  },
+  "provenanceLimit": {
+    "unavailableReferences": [
+      {
+        "originalReference": {
+          "path": "native-observation-release-integration/expected-source-leaves.json",
+          "gitBlob": "6803ed9e77d012b60fb4dbd4bbf8322e28fae144",
+          "bytes": 2795156,
+          "sha256": "8ee064633fed00d178495ff45fd623bff4d4f89e3d10e77c19f91dcbbe6b061c"
+        },
+        "reachableIn578_72e6_c763": false,
+        "availableInLocalGitODB": false,
+        "role": "Historical scratch provenance reference; not one of indexed13 payloads or a substitute for fresh immutable source/log proof."
+      },
+      {
+        "originalReference": {
+          "path": "native-observation-release-integration/source-publication.json",
+          "gitBlob": "a0eb5cdb7816a08122bbeccab59dc5b68b4c56c2",
+          "bytes": 1403,
+          "sha256": "246a2d8398c371de9adbedd4c7b8b05de681d8cf24d4c5292ce528acec101b4f"
+        },
+        "reachableIn578_72e6_c763": false,
+        "availableInLocalGitODB": false,
+        "role": "Historical scratch provenance reference; not one of indexed13 payloads or a substitute for fresh immutable source/log proof."
+      }
+    ],
+    "interpretation": "These two historical scratch records are named in source-binding but are absent from the13 indexed payloads, queried reachable578/72e6/c763 trees and current local Git ODB. They are not asserted recovered. They do not block preserving the incoming exact source: all35 full immutable source bodies, complete raw log, terminal metadata and independent current Team baseline were checked directly.",
+    "publishedMappedReferences": [
+      {
+        "label": "team-578-original/job-133150851331.log",
+        "publishedPaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/team-baseline/job-133150851331.log"
+        ],
+        "bytes": 2709748,
+        "blob": "f8710649393df89727eedf54ac54e59b61c0ace0",
+        "sha256": "aa428b27236f3867f1cdf13c32494a61ec4fa4ffef02cce2a57794ae2024fa81"
+      },
+      {
+        "label": "team-578-original/source-binding.json",
+        "publishedPaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/team-baseline/source-binding.json"
+        ],
+        "bytes": 23742,
+        "blob": "e9f57a6f00c2ad5e4d27b9bb7c42cd3b66834ad2",
+        "sha256": "0570e0742162ca529bd5661368a3e07c0644936d26558747136a5d8d1d7c6756"
+      },
+      {
+        "label": "team-578-original/audit.json",
+        "publishedPaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/team-baseline/audit.json"
+        ],
+        "bytes": 25144,
+        "blob": "b497c97469838cf44e6ee59379598564fc09b2ba",
+        "sha256": "e85ae390c790412602e6000ca2820f2c1f7bf0e996c9518f1e64e888a627ad13"
+      },
+      {
+        "label": "team-578-original/review.md",
+        "publishedPaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/team-baseline/review.md"
+        ],
+        "bytes": 3124,
+        "blob": "95904a6caa8e48e3b151fac1786775ee343ec3c0",
+        "sha256": "d817d5afb4a2f917b9803a5a1bf3d22f350cc0909a45fd32ae48dd54eef4277f"
+      },
+      {
+        "label": "cohort-578-preservation-0807/snapshot.json",
+        "publishedPaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/team-baseline/terminal-snapshot.json"
+        ],
+        "bytes": 188491,
+        "blob": "2addbb6f2985a52252e21d0861dfe838fcef2c45",
+        "sha256": "02a19d0ca40bc190b2b75348d7b2568319ec6d6f96d0ff150e12654a24df79dd"
+      }
+    ],
+    "newGateOrReconstructedRecordRequired": false
+  },
+  "reconciliation": {
+    "mergeBase": "57885c055a18b27c180c304762643eac632513ad",
+    "soleSharedModifiedPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "oursSourceEquals578BeforeIncomingA": true,
+    "leastChangingIncomingAdoption": "Retain the entire actual c763 Plan as immutable prefix. Preserve the exact incoming12799-byte/67-line root A appendix with its original578/49587 insertion provenance, all14 new docs and both incoming commits. A new governing reconciliation/order R1 must be last.",
+    "sourcePreservation": "The ordinary two-parent source union must retain incoming95b→3c254 A. Other8797 non-documentation leaves are unchanged between578 and72e6. Old uncommitted geometry869 alone must never replace the new A test.",
+    "geometryCompatibility": "Frozen inert1b0ad5b15b056857817858d1e85f6dfe81f6e782 equals whole8694096 geometry test plus unchanged08699c4264-byte suffix, preserving both additions. Selecting that composition requires the separate exact current R1/R2 and root ordering; this history review does not select it.",
+    "historicalUnpublishedCut": "Previous108-file geometry/copy packet and remote010a/948a trees have no commit/ref publication. Keep them unchanged as historical proposals; their statement that A is unselected is not the current72e6 state.",
+    "shortPathPreservation": "All40 shortened paths remain exact in the least-changing union, old long paths remain absent and maximum relative path remains216. Do not replace the current complete tree with the incoming complete tree.",
+    "leastChangingUnionLeavesBeforeNewRecords": 11283,
+    "actualRedStillRequired": "Accepted72e6/retained-A RED must be the three named actual semantic expected-rejection failures with the fourth control and preserved cases accounted for in the full original8 command. Static123=120PASS/3FAIL is a prediction only; setup/syntax/import/marker/timeout/cancel/skip is not that evidence. Assertions after failed rejection stay unexecuted.",
+    "laterBAndC": "Neither B driver fix nor C journey is selected by this review; original separate actualRED/R2→B fullGREEN/R2→C freshselection restrictions remain. Current useful-started originals and ordinary fresh-ref publication controls remain root-owned."
+  },
+  "findings": [],
+  "executionAndMutation": {
+    "projectExecution": false,
+    "apiCalls": false,
+    "ciPolls": false,
+    "fetch": false,
+    "sourceIndexOrRefMutation": false,
+    "frozenFilesChanged": false,
+    "newExclusiveScratchReportsOnly": true
+  },
+  "readerDisclosure": "An initial pure evidence reader stopped before writing a report when it correctly could not resolve the two scratch-only references. The final proof records that real limitation explicitly; no record was invented or candidate/project command run."
+}

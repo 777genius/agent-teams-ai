@@ -1,0 +1,14 @@
+{
+  "file": {
+    "path": "ci-e1d14b9/opencode/extracted/TEST-desktop-backend-3wWrVb/ui-failure.png",
+    "bytes": 98710,
+    "blob": "a6396bee6e2c564b7e5c0acad071cceba4b5e8dd",
+    "sha256": "8a1f3f9af5e2f751b5721d1b35e42d4268cc4067cb0f61f2918135036894f8da"
+  },
+  "width": 1400,
+  "height": 900,
+  "actuallyViewed": true,
+  "viewMethod": "Original full image opened singly with view_image.",
+  "scope": "Team/Tasks overview with green Team launched - lead online and four checked progress steps. Alice and Group chat show TEST boot ready previews. One persisted seed Task appears in board and right sidebar. No opened lead conversation, Logs/Activity stream, scheduled flow or final stopped frame is shown.",
+  "timingLimit": "Post-failure screenshot is not atomic with prior stable/final click coordinates and does not establish the cause or duration of movement."
+}

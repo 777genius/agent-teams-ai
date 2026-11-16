@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "kind": "source-only-bounded-pre-click-geometry-assessment",
+  "reviewer": "/root/native_failures",
+  "createdAtUTC": "2026-11-16T07:07:14.029227+00:00",
+  "status": "READ_ONLY_DESIGN_DIRECTION_NOT_A_CANDIDATE_OR_R1",
+  "originalSource": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "comparisonSource": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "historicalActualR2": {
+    "path": "ci-o-953fd8/collaboration/independent-original-review.json",
+    "bytes": 37428,
+    "blob": "4f88a52726d56304ef7d64f87953b572c6da78a2",
+    "sha256": "9dbd91632634fd9d15c306f40da58923d7137993ba37f20a7e13d1e70aeb0557"
+  },
+  "sourceJoins": {
+    "currentSource": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "old": {
+      "bytes": 25052,
+      "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+      "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7"
+    },
+    "current": {
+      "bytes": 27188,
+      "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+      "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+    },
+    "completeClickExpressionBodyByteEqual": true,
+    "body": {
+      "bytes": 6234,
+      "blob": "f831acb1570515d7f56419c604287198a33e1b5c",
+      "sha256": "255f42a70b7595f09d7a630ccacda9830bfd88c40fab16daad5dd6b56c5912de"
+    }
+  },
+  "supportingPins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "bytes": 33173,
+      "blob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+      "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23",
+      "inSelectedCensus": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "bytes": 16555,
+      "blob": "97e14385a298a38a9b81b8805dc3f6d2da66545c",
+      "sha256": "8340911817fb4228e8d948425a1f85796fba16d244b6763b04e307ed6f290713",
+      "inSelectedCensus": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "bytes": 26258,
+      "blob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+      "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+      "inSelectedCensus": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 103573,
+      "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+      "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921",
+      "inSelectedCensus": true
+    }
+  ],
+  "demonstratedBoundary": "The existing loop accepts two successive equal comparisons before its final ownership/fresh-target comparison. It then fails immediately on a geometry-only difference even though no button press has occurred and unused original observation iterations may remain. The historical number of consumed iterations and actual timing of each read are not retained.",
+  "whyNoCauseClaim": "The first refusal proves the coordinates changed across retained observations; it does not establish the UI update that caused it or that a later observation would have settled in this original run.",
+  "existingBudgetTruth": "Fifteen is the original stability-loop iteration cap and100ms is its sleep per iteration. Each readPoint delegates to the existing30,000ms waitRead; the final evaluate is a direct CDP read. This is not a1,500ms absolute deadline. No overall elapsed duration or unused time can be reconstructed from these records.",
+  "boundedDirection": [
+    "Keep Page.bringToFront and the original single hover outside the finite observation loop; never re-enter clickExpression or replay them after an uncertain response.",
+    "Keep the original full selector/owner-qualified expression, target uniqueness/hit/disabled checks, two consecutive matching-coordinate comparisons, numeric checks, fresh ownership check, final raw target observation, final availability and x/y/tag equality, and the final ownership check immediately before the attempted click record.",
+    "A prospective change could account the post-owner fresh geometry observation inside the same finite observation allowance. Only a coordinate-only difference for an otherwise eligible same-tag target may consume a remaining observation slot and reset stability before any press. Do not add a fresh15-iteration loop or restart any read deadline outside the selected original allowance.",
+    "Unavailable/malformed target, changed tag, ownership/currentness failure and unexpected CDP error continue to refuse immediately at their original guards. Do not broadly catch an AssertionError and call click again.",
+    "Once the complete final equality and ownership guards succeed, perform the original single mousePressed and mouseReleased. A failure or uncertain result after either input never retries.",
+    "The exact candidate must explicitly account every read and100ms sleep so post-owner checks cannot silently add another sampling allowance. Repeated fresh ownership callbacks may change dynamic read cardinality even without another UI action; the callback contains group/process/listener observations and cannot be cached or suppressed."
+  ],
+  "authorityChangeRequired": "This would deliberately amend immediate final-coordinate refusal into bounded pre-input observation. It is not byte-equivalent original acceptance and not authorized merely by preserving the numerical15/100 constants. A new exact prospective R1, fresh current-source composition and independent R2 are required before application; no candidate is supplied by this report.",
+  "ownershipLimits": "Both original ownership checks around the final read must remain fresh and error-preserving. There remains a non-atomic interval between renderer observations and physical input; this design cannot promise atomic DOM/OS ownership or historical success.",
+  "existingFiniteVenue": {
+    "testPath": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "existingCases": [
+      "original desktop click waits for stable target geometry, without repeating input",
+      "original desktop click refuses a constantly moving target before dispatch",
+      "original owner-qualified click rereads its full expression through unavailability at unchanged coordinates"
+    ],
+    "actualOriginalOWholeCommand": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "actualOriginalOResult": "115PASS for whole eight-file command; no added prospective regression was executed.",
+    "possibleMeaningfulRegression": "Use the actual exported createDesktopUiControls with the existing finite CDP/owner callbacks. Deliver stable values, then a coordinate change only across the real post-owner final-read window, then settlement within the same counted allowance. Old source must refuse before press; a future candidate must admit only its one original press/release after the complete guards. Additional controls should preserve persistent movement refusal, exhausted allowance, ownership throw identity, unavailable/changed-tag refusal and no replay after an input response failure. This is a test-plan direction only, not an executed RED or a test-only file."
+  },
+  "noApplicationOrExecution": true,
+  "noNewBusinessActionOrNativeSignal": true,
+  "noBudgetIncreaseSelected": true,
+  "noP08P09OrOtherLaneCauseTransfer": true,
+  "findings": []
+}

@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "createdAtUTC": "2026-11-16T06:03:25.509446+00:00",
+  "sourceHead": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "runId": 43807841778,
+  "jobId": 133102584995,
+  "originalOutcome": "FAIL",
+  "receiptStatus": "INCOMPLETE",
+  "payloadCount": 10,
+  "payloads": [
+    {
+      "path": "ci-o-953fd8/collaboration/original-job-133102584995-response.json",
+      "bytes": 194426,
+      "blob": "248f6e85acc6a34a1f201348fa9f7521c9a82eb1",
+      "sha256": "6572c362421748f6a3593a14c98a6550c4d067ff5956804586040a09236066f6"
+    },
+    {
+      "path": "ci-o-953fd8/collaboration/job-133102584995.log",
+      "bytes": 184493,
+      "blob": "1f74d35bb4e85d04dafbf235c4fe87ddf8bb15bb",
+      "sha256": "2a6773a5d6c757f3ec2dd6b4092f6fd46fe7c850dbc0593a600743e9ea047c80"
+    },
+    {
+      "path": "ci-o-953fd8/collaboration/artifact-14200807020.zip",
+      "bytes": 698291,
+      "blob": "13ed6559fc7191a08e510a1bb4c0f705b68c9c20",
+      "sha256": "1d2e1cb5f82d2f1931ff9a0b2413ceab125bba896210fe9aa0bd337d319a12f1"
+    },
+    {
+      "path": "ci-o-953fd8/collaboration/archive-retention.json",
+      "bytes": 4968,
+      "blob": "480c51d03cc031c240ffe9abbc7ce6e6e4420532",
+      "sha256": "28e20594f101a52789419469b7e86c209c9d224ebe7810cff89f36d12cfba8d6"
+    },
+    {
+      "path": "ci-o-953fd8/collaboration/source-pin-audit.json",
+      "bytes": 456971,
+      "blob": "5f9f1328caefdb7dbb33394149cd7222c3fa79e5",
+      "sha256": "43ac66fdad76f3e8f05a91b520256315e49e1dab932eaba84320535aafe696a2"
+    },
+    {
+      "path": "ci-o-953fd8/initial-runs-response.json",
+      "bytes": 810813,
+      "blob": "7be01127e2aaeb4eb246c83194b652461a017ab8",
+      "sha256": "2e6f4ac1538bc0cc96285a4ee4b76590ce83aee414dcdeb4c2494ce394ce84c0"
+    },
+    {
+      "path": "ci-o-953fd8/owned-api-jobs-0602-terminal.json",
+      "bytes": 74308,
+      "blob": "cf79db3bd08de6002f03660caef938d5f6c1d0d4",
+      "sha256": "6bcbba9a82e1fab6639a545adbca1b7ef6142f3bfdf64df8c8234a9bef9ea563"
+    },
+    {
+      "path": "ci-o-953fd8/official-host-artifacts-0546.json",
+      "bytes": 9457,
+      "blob": "f81a35a993c9ae46a939b3e247cf31d37e8d9edb",
+      "sha256": "d1622448afde198f740b1e83772e6f7aa6ce7c0657dad72b4fe864536b561a6a"
+    },
+    {
+      "path": "ci-o-953fd8/collaboration/audit.json",
+      "bytes": 54770,
+      "blob": "d040f1e03d896ecb08cd6e108e2d52356568424d",
+      "sha256": "258096be36597042398cf2e8671c4b5262eaf301925d9be3179eacbc7cc8b7d7"
+    },
+    {
+      "path": "ci-o-953fd8/collaboration/Plan29-appendix.md",
+      "bytes": 5328,
+      "blob": "0f9843a76623d934c4d624f65429c53979ba4a1b",
+      "sha256": "55856bff7989814e2429accd6df618511fa45f8509b4731b1731d4c5d4fe8368"
+    }
+  ],
+  "archiveMembers": 16,
+  "pngCount": 1,
+  "actuallyViewedPngs": [
+    "ci-o-953fd8/collaboration/extracted/TEST-desktop-backend-B318HS/ui-failure.png"
+  ],
+  "selectedSourceCount": 1757,
+  "fullNativeOrReleaseQualification": false,
+  "independentReview": "pending; authored packet only"
+}

@@ -1,0 +1,23 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "content": "{\"sha\":\"c76371db7b1be4bd2381607b1a8bab71ae2a43fc\",\"node_id\":\"C_kwDORVTEtNoAKGM3NjM3MWRiN2IxYmU0YmQyMzgxNjA3YjFhOGJhYjcxYWUyYTQzZmM\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/c76371db7b1be4bd2381607b1a8bab71ae2a43fc\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/c76371db7b1be4bd2381607b1a8bab71ae2a43fc\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T08:02:26Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T08:02:26Z\"},\"tree\":{\"sha\":\"c70232e34d2759ce287e2f224073205dcf9c18db\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/c70232e34d2759ce287e2f224073205dcf9c18db\"},\"message\":\"merge(migration): adopt reviewed Release prefix and Main diagnostic\\n\\nPreserve both complete histories and all verified documentation. Select only the exact incoming TEST header, broker Release hook and closed Main refusal diagnostic; keep every other source leaf unchanged and defer the separate Darwin, geometry and Phase A proposals.\",\"parents\":[{\"sha\":\"174e27e0178025f88608650347900daac49dcc58\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/174e27e0178025f88608650347900daac49dcc58\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/174e27e0178025f88608650347900daac49dcc58\"},{\"sha\":\"57885c055a18b27c180c304762643eac632513ad\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/57885c055a18b27c180c304762643eac632513ad\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/57885c055a18b27c180c304762643eac632513ad\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+    "title": "c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+    "modified_date": null,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+    "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+    "display_title": "c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+    "structuredContent": {
+      "title": "c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+      "content": "{\"sha\":\"c76371db7b1be4bd2381607b1a8bab71ae2a43fc\",\"node_id\":\"C_kwDORVTEtNoAKGM3NjM3MWRiN2IxYmU0YmQyMzgxNjA3YjFhOGJhYjcxYWUyYTQzZmM\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/c76371db7b1be4bd2381607b1a8bab71ae2a43fc\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/c76371db7b1be4bd2381607b1a8bab71ae2a43fc\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T08:02:26Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T08:02:26Z\"},\"tree\":{\"sha\":\"c70232e34d2759ce287e2f224073205dcf9c18db\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/c70232e34d2759ce287e2f224073205dcf9c18db\"},\"message\":\"merge(migration): adopt reviewed Release prefix and Main diagnostic\\n\\nPreserve both complete histories and all verified documentation. Select only the exact incoming TEST header, broker Release hook and closed Main refusal diagnostic; keep every other source leaf unchanged and defer the separate Darwin, geometry and Phase A proposals.\",\"parents\":[{\"sha\":\"174e27e0178025f88608650347900daac49dcc58\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/174e27e0178025f88608650347900daac49dcc58\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/174e27e0178025f88608650347900daac49dcc58\"},{\"sha\":\"57885c055a18b27c180c304762643eac632513ad\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/57885c055a18b27c180c304762643eac632513ad\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/57885c055a18b27c180c304762643eac632513ad\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+      "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/c76371db7b1be4bd2381607b1a8bab71ae2a43fc"
+    }
+  },
+  "isError": false
+}
+

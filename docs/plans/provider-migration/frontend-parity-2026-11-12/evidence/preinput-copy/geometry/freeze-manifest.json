@@ -1,0 +1,66 @@
+{
+  "kind": "scratch-only-geometry-proposal-freeze",
+  "sourceHead": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+  "status": "PROSPECTIVE_UNAPPLIED_UNEXECUTED_PENDING_INDEPENDENT_R2_AND_ROOT_SELECTION",
+  "files": [
+    {
+      "path": "R1-appendix.md",
+      "bytes": 20857,
+      "blob": "9bb3777ca076dea9dd60f76d9759dc1815e0dde0",
+      "sha256": "7d07956cc3f0d6929c2d3fd5907d121254c073294dfcae4573e37763b4b4510d"
+    },
+    {
+      "path": "candidate/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 118885,
+      "blob": "8694096d0aafcd7130589d97f12ad5a4fd65a616",
+      "sha256": "9411c8171255880a187382e5ceef1c44e74172fe4c9eb6c357b3654388cceb70"
+    },
+    {
+      "path": "candidate/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 28094,
+      "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+      "sha256": "67a1e7413eff11ddc087f35a64cd3c8b242c061988b2fbd661497a9f6b5dfd11"
+    },
+    {
+      "path": "candidate-metadata.json",
+      "bytes": 4247,
+      "blob": "18aaa5d9ed647b952dd8a1926e58048ad0c1a7bf",
+      "sha256": "0f16692b1f761eb4792eeb48cd2af0a53fe3c8baf673ff0fe6018a200f027a79"
+    },
+    {
+      "path": "candidate.patch",
+      "bytes": 12271,
+      "blob": "d58db63706739f3d78dde1ec175881dce0f800b1",
+      "sha256": "ad63f15b0fd0f61a8fc3117e906a1162f4203472e57e4a62b5662844c86fb545"
+    },
+    {
+      "path": "preimage/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 111672,
+      "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+      "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445"
+    },
+    {
+      "path": "preimage/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 27188,
+      "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+      "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+    },
+    {
+      "path": "source-and-venue-pins.json",
+      "bytes": 16833,
+      "blob": "6c9a88c8cd1496b32130b3df681db7c8f6e4291f",
+      "sha256": "7eddd4b03e6df71579425ad38812b927ffbbc18d1996533de5d053c6b8e0f0dd"
+    },
+    {
+      "path": "source-evidence-analysis.json",
+      "bytes": 22170,
+      "blob": "b9f0ed4ae75501f21878f40fd6ee319c5be7b2e2",
+      "sha256": "c88e32622dce4d4a4b018c772ed334db2c226bbb56a8d665e4ece6cf7816942f"
+    }
+  ],
+  "fileCount": 9,
+  "bytes": 362217,
+  "externalPrimary578NotComposed": true,
+  "projectExecutionPerformed": false,
+  "gitSourceOrRefMutationPerformed": false
+}

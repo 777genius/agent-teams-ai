@@ -1,0 +1,85 @@
+{
+  "kind": "prospective selected two-existing-file copy correction; not applied",
+  "createdAtUTC": "2026-11-16T08:08:09.490274+00:00",
+  "sourceHead": "c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+  "equivalentProductionBase": "57885c055a18b27c180c304762643eac632513ad",
+  "paths": [
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "preimage": {
+        "bytes": 6481,
+        "lines": 161,
+        "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+        "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+      },
+      "candidate": {
+        "bytes": 6382,
+        "lines": 161,
+        "blob": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+        "sha256": "47c561887a1ea9a499f131a073c805be07a9a17343c1115b32ec173dcdf894c9"
+      },
+      "addedLines": 3,
+      "removedLines": 3
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "preimage": {
+        "bytes": 180091,
+        "lines": 5678,
+        "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+      },
+      "candidate": {
+        "bytes": 180058,
+        "lines": 5678,
+        "blob": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+        "sha256": "70597b6bb603515e31ec1239eb6543cc9f1fb18beb20ac20c6a357ee03f748ed"
+      },
+      "addedLines": 1,
+      "removedLines": 1
+    }
+  ],
+  "patch": {
+    "bytes": 2277,
+    "lines": 33,
+    "blob": "99a267cc38ccb0fa944681a74eea5049f0b48fc2",
+    "sha256": "5ca43aedecbe843d3179cb87d9e7986411c699f0b839888f59f27b0dcba8027b"
+  },
+  "unchangedFormatterTest": {
+    "path": "test/renderer/features/runtime-provider-management/RuntimeProviderConnectErrorPresentation.test.ts",
+    "bytes": 720,
+    "lines": 15,
+    "blob": "fa761c43af6d414b0f2be0338869891dc059f640",
+    "sha256": "7591962fa6f0b58294543c674ab2fd6a590b406159a9cb8ed7b8b7e8f6be9440"
+  },
+  "sourceVenue": {
+    "bytes": 10159,
+    "lines": 237,
+    "blob": "055939127cca2b07091aa9a1d8fd28fec3ff7ba4",
+    "sha256": "98a948fa261ce682a5da1894bccaab6c0ee9026e8fb77aae95404da8b6d46fed"
+  },
+  "rebind": {
+    "bytes": 1763,
+    "lines": 38,
+    "blob": "2beba3f76edf6243aed5b9c908cfb32f2283e494",
+    "sha256": "a1e1ceb845bbbb8735066c5628a7b0e656fa9dd6ba55dae484915061c746a1b6"
+  },
+  "supersededUnexecutedV1": {
+    "R1": {
+      "bytes": 12739,
+      "lines": 58,
+      "blob": "e47a185b81458517b93e9eb7ab928c6fbb49f582",
+      "sha256": "c95602e93f7196371f472820bce00447036bb57379450ea0a90476bf25e1c0cf"
+    },
+    "metadata": {
+      "bytes": 3745,
+      "lines": 91,
+      "blob": "5aeaa6f6e115826cab983513a61dffc6c9405997",
+      "sha256": "cba2d4a7e4cc1fe517d70a4dcfd12ecf63f72f28562e493c6febbac4dce17f49"
+    },
+    "unselectedThirdTestCandidate": "1542ebe14a303845d67a48f601b25941994e8368",
+    "noActualCandidateExecution": true
+  },
+  "selectedExecutionPolicy": "No new tests or intentional RED phase; direct formatter+necessary existing hook expectation correction after independent R1/review/publication; original CI-only complete existing validation on resulting source.",
+  "forbidden": "No backend/API/storage/authority/retry/budget/cleanup/workflow/roster change."
+}

@@ -1,0 +1,806 @@
+{
+  "schema": "E2-immutable-blob-upload-receipts/v1",
+  "expectedNewFiles": 42,
+  "receipts": [
+    {
+      "index": 46,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/previous-darwin-cut/independent-prepublication-review.json",
+      "expectedBlob": "f89c27d816102a716baae2ffdd3c7e28c8757560",
+      "bytes": 22960,
+      "sha256": "b6c90f6bd7a506974d7b18bf6e19e5a6156030e59e17716446dc81bf0551c5c1",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "f89c27d816102a716baae2ffdd3c7e28c8757560"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 45,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/previous-darwin-cut/root-prepublication-byte-review.json",
+      "expectedBlob": "4445f32dafdcb0f24581a1ec8acebef6bac12f8f",
+      "bytes": 18250,
+      "sha256": "2090462030781723f8cd089bec9a8c772d244bfa5f375972780cb31dad5e5fff",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "4445f32dafdcb0f24581a1ec8acebef6bac12f8f"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 44,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/previous-darwin-cut/upload-manifest.json",
+      "expectedBlob": "de9176538dd197596fe581bafc64a30f3caf8404",
+      "bytes": 113825,
+      "sha256": "5bca086d393658f57332e270a78d436b575ce43b2b600da092f913995400b300",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "de9176538dd197596fe581bafc64a30f3caf8404"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 47,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/previous-darwin-cut/independent-byte-tree-proof.json",
+      "expectedBlob": "be2942e5cfc8972db7e5def7700773421c8df833",
+      "bytes": 79742,
+      "sha256": "0e242b7ab7144b727e01eedc1411813ecd8e3d48c04df7ebcf09cdecd629296c",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "be2942e5cfc8972db7e5def7700773421c8df833"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 49,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/previous-darwin-cut/created-source-tree-response.json",
+      "expectedBlob": "440a9daf867e549877b69444075d4777405da990",
+      "bytes": 317,
+      "sha256": "742e26d51d0cf18e5ae8e3054e6cb0ec75de45143dcfec52be1b3f2e47606245",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "440a9daf867e549877b69444075d4777405da990"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 48,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/previous-darwin-cut/created-docs-tree-response.json",
+      "expectedBlob": "e163e1577899f6545e6793aa8de831e6ce0d8f5a",
+      "bytes": 318,
+      "sha256": "56fd4bae71601fe2de3f48370fe8b5e89cc8e18df84c5186a018a00b20e8ea80",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "e163e1577899f6545e6793aa8de831e6ce0d8f5a"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 86,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/reconciliation/incoming-files.json",
+      "expectedBlob": "678902e8e58dad7217e4cd03a0c95f736f529959",
+      "bytes": 13960,
+      "sha256": "b0b1fdc45b3477095967c9e7812a95cded5a0f2e1696f1a1f77f30e0bd26919f",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "678902e8e58dad7217e4cd03a0c95f736f529959"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 87,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/reconciliation/incoming-raw-delta.txt",
+      "expectedBlob": "dae82886b929ff18d9b7aa84c918078733e4f9c3",
+      "bytes": 8610,
+      "sha256": "72d4da5daa1a5de0ef50c831d03299cbc070a046b9f62a9aed283124064f14ad",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "dae82886b929ff18d9b7aa84c918078733e4f9c3"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 84,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/reconciliation/initial-refs.json",
+      "expectedBlob": "9e9d0ba78317895d3d3959bd2cb53ac2c94bce02",
+      "bytes": 175385,
+      "sha256": "2bc016ae29ac09e20924029980ab9b5c0f86b349c68f297c9e2dcf90828cc315",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "9e9d0ba78317895d3d3959bd2cb53ac2c94bce02"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 88,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/reconciliation/incoming-three-source.patch",
+      "expectedBlob": "a82bc4c710ad86b87bf75d2e282dc45913c97a87",
+      "bytes": 5556,
+      "sha256": "ce56f82e847b61224fa4c8daf96407139d46c90f34f5bcd9351974e2a5076ace",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "a82bc4c710ad86b87bf75d2e282dc45913c97a87"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 89,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/reconciliation/incoming-plan-suffix.md",
+      "expectedBlob": "c39f65dccc88d8f84a4eb8b4581643f050db9552",
+      "bytes": 26985,
+      "sha256": "41423291c0c2b190a536a42f2a36aa4e2e0763ce3dee034240199e30ec7e251d",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "c39f65dccc88d8f84a4eb8b4581643f050db9552"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 90,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/reconciliation/root-Main-diagnostic-review.json",
+      "expectedBlob": "8f4aa4e8f3e62c64290274fd7b7c2de968e2c705",
+      "bytes": 24250,
+      "sha256": "1b97d248d4719ccc56af69983a0cca02e7750bda1c68c816392c099f8f0e8dc0",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "8f4aa4e8f3e62c64290274fd7b7c2de968e2c705"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 92,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/reconciliation/independent-cpp-review.json",
+      "expectedBlob": "699267744e1b2d4f024cb51ca8feeb76328bb7f1",
+      "bytes": 18363,
+      "sha256": "c1313c4a07de378be26f7267e9185117b0707c13a0506a4551c2e63ed43bbd10",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "699267744e1b2d4f024cb51ca8feeb76328bb7f1"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 91,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/reconciliation/independent-history-plan-evidence-review.json",
+      "expectedBlob": "261cc6bfd61c266aab61f51da86f8401c9025d38",
+      "bytes": 73886,
+      "sha256": "86e18bc404b7179762c1f95d69e3a8064320cdc974222611072f090164c4b1cd",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "261cc6bfd61c266aab61f51da86f8401c9025d38"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 93,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/reconciliation/independent-cpp-byte-proof.json",
+      "expectedBlob": "362c9ec1912349f43febf83d105afef5565d587f",
+      "bytes": 29315,
+      "sha256": "994459769f7dd65fc2a630d0e7186476d98a4e0541a86a4218df426e5ee1f1f6",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "362c9ec1912349f43febf83d105afef5565d587f"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 94,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/reconciliation/R1-root-ordered-reconciliation.md",
+      "expectedBlob": "93cc40b13741e7a37d2fa20c9e9cd98b30a74515",
+      "bytes": 16653,
+      "sha256": "fb4b47038fa18597bec549ff86a8915382414a2b6f61c7b34fa6966abda12cb3",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "93cc40b13741e7a37d2fa20c9e9cd98b30a74515"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 96,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-terminal/native-process-final.json",
+      "expectedBlob": "ebe3d80a5a97bf286a20306ec0140bc1446cbe40",
+      "bytes": 22873,
+      "sha256": "b006fa5171f4fe762cf1215f951f4fd02230c53d14ead10273e6775942d520dd",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "ebe3d80a5a97bf286a20306ec0140bc1446cbe40"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 95,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-terminal/native-terminal-addendum.json",
+      "expectedBlob": "5928613eb8d9fbe2431b00669af8f3605c0aed7f",
+      "bytes": 61885,
+      "sha256": "2f9491cdfe17c541284eb9ee76a8e7da99dc6b1aa30223ca5c6bfb0ab213c63d",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "5928613eb8d9fbe2431b00669af8f3605c0aed7f"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 97,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-terminal/native-v2-final.json",
+      "expectedBlob": "8c09f251e241d7b0ade5afd51ec4713571798e16",
+      "bytes": 29864,
+      "sha256": "bd1e174db5ca1e6734058e95198877882ae6229c847108ff8325a17ca892dd32",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "8c09f251e241d7b0ade5afd51ec4713571798e16"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 98,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-terminal/ui-terminal-checkpoint.json",
+      "expectedBlob": "4ab99d0f0854d1e4b368ef706c56fb1d9303b6b1",
+      "bytes": 5378,
+      "sha256": "18734b0ca6696becf97f430d74165d5a7262d32cbb1189b1473770c477dac33a",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "4ab99d0f0854d1e4b368ef706c56fb1d9303b6b1"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 99,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-terminal/ui-final-jobs.json",
+      "expectedBlob": "b342c62d6806d2ec685da5b6cc08ed6910829552",
+      "bytes": 64602,
+      "sha256": "a4ff073cfe3cfb0c02f45af0a10480ebfc8b2220674269280f15f47ccc8c86f5",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "b342c62d6806d2ec685da5b6cc08ed6910829552"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 100,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-terminal/general-final-jobs.json",
+      "expectedBlob": "979525195c1412f067b4b1457c69ad29fdda36de",
+      "bytes": 5038,
+      "sha256": "4833f5bc4856428c5c1dbcb2dcaaa0c3c3ded60d70e3b2428577ff6330d77ddc",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "979525195c1412f067b4b1457c69ad29fdda36de"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 85,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/reconciliation/initial-commit-runs-and-fetch.json",
+      "expectedBlob": "317b6465086c4b596dae2300ba2864826850b10b",
+      "bytes": 814752,
+      "sha256": "d01d7a3a646d3865d675feced2d6c997c90a385d28386d7c64910c215006d581",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "317b6465086c4b596dae2300ba2864826850b10b"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 101,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-installer/original-job-133120928959-response.json",
+      "expectedBlob": "bb286bb8294fe952f27c2c2384015c23d552583a",
+      "bytes": 187694,
+      "sha256": "aa74feec812d89b68cf1f1e7836f2d6a219de87774f020c412906beb8452c447",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "bb286bb8294fe952f27c2c2384015c23d552583a"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 102,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-installer/job-133120928959.log",
+      "expectedBlob": "565ec78fd2fefcc147dc22082cb2788025252478",
+      "bytes": 177873,
+      "sha256": "1886ac9743d34ea3fce9e8e9d000a1a84b2e2432ec2e2e85fe64ecc40fe210e6",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "565ec78fd2fefcc147dc22082cb2788025252478"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 104,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-installer/archive-retention.json",
+      "expectedBlob": "77de961fd868496226ec2db33194449081a96601",
+      "bytes": 11436,
+      "sha256": "342facae4b127b0e55b55f258a74de999625d65d7c93a06d6c2f66a0ec727f8a",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "77de961fd868496226ec2db33194449081a96601"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 106,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-installer/visual-review.json",
+      "expectedBlob": "e082ce6852f0477ae61c29487b4336f091d51318",
+      "bytes": 6391,
+      "sha256": "3264546820ac1e7f92e5999514d3a5cbf4913fc52ad019cb63b5cc7f88565696",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "e082ce6852f0477ae61c29487b4336f091d51318"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 107,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-installer/owned-jobs-0643.json",
+      "expectedBlob": "b29f9985ca2b699bf5a90c70f4731863499aeccc",
+      "bytes": 24262,
+      "sha256": "5c3bf79b0669ca6580c073c8b4b0e4d9d1f9a934e776cb4066b1ec97acdc8f35",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "b29f9985ca2b699bf5a90c70f4731863499aeccc"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 108,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-installer/official-host-artifacts-0638.json",
+      "expectedBlob": "c7dedc60b6d0bbefdf192dce529835bd1706ae07",
+      "bytes": 1103,
+      "sha256": "7e0ea15923fcf1f20fac102d89ee3f37e4689fb06b5d56acf37f315d4d7d4fbf",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "c7dedc60b6d0bbefdf192dce529835bd1706ae07"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 110,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-installer/Plan29-appendix-v2.md",
+      "expectedBlob": "865f74f3fbfce9b5a0a6d6f7d51844aad587f44d",
+      "bytes": 9773,
+      "sha256": "c21ed910c7678900f4a1091b266aeb84a07ed2450eeb231299fac908e6d32a89",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "865f74f3fbfce9b5a0a6d6f7d51844aad587f44d"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 109,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-installer/audit-v2.json",
+      "expectedBlob": "76667fab95b24ae45ff2273426f025bb5694463f",
+      "bytes": 165272,
+      "sha256": "e7c3c61b4f003c4364b6ff7179d883f27b1eac14148161299158415ee340bc91",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "76667fab95b24ae45ff2273426f025bb5694463f"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 112,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-installer/Plan29-appendix.md",
+      "expectedBlob": "12c17a1f0eef3570114e30e45fdca55627dcac08",
+      "bytes": 9548,
+      "sha256": "148c68d4cce27f800bfefa709aefce655321f7dfec90713b7d217ecc532e81c3",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "12c17a1f0eef3570114e30e45fdca55627dcac08"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 105,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-installer/source-pin-audit.json",
+      "expectedBlob": "d655fee7b64eb88e94c865aa0262aed405bd6b6e",
+      "bytes": 527764,
+      "sha256": "dfd3edbda78177da4df12be841499500e59f10cca53882cac18c1e93dc2dc2bd",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "d655fee7b64eb88e94c865aa0262aed405bd6b6e"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 114,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-installer/checkpoint-v2.json",
+      "expectedBlob": "244c31785c26668393f3d7e897558297611af960",
+      "bytes": 5957,
+      "sha256": "46e70e41cf31d40014bd921b9c0d7f1ee6db81e2be59fd501db9c8ba80b8d2b3",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "244c31785c26668393f3d7e897558297611af960"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 113,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-installer/checkpoint.json",
+      "expectedBlob": "dbd2203b9981c3aed135fcdecfc04e11f1e729d8",
+      "bytes": 4460,
+      "sha256": "0961cdce26690a5903005c94ba8c7063f58541c3961a940e4dd7bc48d3c6367d",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "dbd2203b9981c3aed135fcdecfc04e11f1e729d8"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 111,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-installer/audit.json",
+      "expectedBlob": "7e515b77550733513670ea2ac591c35b3f2ea68f",
+      "bytes": 164534,
+      "sha256": "c5758f8bfa33512c150a0dde4fe41fbd0c5c2b3770c0fa4ad38a5296daa0c011",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "7e515b77550733513670ea2ac591c35b3f2ea68f"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 117,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-installer/independent-installer-semantic-joins.json",
+      "expectedBlob": "42103f8f769c68d81073c7512ff914986f73e11b",
+      "bytes": 21981,
+      "sha256": "008c52fe7b15528aa44a96142aecfed894997b397f5f56c66687daeb7b540449",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "42103f8f769c68d81073c7512ff914986f73e11b"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 116,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-installer/independent-installer-byte-source-foundation.json",
+      "expectedBlob": "b3e6ab533db0409134e8d3c9f78296928ba36198",
+      "bytes": 43504,
+      "sha256": "033587c8144e49653dccfdfb52d5b82e1704ac73247d35eef5c6293854a6ed60",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "b3e6ab533db0409134e8d3c9f78296928ba36198"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 115,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-installer/independent-installer-review.json",
+      "expectedBlob": "8c02f4aae044c78d88a47e6d0baa332181f639e1",
+      "bytes": 58675,
+      "sha256": "1839cc5efb0bffa102d49139ff3f6b2055a196db721862ea11ae65a0d00ef246",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "8c02f4aae044c78d88a47e6d0baa332181f639e1"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 119,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/publication-index.json",
+      "expectedBlob": "f753fd78ad893dc401c82625ebcf84609abcbd54",
+      "bytes": 132115,
+      "sha256": "96070f87e866110f8e178142986a96a734fa3374505f576bc60797e8457f14ff",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "f753fd78ad893dc401c82625ebcf84609abcbd54"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 103,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-installer/artifact-14203081582.zip",
+      "expectedBlob": "28d8fe149dd76de01d8c7d1f30e0f9a5a187acf9",
+      "bytes": 1146605,
+      "sha256": "54f412ddcedf16276dd055b63a3f7be7c4d3e9f43371422e5082c11ea8118be1",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "28d8fe149dd76de01d8c7d1f30e0f9a5a187acf9"
+        },
+        "isError": false
+      }
+    },
+    {
+      "index": 118,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "expectedBlob": "d5cc38cc212f9757e841decd86db35fd322e358b",
+      "bytes": 2038188,
+      "sha256": "e4f671d3dcf12d23564cf2c5317a2cb702638eb3c68ad803c3b52e94feec6687",
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "sha": "d5cc38cc212f9757e841decd86db35fd322e358b"
+        },
+        "isError": false
+      }
+    }
+  ],
+  "failures": []
+}
+

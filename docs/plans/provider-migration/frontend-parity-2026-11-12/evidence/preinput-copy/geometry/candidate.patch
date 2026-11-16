@@ -1,0 +1,209 @@
+--- a/scripts/legacy-agent-host/desktop-ui-controls.ts
++++ b/scripts/legacy-agent-host/desktop-ui-controls.ts
+@@ -302,27 +302,44 @@
+     point = await readPoint(label + ' after pointer enter');
+     // Async Host hydration can shift the DOM after hover. Check the original
+     // target is stable before ONE physical click, never replay an uncertain click.
+-    let stableSamples = 0;
+-    for (let sample = 0; sample < 15 && stableSamples < 2; sample++) {
++    // Share the original 15 stability reads plus one final read; reserve the
++    // final slot, and never replenish this allowance after a coordinate shift.
++    const observationLimit = 16;
++    let observations = 0, stableSamples = 0, confirmed = false;
++    while (observations < observationLimit - 1) {
+       await new Promise<void>((done) => setTimeout(done, 100));
++      observations++;
+       const next = await readPoint(label + ' stable target');
+       stableSamples =
+         next.x === point.x && next.y === point.y && next.tag === point.tag
+           ? stableSamples + 1
+           : 0;
+       point = next;
++      if (stableSamples !== 2) continue;
++      assert.equal(typeof point.x, 'number');
++      assert.equal(typeof point.y, 'number');
++      assert.ok(Number.isFinite(point.x) && Number.isFinite(point.y), 'Original UI target coordinates must be finite');
++      observations++;
++      options.assertOwnedRenderer();
++      const finalPoint = record(await cdp.evaluate(expression));
++      assert.notEqual(finalPoint.unavailableTarget, true, 'Original UI target unavailable after ownership check');
++      if (observations + 3 <= observationLimit && finalPoint.tag === point.tag &&
++          Number.isFinite(finalPoint.x) && Number.isFinite(finalPoint.y) &&
++          (finalPoint.x !== point.x || finalPoint.y !== point.y)) {
++        // No press occurred. Require two new equal comparisons and another
++        // fresh post-owner read, without repeating the original hover.
++        point = finalPoint; stableSamples = 0;
++        continue;
++      }
++      assert.deepEqual(
++        [finalPoint.x, finalPoint.y, finalPoint.tag],
++        [point.x, point.y, point.tag],
++        'Original UI target moved after ownership check'
++      );
++      confirmed = true;
++      break;
+     }
+-    assert.ok(stableSamples === 2, 'Original UI target did not settle before one click');
+-    assert.equal(typeof point.x, 'number');
+-    assert.equal(typeof point.y, 'number');
+-    options.assertOwnedRenderer();
+-    const finalPoint = record(await cdp.evaluate(expression));
+-    assert.notEqual(finalPoint.unavailableTarget, true, 'Original UI target unavailable after ownership check');
+-    assert.deepEqual(
+-      [finalPoint.x, finalPoint.y, finalPoint.tag],
+-      [point.x, point.y, point.tag],
+-      'Original UI target moved after ownership check'
+-    );
++    assert.ok(confirmed, 'Original UI target did not settle before one click');
+     options.assertOwnedRenderer();
+     step({
+       action: 'mouseClick',
+--- a/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
++++ b/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
+@@ -678,6 +678,7 @@
+   const ui = createDesktopUiControls(cdp, { assertOwnedRenderer() {}, step() {} });
+   await assert.rejects(ui.click('#TEST-original-toggle', 'TEST moving original toggle'), /did not settle before one click/);
+   assert.deepEqual(dispatched, ['mouseMoved'], 'no physical click after unstable ownership');
++  assert.equal(reads, 17, 'two initial reads plus at most fifteen unstable observations');
+ });
+ 
+ test('original owner-qualified click rereads its full expression through unavailability at unchanged coordinates', { timeout: 5000 }, async () => {
+@@ -1189,9 +1190,11 @@
+   assert.equal(JSON.stringify(bounded).includes(secret), false);
+ });
+ 
+-for (const [change, replacement] of [
+-  ['unavailable', { unavailableTarget: true, matches: 1 }],
+-  ['moved', { x: 100, y: 200, tag: 'BUTTON' }],
++for (const [change, replacement, refusal] of [
++  ['unavailable', { unavailableTarget: true, matches: 1 }, 'unavailable'],
++  ['retagged', { x: 100, y: 200, tag: 'DIV' }, 'moved'],
++  ['non-numeric', { x: 100, y: '200', tag: 'BUTTON' }, 'moved'],
++  ['non-finite', { x: 100, y: Number.POSITIVE_INFINITY, tag: 'BUTTON' }, 'moved'],
+ ] as const) {
+   test(`original desktop click refuses a target ${change} during the final ownership check`, { timeout: 5000 }, async () => {
+     const expression = 'TEST_originalOwnerAndHitTestedTarget()';
+@@ -1212,7 +1215,7 @@
+     }, step() {} });
+     await assert.rejects(
+       ui.clickExpression(expression, 'TEST original final target'),
+-      new RegExp(`Original UI target ${change} after ownership check`)
++      new RegExp(`Original UI target ${refusal} after ownership check`)
+     );
+     assert.equal(guardChanges, 1, 'the original final ownership guard changes the target once');
+     assert.deepEqual(expressions, Array.from({ length: 5 }, () => expression),
+@@ -1894,3 +1897,114 @@
+   assert.equal(bounded.rows().length, 96); assert.equal(bounded.rows('__TEST_desktopDragEvents').length, 32);
+   assert.deepEqual(bounded.calls, { send: 1, evaluate: 2, stateReads: 0, microtasks: 135, timers: 135, business: 0 });
+ });
++
++
++test('original desktop click restabilizes a coordinate-only shift before its one physical click', { timeout: 5000 }, async () => {
++  const expression = 'TEST_originalOwnerAndHitTestedTarget()';
++  const original = { x: 100, y: 100, tag: 'BUTTON' }, shifted = { x: 100, y: 200, tag: 'BUTTON' };
++  const expressions: string[] = [], observed: unknown[] = [], ownershipReads: number[] = [], trace: string[] = [];
++  const dispatched: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [];
++  let changed = false, frontCalls = 0;
++  const ui = createDesktopUiControls({
++    async evaluate(actual: string) {
++      assert.equal(trace.at(-1), 'owner', 'every complete target observation follows its fresh owner check');
++      expressions.push(actual); trace.push('read');
++      const point = changed ? shifted : original; observed.push(point); return point;
++    },
++    async send(method: string, params: Record<string, unknown> = {}) {
++      if (method === 'Page.bringToFront') { frontCalls++; return {}; }
++      assert.equal(method, 'Input.dispatchMouseEvent');
++      if (params.type === 'mousePressed') assert.equal(trace.at(-1), 'attempt', 'owner precedes the original attempted-click record');
++      dispatched.push({ ...params }); trace.push(String(params.type)); return {};
++    },
++  }, { assertOwnedRenderer() {
++    ownershipReads.push(expressions.length); trace.push('owner');
++    if (expressions.length === 4) changed = true;
++  }, step(value) {
++    if (value.action === 'mouseClick') { assert.equal(trace.at(-1), 'owner'); trace.push('attempt'); }
++    steps.push(value);
++  } });
++  await ui.clickExpression(expression, 'TEST shifted original target');
++  assert.deepEqual(expressions, Array.from({ length: 8 }, () => expression));
++  assert.deepEqual(observed, [original, original, original, original, shifted, shifted, shifted, shifted]);
++  assert.deepEqual(ownershipReads, [0, 1, 1, 2, 3, 4, 5, 6, 7, 8]);
++  assert.equal(frontCalls, 1);
++  assert.deepEqual(dispatched, [
++    { type: 'mouseMoved', x: 100, y: 100 },
++    { type: 'mousePressed', x: 100, y: 200, button: 'left', clickCount: 1 },
++    { type: 'mouseReleased', x: 100, y: 200, button: 'left', clickCount: 1 },
++  ]);
++  assert.deepEqual(steps.map(step => step.action), ['mouseMoved', 'mouseClick']);
++  assert.deepEqual(steps[1]!.target, shifted);
++});
++
++for (const settlesAtLastObservation of [false, true]) {
++  test('original desktop click shares its sixteen observations with final reads: ' + settlesAtLastObservation, { timeout: 5000 }, async () => {
++    const expression = 'TEST_originalOwnerAndHitTestedTarget()';
++    const ys = [100, 100, 200, 200, 200, 300, 300, 300, 400, 400, 400, 500, 500, 500, 600, 600, 600,
++      settlesAtLastObservation ? 600 : 700];
++    const dispatched: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [];
++    let reads = 0, frontCalls = 0;
++    const ui = createDesktopUiControls({
++      async evaluate(actual: string) {
++        assert.equal(actual, expression); assert.ok(reads < ys.length, 'no replenished observation allowance');
++        return { x: 100, y: ys[reads++], tag: 'BUTTON' };
++      },
++      async send(method: string, params: Record<string, unknown> = {}) {
++        if (method === 'Page.bringToFront') { frontCalls++; return {}; }
++        assert.equal(method, 'Input.dispatchMouseEvent'); dispatched.push({ ...params }); return {};
++      },
++    }, { assertOwnedRenderer() {}, step(value) { steps.push(value); } });
++    const pending = ui.clickExpression(expression, 'TEST original observation limit');
++    if (settlesAtLastObservation) await pending;
++    else await assert.rejects(pending, /Original UI target moved after ownership check/);
++    assert.equal(reads, 18, 'two initial reads plus sixteen shared stability/final observations');
++    assert.equal(frontCalls, 1);
++    assert.deepEqual(dispatched, [{ type: 'mouseMoved', x: 100, y: 100 }, ...(settlesAtLastObservation ? [
++      { type: 'mousePressed', x: 100, y: 600, button: 'left', clickCount: 1 },
++      { type: 'mouseReleased', x: 100, y: 600, button: 'left', clickCount: 1 },
++    ] : [])]);
++    assert.equal(steps.filter(step => step.action === 'mouseClick').length, settlesAtLastObservation ? 1 : 0);
++  });
++}
++
++test('original desktop click refuses non-finite settled coordinates before its final read or press', { timeout: 5000 }, async () => {
++  const dispatched: string[] = []; let reads = 0;
++  const ui = createDesktopUiControls({
++    async evaluate() { reads++; return { x: 100, y: Number.POSITIVE_INFINITY, tag: 'BUTTON' }; },
++    async send(method: string, params: Record<string, unknown> = {}) {
++      if (method === 'Input.dispatchMouseEvent') dispatched.push(String(params.type)); return {};
++    },
++  }, { assertOwnedRenderer() {}, step() {} });
++  await assert.rejects(ui.clickExpression('TEST_nonFiniteOriginalTarget()', 'TEST non-finite target'), /coordinates must be finite/);
++  assert.equal(reads, 4); assert.deepEqual(dispatched, ['mouseMoved']);
++});
++
++for (const boundary of ['owner', 'final-CDP', 'press', 'release'] as const) {
++  test('original desktop click preserves ' + boundary + ' refusal after coordinate-only continuation', { timeout: 5000 }, async () => {
++    const expression = 'TEST_originalOwnerAndHitTestedTarget()';
++    const refusal = new Error(boundary === 'final-CDP' ? 'execution context was destroyed: TEST final read' : 'TEST original ' + boundary + ' refusal');
++    const dispatched: string[] = [], steps: Record<string, unknown>[] = [];
++    let reads = 0, frontCalls = 0;
++    const ui = createDesktopUiControls({
++      async evaluate(actual: string) {
++        assert.equal(actual, expression); reads++;
++        if (boundary === 'final-CDP' && reads === 8) throw refusal;
++        return { x: 100, y: reads < 5 ? 100 : 200, tag: 'BUTTON' };
++      },
++      async send(method: string, params: Record<string, unknown> = {}) {
++        if (method === 'Page.bringToFront') { frontCalls++; return {}; }
++        assert.equal(method, 'Input.dispatchMouseEvent'); dispatched.push(String(params.type));
++        if (boundary === 'press' && params.type === 'mousePressed' || boundary === 'release' && params.type === 'mouseReleased') throw refusal;
++        return {};
++      },
++    }, { assertOwnedRenderer() { if (boundary === 'owner' && reads === 7) throw refusal; },
++      step(value) { steps.push(value); } });
++    await assert.rejects(ui.clickExpression(expression, 'TEST original refusal'), error => { assert.equal(error, refusal); return true; });
++    assert.equal(reads, boundary === 'owner' ? 7 : 8, 'no read is repeated after the original refusal');
++    assert.equal(frontCalls, 1);
++    assert.deepEqual(dispatched, boundary === 'press' ? ['mouseMoved', 'mousePressed'] :
++      boundary === 'release' ? ['mouseMoved', 'mousePressed', 'mouseReleased'] : ['mouseMoved']);
++    assert.equal(steps.filter(step => step.action === 'mouseClick').length, boundary === 'press' || boundary === 'release' ? 1 : 0);
++  });
++}

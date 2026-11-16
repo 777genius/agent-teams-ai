@@ -1,0 +1,951 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-original-O953-Collaboration-evidence-review",
+  "reviewer": "/root/native_failures",
+  "author": "/root/ui_failures",
+  "createdAtUTC": "2026-11-16T07:07:14.015833+00:00",
+  "decision": "APPROVE",
+  "requiredCorrections": [],
+  "scope": "Historical original O953 evidence and author appendix only. FAIL/INCOMPLETE retained; separate bounded geometry analysis is not a selected repair or a current E1 qualification.",
+  "sourceHead": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "runId": 43807841778,
+  "jobId": 133102584995,
+  "reviewedAuthorFiles": {
+    "audit.json": {
+      "path": "ci-o-953fd8/collaboration/audit.json",
+      "bytes": 54770,
+      "blob": "d040f1e03d896ecb08cd6e108e2d52356568424d",
+      "sha256": "258096be36597042398cf2e8671c4b5262eaf301925d9be3179eacbc7cc8b7d7"
+    },
+    "Plan29-appendix.md": {
+      "path": "ci-o-953fd8/collaboration/Plan29-appendix.md",
+      "bytes": 5328,
+      "blob": "0f9843a76623d934c4d624f65429c53979ba4a1b",
+      "sha256": "55856bff7989814e2429accd6df618511fa45f8509b4731b1731d4c5d4fe8368"
+    },
+    "checkpoint.json": {
+      "path": "ci-o-953fd8/collaboration/checkpoint.json",
+      "bytes": 2987,
+      "blob": "26ae3a9bcfc259d74fc4022767772e394f002ed3",
+      "sha256": "f251819086decb2acb4eb9fe64a9c703e707c0755697c502571f10a84743debb"
+    },
+    "source-pin-audit.json": {
+      "path": "ci-o-953fd8/collaboration/source-pin-audit.json",
+      "bytes": 456971,
+      "blob": "5f9f1328caefdb7dbb33394149cd7222c3fa79e5",
+      "sha256": "43ac66fdad76f3e8f05a91b520256315e49e1dab932eaba84320535aafe696a2"
+    },
+    "archive-retention.json": {
+      "path": "ci-o-953fd8/collaboration/archive-retention.json",
+      "bytes": 4968,
+      "blob": "480c51d03cc031c240ffe9abbc7ce6e6e4420532",
+      "sha256": "28e20594f101a52789419469b7e86c209c9d224ebe7810cff89f36d12cfba8d6"
+    }
+  },
+  "independentByteSourceProof": {
+    "path": "ci-o-953fd8/collaboration/independent-byte-source-proof.json",
+    "bytes": 501790,
+    "blob": "234ca773d13469da5e24af3ea57450275a2125c9",
+    "sha256": "967bdc79ca598c9ba6ce2abaee49bc178a37ed0f743b61f8d9aaf4dd3871dabb"
+  },
+  "originalIdentity": {
+    "run": {
+      "id": 43807841778,
+      "head_sha": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+      "event": "pull_request",
+      "run_attempt": 1,
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43807841778"
+    },
+    "initialRunSnapshotStatus": "queued",
+    "initialRunSnapshotNotTerminalQualification": true,
+    "terminalJobStatus": "completed",
+    "terminalJobConclusion": "failure",
+    "failedStepNumbers": [
+      17,
+      30
+    ],
+    "skippedSeparateTeamAndTypesSteps": [
+      9,
+      10
+    ],
+    "officialArtifact": {
+      "id": 14200807020,
+      "name": "host-emulated-linux-x64-953fd8a94dc97bcfe89a7a808043dc11843e19d8-collaboration",
+      "size_in_bytes": 698291,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14200807020",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14200807020/zip",
+      "expired": false,
+      "created_at": "2026-11-16T05:42:13Z",
+      "expires_at": "2026-11-30T05:42:13Z",
+      "updated_at": "2026-11-16T05:42:13Z",
+      "digest": "sha256:1d2e1cb5f82d2f1931ff9a0b2413ceab125bba896210fe9aa0bd337d319a12f1",
+      "workflow_run": {
+        "id": 43807841778,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "head_sha": "953fd8a94dc97bcfe89a7a808043dc11843e19d8"
+      }
+    }
+  },
+  "rawAndArchive": {
+    "checkpointPayloadCount": 10,
+    "allCheckpointBytesAndHashesVerified": true,
+    "fullOriginalMcpContentEqualsRaw": true,
+    "rawLog": {
+      "path": "ci-o-953fd8/collaboration/job-133102584995.log",
+      "bytes": 184493,
+      "blob": "1f74d35bb4e85d04dafbf235c4fe87ddf8bb15bb",
+      "sha256": "2a6773a5d6c757f3ec2dd6b4092f6fd46fe7c850dbc0593a600743e9ea047c80"
+    },
+    "originalResponse": {
+      "path": "ci-o-953fd8/collaboration/original-job-133102584995-response.json",
+      "bytes": 194426,
+      "blob": "248f6e85acc6a34a1f201348fa9f7521c9a82eb1",
+      "sha256": "6572c362421748f6a3593a14c98a6550c4d067ff5956804586040a09236066f6"
+    },
+    "archive": {
+      "path": "ci-o-953fd8/collaboration/artifact-14200807020.zip",
+      "bytes": 698291,
+      "blob": "13ed6559fc7191a08e510a1bb4c0f705b68c9c20",
+      "sha256": "1d2e1cb5f82d2f1931ff9a0b2413ceab125bba896210fe9aa0bd337d319a12f1"
+    },
+    "officialDigestAndSourceRunEqual": true,
+    "memberCount": 16,
+    "uniqueSafeNonSymlinkMembers": true,
+    "allCrcAndExtractedBytesEqual": true,
+    "tee": {
+      "file": {
+        "path": "ci-o-953fd8/collaboration/extracted/host-emulated-emulated-collaboration-ui.log",
+        "bytes": 1308,
+        "blob": "e412b92ca7ea457b4b01df6df723a3e4f784ee8e",
+        "sha256": "27e5cd7a2da974162210cb42ed9f82407c222e2b1acf712a93919e9871e289de"
+      },
+      "rawStartLine": 951,
+      "rawEndLine": 974,
+      "transform": "only original job timestamp prefix and ANSI escapes removed",
+      "allLinesEqual": true
+    },
+    "noArtifactExecutionOrRedownload": true
+  },
+  "sourceReview": {
+    "orderedSelectedBeforeAfterEqual": true,
+    "selectedCount": 1757,
+    "uniqueSelectedPaths": 1757,
+    "freshGitBytes": 20308470,
+    "closurePathNulBytesNulSha256": "eb70a687dbfaf73721a44b444a15afceddbbe101c77d4f779a4aac1a069bd853",
+    "freshSelectedCensusFullyRecomputed": true,
+    "authorClaimLeaves": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 25052,
+        "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+        "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7",
+        "inSelected1757": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+        "bytes": 34086,
+        "blob": "aff6e19ec4cf492841aa667442c1b7d71541c7c5",
+        "sha256": "d02a551bd97ea876b20bf39bd5c66fc6eda109198aad61f4c9dcf2a65981e29f",
+        "inSelected1757": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "bytes": 54778,
+        "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+        "inSelected1757": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "bytes": 49613,
+        "blob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+        "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+        "inSelected1757": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "bytes": 22082,
+        "blob": "a9d725fbe11278dd98611b49d570c19d80684087",
+        "sha256": "3aa149837f6686e8307ba1803984874b4c673d8211094bd3e8e52b9ddb3d70cd",
+        "inSelected1757": true
+      },
+      {
+        "path": "src/main/utils/testChildProcessTrace.ts",
+        "bytes": 9633,
+        "blob": "b3d2ec4b410de5df6d63075955fa8f89fc7c9b88",
+        "sha256": "bff51a48a14cc0d77f8c7233c034c1bbe0eb79b0f5f5270c9540faf70e6472eb",
+        "inSelected1757": true
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "bytes": 101741,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+        "inSelected1757": false
+      }
+    ],
+    "additionalInterpretationLeaves": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+        "bytes": 33173,
+        "blob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+        "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23",
+        "inSelectedCensus": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+        "bytes": 16555,
+        "blob": "97e14385a298a38a9b81b8805dc3f6d2da66545c",
+        "sha256": "8340911817fb4228e8d948425a1f85796fba16d244b6763b04e307ed6f290713",
+        "inSelectedCensus": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+        "bytes": 26258,
+        "blob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "inSelectedCensus": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "bytes": 103573,
+        "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921",
+        "inSelectedCensus": true
+      }
+    ],
+    "compiledLimit": "All14 compiled main/preload hash rows match the original receipt/author audit, but their compiled bytes are not archived. No reproducible rebuild or transitive all-runtime dependency proof is claimed.",
+    "runtimePinsLimit": "Original receipt/source/manifest pins are joined where archived bytes exist; Node/Electron/pnpm/Host executable hashes remain original recorded runtime observations where executable bytes are not archived.",
+    "currentComparison": {
+      "currentSource": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "old": {
+        "bytes": 25052,
+        "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+        "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7"
+      },
+      "current": {
+        "bytes": 27188,
+        "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+      },
+      "completeClickExpressionBodyByteEqual": true,
+      "body": {
+        "bytes": 6234,
+        "blob": "f831acb1570515d7f56419c604287198a33e1b5c",
+        "sha256": "255f42a70b7595f09d7a630ccacda9830bfd88c40fab16daad5dd6b56c5912de"
+      }
+    }
+  },
+  "prerequisites": {
+    "node": "24.21.0",
+    "pnpm": "11.22.0",
+    "electron": "44.10.1",
+    "originalInstall": "node-ci frozen install, explicit Electron install/rebuild and original package-manager capture are retained in the full job; no local installation or replay.",
+    "eightHelperCommand": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "eightHelperBlocks": [
+      {
+        "line": 824,
+        "tests": 115,
+        "suites": 0,
+        "pass": 115,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 9097.688617
+      },
+      {
+        "line": 839,
+        "tests": 7,
+        "suites": 0,
+        "pass": 7,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 196.698306
+      }
+    ],
+    "fullResultTotals": {
+      "pass": 122,
+      "fail": 0,
+      "skip": 0,
+      "cancelled": 0
+    },
+    "separateTeamTenAndWorkspaceTypedLintNotExecutedByThisLane": true,
+    "freshBuild": "Original Linux input helper/Host+ledger/controller/MCP prerequisite commands completed before the original Desktop invocation; app log records its dev bundle build. These are original job observations only."
+  },
+  "firstBoundary": {
+    "receiptFailure": "Original UI target moved after ownership check\n+ actual - expected\n\n  [\n    700,\n+   460,\n-   476,\n    'BUTTON'\n  ]\n",
+    "receiptFailureSource": {
+      "kind": "assertion",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:288:12",
+        "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts:96:37",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:421:12",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+      ]
+    },
+    "status": "INCOMPLETE",
+    "proofStatus": "INCOMPLETE",
+    "stablePoint": [
+      700,
+      476,
+      "BUTTON"
+    ],
+    "finalPoint": [
+      700,
+      460,
+      "BUTTON"
+    ],
+    "priorHoverPoint": [
+      700,
+      479.75,
+      "BUTTON"
+    ],
+    "sourceOrder": "CollaborationUI96 enters optional-settings click; controls261 initial target,262 owner,263-268 one hover;269 post-hover read;273-281 up to15 iterations separated by100ms until two matching comparisons;282 stable assertion;283-284 numeric checks;285 original ownership;286 direct full-expression read;287 availability;288 exact x/y/tag comparison. The original error occurs here.",
+    "notReached": "The second ownership check293, new mouseClick attempted record294-301, mousePressed303-309 and mouseReleased310-316 for this target were not reached. Expansion wait97-105, prompt entry, two-member Launch111, live membership, DM/group Send, business Stop and reload remain unreached.",
+    "processExitWrapper": "The job then reports its original proof-completion assertion because receipt.status remains INCOMPLETE. Step30 independently rejects original UI flow and cleanup must pass; positive containment observations do not satisfy this conjunction.",
+    "geometryCause": "Unproven. No retained prior dialog/readiness snapshot or intermediate rectangle/timestamp identifies which layout transition produced the16px change. The final Checking/verified frame and unrelated task read-boundary error cannot establish hydration, animation or owner-change causation."
+  },
+  "uiObservations": {
+    "steps": [
+      {
+        "action": "mouseMoved",
+        "label": "hover sidebar row before measuring click",
+        "subject": "TEST mixed collaboration sidebar seed",
+        "target": {
+          "x": 1261,
+          "y": 206.875
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "sidebar task",
+        "subject": "TEST mixed collaboration sidebar seed",
+        "target": {
+          "x": 1261,
+          "y": 206.875
+        },
+        "state": "attempted"
+      },
+      {
+        "observation": "passive input delivery after sidebar click",
+        "value": {
+          "focused": true,
+          "visibility": "visible",
+          "events": [
+            {
+              "type": "pointerdown",
+              "timeMs": 33331,
+              "x": 1261,
+              "y": 206.875,
+              "button": 0,
+              "buttons": 1,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "SPAN",
+                "id": "",
+                "ariaLabel": null,
+                "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+              },
+              "focusBefore": {
+                "tag": "INPUT",
+                "id": "",
+                "ariaLabel": null,
+                "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "taskClarification": null,
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "INPUT",
+                "id": "",
+                "ariaLabel": null,
+                "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusout",
+              "timeMs": 33331,
+              "trusted": true,
+              "buttonClass": null,
+              "target": {
+                "tag": "INPUT",
+                "id": "",
+                "ariaLabel": null,
+                "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+              },
+              "focusBefore": {
+                "tag": "BODY",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BODY",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusin",
+              "timeMs": 33334,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "pointerup",
+              "timeMs": 33335,
+              "x": 1261,
+              "y": 206.875,
+              "button": 0,
+              "buttons": 0,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "SPAN",
+                "id": "",
+                "ariaLabel": null,
+                "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "taskClarification": null,
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "click",
+              "timeMs": 33336,
+              "x": 1261,
+              "y": 206,
+              "button": 0,
+              "buttons": 0,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "SPAN",
+                "id": "",
+                "ariaLabel": null,
+                "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "taskClarification": null,
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusout",
+              "timeMs": 33354,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "focusBefore": {
+                "tag": "BODY",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusin",
+              "timeMs": 33355,
+              "trusted": true,
+              "buttonClass": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--",
+              "target": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover Open team",
+        "selector": "[role=\"dialog\"] button",
+        "target": {
+          "x": 1037.546875,
+          "y": 212.1437530517578,
+          "text": "Open team",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "Open team",
+        "selector": "[role=\"dialog\"] button",
+        "expectedText": "Open team",
+        "target": {
+          "x": 1055.3125,
+          "y": 199.625,
+          "text": "Open team",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover open original saved Team Launch",
+        "selector": "button",
+        "target": {
+          "x": 1043.3125,
+          "y": 206,
+          "text": "Launch",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "action": "mouseClick",
+        "label": "open original saved Team Launch",
+        "selector": "button",
+        "expectedText": "Launch",
+        "target": {
+          "x": 1043.3125,
+          "y": 206,
+          "text": "Launch",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "action": "mouseMoved",
+        "label": "hover expand original saved launch settings",
+        "selector": "[role=\"dialog\"] button[aria-controls=\"_r_2u_\"]",
+        "target": {
+          "x": 700,
+          "y": 479.75,
+          "text": "Optional launch settingsOptional•Anthropic•sonnet•low•+2",
+          "tag": "BUTTON"
+        }
+      }
+    ],
+    "stepCounts": {
+      "mouseMoved": 4,
+      "mouseClick": 3,
+      "passive input delivery after sidebar click": 1
+    },
+    "passiveEvents": 25,
+    "passiveEventCounts": {
+      "pointerdown": 3,
+      "focusout": 8,
+      "focusin": 8,
+      "pointerup": 3,
+      "click": 3
+    },
+    "originalPressUpClickEvents": 3,
+    "noAdditionalSettingsClickInRetainedRing": true,
+    "failureSnapshotStore": {
+      "teamsLoading": false,
+      "globalTasksLoading": false,
+      "globalTasksInitialized": true,
+      "globalTasksError": "Host read crossed a mutation boundary",
+      "globalTaskCount": 1,
+      "selectedTeamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-B318HS",
+      "selectedRawMemberCapabilities": {
+        "source": "selected",
+        "state": "available",
+        "count": 2,
+        "overflow": false,
+        "members": [
+          {
+            "valid": true,
+            "provider": "unknown",
+            "capturedOwner": true,
+            "attachments": null,
+            "textAttachments": null,
+            "catalog": {
+              "state": "absent",
+              "count": null,
+              "overflow": false,
+              "hasCost": null
+            }
+          },
+          {
+            "valid": true,
+            "provider": "codex",
+            "capturedOwner": true,
+            "attachments": null,
+            "textAttachments": null,
+            "catalog": {
+              "state": "absent",
+              "count": null,
+              "overflow": false,
+              "hasCost": null
+            }
+          }
+        ]
+      },
+      "provisioning": [
+        {
+          "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-B318HS",
+          "currentProvisioningRunId": null,
+          "currentRuntimeRunId": null,
+          "startedAtFloor": null,
+          "error": null,
+          "ignoredProvisioning": false,
+          "ignoredRuntime": false,
+          "progress": null
+        }
+      ],
+      "globalTaskDetail": null,
+      "paneTabs": [
+        {
+          "type": "team",
+          "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-B318HS"
+        }
+      ]
+    },
+    "png": {
+      "path": "ci-o-953fd8/collaboration/extracted/TEST-desktop-backend-B318HS/ui-failure.png",
+      "bytes": 131831,
+      "blob": "23882b5c9e0ca0423915970a746962588f07f7aa",
+      "sha256": "8ee14a1676791088c7ba970ee7fa92ad866c5b38dd825878797155e6c7579358",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewedByThisReviewer": true,
+      "observation": "Launch Team modal with collapsed Optional launch settings; Anthropic Checking/status loading, Codex Needs attention with one verified selected model, right Tasks warning Host read crossed a mutation boundary plus one loaded seed. This single final image does not prove an earlier geometry or complete Team launch."
+    }
+  },
+  "finitePeerEvidence": {
+    "orderedThreeJournalsEqualFinalCleanupArray": true,
+    "effects": 20,
+    "uniqueLaunchPids": 8,
+    "explicitExit0": 6,
+    "noExitCodePids": [
+      5421,
+      5608
+    ],
+    "finalPeerPids": [
+      5421,
+      5608,
+      5428,
+      5621,
+      5632,
+      5641,
+      5661,
+      5435
+    ],
+    "finalRemaining": [],
+    "allEightPidAbsenceObserved": true,
+    "absenceNotAtomicNativeIdentityOrExitCode": true,
+    "onlyBusinessLikeInput": [
+      {
+        "event": "input",
+        "marker": "TEST_MODEL_PROBE",
+        "turnId": "TEST-turn-5661-1",
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 5661
+      }
+    ],
+    "canonicalArchivedProbe": {
+      "file": {
+        "path": "ci-o-953fd8/collaboration/extracted/TEST-desktop-backend-B318HS/hoststore/management-commands/72461480b8851ec319addfaa03165f8bd35274e1212c396d6c25fa67f14b31c6.json",
+        "bytes": 904,
+        "blob": "5c46ee65b2fb7cf3c2e28b949c773c9c64d906bb",
+        "sha256": "6b6526079bd217980615c5f226f7ba2d32561d31d2882899ff9dd3c53b85d6a5"
+      },
+      "record": {
+        "schemaVersion": 1,
+        "commandId": "team-preflight-9c800dc668451bd2c3b3a0629f2b09f66cd790c3fb4692cc895cb8046f1abf4b",
+        "profileId": "team-probe-d6df1d201bcae9ca42801e94472dabbabcccf022910f247edb00ac322c57a451",
+        "configRevision": "team-probe-d6df1d201bcae9ca42801e94472dabbabcccf022910f247edb00ac322c57a451",
+        "providerId": "codex",
+        "fingerprint": "36abf974105f0c699ec54f3039dc2c0b0d602ed4c8d488ff80055164243bc4d2",
+        "selectionDigest": "6f66017d5b8f198e644b9d74629fc63dc5766c7b7cf2cc394eb138d34412b46c",
+        "resourceId": "43a43b39f60ed671d6d79da92b509b19449bcc93de7f29e41038e3e99d95f2eb",
+        "resourceHeld": false,
+        "kind": "model.probe",
+        "modelId": "TEST-model",
+        "context": "109ebac146685551b3d082bb552d796bc04c3f5b75da1265fafdb3c3ac0f8034",
+        "phase": "completed",
+        "expiresAt": 1794807820857,
+        "ok": true,
+        "digest": "d1353b4cbb84defffd1907ce3e2d84d7eb73104eed7d04539f327e86b69c9f42"
+      }
+    },
+    "limit": "Finite TEST_MODEL_PROBE preflight is not the unreached Team Launch and does not qualify real Claude/Codex/OpenCode or authenticated vendor activity."
+  },
+  "cleanup": {
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "quitRequested": true,
+    "wrapper": {
+      "pid": 4365,
+      "processGroup": 4365,
+      "identity": "Mon Nov 16 05:41:06 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-u8pBR3/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox",
+      "invocation": [
+        "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+        "/home/runner/work/_temp/TEST-emulated-ui-inputs-u8pBR3/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "dev:mcp",
+        "--remoteDebuggingPort",
+        "9222",
+        "--noSandbox"
+      ]
+    },
+    "requestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "raw": {
+      "processGroup": 4365,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "beforeHarnessCleanup": [],
+    "sameReturnedRemainingArrayNotIndependentCensuses": true,
+    "dedicatedCapturedHostUnknown": true,
+    "passiveOriginalMainChild": [
+      {
+        "line": 89,
+        "mainPid": 4487,
+        "event": "async-spawn",
+        "pid": 4685,
+        "requestedCommand": "linux-child-exec",
+        "linuxChildExecTarget": "node",
+        "versionOnly": false,
+        "observedBirth": {
+          "startTicks": "16518",
+          "parentPid": 4487,
+          "processGroupId": 4365
+        },
+        "atomic": false,
+        "observedAtMs": 1794807692711
+      },
+      {
+        "line": 128,
+        "mainPid": 4487,
+        "event": "async-exit",
+        "pid": 4685,
+        "status": 0,
+        "signal": null,
+        "observedAtMs": 1794807731955
+      }
+    ],
+    "passiveTraceSummary": {
+      "line": 137,
+      "mainPid": 4487,
+      "event": "trace-summary",
+      "rows": 29,
+      "droppedObservations": 0,
+      "observedChildren": 13,
+      "unobservedChildren": 0,
+      "observationFailures": 0,
+      "limited": false,
+      "coverage": "node-async-and-unix-process-table-only"
+    },
+    "passiveQualification": "Main4487 observed captured node-target child4685 spawn with parent/group/startTicks and its original async-exit callback0/null. This is separate from launcher4365 and the unavailable dedicated harness Host field; it is not a new atomic custody, executable or all-process certificate.",
+    "signalsLimit": "The retained remaining group is already empty at the original cleanup branch; no harness group-signal branch is established as executed. Business Stop was never reached.",
+    "sentinel": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": null,
+      "postQuitOrCleanupInvocations": null,
+      "refusedInvocations": [],
+      "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+    },
+    "sentinelLimit": "One finite claude-multimodel --version sentinel invocation is recorded as allowed. It is not execution of real Claude/Codex; absent preQuit split prevents a post-Quit zero-invocation claim."
+  },
+  "qualification": {
+    "historicalBusinessPass": false,
+    "receiptIncompleteRetained": true,
+    "oldResultTransferredToE1": false,
+    "realVendorModelQualification": false,
+    "fullStage1OrRelease": false,
+    "sourceRepairApplied": false,
+    "newProjectProviderNativeExecution": false,
+    "sourceRefOrCIMutation": false
+  },
+  "findings": []
+}

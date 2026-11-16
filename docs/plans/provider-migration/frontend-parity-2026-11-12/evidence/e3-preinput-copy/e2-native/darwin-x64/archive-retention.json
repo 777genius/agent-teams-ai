@@ -1,0 +1,43 @@
+{
+  "source": "57885c055a18b27c180c304762643eac632513ad",
+  "artifactId": 14206056428,
+  "archive": {
+    "bytes": 10548,
+    "sha256": "ed16ddeb5b9a54fa6851a4373f92267f2a5f6d7a89e2d30d864de5e7290ad408"
+  },
+  "safeNames": true,
+  "uniqueNames": true,
+  "crc": true,
+  "members": [
+    {
+      "path": "opencode-v2-darwin-custody.json",
+      "bytes": 1444,
+      "sha256": "d311adc0fc48ae7a7c6618e12ab706212f61cb621d2bc3bde323046f1d4667c4",
+      "gitBlob": "6e197afaa1b18dcf73375354a2e1f8191cf46b2b",
+      "crc32": "3e2db99e"
+    },
+    {
+      "path": "opencode-v2-embedded-host.json",
+      "bytes": 95067,
+      "sha256": "4f6b61abc8b92b320f8e3fd9b19832df640db736d410e6fca7a65289d7335199",
+      "gitBlob": "ab45419482ab527fa2cc7688b52f5f14bb68845b",
+      "crc32": "19b9ab7a"
+    },
+    {
+      "path": "opencode-v2-posix-exec.json",
+      "bytes": 14538,
+      "sha256": "aa910f9443a11ee2ded526ca4534c6b686a65e9c6a87277cd9b1f1718f9fd39c",
+      "gitBlob": "e378465f158bedd5c0b6a9b1f53797410ebfd2db",
+      "crc32": "2aba69fe"
+    },
+    {
+      "path": "opencode-v2-embedded-inputs.json",
+      "bytes": 2370,
+      "sha256": "01cdd08167f1d53258433bebb4bc6af2d93ee544c19825fab628f6691f923bfa",
+      "gitBlob": "89dc1f2f1c22b34714f7f0022354fff33cf913af",
+      "crc32": "2f5fd0cb"
+    }
+  ],
+  "downloadUrlRetained": false,
+  "qualification": "raw retention only; semantic audit pending"
+}

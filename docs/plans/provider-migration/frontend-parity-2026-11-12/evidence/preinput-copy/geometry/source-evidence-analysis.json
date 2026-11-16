@@ -1,0 +1,508 @@
+{
+  "kind": "bounded-original-geometry-failure-and-prospective-source-analysis",
+  "author": "/root/migration_scope",
+  "createdAtUTC": "2026-11-16T07:28:54.250440+00:00",
+  "sourceHead": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+  "sourceTree": "763d943372c79c8d82ad2634b04861da81308fee",
+  "e1Originals": [
+    {
+      "lane": "opencode",
+      "jobId": 133120928869,
+      "runId": 43813731227,
+      "artifactId": 14205010690,
+      "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "originalOutcome": "FAIL / INCOMPLETE",
+      "checkpoint": {
+        "path": "ci-e1d14b9/opencode/checkpoint.json",
+        "bytes": 2959,
+        "blob": "41ad5f5bba867aaffa2a7e7ee6d88bceeb99ab1a",
+        "sha256": "aa4d2cd1be9526314257532c7d45a8b2cc26452d234ca0bdfd018d349185caf8"
+      },
+      "authorAudit": {
+        "path": "ci-e1d14b9/opencode/audit.json",
+        "bytes": 153570,
+        "blob": "d1b1616a3f0d5a7b29e61c632865f6c2e48f675e",
+        "sha256": "251ce8e8338602e6e439ee40312529b35221f6a535dbeb0c4f84b2a7aa9f25a3"
+      },
+      "authorAppendix": {
+        "path": "ci-e1d14b9/opencode/Plan29-appendix.md",
+        "bytes": 5150,
+        "blob": "6f7ab3524700ffda49cbc17bb28aa6967efb8226",
+        "sha256": "566cad40b2333d8f0951cb206526744e682a215000cc82d34f4f26f98bedbc1c"
+      },
+      "rawLog": {
+        "path": "ci-e1d14b9/opencode/job.log",
+        "bytes": 188026,
+        "blob": "c210882dcb304f0f583d7bc41bbf9c12d3e0fec2",
+        "sha256": "e9b9cad5e9ef8103d7cfcf4b2a2a777a122a76b739482b93d5515249809d254a"
+      },
+      "rawResponse": {
+        "path": "ci-e1d14b9/opencode/job-original-response.json",
+        "bytes": 198101,
+        "blob": "b48a1b24e417e89dfffa2798f61a9863d209478a",
+        "sha256": "4aa669cebb388f914d441ae77bac858d5458396a413f3a2245868f7c862cbd1b"
+      },
+      "rawResponseExactUtf8Log": true,
+      "archive": {
+        "path": "ci-e1d14b9/opencode/artifact-14205010690.zip",
+        "bytes": 668772,
+        "blob": "2b186415105a6c51824cfcb9f950af2c83dbb43d",
+        "sha256": "cb135dc1436d1c1cf4eabd1ece501be84d15241809c127bb0818d9f277e17098"
+      },
+      "selectedReceipt": {
+        "path": "ci-e1d14b9/opencode/extracted/TEST-desktop-backend-3wWrVb/desktop-backend-receipt.json",
+        "member": "TEST-desktop-backend-3wWrVb/desktop-backend-receipt.json",
+        "bytes": 799893,
+        "blob": "b550d67f0299b9055c07f8943c93a1facbfe2c2c",
+        "sha256": "fc1c3cf01585ef5cf2d09ea72101ceeae143e51f5085ef9f82c3543e1d7e9068",
+        "archiveCrc32": "0f5ab03c",
+        "zipAndExtractedExact": true
+      },
+      "originalFailure": "Original UI target moved after ownership check\n+ actual - expected\n\n  [\n    169.5,\n+   218.5,\n-   210.5,\n    'BUTTON'\n  ]\n",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:321:12",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts:114:3",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:421:12",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+      ],
+      "stableTuple": [
+        169.5,
+        210.5,
+        "BUTTON"
+      ],
+      "finalTuple": [
+        169.5,
+        218.5,
+        "BUTTON"
+      ],
+      "retainedLastStep": {
+        "action": "mouseMoved",
+        "label": "hover open original lead conversation",
+        "selector": "button[aria-label^=\"alice,\"]",
+        "target": {
+          "x": 169.5,
+          "y": 210.5,
+          "text": "aliceYou: TEST_UI_BOOT07:03 AM",
+          "tag": "BUTTON"
+        }
+      },
+      "logicalSampleHistoryOrConsumedBudgetRetained": false,
+      "attemptedClickAtFailedLabelAbsent": true,
+      "wholePacketIndependentSemanticR2Claimed": false,
+      "newImageReviewClaimed": false,
+      "freshSelectedClaimJoins": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "bytes": 27188,
+          "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+          "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "bytes": 111672,
+          "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+          "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+          "bytes": 33173,
+          "blob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+          "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+          "bytes": 54778,
+          "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+          "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+          "bytes": 68865,
+          "blob": "76f4e9aa4d29e4eab14041e5343e0e3a5b46b3cf",
+          "sha256": "945b5ad3a507cea5925cb8b5e8d25aa0a15970c38a5f4c6c13db13fcaa3ccb64"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-review-hunk-controls.ts",
+          "bytes": 9637,
+          "blob": "27ad07bff0c9c89ecfc7dc572ac53e2e9e16e8ef",
+          "sha256": "ae6a85389e34559faf22a87320b940e0df5a80437d8f9ee7f2452131cfea95b4"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-review-ui-smoke.ts",
+          "bytes": 7276,
+          "blob": "9395283cd2e88ddf40def6ee3cf25aaa6f4ff7c3",
+          "sha256": "b7bff873445aa7938b1a1d6e26067fb663205de8002ccca7d5a99745e61217ae"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+          "bytes": 52632,
+          "blob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+          "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+          "bytes": 20996,
+          "blob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+          "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+          "bytes": 44561,
+          "blob": "083522612dd93e77dbb0e79c966103b03a71fe87",
+          "sha256": "555a309f762015659a3b7a0d44522785fa7ea171aedf77392020c25dc5d70e33"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-management-sources.ts",
+          "bytes": 21211,
+          "blob": "762570da8b4fc492065b217303a3da169bf627cf",
+          "sha256": "7b89bab88022f53fbc8470f0cbcd4acd93f8ee5412059144e3a676c0fb7466f8"
+        },
+        {
+          "path": "package.json",
+          "bytes": 26839,
+          "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+        },
+        {
+          "path": "pnpm-lock.yaml",
+          "bytes": 956788,
+          "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+          "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c"
+        }
+      ],
+      "original1757BeforeAfterArraysExact": true,
+      "full1757GitReauditClaimed": false,
+      "cleanup": {
+        "processGroup": 4501,
+        "remaining": [
+          {
+            "pid": 4575,
+            "ppid": 1,
+            "pgid": 4501
+          }
+        ],
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "cleanupFailure": "captured leader absent; retain cleanup debt without signaling",
+        "capturedHostObserved": false,
+        "capturedHostAbsent": null,
+        "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+      },
+      "limits": "No layout-cause attribution, time-cost attribution, historical unused-slot proof, guaranteed future settlement, cleanup qualification or other-lane acceptance."
+    },
+    {
+      "lane": "review",
+      "jobId": 133120928945,
+      "runId": 43813731227,
+      "artifactId": 14204298663,
+      "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "originalOutcome": "FAIL / INCOMPLETE",
+      "checkpoint": {
+        "path": "ci-e1d14b9/review/checkpoint.json",
+        "bytes": 2941,
+        "blob": "7ade9f1c2e1ef6525af4c212691d9bb6f3cdb837",
+        "sha256": "15cc3781272490d451a86b90b929a8cbdb5a97d0ff56738ce08da33c855bf094"
+      },
+      "authorAudit": {
+        "path": "ci-e1d14b9/review/audit.json",
+        "bytes": 144547,
+        "blob": "c773fe28d469a1e6763b31f528c5b4435dd0538f",
+        "sha256": "9341e9ec98445db83733494a4a9f3f1b0ccbc6e0d3b26c49d0338ec5aeeb2b68"
+      },
+      "authorAppendix": {
+        "path": "ci-e1d14b9/review/Plan29-appendix.md",
+        "bytes": 4976,
+        "blob": "a992766d8aa085bae1a5462b57cc747b1462bc59",
+        "sha256": "b632da17c642160588ca7dd7eb99e189096d6e602fa0e611f58b9a06c357adc7"
+      },
+      "rawLog": {
+        "path": "ci-e1d14b9/review/job.log",
+        "bytes": 188081,
+        "blob": "7cc514f1ad52cec3d686daa1b147ca558039f424",
+        "sha256": "7ebbc5901ff88148bc8e5c37edf459f74c80c5abc27a672937f2ddd331f69451"
+      },
+      "rawResponse": {
+        "path": "ci-e1d14b9/review/job-original-response.json",
+        "bytes": 198287,
+        "blob": "fbef5f9028e95e8b241903b0182ecd64a510891a",
+        "sha256": "f9f4f433d6a826db3a12432bdba16d9b7cae1cef4ef4580458da49f0f3832d22"
+      },
+      "rawResponseExactUtf8Log": true,
+      "archive": {
+        "path": "ci-e1d14b9/review/artifact-14204298663.zip",
+        "bytes": 650542,
+        "blob": "cbf46f3661998a6eec4bd044d6704df96acd0339",
+        "sha256": "9e9dd46183fba4b5d56eeb85f525a94739c35e7d1c99cf257cb6e7c8dfe37803"
+      },
+      "selectedReceipt": {
+        "path": "ci-e1d14b9/review/extracted/TEST-desktop-backend-B8oAL1/desktop-backend-receipt.json",
+        "member": "TEST-desktop-backend-B8oAL1/desktop-backend-receipt.json",
+        "bytes": 761599,
+        "blob": "fa1f90c8b0de3a026a30c4d9bf629fe4dff373ab",
+        "sha256": "82b4900542e8503edda7f508130fd4ace9d63752a28fbc5571335104bc6b51f5",
+        "archiveCrc32": "15cb64e6",
+        "zipAndExtractedExact": true
+      },
+      "originalFailure": "Original UI target moved after ownership check\n+ actual - expected\n\n  [\n    700,\n+   433.875,\n-   437.875,\n    'BUTTON'\n  ]\n",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:321:12",
+        "scripts/legacy-agent-host/desktop-review-hunk-controls.ts:100:5",
+        "scripts/legacy-agent-host/desktop-review-ui-smoke.ts:84:3",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:480:7",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+      ],
+      "stableTuple": [
+        700,
+        437.875,
+        "BUTTON"
+      ],
+      "finalTuple": [
+        700,
+        433.875,
+        "BUTTON"
+      ],
+      "retainedLastStep": {
+        "monotonicMs": 63792,
+        "action": "mouseMoved",
+        "label": "hover expand original Changes section",
+        "selector": "[role=\"dialog\"] section:has(svg.lucide-file-diff) > div > button[aria-label=\"Expand section\"]",
+        "target": {
+          "x": 700,
+          "y": 437.875,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      "logicalSampleHistoryOrConsumedBudgetRetained": false,
+      "attemptedClickAtFailedLabelAbsent": true,
+      "wholePacketIndependentSemanticR2Claimed": false,
+      "newImageReviewClaimed": false,
+      "freshSelectedClaimJoins": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "bytes": 27188,
+          "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+          "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "bytes": 111672,
+          "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+          "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+          "bytes": 33173,
+          "blob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+          "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+          "bytes": 54778,
+          "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+          "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+          "bytes": 68865,
+          "blob": "76f4e9aa4d29e4eab14041e5343e0e3a5b46b3cf",
+          "sha256": "945b5ad3a507cea5925cb8b5e8d25aa0a15970c38a5f4c6c13db13fcaa3ccb64"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-review-hunk-controls.ts",
+          "bytes": 9637,
+          "blob": "27ad07bff0c9c89ecfc7dc572ac53e2e9e16e8ef",
+          "sha256": "ae6a85389e34559faf22a87320b940e0df5a80437d8f9ee7f2452131cfea95b4"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-review-ui-smoke.ts",
+          "bytes": 7276,
+          "blob": "9395283cd2e88ddf40def6ee3cf25aaa6f4ff7c3",
+          "sha256": "b7bff873445aa7938b1a1d6e26067fb663205de8002ccca7d5a99745e61217ae"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+          "bytes": 52632,
+          "blob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+          "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+          "bytes": 20996,
+          "blob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+          "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+          "bytes": 44561,
+          "blob": "083522612dd93e77dbb0e79c966103b03a71fe87",
+          "sha256": "555a309f762015659a3b7a0d44522785fa7ea171aedf77392020c25dc5d70e33"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-management-sources.ts",
+          "bytes": 21211,
+          "blob": "762570da8b4fc492065b217303a3da169bf627cf",
+          "sha256": "7b89bab88022f53fbc8470f0cbcd4acd93f8ee5412059144e3a676c0fb7466f8"
+        },
+        {
+          "path": "package.json",
+          "bytes": 26839,
+          "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+          "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+        },
+        {
+          "path": "pnpm-lock.yaml",
+          "bytes": 956788,
+          "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+          "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c"
+        }
+      ],
+      "original1757BeforeAfterArraysExact": true,
+      "full1757GitReauditClaimed": false,
+      "cleanup": {
+        "processGroup": 4300,
+        "remaining": [
+          {
+            "pid": 4374,
+            "ppid": 1,
+            "pgid": 4300
+          }
+        ],
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "cleanupFailure": "captured leader absent; retain cleanup debt without signaling",
+        "capturedHostObserved": false,
+        "capturedHostAbsent": null,
+        "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+      },
+      "limits": "No layout-cause attribution, time-cost attribution, historical unused-slot proof, guaranteed future settlement, cleanup qualification or other-lane acceptance."
+    }
+  ],
+  "olderOIndependentReview": {
+    "path": "ci-o-953fd8/collaboration/independent-original-review.json",
+    "bytes": 37428,
+    "blob": "4f88a52726d56304ef7d64f87953b572c6da78a2",
+    "sha256": "9dbd91632634fd9d15c306f40da58923d7137993ba37f20a7e13d1e70aeb0557"
+  },
+  "olderOSourceAssessment": {
+    "path": "ci-o-953fd8/collaboration/pre-click-geometry-source-assessment.json",
+    "bytes": 7757,
+    "blob": "b2eea65201fa699d9508e982f08811244a3ec9be",
+    "sha256": "2ffe3ab93ed3bb3182c9bd6934a3cce784e47a53ce0343f4e7adbaf51c7e2574"
+  },
+  "wholeClickExpressionOldOAndE1BeforeimageExact": {
+    "originalHead": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+    "comparisonHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "bytes": 6234,
+    "blob": "f831acb1570515d7f56419c604287198a33e1b5c",
+    "sha256": "255f42a70b7595f09d7a630ccacda9830bfd88c40fab16daad5dd6b56c5912de",
+    "byteEqual": true
+  },
+  "scope": "Only original clickExpression pre-press stability block and its existing finite helper tests. Review Taskcard three-comparison oracle, hoverExpression, clickSidebar, passive Team/task metadata and all business flows unchanged.",
+  "policyAmendment": "Allow finite same-tag coordinate-only final mismatch to seed two newly charged equal comparisons and another fresh final read before first press; old immediate-refusal case is explicitly superseded prospectively.",
+  "staticArithmetic": {
+    "initialReadPointCalls": 2,
+    "sharedSubsequentObservationLimit": 16,
+    "stabilityReadPointCallsUpperBound": 15,
+    "outer100msSleepsUpperBound": 15,
+    "directFinalReadsUpperBound": 5,
+    "continuationMinimumRemainingSlots": 3,
+    "proof": [
+      "S and F each increment the single observations counter exactly once.",
+      "The loop reserves one final slot and never replenishes observations.",
+      "A continuation resets stableSamples to0; two newly charged matching stability reads are required before each final read.",
+      "S+F<=16; S<=15; S>=2F, hence F<=5."
+    ],
+    "notAbsoluteTimeBudget": true,
+    "readPointCanContainMultipleExistingCdpReads": true,
+    "unchangedWaitReadTimeoutMs": 30000,
+    "readPointInternalSleepsExcludedFromOuter15": true,
+    "freshOwnerCallsUpperBoundWhenEveryReadImmediatelyReady": 20,
+    "noGlobalWallClockBoundClaim": true
+  },
+  "ownerReadCost": {
+    "source": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+    "callback": "assertOwnedCdpListener",
+    "processTableCommand": [
+      "/bin/ps",
+      "-ax",
+      "-o",
+      "pid=,ppid=,pgid="
+    ],
+    "psTimeoutMs": 3000,
+    "normalSuccessfulCallbackGroupReads": 2,
+    "lsofTimeoutMs": 10000,
+    "lsofMaxBuffer": 1048576,
+    "linuxBirthFilesystemReads": true,
+    "additionalFailureOnlyCensusUnchanged": true,
+    "noCachingOrSuppression": true,
+    "amendedFinalReadOwnerCardinality": "At most1 -> at most5, substituted within the common16 logical observation allowance, not a cost-free change."
+  },
+  "finalRefusalLimits": "Final unavailable/changed-tag/malformed/non-finite tuple, owner error and raw-CDP error remain terminal. Existing waitRead unavailable/context-error handling inside a stability read is preserved and is not reclassified as immediate refusal.",
+  "finiteStableGuard": "New explicit Number.isFinite guard before a direct final read/press; original initial hover path is unchanged.",
+  "nonAtomicLimit": "The final fresh owner callback and CDP reads do not make layout and input atomic; a later movement or ownership change is still possible.",
+  "testPlan": [
+    {
+      "name": "coordinate-only shift during actual final owner callback",
+      "cases": 1,
+      "expected": "8 observations, 10 fresh owner callbacks with immediate available reads; one original hover, one new-point press/release; exact evaluate/owner and attempted-step trace."
+    },
+    {
+      "name": "shared sixteen-observation boundary",
+      "cases": 2,
+      "expected": "18 total logical observations including two initial; fifth final read either equals and permits one click or moves and refuses without press. No allowance replenishment."
+    },
+    {
+      "name": "settled non-finite coordinates",
+      "cases": 1,
+      "expected": "4 reads then explicit finite guard; original hover retained, zero press/release."
+    },
+    {
+      "name": "post-continuation owner/final-CDP/press/release failures",
+      "cases": 4,
+      "expected": "Exact thrown identity, no extra observation or hover, no repeated physical action."
+    },
+    {
+      "name": "existing final-target refusal loop",
+      "oldCases": 2,
+      "candidateCases": 4,
+      "expected": "Unavailable case retained; old same-tag coordinate-only immediate refusal deliberately replaced by changed-tag, non-numeric and non-finite final refusal cases."
+    },
+    {
+      "name": "existing continuous movement",
+      "cases": 1,
+      "expected": "Original refusal/no-press plus added exact17-read bound."
+    },
+    {
+      "name": "existing pending-final owner/cutoff cases",
+      "cases": 2,
+      "expected": "Whole old source block unchanged; original5 reads, refusal before attempted-step/press when authority changes while final read is pending."
+    }
+  ],
+  "netAdditionalCasesStaticPrediction": 10,
+  "actualNewCasesExecuted": 0,
+  "actualRedClaim": false,
+  "actualGreenClaim": false,
+  "testOnlyRedSourceStageSelected": false,
+  "p11FutureComposition": {
+    "priorDormantCandidate": {
+      "path": "phase-a-composition-e1d/p11-test.ts.txt",
+      "bytes": 115936,
+      "blob": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+      "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076"
+    },
+    "priorPreimageBlob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+    "priorUnchangedSuffixBytes": 4264,
+    "priorUnchangedSuffixLines": 62,
+    "candidateDoesNotIncludeP11Suffix": true,
+    "newSeparateFullAfterimageCompositionAndR1R2Required": true
+  },
+  "darwinProposalSeparate": {
+    "path": "darwin-main-admission-expiry-r1/R1-appendix.md",
+    "bytes": 13583,
+    "blob": "97810fb7cb19b2a34a8c6b83009e869ec4082409",
+    "sha256": "f32af083ac05d666bf86f1bd8e1b1167916060745094dcae93135cdc37238c37"
+  },
+  "noSourceRefOrCiMutation": true,
+  "noProjectCompilerTestLintInstallVendorExecution": true
+}

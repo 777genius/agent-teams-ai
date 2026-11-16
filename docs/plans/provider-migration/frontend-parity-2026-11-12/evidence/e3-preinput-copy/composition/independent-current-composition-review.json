@@ -1,0 +1,724 @@
+{
+  "kind": "Independent exact four-source composition and prospective current R1 review",
+  "reviewer": "/root/native_failures",
+  "reviewedAtUTC": "2026-11-16T08:46:41.850317+00:00",
+  "decision": "APPROVE exact prospective four-path composition and R1; no source application, candidate execution or publication qualification",
+  "requiredCorrections": [],
+  "R1": {
+    "path": "preinput-copy-after-p11-r1/R1-current-composition.md",
+    "bytes": 11383,
+    "lines": 48,
+    "blob": "40076f4e3c998770d21716afa78d860237b37bab",
+    "sha256": "086ad6daa80e75772d52c93780356ca615d79b12475905b4033c5dba0af3c7bc"
+  },
+  "metadata": {
+    "path": "preinput-copy-after-p11-r1/candidate-metadata.json",
+    "bytes": 4879,
+    "lines": 137,
+    "blob": "4cff9f6e4f1b67e3ae66fa7930dfd02dd9d19988",
+    "sha256": "1a52ec767e6acd375733767af61ed2cf97bbc7ad7bd888b8d33ffcb204ff4fa8"
+  },
+  "actualParents": {
+    "incoming": "72e6ec04444969d343d73834c70bc4e261100fc9",
+    "followup": "c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+    "incomingCommitParents": [
+      "098a2a6788fcf4477e348ca669628e35f68517a9"
+    ],
+    "followupCommitParents": [
+      "174e27e0178025f88608650347900daac49dcc58",
+      "57885c055a18b27c180c304762643eac632513ad"
+    ]
+  },
+  "completeFourLeaves": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "actualIncoming": {
+        "bytes": 27188,
+        "lines": 489,
+        "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+      },
+      "actualFollowup": {
+        "bytes": 27188,
+        "lines": 489,
+        "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+      },
+      "candidate": {
+        "bytes": 28094,
+        "lines": 506,
+        "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+        "sha256": "67a1e7413eff11ddc087f35a64cd3c8b242c061988b2fbd661497a9f6b5dfd11"
+      },
+      "completeScratchPreimagesEqualFreshGit": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "actualIncoming": {
+        "bytes": 115936,
+        "lines": 1958,
+        "blob": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+        "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076"
+      },
+      "actualFollowup": {
+        "bytes": 111672,
+        "lines": 1896,
+        "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+        "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445"
+      },
+      "candidate": {
+        "bytes": 123149,
+        "lines": 2072,
+        "blob": "1b0ad5b15b056857817858d1e85f6dfe81f6e782",
+        "sha256": "c73b55cbd07ef632b174609e99e05e536d584b8dae9c124c2fc1a14e1c76c4da"
+      },
+      "completeScratchPreimagesEqualFreshGit": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "actualIncoming": {
+        "bytes": 6481,
+        "lines": 161,
+        "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+        "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+      },
+      "actualFollowup": {
+        "bytes": 6481,
+        "lines": 161,
+        "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+        "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+      },
+      "candidate": {
+        "bytes": 6382,
+        "lines": 161,
+        "blob": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+        "sha256": "47c561887a1ea9a499f131a073c805be07a9a17343c1115b32ec173dcdf894c9"
+      },
+      "completeScratchPreimagesEqualFreshGit": true
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "actualIncoming": {
+        "bytes": 180091,
+        "lines": 5678,
+        "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+      },
+      "actualFollowup": {
+        "bytes": 180091,
+        "lines": 5678,
+        "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+      },
+      "candidate": {
+        "bytes": 180058,
+        "lines": 5678,
+        "blob": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+        "sha256": "70597b6bb603515e31ec1239eb6543cc9f1fb18beb20ac20c6a357ee03f748ed"
+      },
+      "completeScratchPreimagesEqualFreshGit": true
+    }
+  ],
+  "strictPatchProofs": [
+    {
+      "path": "preinput-copy-after-p11-r1/candidate-relative-incoming.patch",
+      "bytes": 14568,
+      "lines": 245,
+      "blob": "61ebd379a1038705e2b48487338c0424bc00f760",
+      "sha256": "8067e3aae9067c0ae59e7b7fa6b46a602c5cc9c20445854c3b006ab639067338",
+      "base": "72e6ec04444969d343d73834c70bc4e261100fc9",
+      "wholeForwardAndReverseByteExact": true,
+      "added": 152,
+      "removed": 21
+    },
+    {
+      "path": "preinput-copy-after-p11-r1/candidate-relative-followup.patch",
+      "bytes": 18874,
+      "lines": 304,
+      "blob": "a217b0a40a6e63744fda456d06577849db4d5027",
+      "sha256": "423dd3c43e9289757502c4d9f7e450104216e593bd2b9f3736df4c97e818d069",
+      "base": "c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+      "wholeForwardAndReverseByteExact": true,
+      "added": 214,
+      "removed": 21
+    }
+  ],
+  "wholeSourceMap": {
+    "leafCount": 8798,
+    "otherLeavesExactIncoming": 8794,
+    "incomingMapSha256": "2f1c50940429fd4cc9509ebf9c0c7de77c49560d9999aca848595350310db470",
+    "followupMapSha256": "0aaf4203eeb6a9a0717139f5bfc843a238c26952ccee52572fda1c9c9e8067e2",
+    "projectedMapSha256": "3aac1b178739ba20b80ca23dde15867dc630b8862733a8d02b5829564c0d5ae2",
+    "matchesRootMetadata": true,
+    "samePathSetModesAndTypes": true,
+    "sourceWrites": false,
+    "gitObjectsOrRefsWritten": false
+  },
+  "P11Preservation": {
+    "suffix": {
+      "bytes": 4264,
+      "lines": 62,
+      "blob": "08699c4890b2ef83bcbda53094c450c6a9c3b366",
+      "sha256": "a299b6ec1497dc542f675fd7868a430d8e9d4d0503199c9ff0343a7187b5312d"
+    },
+    "completeGeometryTestPrefix": {
+      "bytes": 118885,
+      "lines": 2010,
+      "blob": "8694096d0aafcd7130589d97f12ad5a4fd65a616",
+      "sha256": "9411c8171255880a187382e5ceef1c44e74172fe4c9eb6c357b3654388cceb70"
+    },
+    "incomingBeforeGeometry": {
+      "bytes": 115936,
+      "lines": 1958,
+      "blob": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+      "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076"
+    },
+    "combinedAfterimage": {
+      "bytes": 123149,
+      "lines": 2072,
+      "blob": "1b0ad5b15b056857817858d1e85f6dfe81f6e782",
+      "sha256": "c73b55cbd07ef632b174609e99e05e536d584b8dae9c124c2fc1a14e1c76c4da"
+    },
+    "exactSuffixOccurrences": 1,
+    "deleteSuffixReturnsEntireReviewedGeometryCandidate": true,
+    "reverseOnlyGeometryKeepsSuffixAndReturnsCurrentIncoming": true,
+    "importsPassiveRecorderAssertionsAndEveryP11AssertionRetained": true,
+    "driverUnchanged": {
+      "bytes": 45707,
+      "lines": 570,
+      "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+    },
+    "actualSourceExtractionAndClosedShadowClockUnchanged": true,
+    "noDriverImportOrRuntimeLaunch": true
+  },
+  "semanticComposition": [
+    "The fresh union resolves the concrete whole-file conflict identified in incoming13c89: applying old8694096 alone would erase current P11 A. The selected1b0ad contains all8694096 bytes followed by the exact incoming08699 suffix, and both parent-relative whole patches reverse byte-exact.",
+    "The geometry helper is byte-identical to independently approved76dda. The combined test retains all approved geometry assertions, the consciously amended moved-point acceptance, every incoming passive-recorder assertion and every incoming P11 case. No new interaction or shared mutable fake clock is introduced: geometry uses existing finite CDP/owner fakes, P11 uses its per-invocation shadow environment.",
+    "Geometry retains two original initial reads and one hover. The common S+F observation count is at most16; every final F consumes two newly charged matching S since initialization/reset, hence F<=5 and S<=15. Continuation requires at least3 remaining slots and only a same-tag finite coordinate mismatch before input. Availability, exact final equality and fresh pre-press owner remain mandatory; no click replay follows press/release uncertainty.",
+    "Logical read allowance is not an absolute1.5-second or OS-query cap. Original nested waitRead/transport/outer deadlines and material original owner ps/lsof/birth costs remain; more final owner observations are an explicitly reviewed acceptance amendment. New settled finite-coordinate check is a disclosed strengthening, not a claim that the earlier hover could never contain malformed coordinates.",
+    "Copy afterimages are exactly1738fe12 and67e50eea: three generic33-byte storage claims plus one existing expectation are removed, with complete remaining bytes preserved. No new literal test, intentional copy RED, storage/API/DTO/currentness/credential behavior or Main qualified diagnostic changes.",
+    "The current P11 defect remains in unchangedbd8bc. Three late true observations still statically resolve instead of rejecting, so three expected-rejection failures remain predictions; post-rejection read/trace assertions are unreachable in those RED cases. Fourth control and all original cases still require actual full-command accounting.",
+    "The new R1 correctly supersedes historical unselected-A statements for primary72e only. It does not select B/C or Models A/B. Current hook1176 and formatter-testfa761 are preserved; the inert after-copy Models preview48bf is excluded."
+  ],
+  "phaseOrderAndEvidence": {
+    "existingAOnlyPrimary": "72e6ec04444969d343d73834c70bc4e261100fc9",
+    "originalEightFileCommand": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "fullCommandUnchanged": true,
+    "AStaticPredictionOnly": "Baseline119+4=123 on the reviewed original Linux venue; three semantic expected-rejection failures are predicted, not observed. Geometry net10 cases in a later composed source must be accounted from actual outputs.",
+    "noAlternateVenueOrWorkflow": true,
+    "actualOriginalASemanticREDAndIndependentR2BeforeB": true,
+    "BNeedsSeparateFreshR1AndCompleteSourceReadback": true,
+    "actualBOriginalGREENBeforeC": true,
+    "copyHasNoNewTestsOrDedicatedRED": true,
+    "baseline578Only": "Actual119 helper+7 installer+179 Team including24 stderr plus full original compiler/typed scopes are retained under exact prior independent report964204. They do not qualify72e or this candidate.",
+    "futureValidation": "Natural original CI only: whole8 helper command, whole10 Team contracts, original4frontend shards, full workspace and dedicated backend compiler and original typed scopes. No local tests/compiler/lint/install/bootstrap/manual dispatch/cancel/rerun/native/provider work.",
+    "fastLintAndArtifactLimits": "Original93 list omits the helper itself. Copy paths stay outside native1757/1769 source census; fresh Git and original frontend/compiler/typed features evidence are required. Existing rosters and source-size guard/exceptions unchanged.",
+    "prospectivePublication": "Fresh full docs manifest/independent byte-tree review and immutable remote-tree verification precede ordinary docs child and actual independent readback. Only then ordered source merge parents[verified docs child,current72e], only four complete afterimages, ordinary followup push and complete actual readback. Primary advancement has its own fresh guards and preservation of useful current originals.",
+    "scopeBoundary": "This report reviews the exact source union and complete40076 R1. It does not approve an as-yet-unfrozen full docs manifest, remote tree, commit or ref update, nor claim actual resulting-source GREEN."
+  },
+  "unchangedModelsHook": {
+    "bytes": 74351,
+    "lines": 2068,
+    "blob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+    "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575"
+  },
+  "unchangedFormatterTest": {
+    "bytes": 720,
+    "lines": 15,
+    "blob": "fa761c43af6d414b0f2be0338869891dc059f640",
+    "sha256": "7591962fa6f0b58294543c674ab2fd6a590b406159a9cb8ed7b8b7e8f6be9440"
+  },
+  "freshGitSourceAndVenueInputs": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101741,
+      "lines": 1312,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": ".node-version",
+      "bytes": 8,
+      "lines": 1,
+      "blob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/02-opencode-v2-credentials.md",
+      "bytes": 161938,
+      "lines": 1024,
+      "blob": "d09816d1d0bb8ff6bb1767a853b32aa6d7f69ca3",
+      "sha256": "658f942fc93a809d9eb64e3810d1b906152fbb6dcfbbeac0f537c2c4cda5bd25",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "eslint.config.js",
+      "bytes": 37840,
+      "lines": 1166,
+      "blob": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+      "sha256": "d9f0cf7c33672b9304fc524bbc028e07939bcab4583bb1e7c94b99fd773eb597",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "eslint.fast.config.js",
+      "bytes": 7268,
+      "lines": 258,
+      "blob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "eslint.feature-overrides.mts",
+      "bytes": 657,
+      "lines": 19,
+      "blob": "9c6450d54b87ce33f7d799f900226c316e367937",
+      "sha256": "a90a4b08c1d5f56021c50fe5f5ababa70c3de0732acec173624da51254dc883e",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "package.json",
+      "bytes": 26839,
+      "lines": 580,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2CredentialOperation.ts",
+      "bytes": 5840,
+      "lines": 103,
+      "blob": "0b7b2bbf7c0538b965551c795a776ec6ed92c1e6",
+      "sha256": "9de31be2a9cd399ab644c2d16649ec0f000561dab105490dc86267a55291c067",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "bytes": 8310,
+      "lines": 172,
+      "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts",
+      "bytes": 36898,
+      "lines": 719,
+      "blob": "3e0d1ae7a3aa852fb5772821f7df1059edd7cead",
+      "sha256": "e54fda9c30ec3d53f20027d59faf81f59c75fd3ad3987593bd4cd64315a17d3a",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/CredentialCommandOwner.ts",
+      "bytes": 10407,
+      "lines": 242,
+      "blob": "741ad6e143b8405358e5f5d1e1a172c761dca10d",
+      "sha256": "78dc89dbdace7a51cf3d98fc3abc530e6362e4873d37ae71ba7d7b666486238b",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "bytes": 16208,
+      "lines": 278,
+      "blob": "ce5c3a7511009501ca057f01957008a8ce3ef67b",
+      "sha256": "e52a7a6ec9af567c1ff9b8e5c82136d538b3ccffbb0803cdf1c5c9db909b2ae5",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "lines": 26665,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "bytes": 6946,
+      "lines": 169,
+      "blob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/ci/check-source-file-size.mjs",
+      "bytes": 8145,
+      "lines": 231,
+      "blob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+      "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/ci/source-file-size-baseline.json",
+      "bytes": 9635,
+      "lines": 146,
+      "blob": "e827bccf455235b1ff7871e7b93450cdaa53eb54",
+      "sha256": "82080bdf23e0fae3ea087e8aea8c3622fa63a734fa9874e7d07e9d568087f072",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/e2e/comment-notification/cdp.mjs",
+      "bytes": 3704,
+      "lines": 119,
+      "blob": "9397505b7889db88ef103dca62287e3d02a88cc9",
+      "sha256": "8e70fecbb1f2107abffa91d78644ee74f8e34546c8117587661f8376c27998aa",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "bytes": 53683,
+      "lines": 1019,
+      "blob": "e2b96672feefb924a39e20131514e0db5e347311",
+      "sha256": "ba36a5c01c6f670bcba92e6a155683385cd3eb33c871f94b8191b378b226f9d9",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "bytes": 33173,
+      "lines": 690,
+      "blob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+      "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 54778,
+      "lines": 791,
+      "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "bytes": 2115,
+      "lines": 46,
+      "blob": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+      "sha256": "26da6d6f0ad5e089fb59b6a57e7d102e434ea442cb5a1b9ef089f1362a139f21",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+      "bytes": 20305,
+      "lines": 283,
+      "blob": "b8b6760f5623f55387dba4fec288947bce707bc7",
+      "sha256": "8d19cb46ef2729e862a37f13c32c0239d0fd7e0148b15873c1f0d1fad87cc6e7",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "bytes": 68865,
+      "lines": 791,
+      "blob": "76f4e9aa4d29e4eab14041e5343e0e3a5b46b3cf",
+      "sha256": "945b5ad3a507cea5925cb8b5e8d25aa0a15970c38a5f4c6c13db13fcaa3ccb64",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "bytes": 24968,
+      "lines": 333,
+      "blob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+      "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "bytes": 45707,
+      "lines": 570,
+      "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "bytes": 20040,
+      "lines": 306,
+      "blob": "13229f20c93226ee5b3f4d07516d16f94b0d48d5",
+      "sha256": "460743df044eef3901653a6c4331a14bdf977ca644513a22386bf34907aaf13e",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+      "bytes": 44561,
+      "lines": 600,
+      "blob": "083522612dd93e77dbb0e79c966103b03a71fe87",
+      "sha256": "555a309f762015659a3b7a0d44522785fa7ea171aedf77392020c25dc5d70e33",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-management-sources.ts",
+      "bytes": 21211,
+      "lines": 309,
+      "blob": "762570da8b4fc492065b217303a3da169bf627cf",
+      "sha256": "7b89bab88022f53fbc8470f0cbcd4acd93f8ee5412059144e3a676c0fb7466f8",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "bytes": 52632,
+      "lines": 800,
+      "blob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+      "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "bytes": 20996,
+      "lines": 323,
+      "blob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+      "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+      "bytes": 3804,
+      "lines": 67,
+      "blob": "7c84fc0167171b2d0cce7c002c660a93060444b8",
+      "sha256": "cb6cd06a6773f9533357c501d551f3ed04144900787f39291caba0abc1980290",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-review-hunk-controls.ts",
+      "bytes": 9637,
+      "lines": 220,
+      "blob": "27ad07bff0c9c89ecfc7dc572ac53e2e9e16e8ef",
+      "sha256": "ae6a85389e34559faf22a87320b940e0df5a80437d8f9ee7f2452131cfea95b4",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-review-ui-smoke.ts",
+      "bytes": 7276,
+      "lines": 176,
+      "blob": "9395283cd2e88ddf40def6ee3cf25aaa6f4ff7c3",
+      "sha256": "b7bff873445aa7938b1a1d6e26067fb663205de8002ccca7d5a99745e61217ae",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 115936,
+      "lines": 1958,
+      "blob": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+      "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076",
+      "sameFollowup": false,
+      "selectedChange": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 27188,
+      "lines": 489,
+      "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+      "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a",
+      "sameFollowup": true,
+      "selectedChange": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+      "bytes": 8676,
+      "lines": 164,
+      "blob": "e7731fd8ca546fd14ac6992d74ea78f3ad8e7981",
+      "sha256": "de8552ab68f316a41901b304e7315128c33ad848a059fd0d14a60de7d6bd4b9e",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "src/features/runtime-provider-management/contracts/types.ts",
+      "bytes": 23745,
+      "lines": 795,
+      "blob": "5cb5e5f3726395cf0cda9a6e6996e47f6e34de58",
+      "sha256": "e873d838b26f31adc115bf8b4220a48a3f14f131262d001cc8e098ee4a42c31a",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/adapters/output/CapturedProviderCredentials.ts",
+      "bytes": 4619,
+      "lines": 85,
+      "blob": "26c843202a7e3ec5a45491857f2dc51948f827bf",
+      "sha256": "bb7f13088bfc888f60d07f9a778ca5dd16672433846aa81fd0a57d40dd8e8273",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient.ts",
+      "bytes": 23900,
+      "lines": 580,
+      "blob": "6849549eacb871ea1342a37f4cecd27ed7795c32",
+      "sha256": "fe9b1bdc4e4dfb4eba417e1bb4a3b29987cbd1ccfdbf9766582e2d49a7a53568",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "bytes": 6481,
+      "lines": 161,
+      "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+      "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0",
+      "sameFollowup": true,
+      "selectedChange": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "bytes": 74351,
+      "lines": 2068,
+      "blob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+      "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "bytes": 8707,
+      "lines": 264,
+      "blob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+      "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/RuntimeProviderConnectErrorPresentation.test.ts",
+      "bytes": 720,
+      "lines": 15,
+      "blob": "fa761c43af6d414b0f2be0338869891dc059f640",
+      "sha256": "7591962fa6f0b58294543c674ab2fd6a590b406159a9cb8ed7b8b7e8f6be9440",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 180091,
+      "lines": 5678,
+      "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+      "sameFollowup": true,
+      "selectedChange": true
+    },
+    {
+      "path": "test/scripts/installDependenciesWithRetry.test.mjs",
+      "bytes": 4939,
+      "lines": 112,
+      "blob": "c1c0232d09e5cd898d7acabcc48b87bab58f3c82",
+      "sha256": "3aab9d6568157c883993c43b8057193175e69c16c31129ce3867a14e686a8f00",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "test/setup.ts",
+      "bytes": 5297,
+      "lines": 168,
+      "blob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c",
+      "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 1235,
+      "lines": 40,
+      "blob": "568952f5025a88c16b0568c7279d8e85a4288b43",
+      "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "bytes": 646,
+      "lines": 20,
+      "blob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306",
+      "sameFollowup": true,
+      "selectedChange": false
+    },
+    {
+      "path": "vitest.config.ts",
+      "bytes": 1187,
+      "lines": 34,
+      "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+      "sameFollowup": true,
+      "selectedChange": false
+    }
+  ],
+  "retainedExactSemanticReviews": [
+    {
+      "path": "click-preinput-stabilization-r1/R1-appendix.md",
+      "bytes": 20857,
+      "lines": 100,
+      "blob": "9bb3777ca076dea9dd60f76d9759dc1815e0dde0",
+      "sha256": "7d07956cc3f0d6929c2d3fd5907d121254c073294dfcae4573e37763b4b4510d"
+    },
+    {
+      "path": "click-preinput-stabilization-r1/independent-source-r1-review.json",
+      "bytes": 13132,
+      "lines": 119,
+      "blob": "6d69b6f30c2aca45254275fc1c380a38426a8ae5",
+      "sha256": "d7b07e1a76b1d03405feba1df12902321e669f5448028e9850fafd25a9ce68ae"
+    },
+    {
+      "path": "credential-failure-copy-r1-v2/R1-appendix.md",
+      "bytes": 8590,
+      "lines": 49,
+      "blob": "0c2c2866685ef1270fe4052dbdb89be00ae6d3a5",
+      "sha256": "d68d1ca4269b68d5e9012a9312306a12b560ff6e9c456267123b9c4357f93647"
+    },
+    {
+      "path": "credential-failure-copy-r1-v2/independent-source-r1-review.json",
+      "bytes": 16030,
+      "lines": 363,
+      "blob": "9a06f1b6a41c03ae82da98a26e7b2d5b42eaab33",
+      "sha256": "7e385a95d35464346776adfedcfa8903d4d71a16bcef9b55625ea74efb3eb49c"
+    },
+    {
+      "path": "external-primary-0833/independent-incoming-p11-phase-a-source-review.json",
+      "bytes": 19635,
+      "lines": 505,
+      "blob": "13c89fcd420f1ddbbccb13fc44c141520fe51d63",
+      "sha256": "29a4d6231aac527f28431d7a44b290d4d2dfe3815c41ab00ba6ac5a362b99f89"
+    },
+    {
+      "path": "ci-57885c/team/independent-team-complete-review.json",
+      "bytes": 75096,
+      "lines": 2129,
+      "blob": "964204f443a3730cdeadade177d18093234ae2be",
+      "sha256": "2c68f6f08f5765e7701b6061bc9c3132c11ed98d7510437c52e7a57bec5f43cd"
+    }
+  ],
+  "limits": [
+    "Historical geometry, Models spinner, cleanup and native failures retain their source-specific limits; no causal repair inferred.",
+    "P08/P09, full I386 policy/root qualification and complete Desktop/migration acceptance remain separate.",
+    "No original reports, candidate bytes, tracked files, refs or CI were changed; no project source was imported or executed."
+  ]
+}

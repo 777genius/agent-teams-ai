@@ -1,0 +1,38 @@
+{
+  "kind": "current full-map evidence reference and exact two selected preimages",
+  "sourceHead": "c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+  "sourceEquivalentHead": "57885c055a18b27c180c304762643eac632513ad",
+  "priorExactFullMapProof": {
+    "path": "credential-failure-copy-r1/current-preimage-rebind.json",
+    "bytes": 2341,
+    "lines": 47,
+    "blob": "76f4eaffc863f69bfb009c4b6c7eec7a12b0965f",
+    "sha256": "f9c401ac86fb0946523fc6fc2145e5fbe50fb41a191bded2fe278466dafc1cbd"
+  },
+  "all8798NonDocsEqualityReferenced": true,
+  "selectedPreimages": [
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "bytes": 6481,
+      "lines": 161,
+      "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+      "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 180091,
+      "lines": 5678,
+      "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+    }
+  ],
+  "unchangedFormatterTest": {
+    "path": "test/renderer/features/runtime-provider-management/RuntimeProviderConnectErrorPresentation.test.ts",
+    "bytes": 720,
+    "lines": 15,
+    "blob": "fa761c43af6d414b0f2be0338869891dc059f640",
+    "sha256": "7591962fa6f0b58294543c674ab2fd6a590b406159a9cb8ed7b8b7e8f6be9440"
+  },
+  "futureModelsAFullFileCandidate": "370e1b067c732c2a59c68a10cdf857f31707386b",
+  "futureModelsCompositionRequired": "Preserve hook-test copy expectation67e50eea when composing any later selected Models regression; never apply old whole-file candidate blindly."
+}

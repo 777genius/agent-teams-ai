@@ -1,0 +1,998 @@
+{
+  "kind": "AUTHOR_READ_ONLY_E2_DARWIN_PROCESS_ORIGINAL_AUDIT",
+  "auditedAtUTC": "2026-11-16T08:04:35.646172+00:00",
+  "sourceHead": "57885c055a18b27c180c304762643eac632513ad",
+  "runId": 43823212637,
+  "jobId": 133150850917,
+  "job": {
+    "id": 133150850917,
+    "name": "Host process fixtures (darwin-arm64)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43823212637,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 2
+      },
+      {
+        "name": "Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Select the pinned package manager with bundled Corepack",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Bind exact source and actual process tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Install frozen workspace without Desktop postinstall",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Build existing controller and Host",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Verify process contracts and retained Main Host transport",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Verify original POSIX Node and shell lifecycle fixtures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Prepare pinned Electron for native process fixtures",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Verify Linux Node exec descriptor closure under both original parents",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15
+      },
+      {
+        "name": "Build original Windows product broker and C++ fixtures",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Qualify original Windows Job and control under Host Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Qualify original Windows Job and control under Electron Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Qualify original codex source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Qualify original claude source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Qualify original opencode source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Require completed original platform receipts and unchanged source",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 23
+      },
+      {
+        "name": "Preserve original process evidence including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24
+      },
+      {
+        "name": "Post Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 46
+      },
+      {
+        "name": "Post Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 47
+      },
+      {
+        "name": "Post Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 48
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 49
+      }
+    ]
+  },
+  "jobsResponse": {
+    "path": "ci-57885c/native/owned-process-jobs-response-0802.json",
+    "bytes": 22863,
+    "blob": "a0d28da734e68819fae720fdbe88f7ccb477ce7d",
+    "sha256": "e071594c6b963a041050e0bfa05b381d9dd2ea1dcaddc31231e6804c7c7031ea"
+  },
+  "artifactMetadataResponse": {
+    "path": "ci-57885c/native/official-process-artifacts-0746.json",
+    "bytes": 3895,
+    "blob": "f55073423b3437a6295a97a3bad9f6e5a961c7d1",
+    "sha256": "299609b9c8c7c6c976d14ba90f5f0970b1c83a16cff91dcde11e71ceadfc612e"
+  },
+  "officialArtifact": {
+    "id": 14206855210,
+    "name": "host-process-fixtures-darwin-arm64-57885c055a18b27c180c304762643eac632513ad",
+    "size_in_bytes": 12899,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206855210",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206855210/zip",
+    "expired": false,
+    "created_at": "2026-11-16T07:38:52Z",
+    "expires_at": "2026-11-30T07:38:51Z",
+    "updated_at": "2026-11-16T07:38:52Z",
+    "digest": "sha256:689bacf6b214c1a6a009480213d408fce79ad64fb998bacaa0796f83b1806892",
+    "workflow_run": {
+      "id": 43823212637,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+    }
+  },
+  "commands": [
+    {
+      "line": 35,
+      "text": "actions/checkout@v7.0.1"
+    },
+    {
+      "line": 240,
+      "text": "actions/setup-node@v7.0.0"
+    },
+    {
+      "line": 261,
+      "text": "set -euo pipefail"
+    },
+    {
+      "line": 274,
+      "text": "actions/setup-node@v7.0.0"
+    },
+    {
+      "line": 307,
+      "text": "set -euo pipefail"
+    },
+    {
+      "line": 319,
+      "text": "node scripts/ci/install-dependencies-with-retry.mjs"
+    },
+    {
+      "line": 597,
+      "text": "set -euo pipefail"
+    },
+    {
+      "line": 611,
+      "text": "set -euo pipefail"
+    },
+    {
+      "line": 874,
+      "text": "set -euo pipefail"
+    },
+    {
+      "line": 925,
+      "text": "set -euo pipefail"
+    },
+    {
+      "line": 1041,
+      "text": "actions/upload-artifact@v4"
+    }
+  ],
+  "reporterBlocks": [
+    {
+      "line": 795,
+      "tests": 167,
+      "suites": 0,
+      "pass": 165,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 2,
+      "todo": 0,
+      "duration_ms": 21936.354417
+    },
+    {
+      "line": 917,
+      "tests": 27,
+      "suites": 0,
+      "pass": 27,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "duration_ms": 11058.837708
+    }
+  ],
+  "sourceIdentityLines": [
+    {
+      "line": 37,
+      "text": "  ref: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 54,
+      "text": "  HOST_PROCESS_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 108,
+      "text": "[command]/opt/homebrew/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 110,
+      "text": " * branch            57885c055a18b27c180c304762643eac632513ad -> FETCH_HEAD"
+    },
+    {
+      "line": 111,
+      "text": "[command]/opt/homebrew/bin/git rev-parse --verify --quiet 57885c055a18b27c180c304762643eac632513ad^{object}"
+    },
+    {
+      "line": 112,
+      "text": "57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 119,
+      "text": "[command]/opt/homebrew/bin/git checkout --progress --force 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 208,
+      "text": "HEAD is now at 57885c0 fix(test): persist I386 observations before Release acknowledgement"
+    },
+    {
+      "line": 211,
+      "text": "57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 248,
+      "text": "  HOST_PROCESS_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 270,
+      "text": "  HOST_PROCESS_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 283,
+      "text": "  HOST_PROCESS_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 316,
+      "text": "  HOST_PROCESS_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 324,
+      "text": "  HOST_PROCESS_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 608,
+      "text": "  HOST_PROCESS_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 619,
+      "text": "  HOST_PROCESS_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 880,
+      "text": "  HOST_PROCESS_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 1038,
+      "text": "  HOST_PROCESS_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 1043,
+      "text": "  name: host-process-fixtures-darwin-arm64-57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 1056,
+      "text": "  HOST_PROCESS_SOURCE_HEAD: 57885c055a18b27c180c304762643eac632513ad"
+    },
+    {
+      "line": 1072,
+      "text": "Artifact host-process-fixtures-darwin-arm64-57885c055a18b27c180c304762643eac632513ad.zip successfully finalized. Artifact ID 14206855210"
+    },
+    {
+      "line": 1073,
+      "text": "Artifact host-process-fixtures-darwin-arm64-57885c055a18b27c180c304762643eac632513ad has been successfully uploaded! Final size is 12899 bytes. Artifact ID is 14206855210"
+    }
+  ],
+  "fullLog": {
+    "path": "ci-57885c/native/process-darwin-arm64/job-133150850917.log",
+    "bytes": 111263,
+    "blob": "8f4ef4380dc294e556b417efa6cbc1f0685344a0",
+    "sha256": "71355e07e29765280d69e519bd1a9794224fd5c5489a121aaf7f432aa947263b"
+  },
+  "originalMCPResponse": {
+    "path": "ci-57885c/native/process-darwin-arm64/original-job-133150850917-response.json",
+    "bytes": 117120,
+    "blob": "0d5dd04a1e120546d050effa1fce10afa889d163",
+    "sha256": "39b6399d262460e97cbf1fd50b94b4364cfa9163b9cb0668e3b2ff974b34f358"
+  },
+  "fullResponseUtf8ByteJoin": true,
+  "archive": {
+    "path": "ci-57885c/native/process-darwin-arm64/artifact-14206855210.zip",
+    "bytes": 12899,
+    "blob": "08c8035de3049180cb886bf6bee9ec27f6ddbb89",
+    "sha256": "689bacf6b214c1a6a009480213d408fce79ad64fb998bacaa0796f83b1806892"
+  },
+  "originalRetention": {
+    "path": "ci-57885c/native/process-darwin-arm64/archive-retention.json",
+    "bytes": 2158,
+    "blob": "06a44b1d963ee3cf0d9e5031f24ef7c39b4b2b9e",
+    "sha256": "b8d3aaa09d83ef8fcdff206cdc9431bb39df2c0ef3d07f397b507c5be70c2055"
+  },
+  "safeUniqueNonsymlinkCRC": true,
+  "members": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log",
+      "bytes": 5173,
+      "blob": "ffd481755d04293613ef5a1939660759c226e3a8",
+      "sha256": "c6e65bb8a75cd6b5de7113b865fab42b108b54f8f17a2ce502fde2cb61484ec0",
+      "crc32": "19f7e0b7",
+      "extracted": "ci-57885c/native/process-darwin-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "bytes": 20684,
+      "blob": "2573d2deb8e36571b0eb9c16c2d875246bdd4f32",
+      "sha256": "b39278f4b0001af54eda600250b91d07d850319b75630ecc6e065906341d99c0",
+      "crc32": "c1d847c8",
+      "extracted": "ci-57885c/native/process-darwin-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "bytes": 9006,
+      "blob": "5076c257fe2fb728b5eae2db5b93ea730b52fa1b",
+      "sha256": "b73136f35783986e365a142d81c112aa1243005acf44a5cdd7dc82ac7c212185",
+      "crc32": "fcb47f48",
+      "extracted": "ci-57885c/native/process-darwin-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "bytes": 771,
+      "blob": "1f17ce54061a73ecec79873efdba3c31f26006ca",
+      "sha256": "137b7166ca16267c73b43ce3ad0bd26b5c9db79dcb7bdef85c4328679244ad64",
+      "crc32": "5bc2fb10",
+      "extracted": "ci-57885c/native/process-darwin-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+      "bytes": 495,
+      "blob": "75e752c3c7a2b84c6c3e2c0a00a39e90b4311bb2",
+      "sha256": "4bdbff2da10b14621dde69eca11f88595a95fe098b7797565397e58a2837e922",
+      "crc32": "05340081",
+      "extracted": "ci-57885c/native/process-darwin-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "bytes": 41,
+      "blob": "32ddd36fc22451553828f4b67edcb8ff5d802e65",
+      "sha256": "f2d72cb87853588bc0cb650131a65687c8ad3de1d55016cf1e46a227f02847bf",
+      "crc32": "543cb8e7",
+      "extracted": "ci-57885c/native/process-darwin-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt"
+    }
+  ],
+  "originalFourTeeJoins": [
+    {
+      "member": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log",
+      "lines": 42,
+      "fullJobFirstLine": 883,
+      "fullJobLastLine": 924,
+      "wholeContiguousJoin": true,
+      "transform": "UTF8 BOM and line-ending normalization; remove only timestamp prefix from full job and ANSI SGR from both sides. Original raw bytes remain separately retained."
+    },
+    {
+      "member": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "lines": 181,
+      "fullJobFirstLine": 622,
+      "fullJobLastLine": 802,
+      "wholeContiguousJoin": true,
+      "transform": "UTF8 BOM and line-ending normalization; remove only timestamp prefix from full job and ANSI SGR from both sides. Original raw bytes remain separately retained."
+    },
+    {
+      "member": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "lines": 59,
+      "fullJobFirstLine": 815,
+      "fullJobLastLine": 873,
+      "wholeContiguousJoin": true,
+      "transform": "UTF8 BOM and line-ending normalization; remove only timestamp prefix from full job and ANSI SGR from both sides. Original raw bytes remain separately retained."
+    },
+    {
+      "member": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "lines": 12,
+      "fullJobFirstLine": 803,
+      "fullJobLastLine": 814,
+      "wholeContiguousJoin": true,
+      "transform": "UTF8 BOM and line-ending normalization; remove only timestamp prefix from full job and ANSI SGR from both sides. Original raw bytes remain separately retained."
+    }
+  ],
+  "scopeFile": {
+    "path": "ci-57885c/native/process-darwin-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+    "bytes": 495,
+    "blob": "75e752c3c7a2b84c6c3e2c0a00a39e90b4311bb2",
+    "sha256": "4bdbff2da10b14621dde69eca11f88595a95fe098b7797565397e58a2837e922"
+  },
+  "scope": {
+    "kind": "TEST_HOST_PROCESS_FIXTURE_ACCEPTANCE",
+    "status": "PASS",
+    "sourceHead": "57885c055a18b27c180c304762643eac632513ad",
+    "platform": "darwin-arm64",
+    "nodeVersion": "v24.21.0",
+    "controlledContracts": true,
+    "retainedMainTransport": true,
+    "posixProcessGroups": true,
+    "native": [],
+    "nativeProviderRuntimeQualified": false,
+    "darwinNativeRegistrationQualified": false,
+    "posixExecutableAdmissionQualified": false,
+    "desktopQualified": false,
+    "releaseQualified": false
+  },
+  "sourceHeadFile": {
+    "path": "ci-57885c/native/process-darwin-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+    "bytes": 41,
+    "blob": "32ddd36fc22451553828f4b67edcb8ff5d802e65",
+    "sha256": "f2d72cb87853588bc0cb650131a65687c8ad3de1d55016cf1e46a227f02847bf"
+  },
+  "sourceLeaves": [
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "bytes": 32248,
+      "blob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+      "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c",
+      "lines": 418,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "package.json",
+      "bytes": 26839,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "lines": 580,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/index.ts",
+      "bytes": 11111,
+      "blob": "755158699496506a62132c540f19b225c5a6222d",
+      "sha256": "5710013cfeac12d61f6f93ba995df696395c583803b2226be79195dff7dff095",
+      "lines": 330,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/hostCustody.ts",
+      "bytes": 21129,
+      "blob": "af69d8430ffd473d471a5e663606fcaea640d2e5",
+      "sha256": "ae2bc6fe45b4dded8cff67b13daf01e8a5f5c4fc3e835ce7eb98a8c58adaf435",
+      "lines": 472,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/claude-management-host.test.ts",
+      "bytes": 13620,
+      "blob": "7f7ee01121e64f0ab55c127f62c796bf20b3fc70",
+      "sha256": "0c90e1992310021a746897425e4440dff4116dcb8a7a19651def8a47563925be",
+      "lines": 223,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/lifecycle-process-release.test.ts",
+      "bytes": 11844,
+      "blob": "6e620f1fdc12a4752b19e8ec2a8757ee2ad0d368",
+      "sha256": "d635cffd30e479172d6febdfa1de71d2c518c310a72aadfd6cd0f63c9e2deca1",
+      "lines": 169,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/management-command-store.test.ts",
+      "bytes": 6631,
+      "blob": "b5788fd14518fde0dff0c58071cf8f9722d87e72",
+      "sha256": "c49a82c5f6626f17228c929077d849f74bf53f8837c6b11d6ed759e7280f3b60",
+      "lines": 120,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "bytes": 47440,
+      "blob": "d13aa0c846dbf97aff99786e1165aa214aab93c7",
+      "sha256": "5a1e781f3d910b97cb3e4bfdc8592897bce69861b6200421355ed9f047f85f89",
+      "lines": 850,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+      "bytes": 9208,
+      "blob": "1a202377edc9f57c62eb757e9fcdc8718479e3d1",
+      "sha256": "ee1ba17e9fd9f52dc825c067a17038a5de36af4541ede3201621e62007614dec",
+      "lines": 164,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/registered-process-build-selection.test.ts",
+      "bytes": 15547,
+      "blob": "d88797a15f80482027c990a1fdd75ff42264aa41",
+      "sha256": "26dd3e24a21b33fbe50067f2f73a925db82d3ae7e907cd93b2a9f0bd8fe08322",
+      "lines": 258,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/registered-process-capture-records.test.ts",
+      "bytes": 4201,
+      "blob": "c7e75d4252407448804d52f80de69e64014645af",
+      "sha256": "c25580f9eac0ecfaf67d0319e75db263b3f06126a1891ffb23697594f711ec16",
+      "lines": 57,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/registered-process-commands.test.ts",
+      "bytes": 48150,
+      "blob": "5fedca0326ab0bc92a124af9c39d1df1e4bb90cd",
+      "sha256": "052e701e1f0942215caeae3e6d2a92e900a03dcede46a3707682cf651122e68f",
+      "lines": 844,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/registered-process-linux-warm-lifetime.test.ts",
+      "bytes": 18173,
+      "blob": "06472ff88775f547e4b49fd1521109623d2d220f",
+      "sha256": "98050d0259dd0ab0b061f23e8d8e313811dc21ba59e0238e67a3269269b00c3e",
+      "lines": 290,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/registered-process-owner.test.ts",
+      "bytes": 12404,
+      "blob": "f1737e1a21a0447d43b84d3d839a5ffa6f385e2b",
+      "sha256": "44641e49e37d6c7bc9106aa18c98b399f9697128b7fdc4b341185c0835a8c0ef",
+      "lines": 314,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-source-probe-origins.test.ts",
+      "bytes": 12854,
+      "blob": "e757868741c2f4dd63f811a76232f95d6c7d6ba1",
+      "sha256": "33987a7fadfa6254175e64d9a743931c34684192e787a236a5b43dc247d82011",
+      "lines": 212,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-source-process-selections.test.ts",
+      "bytes": 21765,
+      "blob": "126e66a45224121719b7b33c333692ee147b664d",
+      "sha256": "21ba6dea161737fee65834714cc9c4fb252e148f3d778f52d5e004fcfd18b757",
+      "lines": 294,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "bytes": 90081,
+      "blob": "6a668daeaf47a920aeddfb87c4d2658a35754f11",
+      "sha256": "63b8db91450898514af1b2bd474faf4c0b5fe4eae29d3b6f986ee636f0f505a8",
+      "lines": 1672,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+      "bytes": 41863,
+      "blob": "dbbd17b11db24a9dc3fb989e0266101847f0a778",
+      "sha256": "f3f9147184700663c24d85a2a81ff6ab54724b7883a9e6fcc9bf9c324f473ab5",
+      "lines": 598,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/windows-finite-process-routing.test.ts",
+      "bytes": 10746,
+      "blob": "00eaa6c453a9d53c31dfc29f0dc0d83a610f5b85",
+      "sha256": "194703f2e57d73a0a4db026b41e9c64071bdc956d08dcdf9cb4ef2c238d8462b",
+      "lines": 165,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/windows-job-custody.test.ts",
+      "bytes": 19542,
+      "blob": "1ca246fe30e71394783be13dc49ccc1d9b864dbb",
+      "sha256": "1ff30c2a0b092456040fe2779a2f71325d261cccc71fd81d527722105dced469",
+      "lines": 349,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/windows-launcher-recipe.test.ts",
+      "bytes": 22044,
+      "blob": "af3b9078b2fa9ee565ccc406a50852ccb600b4bb",
+      "sha256": "7a7dfa5edfa12536d692aa1d5db0df4db992092a33094c965918ce8fbbc0e0af",
+      "lines": 357,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/windows-provider-routing.test.ts",
+      "bytes": 5368,
+      "blob": "7ec8646c9dd6f375f77c999fb33d1963a259298e",
+      "sha256": "d3ea92a25c8f1b837f7f08a8196a1ce6eb02dd6de51601a382906601b8f14596",
+      "lines": 92,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "bytes": 456,
+      "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab",
+      "lines": 19,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.test.json",
+      "bytes": 174,
+      "blob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+      "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356",
+      "lines": 9,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+      "lines": 26665,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "bytes": 32767,
+      "blob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+      "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138",
+      "lines": 800,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "bytes": 52301,
+      "blob": "272e7c3f6ca10d890148fa16080464b395535125",
+      "sha256": "a974eadfc088aa488412b34840a138ef4187e5382592b19493af4a4eeb66d86f",
+      "lines": 1046,
+      "sameBytesAsE1": false
+    },
+    {
+      "path": "test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts",
+      "bytes": 4592,
+      "blob": "4a7801a5260ad0c25a07485003d4e99ac5b4633f",
+      "sha256": "a979a7e7a32e952067237fc3d04f3b4b19a97328dacf55db65c606dae4211287",
+      "lines": 67,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "test/features/agent-backend/capturedWindowsSelection.test.ts",
+      "bytes": 10861,
+      "blob": "e6379e4ace2cc874f660c6bb1377592bba52ebb9",
+      "sha256": "3f972d99f44c514d3f06875a7c8a094b63998aa5daf17abf68db13a7b4cc9025",
+      "lines": 186,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+      "bytes": 12515,
+      "blob": "b6ce74003e2dc27a8e4527bd07298fc2bff2a586",
+      "sha256": "0c411315405fd6a572dddb385e3735ca43b78141d729f932a27087adf48480c7",
+      "lines": 166,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "test/features/agent-backend/capturedWindowsSourcePending.test.ts",
+      "bytes": 6457,
+      "blob": "1ff48096cf52cde91cd82ac55eddf99f4458896e",
+      "sha256": "b18822ad82a51a00100184148043032822fcfa2df80c47e1d38a4dbdc6e71e56",
+      "lines": 86,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "test/features/agent-backend/desktopBackendFeature.test.ts",
+      "bytes": 56748,
+      "blob": "1bd21c24852ebfade85b23b425342e6665f447e7",
+      "sha256": "a6540bd6c68165b7b0d782768cc7303d00cb609083df4baacdaad81d51e3f810",
+      "lines": 1121,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "test/features/agent-backend/fileTeamModelProbeIntents.test.ts",
+      "bytes": 10028,
+      "blob": "a596613b900598a51d446d7c959b1ea7c1c95b64",
+      "sha256": "0fd030d5cdfb4473b32991b6b62befa9ecd888236423419df9a48f9e599cc119",
+      "lines": 194,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "test/features/agent-backend/fixtures/retainedNativeCustody.ts",
+      "bytes": 29798,
+      "blob": "c2a23405f8e90face1927707d741cd8f462e35b8",
+      "sha256": "84d8b7cb8ce39b73d713c5d819ebd3c3ae854fe6917257333809328106c474e7",
+      "lines": 603,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+      "bytes": 15667,
+      "blob": "bc0820f51820e4cf66f37404395fee4c536b5311",
+      "sha256": "1f20a7ab1e2f8e35abd2123a962884054f00b0a48deb7bf2617502bc8d960b46",
+      "lines": 294,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.test.ts",
+      "bytes": 4745,
+      "blob": "48d1c9752dddb3e5fa91c6c564912b0474312168",
+      "sha256": "4ad0525d402aac610a867e7011da52a4f85dc7d6055fb048d9c78995187f4778",
+      "lines": 95,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+      "bytes": 7387,
+      "blob": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+      "sha256": "40a1d7107607b3d1e6fcbdd0018d452e830622a5d3ba8256d302a2a42ac7633a",
+      "lines": 124,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "tools/owned-process-broker/protocol.test.ts",
+      "bytes": 54514,
+      "blob": "89fe7152198d4eac2772e21222cd3b7b7be381d7",
+      "sha256": "c726cbfe75eb1b9acee02a51b7828068b14ac7d953c75ee092a5f4f3bf1f6438",
+      "lines": 1239,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "bytes": 557,
+      "blob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+      "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+      "lines": 6,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+      "bytes": 393,
+      "blob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+      "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+      "lines": 6,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "tools/owned-process-broker/vitest.config.ts",
+      "bytes": 342,
+      "blob": "cd03a73404a7b2548c15234743c24c1093b554af",
+      "sha256": "d7af296db40661045f6402af15eeb6072781919fd8c8145e554dada03e0de88e",
+      "lines": 13,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "vitest.config.ts",
+      "bytes": 1187,
+      "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+      "lines": 34,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "bytes": 17005,
+      "blob": "d2b952c9e6ac2281a14a00665cf4689d9c7d4b5c",
+      "sha256": "12be8f565712c09537d99ba75b63aa6e01774708ad1967c7ee2fdd964d747712",
+      "lines": 366,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-source-native-identity.test.ts",
+      "bytes": 42655,
+      "blob": "eaf21d42dc203d22778cfec4f02eb9bc6d62c0fa",
+      "sha256": "3cb9951ac6c712fb5911ebf83598d1c81d62a6fa6aa9bd03dc6c2df745e3a420",
+      "lines": 994,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts",
+      "bytes": 11502,
+      "blob": "c3670e3828e2b9470a2997d29d6cad225107d8fc",
+      "sha256": "ccf4bd25cb828b6ea08b437337552f7a8d662dd49fb6aeabb2d7af4d9c29897f",
+      "lines": 291,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+      "bytes": 9039,
+      "blob": "a2158e62d439c0ee0b29ffd28df64cf848cee99f",
+      "sha256": "5a7e5ab19c9f486c21e518c117c2637e0125b38f7ef2850ee6e1295bbad2123d",
+      "lines": 196,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts",
+      "bytes": 10051,
+      "blob": "e6861511417070c9202458253a16a3ffb20216ae",
+      "sha256": "77cb82d6c1938b3f858b4b65484c9ab123ec6b0c8e4bab2c20793b6708f51c08",
+      "lines": 166,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "bytes": 8310,
+      "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7",
+      "lines": 172,
+      "sameBytesAsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/RuntimeSourceNativeVersion.ts",
+      "bytes": 6458,
+      "blob": "5c3e39fa4f77c9534625396204df6cc68e108170",
+      "sha256": "3d5172989237fdf15827d2116af71e395de0ca58d0d95070c5d258dd25d99e04",
+      "lines": 151,
+      "sameBytesAsE1": true
+    }
+  ],
+  "sourceCount": 49,
+  "literalOriginalCommands": [
+    {
+      "line": 599,
+      "text": "node node_modules/@typescript/native/bin/tsc -p packages/task-change-ledger/tsconfig.json"
+    },
+    {
+      "line": 600,
+      "text": "node agent-teams-controller/scripts/build.mjs"
+    },
+    {
+      "line": 601,
+      "text": "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.json"
+    },
+    {
+      "line": 602,
+      "text": "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json"
+    },
+    {
+      "line": 603,
+      "text": "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json"
+    },
+    {
+      "line": 604,
+      "text": "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json"
+    },
+    {
+      "line": 613,
+      "text": "node --test packages/legacy-agent-host/tests/claude-management-host.test.ts packages/legacy-agent-host/tests/scheduled-run-host.test.ts packages/legacy-agent-host/tests/management-command-store.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-linux-warm-lifetime.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/lifecycle-process-release.test.ts packages/legacy-agent-host/tests/windows-provider-routing.test.ts packages/legacy-agent-host/tests/windows-launcher-recipe.test.ts packages/legacy-agent-host/tests/windows-finite-process-routing.test.ts packages/legacy-agent-host/tests/runtime-source-process-selections.test.ts packages/legacy-agent-host/tests/runtime-source-probe-origins.test.ts packages/legacy-agent-host/tests/management-model-probe.test.ts packages/legacy-agent-host/tests/saved-team-model-probe.test.ts 2>&1 | tee process-acceptance-evidence/host-contracts.log"
+    },
+    {
+      "line": 614,
+      "text": "node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts 2>&1 | tee process-acceptance-evidence/protocol.log"
+    },
+    {
+      "line": 615,
+      "text": "node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/features/agent-backend/capturedHostClient.test.ts test/features/agent-backend/capturedWindowsSelection.test.ts test/features/agent-backend/desktopBackendFeature.test.ts test/features/agent-backend/fileTeamModelProbeIntents.test.ts test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts test/features/agent-backend/capturedWindowsSourceHistory.test.ts test/features/agent-backend/capturedWindowsSourcePending.test.ts test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts 2>&1 | tee process-acceptance-evidence/retained-main.log"
+    },
+    {
+      "line": 876,
+      "text": "node --test packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/runtime-source-native-identity.test.ts 2>&1 | tee process-acceptance-evidence/posix-lifecycle.log"
+    }
+  ],
+  "commandComposition": {
+    "hostFiles": 18,
+    "protocolVitestFiles": 3,
+    "retainedMainFiles": 8,
+    "POSIXFiles": 2
+  },
+  "vitestReporterRows": [
+    {
+      "line": 811,
+      "text": "      Tests  54 passed (54)"
+    },
+    {
+      "line": 870,
+      "text": "      Tests  81 passed (81)"
+    }
+  ],
+  "totalObservedAssertions": {
+    "pass": 327,
+    "fail": 0,
+    "skip": 2,
+    "cancel": 0
+  },
+  "actualMainPressureCases": [
+    "   ✓ captured legacy host client over real subprocess stdio > holds Main reply bytes before native effect, expiry=false  396ms",
+    "   ✓ captured legacy host client over real subprocess stdio > holds Main reply bytes before native effect, expiry=true  499ms"
+  ],
+  "physicalNegativeDiagnostics": [
+    {
+      "cleanupConfirmed": true,
+      "descendantAbsent": true,
+      "neighborPreserved": true
+    },
+    {
+      "cleanupConfirmed": false,
+      "descendantAbsent": true,
+      "neighborPreserved": true
+    }
+  ],
+  "physicalSemantics": "Ordered initial cleanupConfirmed true/false are intentional distinct original cases. In the parent-exited case, source requires descendant still present, creates its original release marker, then waits same custody true and asserts fresh ESRCH before publishing the earlier false diagnostic. Original neighbor stays alive until its finally cleanup. The separately mocked replacement-PGID case refuses TERM/KILL for reaped root; no forced PID reuse is claimed.",
+  "providerNameLimits": "The actual new standalone Claude/Codex rows use source-defined finite Node executables ending7 with TEST stderr/stdout, expect native session startup rejection and exact cleanup. Runtime-version cases use generated TEST shell executables; no real vendor/version qualification is inferred from case names or SDK warning.",
+  "limits": [
+    "Actual source578 SUCCESS is separate from earlier sourceE1 failure. The only changed selected interpretation leaf adds a closed reply-status diagnostic to an existing rejection; the optional pre-schema20ms pressure request and original Main gate remain unchanged. Neither this success nor new source proves old failure cause or qualifies the separate unselected Main-cap proposal.",
+    "18-file Host contracts include finite TEST peers and mocked ownership cases. The original POSIX lane runs two source files, not a real vendor CLI/version acceptance.",
+    "Original native array is empty; no Darwin native registered execution/P09, Desktop, installed product, vendor or release qualification.",
+    "Source-selected constructor/cleanup semantics and original actual test assertions are retained. A diagnostic cleanupConfirmed:false is the deliberately earlier observation before subsequent original marker/reap/ESRCH assertions, not a failed final-cleanup aggregate.",
+    "No source/test/compiler/native/provider/CI action by auditor. Full original logs, four tees and six ZIP members are byte joined."
+  ]
+}

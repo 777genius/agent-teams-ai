@@ -1,0 +1,302 @@
+{
+  "kind": "E2_578_COMPLETE_FOUR_FRONTEND_ORIGINALS_CHECKPOINT",
+  "author": "/root/migration_scope",
+  "createdAtUTC": "2026-11-16T08:16:42.728692+00:00",
+  "sourceHead": "57885c055a18b27c180c304762643eac632513ad",
+  "sourceTree": "b1685b4993306f9cd509d832b72f2cd6f0418943",
+  "runId": 43823212577,
+  "status": "AUTHOR_AUDITED_AWAITING_SEPARATE_INDEPENDENT_R2",
+  "canonicalCounts": {
+    "filesTotal": 2162,
+    "filesPassed": 2155,
+    "filesWhollySkipped": 7,
+    "assertionsTotal": 25870,
+    "assertionsPassed": 25832,
+    "assertionsSkipped": 38,
+    "assertionsFailed": 0
+  },
+  "payloadCount": 23,
+  "originalPayloadCount": 20,
+  "payloads": [
+    {
+      "path": "ci-57885c/initial-owned-api-0729.json",
+      "bytes": 104681,
+      "blob": "539d2a83b1f7b5ed443531fc6b73f37aad5805b9",
+      "sha256": "484c9e33e89e964f61d4475d6835f9167bbe8cd3c0e816901420d06df00b42c6"
+    },
+    {
+      "path": "ci-57885c/owned-jobs-0804-actual.json",
+      "bytes": 167686,
+      "blob": "2fae2b6d416ca121b625185671ebc14aebf66a38",
+      "sha256": "1232f802374e5f2861dbe749357d99771ec0e7f9108334961e00685ae77e2934"
+    },
+    {
+      "path": "ci-57885c/official-host-artifacts-0747.json",
+      "bytes": 10414,
+      "blob": "5d0f75b5311876697ecdc174f8831b6f54462d8f",
+      "sha256": "53cc7bea17d24da54b9884a9b8d1367075c4a4b03c46e156c36520001d119d98"
+    },
+    {
+      "path": "ci-57885c/official-host-artifacts-0805.json",
+      "bytes": 20681,
+      "blob": "1a9dd98536b6d433ee1aadfe65f82e8c55b06be0",
+      "sha256": "ffd586353083cb2fdf106fc798470ecf2f65d9a9c1a6664e9e6ec89d3f6a5fcd"
+    },
+    {
+      "path": "ci-57885c/frontend1/job.log",
+      "bytes": 168408,
+      "blob": "95a2bc313e41c86489e1a1831ad2c93a35399000",
+      "sha256": "a5bdb216ba0ed58bff08ceedbcb42d0265d741f119b380c087f33bc5b6722810"
+    },
+    {
+      "path": "ci-57885c/frontend1/job-original-response.json",
+      "bytes": 207526,
+      "blob": "2421eec56a354e44e01163f3ec6699432c610e95",
+      "sha256": "bc85aa988b636b8b9123053e206ef49163731f4bd7910e45cc3e86359254c52e"
+    },
+    {
+      "path": "ci-57885c/frontend1/archive-retention.json",
+      "bytes": 2073,
+      "blob": "0ad3a4384d3a6079fd4f0031ade00098a29de1b8",
+      "sha256": "398ec0373e7f75eb0c9765ef841f479855653416c6cab49d7c23e33e7cdc0887"
+    },
+    {
+      "path": "ci-57885c/frontend1/artifact-14206308356.zip",
+      "bytes": 294718,
+      "blob": "bc6be809faa0d6a13caeffe1359adedfbd78dab6",
+      "sha256": "9e18bfa1fe9933f5bd9ae1e354422728342dbaf67f11e33e948cf8a65ea7585c"
+    },
+    {
+      "path": "ci-57885c/frontend2/job.log",
+      "bytes": 176039,
+      "blob": "8bb942c155724155fe2a5154a8b5efdaff9442b2",
+      "sha256": "a620fa7d91e70ad40c73fcb2045b02610d80efc85172044b51f90fd95f635a5d"
+    },
+    {
+      "path": "ci-57885c/frontend2/job-original-response.json",
+      "bytes": 216882,
+      "blob": "c55bb11e0a7391cb5ab8e58702f7ddd1b9493d20",
+      "sha256": "53ae805119e64076d241da8a9400185f4dc0f5d72a13e60bec8a5ebbc94fdab1"
+    },
+    {
+      "path": "ci-57885c/frontend2/archive-retention.json",
+      "bytes": 2074,
+      "blob": "b4ba0f9f505f32fcce7f8eb0c4307359484e8897",
+      "sha256": "8e12c0226a630ed95be68b0ad1e0803f6d80c2a04946f7c8f83f1065b62196f8"
+    },
+    {
+      "path": "ci-57885c/frontend2/artifact-14206432098.zip",
+      "bytes": 311602,
+      "blob": "5ff2740b7962dbbe234faa0ad910e3fbfac3ad67",
+      "sha256": "c74cdae047de0b4da27cd2789c5bdfdcda39f83d3485605916f941c71578d1ca"
+    },
+    {
+      "path": "ci-57885c/frontend3/job.log",
+      "bytes": 166129,
+      "blob": "da0708e5b81b1f96453f1f6b07ef16f7a0c51a6f",
+      "sha256": "9d7a0239044c5cf83a7064693a8f5ef0f5baae45854cecb54ca8880447c3824e"
+    },
+    {
+      "path": "ci-57885c/frontend3/job-original-response.json",
+      "bytes": 203959,
+      "blob": "efb8c0429d8826005a2a4d1f80df62dfae5bd61e",
+      "sha256": "3214d60d7b3319db28f69cbc49e41aa12ed8e56ea93903225fc349643ebeb3d2"
+    },
+    {
+      "path": "ci-57885c/frontend3/archive-retention.json",
+      "bytes": 2073,
+      "blob": "095503d9c4e6bae39d938eceb6f64b4452d48fdd",
+      "sha256": "2bcabac9a85cb7c2aaeb59b34a2372dc0b1d39c4f1342ea0edfee1c2a83d1654"
+    },
+    {
+      "path": "ci-57885c/frontend3/artifact-14206571770.zip",
+      "bytes": 297156,
+      "blob": "84fee94de3621d09d7e10893e4df974ae29fcb2b",
+      "sha256": "a2f2458462d2e50e2c48de96f0672fb89d28b76d44a986d24b3b68dd54b9645d"
+    },
+    {
+      "path": "ci-57885c/frontend4/job.log",
+      "bytes": 193257,
+      "blob": "106f43469fa56e339f3c8fcb83179ac94193519d",
+      "sha256": "515af6bf729f9ace9ba7a2fb21567f21cc1483896222b7e1716794791f27853a"
+    },
+    {
+      "path": "ci-57885c/frontend4/job-original-response.json",
+      "bytes": 237300,
+      "blob": "6bf536f2d7df25e0c55a870bebe994019ea6f6b3",
+      "sha256": "e11d968a760bae228a2416ce537464adda7441e4fb1b482de179413c3dfefb7d"
+    },
+    {
+      "path": "ci-57885c/frontend4/archive-retention.json",
+      "bytes": 2462,
+      "blob": "f3517eadb4470bed23c366a79b261e319c6c0b06",
+      "sha256": "56e0861e391a2e438ba7aec726bf38e903925f433dbadcf95a3151a1c1e863a5"
+    },
+    {
+      "path": "ci-57885c/frontend4/14207795182.zip",
+      "bytes": 317499,
+      "blob": "eff2c43a36143ab54e20f8e6d4b6fe93239bd779",
+      "sha256": "4fe0bb55bfaa04f2482c469cc86f633c942d72d627c66501e1e2a410d88559bd"
+    },
+    {
+      "path": "ci-57885c/frontend-all-shards/byte-source-proof.json",
+      "bytes": 1619746,
+      "blob": "ba9e18e494d9c6ba238c1303bb791723b0c1f818",
+      "sha256": "c14c5cced0a5c9d8fd065fe043bf374ed8ac896c76bc952f6fb081198f6c13c9"
+    },
+    {
+      "path": "ci-57885c/frontend-all-shards/aggregate-audit.json",
+      "bytes": 63158,
+      "blob": "c2b7d7acf3842bacb0a60d8fe50c6f7af52d53fe",
+      "sha256": "3bb0d1d6aa7e919fb2c82b59e9262fb273ade7cac4bd082018e897d2da2280a2"
+    },
+    {
+      "path": "ci-57885c/frontend-all-shards/Plan29-all-frontend-shards-appendix.md",
+      "bytes": 6324,
+      "blob": "d70a73507dbd2ab230e6585691778ac6b64a6ce0",
+      "sha256": "46e900a562aea49e3e8888304835a127d9f90ec9fa5fba11099ba595d15cdc9b"
+    }
+  ],
+  "payloadBytes": 4791847,
+  "recoverableArchiveCount": 4,
+  "recoverableMemberCount": 8,
+  "recoverableMembers": [
+    {
+      "shard": 1,
+      "artifactId": 14206308356,
+      "archive": {
+        "path": "ci-57885c/frontend1/artifact-14206308356.zip",
+        "bytes": 294718,
+        "blob": "bc6be809faa0d6a13caeffe1359adedfbd78dab6",
+        "sha256": "9e18bfa1fe9933f5bd9ae1e354422728342dbaf67f11e33e948cf8a65ea7585c"
+      },
+      "members": [
+        {
+          "member": "host-offline-tests-1.json",
+          "bytes": 2168218,
+          "blob": "a0fb099bfa7be6f5e52b0009c42a97cc5ff3e1c8",
+          "sha256": "5515d8dd260a84a278601da5b40cdb762f8ed7ee505f22e884b0da8362e0a2ff",
+          "crc32": "5cf1c2c0",
+          "extractedPath": "ci-57885c/frontend1/extracted/host-offline-tests-1.json",
+          "extractedFullBytesEqual": true
+        },
+        {
+          "member": "host-offline-tests-1.log",
+          "bytes": 98335,
+          "blob": "5ce1ec736815340de1cca13f11fd3468afb19920",
+          "sha256": "8a4d0446b60b1e4c2b9781aa100b2002192edaee70ffd6b3913a543f0503d917",
+          "crc32": "efe3b26d",
+          "extractedPath": "ci-57885c/frontend1/extracted/host-offline-tests-1.log",
+          "extractedFullBytesEqual": true
+        }
+      ]
+    },
+    {
+      "shard": 2,
+      "artifactId": 14206432098,
+      "archive": {
+        "path": "ci-57885c/frontend2/artifact-14206432098.zip",
+        "bytes": 311602,
+        "blob": "5ff2740b7962dbbe234faa0ad910e3fbfac3ad67",
+        "sha256": "c74cdae047de0b4da27cd2789c5bdfdcda39f83d3485605916f941c71578d1ca"
+      },
+      "members": [
+        {
+          "member": "host-offline-tests-2.json",
+          "bytes": 2388627,
+          "blob": "9cbbe3f0e1977d960f1ce0887ea65f75951f259e",
+          "sha256": "7ed49fe04e4d6a9be73fafd8ba7453987a0b5e979b2f9863c4401dace2d1aa1f",
+          "crc32": "ab24bb58",
+          "extractedPath": "ci-57885c/frontend2/extracted/host-offline-tests-2.json",
+          "extractedFullBytesEqual": true
+        },
+        {
+          "member": "host-offline-tests-2.log",
+          "bytes": 105028,
+          "blob": "b63cda20b726b5f6138861a520be86b1f8aba76f",
+          "sha256": "f15a66380f4866abf95573b1b9c7e21c20a32b06d06b1a5945a299d6e089ec31",
+          "crc32": "73164e48",
+          "extractedPath": "ci-57885c/frontend2/extracted/host-offline-tests-2.log",
+          "extractedFullBytesEqual": true
+        }
+      ]
+    },
+    {
+      "shard": 3,
+      "artifactId": 14206571770,
+      "archive": {
+        "path": "ci-57885c/frontend3/artifact-14206571770.zip",
+        "bytes": 297156,
+        "blob": "84fee94de3621d09d7e10893e4df974ae29fcb2b",
+        "sha256": "a2f2458462d2e50e2c48de96f0672fb89d28b76d44a986d24b3b68dd54b9645d"
+      },
+      "members": [
+        {
+          "member": "host-offline-tests-3.json",
+          "bytes": 2189608,
+          "blob": "506e8951a3f96527c5c01ecd773cee920b7866d8",
+          "sha256": "8008a598ab47ffa44ad82cc4a403e5a24baf653be39f12376f63b02153dd7855",
+          "crc32": "3c81f2f7",
+          "extractedPath": "ci-57885c/frontend3/extracted/host-offline-tests-3.json",
+          "extractedFullBytesEqual": true
+        },
+        {
+          "member": "host-offline-tests-3.log",
+          "bytes": 93965,
+          "blob": "e4fbdc16e8a6479984bb23900fc6211cb7a77b02",
+          "sha256": "e6f13735fd9c7eb16713ba666b2fbb90f5488cbce057b31aac63216b7721fa06",
+          "crc32": "91866394",
+          "extractedPath": "ci-57885c/frontend3/extracted/host-offline-tests-3.log",
+          "extractedFullBytesEqual": true
+        }
+      ]
+    },
+    {
+      "shard": 4,
+      "artifactId": 14207795182,
+      "archive": {
+        "path": "ci-57885c/frontend4/14207795182.zip",
+        "bytes": 317499,
+        "blob": "eff2c43a36143ab54e20f8e6d4b6fe93239bd779",
+        "sha256": "4fe0bb55bfaa04f2482c469cc86f633c942d72d627c66501e1e2a410d88559bd"
+      },
+      "members": [
+        {
+          "member": "host-offline-tests-4.json",
+          "bytes": 2329549,
+          "blob": "3ca8ef44e2af092c324d07d3f5c96784a02afe1b",
+          "sha256": "1fb3a43edde4170388bba3ec3b993911e466da9f9fef99faab74e9566c73bb1e",
+          "crc32": "d9460a7b",
+          "extractedPath": "ci-57885c/frontend4/extracted/host-offline-tests-4.json",
+          "extractedFullBytesEqual": true
+        },
+        {
+          "member": "host-offline-tests-4.log",
+          "bytes": 118051,
+          "blob": "1a8c74a9c4b3175451fd756daa0dbdffc0684fd0",
+          "sha256": "5114d7b7f42199b1ca0937e26ffe77a9476f60a3011b7eddda1069e66f3e17e7",
+          "crc32": "e213ddb3",
+          "extractedPath": "ci-57885c/frontend4/extracted/host-offline-tests-4.log",
+          "extractedFullBytesEqual": true
+        }
+      ]
+    }
+  ],
+  "sourceProof": {
+    "path": "ci-57885c/frontend-all-shards/byte-source-proof.json",
+    "bytes": 1619746,
+    "blob": "ba9e18e494d9c6ba238c1303bb791723b0c1f818",
+    "sha256": "c14c5cced0a5c9d8fd065fe043bf374ed8ac896c76bc952f6fb081198f6c13c9"
+  },
+  "limits": [
+    "Original four safe frontend shard jobs on578 only; no overall Host workflow, Desktop business action, Team/privacy/static, native/vendor, packaged, P08/P09, merge or release qualification.",
+    "The33 CLI-excluded files and38 skipped assertions remain unqualified. Seven physical files have only skipped assertions even though their original JSON testResult.status says passed; physical file counts are reconstructed from assertion arrays and agree with the default reporter.",
+    "Reported JSON test-suite counters are preserved separately and are not physical file counts.",
+    "Workspace runnerNode26.12.1 is distinct from captured TESTNode24.21.0. Original Host/ledger engine-range warnings are retained; no warning-free claim is made.",
+    "Original prerequisite build commands and the SQLite ABI smoke completed in CI; the archives do not contain a full compiled-output/dependency inventory, and this reviewer performed no fresh build.",
+    "Git source checkout/path/config joins and complete reviewer-side Git hashing do not independently archive or prove each transformed runner module, every dependency or all transitive imports.",
+    "This is not the older9e General command or its counters, and results do not transfer to c763 merge or proposed geometry/copy/Models/P11 afterimages. The existing Models file has80PASS on6c311; neither the future90-case ModelsA nor P11A is present or executed.",
+    "This author packet awaits separate independent R2. Retained API snapshots are historical observations, not new polls or a latest/all-cohorts terminal claim."
+  ],
+  "noExecutionDownloadPollOrMutation": true
+}

@@ -1,0 +1,91 @@
+{
+  "kind": "prospective exact three-file presentation-only correction; not applied",
+  "sourceHead": "57885c055a18b27c180c304762643eac632513ad",
+  "createdAtUTC": "2026-11-16T07:59:12.382428+00:00",
+  "paths": [
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "preimage": {
+        "bytes": 6481,
+        "lines": 161,
+        "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+        "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+      },
+      "candidate": {
+        "bytes": 6382,
+        "lines": 161,
+        "blob": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+        "sha256": "47c561887a1ea9a499f131a073c805be07a9a17343c1115b32ec173dcdf894c9"
+      },
+      "addedLines": 3,
+      "removedLines": 3
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/RuntimeProviderConnectErrorPresentation.test.ts",
+      "preimage": {
+        "bytes": 720,
+        "lines": 15,
+        "blob": "fa761c43af6d414b0f2be0338869891dc059f640",
+        "sha256": "7591962fa6f0b58294543c674ab2fd6a590b406159a9cb8ed7b8b7e8f6be9440"
+      },
+      "candidate": {
+        "bytes": 2365,
+        "lines": 61,
+        "blob": "1542ebe14a303845d67a48f601b25941994e8368",
+        "sha256": "5fffb3b149eddf7ea88b997580733d3a10217c0e05d35b4b36a5d4d5951af837"
+      },
+      "addedLines": 46,
+      "removedLines": 0
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "preimage": {
+        "bytes": 180091,
+        "lines": 5678,
+        "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+      },
+      "candidate": {
+        "bytes": 180058,
+        "lines": 5678,
+        "blob": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+        "sha256": "70597b6bb603515e31ec1239eb6543cc9f1fb18beb20ac20c6a357ee03f748ed"
+      },
+      "addedLines": 1,
+      "removedLines": 1
+    }
+  ],
+  "patch": {
+    "bytes": 4317,
+    "lines": 85,
+    "blob": "a9a96167ed85ecc08ef2bc9ce5d49747d0753d2f",
+    "sha256": "3163c2c1e91fb17bf58511334c8d01b61b80ca0ce5690ced4c6215cd34d65f7a"
+  },
+  "recipe": {
+    "production": "Remove the same unsupported storage assertion from exactly three existing generic failure strings; all predicates/branch order/full other bytes unchanged.",
+    "formatterTests": "Full15-line original prefix plus four actual-function cases; three intended changed-message failures and one unconfirmed-diagnostic control.",
+    "hookTest": "One existing literal expected-message update only; all original80 cases/source bytes otherwise exact."
+  },
+  "inverse": {
+    "allThreeCompletePreimagesRestored": true,
+    "originalFormatterTestPrefixExact": true,
+    "productionChangedLines": 3,
+    "hookChangedLines": 1
+  },
+  "expectedNotExecuted": {
+    "formatterFile": "5 total:2PASS3semanticFAIL before correction,5PASS after; prediction only.",
+    "hookFile": "80 total on retained current E2 source; one literal expectation should fail before correction and be restored after. Other outcomes are not presumed.",
+    "noRuntimeExecution": true
+  },
+  "nativeSelectedSourceRoster": {
+    "formatterPresent": false,
+    "bothTestFilesPresent": false,
+    "rosterChangeSelected": false,
+    "limit": "Fresh complete Git bodies + existing original frontend/compiler/typed-lint venues; no native selected-source-census coverage claim."
+  },
+  "prohibitedChanges": [
+    "No credential storage/API/DTO/guard/timeout/retry/cleanup behavior change",
+    "No workflow or source-roster edit",
+    "No source application or test/compile/lint/install/native/CI execution"
+  ]
+}

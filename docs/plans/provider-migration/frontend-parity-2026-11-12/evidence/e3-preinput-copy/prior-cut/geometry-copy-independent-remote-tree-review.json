@@ -1,0 +1,62 @@
+{
+  "schema": "independent-geometry-copy-immutable-remote-tree-review/v1",
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUTC": "2026-11-16T08:32:19.060376+00:00",
+  "result": "APPROVE",
+  "manifest": {
+    "path": "/workspace/scratch/82d3f9ba6b85/geometry-copy-publication/upload-manifest.json",
+    "bytes": 275786,
+    "blob": "ddcb97cd74c77d7bd26f533bd561c531560f2892",
+    "sha256": "222174ae401a622ff877d772d15b15b6665a75b298428349aa9ad976e301681f"
+  },
+  "prepublicationReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/geometry-copy-independent-prepublication-review.json",
+    "bytes": 39378,
+    "blob": "384dcc27d4fcdc61a4aaedeb8603472f6b65ea95",
+    "sha256": "8606adb1928d7183444b731dc021f503b7c3bd3e81140de23a69730978211eeb"
+  },
+  "completeOfficialResponseReviews": [
+    {
+      "kind": "docs",
+      "rawResponse": {
+        "path": "/workspace/scratch/82d3f9ba6b85/geometry-copy-publication/remote-docs-tree-response.json",
+        "bytes": 8103786,
+        "blob": "01ee72180a97925f7b9f62418d328e5e313823d4",
+        "sha256": "0cd4b3eaafa7a0c0cb87e6348f3c97d156be606ede4b29474cc4cc05cbb92ddc"
+      },
+      "observedAtUTC": null,
+      "tree": "010a100641c228169434065fd3bdd9f58f9cde66",
+      "untruncated": true,
+      "recursiveEntries": 13087,
+      "leaves": 11376,
+      "directoriesIncludingRoot": 1712,
+      "allModesTypesShasSizesExact": true,
+      "allDirectoryObjectsRehashed": true,
+      "fullExpectedMapEqual": true,
+      "nonDocCount": 8798,
+      "nonDocMapSha256": "0aaf4203eeb6a9a0717139f5bfc843a238c26952ccee52572fda1c9c9e8067e2"
+    },
+    {
+      "kind": "source",
+      "rawResponse": {
+        "path": "/workspace/scratch/82d3f9ba6b85/geometry-copy-publication/remote-source-tree-response.json",
+        "bytes": 8103786,
+        "blob": "5026bb65d5f8952eb10ae85a4d31f0338b93bd10",
+        "sha256": "a9b77037a4f9ae38a1285b37878436baea2128310b68416879d9450dc4fd4577"
+      },
+      "observedAtUTC": null,
+      "tree": "948a19a67800c3cb6b1cb2b539a38b5de9dac67c",
+      "untruncated": true,
+      "recursiveEntries": 13087,
+      "leaves": 11376,
+      "directoriesIncludingRoot": 1712,
+      "allModesTypesShasSizesExact": true,
+      "allDirectoryObjectsRehashed": true,
+      "fullExpectedMapEqual": true,
+      "nonDocCount": 8798,
+      "nonDocMapSha256": "75c3a4a9e66e1fe81fe09c91ea24b765894d6a0026c0dc1daacff1201c1f1eb3"
+    }
+  ],
+  "method": "Complete root-retained official immutable GET responses, identical inner response content, every leaf mode/type/SHA/size, every directory SHA and independent bottom-up Git Merkle. No duplicate API/CI calls.",
+  "scope": "Immutable remote proposals only. Actual docs publication/readback must precede the separate four-source child; no commit/ref/project execution performed by reviewer. Fresh publication route guards remain root-owned."
+}

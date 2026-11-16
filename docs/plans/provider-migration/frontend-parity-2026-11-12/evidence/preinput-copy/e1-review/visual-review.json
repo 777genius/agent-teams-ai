@@ -1,0 +1,16 @@
+{
+  "file": {
+    "path": "ci-e1d14b9/review/extracted/TEST-desktop-backend-B8oAL1/ui-failure.png",
+    "bytes": 87805,
+    "blob": "3289bfe80c45eaedb87fa97bcf4e7cfa1f9101de",
+    "sha256": "034b73f23ca4afa9a6ab691a97e0f3fd17c38757e2618f0dc53afcc0ffbddb1c"
+  },
+  "dimensions": [
+    1400,
+    900
+  ],
+  "receiptSha256Matched": true,
+  "actuallyViewedSingly": true,
+  "scope": "Original seeded Task dialog with subject TEST persisted Host sidebar seed, Pending and Unassigned labels, expanded Description, collapsed Changes with badge1, collapsed Task Logs and Workflow History1, and Comments textarea. Background has the same sidebar Task seed and Team overview. No opened change file, hunk decision, history or reload image is present.",
+  "limit": "This later non-atomic frame cannot establish the earlier geometry-change cause or duration, and does not prove a user could mutate the read-only form."
+}

@@ -1,0 +1,113 @@
+{
+  "source": "57885c055a18b27c180c304762643eac632513ad",
+  "artifactId": 14206705481,
+  "archive": {
+    "bytes": 34148,
+    "sha256": "aedbe763c13855e0172c30c6862021e45cbaf8992c7c207f33d09a7289831406"
+  },
+  "safeNames": true,
+  "uniqueNames": true,
+  "crc": true,
+  "members": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt",
+      "bytes": 1929,
+      "sha256": "075a2caee2c218c1c0b826a147beacb228ec10b4821717cd2bb39f2365a06f4c",
+      "gitBlob": "e2c06f4352862ea408d4e909e9fe37b136286104",
+      "crc32": "1df0445f"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "bytes": 20524,
+      "sha256": "e874729e7931ca668d3a616a3edbdf5c12bd8e9712b7ac9ffdf72712342f74a6",
+      "gitBlob": "ac13faf4359763dd9eb558f40b129b7174ec2b0f",
+      "crc32": "f7d27011"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "bytes": 758,
+      "sha256": "9f786e7f9d2793262efbe271237a6942e677a086eacc971a3553bb4c8da9b555",
+      "gitBlob": "75f0f55f8a5d9f26a22b8d1f1e973a200f65b8d8",
+      "crc32": "d31ca05d"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "bytes": 9885,
+      "sha256": "14642dcde2e13db8dd6d68c9535ed694392452bb1d17aad7c0550aae1af98e96",
+      "gitBlob": "e7a3cdcaf5ea6cbaa34e10fe6e22feab78946ab7",
+      "crc32": "0c6fc743"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "bytes": 41,
+      "sha256": "f2d72cb87853588bc0cb650131a65687c8ad3de1d55016cf1e46a227f02847bf",
+      "gitBlob": "32ddd36fc22451553828f4b67edcb8ff5d802e65",
+      "crc32": "543cb8e7"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt",
+      "bytes": 1929,
+      "sha256": "075a2caee2c218c1c0b826a147beacb228ec10b4821717cd2bb39f2365a06f4c",
+      "gitBlob": "e2c06f4352862ea408d4e909e9fe37b136286104",
+      "crc32": "1df0445f"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+      "bytes": 89947,
+      "sha256": "4357ca4d86f818c27c56c2cc16773fb1a707b0de43950f00c958035f8a1a2cd5",
+      "gitBlob": "8cddc7ec80fc7f019f316e0506ca61ba3dac8ee5",
+      "crc32": "156e022d"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider-receipt.json",
+      "bytes": 2908,
+      "sha256": "1178e332391e04af73314c8e1435cc33265b52b5c50f630b079465d9631b10ea",
+      "gitBlob": "e063879611e5d6026659f9b3a243b3e18d5d9d2a",
+      "crc32": "37f7b835"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider.log",
+      "bytes": 1278,
+      "sha256": "a728b651b6ec4395e7cff152d3d7331f35819bf6bc95a63093bd94b2459027e4",
+      "gitBlob": "fc86196ca46a8f252558942fed61fbd899c2480b",
+      "crc32": "845fe74b"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json",
+      "bytes": 195,
+      "sha256": "f42ab29e51344d5f345e967bfb9718505d297e3618d7a087da2b004bc71c6cbe",
+      "gitBlob": "a6e60508628d8ba0377c003aa5b29e16873702c0",
+      "crc32": "94e3f143"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+      "bytes": 89884,
+      "sha256": "59d307c3933798d5f0cf15b686c8e59c645427cae5bccd297619dfdc0dd4cda0",
+      "gitBlob": "c32e6ffa7d163560990a4e2f65edd957337e01a7",
+      "crc32": "57aedd15"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json",
+      "bytes": 232,
+      "sha256": "d366deae8b7a7adffd8247a8a5c38cd9375888f62d90aa96142e1e0448f5c0fb",
+      "gitBlob": "79529d78d96014e29e18d29d280ad4b519bfd691",
+      "crc32": "87de5477"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+      "bytes": 22821,
+      "sha256": "7ee6ede27d2f052c56ea0b20245a188e1c248ea88269359047c2da0429aa7ee3",
+      "gitBlob": "ee94cb9943d8fa77d765a199905d1ce0f55cd45f",
+      "crc32": "3cc89d21"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+      "bytes": 15074,
+      "sha256": "e44b7f030672db70c33983f2888be9572edc4bf49643c0a31d78d2c26f84c055",
+      "gitBlob": "528b8fc5af16716d20c3484e1d7122de98c6d85f",
+      "crc32": "d9b4e517"
+    }
+  ],
+  "downloadUrlRetained": false,
+  "qualification": "raw retention only; semantic audit pending"
+}

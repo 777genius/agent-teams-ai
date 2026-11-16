@@ -1,0 +1,312 @@
+{
+  "kind": "Read-only E2 Windows first-boundary source assessment; no repair selected",
+  "sourceHead": "57885c055a18b27c180c304762643eac632513ad",
+  "createdAtUTC": "2026-11-16T07:56:54.663165+00:00",
+  "basis": [
+    {
+      "path": "ci-57885c/native/process-windows-x64/original-windows-process-failure-audit.json",
+      "bytes": 226589,
+      "blob": "8113090283e2cbdf6511999d257931b7edd29feb",
+      "sha256": "ba0be2724618f09ff3bf8d2057c383ee592cd5c7ef0b92bfc8623c9a96697bf1"
+    },
+    {
+      "path": "ci-57885c/native/process-windows-arm64/original-windows-process-failure-audit.json",
+      "bytes": 266671,
+      "blob": "1a33fc80c24344bb10aea550bb8a27463dff266e",
+      "sha256": "489fc552719e481e4004188c332979b28d349d29e3fe2eab858d3b859418aa9b"
+    },
+    {
+      "path": "ci-57885c/native/host-source-E2-git-audit.json",
+      "bytes": 217153,
+      "blob": "35d96ef2724a931d3c2d83ca98250188916c1a88",
+      "sha256": "29b68ca6a084007c056d5b49aad6a95755bc4bba916c190e790dd2dd3ac532cd"
+    }
+  ],
+  "selectedSourceIdentities": [
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "bytes": 58249,
+      "blob": "dd1e8cd2f1ea052f0480833cfe1fca6be9b5d2e6",
+      "sha256": "442fc644470c06095932c89434cdd8d24ffb6971bdb475d2ca1a3e6257be760d",
+      "lines": 789,
+      "equalsE1": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "bytes": 23934,
+      "blob": "ae066b7c62e2875d975e0f6d701a92bb102a8594",
+      "sha256": "79bea9e617314021ebbd306258d70a1a5beb5a3039665da05a1639bfd0f91fb2",
+      "lines": 279,
+      "equalsE1": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "bytes": 15213,
+      "blob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+      "sha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd",
+      "lines": 231,
+      "equalsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "bytes": 44781,
+      "blob": "08552af73c0f67cd62fca0e5b773cde2281eb152",
+      "sha256": "eb985c1ba5f4a6d22a3816cd80795374f817645e8a59fb8ad70a1734f3e20fc3",
+      "lines": 713,
+      "equalsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "bytes": 30721,
+      "blob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+      "sha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+      "lines": 600,
+      "equalsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "bytes": 22408,
+      "blob": "3b5a244c27d004af6e82fffa092fa83e1894de73",
+      "sha256": "447a3ae82ab6ce0ec866305af2cd426619df3618fbec2397931212379d945784",
+      "lines": 581,
+      "equalsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "bytes": 3398,
+      "blob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f",
+      "sha256": "352c62fcce347599a89658a5dc98d3d05d35d4a6d26618cc87faa6ece2f995df",
+      "lines": 77,
+      "equalsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "bytes": 30469,
+      "blob": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+      "sha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d",
+      "lines": 757,
+      "equalsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "bytes": 15423,
+      "blob": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d",
+      "sha256": "189b8a98f8708d22b1ffabc84ef235efd320a910bf7a9ee19c266846ccd3f1ac",
+      "lines": 315,
+      "equalsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "bytes": 11592,
+      "blob": "2fe449639596cdb07bf5ef39d8040c65d9d6538c",
+      "sha256": "b5c6b9e8924c4eb897f14c2ac4a355e6d505f515fe811c86667144bba4e362f9",
+      "lines": 294,
+      "equalsE1": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+      "bytes": 24664,
+      "blob": "b98f057ce72161d867b99f01dde0f83e3244c3d2",
+      "sha256": "50685504916c575c2956720debc7fc30ba35bd51d047ed9de1ee197d1880f79f",
+      "lines": 584,
+      "equalsE1": true
+    }
+  ],
+  "commonObservationLaw": [
+    "The source scenario gives non-Claude member readiness one 15000ms absolute deadline after the original Start acknowledgement (Scenario470-485). poll59-67 checks the same deadline before and after each original async read; after a false result it waits25ms. Readiness.elapsedMs is sampled inside the check after runtime.read, using readinessStarted, so it is not the later failed deadline operand.",
+    "ARM original stack fails the post-read assertion64. X64 original stack fails the next pre-read assertion62. The x64 last saved14976.1746ms and ARM last15021.603ms therefore describe distinct retained observation points and do not establish different configured budgets.",
+    "ProjectRuntimeMember19-26 reads the original Runtime snapshot and short circuits bindingMatches, recordReady, providerReady, ownerCurrent. Both original failure projections match the retained viewDigest with recordReady:false; providerReady:null and ownerCurrent:null mean those operands were not evaluated in that observation. They are not failed values.",
+    "The projection is an exit-retained TEST observation joined by exact viewDigest after original cleanup; atomicWithFailure:false remains explicit. No new Runtime or native query was made by this audit."
+  ],
+  "codexARM": {
+    "originalReadiness": {
+      "source": {
+        "sourceId": "492cd3a262479d9ff2870060d92b05ecc0043dac9cc59fe566183ab3a3631867",
+        "revision": "139458a2588ca784ea9df6ecaed9b26a0086a830ba670d1f259e6a2be8597e25"
+      },
+      "image": "A",
+      "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+      "readCount": 110,
+      "elapsedMs": 15021.603000000001,
+      "lastRuntimeRead": {
+        "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+        "memberId": "alice-id",
+        "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+        "phase": "allocated",
+        "sealed": false,
+        "custody": "owned",
+        "nativeReady": false,
+        "attached": true
+      }
+    },
+    "originalProjection": {
+      "status": "observed",
+      "atomicWithFailure": false,
+      "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+      "bindingMatches": true,
+      "recordReady": false,
+      "providerReady": null,
+      "ownerCurrent": null,
+      "nativeReady": false
+    },
+    "originalFirstRefusal": {
+      "status": "unknown",
+      "reason": "empty"
+    },
+    "originalCleanup": {
+      "scenario": true,
+      "outer": true,
+      "finalJobs": 7
+    },
+    "sourceChain": [
+      "RuntimeOwner224 awaits driverFactory.open before installing the driver225 and publishing custody:owned/phase:allocated232-237. It then awaits original driver.checkReadiness240 and only then publishes nativeReady241-249. A thrown open/readiness path would publish held/unknown/open-unknown251-258; a completed false proof would publish readiness-unavailable248.",
+      "CreateRuntimeMemberProviderFactory292 awaits provider.factory.open and returns the original driver wrapper; its checkReadiness303 delegates without replacing the provider result.",
+      "CodexMemberProvider219 awaits the captured D factory open. Its wrapper232-235 awaits source.checkReadiness before setting ready=proof.ok&&current(). The configuration path132 performs the fresh catalog read under original authority; profile.limits.timeoutMs90000 is distinct from the original15s outer observer. This review does not inspect a retained per-call D substage or infer which await was pending.",
+      "The captured allocated/owned/attached/nativeReady:false/no diagnostic row is consistent with the last readiness await not yet published at that observation, but there is no retained per-callsite/argv/response/timing proof selecting catalog, protocol, peer startup, scheduler or transport as the cause.",
+      "SourceProfile73 appends peer entry before importing the finite peer. Original entryStart/entryEnd and outbound threadEphemeral boolean therefore do not prove successful native thread acceptance, final catalog output or their timing before the last read.",
+      "All seven final Job receipts have their original five custody fields true. Earlier cleanup stdout is before witness.wait; it is not equivalent to the final absent field. Empty first-refusal is unknown, not proof that every provider operation succeeded."
+    ],
+    "concreteCorrectableCounterexampleEstablished": false
+  },
+  "opencodeX64": {
+    "originalReadiness": {
+      "source": {
+        "sourceId": "7743f08278dfb36c34ff5128d3cf1d09e96971a0961c0239e2d68f8f731371e4",
+        "revision": "39b1dd91c6e145ca956cef80c50ac562838dd810fd1a446bc62e0f1c1b75bc72"
+      },
+      "image": "A",
+      "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+      "readCount": 72,
+      "elapsedMs": 14976.174599999998,
+      "lastRuntimeRead": {
+        "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+        "memberId": "alice-id",
+        "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+        "phase": "held",
+        "sealed": false,
+        "custody": "unknown",
+        "nativeReady": false,
+        "attached": false,
+        "diagnostic": "open-unknown"
+      }
+    },
+    "originalProjection": {
+      "status": "observed",
+      "atomicWithFailure": false,
+      "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+      "bindingMatches": true,
+      "recordReady": false,
+      "providerReady": null,
+      "ownerCurrent": null,
+      "nativeReady": false
+    },
+    "originalFirstRefusal": {
+      "status": "observed",
+      "observations": [
+        {
+          "kind": "reference",
+          "commandDigest": "267e7110c52c9dc81cdcd827bca86e4729cbbce8104a2c6344c9041ea068cbbf",
+          "contextDigest": "cbadbea0a9b2f527dbd2b1632f94b5dc12d53c3635c07ead9c589f1efd6768e0",
+          "phase": "probe-expiry",
+          "reason": "held",
+          "probeCutoff": 1794814858465,
+          "probeNow": 1794814858697,
+          "scopeCutoff": null,
+          "scopeNow": null,
+          "preparationCutoff": null,
+          "preparationNow": null,
+          "ordinal": 1,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "7743f08278dfb36c34ff5128d3cf1d09e96971a0961c0239e2d68f8f731371e4",
+            "revision": "39b1dd91c6e145ca956cef80c50ac562838dd810fd1a446bc62e0f1c1b75bc72"
+          }
+        },
+        {
+          "kind": "consumer",
+          "actionDigest": "0999f35342307166abf6addfd3031950d31858d19f9b349ce1a23447a7d9253d",
+          "groupDigest": "c6787b2f7818f62792016062ff982e627e144268125e4b60d88adfb0a6cfb934",
+          "bindingDigest": "27330677a8e68c915a45332ea1838220c95a3b44505efb28271b3099ebf3e326",
+          "consumerId": "6e20fec98abb8597504a412155f389a5668aa8a6cc6f2d25d9ebd315c8acd8dc",
+          "phase": "reference",
+          "reason": "threw",
+          "cutoff": 1794814858465,
+          "observedAt": 1794814858116,
+          "currentCalls": {
+            "count": 17,
+            "totalMs": 10189,
+            "maxMs": 674,
+            "lastMs": 608,
+            "truncated": false
+          },
+          "ordinal": 2,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "7743f08278dfb36c34ff5128d3cf1d09e96971a0961c0239e2d68f8f731371e4",
+            "revision": "39b1dd91c6e145ca956cef80c50ac562838dd810fd1a446bc62e0f1c1b75bc72"
+          }
+        },
+        {
+          "kind": "native",
+          "phase": "prepare",
+          "reason": "current-false",
+          "dispatched": true,
+          "staged": true,
+          "rootCaptured": false,
+          "deadlineExpired": null,
+          "ordinal": 3,
+          "source": {
+            "sourceId": "7743f08278dfb36c34ff5128d3cf1d09e96971a0961c0239e2d68f8f731371e4",
+            "revision": "39b1dd91c6e145ca956cef80c50ac562838dd810fd1a446bc62e0f1c1b75bc72"
+          }
+        },
+        {
+          "kind": "opencode-open",
+          "bindingDigest": "27330677a8e68c915a45332ea1838220c95a3b44505efb28271b3099ebf3e326",
+          "phase": "native-ready",
+          "reason": "threw",
+          "ordinal": 4,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "7743f08278dfb36c34ff5128d3cf1d09e96971a0961c0239e2d68f8f731371e4",
+            "revision": "39b1dd91c6e145ca956cef80c50ac562838dd810fd1a446bc62e0f1c1b75bc72"
+          }
+        }
+      ]
+    },
+    "primaryExpiryArithmetic": {
+      "probeCutoff": 1794814858465,
+      "consumerObservedAt": 1794814858116,
+      "probeNow": 1794814858697,
+      "consumerBeforeCutoffMs": 349,
+      "probeAfterCutoffMs": 232,
+      "dateSampleDifferenceMs": 581
+    },
+    "currentCallsMeaning": [
+      "prepareTeamModelReadiness342 creates one accumulator per non-initial inspectMemberModelReadiness closure. With an original subscriber present, calls are counted before first refusal, including the initial current()400, capped4096. Its finally383-387 adds rounded performance.now elapsed for each counted call, including the failing call, before the first refusal snapshot395.",
+      "The actual count17,totalMs10189,maxMs674,lastMs608,truncated:false describes measured cumulative synchronous current() callback execution. It is not17 RPCs, a named single caller route, complete launch wall time, or a measured I/O/device substage.",
+      "Consumer observedAt is the original cutoff operand at370. The nested readPreparedModelReference372 performs retained reads/captures before ModelProbeOwner205 samples probeNow. The reference expiry is therefore later than the outer operand. The reference refusal is published first; its enclosing consumer retains its earlier Date sample and rethrows the original error as phase reference/reason threw.",
+      "The581ms Date operand difference and608ms rounded performance interval have different start/end points and clocks. Neither identifies where the cost occurred. No caching, skipped currentness read, TTL increase or removed guard is justified by these totals."
+    ],
+    "nativePreparationBoundary": [
+      "HostWindowsLaunch.stage319-357 admits allocate, streams original launch chunks, commits and rechecks currentness before staged=true. The actual native first refusal is phase prepare/current-false,dispatched:true,staged:true,rootCaptured:false,deadlineExpired:null.",
+      "RemotePending.prepare371 sets phase before the entry currentness check373 and the lazy prepare request builder377. Therefore the closed phase alone cannot distinguish those two source check sites. The original Main observer ledger for slot2 has prepare.calls0 and resume.calls0; no Main prepare was observed, while original allocate/chunk/commit completed.",
+      "Native current-false is retained after the reference/consumer refusals; setupCurrent in the runtime factory catches an authority/readiness throw and returns false. Those source paths are consistent with the sequence, but the published diagnostic does not record the exact caller stack or an independent identity of the thrown object.",
+      "OpenCode opening native-ready/threw is a separate closed provider stage. It does not establish a successful server readiness response or prove a later native session/input was accepted."
+    ],
+    "cleanupBoundary": [
+      "The source observer adds a Job only after original allocate returns (Scenario214-218). It captures root/witness only from a returned prepare result221-227; resume/Stop/drain/release fields follow original results230-234.",
+      "Original close294-312 awaits client shutdown and physical close, then for each retained Job prints pre-wait cleanup and requires root+witness+resumed+stopped+drained+released before the original witness.wait. No currentness failure is allowed to skip this original assertion.",
+      "Final slots0/1 have root2976/3452 and all five custody fields true. Slot2 has root:null,resumed:false,stopped/drained/released:true,originalHandleAbsent:false and null entry range. Its failed305 conjunction evaluates to undefined before witness.wait; the original cleanup debt remains.",
+      "The slot2 row does not prove that a particular process exists, nor that one is absent. No original root/witness exists in the retained receipt to support either claim. No signal, cleanup replay or oracle narrowing is proposed.",
+      "The outer AggregateError preserves readiness as its first error, then includes the epoch cleanup assertion. scenario.cleanup:false and outer gate cleanup:true refer to different responsibilities. Controller rootExit1/active0 and source controller104 remain separate facts."
+    ],
+    "concreteCorrectableCounterexampleEstablished": false
+  },
+  "boundedOutcome": [
+    "Both current failures are localized more narrowly than a generic timeout, but the original records do not identify a safe same-contract production correction. The recorded guard refusals agree with the pinned source order.",
+    "The incoming C++ Release-prefix publication source was exercised earlier by original Host Node and Electron I386 rows on both Windows jobs. Its completed native observation is separate from the later source readiness failures; no causal transfer or whole Process PASS is claimed.",
+    "Do not change15s/TTL, actions, witness/currentness/custody checks or replay. Any later narrower passive cost diagnostic would need its own prospective plan and independent review; none is selected or implemented here.",
+    "This assessment is source/evidence analysis by the author of the raw packet, not its independent R2. The independently supplied Scope timestamp analysis agrees with the source order; a full independent raw audit remains separate."
+  ]
+}

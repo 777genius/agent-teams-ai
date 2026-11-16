@@ -1,0 +1,270 @@
+{
+  "kind": "Independent exact geometry candidate data/source/venue proof",
+  "createdAt": "2026-11-16T07:43:19.127125+00:00",
+  "reviewSource": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+  "additionalFreshReadOnlySource": "57885c055a18b27c180c304762643eac632513ad",
+  "artifacts": {
+    "R1-appendix.md": {
+      "bytes": 20857,
+      "blob": "9bb3777ca076dea9dd60f76d9759dc1815e0dde0",
+      "sha256": "7d07956cc3f0d6929c2d3fd5907d121254c073294dfcae4573e37763b4b4510d",
+      "lines": 100
+    },
+    "candidate-metadata.json": {
+      "bytes": 4247,
+      "blob": "18aaa5d9ed647b952dd8a1926e58048ad0c1a7bf",
+      "sha256": "0f16692b1f761eb4792eeb48cd2af0a53fe3c8baf673ff0fe6018a200f027a79",
+      "lines": 110
+    },
+    "candidate.patch": {
+      "bytes": 12271,
+      "blob": "d58db63706739f3d78dde1ec175881dce0f800b1",
+      "sha256": "ad63f15b0fd0f61a8fc3117e906a1162f4203472e57e4a62b5662844c86fb545",
+      "lines": 209
+    },
+    "source-and-venue-pins.json": {
+      "bytes": 16833,
+      "blob": "6c9a88c8cd1496b32130b3df681db7c8f6e4291f",
+      "sha256": "7eddd4b03e6df71579425ad38812b927ffbbc18d1996533de5d053c6b8e0f0dd",
+      "lines": 337
+    },
+    "source-evidence-analysis.json": {
+      "bytes": 22170,
+      "blob": "b9f0ed4ae75501f21878f40fd6ee319c5be7b2e2",
+      "sha256": "c88e32622dce4d4a4b018c772ed334db2c226bbb56a8d665e4ece6cf7816942f",
+      "lines": 508
+    },
+    "freeze-manifest.json": {
+      "bytes": 2479,
+      "blob": "989fb0230c86086d9878a17ab9abc35ffcd3d317",
+      "sha256": "de7f28a985bc2e8a9ad8336ad76900896ec6064666d9889b30e6fd3924f26ebf",
+      "lines": 66
+    }
+  },
+  "candidateLeaves": {
+    "scripts/legacy-agent-host/desktop-ui-controls.ts": {
+      "preimage": {
+        "bytes": 27188,
+        "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a",
+        "lines": 489
+      },
+      "candidate": {
+        "bytes": 28094,
+        "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+        "sha256": "67a1e7413eff11ddc087f35a64cd3c8b242c061988b2fbd661497a9f6b5dfd11",
+        "lines": 506
+      },
+      "exactPreimageOnAllThreeHeads": true
+    },
+    "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts": {
+      "preimage": {
+        "bytes": 111672,
+        "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+        "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445",
+        "lines": 1896
+      },
+      "candidate": {
+        "bytes": 118885,
+        "blob": "8694096d0aafcd7130589d97f12ad5a4fd65a616",
+        "sha256": "9411c8171255880a187382e5ceef1c44e74172fe4c9eb6c357b3654388cceb70",
+        "lines": 2010
+      },
+      "exactPreimageOnAllThreeHeads": true
+    }
+  },
+  "all21SelectedSourcePins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 27188,
+      "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+      "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a",
+      "lines": 489,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 111672,
+      "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+      "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445",
+      "lines": 1896,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "bytes": 33173,
+      "blob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+      "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23",
+      "lines": 690,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 54778,
+      "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "lines": 791,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "bytes": 68865,
+      "blob": "76f4e9aa4d29e4eab14041e5343e0e3a5b46b3cf",
+      "sha256": "945b5ad3a507cea5925cb8b5e8d25aa0a15970c38a5f4c6c13db13fcaa3ccb64",
+      "lines": 791,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-review-hunk-controls.ts",
+      "bytes": 9637,
+      "blob": "27ad07bff0c9c89ecfc7dc572ac53e2e9e16e8ef",
+      "sha256": "ae6a85389e34559faf22a87320b940e0df5a80437d8f9ee7f2452131cfea95b4",
+      "lines": 220,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-review-ui-smoke.ts",
+      "bytes": 7276,
+      "blob": "9395283cd2e88ddf40def6ee3cf25aaa6f4ff7c3",
+      "sha256": "b7bff873445aa7938b1a1d6e26067fb663205de8002ccca7d5a99745e61217ae",
+      "lines": 176,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "scripts/e2e/comment-notification/cdp.mjs",
+      "bytes": 3704,
+      "blob": "9397505b7889db88ef103dca62287e3d02a88cc9",
+      "sha256": "8e70fecbb1f2107abffa91d78644ee74f8e34546c8117587661f8376c27998aa",
+      "lines": 119,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "bytes": 52632,
+      "blob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+      "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a",
+      "lines": 800,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "bytes": 20996,
+      "blob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+      "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b",
+      "lines": 323,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+      "bytes": 44561,
+      "blob": "083522612dd93e77dbb0e79c966103b03a71fe87",
+      "sha256": "555a309f762015659a3b7a0d44522785fa7ea171aedf77392020c25dc5d70e33",
+      "lines": 600,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-management-sources.ts",
+      "bytes": 21211,
+      "blob": "762570da8b4fc492065b217303a3da169bf627cf",
+      "sha256": "7b89bab88022f53fbc8470f0cbcd4acd93f8ee5412059144e3a676c0fb7466f8",
+      "lines": 309,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+      "lines": 1312,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "package.json",
+      "bytes": 26839,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "lines": 580,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+      "lines": 26665,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "bytes": 6946,
+      "blob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea",
+      "lines": 169,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "bytes": 646,
+      "blob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306",
+      "lines": 20,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "eslint.fast.config.js",
+      "bytes": 7268,
+      "blob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88",
+      "lines": 258,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "eslint.config.js",
+      "bytes": 37840,
+      "blob": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+      "sha256": "d9f0cf7c33672b9304fc524bbc028e07939bcab4583bb1e7c94b99fd773eb597",
+      "lines": 1166,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "scripts/ci/check-source-file-size.mjs",
+      "bytes": 8145,
+      "blob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+      "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2",
+      "lines": 231,
+      "e1AndE2Exact": true
+    },
+    {
+      "path": "scripts/ci/source-file-size-baseline.json",
+      "bytes": 9635,
+      "blob": "e827bccf455235b1ff7871e7b93450cdaa53eb54",
+      "sha256": "82080bdf23e0fae3ea087e8aea8c3622fa63a734fa9874e7d07e9d568087f072",
+      "lines": 146,
+      "e1AndE2Exact": true
+    }
+  ],
+  "patchExactForwardAndReverse": true,
+  "helperOutsideOriginalBlockExact": true,
+  "pendingFinalOwnerAndCutoffCasesExact": true,
+  "historicalPureProjectedTree": "5d1184fb771af1e86eb8db2cb11c883ae83e700d",
+  "historicalLeafCount": 11150,
+  "historicalDirectoryCount": 1683,
+  "existingOriginalEightFileCommand": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+  "wholeTeamContractsUnchanged": true,
+  "fastLintTestPresent": true,
+  "fastLintHelperAbsent": true,
+  "rosterAlreadyContainsBothPaths": true,
+  "installedIsFiniteSignatureReadOnly": {
+    "bytes": 22866,
+    "blob": "d70f9cdc0a0253c6e99f05742fe6fe76f2b3ee6e",
+    "sha256": "c57796738e7f83dbc4b8e65132f11a377649c00dd3eee333f672b8f0a6bea671",
+    "lines": 597
+  },
+  "staticNewCaseArithmetic": {
+    "appended": 8,
+    "expandedExistingLoopOld": 2,
+    "expandedExistingLoopNew": 4,
+    "net": 10
+  },
+  "scope": "source-only; no actual test, compiler, lint, project, native or CI execution; no source/ref write; equality on578 does not select application or rebase historical tree"
+}

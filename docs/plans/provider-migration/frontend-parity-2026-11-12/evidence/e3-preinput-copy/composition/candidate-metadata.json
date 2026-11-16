@@ -1,0 +1,137 @@
+{
+  "kind": "prospective-four-existing-source-union-preserving-incoming-P11-A",
+  "createdAtUTC": "2026-11-16T08:41:06.787003+00:00",
+  "incoming": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "followup": "c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+  "paths": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "incoming": {
+        "bytes": 27188,
+        "lines": 489,
+        "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+      },
+      "followup": {
+        "bytes": 27188,
+        "lines": 489,
+        "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+      },
+      "candidate": {
+        "bytes": 28094,
+        "lines": 506,
+        "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+        "sha256": "67a1e7413eff11ddc087f35a64cd3c8b242c061988b2fbd661497a9f6b5dfd11"
+      },
+      "addedFromIncoming": 30,
+      "removedFromIncoming": 13
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "incoming": {
+        "bytes": 115936,
+        "lines": 1958,
+        "blob": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+        "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076"
+      },
+      "followup": {
+        "bytes": 111672,
+        "lines": 1896,
+        "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+        "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445"
+      },
+      "candidate": {
+        "bytes": 123149,
+        "lines": 2072,
+        "blob": "1b0ad5b15b056857817858d1e85f6dfe81f6e782",
+        "sha256": "c73b55cbd07ef632b174609e99e05e536d584b8dae9c124c2fc1a14e1c76c4da"
+      },
+      "addedFromIncoming": 118,
+      "removedFromIncoming": 4
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "mode": "100644",
+      "incoming": {
+        "bytes": 6481,
+        "lines": 161,
+        "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+        "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+      },
+      "followup": {
+        "bytes": 6481,
+        "lines": 161,
+        "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+        "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+      },
+      "candidate": {
+        "bytes": 6382,
+        "lines": 161,
+        "blob": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+        "sha256": "47c561887a1ea9a499f131a073c805be07a9a17343c1115b32ec173dcdf894c9"
+      },
+      "addedFromIncoming": 3,
+      "removedFromIncoming": 3
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "mode": "100644",
+      "incoming": {
+        "bytes": 180091,
+        "lines": 5678,
+        "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+      },
+      "followup": {
+        "bytes": 180091,
+        "lines": 5678,
+        "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+      },
+      "candidate": {
+        "bytes": 180058,
+        "lines": 5678,
+        "blob": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+        "sha256": "70597b6bb603515e31ec1239eb6543cc9f1fb18beb20ac20c6a357ee03f748ed"
+      },
+      "addedFromIncoming": 1,
+      "removedFromIncoming": 1
+    }
+  ],
+  "incomingSourceChangeCount": 4,
+  "allOther8794NonDocLeavesPreserved": true,
+  "sourceNonDocsMapSha256": "3aac1b178739ba20b80ca23dde15867dc630b8862733a8d02b5829564c0d5ae2",
+  "incomingPatch": {
+    "bytes": 14568,
+    "lines": 245,
+    "blob": "61ebd379a1038705e2b48487338c0424bc00f760",
+    "sha256": "8067e3aae9067c0ae59e7b7fa6b46a602c5cc9c20445854c3b006ab639067338"
+  },
+  "followupPatch": {
+    "bytes": 18874,
+    "lines": 304,
+    "blob": "a217b0a40a6e63744fda456d06577849db4d5027",
+    "sha256": "423dd3c43e9289757502c4d9f7e450104216e593bd2b9f3736df4c97e818d069"
+  },
+  "P11ExactSuffix": {
+    "bytes": 4264,
+    "lines": 62,
+    "blob": "08699c4890b2ef83bcbda53094c450c6a9c3b366",
+    "sha256": "a299b6ec1497dc542f675fd7868a430d8e9d4d0503199c9ff0343a7187b5312d"
+  },
+  "P11SuffixAppendedToEntireGeometryAfterimage": true,
+  "inverseGeometryPlusUnchangedSuffixRestoresIncoming": true,
+  "R1": {
+    "bytes": 11383,
+    "lines": 48,
+    "blob": "40076f4e3c998770d21716afa78d860237b37bab",
+    "sha256": "086ad6daa80e75772d52c93780356ca615d79b12475905b4033c5dba0af3c7bc"
+  },
+  "P11BApplied": false,
+  "ModelsAApplied": false,
+  "sourceOrObjectOrRefChanged": false,
+  "executionPerformed": false
+}

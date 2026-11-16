@@ -1,0 +1,23 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "content": "{\"sha\":\"174e27e0178025f88608650347900daac49dcc58\",\"node_id\":\"C_kwDORVTEtNoAKDE3NGUyN2UwMTc4MDI1Zjg4NjA4NjUwMzQ3OTAwZGFhYzQ5ZGNjNTg\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/174e27e0178025f88608650347900daac49dcc58\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/174e27e0178025f88608650347900daac49dcc58\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T07:58:23Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T07:58:23Z\"},\"tree\":{\"sha\":\"ddab0eca5c0062243dd48deac2c50c5efd8f6c99\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/ddab0eca5c0062243dd48deac2c50c5efd8f6c99\"},\"message\":\"docs(migration): reconcile incoming release observation and retained E1 evidence\\n\\nPreserve the complete followup Plan and evidence, the incoming native observation history, and the reviewed documentation-first adoption of exactly three source images. Keep the uncommitted Darwin proposal, geometry and Phase A inactive.\",\"parents\":[{\"sha\":\"00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+    "title": "174e27e0178025f88608650347900daac49dcc58",
+    "modified_date": null,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/174e27e0178025f88608650347900daac49dcc58",
+    "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/174e27e0178025f88608650347900daac49dcc58",
+    "display_title": "174e27e0178025f88608650347900daac49dcc58",
+    "structuredContent": {
+      "title": "174e27e0178025f88608650347900daac49dcc58",
+      "content": "{\"sha\":\"174e27e0178025f88608650347900daac49dcc58\",\"node_id\":\"C_kwDORVTEtNoAKDE3NGUyN2UwMTc4MDI1Zjg4NjA4NjUwMzQ3OTAwZGFhYzQ5ZGNjNTg\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/174e27e0178025f88608650347900daac49dcc58\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/174e27e0178025f88608650347900daac49dcc58\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T07:58:23Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T07:58:23Z\"},\"tree\":{\"sha\":\"ddab0eca5c0062243dd48deac2c50c5efd8f6c99\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/ddab0eca5c0062243dd48deac2c50c5efd8f6c99\"},\"message\":\"docs(migration): reconcile incoming release observation and retained E1 evidence\\n\\nPreserve the complete followup Plan and evidence, the incoming native observation history, and the reviewed documentation-first adoption of exactly three source images. Keep the uncommitted Darwin proposal, geometry and Phase A inactive.\",\"parents\":[{\"sha\":\"00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+      "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/174e27e0178025f88608650347900daac49dcc58"
+    }
+  },
+  "isError": false
+}
+

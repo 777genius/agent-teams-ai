@@ -1,0 +1,83 @@
+{
+  "kind": "E2 current Team gate/UI original checkpoint",
+  "sourceHead": "57885c055a18b27c180c304762643eac632513ad",
+  "runId": 43823212577,
+  "jobId": 133150851331,
+  "artifactId": 14207048848,
+  "payloads": [
+    {
+      "path": "ci-57885c/team/job-original-response.json",
+      "bytes": 2736814,
+      "blob": "5d7d19344b7e62bd507cb6b935fe0d3523c3563e",
+      "sha256": "ad5d7c2e48358298f3890517c6acaef71cf038318a5af309a7007ff5b679d0f7"
+    },
+    {
+      "path": "ci-57885c/team/job.log",
+      "bytes": 2709748,
+      "blob": "f8710649393df89727eedf54ac54e59b61c0ace0",
+      "sha256": "aa428b27236f3867f1cdf13c32494a61ec4fa4ffef02cce2a57794ae2024fa81"
+    },
+    {
+      "path": "ci-57885c/team/14207048848.zip",
+      "bytes": 651631,
+      "blob": "560ae4988302d039b43a91131d9e11a69c183c7d",
+      "sha256": "d16e4dd4556eb2732788275367240825716bdb2f512eeacdd8aed1e5123e37b9"
+    },
+    {
+      "path": "ci-57885c/team/archive-retention.json",
+      "bytes": 5191,
+      "blob": "5cda2cfbe09d96f03461bf8dc9ce1d2784096201",
+      "sha256": "79e68d5b3e96962ef3369ef5d71186a2439e7fb47c4756938acb54c8c44cba72"
+    },
+    {
+      "path": "ci-57885c/official-host-artifacts-0805.json",
+      "bytes": 20681,
+      "blob": "1a9dd98536b6d433ee1aadfe65f82e8c55b06be0",
+      "sha256": "ffd586353083cb2fdf106fc798470ecf2f65d9a9c1a6664e9e6ec89d3f6a5fcd"
+    },
+    {
+      "path": "ci-57885c/owned-jobs-0810.json",
+      "bytes": 168882,
+      "blob": "6a83b45edb2e6357680c8b802394595a92ac0609",
+      "sha256": "37e2f2681244e99e5a181b0363d7918cf341207a21d226e3d7203d8f31362db0"
+    },
+    {
+      "path": "ci-57885c/initial-owned-api-0729.json",
+      "bytes": 104681,
+      "blob": "539d2a83b1f7b5ed443531fc6b73f37aad5805b9",
+      "sha256": "484c9e33e89e964f61d4475d6835f9167bbe8cd3c0e816901420d06df00b42c6"
+    },
+    {
+      "path": "ci-57885c/team/source-pin-audit.json",
+      "bytes": 630098,
+      "blob": "0b2d978c57d2f0a074af776a182b3f396638df05",
+      "sha256": "851beba6e3fc3ad02575e3d5b24e1007f2c4733637d5a1b05a31b016a1775358"
+    },
+    {
+      "path": "ci-57885c/team/gate-audit.json",
+      "bytes": 139050,
+      "blob": "568780a7389c4c6eec8f4699080599dcb9c2096c",
+      "sha256": "41ae00e9cea7d5326fe3ae7059a791683e1031a6806074097d96d896ba4f72de"
+    },
+    {
+      "path": "ci-57885c/team/audit.json",
+      "bytes": 55397,
+      "blob": "a51312b7fa17f265d7ec355c1b299b60e2fce656",
+      "sha256": "3d3f0c501df053022c4bdbae3177fd11acaef039c3b4e70a8e284eeb2209e3b2"
+    },
+    {
+      "path": "ci-57885c/team/Plan29-appendix.md",
+      "bytes": 6030,
+      "blob": "3514c6a88f1abb50f9a4b8dcae184cc7b4c98549",
+      "sha256": "4e065c5f0118ff0f0dd595c5bdbbc73b575a876eee5d721ef342151bd31d6785"
+    }
+  ],
+  "payloadBytes": 7228203,
+  "archiveMembers": 14,
+  "actuallyViewedPngs": 1,
+  "status": "PASS within original Team gate and finite Task UI scope",
+  "nativeQualified": false,
+  "releaseQualified": false,
+  "allDesktopQualified": false,
+  "independentReview": "separate pending report"
+}

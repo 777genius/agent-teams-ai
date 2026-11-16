@@ -1,0 +1,2129 @@
+{
+  "kind": "INDEPENDENT_E2_TEAM_COMPLETE_ORIGINAL_GATE_UI_REVIEW",
+  "reviewer": "native_failures",
+  "reviewedAtUTC": "2026-11-16T08:21:13.279991+00:00",
+  "verdict": "APPROVE exact original E2 Team gate and scoped offline Task UI/cleanup evidence; no findings",
+  "sourceHead": "57885c055a18b27c180c304762643eac632513ad",
+  "runId": 43823212577,
+  "jobId": 133150851331,
+  "artifactId": 14207048848,
+  "authorCheckpoint": {
+    "path": "ci-57885c/team/checkpoint.json",
+    "bytes": 3011,
+    "blob": "e6a69ab615cd3ba039a4ee01110020afa347df8c",
+    "sha256": "c48b482e818c75741a4bd168f6ab57ce3c3535bd6ce77f9ea5f910f8e3e00658"
+  },
+  "all11PayloadsRehashed": [
+    {
+      "path": "ci-57885c/team/job-original-response.json",
+      "bytes": 2736814,
+      "blob": "5d7d19344b7e62bd507cb6b935fe0d3523c3563e",
+      "sha256": "ad5d7c2e48358298f3890517c6acaef71cf038318a5af309a7007ff5b679d0f7"
+    },
+    {
+      "path": "ci-57885c/team/job.log",
+      "bytes": 2709748,
+      "blob": "f8710649393df89727eedf54ac54e59b61c0ace0",
+      "sha256": "aa428b27236f3867f1cdf13c32494a61ec4fa4ffef02cce2a57794ae2024fa81"
+    },
+    {
+      "path": "ci-57885c/team/14207048848.zip",
+      "bytes": 651631,
+      "blob": "560ae4988302d039b43a91131d9e11a69c183c7d",
+      "sha256": "d16e4dd4556eb2732788275367240825716bdb2f512eeacdd8aed1e5123e37b9"
+    },
+    {
+      "path": "ci-57885c/team/archive-retention.json",
+      "bytes": 5191,
+      "blob": "5cda2cfbe09d96f03461bf8dc9ce1d2784096201",
+      "sha256": "79e68d5b3e96962ef3369ef5d71186a2439e7fb47c4756938acb54c8c44cba72"
+    },
+    {
+      "path": "ci-57885c/official-host-artifacts-0805.json",
+      "bytes": 20681,
+      "blob": "1a9dd98536b6d433ee1aadfe65f82e8c55b06be0",
+      "sha256": "ffd586353083cb2fdf106fc798470ecf2f65d9a9c1a6664e9e6ec89d3f6a5fcd"
+    },
+    {
+      "path": "ci-57885c/owned-jobs-0810.json",
+      "bytes": 168882,
+      "blob": "6a83b45edb2e6357680c8b802394595a92ac0609",
+      "sha256": "37e2f2681244e99e5a181b0363d7918cf341207a21d226e3d7203d8f31362db0"
+    },
+    {
+      "path": "ci-57885c/initial-owned-api-0729.json",
+      "bytes": 104681,
+      "blob": "539d2a83b1f7b5ed443531fc6b73f37aad5805b9",
+      "sha256": "484c9e33e89e964f61d4475d6835f9167bbe8cd3c0e816901420d06df00b42c6"
+    },
+    {
+      "path": "ci-57885c/team/source-pin-audit.json",
+      "bytes": 630098,
+      "blob": "0b2d978c57d2f0a074af776a182b3f396638df05",
+      "sha256": "851beba6e3fc3ad02575e3d5b24e1007f2c4733637d5a1b05a31b016a1775358"
+    },
+    {
+      "path": "ci-57885c/team/gate-audit.json",
+      "bytes": 139050,
+      "blob": "568780a7389c4c6eec8f4699080599dcb9c2096c",
+      "sha256": "41ae00e9cea7d5326fe3ae7059a791683e1031a6806074097d96d896ba4f72de"
+    },
+    {
+      "path": "ci-57885c/team/audit.json",
+      "bytes": 55397,
+      "blob": "a51312b7fa17f265d7ec355c1b299b60e2fce656",
+      "sha256": "3d3f0c501df053022c4bdbae3177fd11acaef039c3b4e70a8e284eeb2209e3b2"
+    },
+    {
+      "path": "ci-57885c/team/Plan29-appendix.md",
+      "bytes": 6030,
+      "blob": "3514c6a88f1abb50f9a4b8dcae184cc7b4c98549",
+      "sha256": "4e065c5f0118ff0f0dd595c5bdbbc73b575a876eee5d721ef342151bd31d6785"
+    }
+  ],
+  "payloadBytes": 7228203,
+  "gateReview": {
+    "path": "ci-57885c/team/independent-team-gate-review.json",
+    "bytes": 159274,
+    "blob": "804ec7abf5a1e22db11a4fc694457df9b7102936",
+    "sha256": "45d84a6af6c2ba1ec5276ba44e49f462f8619ae3ccae0efaedaa8428dbaf08c7"
+  },
+  "sourceProof": {
+    "path": "ci-57885c/team/independent-team-gate-source-proof.json",
+    "bytes": 699076,
+    "blob": "a088867485ae731ceb80427bba7b6e4a8fd574a2",
+    "sha256": "4d82bb19c3e54512b36e511721c1040c1d3cf05baad1c5df5a88f2c1445e2154"
+  },
+  "gateScope": "Full original119 helper +7 installer +179 Team cases,24 stderr cases,93 fast lint operands,workspace and dedicated backend types,all four typed lint scopes as separately independently reviewed. Current179/current ce5c source distinctions retained.",
+  "fullOriginalMcpUtf8Equality": true,
+  "terminalJob": {
+    "id": 133150851331,
+    "name": "Offline Host Desktop (linux-x64, team)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43823212577,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Verify original checkout and runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Prepare private Linux display",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Install frozen workspace and Electron",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build existing Desktop prerequisites and verify admission",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Verify original Runtime and Team conversation contracts",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Capture package-manager and Host inputs without vendor executables",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Capture original controlled Linux process input without a provider",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Exercise ordinary Team controls and renderer reload",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13
+      },
+      {
+        "name": "Exercise ordinary Taskboard controls and persistence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Exercise original Skills and cross-Team controls",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15
+      },
+      {
+        "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Exercise original Review after a cold Host and app restart",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Exercise saved next-launch selection while the original Team remains live",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 24
+      },
+      {
+        "name": "Exercise stock Codex Update while the original Team retains its captured source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 25
+      },
+      {
+        "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 26
+      },
+      {
+        "name": "Prepare exact OpenCode V2 Bun and engine graph",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 27
+      },
+      {
+        "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 28
+      },
+      {
+        "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 29
+      },
+      {
+        "name": "Verify exact source, original screenshots, receipts and cleanup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 30
+      },
+      {
+        "name": "Preserve original Desktop evidence, including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 60
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 61
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 62
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 63
+      }
+    ]
+  },
+  "officialArtifact": {
+    "id": 14207048848,
+    "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-team",
+    "size_in_bytes": 651631,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207048848",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207048848/zip",
+    "expired": false,
+    "created_at": "2026-11-16T08:04:18Z",
+    "expires_at": "2026-11-30T08:04:18Z",
+    "updated_at": "2026-11-16T08:04:18Z",
+    "digest": "sha256:d16e4dd4556eb2732788275367240825716bdb2f512eeacdd8aed1e5123e37b9",
+    "workflow_run": {
+      "id": 43823212577,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+    }
+  },
+  "zip": {
+    "path": "ci-57885c/team/14207048848.zip",
+    "bytes": 651631,
+    "blob": "560ae4988302d039b43a91131d9e11a69c183c7d",
+    "sha256": "d16e4dd4556eb2732788275367240825716bdb2f512eeacdd8aed1e5123e37b9"
+  },
+  "all14MembersSafeUniqueNonsymlinkCrcAndExtractedExact": [
+    {
+      "member": "TEST-desktop-backend-kPz1bG/desktop-backend-receipt.json",
+      "crc32": "0a32a705",
+      "path": "ci-57885c/team/extracted/TEST-desktop-backend-kPz1bG/desktop-backend-receipt.json",
+      "bytes": 703611,
+      "blob": "9d983bbfb2f03e495af5ca9b2bad88132f0c22b2",
+      "sha256": "91896cb720370d16a09e190b013e9b618ded19bda2dd6d38d404631c67e912eb"
+    },
+    {
+      "member": "TEST-desktop-backend-kPz1bG/desktop-descriptor.json",
+      "crc32": "17e6c344",
+      "path": "ci-57885c/team/extracted/TEST-desktop-backend-kPz1bG/desktop-descriptor.json",
+      "bytes": 1895,
+      "blob": "8f2852d649c1afbbd770805ca0b1be7c61a60553",
+      "sha256": "21293c7a50523dbacb04b6ccd1b323e5392d6c1e27aecaec9f6de507092c1756"
+    },
+    {
+      "member": "TEST-desktop-backend-kPz1bG/desktop-app.log",
+      "crc32": "6c9c3c35",
+      "path": "ci-57885c/team/extracted/TEST-desktop-backend-kPz1bG/desktop-app.log",
+      "bytes": 14590,
+      "blob": "d8ec8993dbea7dbc9fc9741a43c81773bb0d6db9",
+      "sha256": "f7652c01c1b8dbd91b9f298c71e08f6e41e15c7096f8c1c54022a67e0cb61cd8"
+    },
+    {
+      "member": "TEST-desktop-backend-kPz1bG/host-profile.json",
+      "crc32": "97a83c10",
+      "path": "ci-57885c/team/extracted/TEST-desktop-backend-kPz1bG/host-profile.json",
+      "bytes": 1084,
+      "blob": "b10301193ee32ae053cea18a7fae46c3aaccfa22",
+      "sha256": "12ddf6ac3c094d4200d90c6bf83619eb36db2cbdf863ca224a86dfa864bfce76"
+    },
+    {
+      "member": "TEST-desktop-backend-kPz1bG/sentinel-invocations.ndjson",
+      "crc32": "9fc3bdb4",
+      "path": "ci-57885c/team/extracted/TEST-desktop-backend-kPz1bG/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+    },
+    {
+      "member": "TEST-desktop-backend-kPz1bG/ui-seed-receipt.json",
+      "crc32": "e945b657",
+      "path": "ci-57885c/team/extracted/TEST-desktop-backend-kPz1bG/ui-seed-receipt.json",
+      "bytes": 2037,
+      "blob": "9d69dd1beb039b06122e757fc452173be7c702e8",
+      "sha256": "35d97ec40b4c8ee3b59fc902c0eda21bfaa9e5857713638f22ea75bcd47b7e20"
+    },
+    {
+      "member": "TEST-desktop-backend-kPz1bG/ui-task-created.png",
+      "crc32": "c10781e5",
+      "path": "ci-57885c/team/extracted/TEST-desktop-backend-kPz1bG/ui-task-created.png",
+      "bytes": 93165,
+      "blob": "3c527ddec08a26eec4d0450712f70bd24fe556fd",
+      "sha256": "6c218cd49d230ed2c0d0df694f0de67bf840c91c643e767b1da258457c6e2ddc"
+    },
+    {
+      "member": "TEST-desktop-backend-kPz1bG/ui-task-snapshots.json",
+      "crc32": "c63aaaaa",
+      "path": "ci-57885c/team/extracted/TEST-desktop-backend-kPz1bG/ui-task-snapshots.json",
+      "bytes": 3023,
+      "blob": "77436c273c5a0cd40630ddf687f2e8d2a5f91b20",
+      "sha256": "4729e8e2761ed8fcc2aa483f4dba254eee59a41c54017d397aa518cd3e3ccf8c"
+    },
+    {
+      "member": "TEST-emulated-ui-inputs-Q17n40/linux-child-exec/linux-child-exec",
+      "crc32": "ed0ca14b",
+      "path": "ci-57885c/team/extracted/TEST-emulated-ui-inputs-Q17n40/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    {
+      "member": "TEST-emulated-ui-inputs-Q17n40/linux-child-exec/manifest.json",
+      "crc32": "e06f2443",
+      "path": "ci-57885c/team/extracted/TEST-emulated-ui-inputs-Q17n40/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+    },
+    {
+      "member": "host-emulated-inputs.json",
+      "crc32": "c0e53407",
+      "path": "ci-57885c/team/extracted/host-emulated-inputs.json",
+      "bytes": 1803,
+      "blob": "4090a7dbe7f67eb74147e12fc547c167116ca4a1",
+      "sha256": "69b40f3215278304de83b3ad4d244dd94c5b7747662683770402665e3c0f50a2"
+    },
+    {
+      "member": "host-emulated-linux-child-exec-selection.json",
+      "crc32": "4eb8a166",
+      "path": "ci-57885c/team/extracted/host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "blob": "f3b80c6ef4c2e125b8746a4275c5a154ab78141b",
+      "sha256": "f252c1a8283b693e865f8dd449a77c365efe733f23d5163dfc090bc1730851f3"
+    },
+    {
+      "member": "host-emulated-summary.json",
+      "crc32": "1b5bbd42",
+      "path": "ci-57885c/team/extracted/host-emulated-summary.json",
+      "bytes": 575,
+      "blob": "85f14499110373dbd53e088456e8676711c31845",
+      "sha256": "61ec4acc064f67768665c4485c3d3b34207deca48d03c4a9bf5350fc28157aef"
+    },
+    {
+      "member": "host-emulated-team-ui.log",
+      "crc32": "b213bc76",
+      "path": "ci-57885c/team/extracted/host-emulated-team-ui.log",
+      "bytes": 225,
+      "blob": "f3a2dc0a10aaa6c2f6dd0b2b073d0f8ffcfc1c9f",
+      "sha256": "ab964ba98b9398413165571c88e2250db2acb4755f0d405b002b9fa4e45aefe7"
+    }
+  ],
+  "tee": {
+    "path": {
+      "path": "ci-57885c/team/extracted/host-emulated-team-ui.log",
+      "bytes": 225,
+      "blob": "f3a2dc0a10aaa6c2f6dd0b2b073d0f8ffcfc1c9f",
+      "sha256": "ab964ba98b9398413165571c88e2250db2acb4755f0d405b002b9fa4e45aefe7"
+    },
+    "completeOriginalLogJoin": "Exactly one contiguous whole tee after only GitHub timestamp prefix removal",
+    "rows": [
+      {
+        "phase": "prepared",
+        "receipt": "/home/runner/work/_temp/TEST-desktop-backend-kPz1bG/desktop-backend-receipt.json"
+      },
+      {
+        "status": "PASS",
+        "receipt": "/home/runner/work/_temp/TEST-desktop-backend-kPz1bG/desktop-backend-receipt.json"
+      }
+    ]
+  },
+  "receipt": {
+    "path": "ci-57885c/team/extracted/TEST-desktop-backend-kPz1bG/desktop-backend-receipt.json",
+    "bytes": 703611,
+    "blob": "9d983bbfb2f03e495af5ca9b2bad88132f0c22b2",
+    "sha256": "91896cb720370d16a09e190b013e9b618ded19bda2dd6d38d404631c67e912eb"
+  },
+  "summary": {
+    "status": "PASS",
+    "scope": "selected lane only",
+    "lane": "team",
+    "sourceHead": "57885c055a18b27c180c304762643eac632513ad",
+    "completed": [
+      {
+        "mode": "team-ui",
+        "receipt": "/home/runner/work/_temp/TEST-desktop-backend-kPz1bG/desktop-backend-receipt.json",
+        "screenshots": [
+          "6c218cd49d230ed2c0d0df694f0de67bf840c91c643e767b1da258457c6e2ddc"
+        ]
+      }
+    ],
+    "nativeProviders": "not executed",
+    "vendorAuthQualified": false,
+    "releaseQualified": false,
+    "visualReview": "original screenshots retained for independent inspection"
+  },
+  "freshClaimSources": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "bytes": 33737,
+      "blob": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587",
+      "sha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+      "lines": 770,
+      "inside1757": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "bytes": 33173,
+      "blob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+      "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23",
+      "lines": 690,
+      "inside1757": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 54778,
+      "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "lines": 791,
+      "inside1757": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "bytes": 49613,
+      "blob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+      "lines": 787,
+      "inside1757": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.ts",
+      "bytes": 27829,
+      "blob": "9aa43a43d6186c62bc92dae60dab4fe57cc63fe6",
+      "sha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf",
+      "lines": 477,
+      "inside1757": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 27188,
+      "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+      "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a",
+      "lines": 489,
+      "inside1757": true
+    },
+    {
+      "path": "src/features/agent-backend/renderer/createHostTeamMutations.ts",
+      "bytes": 22095,
+      "blob": "50fc987c59ead1357c32a62f2da6520bc45c86d8",
+      "sha256": "73a6fdf0b6ce0710ab45f0e4418597c35074b7e21f44d57222224853c2c735a5",
+      "lines": 583,
+      "inside1757": true
+    },
+    {
+      "path": "src/features/agent-backend/renderer/createHostTeamsApi.ts",
+      "bytes": 31402,
+      "blob": "506b1c56e2fda091040c1864ed3b3b1258208543",
+      "sha256": "7d85e02663936b51c92d447a407262559f2578057c9197067d11918bbd807bb9",
+      "lines": 761,
+      "inside1757": true
+    },
+    {
+      "path": "src/main/utils/testChildProcessTrace.ts",
+      "bytes": 9633,
+      "blob": "b3d2ec4b410de5df6d63075955fa8f89fc7c9b88",
+      "sha256": "bff51a48a14cc0d77f8c7233c034c1bbe0eb79b0f5f5270c9540faf70e6472eb",
+      "lines": 185,
+      "inside1757": true
+    },
+    {
+      "path": "src/renderer/api/index.ts",
+      "bytes": 6363,
+      "blob": "1c0623475dd6cf9f9d735d784e4aaf3ab8a9c158",
+      "sha256": "d57cc68ce63f4bc123cc614a29a4a7149759bc174a3299759a3685abf8f2cd62",
+      "lines": 176,
+      "inside1757": true
+    },
+    {
+      "path": "src/renderer/components/sidebar/SidebarTaskItem.tsx",
+      "bytes": 19365,
+      "blob": "6d6589233e471cbb4714c665cfee2b04fdd2df29",
+      "sha256": "fb66d0574200e27e6a18685dfe376665aba7ad0f42842a542a6094a44779548d",
+      "lines": 461,
+      "inside1757": false
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/CreateTaskDialog.tsx",
+      "bytes": 25773,
+      "blob": "2e5e2f595e9eadf69bababf68159ad3320b6fc1c",
+      "sha256": "f6e2d258003ce9237a5b87fe875a070868646699c60e30c8e848a4ace2ac69b2",
+      "lines": 610,
+      "inside1757": true
+    }
+  ],
+  "selectedSourceBoundary": {
+    "selected": 1757,
+    "selectedBytes": 20343408,
+    "prePostOrderedEqual": true,
+    "afterFlowFresh": [
+      {
+        "path": "src/features/agent-backend/renderer/createHostTeamsApi.ts",
+        "bytes": 31402,
+        "blob": "506b1c56e2fda091040c1864ed3b3b1258208543",
+        "sha256": "7d85e02663936b51c92d447a407262559f2578057c9197067d11918bbd807bb9",
+        "lines": 761,
+        "inside1757": true
+      },
+      {
+        "path": "src/features/agent-backend/renderer/createHostTeamMutations.ts",
+        "bytes": 22095,
+        "blob": "50fc987c59ead1357c32a62f2da6520bc45c86d8",
+        "sha256": "73a6fdf0b6ce0710ab45f0e4418597c35074b7e21f44d57222224853c2c735a5",
+        "lines": 583,
+        "inside1757": true
+      },
+      {
+        "path": "src/renderer/api/index.ts",
+        "bytes": 6363,
+        "blob": "1c0623475dd6cf9f9d735d784e4aaf3ab8a9c158",
+        "sha256": "d57cc68ce63f4bc123cc614a29a4a7149759bc174a3299759a3685abf8f2cd62",
+        "lines": 176,
+        "inside1757": true
+      },
+      {
+        "path": "src/renderer/components/team/dialogs/CreateTaskDialog.tsx",
+        "bytes": 25773,
+        "blob": "2e5e2f595e9eadf69bababf68159ad3320b6fc1c",
+        "sha256": "f6e2d258003ce9237a5b87fe875a070868646699c60e30c8e848a4ace2ac69b2",
+        "lines": 610,
+        "inside1757": true
+      },
+      {
+        "path": "src/renderer/components/sidebar/SidebarTaskItem.tsx",
+        "bytes": 19365,
+        "blob": "6d6589233e471cbb4714c665cfee2b04fdd2df29",
+        "sha256": "fb66d0574200e27e6a18685dfe376665aba7ad0f42842a542a6094a44779548d",
+        "lines": 461,
+        "inside1757": false
+      }
+    ],
+    "uniqueSelectedPlusAfterFlow": 1758,
+    "wholeHostGit": 619,
+    "artifactSelectedHost": 586,
+    "compiledDigestRows": 14,
+    "independentlyReproducedBuild": false
+  },
+  "ui": {
+    "status": "PASS",
+    "steps": [
+      {
+        "monotonicMs": 58649,
+        "action": "mouseMoved",
+        "label": "hover sidebar row before measuring click",
+        "subject": "TEST persisted Host sidebar seed",
+        "target": {
+          "x": 1261,
+          "y": 206.875
+        }
+      },
+      {
+        "monotonicMs": 58904,
+        "action": "mouseClick",
+        "label": "sidebar task",
+        "subject": "TEST persisted Host sidebar seed",
+        "target": {
+          "x": 1261,
+          "y": 206.875
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 58936,
+        "observation": "passive input delivery after sidebar click",
+        "value": {
+          "focused": true,
+          "visibility": "visible",
+          "events": [
+            {
+              "type": "pointerdown",
+              "timeMs": 34340,
+              "x": 1261,
+              "y": 206.875,
+              "button": 0,
+              "buttons": 1,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "SPAN",
+                "id": "",
+                "ariaLabel": null,
+                "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+              },
+              "focusBefore": {
+                "tag": "INPUT",
+                "id": "",
+                "ariaLabel": null,
+                "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "taskClarification": null,
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "INPUT",
+                "id": "",
+                "ariaLabel": null,
+                "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              }
+            },
+            {
+              "type": "focusout",
+              "timeMs": 34341,
+              "trusted": true,
+              "buttonClass": null,
+              "target": {
+                "tag": "INPUT",
+                "id": "",
+                "ariaLabel": null,
+                "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+              },
+              "focusBefore": {
+                "tag": "BODY",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BODY",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              }
+            },
+            {
+              "type": "focusin",
+              "timeMs": 34344,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              }
+            },
+            {
+              "type": "pointerup",
+              "timeMs": 34345,
+              "x": 1261,
+              "y": 206.875,
+              "button": 0,
+              "buttons": 0,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "SPAN",
+                "id": "",
+                "ariaLabel": null,
+                "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "taskClarification": null,
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "click",
+              "timeMs": 34345,
+              "x": 1261,
+              "y": 206,
+              "button": 0,
+              "buttons": 0,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "SPAN",
+                "id": "",
+                "ariaLabel": null,
+                "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "taskClarification": null,
+              "teamNavigation": null,
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusout",
+              "timeMs": 34365,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "focusBefore": {
+                "tag": "BODY",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusin",
+              "timeMs": 34366,
+              "trusted": true,
+              "buttonClass": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--",
+              "target": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "monotonicMs": 59478,
+        "action": "mouseMoved",
+        "label": "hover Open team",
+        "selector": "[role=\"dialog\"] button",
+        "target": {
+          "x": 1037.546875,
+          "y": 212.1437530517578,
+          "text": "Open team",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 60060,
+        "action": "mouseClick",
+        "label": "Open team",
+        "selector": "[role=\"dialog\"] button",
+        "expectedText": "Open team",
+        "target": {
+          "x": 1055.3125,
+          "y": 199.625,
+          "text": "Open team",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 64643,
+        "assertion": "canonical seed card visible",
+        "taskId": "432593ee-dae8-5c6f-969b-cf341769dd90"
+      },
+      {
+        "monotonicMs": 64833,
+        "action": "mouseMoved",
+        "label": "hover open Create Task dialog",
+        "selector": "button",
+        "target": {
+          "x": 1042.65625,
+          "y": 361.5,
+          "text": "Task",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 65577,
+        "action": "mouseClick",
+        "label": "open Create Task dialog",
+        "selector": "button",
+        "expectedText": "Task",
+        "target": {
+          "x": 1042.65625,
+          "y": 361.5,
+          "text": "Task",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 66068,
+        "action": "mouseMoved",
+        "label": "hover focus Subject input",
+        "selector": "[role=\"dialog\"] #task-subject",
+        "target": {
+          "x": 700.0000305175781,
+          "y": 444.81776428222656,
+          "text": "",
+          "tag": "INPUT"
+        }
+      },
+      {
+        "monotonicMs": 66500,
+        "action": "mouseClick",
+        "label": "focus Subject input",
+        "selector": "[role=\"dialog\"] #task-subject",
+        "target": {
+          "x": 700,
+          "y": 444.75,
+          "text": "",
+          "tag": "INPUT"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 66604,
+        "action": "Input.insertText",
+        "subject": "TEST created by ordinary Desktop Task controls"
+      },
+      {
+        "monotonicMs": 66729,
+        "action": "mouseMoved",
+        "label": "hover Create Task once",
+        "selector": "[role=\"dialog\"] button",
+        "target": {
+          "x": 934.984375,
+          "y": 620.75,
+          "text": "Create",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 67150,
+        "action": "mouseClick",
+        "label": "Create Task once",
+        "selector": "[role=\"dialog\"] button",
+        "expectedText": "Create",
+        "target": {
+          "x": 934.984375,
+          "y": 620.75,
+          "text": "Create",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 67465,
+        "assertion": "created Task canonical and rendered",
+        "taskId": "d7e79285-5204-51dd-b08b-5a334cc98021",
+        "subject": "TEST created by ordinary Desktop Task controls",
+        "status": "pending"
+      },
+      {
+        "monotonicMs": 67509,
+        "action": "Page.reload",
+        "ignoreCache": false
+      },
+      {
+        "monotonicMs": 73498,
+        "action": "mouseMoved",
+        "label": "hover sidebar row before measuring click",
+        "subject": "TEST created by ordinary Desktop Task controls",
+        "target": {
+          "x": 1261,
+          "y": 215
+        }
+      },
+      {
+        "monotonicMs": 73746,
+        "action": "mouseClick",
+        "label": "sidebar task",
+        "subject": "TEST created by ordinary Desktop Task controls",
+        "target": {
+          "x": 1261,
+          "y": 215
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 73769,
+        "observation": "passive input delivery after sidebar click",
+        "value": {
+          "focused": true,
+          "visibility": "visible",
+          "events": [
+            {
+              "type": "pointerdown",
+              "timeMs": 6235,
+              "x": 1261,
+              "y": 215,
+              "button": 0,
+              "buttons": 1,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "SPAN",
+                "id": "",
+                "ariaLabel": null,
+                "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+              },
+              "focusBefore": {
+                "tag": "INPUT",
+                "id": "",
+                "ariaLabel": null,
+                "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "taskClarification": null,
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "INPUT",
+                "id": "",
+                "ariaLabel": null,
+                "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusout",
+              "timeMs": 6236,
+              "trusted": true,
+              "buttonClass": null,
+              "target": {
+                "tag": "INPUT",
+                "id": "",
+                "ariaLabel": null,
+                "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+              },
+              "focusBefore": {
+                "tag": "BODY",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BODY",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusin",
+              "timeMs": 6238,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "pointerup",
+              "timeMs": 6239,
+              "x": 1261,
+              "y": 215,
+              "button": 0,
+              "buttons": 0,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "SPAN",
+                "id": "",
+                "ariaLabel": null,
+                "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "taskClarification": null,
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "click",
+              "timeMs": 6239,
+              "x": 1261,
+              "y": 215,
+              "button": 0,
+              "buttons": 0,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "SPAN",
+                "id": "",
+                "ariaLabel": null,
+                "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "taskClarification": null,
+              "teamNavigation": null,
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusout",
+              "timeMs": 6253,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "focusBefore": {
+                "tag": "BODY",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusin",
+              "timeMs": 6254,
+              "trusted": true,
+              "buttonClass": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--",
+              "target": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "monotonicMs": 74316,
+        "action": "mouseMoved",
+        "label": "hover Open team",
+        "selector": "[role=\"dialog\"] button",
+        "target": {
+          "x": 1050.7255859375,
+          "y": 202.8572235107422,
+          "text": "Open team",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 74737,
+        "action": "mouseClick",
+        "label": "Open team",
+        "selector": "[role=\"dialog\"] button",
+        "expectedText": "Open team",
+        "target": {
+          "x": 1055.3125,
+          "y": 199.625,
+          "text": "Open team",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 75959,
+        "assertion": "same Task ID and product fields after reload",
+        "taskId": "d7e79285-5204-51dd-b08b-5a334cc98021",
+        "taskCount": 2
+      }
+    ],
+    "clicks": 7,
+    "createSubmissions": 1,
+    "textInsertions": 1,
+    "rendererReloads": 1,
+    "seedReceipt": {
+      "schemaVersion": 1,
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-kPz1bG",
+        "teamId": "TEST-desktop-team",
+        "teamName": "test-desktop-backend"
+      },
+      "commandId": "TEST-ui-offline-seed",
+      "principalId": "TEST-human",
+      "fingerprint": "e5830c43d8a3405edfce397460532058ce21b6fbe68b35c48eca67b0ace23c6c",
+      "command": {
+        "commandId": "TEST-ui-offline-seed",
+        "operation": "task.create",
+        "payload": {
+          "subject": "TEST persisted Host sidebar seed"
+        }
+      },
+      "effects": {
+        "taskId": "432593ee-dae8-5c6f-969b-cf341769dd90",
+        "commentId": "3ad4a87b-59d6-5fe8-848e-46d3aaa5fa4c",
+        "messageId": "2ef99f48-0a1c-5ab4-a1a5-6ac2b058bba8",
+        "deliveryId": "9dd0b419-e6f9-5035-9825-a603456e8633"
+      },
+      "createdAt": "2026-11-16T08:03:01.035Z",
+      "phase": "completed",
+      "authorityRevision": 1,
+      "taskPlanVersion": 1,
+      "taskPreimage": "8a54e11e8375bcf9e1530167953f63a7fef2a38aa8b0184742800735ee598418",
+      "taskRecipients": [
+        {
+          "name": "alice"
+        }
+      ],
+      "result": {
+        "id": "432593ee-dae8-5c6f-969b-cf341769dd90",
+        "displayId": "432593ee",
+        "subject": "TEST persisted Host sidebar seed",
+        "description": "TEST persisted Host sidebar seed",
+        "createdBy": "user",
+        "status": "pending",
+        "createdAt": "2026-11-16T08:03:01.035Z",
+        "updatedAt": "2026-11-16T08:03:01.035Z",
+        "historyEvents": [
+          {
+            "id": "0457cd48-84b6-422c-a58e-a6cbf8c79bda",
+            "timestamp": "2026-11-16T08:03:01.035Z",
+            "type": "task_created",
+            "status": "pending",
+            "actor": "user"
+          }
+        ],
+        "blocks": [],
+        "blockedBy": [],
+        "reviewState": "none",
+        "creationCommand": {
+          "namespace": "legacy-agent-host",
+          "scopeKey": "test-desktop-backend",
+          "operation": "task.create",
+          "commandId": "432593ee-dae8-5c6f-969b-cf341769dd90",
+          "payloadHash": "e5830c43d8a3405edfce397460532058ce21b6fbe68b35c48eca67b0ace23c6c"
+        }
+      },
+      "taskHash": "f9f745fd6e16ddf864669d407ede8e453d247120e2ca0f43003494dd63f90fb9"
+    },
+    "businessReceipt": {
+      "schemaVersion": 1,
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-kPz1bG",
+        "teamId": "TEST-desktop-team",
+        "teamName": "test-desktop-backend"
+      },
+      "commandId": "a11fc23a-32cd-4cb3-94bc-d8635a71ee23",
+      "principalId": "TEST-human",
+      "fingerprint": "fce3893f8fa92ad846c6100e183ecc120848ec1ac6f262851f2c78a7a635035e",
+      "command": {
+        "operation": "task.create",
+        "payload": {
+          "subject": "TEST created by ordinary Desktop Task controls",
+          "descriptionTaskRefs": []
+        },
+        "commandId": "a11fc23a-32cd-4cb3-94bc-d8635a71ee23"
+      },
+      "effects": {
+        "taskId": "d7e79285-5204-51dd-b08b-5a334cc98021",
+        "commentId": "e250a526-73ef-5a50-b199-ce83cc9417cd",
+        "messageId": "d7e5ba6e-8478-5b6f-ad87-5af31f59c1df",
+        "deliveryId": "fe095e05-4829-53f4-b733-dc31b4732dd4"
+      },
+      "createdAt": "2026-11-16T08:04:07.171Z",
+      "phase": "completed",
+      "authorityRevision": 1,
+      "taskPlanVersion": 1,
+      "taskPreimage": "66104473eda1833b2af189263b81d65424ac9d7586eff64eb991175e93ea22b1",
+      "taskRecipients": [
+        {
+          "name": "alice"
+        }
+      ],
+      "result": {
+        "id": "d7e79285-5204-51dd-b08b-5a334cc98021",
+        "displayId": "d7e79285",
+        "subject": "TEST created by ordinary Desktop Task controls",
+        "description": "TEST created by ordinary Desktop Task controls",
+        "createdBy": "user",
+        "status": "pending",
+        "createdAt": "2026-11-16T08:04:07.171Z",
+        "updatedAt": "2026-11-16T08:04:07.171Z",
+        "historyEvents": [
+          {
+            "id": "18a3541d-cff7-4614-a58a-ac5ab595d304",
+            "timestamp": "2026-11-16T08:04:07.171Z",
+            "type": "task_created",
+            "status": "pending",
+            "actor": "user"
+          }
+        ],
+        "blocks": [],
+        "blockedBy": [],
+        "reviewState": "none",
+        "creationCommand": {
+          "namespace": "legacy-agent-host",
+          "scopeKey": "test-desktop-backend",
+          "operation": "task.create",
+          "commandId": "d7e79285-5204-51dd-b08b-5a334cc98021",
+          "payloadHash": "fce3893f8fa92ad846c6100e183ecc120848ec1ac6f262851f2c78a7a635035e"
+        }
+      },
+      "taskHash": "97a9d888f6be7fb0c07889c42ecce05c55a072f214ab3cf11c492f8e03cdf4c8"
+    },
+    "snapshots": {
+      "before": [
+        {
+          "id": "432593ee-dae8-5c6f-969b-cf341769dd90",
+          "displayId": "432593ee",
+          "subject": "TEST persisted Host sidebar seed",
+          "description": "TEST persisted Host sidebar seed",
+          "createdBy": "user",
+          "status": "pending",
+          "createdAt": "2026-11-16T08:03:01.035Z",
+          "updatedAt": "2026-11-16T08:03:01.035Z",
+          "historyEvents": [
+            {
+              "id": "0457cd48-84b6-422c-a58e-a6cbf8c79bda",
+              "timestamp": "2026-11-16T08:03:01.035Z",
+              "type": "task_created",
+              "status": "pending",
+              "actor": "user"
+            }
+          ],
+          "blocks": [],
+          "blockedBy": [],
+          "reviewState": "none",
+          "creationCommand": {
+            "namespace": "legacy-agent-host",
+            "scopeKey": "test-desktop-backend",
+            "operation": "task.create",
+            "commandId": "432593ee-dae8-5c6f-969b-cf341769dd90",
+            "payloadHash": "e5830c43d8a3405edfce397460532058ce21b6fbe68b35c48eca67b0ace23c6c"
+          }
+        }
+      ],
+      "after": [
+        {
+          "id": "432593ee-dae8-5c6f-969b-cf341769dd90",
+          "displayId": "432593ee",
+          "subject": "TEST persisted Host sidebar seed",
+          "description": "TEST persisted Host sidebar seed",
+          "createdBy": "user",
+          "status": "pending",
+          "createdAt": "2026-11-16T08:03:01.035Z",
+          "updatedAt": "2026-11-16T08:03:01.035Z",
+          "historyEvents": [
+            {
+              "id": "0457cd48-84b6-422c-a58e-a6cbf8c79bda",
+              "timestamp": "2026-11-16T08:03:01.035Z",
+              "type": "task_created",
+              "status": "pending",
+              "actor": "user"
+            }
+          ],
+          "blocks": [],
+          "blockedBy": [],
+          "reviewState": "none",
+          "creationCommand": {
+            "namespace": "legacy-agent-host",
+            "scopeKey": "test-desktop-backend",
+            "operation": "task.create",
+            "commandId": "432593ee-dae8-5c6f-969b-cf341769dd90",
+            "payloadHash": "e5830c43d8a3405edfce397460532058ce21b6fbe68b35c48eca67b0ace23c6c"
+          }
+        },
+        {
+          "id": "d7e79285-5204-51dd-b08b-5a334cc98021",
+          "displayId": "d7e79285",
+          "subject": "TEST created by ordinary Desktop Task controls",
+          "description": "TEST created by ordinary Desktop Task controls",
+          "createdBy": "user",
+          "status": "pending",
+          "createdAt": "2026-11-16T08:04:07.171Z",
+          "updatedAt": "2026-11-16T08:04:07.171Z",
+          "historyEvents": [
+            {
+              "id": "18a3541d-cff7-4614-a58a-ac5ab595d304",
+              "timestamp": "2026-11-16T08:04:07.171Z",
+              "type": "task_created",
+              "status": "pending",
+              "actor": "user"
+            }
+          ],
+          "blocks": [],
+          "blockedBy": [],
+          "reviewState": "none",
+          "creationCommand": {
+            "namespace": "legacy-agent-host",
+            "scopeKey": "test-desktop-backend",
+            "operation": "task.create",
+            "commandId": "d7e79285-5204-51dd-b08b-5a334cc98021",
+            "payloadHash": "fce3893f8fa92ad846c6100e183ecc120848ec1ac6f262851f2c78a7a635035e"
+          }
+        }
+      ]
+    },
+    "sameIdAfterReload": {
+      "monotonicMs": 75959,
+      "assertion": "same Task ID and product fields after reload",
+      "taskId": "d7e79285-5204-51dd-b08b-5a334cc98021",
+      "taskCount": 2
+    },
+    "readOnlyDomAfterReload": {
+      "dialogs": [],
+      "alerts": []
+    },
+    "sourceOrdering": "The sole screenshot and archived before/after snapshots precede Page.reload. The later step follows the original fresh taskFiles read and assert.deepEqual(reloaded,after). No third independently archived post-reload store snapshot is claimed."
+  },
+  "visual": {
+    "image": {
+      "path": "ci-57885c/team/extracted/TEST-desktop-backend-kPz1bG/ui-task-created.png",
+      "bytes": 93165,
+      "blob": "3c527ddec08a26eec4d0450712f70bd24fe556fd",
+      "sha256": "6c218cd49d230ed2c0d0df694f0de67bf840c91c643e767b1da258457c6e2ddc"
+    },
+    "actuallyViewedSingly": true,
+    "dimensions": [
+      1400,
+      900
+    ],
+    "observation": "Pre-reload TEST private backend; Team offline/Launch and alice offline; Tasks2/TODO2 with exact new ordinary-control Task and preserved seed; right sidebar shows only seed. No runtime readiness/launch proof."
+  },
+  "cleanup": {
+    "app": {
+      "pid": 5219,
+      "processGroup": 5219,
+      "identity": "Mon Nov 16 08:03:01 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-Q17n40/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox",
+      "invocation": [
+        "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+        "/home/runner/work/_temp/TEST-emulated-ui-inputs-Q17n40/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "dev:mcp",
+        "--remoteDebuggingPort",
+        "9222",
+        "--noSandbox"
+      ]
+    },
+    "hostChild": {
+      "pid": 5560,
+      "ppid": 5342,
+      "pgid": 5219,
+      "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+      "observedBeforeShutdown": true
+    },
+    "quitRequested": true,
+    "originalRequestedQuitExit": {
+      "initialExitCode": null,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [
+      {
+        "pid": 5293,
+        "ppid": 1,
+        "pgid": 5219
+      }
+    ],
+    "originalExitedGroup": {
+      "settled": true,
+      "reason": "original-natural-exit-and-fresh-absence",
+      "initialMembers": [
+        {
+          "pid": 5293,
+          "ppid": 1,
+          "pgid": 5219
+        }
+      ],
+      "remaining": [],
+      "capturedHostAbsent": true,
+      "capturedDescendantsAbsent": true,
+      "appExitCode": 0,
+      "appSignalCode": null
+    },
+    "final": {
+      "processGroup": 5219,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "passiveOriginalHostChild": [
+      {
+        "line": 89,
+        "value": {
+          "mainPid": 5342,
+          "event": "async-spawn",
+          "pid": 5560,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "node",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "96874",
+            "parentPid": 5342,
+            "processGroupId": 5219
+          },
+          "atomic": false,
+          "observedAtMs": 1794816208141
+        }
+      },
+      {
+        "line": 126,
+        "value": {
+          "mainPid": 5342,
+          "event": "async-exit",
+          "pid": 5560,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794816256649
+        }
+      }
+    ],
+    "passiveTrace": [
+      {
+        "line": 62,
+        "value": {
+          "mainPid": 5342,
+          "event": "trace-active",
+          "limit": 256,
+          "childLimit": 64,
+          "coverage": "node-async-and-unix-process-table-only"
+        }
+      },
+      {
+        "line": 76,
+        "value": {
+          "mainPid": 5342,
+          "event": "async-spawn",
+          "pid": 5420,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "ps",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "96526",
+            "parentPid": 5342,
+            "processGroupId": 5219
+          },
+          "atomic": false,
+          "observedAtMs": 1794816204662
+        }
+      },
+      {
+        "line": 77,
+        "value": {
+          "mainPid": 5342,
+          "event": "async-exit",
+          "pid": 5420,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794816204699
+        }
+      },
+      {
+        "line": 78,
+        "value": {
+          "mainPid": 5342,
+          "event": "sync-result",
+          "requestedCommand": "unix-process-table",
+          "pid": 5429,
+          "status": 0,
+          "signal": null,
+          "observedBirth": null,
+          "atomic": false,
+          "observedAtMs": 1794816204827
+        }
+      },
+      {
+        "line": 79,
+        "value": {
+          "mainPid": 5342,
+          "event": "async-spawn",
+          "pid": 5428,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "node",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "96535",
+            "parentPid": 5342,
+            "processGroupId": 5219
+          },
+          "atomic": false,
+          "observedAtMs": 1794816204836
+        }
+      },
+      {
+        "line": 80,
+        "value": {
+          "mainPid": 5342,
+          "event": "async-exit",
+          "pid": 5428,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794816204839
+        }
+      },
+      {
+        "line": 82,
+        "value": {
+          "mainPid": 5342,
+          "event": "sync-result",
+          "requestedCommand": "unix-process-table",
+          "pid": 5449,
+          "status": 0,
+          "signal": null,
+          "observedBirth": null,
+          "atomic": false,
+          "observedAtMs": 1794816204998
+        }
+      },
+      {
+        "line": 83,
+        "value": {
+          "mainPid": 5342,
+          "event": "async-spawn",
+          "pid": 5448,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "node",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "96557",
+            "parentPid": 5342,
+            "processGroupId": 5219
+          },
+          "atomic": false,
+          "observedAtMs": 1794816205012
+        }
+      },
+      {
+        "line": 86,
+        "value": {
+          "mainPid": 5342,
+          "event": "async-exit",
+          "pid": 5448,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794816207021
+        }
+      },
+      {
+        "line": 87,
+        "value": {
+          "mainPid": 5342,
+          "event": "async-spawn",
+          "pid": 5559,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "node",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "96872",
+            "parentPid": 5342,
+            "processGroupId": 5219
+          },
+          "atomic": false,
+          "observedAtMs": 1794816208109
+        }
+      },
+      {
+        "line": 88,
+        "value": {
+          "mainPid": 5342,
+          "event": "async-exit",
+          "pid": 5559,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794816208122
+        }
+      },
+      {
+        "line": 89,
+        "value": {
+          "mainPid": 5342,
+          "event": "async-spawn",
+          "pid": 5560,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "node",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "96874",
+            "parentPid": 5342,
+            "processGroupId": 5219
+          },
+          "atomic": false,
+          "observedAtMs": 1794816208141
+        }
+      },
+      {
+        "line": 95,
+        "value": {
+          "mainPid": 5342,
+          "event": "async-spawn",
+          "pid": 5842,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "ps",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "98014",
+            "parentPid": 5342,
+            "processGroupId": 5219
+          },
+          "atomic": false,
+          "observedAtMs": 1794816219539
+        }
+      },
+      {
+        "line": 97,
+        "value": {
+          "mainPid": 5342,
+          "event": "async-exit",
+          "pid": 5842,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794816219597
+        }
+      },
+      {
+        "line": 126,
+        "value": {
+          "mainPid": 5342,
+          "event": "async-exit",
+          "pid": 5560,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794816256649
+        }
+      },
+      {
+        "line": 128,
+        "value": {
+          "mainPid": 5342,
+          "event": "async-spawn",
+          "pid": 6645,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "ps",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "101728",
+            "parentPid": 5342,
+            "processGroupId": 5219
+          },
+          "atomic": false,
+          "observedAtMs": 1794816256668
+        }
+      },
+      {
+        "line": 129,
+        "value": {
+          "mainPid": 5342,
+          "event": "async-exit",
+          "pid": 6645,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794816256676
+        }
+      },
+      {
+        "line": 130,
+        "value": {
+          "mainPid": 5342,
+          "event": "async-spawn",
+          "pid": 6646,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "ps",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "101729",
+            "parentPid": 5342,
+            "processGroupId": 5219
+          },
+          "atomic": false,
+          "observedAtMs": 1794816256685
+        }
+      },
+      {
+        "line": 131,
+        "value": {
+          "mainPid": 5342,
+          "event": "async-exit",
+          "pid": 6646,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794816256695
+        }
+      },
+      {
+        "line": 138,
+        "value": {
+          "mainPid": 5342,
+          "event": "trace-summary",
+          "rows": 18,
+          "droppedObservations": 0,
+          "observedChildren": 8,
+          "unobservedChildren": 0,
+          "observationFailures": 0,
+          "limited": false,
+          "coverage": "node-async-and-unix-process-table-only"
+        }
+      }
+    ],
+    "sentinel": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": 1,
+      "postQuitOrCleanupInvocations": [],
+      "refusedInvocations": [],
+      "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+    },
+    "linuxChildExecInputVerifiedAfterCleanup": true,
+    "sourceInference": "The observed settled group empties remaining before the fallback signal branch. No fallback group signal was required. Numeric process-table absence and the separate original ChildProcess exit callback remain distinct from a native custody certificate."
+  },
+  "sourceBoundary": {
+    "teamSmoke": "Source18–218 ordinary control path; screenshot136–145 before reload148–163; nativeStop branch164 not selected.",
+    "cleanup": "Captured app original3000ms observation402; settledGroupMembers412; observeExitedAppGroup427–432; fallback signal480 only if remaining persists; fresh Hostabsence501–502.",
+    "passiveTrace": "Closed source child_process subscription; original once(spawn)/once(exit),two birth observations with atomic:false;256-row64-child bounds; no launch/interception/signal authority."
+  },
+  "qualification": {
+    "runtimeConfigured": false,
+    "managementConfigured": false,
+    "nativeProviders": "not executed",
+    "nativeQualified": false,
+    "vendorAuthQualified": false,
+    "releaseQualified": false,
+    "allDesktopQualified": false,
+    "noNewExecutionOrNetwork": true
+  },
+  "limits": [
+    "Exact578 source/current original only; no other lane or later source transfer.",
+    "After-flow-only SidebarTaskItem is additional to selected1757, not silently in that census.",
+    "Full619 Host Git census is separate from artifact586 selected Host leaves.",
+    "Fourteen compiled digest rows and actual build/tests do not constitute independent reproducible source-to-bundle proof or complete installed dependency census.",
+    "Native runtime and provider sessions are excluded; version check was the original finite sentinel, not real vendor execution.",
+    "No post-reload PNG exists; later original canonical read/assertion is preserved separately.",
+    "The orphan row5293 is not relabeled as a zombie or executable. Fresh absence and original wrapper exit are retained, without a cause inference.",
+    "Dedicated transport has no separate Host exit code; the original passive Host5560 callback reports0/null separately with its bounded non-atomic source limits.",
+    "Original package-manager/routing diagnostics remain in raw logs.",
+    "No source/ref/CI mutation or project/native/provider execution by reviewer."
+  ]
+}

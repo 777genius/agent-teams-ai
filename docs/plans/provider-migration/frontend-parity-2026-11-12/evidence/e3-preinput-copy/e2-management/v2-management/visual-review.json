@@ -1,0 +1,46 @@
+{
+  "kind": "Author actual single-image views, all3 original PNGs",
+  "sourceHead": "57885c055a18b27c180c304762643eac632513ad",
+  "reviewedAtUTC": "2026-11-16T08:09:30.802694+00:00",
+  "images": [
+    {
+      "path": "extracted/TEST-desktop-backend-lDScrK/ui-v2-management-rejected-key.png",
+      "bytes": 123144,
+      "blob": "4e840b3ce02c1aa20274cc8ee246542733e452b2",
+      "sha256": "13b32cd46c8f64dca4d20ed4fb39d12d1f4481addc307c0e58ffa8012a72e4d9",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewedSingly": true,
+      "scope": "Actual rejected TEST key frame: red model-verification failure says the new credential was not kept; API key field masked, native model catalog available, provider test-local Configured. This display does not independently prove credential storage."
+    },
+    {
+      "path": "extracted/TEST-desktop-backend-lDScrK/ui-v2-management-connected.png",
+      "bytes": 103555,
+      "blob": "b7ed3b5f2f1204f1e48dbe29dde2894e4b0cb60c",
+      "sha256": "9b2b93d0e26885e0cf6e9cd4d889399752bca705aaeba5a3fdbb0efb4ba6a1f8",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewedSingly": true,
+      "scope": "Actual replacement frame: test-local green Connected and From OpenCode settings; expanded model area still shows loading placeholders. This is not a settled complete catalog/default-inheritance view."
+    },
+    {
+      "path": "extracted/TEST-desktop-backend-lDScrK/ui-v2-management-failure.png",
+      "bytes": 65209,
+      "blob": "3dcf6a2cec41c1208607d9fd97037b214eb5fbc6",
+      "sha256": "a5d9901a542b0ee854681a121514933dac44572cbfd6a41e78d1ef6a8cc45a46",
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewedSingly": true,
+      "scope": "Actual failure frame: Models active, visible Refresh spinner, Select project context and empty legacy model-routes message; no default-inheritance card visible. No hook request/currentness/native substage or duration is established by this image."
+    }
+  ],
+  "limitations": [
+    "No duration/causal/native classification from a screenshot."
+  ]
+}

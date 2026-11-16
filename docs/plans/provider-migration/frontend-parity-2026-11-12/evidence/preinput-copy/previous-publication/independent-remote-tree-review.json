@@ -1,0 +1,111 @@
+{
+  "kind": "Independent E2 immutable remote-tree R2",
+  "result": "APPROVE",
+  "reviewer": "/root/migration_scope",
+  "createdAtUTC": "2026-11-16T07:57:12.700265+00:00",
+  "method": "Read the full saved official recursive responses captured07:55:06/08, as explicitly authorized; no duplicate GET. Compared every remote leaf and directory against independently reviewed full expected maps, independently rehashed all directory objects, and checked all blob sizes against actual base Git plus frozen overrides.",
+  "manifest": {
+    "path": "e2-reconciliation-publication/upload-manifest.json",
+    "bytes": 283239,
+    "blob": "5248df585cb5069fd7c97a81456d9872c46bfcb9",
+    "sha256": "e1e72a8328914b25ad44c886be17631a0ffa835af65def53c726c7f13249bbef"
+  },
+  "independentPrepublicationReview": {
+    "path": "e2-reconciliation-publication/independent-prepublication-review.json",
+    "bytes": 19981,
+    "blob": "dd723a6b2288daeaed4758f65aa5a727b42ba63b",
+    "sha256": "722849be8539600025201dceb76d901829f8eb752d418103859c0a609fb3edac"
+  },
+  "independentByteTreeProof": {
+    "path": "e2-reconciliation-publication/independent-prepublication-byte-tree-proof.json",
+    "bytes": 568707,
+    "blob": "ee8fb0caf70ad36ba109b9d36c7c65adfa3401bf",
+    "sha256": "eddfbc3eb26f07987d78409b16f87086f2f932e8f9b54267d2638d6665bcaab0"
+  },
+  "records": [
+    {
+      "kind": "docs",
+      "responseObservedAtUTC": "2026-11-16 07:55:06 UTC",
+      "rawResponse": {
+        "path": "e2-reconciliation-publication/remote-docs-tree-response.json",
+        "bytes": 8019555,
+        "blob": "8cbbad9832a9c70d2c20b44860e130217cdffc27",
+        "sha256": "f17ba9837a4e86477b45bdd3ba1137adfca41e27a812c815193692da4c0e51e5"
+      },
+      "root": "ddab0eca5c0062243dd48deac2c50c5efd8f6c99",
+      "truncated": false,
+      "completeRecursiveEntryCount": 12969,
+      "leafCount": 11269,
+      "directoryCountIncludingRoot": 1701,
+      "everyLeafModeTypeBlobSizeExact": true,
+      "everyDirectoryModeAndShaExact": true,
+      "allDirectoryObjectsIndependentlyRehashed": true,
+      "nonDocumentationLeaves": 8798,
+      "nonDocumentationMapSha256": "94deeed545664749a234f724e5a59304ba6499760817630cac2fcf2bb618d199",
+      "all40ShortMovesPreserved": true,
+      "maximumRelativePathCharacters": 216
+    },
+    {
+      "kind": "source",
+      "responseObservedAtUTC": "2026-11-16 07:55:08 UTC",
+      "rawResponse": {
+        "path": "e2-reconciliation-publication/remote-source-tree-response.json",
+        "bytes": 8019557,
+        "blob": "d6e7ec6280748bc8af4d9a4787e58a1733d852d2",
+        "sha256": "9ff34eebcdea92ea092f5c04aff8e641d6a80fc7f6a04fea4a77a12db38aef97"
+      },
+      "root": "c70232e34d2759ce287e2f224073205dcf9c18db",
+      "truncated": false,
+      "completeRecursiveEntryCount": 12969,
+      "leafCount": 11269,
+      "directoryCountIncludingRoot": 1701,
+      "everyLeafModeTypeBlobSizeExact": true,
+      "everyDirectoryModeAndShaExact": true,
+      "allDirectoryObjectsIndependentlyRehashed": true,
+      "nonDocumentationLeaves": 8798,
+      "nonDocumentationMapSha256": "0aaf4203eeb6a9a0717139f5bfc843a238c26952ccee52572fda1c9c9e8067e2",
+      "all40ShortMovesPreserved": true,
+      "maximumRelativePathCharacters": 216
+    }
+  ],
+  "documentationStage": {
+    "soleProspectiveParent": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+    "all120SelectedBlobsAndPlanEntryExact": true,
+    "all11149OtherBaseLeavesExact": true,
+    "noSourceChange": true
+  },
+  "sourceProjection": {
+    "orderedProspectiveParents": [
+      "EXACT_VERIFIED_DOCUMENTATION_CHILD",
+      "57885c055a18b27c180c304762643eac632513ad"
+    ],
+    "exactThreeSelectedLeaves": [
+      {
+        "path": "test/features/agent-backend/capturedHostClient.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "272e7c3f6ca10d890148fa16080464b395535125"
+      },
+      {
+        "path": "tools/owned-process-broker/broker.cpp",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a4912d809aacc1fd4a949267fa0120d324b41be4"
+      },
+      {
+        "path": "tools/owned-process-broker/debugServiceTest.h",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a72b32fa7eda34d473463099f7df151f359a8559"
+      }
+    ],
+    "all11266OtherDocsTreeLeavesExact": true,
+    "allDocumentationPreserved": true,
+    "DarwinGeometryPhaseAExcluded": true
+  },
+  "limits": [
+    "Remote trees are immutable unreferenced objects at this gate, not actual published commits.",
+    "Fresh route/ref guards and actual documentation commit/readback precede the separate source merge; primary advancement is not approved by this gate.",
+    "No source/project/CI/native execution, writer invocation, fetch, checkout, index/ref mutation or further API call by this reader."
+  ]
+}

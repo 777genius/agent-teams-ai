@@ -1,0 +1,146 @@
+{
+  "incoming": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "incomingTree": "de80fbfbffb3fe4daabf6cc9be258cc8df534524",
+  "incomingParents": [
+    "098a2a6788fcf4477e348ca669628e35f68517a9"
+  ],
+  "commonAncestor": "57885c055a18b27c180c304762643eac632513ad",
+  "rows": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 1915226,
+      "lines": 8297,
+      "blob": "bfcd6cbbb7ec293a568a61079bc60ed572979430",
+      "sha256": "406271bf95c71863fa6e488b4f447f7a4e5c659a15d92db263a003292a51ee4b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/current-source-r2/review.json",
+      "bytes": 17996,
+      "lines": 476,
+      "blob": "0d4cb15fdda69ea2f34182d9fab804795dc7e78c",
+      "sha256": "080572c806da3e4267b514c6514b844871774dc35a9b5d9d5bcc8f52aaadc4f2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/current-source-r2/review.md",
+      "bytes": 2893,
+      "lines": 11,
+      "blob": "e57482a890d5e77fecb7ec38ff6906e3b31d4b4f",
+      "sha256": "a9942a95590254f405871a4e79e4fc23daa42514ff125cb17ecfef281473f632"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/evidence-index.json",
+      "bytes": 24023,
+      "lines": 614,
+      "blob": "6fd63e361174502b8bbe293315875e179f53f0ef",
+      "sha256": "25fedd93da39162ad03372598b98bc45c2d360db1f1f12d6e64cdc9720721df8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/phase-a/historical-static-r2.json",
+      "bytes": 2675,
+      "lines": 67,
+      "blob": "70e402f88a8f156c6a37bc1a412302cb52ad404a",
+      "sha256": "b254fb22865c60eee3d1715bf618818e5437cbf026da812a4233bf35cb59de40"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/phase-a/phase-a-appended-suffix.txt",
+      "bytes": 4264,
+      "lines": 62,
+      "blob": "08699c4890b2ef83bcbda53094c450c6a9c3b366",
+      "sha256": "a299b6ec1497dc542f675fd7868a430d8e9d4d0503199c9ff0343a7187b5312d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/phase-a/phase-a-current.patch",
+      "bytes": 4709,
+      "lines": 68,
+      "blob": "adda40c296f1b88f2f0a5e20cccb3444e4e8887d",
+      "sha256": "bc09f9098c3206ffc50ab80f452719f838a735586e19a732bc083676861d777a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/phase-a/phase-a-manifest.json",
+      "bytes": 14720,
+      "lines": 364,
+      "blob": "f74084e8e236d9b5dfe6ecae84000d2957200458",
+      "sha256": "cc216a766ef8db0cf227eb181fb53ff46fe6317b74201995bb5ebde1611ad912"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/phase-a/phase-order-proposal.md",
+      "bytes": 10323,
+      "lines": 49,
+      "blob": "0914c6acf7e7882785ad8c5af95bc970ea710efd",
+      "sha256": "1f32cbf094b732e75ce4536656f13015607b8a3d84826417b50deba9b474fc75"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/team-baseline/audit.json",
+      "bytes": 25144,
+      "lines": 798,
+      "blob": "b497c97469838cf44e6ee59379598564fc09b2ba",
+      "sha256": "e85ae390c790412602e6000ca2820f2c1f7bf0e996c9518f1e64e888a627ad13"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/team-baseline/job-133150851331.log",
+      "bytes": 2709748,
+      "lines": 16645,
+      "blob": "f8710649393df89727eedf54ac54e59b61c0ace0",
+      "sha256": "aa428b27236f3867f1cdf13c32494a61ec4fa4ffef02cce2a57794ae2024fa81"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/team-baseline/manifest.json",
+      "bytes": 1448,
+      "lines": 41,
+      "blob": "ec78e5630bae8839fe7811db91c85f701b0f1607",
+      "sha256": "15fceb525487f892e4b91232f80254e8365055e97e866d6450eefb5f16d9e9af"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/team-baseline/review.md",
+      "bytes": 3124,
+      "lines": 23,
+      "blob": "95904a6caa8e48e3b151fac1786775ee343ec3c0",
+      "sha256": "d817d5afb4a2f917b9803a5a1bf3d22f350cc0909a45fd32ae48dd54eef4277f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/team-baseline/source-binding.json",
+      "bytes": 23742,
+      "lines": 454,
+      "blob": "e9f57a6f00c2ad5e4d27b9bb7c42cd3b66834ad2",
+      "sha256": "0570e0742162ca529bd5661368a3e07c0644936d26558747136a5d8d1d7c6756"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-a-current-2026-11-16/team-baseline/terminal-snapshot.json",
+      "bytes": 188491,
+      "lines": 4799,
+      "blob": "2addbb6f2985a52252e21d0861dfe838fcef2c45",
+      "sha256": "02a19d0ca40bc190b2b75348d7b2568319ec6d6f96d0ff150e12654a24df79dd"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 115936,
+      "lines": 1958,
+      "blob": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+      "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076"
+    }
+  ],
+  "priorPlan": {
+    "bytes": 1902427,
+    "lines": 8230,
+    "blob": "49587b36ed3bebbd9a766215ba0e00842db1b5a1",
+    "sha256": "fdb0d07f9850ffe364a13c6cc06c705a2314abe7c7e1d4857c1acbd9e3123bf6"
+  },
+  "incomingPlan": {
+    "bytes": 1915226,
+    "lines": 8297,
+    "blob": "bfcd6cbbb7ec293a568a61079bc60ed572979430",
+    "sha256": "406271bf95c71863fa6e488b4f447f7a4e5c659a15d92db263a003292a51ee4b"
+  },
+  "incomingPlanSuffix": {
+    "bytes": 12799,
+    "lines": 67,
+    "blob": "5af5c105b0e95576ef89d3d7487815322ce2fd9a",
+    "sha256": "3f70c79d12e5851be2c044209ecdfd4dc743e4d05cae68388c373a8d5cd685d9"
+  },
+  "sourcePatch": {
+    "bytes": 4953,
+    "lines": 70,
+    "blob": "57aaff301b8e5f0c376c79eadd978bc95763f142",
+    "sha256": "f738fe5a5b743f05ae001483eb674bacdeb4a1a8294a593f30c14c3a623b62a1"
+  }
+}

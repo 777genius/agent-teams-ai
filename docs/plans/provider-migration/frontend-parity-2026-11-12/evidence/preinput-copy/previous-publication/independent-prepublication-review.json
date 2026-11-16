@@ -1,0 +1,330 @@
+{
+  "kind": "Independent E2 reconciliation full prepublication R2",
+  "reviewer": "/root/migration_scope",
+  "createdAtUTC": "2026-11-16T07:50:18.426730+00:00",
+  "result": "APPROVE",
+  "scope": "Approve the exact frozen documentation candidate and exact three-source follow-on projection for the ordered root publication process. No commit/ref/current-source execution or primary advancement is attested or performed.",
+  "findings": [],
+  "frozenInputs": {
+    "manifest": {
+      "path": "e2-reconciliation-publication/upload-manifest.json",
+      "bytes": 283239,
+      "blob": "5248df585cb5069fd7c97a81456d9872c46bfcb9",
+      "sha256": "e1e72a8328914b25ad44c886be17631a0ffa835af65def53c726c7f13249bbef"
+    },
+    "rootR1": {
+      "path": "e2-reconciliation-publication/R1-root-ordered-reconciliation.md",
+      "bytes": 16653,
+      "blob": "93cc40b13741e7a37d2fa20c9e9cd98b30a74515",
+      "sha256": "fb4b47038fa18597bec549ff86a8915382414a2b6f61c7b34fa6966abda12cb3"
+    },
+    "byteTreeProof": {
+      "path": "e2-reconciliation-publication/independent-prepublication-byte-tree-proof.json",
+      "bytes": 568707,
+      "blob": "ee8fb0caf70ad36ba109b9d36c7c65adfa3401bf",
+      "sha256": "eddfbc3eb26f07987d78409b16f87086f2f932e8f9b54267d2638d6665bcaab0"
+    }
+  },
+  "exactSummary": {
+    "manifest": {
+      "path": "e2-reconciliation-publication/upload-manifest.json",
+      "bytes": 283239,
+      "blob": "5248df585cb5069fd7c97a81456d9872c46bfcb9",
+      "sha256": "e1e72a8328914b25ad44c886be17631a0ffa835af65def53c726c7f13249bbef"
+    },
+    "rootR1": {
+      "path": "e2-reconciliation-publication/R1-root-ordered-reconciliation.md",
+      "bytes": 16653,
+      "blob": "93cc40b13741e7a37d2fa20c9e9cd98b30a74515",
+      "sha256": "fb4b47038fa18597bec549ff86a8915382414a2b6f61c7b34fa6966abda12cb3"
+    },
+    "files": 120,
+    "newPayloadBytes": 10257759,
+    "references": 122,
+    "priorReuse": 4,
+    "sameNewReuse": 0,
+    "docsTree": "ddab0eca5c0062243dd48deac2c50c5efd8f6c99",
+    "sourceTree": "c70232e34d2759ce287e2f224073205dcf9c18db",
+    "leaves": 11269,
+    "directoriesIncludingRoot": 1701,
+    "existingLeavesUnchanged": 11149,
+    "sourceOnlyOtherLeavesUnchanged": 11266,
+    "archives": 6,
+    "members": 62,
+    "Plan": {
+      "bytes": 2038188,
+      "blob": "d5cc38cc212f9757e841decd86db35fd322e358b",
+      "sha256": "e4f671d3dcf12d23564cf2c5317a2cb702638eb3c68ad803c3b52e94feec6687"
+    },
+    "PlanSegments": 4,
+    "incomingDocs": 34,
+    "incomingDocsBytes": 938816,
+    "oldNonPlanPreserved": 44,
+    "movesPreserved": 40,
+    "maxPath": 216,
+    "currentSourceMap": "94deeed545664749a234f724e5a59304ba6499760817630cac2fcf2bb618d199",
+    "selectedSourceMap": "0aaf4203eeb6a9a0717139f5bfc843a238c26952ccee52572fda1c9c9e8067e2"
+  },
+  "independentMethod": [
+    "Read every120 staged payload body and independently recomputed Git blob/SHA256/size; compared its original source copy wherever mapped.",
+    "Resolved all122 manifest reference mappings including4 exact published reuses against base Git; checked the former Darwin index additional50 references including7 already-published reuses and both archive addresses.",
+    "Read every member of all6 unique selected official ZIPs, required safe unique regular-file names, recomputed CRC32/Git blob/SHA256/size, matched all62 manifest member rows. The inherited Darwin ZIP alias has the same checked bytes as its incoming preserved copy.",
+    "Read full actual base, common-ancestor and incoming Git trees; rebuilt all1701 directory objects independently bottom-up, including root; compared every leaf and directory to both frozen complete maps.",
+    "Reconstructed entire Plan29 from the actual00d Git prefix and four literal two-LF-separated full byte blocks; checked historical uncommitted Darwin full prefix and incoming E1+suffix equation.",
+    "Read exact root R1 and rejoined the completed source/history reviews; independently verified full three preimage/afterimage Git bodies and source projection. No author/root writer or project command invoked."
+  ],
+  "historyAndPlan": {
+    "base": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+    "baseTree": "763d943372c79c8d82ad2634b04861da81308fee",
+    "commonAncestor": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "incomingDocumentationParent": "f3948bee8f5e14b0e7332bd266fd197b44228d32",
+    "incomingSource": "57885c055a18b27c180c304762643eac632513ad",
+    "incomingTree": "b1685b4993306f9cd509d832b72f2cd6f0418943",
+    "incomingParentChainExact": true,
+    "actual00dPrefix": {
+      "bytes": 1969658,
+      "blob": "a6860c298a8ef6bb3d806d93758ff01624dbee03",
+      "sha256": "c76b7f205110c1dbda54a38c5f3008aa6bd20e8162252b69df37343afed0ff99"
+    },
+    "formerUncommittedDarwinPrefix": {
+      "bytes": 1994546,
+      "blob": "f4696f07178f3067f61e24c13c0dc2043dc73297",
+      "sha256": "4c7240b04de05e7e5af4ff893a402ea33c86aaa0fc4ecadc35b43d205618614d"
+    },
+    "PlanResult": {
+      "bytes": 2038188,
+      "blob": "d5cc38cc212f9757e841decd86db35fd322e358b",
+      "sha256": "e4f671d3dcf12d23564cf2c5317a2cb702638eb3c68ad803c3b52e94feec6687"
+    },
+    "orderedSegments": [
+      {
+        "label": "Exact prospective Main admission TEST source R1",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-appendix.md",
+        "bytes": 13583,
+        "blob": "97810fb7cb19b2a34a8c6b83009e869ec4082409",
+        "sha256": "f32af083ac05d666bf86f1bd8e1b1167916060745094dcae93135cdc37238c37",
+        "separatorOffset": 1969658,
+        "contentOffset": 1969660
+      },
+      {
+        "label": "Root ordered selection governs last",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/darwin-expiry/proposal/R1-root-ordered-selection.md",
+        "bytes": 11301,
+        "blob": "d0df968462614a31d8ab5cc43ac3b09ebc6aa9fd",
+        "sha256": "c4e74225de6fb9059793f46c93f09583448649492cfffce33693a4edc5bae52d",
+        "separatorOffset": 1983243,
+        "contentOffset": 1983245
+      },
+      {
+        "label": "Exact new incoming Plan suffix; historical incoming root selection retained",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/reconciliation/incoming-plan-suffix.md",
+        "bytes": 26985,
+        "blob": "c39f65dccc88d8f84a4eb8b4581643f050db9552",
+        "sha256": "41423291c0c2b190a536a42f2a36aa4e2e0763ce3dee034240199e30ec7e251d",
+        "separatorOffset": 1994546,
+        "contentOffset": 1994548
+      },
+      {
+        "label": "New root ordered reconciliation supersedes prior conditional source routes and governs last",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/reconciliation/R1-root-ordered-reconciliation.md",
+        "bytes": 16653,
+        "blob": "93cc40b13741e7a37d2fa20c9e9cd98b30a74515",
+        "sha256": "fb4b47038fa18597bec549ff86a8915382414a2b6f61c7b34fa6966abda12cb3",
+        "separatorOffset": 2021533,
+        "contentOffset": 2021535
+      }
+    ],
+    "appendOnlyCurrentHistory": true,
+    "sourceOfNewIncomingSuffix": "Full incoming Plan equals the complete E1 Plan plus the exact26985-byte/126-line suffix c39f65dc. It is not claimed to be a contiguous prefix of our current followup Plan. The previously reconciled E1 non-EOF insertions remain in the full00d prefix/history.",
+    "governingLastR1": "The final93cc40b1 root R1 explicitly supersedes old immediate Darwin selection/publication text while preserving all old bytes. Historical retained R1 labels are not live authorization.",
+    "otherExistingDocumentation": "Plan30 and every existing documentation leaf except append-only Plan29 remain exact; all34 incoming evidence documents retain their original repository paths, bytes and history.",
+    "historicalSourceCandidates": "Darwin4e8a47af and fixture27261559 appear only as inert previews/documentation. The unchanged source fixture is c2a23405. Neither historical candidate is applied."
+  },
+  "documentationTreeScope": {
+    "tree": "ddab0eca5c0062243dd48deac2c50c5efd8f6c99",
+    "payloadCount": 120,
+    "payloadBytes": 10257759,
+    "newLeaves": 119,
+    "modifiedExistingLeaves": [
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md"
+    ],
+    "allOtherExistingLeavesExact": 11149,
+    "leaves": 11269,
+    "directoriesIncludingRoot": 1701,
+    "nonDocumentationLeaves": 8798,
+    "nonDocumentationMapSha256": "94deeed545664749a234f724e5a59304ba6499760817630cac2fcf2bb618d199",
+    "sourceUnchangedFrom00d": true,
+    "old44DarwinPayloadsRetainedExact": true,
+    "oldPreparationArtifacts": "The old45-file cut manifest, prospective reviews and unreferenced tree-creation responses are retained; they do not become an actually published old Darwin source commit.",
+    "preservedShortMoves": 40,
+    "oldLongLocationsAbsent": true,
+    "maximumRelativeCharacters": 216,
+    "inertPreviewBoundary": "All new payload paths are documentation. No compiler-visible candidate source, new workflow/config, actual native binary source leaf, geometry application or PhaseA application is introduced."
+  },
+  "sourceProjectionScope": {
+    "tree": "c70232e34d2759ce287e2f224073205dcf9c18db",
+    "orderedParents": [
+      "EXACT_VERIFIED_DOCUMENTATION_CHILD",
+      "57885c055a18b27c180c304762643eac632513ad"
+    ],
+    "exactChangedPaths": [
+      "test/features/agent-backend/capturedHostClient.test.ts",
+      "tools/owned-process-broker/broker.cpp",
+      "tools/owned-process-broker/debugServiceTest.h"
+    ],
+    "changes": [
+      {
+        "path": "test/features/agent-backend/capturedHostClient.test.ts",
+        "mode": "100644",
+        "preimage": {
+          "bytes": 51981,
+          "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+          "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f"
+        },
+        "incoming": {
+          "bytes": 52301,
+          "blob": "272e7c3f6ca10d890148fa16080464b395535125",
+          "sha256": "a974eadfc088aa488412b34840a138ef4187e5382592b19493af4a4eeb66d86f"
+        },
+        "preimageLines": 1040,
+        "incomingLines": 1046,
+        "incomingScratchPath": "/workspace/scratch/82d3f9ba6b85/external-primary-0722/source/incoming/test/features/agent-backend/capturedHostClient.test.ts"
+      },
+      {
+        "path": "tools/owned-process-broker/broker.cpp",
+        "mode": "100644",
+        "preimage": {
+          "bytes": 25929,
+          "blob": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e",
+          "sha256": "c9b35397e4beb534a9a4298b6a6b7c8c8745571381b69b3301ab3b60fccd6dc3"
+        },
+        "incoming": {
+          "bytes": 26160,
+          "blob": "a4912d809aacc1fd4a949267fa0120d324b41be4",
+          "sha256": "54d754c150a9edf5c82107ca6bbe725057b90e28dc4585533a88bc4cb0854814"
+        },
+        "preimageLines": 530,
+        "incomingLines": 534,
+        "incomingScratchPath": "/workspace/scratch/82d3f9ba6b85/external-primary-0722/source/incoming/tools/owned-process-broker/broker.cpp"
+      },
+      {
+        "path": "tools/owned-process-broker/debugServiceTest.h",
+        "mode": "100644",
+        "preimage": {
+          "bytes": 8822,
+          "blob": "952ed2d3436708addf656109dc513270ea33ce22",
+          "sha256": "cb3ed3eaebb0f59aa968a285ddd85522181292a289a9bed7c59a6adf0feabf65"
+        },
+        "incoming": {
+          "bytes": 9097,
+          "blob": "a72b32fa7eda34d473463099f7df151f359a8559",
+          "sha256": "121bcbb444822e6e45b76dbcbf170cda0eecfce60bb5a222a7c6316b23c953f8"
+        },
+        "preimageLines": 182,
+        "incomingLines": 188,
+        "incomingScratchPath": "/workspace/scratch/82d3f9ba6b85/external-primary-0722/source/incoming/tools/owned-process-broker/debugServiceTest.h"
+      }
+    ],
+    "totalAddedLines": 25,
+    "totalRemovedLines": 9,
+    "allOtherLeavesExact": 11266,
+    "everyDocumentationLeafExactToVerifiedDocsTree": true,
+    "completeIncomingNonDocumentationMapEqual": true,
+    "nonDocumentationLeaves": 8798,
+    "nonDocumentationMapSha256": "0aaf4203eeb6a9a0717139f5bfc843a238c26952ccee52572fda1c9c9e8067e2",
+    "fullFileSelection": "The exact complete incoming a72 header replaces our952 header explicitly; no mixed per-event-plus-Release writer. The complete incoming a491 broker and272e test diagnostic are selected.",
+    "deferredWorkExcluded": [
+      "Two-file Darwin anchor amendment; it must later preserve the272e diagnostic through a fresh complete composition.",
+      "Geometry helper/test; unchanged21 source pins are compatibility only. Native geometry R2 arriving after this freeze does not select or add its source to this cut.",
+      "Models/P11 PhaseA; old full-file test candidate remains dormant and must be recomposed if geometry later changes it."
+    ]
+  },
+  "sourceAuthorityReview": {
+    "cpp": "The independently reviewed TEST macro path acquires a release-published completed prefix, bounds output to16x8DWORD=512 bytes, checks WriteFile and exact byte count, and routes failure through existing first-error handling before Released success. No added success exit bypass, duplicate flush or change of the ordinary production exception/Stop/custody policy is asserted.",
+    "latency": "512 bytes is an output-size bound, not a latency guarantee. The synchronous write has no new internal deadline; the existing writer ACK five-second bound begins later. Enclosing original scenario/controller limits remain unchanged.",
+    "historicalFailure": "The old unknown I386 observations and Darwin requested-before-queued outcome remain failures. No assertion identifies which publication/read/decoder alternative caused either historical result.",
+    "MainDiagnostic": "Only completed/refused/unknown or fixed invalid can enter the original race Error message. The original races, promises, assertions, finally restoration/shutdown and20/2000/3000ms bounds remain; diagnostics do not constitute a timeout repair.",
+    "evidencePolicyAmendment": "Explicit adoption of checked acquired-prefix persistence before Release; a false/short TEST write may become the first error. No fsync/durability, full-trace completeness, direct I386-root late-handler or new native PASS claim."
+  },
+  "semanticReviewJoins": [
+    {
+      "path": "external-primary-0722/independent-incoming-history-plan-evidence-review.json",
+      "bytes": 73886,
+      "blob": "261cc6bfd61c266aab61f51da86f8401c9025d38",
+      "sha256": "86e18bc404b7179762c1f95d69e3a8064320cdc974222611072f090164c4b1cd",
+      "scope": "My independent exact incoming history, Plan suffix, all34 incoming documents and original four archives/six logs. Rejoined full identities in this package."
+    },
+    {
+      "path": "external-primary-0722/independent-incoming-i386-source-review.json",
+      "bytes": 18363,
+      "blob": "699267744e1b2d4f024cb51ca8feeb76328bb7f1",
+      "sha256": "c1313c4a07de378be26f7267e9185117b0707c13a0506a4551c2e63ed43bbd10",
+      "scope": "Native independent exact two-C++ source/authority review including explicit952-to-a72 replacement; source semantics approved, no native PASS."
+    },
+    {
+      "path": "external-primary-0722/independent-incoming-i386-source-byte-proof.json",
+      "bytes": 29315,
+      "blob": "362c9ec1912349f43febf83d105afef5565d587f",
+      "sha256": "994459769f7dd65fc2a630d0e7186476d98a4e0541a86a4218df426e5ee1f1f6",
+      "scope": "Native full source/history/input byte proof supporting two-C++ review."
+    },
+    {
+      "path": "external-primary-0722/root-incoming-Main-diagnostic-review.json",
+      "bytes": 24250,
+      "blob": "8f4aa4e8f3e62c64290274fd7b7c2de968e2c705",
+      "sha256": "1b97d248d4719ccc56af69983a0cca02e7750bda1c68c816392c099f8f0e8dc0",
+      "scope": "Root independent closed-status diagnostic source review,31 fresh source/venue pins; no expiry fix or actual future result."
+    },
+    {
+      "path": "ci-e1d14b9/installer/independent-installer-review.json",
+      "bytes": 58675,
+      "blob": "8c02f4aae044c78d88a47e6d0baa332181f639e1",
+      "sha256": "1839cc5efb0bffa102d49139ff3f6b2055a196db721862ea11ae65a0d00ef246",
+      "scope": "My canonicalv2 actual E1 Installer full source/archive/11-image/cleanup review. No Team/static/later-source transfer."
+    },
+    {
+      "path": "darwin-expiry-publication/independent-prepublication-review.json",
+      "bytes": 22960,
+      "blob": "f89c27d816102a716baae2ffdd3c7e28c8757560",
+      "sha256": "b6c90f6bd7a506974d7b18bf6e19e5a6156030e59e17716446dc81bf0551c5c1",
+      "scope": "Historical uncommitted Darwin cut prepublication review, retained inert and superseded by new root R1."
+    }
+  ],
+  "evidenceQualificationBoundaries": {
+    "incoming34": "All34 original documents, four official ZIPs and six logs are preserved; names such as incoming migration-r2 remain attributed historical external records rather than this reviewer’s new authorship or native qualification.",
+    "E1Installer": "Canonicalv2 accurately retains the502-byte archived current.json and unchanged limits. Original helper118PASS/1SKIP plus7 installerPASS,11 actual images and original custody/cleanup remain E1-only. Team/static were skipped.",
+    "E1Frontend": "Only original shard4/4 is qualified in this retained package. Other three terminal cancellation records do not produce an all-four result.",
+    "terminalAPIs": "Nine final snapshot reference mappings are retained. API-only cancelled states without returned executed steps establish recorded state, not a cause, no-process guarantee, or project PASS. E2 current cohort is separate.",
+    "nestedHistoricalReferences": {
+      "formerDarwinIndexReferenceRowsVerified": 50,
+      "alreadyPublishedReuseRows": 7,
+      "existingArtifactsRemainRecoverable": true
+    },
+    "originalFailuresRemainOpen": [
+      "Missing Host identity and physical cleanup debt",
+      "Unreached UI actions",
+      "P08 same-Main physical Stop obligations",
+      "Strict P09 permitted-writer/consumed-image limits",
+      "Direct I386 root late-handler/full-policy scope",
+      "Genuine M16 and remaining frontend/native gates"
+    ]
+  },
+  "requiredOrderedNextSteps": [
+    "Root freshly verifies followup00d, incoming578, PR1192 open Draft/base def734 and followup publication route immediately before any mutation. A changed lease requires disposition, not overwriting it.",
+    "Create/publish exactly the independently approved documentation-only child of00d by ordinary expected-parent force:false update; actual commit/parent/refs/full-byte/full-tree readbacks by root and independent reviewer precede source application.",
+    "Only then create the source-history merge with ordered parents[actual verified docs child,578] and exact c70232e3 tree; ordinary immediate publication and independent actual source/docs preservation readback are separate required gates.",
+    "No primary advance is authorized by this cut. Later advancement requires fresh current useful-cohort assessment, preserving started useful jobs under existing policy; queued rows alone do not introduce an all-terminal barrier.",
+    "Any execution remains the existing naturally triggered original CI. This review grants no local tests/compiler/install/lint/build/import/native/UI execution, manual rerun/dispatch/cancel, real Claude/Codex query, Ready transition, merge to main, release, default activation or Stage2."
+  ],
+  "currentnessLimit": "This is a frozen candidate/source review. Retained initial refs and terminal snapshots are historical inputs; it does not claim a fresh current lease or any execution result on a not-yet-published merge.",
+  "readerActions": {
+    "projectExecution": false,
+    "writerExecuted": false,
+    "sourceEdits": false,
+    "gitCheckoutOrFetch": false,
+    "gitIndexOrRefsChanged": false,
+    "CIActionOrPoll": false,
+    "rootOrAuthorFrozenBytesChanged": false,
+    "exclusiveScratchReportsOnly": true
+  }
+}

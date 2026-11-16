@@ -1,0 +1,172 @@
+{
+  "kind": "original official artifact retention only",
+  "sourceHead": "57885c055a18b27c180c304762643eac632513ad",
+  "retainedAtUTC": "2026-11-16T07:52:50.549467+00:00",
+  "artifact": {
+    "id": 14206792564,
+    "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-opencode-v2-management",
+    "size_in_bytes": 846718,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206792564",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14206792564/zip",
+    "expired": false,
+    "created_at": "2026-11-16T07:51:16Z",
+    "expires_at": "2026-11-30T07:51:15Z",
+    "updated_at": "2026-11-16T07:51:16Z",
+    "digest": "sha256:5ddecbc018c17032aed6ab4e72d6861999b9eb575dfc8b1805743cffe2c0ab50",
+    "workflow_run": {
+      "id": 43823212577,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+    }
+  },
+  "zip": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-57885c/v2-management/artifact-14206792564.zip",
+    "bytes": 846718,
+    "blob": "0adbc72e454b21b5ee51910b527b4202b95233ea",
+    "sha256": "5ddecbc018c17032aed6ab4e72d6861999b9eb575dfc8b1805743cffe2c0ab50"
+  },
+  "memberCount": 19,
+  "pngCount": 3,
+  "safeUniquePathsAndCrc": true,
+  "members": [
+    {
+      "path": "TEST-desktop-backend-lDScrK/desktop-backend-app.log",
+      "bytes": 11213,
+      "blob": "562d938663d15aa9103f148846ea7dcbf539edab",
+      "sha256": "c326e5d57994a49e3307d3fd97cff6f2e6d42f2c93f306c74d35c992b182bd08",
+      "crc32": 2986069973
+    },
+    {
+      "path": "TEST-desktop-backend-lDScrK/desktop-backend-receipt.json",
+      "bytes": 691881,
+      "blob": "8efd4ac15810c77d1af89039d2a35145248a563a",
+      "sha256": "25c93c31cbb6d88886f4bec5bda3e154eeb15e43abf35f8d72cc20513a54f8f7",
+      "crc32": 935977899
+    },
+    {
+      "path": "TEST-desktop-backend-lDScrK/desktop-descriptor.json",
+      "bytes": 3319,
+      "blob": "08bb92d900d0eb61bf04f64edf8fbe1ee2f90adf",
+      "sha256": "c777cde4be068a71b4d9067a6a7a4b61a4426a55a950b74c8ba832d56bf3e5f6",
+      "crc32": 2490511046
+    },
+    {
+      "path": "TEST-desktop-backend-lDScrK/host-profile.json",
+      "bytes": 5011,
+      "blob": "468aac1357efcc3a5a074366496a4c347cb7ec1c",
+      "sha256": "7581948cc984da0abac5db54863cf93271e04c0f80cbcf809375a5f1f40a54e0",
+      "crc32": 2353190119
+    },
+    {
+      "path": "TEST-desktop-backend-lDScrK/hoststore/management-commands/50eeac8b531edf0069dd11c18a1427b30ac74c9b665161370589a1099bc47f69.json",
+      "bytes": 1370,
+      "blob": "8e6d4126b64216bcd994afe9716bf716625e9115",
+      "sha256": "20727aaf8126869cf712617275fad99228b6bea947623dd8300147c7aabd23fa",
+      "crc32": 946412240
+    },
+    {
+      "path": "TEST-desktop-backend-lDScrK/hoststore/management-commands/767d43a442fafaa62502889a3431fe508a27e0475611e4f8bec430b9e91b6cbe.json",
+      "bytes": 1345,
+      "blob": "f2d146d4cad149801b26fea8828dc1e744264f86",
+      "sha256": "dfabadb8c5c3ed1a6f75336e039ef763bbd24f6caf158711099d26672b5e8ea5",
+      "crc32": 247437604
+    },
+    {
+      "path": "TEST-desktop-backend-lDScrK/hoststore/management-commands/ee375180d83b7840ddc08e07c2d825bae00bae6a7b2fa91e8843f33c0627cff1.json",
+      "bytes": 2811,
+      "blob": "e3d0c37de09a1e4ca1af0ccd9da92032ca7b061d",
+      "sha256": "899b0044910f049b1a46aeaee2127471d33dc3e1569f1a9cd8f1f9dbfede5a55",
+      "crc32": 2960524650
+    },
+    {
+      "path": "TEST-desktop-backend-lDScrK/hoststore/runtime-sources/index.json",
+      "bytes": 2201,
+      "blob": "d59e94b1083bde61b1009659a83fb29edcdb5c86",
+      "sha256": "48d4ca6bcfaad1b53bfe0a74f1f8a48138656655236507badea4efb8d1868e85",
+      "crc32": 1575985900
+    },
+    {
+      "path": "TEST-desktop-backend-lDScrK/sentinel-invocations.ndjson",
+      "bytes": 512,
+      "blob": "80508fd4c062adf7fb70c3eb152362baa7d6dda9",
+      "sha256": "a0973cc5dae4199c7676319a44b5b991c00718fc8f8c6e2b5a66e909c3f4b525",
+      "crc32": 2602214512
+    },
+    {
+      "path": "TEST-desktop-backend-lDScrK/ui-seed-receipt.json",
+      "bytes": 2037,
+      "blob": "544d24746d79ed4d0534c614a1ed2e878de0ab26",
+      "sha256": "214f5172ce48b7d6ac13a1aa220a7685eea01877ff96cbe6e5b2b6eda44ff23e",
+      "crc32": 841847647
+    },
+    {
+      "path": "TEST-desktop-backend-lDScrK/ui-v2-management-connected.png",
+      "bytes": 103555,
+      "blob": "b7ed3b5f2f1204f1e48dbe29dde2894e4b0cb60c",
+      "sha256": "9b2b93d0e26885e0cf6e9cd4d889399752bca705aaeba5a3fdbb0efb4ba6a1f8",
+      "crc32": 2216827388
+    },
+    {
+      "path": "TEST-desktop-backend-lDScrK/ui-v2-management-failure.png",
+      "bytes": 65209,
+      "blob": "3dcf6a2cec41c1208607d9fd97037b214eb5fbc6",
+      "sha256": "a5d9901a542b0ee854681a121514933dac44572cbfd6a41e78d1ef6a8cc45a46",
+      "crc32": 2496462484
+    },
+    {
+      "path": "TEST-desktop-backend-lDScrK/ui-v2-management-rejected-key.png",
+      "bytes": 123144,
+      "blob": "4e840b3ce02c1aa20274cc8ee246542733e452b2",
+      "sha256": "13b32cd46c8f64dca4d20ed4fb39d12d1f4481addc307c0e58ffa8012a72e4d9",
+      "crc32": 3712926432
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-GmGOXM/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "crc32": 3977027915
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1838,
+      "blob": "5598acca1fea96c6993199dd139d070bbe53b485",
+      "sha256": "7135633a137f62973b8204a6caa5527b2f04f087187dd2c4073aa70618a82555",
+      "crc32": 3551826701
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-GmGOXM/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "crc32": 3765380163
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "blob": "2224678073773d34e2c99197125f7b6cb2701407",
+      "sha256": "c090650baa3513fe10f37680c23e66029d37115c3c1646da73bbc26ed150e99f",
+      "crc32": 1041706060
+    },
+    {
+      "path": "host-emulated-opencode-v2-inputs.json",
+      "bytes": 783,
+      "blob": "d2aed01447ba3f341feee0e1fb812bde7927ca70",
+      "sha256": "db5abca91433e5cca5fdbc1e852eef74c1c13756b7c6b5cad61a9dd956d27dff",
+      "crc32": 1569055338
+    },
+    {
+      "path": "host-emulated-opencode-v2-management-ui.log",
+      "bytes": 1544,
+      "blob": "3d2945f76d6024173c776ebf717af2375f38defa",
+      "sha256": "7e127aadd8a1441a2e06dcc1c8ee0579c1700dad91162f15057385feccd6ae2b",
+      "crc32": 519477746
+    }
+  ],
+  "limits": [
+    "No project code execution, semantic acceptance review or image inspection is claimed by this raw-retention record.",
+    "Temporary download transport URLs are excluded."
+  ]
+}

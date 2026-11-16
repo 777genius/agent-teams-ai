@@ -1,0 +1,1938 @@
+{
+  "schema": "preinput-copy-root-prepublication-review/v1",
+  "observedAtUTC": "2026-11-16T08:20:43.360786+00:00",
+  "status": "PASS_EXACT_BYTES_AND_MERKLE_PENDING_INDEPENDENT_COMBINED_R2",
+  "manifest": {
+    "bytes": 275786,
+    "blob": "ddcb97cd74c77d7bd26f533bd561c531560f2892",
+    "sha256": "222174ae401a622ff877d772d15b15b6665a75b298428349aa9ad976e301681f"
+  },
+  "rootR1": {
+    "bytes": 15604,
+    "blob": "4e41f881a1ba86ccd2aebc637aba7638c0081353",
+    "sha256": "6ddcb569a49f97ee8777f529dbb843b25242f25d91875da04c3d54508b38c77b"
+  },
+  "base": "c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+  "originalPrimary": "57885c055a18b27c180c304762643eac632513ad",
+  "docsTree": "010a100641c228169434065fd3bdd9f58f9cde66",
+  "sourceTree": "948a19a67800c3cb6b1cb2b539a38b5de9dac67c",
+  "payloads": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/upload-manifest.json",
+      "bytes": 283239,
+      "blob": "5248df585cb5069fd7c97a81456d9872c46bfcb9",
+      "sha256": "e1e72a8328914b25ad44c886be17631a0ffa835af65def53c726c7f13249bbef"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/root-prepublication-byte-review.json",
+      "bytes": 48660,
+      "blob": "846debf2a73728d3d5e29186bbdbfbc9c0b0b14f",
+      "sha256": "a60c94fcf83235c5a25d5d07420e77b2adfa9e563fa199e27ee7518ba446aa12"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-prepublication-review.json",
+      "bytes": 19981,
+      "blob": "dd723a6b2288daeaed4758f65aa5a727b42ba63b",
+      "sha256": "722849be8539600025201dceb76d901829f8eb752d418103859c0a609fb3edac"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-prepublication-byte-tree-proof.json",
+      "bytes": 568707,
+      "blob": "ee8fb0caf70ad36ba109b9d36c7c65adfa3401bf",
+      "sha256": "eddfbc3eb26f07987d78409b16f87086f2f932e8f9b54267d2638d6665bcaab0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/root-remote-tree-review.json",
+      "bytes": 1758,
+      "blob": "84da3ce91e35da32524360cfcd9d662d313e2241",
+      "sha256": "7b25e6fe512389c95740063674ba03adc4de9942613c1b01ff577151e7ce4ece"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-remote-tree-review.json",
+      "bytes": 4776,
+      "blob": "863d307b1abd620814c5fcaa3ef9c484587d4140",
+      "sha256": "a9fb6550a2089b570dfe7a18a2f0399de300f5409a9a6d604021fa7300f504d9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/root-actual-docs-readback.json",
+      "bytes": 102813,
+      "blob": "f50b497c0a388a8c335192c2388861b58d21b00c",
+      "sha256": "bdd804e92fd6eb206d5f0475f2a6997407fa6288bb227542a5a945bc8d979499"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-actual-docs-readback.json",
+      "bytes": 159244,
+      "blob": "e7336c6d1737ef4e5d33a70ab891bd2546db45b7",
+      "sha256": "668c2bb17862925e66c88344c774e292f1bf5cd631dced3ec593298664e545ca"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/root-actual-source-readback.json",
+      "bytes": 102859,
+      "blob": "662770de706887b4dc46f012b52d2f958d73508d",
+      "sha256": "1d5bd6ddd84491271d16035954970a3e7c3b8b23c237b0f76784b3dd411f814b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-actual-source-readback.json",
+      "bytes": 145587,
+      "blob": "455fb1436977d80e4dfaa572b1bace7cca853f44",
+      "sha256": "f74de4550a02640f728691f60f239604e6a328cd9d51b0620590b925833183c5"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-docs-tree-response.json",
+      "bytes": 196,
+      "blob": "e85dad73ffa1037725fb5ad44fdd5765d157208e",
+      "sha256": "41b7428c124eb4301675cbaa49bf2681f7d865d1c93d0614399ba3d030267875"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-source-tree-response.json",
+      "bytes": 196,
+      "blob": "83cd7950e4a744f1f7ac7e7c73827839bf01e275",
+      "sha256": "05dc4ba405da1b4262491ed83b54d5a5af476004ca0c33140831703980b6ed0d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-docs-commit-response.json",
+      "bytes": 196,
+      "blob": "e8b5040610f376f09be898eec61490bab39a23d0",
+      "sha256": "b981dc91a78960503d3aa84ac549f529d6fdc75e07147e2079c073d6ee233d6f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-source-commit-response.json",
+      "bytes": 196,
+      "blob": "1525b060611e1c6f571655d2e161d289b6be9a8f",
+      "sha256": "f22fcfa9dad780056bd5c121dd9879713a4d4b6990730a84a54fc177b21b76c1"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-docs-commit-immutable-readback.json",
+      "bytes": 3847,
+      "blob": "d5386b1d464b973a1423d22355232c7c7602e2c7",
+      "sha256": "b816ee8d84e3573d466825af0cfbf09c4730e71553bd5ec2b288eaee2b67d43c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-source-commit-immutable-readback.json",
+      "bytes": 4445,
+      "blob": "7d5bf091e45cc45b0f4b51d661e343f828abef6a",
+      "sha256": "03f9757381ad2407e0e4329146f0c5a1d471bc287147fd7d5a7b09f104fb6398"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/ordinary-docs-push-response.json",
+      "bytes": 162,
+      "blob": "7ee60341e3c13aa704e85f92cae5bb151d42c0ea",
+      "sha256": "b2f9e7a62e69e889ebd691241097df0c5cab6b13ec7ba9bb9e0ccbd78fa43575"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/fresh-docs-precommit-guards.json",
+      "bytes": 175652,
+      "blob": "1036af7a1227ee3d1f4ecec0b6c2cf6285516182",
+      "sha256": "8e452ed2a5c886e105a626bd9e891465da9c746fad25d8a93481ea5378545953"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/fresh-source-precommit-guards.json",
+      "bytes": 175729,
+      "blob": "64f07f23589df45b033ba246779801306e80e4cc",
+      "sha256": "ea6243c5847f7c0073dc7049c37f27aaa5e7e56cf702412fa125494f16d9a666"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/post-docs-push-readback.json",
+      "bytes": 175659,
+      "blob": "6e8f803c2ffcb777b6d61a098ad66322a103df57",
+      "sha256": "d707b7de11e7ec8da7b889d85dd7b4214b083d197f8a0ded0b99c9ab18415efe"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/post-source-push-readback.json",
+      "bytes": 175661,
+      "blob": "aa696f0114db585e17492976b9a14db4280565e9",
+      "sha256": "98cbc70b184baf86188e178e1d8b9773a6fb9889d6aa31985e792226aa58015e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/blob-upload-receipts.json",
+      "bytes": 26315,
+      "blob": "9137bd3f95e8acc2d1f1742866fdb18de87f4f8f",
+      "sha256": "4b6fa9a9a8daf0ab0bf0c2719257aac97030e35ce893a76110a98eeede4af257"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/remote-docs-tree-response.json.gz",
+      "bytes": 1139896,
+      "blob": "703103805a0731ed3d869d73eb2f3cc4a8f84052",
+      "sha256": "18983146c41ba3daefb60c21a7603ff675d0d7d50beefd3e754c355a7e10102c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/remote-source-tree-response.json.gz",
+      "bytes": 1139883,
+      "blob": "994cebc24190d41718000a792922b720785b8e25",
+      "sha256": "282870d9ddada2d637f247671065432803c5c8c7df854d3dea74eecdaf7a2137"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/R1-appendix.md",
+      "bytes": 20857,
+      "blob": "9bb3777ca076dea9dd60f76d9759dc1815e0dde0",
+      "sha256": "7d07956cc3f0d6929c2d3fd5907d121254c073294dfcae4573e37763b4b4510d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/candidate-desktop-team-ui-smoke.test.ts.txt",
+      "bytes": 118885,
+      "blob": "8694096d0aafcd7130589d97f12ad5a4fd65a616",
+      "sha256": "9411c8171255880a187382e5ceef1c44e74172fe4c9eb6c357b3654388cceb70"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/candidate-desktop-ui-controls.ts.txt",
+      "bytes": 28094,
+      "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+      "sha256": "67a1e7413eff11ddc087f35a64cd3c8b242c061988b2fbd661497a9f6b5dfd11"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/candidate-metadata.json",
+      "bytes": 4247,
+      "blob": "18aaa5d9ed647b952dd8a1926e58048ad0c1a7bf",
+      "sha256": "0f16692b1f761eb4792eeb48cd2af0a53fe3c8baf673ff0fe6018a200f027a79"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/candidate.patch",
+      "bytes": 12271,
+      "blob": "d58db63706739f3d78dde1ec175881dce0f800b1",
+      "sha256": "ad63f15b0fd0f61a8fc3117e906a1162f4203472e57e4a62b5662844c86fb545"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/freeze-manifest.json",
+      "bytes": 2479,
+      "blob": "989fb0230c86086d9878a17ab9abc35ffcd3d317",
+      "sha256": "de7f28a985bc2e8a9ad8336ad76900896ec6064666d9889b30e6fd3924f26ebf"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/independent-source-byte-proof.json",
+      "bytes": 10267,
+      "blob": "ac99bae999088f5d06d172e3e361a5651e50197e",
+      "sha256": "053381860c85c246ce950ad09c382d23e0d1d2f8e01ec09cfc2eddd39c241de8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/independent-source-r1-review.json",
+      "bytes": 13132,
+      "blob": "6d69b6f30c2aca45254275fc1c380a38426a8ae5",
+      "sha256": "d7b07e1a76b1d03405feba1df12902321e669f5448028e9850fafd25a9ce68ae"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/preimage-desktop-team-ui-smoke.test.ts.txt",
+      "bytes": 111672,
+      "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+      "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/preimage-desktop-ui-controls.ts.txt",
+      "bytes": 27188,
+      "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+      "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/source-and-venue-pins.json",
+      "bytes": 16833,
+      "blob": "6c9a88c8cd1496b32130b3df681db7c8f6e4291f",
+      "sha256": "7eddd4b03e6df71579425ad38812b927ffbbc18d1996533de5d053c6b8e0f0dd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/source-evidence-analysis.json",
+      "bytes": 22170,
+      "blob": "b9f0ed4ae75501f21878f40fd6ee319c5be7b2e2",
+      "sha256": "c88e32622dce4d4a4b018c772ed334db2c226bbb56a8d665e4ece6cf7816942f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/R1-appendix.md",
+      "bytes": 8590,
+      "blob": "0c2c2866685ef1270fe4052dbdb89be00ae6d3a5",
+      "sha256": "d68d1ca4269b68d5e9012a9312306a12b560ff6e9c456267123b9c4357f93647"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/candidate-runtimeProviderManagementPresentation.ts.txt",
+      "bytes": 6382,
+      "blob": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+      "sha256": "47c561887a1ea9a499f131a073c805be07a9a17343c1115b32ec173dcdf894c9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/candidate-useRuntimeProviderManagement.test.ts.txt",
+      "bytes": 180058,
+      "blob": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+      "sha256": "70597b6bb603515e31ec1239eb6543cc9f1fb18beb20ac20c6a357ee03f748ed"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/candidate-metadata.json",
+      "bytes": 3315,
+      "blob": "1771f114d49cfffbe29661529010d5b76c861f68",
+      "sha256": "bddd36356d925def05966c97eaac5fdcaf1f1ceabc7f633fcdc31d85edf04de1"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/candidate.patch",
+      "bytes": 2277,
+      "blob": "99a267cc38ccb0fa944681a74eea5049f0b48fc2",
+      "sha256": "5ca43aedecbe843d3179cb87d9e7986411c699f0b839888f59f27b0dcba8027b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/current-preimage-rebind.json",
+      "bytes": 1763,
+      "blob": "2beba3f76edf6243aed5b9c908cfb32f2283e494",
+      "sha256": "a1e1ceb845bbbb8735066c5628a7b0e656fa9dd6ba55dae484915061c746a1b6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/independent-source-r1-review.json",
+      "bytes": 16030,
+      "blob": "9a06f1b6a41c03ae82da98a26e7b2d5b42eaab33",
+      "sha256": "7e385a95d35464346776adfedcfa8903d4d71a16bcef9b55625ea74efb3eb49c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/preimage-runtimeProviderManagementPresentation.ts.txt",
+      "bytes": 6481,
+      "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+      "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/preimage-useRuntimeProviderManagement.test.ts.txt",
+      "bytes": 180091,
+      "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/source-and-venue-review.json",
+      "bytes": 10159,
+      "blob": "055939127cca2b07091aa9a1d8fd28fec3ff7ba4",
+      "sha256": "98a948fa261ce682a5da1894bccaab6c0ee9026e8fb77aae95404da8b6d46fed"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/R1-appendix.md",
+      "bytes": 12739,
+      "blob": "e47a185b81458517b93e9eb7ab928c6fbb49f582",
+      "sha256": "c95602e93f7196371f472820bce00447036bb57379450ea0a90476bf25e1c0cf"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/candidate-RuntimeProviderConnectErrorPresentation.test.ts.txt",
+      "bytes": 2365,
+      "blob": "1542ebe14a303845d67a48f601b25941994e8368",
+      "sha256": "5fffb3b149eddf7ea88b997580733d3a10217c0e05d35b4b36a5d4d5951af837"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/candidate-metadata.json",
+      "bytes": 3745,
+      "blob": "5aeaa6f6e115826cab983513a61dffc6c9405997",
+      "sha256": "cba2d4a7e4cc1fe517d70a4dcfd12ecf63f72f28562e493c6febbac4dce17f49"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/candidate.patch",
+      "bytes": 4317,
+      "blob": "a9a96167ed85ecc08ef2bc9ce5d49747d0753d2f",
+      "sha256": "3163c2c1e91fb17bf58511334c8d01b61b80ca0ce5690ced4c6215cd34d65f7a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/current-preimage-rebind.json",
+      "bytes": 2341,
+      "blob": "76f4eaffc863f69bfb009c4b6c7eec7a12b0965f",
+      "sha256": "f9c401ac86fb0946523fc6fc2145e5fbe50fb41a191bded2fe278466dafc1cbd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/preimage-RuntimeProviderConnectErrorPresentation.test.ts.txt",
+      "bytes": 720,
+      "blob": "fa761c43af6d414b0f2be0338869891dc059f640",
+      "sha256": "7591962fa6f0b58294543c674ab2fd6a590b406159a9cb8ed7b8b7e8f6be9440"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/source-and-venue-review.json",
+      "bytes": 9917,
+      "blob": "3318e695efd50ad5452e587a03a416973189f63d",
+      "sha256": "00e63d7bb14b11517b52eb17aaf32e9fc5d6f67b2a325c32a0463a0a31220015"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/freeze-manifest.json",
+      "bytes": 2631,
+      "blob": "db5f680ceaf5d6e196860f0ef44a69fee6b0d4b6",
+      "sha256": "5ff2b59af152907b461ec22af1bf243596f1408cb3f8697a8f029cd2a74834a8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/geometry-binding-metadata.json",
+      "bytes": 22752,
+      "blob": "78b1d8e0047824819121b2258f4478fefb34a788",
+      "sha256": "e1367e514b833af08b233d7d2b061b1d8c83da342fcc52a6ec97a54c39491773"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/p11-after-geometry-test.ts.txt",
+      "bytes": 123149,
+      "blob": "1b0ad5b15b056857817858d1e85f6dfe81f6e782",
+      "sha256": "c73b55cbd07ef632b174609e99e05e536d584b8dae9c124c2fc1a14e1c76c4da"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/p11-after-geometry.patch",
+      "bytes": 4617,
+      "blob": "ab14668b079eacdc2ddd8b0ffb298c334503d297",
+      "sha256": "c71388877cd144ffa09dfd53421b814a722766d61d0ad61e84b80004b2153862"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/p11-composition-metadata.json",
+      "bytes": 6546,
+      "blob": "642010d58fb1d29e542ac05f637fdba0a38cf293",
+      "sha256": "5a96cc8c3492939e9e90301e6a674f39f3620bd99a0dffe5d1e0a958d4849305"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/p11-regression-suffix.ts.txt",
+      "bytes": 4264,
+      "blob": "08699c4890b2ef83bcbda53094c450c6a9c3b366",
+      "sha256": "a299b6ec1497dc542f675fd7868a430d8e9d4d0503199c9ff0343a7187b5312d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/source-pin-audit.json",
+      "bytes": 456971,
+      "blob": "5f9f1328caefdb7dbb33394149cd7222c3fa79e5",
+      "sha256": "43ac66fdad76f3e8f05a91b520256315e49e1dab932eaba84320535aafe696a2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/owned-api-jobs-0602-terminal.json",
+      "bytes": 74308,
+      "blob": "cf79db3bd08de6002f03660caef938d5f6c1d0d4",
+      "sha256": "6bcbba9a82e1fab6639a545adbca1b7ef6142f3bfdf64df8c8234a9bef9ea563"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/audit.json",
+      "bytes": 54770,
+      "blob": "d040f1e03d896ecb08cd6e108e2d52356568424d",
+      "sha256": "258096be36597042398cf2e8671c4b5262eaf301925d9be3179eacbc7cc8b7d7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/Plan29-appendix.md",
+      "bytes": 5328,
+      "blob": "0f9843a76623d934c4d624f65429c53979ba4a1b",
+      "sha256": "55856bff7989814e2429accd6df618511fa45f8509b4731b1731d4c5d4fe8368"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/checkpoint.json",
+      "bytes": 2987,
+      "blob": "26ae3a9bcfc259d74fc4022767772e394f002ed3",
+      "sha256": "f251819086decb2acb4eb9fe64a9c703e707c0755697c502571f10a84743debb"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/independent-original-review.json",
+      "bytes": 37428,
+      "blob": "4f88a52726d56304ef7d64f87953b572c6da78a2",
+      "sha256": "9dbd91632634fd9d15c306f40da58923d7137993ba37f20a7e13d1e70aeb0557"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/independent-byte-source-proof.json",
+      "bytes": 501790,
+      "blob": "234ca773d13469da5e24af3ea57450275a2125c9",
+      "sha256": "967bdc79ca598c9ba6ce2abaee49bc178a37ed0f743b61f8d9aaf4dd3871dabb"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/pre-click-geometry-source-assessment.json",
+      "bytes": 7757,
+      "blob": "b2eea65201fa699d9508e982f08811244a3ec9be",
+      "sha256": "2ffe3ab93ed3bb3182c9bd6934a3cce784e47a53ce0343f4e7adbaf51c7e2574"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/job-original-response.json",
+      "bytes": 198101,
+      "blob": "b48a1b24e417e89dfffa2798f61a9863d209478a",
+      "sha256": "4aa669cebb388f914d441ae77bac858d5458396a413f3a2245868f7c862cbd1b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/job.log",
+      "bytes": 188026,
+      "blob": "c210882dcb304f0f583d7bc41bbf9c12d3e0fec2",
+      "sha256": "e9b9cad5e9ef8103d7cfcf4b2a2a777a122a76b739482b93d5515249809d254a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/artifact-14205010690.zip",
+      "bytes": 668772,
+      "blob": "2b186415105a6c51824cfcb9f950af2c83dbb43d",
+      "sha256": "cb135dc1436d1c1cf4eabd1ece501be84d15241809c127bb0818d9f277e17098"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/archive-retention.json",
+      "bytes": 5408,
+      "blob": "fb8be0276e83b020734d0041e8ba628cd47933c2",
+      "sha256": "db912f214b04df5a5cf2a1a9c32006f9eef4a8abbda7d6e6c8f70c63b22ec76f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/source-pin-audit.json",
+      "bytes": 458891,
+      "blob": "b8477e397dad053eb7376dee24f1b5b4e216e081",
+      "sha256": "ad37cec616cbbcce1c19bae0844fff96283ea26c4fa95a77a644dbfaa4084460"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/visual-review.json",
+      "bytes": 870,
+      "blob": "6b8e8c11f034c00ec663bdf15ea1d43febb0cae3",
+      "sha256": "216b88bdae62e42d0e76c82faf5d6cdd74777c6e0f5805fcbfe2567d2842afac"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/official-host-artifacts-0707.json",
+      "bytes": 3892,
+      "blob": "6183c3c0f88e8514d52fb19c822a5d59a85c60e7",
+      "sha256": "62905f37173c4858200bc05e17a29bc92b329efa70d402fd20299bbd4a31cdf7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/owned-jobs-0707.json",
+      "bytes": 53878,
+      "blob": "b2a21ccae083071c58239066e5d5a5eb63942cd6",
+      "sha256": "db33ebbfd25e7a5b7be07869a7ac6d9459b2bf73f3f93bbf851ad88a731f0e26"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/audit.json",
+      "bytes": 153570,
+      "blob": "d1b1616a3f0d5a7b29e61c632865f6c2e48f675e",
+      "sha256": "251ce8e8338602e6e439ee40312529b35221f6a535dbeb0c4f84b2a7aa9f25a3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/Plan29-appendix.md",
+      "bytes": 5150,
+      "blob": "6f7ab3524700ffda49cbc17bb28aa6967efb8226",
+      "sha256": "566cad40b2333d8f0951cb206526744e682a215000cc82d34f4f26f98bedbc1c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/checkpoint.json",
+      "bytes": 2959,
+      "blob": "41ad5f5bba867aaffa2a7e7ee6d88bceeb99ab1a",
+      "sha256": "aa4d2cd1be9526314257532c7d45a8b2cc26452d234ca0bdfd018d349185caf8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/independent-original-review.json",
+      "bytes": 38175,
+      "blob": "552ac7d0e5627b5c4cd6ac7b03bc666fa55b95a7",
+      "sha256": "3bf5a3c4a26b528b363302bae3aeb614074242e80bf9bcd1659c9f2fc9c05ec7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/independent-byte-source-proof.json",
+      "bytes": 525457,
+      "blob": "30ea88f71d008d9ee518787143cfa91ec2074e82",
+      "sha256": "e9bc35c3b09918bcb63ca048e528acf5b654c1822ffdea5d57b83cc7ca15fd7e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/job-original-response.json",
+      "bytes": 198287,
+      "blob": "fbef5f9028e95e8b241903b0182ecd64a510891a",
+      "sha256": "f9f4f433d6a826db3a12432bdba16d9b7cae1cef4ef4580458da49f0f3832d22"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/job.log",
+      "bytes": 188081,
+      "blob": "7cc514f1ad52cec3d686daa1b147ca558039f424",
+      "sha256": "7ebbc5901ff88148bc8e5c37edf459f74c80c5abc27a672937f2ddd331f69451"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/artifact-14204298663.zip",
+      "bytes": 650542,
+      "blob": "cbf46f3661998a6eec4bd044d6704df96acd0339",
+      "sha256": "9e9dd46183fba4b5d56eeb85f525a94739c35e7d1c99cf257cb6e7c8dfe37803"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/archive-retention.json",
+      "bytes": 4619,
+      "blob": "9ec1a281d541c8968759e1c02e71e7551d67bb3a",
+      "sha256": "26ae2904f8ea1e7cac0d5bad18937b652bfbcd3da516049b52c09957d7591aca"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/source-pin-audit.json",
+      "bytes": 518454,
+      "blob": "9f90d76d728f3e9ec30ca420a66e692f7757b358",
+      "sha256": "76b64b9bcb7cacf375552804b71e76a81860dfbc51a3bedbad68dc1f29e4fc32"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/visual-review.json",
+      "bytes": 907,
+      "blob": "11132e79a4a3cb8f0aca0ffb1d721b8814b001c0",
+      "sha256": "b16f3d48177b7897b3373a016a70a44213533fdf81d68a2ba6a8b5b6ff03eeaf"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/official-host-artifacts-0713.json",
+      "bytes": 5755,
+      "blob": "84c5bcde7125687403ce0e8712e41fe691710b0e",
+      "sha256": "b5646d12ff61199802615d79030f462625b4fe630b1a31eff48d9e9ae094ea3e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/owned-jobs-0712.json",
+      "bytes": 62929,
+      "blob": "a7baa556f7b0b374caa97bf60e0ac7dd9fccc19f",
+      "sha256": "e44e8dd5d19ae38dfaafe2049e064a2770984279e0034efb0c917893cbcd4c1b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/audit.json",
+      "bytes": 144547,
+      "blob": "c773fe28d469a1e6763b31f528c5b4435dd0538f",
+      "sha256": "9341e9ec98445db83733494a4a9f3f1b0ccbc6e0d3b26c49d0338ec5aeeb2b68"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/Plan29-appendix.md",
+      "bytes": 4976,
+      "blob": "a992766d8aa085bae1a5462b57cc747b1462bc59",
+      "sha256": "b632da17c642160588ca7dd7eb99e189096d6e602fa0e611f58b9a06c357adc7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/checkpoint.json",
+      "bytes": 2941,
+      "blob": "7ade9f1c2e1ef6525af4c212691d9bb6f3cdb837",
+      "sha256": "15cc3781272490d451a86b90b929a8cbdb5a97d0ff56738ce08da33c855bf094"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/independent-original-review.json",
+      "bytes": 19331,
+      "blob": "4083852d4cdd8be09e2e7ab61ab96344243990a9",
+      "sha256": "a1085a0148c5be6bb6722238f95f8c85cc9b35387775a992d48f5b941c1a843b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/independent-byte-source-proof.json",
+      "bytes": 609868,
+      "blob": "0da61cf9a4f6936c893207d967f1a0519239fb5a",
+      "sha256": "4b0ab32afc25d26e12f7f0d33433097decc951b5117ce6b29ed434f8de16efa8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/job.log",
+      "bytes": 110305,
+      "blob": "2b52eb7e41f07ac23149c0d9464e12fc2568c553",
+      "sha256": "5d5d62b99e73bcd2b97d937e9d62bdfcba291a00561f990c00eebca95240b156"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/job-original-response.json",
+      "bytes": 112803,
+      "blob": "4ae4b4ac508ea84129e0d809bc25a2db327ede3c",
+      "sha256": "5c4c94d650e55a9bd9ab76de03dc48fea5aeb4f7a4e42d272ea53dd05fd645ae"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/artifact-14205700298.zip",
+      "bytes": 1011280,
+      "blob": "04e1609fa83a12c3d90efa464f56ff3b1a737f6a",
+      "sha256": "fc92eb2535b413ccf4d1d126045879b57048fee42aad16e8099c58e2a99d0471"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/archive-retention.json",
+      "bytes": 10429,
+      "blob": "e0d2f59941a6e1c26536b60a29b0ef88c867bc33",
+      "sha256": "63661f17f77edba9369cf8c59831485a04e84f0b8b33c94a0cf4983d4db21229"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/official-host-artifacts-0724.json",
+      "bytes": 6703,
+      "blob": "5e09ac757d3d5bd7c87090455c76f1fa917641e0",
+      "sha256": "ede0890fd0f959530b35753235420b59cb9d8a0b47c6947a2c85f037107f40b9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/source-pin-audit.json",
+      "bytes": 591465,
+      "blob": "5d82620f94595466da0291a04a1b0c2666a3c381",
+      "sha256": "008c2f611535cb43b478fbd169b7238a5e9bb36ca1950923f05d62e1f52d21ae"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/visual-review.json",
+      "bytes": 3643,
+      "blob": "3fd78d678b90aa63cf960aab3dd9139ac30d737d",
+      "sha256": "ecefe79c543a7e9666dccdb579bf1696c7a7db9a24da9765b94417c70c9d3262"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/credential-copy-boundary.json",
+      "bytes": 3298,
+      "blob": "f19a9c650bfe972e621cfcfb5400dfc3e725e936",
+      "sha256": "2bbf197f2433cf691607e04f8c833036cf77e2a6733e9dceaf34d6b16f9f8067"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/audit.json",
+      "bytes": 163880,
+      "blob": "6c41fe3695ab3c3a5d04b0be76803bf72c6a6eac",
+      "sha256": "f8e33e67e0e2f91d14c4b7c7f7ac6cc6329e0530fdd4a9ddcdf87ee9ed26e23e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/Plan29-appendix.md",
+      "bytes": 6577,
+      "blob": "bad398b298a867ed211e2fd744ba2df1e6e72c6b",
+      "sha256": "d3e5db07bc7096759d1525e9d7f5d43c549e322cfca19d1db527b01e8be16ae0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/checkpoint.json",
+      "bytes": 14694,
+      "blob": "4ad62dab85c2d6ab2503095a5a67f4606ce9385c",
+      "sha256": "b2c5ba49d2b063c2ae47b42e884d06ba27b5a085df0d0a6b745fda473f1a19a3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/credential-copy-source-assessment.json",
+      "bytes": 38731,
+      "blob": "70df42b890861fa650b6196420e9b823c0262e47",
+      "sha256": "269ff895d5cd3b4bab96b141ad98cc5b0839bcea97b43d61be6c01483ffbcf61"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/selection/R1-root-combined-cut.md",
+      "bytes": 15604,
+      "blob": "4e41f881a1ba86ccd2aebc637aba7638c0081353",
+      "sha256": "6ddcb569a49f97ee8777f529dbb843b25242f25d91875da04c3d54508b38c77b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2083245,
+      "blob": "c062e0a00ad2b1c0d2c55721ab7a80c2e7b79d68",
+      "sha256": "e48600cc383500bdfe8aeaf1740cb3f1c8ba78cfc9f21c26b465334956bc7a26"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/publication-index.json",
+      "bytes": 144176,
+      "blob": "6205631b7df8e7b816021c3f3827c3ca8160a9ca",
+      "sha256": "d0762eb4069f2f0e0cd64b645cd16ac555ae3d43357d09ea922badfe97181399"
+    }
+  ],
+  "payloadCount": 108,
+  "payloadBytes": 15631559,
+  "allReferences": [
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/upload-manifest.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/upload-manifest.json",
+      "bytes": 283239,
+      "blob": "5248df585cb5069fd7c97a81456d9872c46bfcb9",
+      "sha256": "e1e72a8328914b25ad44c886be17631a0ffa835af65def53c726c7f13249bbef",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/root-prepublication-byte-review.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/root-prepublication-byte-review.json",
+      "bytes": 48660,
+      "blob": "846debf2a73728d3d5e29186bbdbfbc9c0b0b14f",
+      "sha256": "a60c94fcf83235c5a25d5d07420e77b2adfa9e563fa199e27ee7518ba446aa12",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-prepublication-review.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/independent-prepublication-review.json",
+      "bytes": 19981,
+      "blob": "dd723a6b2288daeaed4758f65aa5a727b42ba63b",
+      "sha256": "722849be8539600025201dceb76d901829f8eb752d418103859c0a609fb3edac",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-prepublication-byte-tree-proof.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/independent-prepublication-byte-tree-proof.json",
+      "bytes": 568707,
+      "blob": "ee8fb0caf70ad36ba109b9d36c7c65adfa3401bf",
+      "sha256": "eddfbc3eb26f07987d78409b16f87086f2f932e8f9b54267d2638d6665bcaab0",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/root-remote-tree-review.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/root-remote-tree-review.json",
+      "bytes": 1758,
+      "blob": "84da3ce91e35da32524360cfcd9d662d313e2241",
+      "sha256": "7b25e6fe512389c95740063674ba03adc4de9942613c1b01ff577151e7ce4ece",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-remote-tree-review.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/independent-remote-tree-review.json",
+      "bytes": 4776,
+      "blob": "863d307b1abd620814c5fcaa3ef9c484587d4140",
+      "sha256": "a9fb6550a2089b570dfe7a18a2f0399de300f5409a9a6d604021fa7300f504d9",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/root-actual-docs-readback.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/root-actual-docs-readback.json",
+      "bytes": 102813,
+      "blob": "f50b497c0a388a8c335192c2388861b58d21b00c",
+      "sha256": "bdd804e92fd6eb206d5f0475f2a6997407fa6288bb227542a5a945bc8d979499",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-actual-docs-readback.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/independent-actual-docs-readback.json",
+      "bytes": 159244,
+      "blob": "e7336c6d1737ef4e5d33a70ab891bd2546db45b7",
+      "sha256": "668c2bb17862925e66c88344c774e292f1bf5cd631dced3ec593298664e545ca",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/root-actual-source-readback.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/root-actual-source-readback.json",
+      "bytes": 102859,
+      "blob": "662770de706887b4dc46f012b52d2f958d73508d",
+      "sha256": "1d5bd6ddd84491271d16035954970a3e7c3b8b23c237b0f76784b3dd411f814b",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-actual-source-readback.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/independent-actual-source-readback.json",
+      "bytes": 145587,
+      "blob": "455fb1436977d80e4dfaa572b1bace7cca853f44",
+      "sha256": "f74de4550a02640f728691f60f239604e6a328cd9d51b0620590b925833183c5",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-docs-tree-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/created-docs-tree-response.json",
+      "bytes": 196,
+      "blob": "e85dad73ffa1037725fb5ad44fdd5765d157208e",
+      "sha256": "41b7428c124eb4301675cbaa49bf2681f7d865d1c93d0614399ba3d030267875",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-source-tree-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/created-source-tree-response.json",
+      "bytes": 196,
+      "blob": "83cd7950e4a744f1f7ac7e7c73827839bf01e275",
+      "sha256": "05dc4ba405da1b4262491ed83b54d5a5af476004ca0c33140831703980b6ed0d",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-docs-commit-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/created-docs-commit-response.json",
+      "bytes": 196,
+      "blob": "e8b5040610f376f09be898eec61490bab39a23d0",
+      "sha256": "b981dc91a78960503d3aa84ac549f529d6fdc75e07147e2079c073d6ee233d6f",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-source-commit-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/created-source-commit-response.json",
+      "bytes": 196,
+      "blob": "1525b060611e1c6f571655d2e161d289b6be9a8f",
+      "sha256": "f22fcfa9dad780056bd5c121dd9879713a4d4b6990730a84a54fc177b21b76c1",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-docs-commit-immutable-readback.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/created-docs-commit-immutable-readback.json",
+      "bytes": 3847,
+      "blob": "d5386b1d464b973a1423d22355232c7c7602e2c7",
+      "sha256": "b816ee8d84e3573d466825af0cfbf09c4730e71553bd5ec2b288eaee2b67d43c",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-source-commit-immutable-readback.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/created-source-commit-immutable-readback.json",
+      "bytes": 4445,
+      "blob": "7d5bf091e45cc45b0f4b51d661e343f828abef6a",
+      "sha256": "03f9757381ad2407e0e4329146f0c5a1d471bc287147fd7d5a7b09f104fb6398",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/ordinary-docs-push-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/ordinary-docs-push-response.json",
+      "bytes": 162,
+      "blob": "7ee60341e3c13aa704e85f92cae5bb151d42c0ea",
+      "sha256": "b2f9e7a62e69e889ebd691241097df0c5cab6b13ec7ba9bb9e0ccbd78fa43575",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/ordinary-docs-push-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/ordinary-source-push-response.json",
+      "bytes": 162,
+      "blob": "7ee60341e3c13aa704e85f92cae5bb151d42c0ea",
+      "sha256": "b2f9e7a62e69e889ebd691241097df0c5cab6b13ec7ba9bb9e0ccbd78fa43575",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/fresh-docs-precommit-guards.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/fresh-docs-precommit-guards.json",
+      "bytes": 175652,
+      "blob": "1036af7a1227ee3d1f4ecec0b6c2cf6285516182",
+      "sha256": "8e452ed2a5c886e105a626bd9e891465da9c746fad25d8a93481ea5378545953",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/fresh-source-precommit-guards.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/fresh-source-precommit-guards.json",
+      "bytes": 175729,
+      "blob": "64f07f23589df45b033ba246779801306e80e4cc",
+      "sha256": "ea6243c5847f7c0073dc7049c37f27aaa5e7e56cf702412fa125494f16d9a666",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/post-docs-push-readback.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/post-docs-push-readback.json",
+      "bytes": 175659,
+      "blob": "6e8f803c2ffcb777b6d61a098ad66322a103df57",
+      "sha256": "d707b7de11e7ec8da7b889d85dd7b4214b083d197f8a0ded0b99c9ab18415efe",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/post-source-push-readback.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/post-source-push-readback.json",
+      "bytes": 175661,
+      "blob": "aa696f0114db585e17492976b9a14db4280565e9",
+      "sha256": "98cbc70b184baf86188e178e1d8b9773a6fb9889d6aa31985e792226aa58015e",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/blob-upload-receipts.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/blob-upload-receipts.json",
+      "bytes": 26315,
+      "blob": "9137bd3f95e8acc2d1f1742866fdb18de87f4f8f",
+      "sha256": "4b6fa9a9a8daf0ab0bf0c2719257aac97030e35ce893a76110a98eeede4af257",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/remote-docs-tree-response.json.gz",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/remote-docs-tree-response.json",
+      "bytes": 1139896,
+      "blob": "703103805a0731ed3d869d73eb2f3cc4a8f84052",
+      "sha256": "18983146c41ba3daefb60c21a7603ff675d0d7d50beefd3e754c355a7e10102c",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Completed174/c763 prior publication custody",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/remote-source-tree-response.json.gz",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/remote-source-tree-response.json",
+      "bytes": 1139883,
+      "blob": "994cebc24190d41718000a792922b720785b8e25",
+      "sha256": "282870d9ddada2d637f247671065432803c5c8c7df854d3dea74eecdaf7a2137",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "geometry",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/R1-appendix.md",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/click-preinput-stabilization-r1/R1-appendix.md",
+      "bytes": 20857,
+      "blob": "9bb3777ca076dea9dd60f76d9759dc1815e0dde0",
+      "sha256": "7d07956cc3f0d6929c2d3fd5907d121254c073294dfcae4573e37763b4b4510d",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "geometry",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/candidate-desktop-team-ui-smoke.test.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/click-preinput-stabilization-r1/candidate/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 118885,
+      "blob": "8694096d0aafcd7130589d97f12ad5a4fd65a616",
+      "sha256": "9411c8171255880a187382e5ceef1c44e74172fe4c9eb6c357b3654388cceb70",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "geometry",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/candidate-desktop-ui-controls.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/click-preinput-stabilization-r1/candidate/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 28094,
+      "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+      "sha256": "67a1e7413eff11ddc087f35a64cd3c8b242c061988b2fbd661497a9f6b5dfd11",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "geometry",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/candidate-metadata.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/click-preinput-stabilization-r1/candidate-metadata.json",
+      "bytes": 4247,
+      "blob": "18aaa5d9ed647b952dd8a1926e58048ad0c1a7bf",
+      "sha256": "0f16692b1f761eb4792eeb48cd2af0a53fe3c8baf673ff0fe6018a200f027a79",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "geometry",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/candidate.patch",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/click-preinput-stabilization-r1/candidate.patch",
+      "bytes": 12271,
+      "blob": "d58db63706739f3d78dde1ec175881dce0f800b1",
+      "sha256": "ad63f15b0fd0f61a8fc3117e906a1162f4203472e57e4a62b5662844c86fb545",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "geometry",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/freeze-manifest.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/click-preinput-stabilization-r1/freeze-manifest.json",
+      "bytes": 2479,
+      "blob": "989fb0230c86086d9878a17ab9abc35ffcd3d317",
+      "sha256": "de7f28a985bc2e8a9ad8336ad76900896ec6064666d9889b30e6fd3924f26ebf",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "geometry",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/independent-source-byte-proof.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/click-preinput-stabilization-r1/independent-source-byte-proof.json",
+      "bytes": 10267,
+      "blob": "ac99bae999088f5d06d172e3e361a5651e50197e",
+      "sha256": "053381860c85c246ce950ad09c382d23e0d1d2f8e01ec09cfc2eddd39c241de8",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "geometry",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/independent-source-r1-review.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/click-preinput-stabilization-r1/independent-source-r1-review.json",
+      "bytes": 13132,
+      "blob": "6d69b6f30c2aca45254275fc1c380a38426a8ae5",
+      "sha256": "d7b07e1a76b1d03405feba1df12902321e669f5448028e9850fafd25a9ce68ae",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "geometry",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/preimage-desktop-team-ui-smoke.test.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/click-preinput-stabilization-r1/preimage/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 111672,
+      "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+      "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "geometry",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/preimage-desktop-ui-controls.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/click-preinput-stabilization-r1/preimage/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 27188,
+      "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+      "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "geometry",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/source-and-venue-pins.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/click-preinput-stabilization-r1/source-and-venue-pins.json",
+      "bytes": 16833,
+      "blob": "6c9a88c8cd1496b32130b3df681db7c8f6e4291f",
+      "sha256": "7eddd4b03e6df71579425ad38812b927ffbbc18d1996533de5d053c6b8e0f0dd",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "geometry",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/source-evidence-analysis.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/click-preinput-stabilization-r1/source-evidence-analysis.json",
+      "bytes": 22170,
+      "blob": "b9f0ed4ae75501f21878f40fd6ee319c5be7b2e2",
+      "sha256": "c88e32622dce4d4a4b018c772ed334db2c226bbb56a8d665e4ece6cf7816942f",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/R1-appendix.md",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1-v2/R1-appendix.md",
+      "bytes": 8590,
+      "blob": "0c2c2866685ef1270fe4052dbdb89be00ae6d3a5",
+      "sha256": "d68d1ca4269b68d5e9012a9312306a12b560ff6e9c456267123b9c4357f93647",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/candidate-runtimeProviderManagementPresentation.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1-v2/candidate/src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "bytes": 6382,
+      "blob": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+      "sha256": "47c561887a1ea9a499f131a073c805be07a9a17343c1115b32ec173dcdf894c9",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/candidate-useRuntimeProviderManagement.test.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1-v2/candidate/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 180058,
+      "blob": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+      "sha256": "70597b6bb603515e31ec1239eb6543cc9f1fb18beb20ac20c6a357ee03f748ed",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/candidate-metadata.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1-v2/candidate-metadata.json",
+      "bytes": 3315,
+      "blob": "1771f114d49cfffbe29661529010d5b76c861f68",
+      "sha256": "bddd36356d925def05966c97eaac5fdcaf1f1ceabc7f633fcdc31d85edf04de1",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/candidate.patch",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1-v2/candidate.patch",
+      "bytes": 2277,
+      "blob": "99a267cc38ccb0fa944681a74eea5049f0b48fc2",
+      "sha256": "5ca43aedecbe843d3179cb87d9e7986411c699f0b839888f59f27b0dcba8027b",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/current-preimage-rebind.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1-v2/current-preimage-rebind.json",
+      "bytes": 1763,
+      "blob": "2beba3f76edf6243aed5b9c908cfb32f2283e494",
+      "sha256": "a1e1ceb845bbbb8735066c5628a7b0e656fa9dd6ba55dae484915061c746a1b6",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/independent-source-r1-review.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1-v2/independent-source-r1-review.json",
+      "bytes": 16030,
+      "blob": "9a06f1b6a41c03ae82da98a26e7b2d5b42eaab33",
+      "sha256": "7e385a95d35464346776adfedcfa8903d4d71a16bcef9b55625ea74efb3eb49c",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/preimage-runtimeProviderManagementPresentation.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1-v2/preimage/src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "bytes": 6481,
+      "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+      "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/preimage-useRuntimeProviderManagement.test.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1-v2/preimage/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 180091,
+      "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v2",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/source-and-venue-review.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1-v2/source-and-venue-review.json",
+      "bytes": 10159,
+      "blob": "055939127cca2b07091aa9a1d8fd28fec3ff7ba4",
+      "sha256": "98a948fa261ce682a5da1894bccaab6c0ee9026e8fb77aae95404da8b6d46fed",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v1-inert",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/R1-appendix.md",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1/R1-appendix.md",
+      "bytes": 12739,
+      "blob": "e47a185b81458517b93e9eb7ab928c6fbb49f582",
+      "sha256": "c95602e93f7196371f472820bce00447036bb57379450ea0a90476bf25e1c0cf",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v1-inert",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/candidate-runtimeProviderManagementPresentation.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1/candidate/src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "bytes": 6382,
+      "blob": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+      "sha256": "47c561887a1ea9a499f131a073c805be07a9a17343c1115b32ec173dcdf894c9",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v1-inert",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/candidate-RuntimeProviderConnectErrorPresentation.test.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1/candidate/test/renderer/features/runtime-provider-management/RuntimeProviderConnectErrorPresentation.test.ts",
+      "bytes": 2365,
+      "blob": "1542ebe14a303845d67a48f601b25941994e8368",
+      "sha256": "5fffb3b149eddf7ea88b997580733d3a10217c0e05d35b4b36a5d4d5951af837",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v1-inert",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/candidate-useRuntimeProviderManagement.test.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1/candidate/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 180058,
+      "blob": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+      "sha256": "70597b6bb603515e31ec1239eb6543cc9f1fb18beb20ac20c6a357ee03f748ed",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v1-inert",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/candidate-metadata.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1/candidate-metadata.json",
+      "bytes": 3745,
+      "blob": "5aeaa6f6e115826cab983513a61dffc6c9405997",
+      "sha256": "cba2d4a7e4cc1fe517d70a4dcfd12ecf63f72f28562e493c6febbac4dce17f49",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v1-inert",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/candidate.patch",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1/candidate.patch",
+      "bytes": 4317,
+      "blob": "a9a96167ed85ecc08ef2bc9ce5d49747d0753d2f",
+      "sha256": "3163c2c1e91fb17bf58511334c8d01b61b80ca0ce5690ced4c6215cd34d65f7a",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v1-inert",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/current-preimage-rebind.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1/current-preimage-rebind.json",
+      "bytes": 2341,
+      "blob": "76f4eaffc863f69bfb009c4b6c7eec7a12b0965f",
+      "sha256": "f9c401ac86fb0946523fc6fc2145e5fbe50fb41a191bded2fe278466dafc1cbd",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v1-inert",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/preimage-runtimeProviderManagementPresentation.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1/preimage/src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "bytes": 6481,
+      "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+      "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v1-inert",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/preimage-RuntimeProviderConnectErrorPresentation.test.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1/preimage/test/renderer/features/runtime-provider-management/RuntimeProviderConnectErrorPresentation.test.ts",
+      "bytes": 720,
+      "blob": "fa761c43af6d414b0f2be0338869891dc059f640",
+      "sha256": "7591962fa6f0b58294543c674ab2fd6a590b406159a9cb8ed7b8b7e8f6be9440",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v1-inert",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/preimage-useRuntimeProviderManagement.test.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1/preimage/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 180091,
+      "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "credential-v1-inert",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/source-and-venue-review.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/credential-failure-copy-r1/source-and-venue-review.json",
+      "bytes": 9917,
+      "blob": "3318e695efd50ad5452e587a03a416973189f63d",
+      "sha256": "00e63d7bb14b11517b52eb17aaf32e9fc5d6f67b2a325c32a0463a0a31220015",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Fresh c763 geometry binding and dormant P11 composition",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/freeze-manifest.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/geometry-composition-c763/freeze-manifest.json",
+      "bytes": 2631,
+      "blob": "db5f680ceaf5d6e196860f0ef44a69fee6b0d4b6",
+      "sha256": "5ff2b59af152907b461ec22af1bf243596f1408cb3f8697a8f029cd2a74834a8",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Fresh c763 geometry binding and dormant P11 composition",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/geometry-binding-metadata.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/geometry-composition-c763/geometry-binding-metadata.json",
+      "bytes": 22752,
+      "blob": "78b1d8e0047824819121b2258f4478fefb34a788",
+      "sha256": "e1367e514b833af08b233d7d2b061b1d8c83da342fcc52a6ec97a54c39491773",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Fresh c763 geometry binding and dormant P11 composition",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/candidate-desktop-ui-controls.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/geometry-composition-c763/geometry-helper.ts.txt",
+      "bytes": 28094,
+      "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+      "sha256": "67a1e7413eff11ddc087f35a64cd3c8b242c061988b2fbd661497a9f6b5dfd11",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Fresh c763 geometry binding and dormant P11 composition",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/candidate-desktop-team-ui-smoke.test.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/geometry-composition-c763/geometry-test.ts.txt",
+      "bytes": 118885,
+      "blob": "8694096d0aafcd7130589d97f12ad5a4fd65a616",
+      "sha256": "9411c8171255880a187382e5ceef1c44e74172fe4c9eb6c357b3654388cceb70",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Fresh c763 geometry binding and dormant P11 composition",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/p11-after-geometry-test.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/geometry-composition-c763/p11-after-geometry-test.ts.txt",
+      "bytes": 123149,
+      "blob": "1b0ad5b15b056857817858d1e85f6dfe81f6e782",
+      "sha256": "c73b55cbd07ef632b174609e99e05e536d584b8dae9c124c2fc1a14e1c76c4da",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Fresh c763 geometry binding and dormant P11 composition",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/p11-after-geometry.patch",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/geometry-composition-c763/p11-after-geometry.patch",
+      "bytes": 4617,
+      "blob": "ab14668b079eacdc2ddd8b0ffb298c334503d297",
+      "sha256": "c71388877cd144ffa09dfd53421b814a722766d61d0ad61e84b80004b2153862",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Fresh c763 geometry binding and dormant P11 composition",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/p11-composition-metadata.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/geometry-composition-c763/p11-composition-metadata.json",
+      "bytes": 6546,
+      "blob": "642010d58fb1d29e542ac05f637fdba0a38cf293",
+      "sha256": "5a96cc8c3492939e9e90301e6a674f39f3620bd99a0dffe5d1e0a958d4849305",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Fresh c763 geometry binding and dormant P11 composition",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/p11-regression-suffix.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/geometry-composition-c763/p11-regression-suffix.ts.txt",
+      "bytes": 4264,
+      "blob": "08699c4890b2ef83bcbda53094c450c6a9c3b366",
+      "sha256": "a299b6ec1497dc542f675fd7868a430d8e9d4d0503199c9ff0343a7187b5312d",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Fresh c763 geometry binding and dormant P11 composition",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/preimage-desktop-ui-controls.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/geometry-composition-c763/preimage-geometry-helper.ts.txt",
+      "bytes": 27188,
+      "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+      "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Fresh c763 geometry binding and dormant P11 composition",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/preimage-desktop-team-ui-smoke.test.ts.txt",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/geometry-composition-c763/preimage-geometry-test.ts.txt",
+      "bytes": 111672,
+      "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+      "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "o-collaboration",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o-team-phase-a/new-originals/collaboration/original-job-133102584995-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/collaboration/original-job-133102584995-response.json",
+      "bytes": 194426,
+      "blob": "248f6e85acc6a34a1f201348fa9f7521c9a82eb1",
+      "sha256": "6572c362421748f6a3593a14c98a6550c4d067ff5956804586040a09236066f6",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "o-collaboration",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o-team-phase-a/new-originals/collaboration/job-133102584995.log",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/collaboration/job-133102584995.log",
+      "bytes": 184493,
+      "blob": "1f74d35bb4e85d04dafbf235c4fe87ddf8bb15bb",
+      "sha256": "2a6773a5d6c757f3ec2dd6b4092f6fd46fe7c850dbc0593a600743e9ea047c80",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "o-collaboration",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o-team-phase-a/new-originals/collaboration/artifact-14200807020.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/collaboration/artifact-14200807020.zip",
+      "bytes": 698291,
+      "blob": "13ed6559fc7191a08e510a1bb4c0f705b68c9c20",
+      "sha256": "1d2e1cb5f82d2f1931ff9a0b2413ceab125bba896210fe9aa0bd337d319a12f1",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "o-collaboration",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o-team-phase-a/new-originals/collaboration/archive-retention.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/collaboration/archive-retention.json",
+      "bytes": 4968,
+      "blob": "480c51d03cc031c240ffe9abbc7ce6e6e4420532",
+      "sha256": "28e20594f101a52789419469b7e86c209c9d224ebe7810cff89f36d12cfba8d6",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "o-collaboration",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/source-pin-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/collaboration/source-pin-audit.json",
+      "bytes": 456971,
+      "blob": "5f9f1328caefdb7dbb33394149cd7222c3fa79e5",
+      "sha256": "43ac66fdad76f3e8f05a91b520256315e49e1dab932eaba84320535aafe696a2",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "o-collaboration",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/initial-runs-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/initial-runs-response.json",
+      "bytes": 810813,
+      "blob": "7be01127e2aaeb4eb246c83194b652461a017ab8",
+      "sha256": "2e6f4ac1538bc0cc96285a4ee4b76590ce83aee414dcdeb4c2494ce394ce84c0",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "o-collaboration",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/owned-api-jobs-0602-terminal.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/owned-api-jobs-0602-terminal.json",
+      "bytes": 74308,
+      "blob": "cf79db3bd08de6002f03660caef938d5f6c1d0d4",
+      "sha256": "6bcbba9a82e1fab6639a545adbca1b7ef6142f3bfdf64df8c8234a9bef9ea563",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "o-collaboration",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o-team-phase-a/new-originals/official-host-artifacts-0546.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/official-host-artifacts-0546.json",
+      "bytes": 9457,
+      "blob": "f81a35a993c9ae46a939b3e247cf31d37e8d9edb",
+      "sha256": "d1622448afde198f740b1e83772e6f7aa6ce7c0657dad72b4fe864536b561a6a",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "o-collaboration",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/collaboration/audit.json",
+      "bytes": 54770,
+      "blob": "d040f1e03d896ecb08cd6e108e2d52356568424d",
+      "sha256": "258096be36597042398cf2e8671c4b5262eaf301925d9be3179eacbc7cc8b7d7",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "o-collaboration",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/Plan29-appendix.md",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/collaboration/Plan29-appendix.md",
+      "bytes": 5328,
+      "blob": "0f9843a76623d934c4d624f65429c53979ba4a1b",
+      "sha256": "55856bff7989814e2429accd6df618511fa45f8509b4731b1731d4c5d4fe8368",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "o-collaboration",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/checkpoint.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/collaboration/checkpoint.json",
+      "bytes": 2987,
+      "blob": "26ae3a9bcfc259d74fc4022767772e394f002ed3",
+      "sha256": "f251819086decb2acb4eb9fe64a9c703e707c0755697c502571f10a84743debb",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "o-collaboration",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/independent-original-review.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/collaboration/independent-original-review.json",
+      "bytes": 37428,
+      "blob": "4f88a52726d56304ef7d64f87953b572c6da78a2",
+      "sha256": "9dbd91632634fd9d15c306f40da58923d7137993ba37f20a7e13d1e70aeb0557",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "o-collaboration",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/independent-byte-source-proof.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/collaboration/independent-byte-source-proof.json",
+      "bytes": 501790,
+      "blob": "234ca773d13469da5e24af3ea57450275a2125c9",
+      "sha256": "967bdc79ca598c9ba6ce2abaee49bc178a37ed0f743b61f8d9aaf4dd3871dabb",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "o-collaboration",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/pre-click-geometry-source-assessment.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/collaboration/pre-click-geometry-source-assessment.json",
+      "bytes": 7757,
+      "blob": "b2eea65201fa699d9508e982f08811244a3ec9be",
+      "sha256": "2ffe3ab93ed3bb3182c9bd6934a3cce784e47a53ce0343f4e7adbaf51c7e2574",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-opencode",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/job-original-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/opencode/job-original-response.json",
+      "bytes": 198101,
+      "blob": "b48a1b24e417e89dfffa2798f61a9863d209478a",
+      "sha256": "4aa669cebb388f914d441ae77bac858d5458396a413f3a2245868f7c862cbd1b",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-opencode",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/job.log",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/opencode/job.log",
+      "bytes": 188026,
+      "blob": "c210882dcb304f0f583d7bc41bbf9c12d3e0fec2",
+      "sha256": "e9b9cad5e9ef8103d7cfcf4b2a2a777a122a76b739482b93d5515249809d254a",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-opencode",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/artifact-14205010690.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/opencode/artifact-14205010690.zip",
+      "bytes": 668772,
+      "blob": "2b186415105a6c51824cfcb9f950af2c83dbb43d",
+      "sha256": "cb135dc1436d1c1cf4eabd1ece501be84d15241809c127bb0818d9f277e17098",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-opencode",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/archive-retention.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/opencode/archive-retention.json",
+      "bytes": 5408,
+      "blob": "fb8be0276e83b020734d0041e8ba628cd47933c2",
+      "sha256": "db912f214b04df5a5cf2a1a9c32006f9eef4a8abbda7d6e6c8f70c63b22ec76f",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-opencode",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/source-pin-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/opencode/source-pin-audit.json",
+      "bytes": 458891,
+      "blob": "b8477e397dad053eb7376dee24f1b5b4e216e081",
+      "sha256": "ad37cec616cbbcce1c19bae0844fff96283ea26c4fa95a77a644dbfaa4084460",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-opencode",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/visual-review.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/opencode/visual-review.json",
+      "bytes": 870,
+      "blob": "6b8e8c11f034c00ec663bdf15ea1d43febb0cae3",
+      "sha256": "216b88bdae62e42d0e76c82faf5d6cdd74777c6e0f5805fcbfe2567d2842afac",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-opencode",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/official-host-artifacts-0707.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/official-host-artifacts-0707.json",
+      "bytes": 3892,
+      "blob": "6183c3c0f88e8514d52fb19c822a5d59a85c60e7",
+      "sha256": "62905f37173c4858200bc05e17a29bc92b329efa70d402fd20299bbd4a31cdf7",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-opencode",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/owned-jobs-0707.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/owned-jobs-0707.json",
+      "bytes": 53878,
+      "blob": "b2a21ccae083071c58239066e5d5a5eb63942cd6",
+      "sha256": "db33ebbfd25e7a5b7be07869a7ac6d9459b2bf73f3f93bbf851ad88a731f0e26",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-opencode",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/opencode/audit.json",
+      "bytes": 153570,
+      "blob": "d1b1616a3f0d5a7b29e61c632865f6c2e48f675e",
+      "sha256": "251ce8e8338602e6e439ee40312529b35221f6a535dbeb0c4f84b2a7aa9f25a3",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-opencode",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/Plan29-appendix.md",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/opencode/Plan29-appendix.md",
+      "bytes": 5150,
+      "blob": "6f7ab3524700ffda49cbc17bb28aa6967efb8226",
+      "sha256": "566cad40b2333d8f0951cb206526744e682a215000cc82d34f4f26f98bedbc1c",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-opencode",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/checkpoint.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/opencode/checkpoint.json",
+      "bytes": 2959,
+      "blob": "41ad5f5bba867aaffa2a7e7ee6d88bceeb99ab1a",
+      "sha256": "aa4d2cd1be9526314257532c7d45a8b2cc26452d234ca0bdfd018d349185caf8",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-opencode",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/independent-original-review.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/opencode/independent-original-review.json",
+      "bytes": 38175,
+      "blob": "552ac7d0e5627b5c4cd6ac7b03bc666fa55b95a7",
+      "sha256": "3bf5a3c4a26b528b363302bae3aeb614074242e80bf9bcd1659c9f2fc9c05ec7",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-opencode",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/independent-byte-source-proof.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/opencode/independent-byte-source-proof.json",
+      "bytes": 525457,
+      "blob": "30ea88f71d008d9ee518787143cfa91ec2074e82",
+      "sha256": "e9bc35c3b09918bcb63ca048e528acf5b654c1822ffdea5d57b83cc7ca15fd7e",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/job-original-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/review/job-original-response.json",
+      "bytes": 198287,
+      "blob": "fbef5f9028e95e8b241903b0182ecd64a510891a",
+      "sha256": "f9f4f433d6a826db3a12432bdba16d9b7cae1cef4ef4580458da49f0f3832d22",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/job.log",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/review/job.log",
+      "bytes": 188081,
+      "blob": "7cc514f1ad52cec3d686daa1b147ca558039f424",
+      "sha256": "7ebbc5901ff88148bc8e5c37edf459f74c80c5abc27a672937f2ddd331f69451",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/artifact-14204298663.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/review/artifact-14204298663.zip",
+      "bytes": 650542,
+      "blob": "cbf46f3661998a6eec4bd044d6704df96acd0339",
+      "sha256": "9e9dd46183fba4b5d56eeb85f525a94739c35e7d1c99cf257cb6e7c8dfe37803",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/archive-retention.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/review/archive-retention.json",
+      "bytes": 4619,
+      "blob": "9ec1a281d541c8968759e1c02e71e7551d67bb3a",
+      "sha256": "26ae2904f8ea1e7cac0d5bad18937b652bfbcd3da516049b52c09957d7591aca",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/source-pin-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/review/source-pin-audit.json",
+      "bytes": 518454,
+      "blob": "9f90d76d728f3e9ec30ca420a66e692f7757b358",
+      "sha256": "76b64b9bcb7cacf375552804b71e76a81860dfbc51a3bedbad68dc1f29e4fc32",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/visual-review.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/review/visual-review.json",
+      "bytes": 907,
+      "blob": "11132e79a4a3cb8f0aca0ffb1d721b8814b001c0",
+      "sha256": "b16f3d48177b7897b3373a016a70a44213533fdf81d68a2ba6a8b5b6ff03eeaf",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/official-host-artifacts-0713.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/official-host-artifacts-0713.json",
+      "bytes": 5755,
+      "blob": "84c5bcde7125687403ce0e8712e41fe691710b0e",
+      "sha256": "b5646d12ff61199802615d79030f462625b4fe630b1a31eff48d9e9ae094ea3e",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/owned-jobs-0712.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/owned-jobs-0712.json",
+      "bytes": 62929,
+      "blob": "a7baa556f7b0b374caa97bf60e0ac7dd9fccc19f",
+      "sha256": "e44e8dd5d19ae38dfaafe2049e064a2770984279e0034efb0c917893cbcd4c1b",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/review/audit.json",
+      "bytes": 144547,
+      "blob": "c773fe28d469a1e6763b31f528c5b4435dd0538f",
+      "sha256": "9341e9ec98445db83733494a4a9f3f1b0ccbc6e0d3b26c49d0338ec5aeeb2b68",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/Plan29-appendix.md",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/review/Plan29-appendix.md",
+      "bytes": 4976,
+      "blob": "a992766d8aa085bae1a5462b57cc747b1462bc59",
+      "sha256": "b632da17c642160588ca7dd7eb99e189096d6e602fa0e611f58b9a06c357adc7",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/checkpoint.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/review/checkpoint.json",
+      "bytes": 2941,
+      "blob": "7ade9f1c2e1ef6525af4c212691d9bb6f3cdb837",
+      "sha256": "15cc3781272490d451a86b90b929a8cbdb5a97d0ff56738ce08da33c855bf094",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/independent-original-review.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/review/independent-original-review.json",
+      "bytes": 19331,
+      "blob": "4083852d4cdd8be09e2e7ab61ab96344243990a9",
+      "sha256": "a1085a0148c5be6bb6722238f95f8c85cc9b35387775a992d48f5b941c1a843b",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-review",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/independent-byte-source-proof.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/review/independent-byte-source-proof.json",
+      "bytes": 609868,
+      "blob": "0da61cf9a4f6936c893207d967f1a0519239fb5a",
+      "sha256": "4b0ab32afc25d26e12f7f0d33433097decc951b5117ce6b29ed434f8de16efa8",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-credential-basis",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/job.log",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/v2-management/job.log",
+      "bytes": 110305,
+      "blob": "2b52eb7e41f07ac23149c0d9464e12fc2568c553",
+      "sha256": "5d5d62b99e73bcd2b97d937e9d62bdfcba291a00561f990c00eebca95240b156",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-credential-basis",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/job-original-response.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/v2-management/job-original-response.json",
+      "bytes": 112803,
+      "blob": "4ae4b4ac508ea84129e0d809bc25a2db327ede3c",
+      "sha256": "5c4c94d650e55a9bd9ab76de03dc48fea5aeb4f7a4e42d272ea53dd05fd645ae",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-credential-basis",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/artifact-14205700298.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/v2-management/artifact-14205700298.zip",
+      "bytes": 1011280,
+      "blob": "04e1609fa83a12c3d90efa464f56ff3b1a737f6a",
+      "sha256": "fc92eb2535b413ccf4d1d126045879b57048fee42aad16e8099c58e2a99d0471",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-credential-basis",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/archive-retention.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/v2-management/archive-retention.json",
+      "bytes": 10429,
+      "blob": "e0d2f59941a6e1c26536b60a29b0ef88c867bc33",
+      "sha256": "63661f17f77edba9369cf8c59831485a04e84f0b8b33c94a0cf4983d4db21229",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-credential-basis",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/official-host-artifacts-0724.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/official-host-artifacts-0724.json",
+      "bytes": 6703,
+      "blob": "5e09ac757d3d5bd7c87090455c76f1fa917641e0",
+      "sha256": "ede0890fd0f959530b35753235420b59cb9d8a0b47c6947a2c85f037107f40b9",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-credential-basis",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e2-reconciliation/e1-terminal/ui-final-jobs.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/owned-jobs-0724.json",
+      "bytes": 64602,
+      "blob": "b342c62d6806d2ec685da5b6cc08ed6910829552",
+      "sha256": "a4ff073cfe3cfb0c02f45af0a10480ebfc8b2220674269280f15f47ccc8c86f5",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-credential-basis",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/source-pin-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/v2-management/source-pin-audit.json",
+      "bytes": 591465,
+      "blob": "5d82620f94595466da0291a04a1b0c2666a3c381",
+      "sha256": "008c2f611535cb43b478fbd169b7238a5e9bb36ca1950923f05d62e1f52d21ae",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-credential-basis",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/visual-review.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/v2-management/visual-review.json",
+      "bytes": 3643,
+      "blob": "3fd78d678b90aa63cf960aab3dd9139ac30d737d",
+      "sha256": "ecefe79c543a7e9666dccdb579bf1696c7a7db9a24da9765b94417c70c9d3262",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-credential-basis",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/credential-copy-boundary.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/v2-management/credential-copy-boundary.json",
+      "bytes": 3298,
+      "blob": "f19a9c650bfe972e621cfcfb5400dfc3e725e936",
+      "sha256": "2bbf197f2433cf691607e04f8c833036cf77e2a6733e9dceaf34d6b16f9f8067",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-credential-basis",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/v2-management/audit.json",
+      "bytes": 163880,
+      "blob": "6c41fe3695ab3c3a5d04b0be76803bf72c6a6eac",
+      "sha256": "f8e33e67e0e2f91d14c4b7c7f7ac6cc6329e0530fdd4a9ddcdf87ee9ed26e23e",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-credential-basis",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/Plan29-appendix.md",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/v2-management/Plan29-appendix.md",
+      "bytes": 6577,
+      "blob": "bad398b298a867ed211e2fd744ba2df1e6e72c6b",
+      "sha256": "d3e5db07bc7096759d1525e9d7f5d43c549e322cfca19d1db527b01e8be16ae0",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-credential-basis",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/checkpoint.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/v2-management/checkpoint.json",
+      "bytes": 14694,
+      "blob": "4ad62dab85c2d6ab2503095a5a67f4606ce9385c",
+      "sha256": "b2c5ba49d2b063c2ae47b42e884d06ba27b5a085df0d0a6b745fda473f1a19a3",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "e1-credential-basis",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/credential-copy-source-assessment.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-e1d14b9/v2-management/credential-copy-source-assessment.json",
+      "bytes": 38731,
+      "blob": "70df42b890861fa650b6196420e9b823c0262e47",
+      "sha256": "269ff895d5cd3b4bab96b141ad98cc5b0839bcea97b43d61be6c01483ffbcf61",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    },
+    {
+      "group": "Root combined selection",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/selection/R1-root-combined-cut.md",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/geometry-copy-publication/R1-root-combined-cut.md",
+      "bytes": 15604,
+      "blob": "4e41f881a1ba86ccd2aebc637aba7638c0081353",
+      "sha256": "6ddcb569a49f97ee8777f529dbb843b25242f25d91875da04c3d54508b38c77b",
+      "exactOriginalOrDeclaredLosslessMatch": true
+    }
+  ],
+  "referenceCount": 122,
+  "fullLeafCount": 11376,
+  "directoryCountIncludingRoot": 1712,
+  "all11268OtherOriginalLeavesPreserved": true,
+  "everySourceUnchangedInDocs": true,
+  "everyDocsLeafUnchangedInSource": true,
+  "exactFourSourceChanges": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "before": {
+        "bytes": 27188,
+        "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+      },
+      "after": {
+        "bytes": 28094,
+        "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+        "sha256": "67a1e7413eff11ddc087f35a64cd3c8b242c061988b2fbd661497a9f6b5dfd11"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "before": {
+        "bytes": 111672,
+        "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+        "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445"
+      },
+      "after": {
+        "bytes": 118885,
+        "blob": "8694096d0aafcd7130589d97f12ad5a4fd65a616",
+        "sha256": "9411c8171255880a187382e5ceef1c44e74172fe4c9eb6c357b3654388cceb70"
+      }
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "before": {
+        "bytes": 6481,
+        "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+        "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+      },
+      "after": {
+        "bytes": 6382,
+        "blob": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+        "sha256": "47c561887a1ea9a499f131a073c805be07a9a17343c1115b32ec173dcdf894c9"
+      }
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "before": {
+        "bytes": 180091,
+        "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+      },
+      "after": {
+        "bytes": 180058,
+        "blob": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+        "sha256": "70597b6bb603515e31ec1239eb6543cc9f1fb18beb20ac20c6a357ee03f748ed"
+      }
+    }
+  ],
+  "sourceMapSha256": "75c3a4a9e66e1fe81fe09c91ea24b765894d6a0026c0dc1daacff1201c1f1eb3",
+  "freshPinUnionCount": 36,
+  "planPrefix": {
+    "bytes": 2038188,
+    "blob": "d5cc38cc212f9757e841decd86db35fd322e358b",
+    "sha256": "e4f671d3dcf12d23564cf2c5317a2cb702638eb3c68ad803c3b52e94feec6687"
+  },
+  "planResult": {
+    "bytes": 2083245,
+    "blob": "c062e0a00ad2b1c0d2c55721ab7a80c2e7b79d68",
+    "sha256": "e48600cc383500bdfe8aeaf1740cb3f1c8ba78cfc9f21c26b465334956bc7a26"
+  },
+  "allThreeAppendicesExactInOrder": true,
+  "losslessOriginalTreeResponses": [
+    {
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/remote-docs-tree-response.json.gz",
+      "compressed": {
+        "bytes": 1139896,
+        "blob": "703103805a0731ed3d869d73eb2f3cc4a8f84052",
+        "sha256": "18983146c41ba3daefb60c21a7603ff675d0d7d50beefd3e754c355a7e10102c"
+      },
+      "decodedRaw": {
+        "bytes": 8019555,
+        "blob": "8cbbad9832a9c70d2c20b44860e130217cdffc27",
+        "sha256": "f17ba9837a4e86477b45bdd3ba1137adfca41e27a812c815193692da4c0e51e5"
+      },
+      "originalScratchPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/remote-docs-tree-response.json",
+      "algorithm": "gzip; mtime0; exact full original tool response",
+      "losslessEqualityVerified": true,
+      "originalRetainedUnmodified": true
+    },
+    {
+      "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/remote-source-tree-response.json.gz",
+      "compressed": {
+        "bytes": 1139883,
+        "blob": "994cebc24190d41718000a792922b720785b8e25",
+        "sha256": "282870d9ddada2d637f247671065432803c5c8c7df854d3dea74eecdaf7a2137"
+      },
+      "decodedRaw": {
+        "bytes": 8019557,
+        "blob": "d6e7ec6280748bc8af4d9a4787e58a1733d852d2",
+        "sha256": "9ff34eebcdea92ea092f5c04aff8e641d6a80fc7f6a04fea4a77a12db38aef97"
+      },
+      "originalScratchPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/remote-source-tree-response.json",
+      "algorithm": "gzip; mtime0; exact full original tool response",
+      "losslessEqualityVerified": true,
+      "originalRetainedUnmodified": true
+    }
+  ],
+  "archives": [
+    {
+      "paths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/artifact-14205700298.zip"
+      ],
+      "bytes": 1011280,
+      "blob": "04e1609fa83a12c3d90efa464f56ff3b1a737f6a",
+      "sha256": "fc92eb2535b413ccf4d1d126045879b57048fee42aad16e8099c58e2a99d0471",
+      "memberCount": 33,
+      "fullSafeCrcByteJoin": true
+    },
+    {
+      "paths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o-team-phase-a/new-originals/collaboration/artifact-14200807020.zip"
+      ],
+      "bytes": 698291,
+      "blob": "13ed6559fc7191a08e510a1bb4c0f705b68c9c20",
+      "sha256": "1d2e1cb5f82d2f1931ff9a0b2413ceab125bba896210fe9aa0bd337d319a12f1",
+      "memberCount": 16,
+      "fullSafeCrcByteJoin": true
+    },
+    {
+      "paths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/artifact-14205010690.zip"
+      ],
+      "bytes": 668772,
+      "blob": "2b186415105a6c51824cfcb9f950af2c83dbb43d",
+      "sha256": "cb135dc1436d1c1cf4eabd1ece501be84d15241809c127bb0818d9f277e17098",
+      "memberCount": 16,
+      "fullSafeCrcByteJoin": true
+    },
+    {
+      "paths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/artifact-14204298663.zip"
+      ],
+      "bytes": 650542,
+      "blob": "cbf46f3661998a6eec4bd044d6704df96acd0339",
+      "sha256": "9e9dd46183fba4b5d56eeb85f525a94739c35e7d1c99cf257cb6e7c8dfe37803",
+      "memberCount": 14,
+      "fullSafeCrcByteJoin": true
+    }
+  ],
+  "all40ShortMovesPreserved": true,
+  "maximumRelativePathCharacters": 216,
+  "sourceReviewBasis": [
+    "Geometry9bb377/R2 6d69b6 and fresh c763binding78b1d8",
+    "Copyv2 0c2c28/R2 9a06f1; formatter-test fa761 unchanged"
+  ],
+  "validationInterpretation": "Vitest15000ms is existing DEFAULT; all original individual per-test overrides remain unchanged. No workflow/config/test timing change.",
+  "unselected": [
+    "copyv1 thirdpath/newcases/test-onlyRED",
+    "P11/Models A/B/C",
+    "Darwin expiry anchor",
+    "primary move"
+  ],
+  "noProjectOrNativeExecution": true,
+  "noGitObjectSourceOrRefMutation": true,
+  "noCandidatePassClaim": true
+}

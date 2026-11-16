@@ -1,0 +1,48 @@
+{
+  "kind": "original-artifact-retention-only",
+  "source": "57885c055a18b27c180c304762643eac632513ad",
+  "artifactId": 14206282008,
+  "artifact": "artifact-14206282008.zip",
+  "bytes": 13383,
+  "sha256": "dd40f3d41a36c21a183bd7489ee7a795680cf874174a64ec8c5d446de59f5933",
+  "gitBlob": "e69bda7fc4426bd5e680a66eddcfc525e52db32e",
+  "checkedAt": "2026-11-16T07:49:20.011929+00:00",
+  "zipSafeUniqueNames": true,
+  "crcVerified": true,
+  "memberCount": 4,
+  "members": [
+    {
+      "member": "opencode-v2-embedded-inputs.json",
+      "crc32": "a5bdf219",
+      "compressedBytes": 491,
+      "bytes": 782,
+      "sha256": "8306f02d927f706936079b8db0ccfbd402617e543c2cbe924bd662be94554016",
+      "gitBlob": "a4382d823c1ab753ab52e617af1523530921489e"
+    },
+    {
+      "member": "opencode-v2-embedded-host.json",
+      "crc32": "a6135dd7",
+      "compressedBytes": 5866,
+      "bytes": 95123,
+      "sha256": "33a98d1e39e7f800614cf36044aa9093b1bb3221c6c73fa5557efa806072b74e",
+      "gitBlob": "df78feb4a31c2c5aed026e917c8af06e318f13af"
+    },
+    {
+      "member": "opencode-v2-windows-custody.json",
+      "crc32": "81aba0b8",
+      "compressedBytes": 549,
+      "bytes": 909,
+      "sha256": "32068a84e083d6ae595b24bc1c67b09f9bbca81b8ad1b87cfa4a17a087109982",
+      "gitBlob": "f3932cc070ad943d4208b01b71ac352bedca4401"
+    },
+    {
+      "member": "opencode-v2-embedded-host-auto.json",
+      "crc32": "d9dcf9de",
+      "compressedBytes": 5829,
+      "bytes": 94930,
+      "sha256": "cb2cd192c639c3bbfda9b2dc7157c7a91dd2a6c556cf82e8c2d9483065c20ca0",
+      "gitBlob": "933cf7dea14869b3bffc541b18603b96ef99b1d1"
+    }
+  ],
+  "qualification": "Not established by archive retention. No project, native, source, ref or CI action."
+}

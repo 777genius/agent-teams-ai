@@ -1,0 +1,462 @@
+{
+  "kind": "fresh-actual-c763-geometry-compatibility-binding",
+  "status": "COMPATIBLE_SOURCE_ONLY_PENDING_FRESH_ROOT_SELECTION_AND_PUBLICATION",
+  "author": "/root/migration_scope",
+  "createdAtUTC": "2026-11-16T08:10:51.128503+00:00",
+  "sourceHead": "c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+  "sourceTree": "c70232e34d2759ce287e2f224073205dcf9c18db",
+  "sourceParents": [
+    "174e27e0178025f88608650347900daac49dcc58",
+    "57885c055a18b27c180c304762643eac632513ad"
+  ],
+  "sourceLeafCount": 11269,
+  "sourceDirectoryCountIncludingRoot": 1701,
+  "actualSourceReadback": {
+    "file": "e2-reconciliation-publication/independent-actual-source-readback.json",
+    "bytes": 145587,
+    "blob": "455fb1436977d80e4dfaa572b1bace7cca853f44",
+    "sha256": "f74de4550a02640f728691f60f239604e6a328cd9d51b0620590b925833183c5"
+  },
+  "currentPlan29": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "bytes": 2038188,
+    "blob": "d5cc38cc212f9757e841decd86db35fd322e358b",
+    "sha256": "e4f671d3dcf12d23564cf2c5317a2cb702638eb3c68ad803c3b52e94feec6687"
+  },
+  "noProjectExecution": true,
+  "noGitObjectRefIndexWorktreeMutation": true,
+  "originalGeometryMetadata": {
+    "file": "click-preinput-stabilization-r1/candidate-metadata.json",
+    "bytes": 4247,
+    "blob": "18aaa5d9ed647b952dd8a1926e58048ad0c1a7bf",
+    "sha256": "0f16692b1f761eb4792eeb48cd2af0a53fe3c8baf673ff0fe6018a200f027a79"
+  },
+  "originalGeometryR1": {
+    "file": "click-preinput-stabilization-r1/R1-appendix.md",
+    "bytes": 20857,
+    "blob": "9bb3777ca076dea9dd60f76d9759dc1815e0dde0",
+    "sha256": "7d07956cc3f0d6929c2d3fd5907d121254c073294dfcae4573e37763b4b4510d"
+  },
+  "originalGeometryIndependentR2": {
+    "file": "click-preinput-stabilization-r1/independent-source-r1-review.json",
+    "bytes": 13132,
+    "blob": "6d69b6f30c2aca45254275fc1c380a38426a8ae5",
+    "sha256": "d7b07e1a76b1d03405feba1df12902321e669f5448028e9850fafd25a9ce68ae"
+  },
+  "originalGeometryIndependentByteProof": {
+    "file": "click-preinput-stabilization-r1/independent-source-byte-proof.json",
+    "bytes": 10267,
+    "blob": "ac99bae999088f5d06d172e3e361a5651e50197e",
+    "sha256": "053381860c85c246ce950ad09c382d23e0d1d2f8e01ec09cfc2eddd39c241de8"
+  },
+  "originalGeometryPatch": {
+    "file": "click-preinput-stabilization-r1/candidate.patch",
+    "bytes": 12271,
+    "blob": "d58db63706739f3d78dde1ec175881dce0f800b1",
+    "sha256": "ad63f15b0fd0f61a8fc3117e906a1162f4203472e57e4a62b5662844c86fb545"
+  },
+  "twoCurrentPreimagesAndUnmodifiedCandidates": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "currentPreimage": {
+        "bytes": 27188,
+        "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a",
+        "lines": 489
+      },
+      "candidate": {
+        "bytes": 28094,
+        "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+        "sha256": "67a1e7413eff11ddc087f35a64cd3c8b242c061988b2fbd661497a9f6b5dfd11",
+        "lines": 506
+      },
+      "frozenCandidateFile": "click-preinput-stabilization-r1/candidate/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "addedLines": 30,
+      "removedLines": 13,
+      "fullForwardAndReverseExact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "currentPreimage": {
+        "bytes": 111672,
+        "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+        "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445",
+        "lines": 1896
+      },
+      "candidate": {
+        "bytes": 118885,
+        "blob": "8694096d0aafcd7130589d97f12ad5a4fd65a616",
+        "sha256": "9411c8171255880a187382e5ceef1c44e74172fe4c9eb6c357b3654388cceb70",
+        "lines": 2010
+      },
+      "frozenCandidateFile": "click-preinput-stabilization-r1/candidate/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "addedLines": 118,
+      "removedLines": 4,
+      "fullForwardAndReverseExact": true
+    }
+  ],
+  "selectedPinCount": 21,
+  "freshSelectedPins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "bytes": 27188,
+      "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+      "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a",
+      "lines": 489,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 111672,
+      "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+      "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445",
+      "lines": 1896,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "mode": "100644",
+      "bytes": 33173,
+      "blob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+      "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23",
+      "lines": 690,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "mode": "100644",
+      "bytes": 54778,
+      "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "lines": 791,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "mode": "100644",
+      "bytes": 68865,
+      "blob": "76f4e9aa4d29e4eab14041e5343e0e3a5b46b3cf",
+      "sha256": "945b5ad3a507cea5925cb8b5e8d25aa0a15970c38a5f4c6c13db13fcaa3ccb64",
+      "lines": 791,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-review-hunk-controls.ts",
+      "mode": "100644",
+      "bytes": 9637,
+      "blob": "27ad07bff0c9c89ecfc7dc572ac53e2e9e16e8ef",
+      "sha256": "ae6a85389e34559faf22a87320b940e0df5a80437d8f9ee7f2452131cfea95b4",
+      "lines": 220,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-review-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 7276,
+      "blob": "9395283cd2e88ddf40def6ee3cf25aaa6f4ff7c3",
+      "sha256": "b7bff873445aa7938b1a1d6e26067fb663205de8002ccca7d5a99745e61217ae",
+      "lines": 176,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "scripts/e2e/comment-notification/cdp.mjs",
+      "mode": "100644",
+      "bytes": 3704,
+      "blob": "9397505b7889db88ef103dca62287e3d02a88cc9",
+      "sha256": "8e70fecbb1f2107abffa91d78644ee74f8e34546c8117587661f8376c27998aa",
+      "lines": 119,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "mode": "100644",
+      "bytes": 52632,
+      "blob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+      "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a",
+      "lines": 800,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "mode": "100644",
+      "bytes": 20996,
+      "blob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+      "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b",
+      "lines": 323,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+      "mode": "100644",
+      "bytes": 44561,
+      "blob": "083522612dd93e77dbb0e79c966103b03a71fe87",
+      "sha256": "555a309f762015659a3b7a0d44522785fa7ea171aedf77392020c25dc5d70e33",
+      "lines": 600,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-management-sources.ts",
+      "mode": "100644",
+      "bytes": 21211,
+      "blob": "762570da8b4fc492065b217303a3da169bf627cf",
+      "sha256": "7b89bab88022f53fbc8470f0cbcd4acd93f8ee5412059144e3a676c0fb7466f8",
+      "lines": 309,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "mode": "100644",
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+      "lines": 1312,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "bytes": 26839,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "lines": 580,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "mode": "100644",
+      "bytes": 956788,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+      "lines": 26665,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "mode": "100644",
+      "bytes": 6946,
+      "blob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea",
+      "lines": 169,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "mode": "100644",
+      "bytes": 646,
+      "blob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306",
+      "lines": 20,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "eslint.fast.config.js",
+      "mode": "100644",
+      "bytes": 7268,
+      "blob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88",
+      "lines": 258,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "eslint.config.js",
+      "mode": "100644",
+      "bytes": 37840,
+      "blob": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+      "sha256": "d9f0cf7c33672b9304fc524bbc028e07939bcab4583bb1e7c94b99fd773eb597",
+      "lines": 1166,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "scripts/ci/check-source-file-size.mjs",
+      "mode": "100644",
+      "bytes": 8145,
+      "blob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+      "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2",
+      "lines": 231,
+      "sameAsFrozenGeometryPin": true
+    },
+    {
+      "path": "scripts/ci/source-file-size-baseline.json",
+      "mode": "100644",
+      "bytes": 9635,
+      "blob": "e827bccf455235b1ff7871e7b93450cdaa53eb54",
+      "sha256": "82080bdf23e0fae3ea087e8aea8c3622fa63a734fa9874e7d07e9d568087f072",
+      "lines": 146,
+      "sameAsFrozenGeometryPin": true
+    }
+  ],
+  "selectedPinScope": "Claim-bearing source and existing venue only; not a complete toolchain/dependency execution closure.",
+  "existingVenueUnchanged": {
+    "workflow": ".github/workflows/host-emulated-acceptance.yml",
+    "job": "offline-desktop-scenario",
+    "jobTimeoutMinutes": 45,
+    "nodeVersion": "24.21.0",
+    "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621",
+    "wholeEightFileCommand": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "testCaseTimeoutMs": 5000,
+    "teamContractsCommandUnchanged": "node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+    "workspaceTypesCommand": "pnpm typecheck:workspace",
+    "workspaceTypesBody": "pnpm typecheck && pnpm typecheck:legacy-host-scripts && pnpm --filter @agent-teams/legacy-agent-host typecheck:test && pnpm --filter agent-teams-mcp typecheck && pnpm --filter agent-teams-mcp typecheck:test",
+    "legacyScriptsTypesBody": "node node_modules/@typescript/native/bin/tsc --project tsconfig.legacy-agent-host-scripts.json",
+    "fastLintOperands": [
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts",
+      "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "packages/legacy-agent-host/tests/opencode-configuration-source.test.ts",
+      "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts",
+      "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+      "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+      "scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+      "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+      "src/features/agent-backend/renderer/createHostMemberSpawnStatuses.ts",
+      "src/features/agent-backend/renderer/createHostTeamChanges.ts",
+      "src/features/agent-backend/renderer/createHostTeamProvisioning.ts",
+      "src/features/agent-backend/renderer/index.ts",
+      "src/renderer/store/slices/teamSlice.ts",
+      "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "test/features/agent-backend/capturedWindowsSelection.test.ts",
+      "test/features/agent-backend/hostMemberSpawnStatuses.test.ts",
+      "test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "test/renderer/store/teamRuntimeRunAdoption.test.ts",
+      "test/renderer/store/teamSlice.test.ts",
+      "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts",
+      "packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "packages/legacy-agent-host/src/composition/HostScheduledRuns.ts",
+      "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "packages/legacy-agent-host/src/composition/readTeamActivity.ts",
+      "packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts",
+      "packages/legacy-agent-host/src/composition/scheduledRunProjection.ts",
+      "packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts",
+      "packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+      "packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts",
+      "packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+      "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "packages/legacy-agent-host/src/runtime/activityContracts.ts",
+      "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+      "packages/legacy-agent-host/src/runtime/providerActivityContracts.ts",
+      "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+      "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+      "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+      "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+      "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+      "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+      "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+      "src/features/agent-backend/contracts/operations.ts",
+      "src/features/agent-backend/main/adapters/output/projectBackendResult.ts",
+      "src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts",
+      "src/features/agent-backend/renderer/createHostTaskActivityApi.ts",
+      "src/renderer/components/team/ClaudeLogsPanel.tsx",
+      "src/renderer/components/team/ClaudeLogsSection.tsx",
+      "src/renderer/components/team/members/HostMemberActivityLog.tsx",
+      "src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx",
+      "src/renderer/components/team/members/MemberLogsTab.tsx",
+      "src/shared/types/teamActivity.ts",
+      "src/shared/utils/diagnosticsRedaction.ts",
+      "src/shared/utils/redactDiagnosticAssignments.ts",
+      "src/shared/utils/runtimeDiagnosticText.ts",
+      "test/features/agent-backend/hostTaskActivity.test.ts",
+      "test/renderer/components/team/ClaudeLogsSection.test.ts",
+      "test/renderer/components/team/members/MemberLogsPolling.test.ts",
+      "test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+      "test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx",
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "tools/owned-process-broker/nativeDebugServiceScenario.ts"
+    ],
+    "fastLintHelperCovered": false,
+    "fastLintTestCovered": true,
+    "fastLintGapExplicit": true,
+    "typedLintSrcScopesDoNotCoverHelper": true,
+    "noWorkflowChange": true,
+    "noLocalFallback": true,
+    "noManualDispatchOrReadyRouteSelected": true,
+    "noActualExecution": true
+  },
+  "frozenOlderPlanIsExactCurrentPlanPrefix": {
+    "exact": true,
+    "olderPrefix": {
+      "bytes": 1969658,
+      "blob": "a6860c298a8ef6bb3d806d93758ff01624dbee03",
+      "sha256": "c76b7f205110c1dbda54a38c5f3008aa6bd20e8162252b69df37343afed0ff99"
+    },
+    "currentPlan": {
+      "bytes": 2038188,
+      "blob": "d5cc38cc212f9757e841decd86db35fd322e358b",
+      "sha256": "e4f671d3dcf12d23564cf2c5317a2cb702638eb3c68ad803c3b52e94feec6687"
+    }
+  },
+  "sourceOnlyGeometryProjection": {
+    "tree": "e6f38630fa4709b9ae6583ed7e44d8efe55d2fb8",
+    "exactChangedPaths": [
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts"
+    ],
+    "unchangedLeafCount": 11267,
+    "leafCount": 11269,
+    "directoryCountIncludingRoot": 1701,
+    "pureMerkleOnly": true,
+    "noTreeObjectCreated": true,
+    "excludesCopyTwoPathCompositionAndNewDocumentation": true,
+    "notUpcomingCombinedPublicationTree": true
+  },
+  "preservation": {
+    "all21PinsAndBothPreimagesExact": true,
+    "wholeGeometryPatchForwardAndReverseExact": true,
+    "otherSourceWorkflowConfigDocumentationLeavesUnchangedInStandaloneProjection": true,
+    "allIncoming130PassiveTeamLinesExact": true,
+    "netTenAdditionalGeometryCasesStaticOnly": true
+  },
+  "selectionBoundary": {
+    "rootSelectionPerformedByThisArtifact": false,
+    "currentResultingSourceTeamStaticGateClaimed": false,
+    "geometryActualRuntimeResult": null,
+    "phaseASelected": false,
+    "P11SourceApplied": false,
+    "ModelsCompositionPerformed": false,
+    "copyCompositionPerformed": false,
+    "independentFreshBindingReviewRequired": true,
+    "explicitRootCutAndFreshPrepublicationGuardsRequired": true
+  },
+  "limits": [
+    "Fresh immutable Git-byte/source/venue compatibility is not execution, current-source qualification or publication authorization.",
+    "The approved geometry R1 deliberately changes immediate same-tag coordinate mismatch refusal to bounded pre-input continuation. Exact fresh owner checks, shared16 observation limit, at most15 sleeps and at most5 raw final reads remain.",
+    "Existing per-read30s and outer budgets remain. Fifteen100ms sleeps are not an absolute1.5s cutoff; extra ownership-read costs remain explicitly amended by the original R1.",
+    "Original93 fast-lint operands include the test and omit desktop-ui-controls.ts. Typed src scopes do not close that gap; no workflow or coverage amendment is made here.",
+    "Root described a possible four-path geometry2+copy2 cut. This record composes no copy bytes and no Models afterimage; its pure trees are not that future combined publication.",
+    "Historical UI failures/source approvals do not establish resulting-source UI success, cleanup, native acceptance or layout cause."
+  ]
+}

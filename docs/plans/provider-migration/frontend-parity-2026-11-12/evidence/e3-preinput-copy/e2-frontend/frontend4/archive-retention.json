@@ -1,0 +1,64 @@
+{
+  "kind": "original terminal artifact/raw retention only; no semantic acceptance",
+  "retainedAtUTC": "2026-11-16T08:05:59.682813+00:00",
+  "sourceHead": "57885c055a18b27c180c304762643eac632513ad",
+  "officialArtifact": {
+    "id": 14207795182,
+    "name": "host-offline-tests-57885c055a18b27c180c304762643eac632513ad-4",
+    "size_in_bytes": 317499,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207795182",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207795182/zip",
+    "expired": false,
+    "created_at": "2026-11-16T08:00:59Z",
+    "expires_at": "2026-11-30T08:00:58Z",
+    "updated_at": "2026-11-16T08:00:59Z",
+    "digest": "sha256:4fe0bb55bfaa04f2482c469cc86f633c942d72d627c66501e1e2a410d88559bd",
+    "workflow_run": {
+      "id": 43823212577,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+    }
+  },
+  "officialApiFile": "ci-57885c/official-host-artifacts-0805.json",
+  "archive": {
+    "path": "ci-57885c/frontend4/14207795182.zip",
+    "bytes": 317499,
+    "blob": "eff2c43a36143ab54e20f8e6d4b6fe93239bd779",
+    "sha256": "4fe0bb55bfaa04f2482c469cc86f633c942d72d627c66501e1e2a410d88559bd"
+  },
+  "members": [
+    {
+      "path": "host-offline-tests-4.json",
+      "crc32": "d9460a7b",
+      "bytes": 2329549,
+      "blob": "3ca8ef44e2af092c324d07d3f5c96784a02afe1b",
+      "sha256": "1fb3a43edde4170388bba3ec3b993911e466da9f9fef99faab74e9566c73bb1e"
+    },
+    {
+      "path": "host-offline-tests-4.log",
+      "crc32": "e213ddb3",
+      "bytes": 118051,
+      "blob": "1a8c74a9c4b3175451fd756daa0dbdffc0684fd0",
+      "sha256": "5114d7b7f42199b1ca0937e26ffe77a9476f60a3011b7eddda1069e66f3e17e7"
+    }
+  ],
+  "uniqueSafePaths": true,
+  "crcPassed": true,
+  "jobRaw": {
+    "bytes": 193257,
+    "blob": "106f43469fa56e339f3c8fcb83179ac94193519d",
+    "sha256": "515af6bf729f9ace9ba7a2fb21567f21cc1483896222b7e1716794791f27853a"
+  },
+  "jobResponse": {
+    "bytes": 237300,
+    "blob": "6bf536f2d7df25e0c55a870bebe994019ea6f6b3",
+    "sha256": "e11d968a760bae228a2416ce537464adda7441e4fb1b482de179413c3dfefb7d"
+  },
+  "fullRawEqualsOriginalMcpContent": true,
+  "transportUrlRetained": false,
+  "limits": [
+    "Original bytes and safe CRC only; no image/semantic/source qualification yet."
+  ]
+}

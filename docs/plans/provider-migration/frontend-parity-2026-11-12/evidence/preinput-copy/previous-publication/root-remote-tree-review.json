@@ -1,0 +1,46 @@
+{
+  "schema": "E2-exact-immutable-remote-tree-readback/v1",
+  "verifiedAtUTC": "2026-11-16T07:55:38.327916+00:00",
+  "manifest": {
+    "bytes": 283239,
+    "blob": "5248df585cb5069fd7c97a81456d9872c46bfcb9",
+    "sha256": "e1e72a8328914b25ad44c886be17631a0ffa835af65def53c726c7f13249bbef"
+  },
+  "records": [
+    {
+      "kind": "docs",
+      "observedAtUTC": "2026-11-16 07:55:06 UTC",
+      "root": "ddab0eca5c0062243dd48deac2c50c5efd8f6c99",
+      "entries": 12969,
+      "leafCount": 11269,
+      "directoryCountIncludingRoot": 1701,
+      "everyModeTypeShaAndBlobSizeMatched": true,
+      "completeOrderedEntryMapSha256": "399b882432382b81cd7be85be96235384c061ea8b1d90309757375f897351105",
+      "rawResponse": {
+        "path": "e2-reconciliation-publication/remote-docs-tree-response.json",
+        "bytes": 8019555,
+        "blob": "8cbbad9832a9c70d2c20b44860e130217cdffc27",
+        "sha256": "f17ba9837a4e86477b45bdd3ba1137adfca41e27a812c815193692da4c0e51e5"
+      }
+    },
+    {
+      "kind": "source",
+      "observedAtUTC": "2026-11-16 07:55:08 UTC",
+      "root": "c70232e34d2759ce287e2f224073205dcf9c18db",
+      "entries": 12969,
+      "leafCount": 11269,
+      "directoryCountIncludingRoot": 1701,
+      "everyModeTypeShaAndBlobSizeMatched": true,
+      "completeOrderedEntryMapSha256": "cb269464173813c47a2d62c3ef053d802c0b181b48525f771363777d18048ecd",
+      "rawResponse": {
+        "path": "e2-reconciliation-publication/remote-source-tree-response.json",
+        "bytes": 8019557,
+        "blob": "d6e7ec6280748bc8af4d9a4787e58a1733d852d2",
+        "sha256": "9ff34eebcdea92ea092f5c04aff8e641d6a80fc7f6a04fea4a77a12db38aef97"
+      }
+    }
+  ],
+  "commitsCreatedByThisReader": false,
+  "refsChanged": false,
+  "sourceExecuted": false
+}

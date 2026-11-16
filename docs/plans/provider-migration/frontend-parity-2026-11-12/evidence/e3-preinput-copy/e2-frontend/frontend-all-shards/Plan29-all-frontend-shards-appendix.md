@@ -1,0 +1,31 @@
+
+### E2 original578: all four complete safe frontend shards, source-bound author evidence
+
+This appendix records the four original `Host Emulated Acceptance` frontend jobs in run `43823212577`, attempt1, on exact source `57885c055a18b27c180c304762643eac632513ad` / tree `b1685b4993306f9cd509d832b72f2cd6f0418943`. It is an author audit of retained original CI results, with separate independent R2 still pending. The historical full API snapshot completed at `2026-11-16 08:04:16 UTC` records all four selected jobs `completed/success`; it does not qualify unrelated jobs or assert a latest all-workflows state.
+
+The complete JSON assertion arrays contain **25,832 PASS, 38 SKIP, 0 FAIL and 0 TODO**, 25,870 assertions in total. The shard path sets are disjoint: **2,162 physical test files, 2,155 passed and seven wholly skipped**. The default reporters agree with those reconstructed counts. Original JSON suite counters and per-file `status: passed` values are preserved: the latter also occur on wholly skipped files and are not used to promote them to PASS.
+
+| Original shard | Job | Official artifact | Files PASS / wholly SKIP | Assertions PASS / SKIP / FAIL | Reported Vitest duration |
+|---|---|---|---:|---:|---:|
+| 1/4 | 133150851317 | 14206308356 | 541 / 0 | 6222 / 6 / 0 | 248.28 s |
+| 2/4 | 133150851024 | 14206432098 | 539 / 2 | 6739 / 18 / 0 | 269.27 s |
+| 3/4 | 133150851311 | 14206571770 | 538 / 3 | 6257 / 7 / 0 | 369.41 s |
+| 4/4 | 133150851591 | 14207795182 | 537 / 2 | 6614 / 7 / 0 | 339.17 s |
+
+Durations are each original Vitest reporter's duration, not end-to-end job time or a sum across concurrently scheduled jobs. Raw timestamps and JSON start/end values remain in the proof.
+
+The complete raw job logs are byte-identical to the original MCP `structuredContent.content`. Every line of each archived tee stream, including ANSI sequences and empty lines, is the unique contiguous sequence in its raw job after removing only GitHub timestamp prefixes: shard1 lines584–1292, shard2 lines578–1341, shard3 lines632–1305 and shard4 lines605–1440. These are source-record offsets, not elapsed durations. All four official ZIP sizes/SHA256 digests match their API records; all eight unique safe members pass CRC and match the retained extracted bytes. No original was downloaded again or executed locally.
+
+The original workflow checked out578, verified `git rev-parse HEAD` against `HOST_EMULATED_SOURCE_HEAD`, captured TEST Node24.21.0, then switched to the unchanged `.node-version` workspace Node26.12.1. Raw outputs show pnpm11.22.0 and Vitest3.2.6. The original prerequisites installed lsof, ran the existing frozen-install helper with `--child-concurrency=1`, verified the SQLite Node ABI rebuild, built the MCP bundle, and ran the Host build with its ledger prebuild. All14 returned API steps in each selected job succeeded. Host/ledger engine-range warnings under Node26 are retained; the captured TEST runtime and actual frontend workspace runtime are distinct. These records are not a full compiled-output or installed-dependency inventory.
+
+The exact existing frontend invocation remains `pnpm exec vitest run --maxWorkers=2 --shard="$HOST_TEST_SHARD/4"`, with the three unchanged exclusions `**/*.live.test.*`, `**/*.live-e2e.test.*`, and `**/*.native.test.*`, both default/JSON reporters and the original `tee` under Bash `-e -o pipefail`. The original job limit is45minutes; the unchanged Vitest config uses happy-dom, `test/setup.ts`, and a15000ms default test timeout, subject to original individual overrides. No workflow, cutoff, scope or source was changed for this audit.
+
+Fresh immutable Git reads cover all **2,195** tracked test paths matched by the four original config includes. Removing exactly **33** paths matched by the actual CLI exclusions yields precisely the **2,162** physical paths in the four original JSON arrays, with no missing or unexpected path. The complete reviewer-side inventory also pins the config, runtime/lock/workspace, original prerequisite scripts/package bodies and two Models claim-bearing sources: 2,213 unique Git leaves / 32,443,485 bytes. The inventory binds source identities; no per-module transformed runner payload or complete transitive dependency census is invented.
+
+All38 skipped assertions remain explicit in20 original guard-bearing files, freshly read and byte-identical to their0660 Git versions. Their retained guards cover Windows/Darwin-only cases, absent or unselected native/live opt-ins, the original zsh executable gate and the original fixture-only opt-in. These skips and33 CLI-excluded files have no acceptance credit. Recorded skips plus source predicates are not an independent complete runner environment census.
+
+The existing Models hook test file `test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts` is the exact6c31165af5b91090fa56bc89ddd286a68f84c978 source and contributes **80 PASS /0 SKIP** in shard2. Its full80 original names/statuses/durations are retained in the proof. The existing hook1176fd06 and presentation907fb16a are separately pinned. This is the original baseline; the prospective copy expectation, Models90-case PhaseA, P11 regressions and geometry afterimages were absent. No future source acceptance or Models loading-owner repair is inferred.
+
+Canonical retained records for this appendix are `ci-57885c/frontend-all-shards/aggregate-audit.json` (63,158B, blob`c2b7d7acf3842bacb0a60d8fe50c6f7af52d53fe`, SHA256`3bb0d1d6aa7e919fb2c82b59e9262fb273ade7cac4bd082018e897d2da2280a2`) and `byte-source-proof.json` (1,619,746B, blob`ba9e18e494d9c6ba238c1303bb791723b0c1f818`, SHA256`c14c5cced0a5c9d8fd065fe043bf374ed8ac896c76bc952f6fb081198f6c13c9`). The checkpoint maps all20 original payload files, these derived records and the eight recoverable members. Original raw/response/ZIP/retention files remain unchanged in `frontend1` through `frontend4`.
+
+This closes only the recorded original safe frontend scope on578. It does not qualify whole Host workflow success, Desktop business actions, Team/privacy/static gates, native or vendor execution, packaged acceptance, P08/P09, release/merge, the older9e General command, or any later combined source. No local project, compiler, test, install, native, source/ref or CI action was performed by this audit.

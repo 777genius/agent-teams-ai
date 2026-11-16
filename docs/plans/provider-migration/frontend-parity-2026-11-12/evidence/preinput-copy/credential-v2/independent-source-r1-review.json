@@ -1,0 +1,363 @@
+{
+  "kind": "INDEPENDENT_PROSPECTIVE_TWO_FILE_SOURCE_R1_REVIEW",
+  "reviewer": "native_failures",
+  "reviewedAtUTC": "2026-11-16T08:10:05.669055+00:00",
+  "verdict": "APPROVE exact v2 source/prose only; no actual resulting-source execution or publication qualification",
+  "sourceHead": "c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+  "equivalentOriginalSource": "57885c055a18b27c180c304762643eac632513ad",
+  "R1": {
+    "path": "credential-failure-copy-r1-v2/R1-appendix.md",
+    "bytes": 8590,
+    "lines": 49,
+    "blob": "0c2c2866685ef1270fe4052dbdb89be00ae6d3a5",
+    "sha256": "d68d1ca4269b68d5e9012a9312306a12b560ff6e9c456267123b9c4357f93647"
+  },
+  "metadata": {
+    "path": "credential-failure-copy-r1-v2/candidate-metadata.json",
+    "bytes": 3315,
+    "lines": 85,
+    "blob": "1771f114d49cfffbe29661529010d5b76c861f68",
+    "sha256": "bddd36356d925def05966c97eaac5fdcaf1f1ceabc7f633fcdc31d85edf04de1"
+  },
+  "patch": {
+    "path": "credential-failure-copy-r1-v2/candidate.patch",
+    "bytes": 2277,
+    "lines": 33,
+    "blob": "99a267cc38ccb0fa944681a74eea5049f0b48fc2",
+    "sha256": "5ca43aedecbe843d3179cb87d9e7986411c699f0b839888f59f27b0dcba8027b"
+  },
+  "venue": {
+    "path": "credential-failure-copy-r1-v2/source-and-venue-review.json",
+    "bytes": 10159,
+    "lines": 237,
+    "blob": "055939127cca2b07091aa9a1d8fd28fec3ff7ba4",
+    "sha256": "98a948fa261ce682a5da1894bccaab6c0ee9026e8fb77aae95404da8b6d46fed"
+  },
+  "currentPreimageRebind": {
+    "path": "credential-failure-copy-r1-v2/current-preimage-rebind.json",
+    "bytes": 1763,
+    "lines": 38,
+    "blob": "2beba3f76edf6243aed5b9c908cfb32f2283e494",
+    "sha256": "a1e1ceb845bbbb8735066c5628a7b0e656fa9dd6ba55dae484915061c746a1b6"
+  },
+  "completeCandidates": [
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "fullPreimage": {
+        "bytes": 6481,
+        "lines": 161,
+        "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+        "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+      },
+      "fullCandidate": {
+        "bytes": 6382,
+        "lines": 161,
+        "blob": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+        "sha256": "47c561887a1ea9a499f131a073c805be07a9a17343c1115b32ec173dcdf894c9"
+      },
+      "freshCurrentAnd578BytesEqual": true,
+      "onlySentenceDeletion": true,
+      "deletedOccurrences": 3,
+      "otherBytesAndLineCountExact": true
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "fullPreimage": {
+        "bytes": 180091,
+        "lines": 5678,
+        "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+      },
+      "fullCandidate": {
+        "bytes": 180058,
+        "lines": 5678,
+        "blob": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+        "sha256": "70597b6bb603515e31ec1239eb6543cc9f1fb18beb20ac20c6a357ee03f748ed"
+      },
+      "freshCurrentAnd578BytesEqual": true,
+      "onlySentenceDeletion": true,
+      "deletedOccurrences": 1,
+      "otherBytesAndLineCountExact": true
+    }
+  ],
+  "freshSourceInputs": [
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "bytes": 6481,
+      "lines": 161,
+      "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+      "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0",
+      "same578Bytes": true
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/RuntimeProviderConnectErrorPresentation.test.ts",
+      "bytes": 720,
+      "lines": 15,
+      "blob": "fa761c43af6d414b0f2be0338869891dc059f640",
+      "sha256": "7591962fa6f0b58294543c674ab2fd6a590b406159a9cb8ed7b8b7e8f6be9440",
+      "same578Bytes": true
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 180091,
+      "lines": 5678,
+      "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+      "same578Bytes": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient.ts",
+      "bytes": 23900,
+      "lines": 580,
+      "blob": "6849549eacb871ea1342a37f4cecd27ed7795c32",
+      "sha256": "fe9b1bdc4e4dfb4eba417e1bb4a3b29987cbd1ccfdbf9766582e2d49a7a53568",
+      "same578Bytes": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/adapters/output/CapturedProviderCredentials.ts",
+      "bytes": 4619,
+      "lines": 85,
+      "blob": "26c843202a7e3ec5a45491857f2dc51948f827bf",
+      "sha256": "bb7f13088bfc888f60d07f9a778ca5dd16672433846aa81fd0a57d40dd8e8273",
+      "same578Bytes": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/contracts/types.ts",
+      "bytes": 23745,
+      "lines": 795,
+      "blob": "5cb5e5f3726395cf0cda9a6e6996e47f6e34de58",
+      "sha256": "e873d838b26f31adc115bf8b4220a48a3f14f131262d001cc8e098ee4a42c31a",
+      "same578Bytes": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2CredentialOperation.ts",
+      "bytes": 5840,
+      "lines": 103,
+      "blob": "0b7b2bbf7c0538b965551c795a776ec6ed92c1e6",
+      "sha256": "9de31be2a9cd399ab644c2d16649ec0f000561dab105490dc86267a55291c067",
+      "same578Bytes": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/CredentialCommandOwner.ts",
+      "bytes": 10407,
+      "lines": 242,
+      "blob": "741ad6e143b8405358e5f5d1e1a172c761dca10d",
+      "sha256": "78dc89dbdace7a51cf3d98fc3abc530e6362e4873d37ae71ba7d7b666486238b",
+      "same578Bytes": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts",
+      "bytes": 36898,
+      "lines": 719,
+      "blob": "3e0d1ae7a3aa852fb5772821f7df1059edd7cead",
+      "sha256": "e54fda9c30ec3d53f20027d59faf81f59c75fd3ad3987593bd4cd64315a17d3a",
+      "same578Bytes": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/02-opencode-v2-credentials.md",
+      "bytes": 161938,
+      "lines": 1024,
+      "blob": "d09816d1d0bb8ff6bb1767a853b32aa6d7f69ca3",
+      "sha256": "658f942fc93a809d9eb64e3810d1b906152fbb6dcfbbeac0f537c2c4cda5bd25",
+      "same578Bytes": true
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101741,
+      "lines": 1312,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+      "same578Bytes": true
+    },
+    {
+      "path": "vitest.config.ts",
+      "bytes": 1187,
+      "lines": 34,
+      "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+      "same578Bytes": true
+    },
+    {
+      "path": "test/setup.ts",
+      "bytes": 5297,
+      "lines": 168,
+      "blob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c",
+      "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b",
+      "same578Bytes": true
+    },
+    {
+      "path": "package.json",
+      "bytes": 26839,
+      "lines": 580,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "same578Bytes": true
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "lines": 26665,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+      "same578Bytes": true
+    },
+    {
+      "path": ".node-version",
+      "bytes": 8,
+      "lines": 1,
+      "blob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5",
+      "same578Bytes": true
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 1235,
+      "lines": 40,
+      "blob": "568952f5025a88c16b0568c7279d8e85a4288b43",
+      "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a",
+      "same578Bytes": true
+    },
+    {
+      "path": "eslint.config.js",
+      "bytes": 37840,
+      "lines": 1166,
+      "blob": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+      "sha256": "d9f0cf7c33672b9304fc524bbc028e07939bcab4583bb1e7c94b99fd773eb597",
+      "same578Bytes": true
+    },
+    {
+      "path": "eslint.fast.config.js",
+      "bytes": 7268,
+      "lines": 258,
+      "blob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88",
+      "same578Bytes": true
+    },
+    {
+      "path": "eslint.feature-overrides.mts",
+      "bytes": 657,
+      "lines": 19,
+      "blob": "9c6450d54b87ce33f7d799f900226c316e367937",
+      "sha256": "a90a4b08c1d5f56021c50fe5f5ababa70c3de0732acec173624da51254dc883e",
+      "same578Bytes": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "bytes": 52632,
+      "lines": 800,
+      "blob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+      "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a",
+      "same578Bytes": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "bytes": 20996,
+      "lines": 323,
+      "blob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+      "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b",
+      "same578Bytes": true
+    }
+  ],
+  "fullNonDocsTreeEquality": {
+    "count": 8798,
+    "allPathsModesTypesBlobsEqual": true,
+    "heads": [
+      "57885c055a18b27c180c304762643eac632513ad",
+      "c76371db7b1be4bd2381607b1a8bab71ae2a43fc"
+    ]
+  },
+  "unchangedFormatterTest": {
+    "path": "test/renderer/features/runtime-provider-management/RuntimeProviderConnectErrorPresentation.test.ts",
+    "bytes": 720,
+    "lines": 15,
+    "blob": "fa761c43af6d414b0f2be0338869891dc059f640",
+    "sha256": "7591962fa6f0b58294543c674ab2fd6a590b406159a9cb8ed7b8b7e8f6be9440"
+  },
+  "semanticAssessment": [
+    {
+      "finding": "Concrete source-level contradictory storage claim established",
+      "basis": "CapturedProviderCredentials:80-81 maps qualified held verification-rejected to CapturedCredentialVerificationRejected. Main6849549e:216-219 truthfully returns that the key was saved; unchanged hook1176fd06:1294-1297 formats that exact error. Generic auth-failed formatter previously prepended the opposite storage assertion."
+    },
+    {
+      "finding": "Removal does not replace uncertainty with another storage promise",
+      "basis": "Only33-byte sentence removed from3existingstrings. Invalid-key/policy/code classification does not establish persistence. Preserves exact predicates, branch order, original Main diagnostic interpolation, existing V1 shared-credential conflict, cancellation and fallback."
+    },
+    {
+      "finding": "Storage and authority behavior is untouched",
+      "basis": "Host0b7b2bbf publishes before native model verification. Publication failure alone has its existing owned rollback; qualified model rejection remains available to the existing guarded replacement flow. Owner741ad6e/Coordinator3e0d1ae/Plan02d098 R4/R7 unchanged. No store/API/DTO/currentness/resource-fence/cleanup/timeout/retry changes."
+    },
+    {
+      "finding": "Existing hook expectation adjustment is necessary and minimal",
+      "basis": "One string at existing hook test3507; fullfile otherwise identical. Keeps original API args, failed outcome, entered-key retention and analytics checks. Existing formatter testfa761 remains untouched; no new case, matcher API or mock seam introduced."
+    }
+  ],
+  "sourceEvidenceBoundary": {
+    "priorAssessment": {
+      "path": "ci-e1d14b9/v2-management/credential-copy-source-assessment.json",
+      "bytes": 38731,
+      "lines": 358,
+      "blob": "70df42b890861fa650b6196420e9b823c0262e47",
+      "sha256": "269ff895d5cd3b4bab96b141ad98cc5b0839bcea97b43d61be6c01483ffbcf61"
+    },
+    "actualSingleImageViewed": {
+      "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/ui-v2-management-rejected-key.png",
+      "bytes": 123422,
+      "lines": 447,
+      "blob": "773cd8bd8c67865e8da8724305009b4b76854726",
+      "sha256": "fc8afb4fd125d073be89bcd3fa860cc20e7a6b7eb7f2cee839ba0b094149da12"
+    },
+    "visibleText": "test-local could not verify this credential with a real model request. The new credential was not kept.",
+    "scope": "Viewed original rejected-key image and read relevant source/plan/assertions; this is not a new independent full E1 artifact/cleanup audit. Original auth.json is not archived, so no recovered private credential-byte claim."
+  },
+  "validationPolicy": {
+    "noNewTests": true,
+    "noIntentionalREDPhase": true,
+    "v1FourNewLiteralCasesAndThirdPathUnselected": true,
+    "v1Preserved": {
+      "path": "credential-failure-copy-r1/R1-appendix.md",
+      "bytes": 12739,
+      "lines": 58,
+      "blob": "e47a185b81458517b93e9eb7ab928c6fbb49f582",
+      "sha256": "c95602e93f7196371f472820bce00447036bb57379450ea0a90476bf25e1c0cf"
+    },
+    "originalFrontendCommandLiteral": "          pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" \\\n            --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' \\\n            --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" \\\n            2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\"",
+    "allFourOriginalShardsRequired": true,
+    "runtime": "Node26.12.1 frontend; capturedHost24.21.0 separate",
+    "timeout": 15000,
+    "happyDom": true,
+    "originalTypeLintCommands": [
+      "pnpm typecheck:workspace",
+      "node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json",
+      "pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main",
+      "pnpm lint:ci:files src/renderer --cache-location .eslintcache-renderer",
+      "pnpm lint:ci:files src/features --cache-location .eslintcache-features",
+      "pnpm lint:mcp"
+    ],
+    "sourceCap": {
+      "productionLines": 161,
+      "cap": 800,
+      "existingTestExclusionsUnchanged": true
+    },
+    "observedUnmodifiedBaseline": {
+      "json": {
+        "path": "ci-57885c/frontend2/extracted/host-offline-tests-2.json",
+        "bytes": 2388627,
+        "lines": 0,
+        "blob": "9cbbe3f0e1977d960f1ce0887ea65f75951f259e",
+        "sha256": "7ed49fe04e4d6a9be73fafd8ba7453987a0b5e979b2f9863c4401dace2d1aa1f"
+      },
+      "hookCaseCount": 80,
+      "allPassed": true,
+      "candidateExecution": false
+    },
+    "execution": "Only original CI after plan publication/readback and fresh root source selection; no local project/tests/compiler/lint/install/bootstrap/manualCI or replay authorized."
+  },
+  "compositionLimits": [
+    "Two selected fullcandidates only; geometry remains outside this R1. Any combined source requires its own exact composition/currentness review.",
+    "Both selected paths and unchangedformattertest are absent existing1757/1769 artifact source census. No roster expansion or native capturedcompiledbody qualification; freshGit/frontend/compiler/typedfeatureslint is the declared proof route.",
+    "Dormant Models A370e fullhooktest must be recomposed retaining67e5 copy expectation and all separately selected Models assertions. No Models source/RED/GREEN selected by this low-impactcopy correction.",
+    "Existing usefulE2 originalcohort preservation remains mandatory before a later primary advance. No historical spinner/navigation/native failure cause or repair inferred.",
+    "No project/source/ref/CI actions performed by this independent reviewer."
+  ],
+  "requiredCorrections": []
+}

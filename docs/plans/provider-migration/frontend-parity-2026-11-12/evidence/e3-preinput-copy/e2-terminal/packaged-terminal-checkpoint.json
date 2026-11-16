@@ -1,0 +1,48 @@
+{
+  "kind": "E2 original Packaged terminal stop checkpoint",
+  "observedAtUTC": "2026-11-16T08:35:19Z",
+  "sourceHead": "57885c055a18b27c180c304762643eac632513ad",
+  "runId": 43823212580,
+  "rawResponse": {
+    "path": "ci-57885c/packaged-jobs-0835.json",
+    "bytes": 1198,
+    "blob": "eac7fba8479eebad3dd45534f3952b765e8b2ce3",
+    "sha256": "ec61f0a2a7b4162fe7d72f9c17a8644d3cfeac1942d4ccec05b876f2b3999f6d"
+  },
+  "jobs": [
+    {
+      "id": 133150850492,
+      "name": "classify packaged smoke",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "run_id": 43823212580,
+      "logs_url": null,
+      "steps": null
+    },
+    {
+      "id": 133178916405,
+      "name": "${{ (((github.event.action == 'edited') && !github.event.changes.base && ((github.event.changes.title || github.event.changes.body)) && 'metadata packaged smoke') || 'packaged smoke') }} (${{ matrix.platform }})",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "run_id": 43823212580,
+      "logs_url": null,
+      "steps": null
+    },
+    {
+      "id": 133178917655,
+      "name": "github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'metadata packaged gate' || 'packaged full gate'",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "run_id": 43823212580,
+      "logs_url": null,
+      "steps": null
+    }
+  ],
+  "terminalStopped": true,
+  "originalLogFetchesForNullStepJobs": 0,
+  "limits": [
+    "All three returned jobs are terminal cancelled with steps null. No packaged scenario/build/cleanup outcome can be credited.",
+    "No cancellation cause is inferred; no CI rerun/cancel/dispatch was performed.",
+    "Host and Creation were already terminal and stopped; this closes all owned E2 polling."
+  ]
+}

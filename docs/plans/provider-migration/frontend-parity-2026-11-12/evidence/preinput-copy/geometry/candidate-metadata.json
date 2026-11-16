@@ -1,0 +1,110 @@
+{
+  "kind": "prospective-two-existing-file-preinput-geometry-amendment",
+  "author": "/root/migration_scope",
+  "status": "SCRATCH_ONLY_UNAPPLIED_UNEXECUTED_PENDING_INDEPENDENT_R2_AND_ROOT_SELECTION",
+  "sourceHead": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+  "sourceTree": "763d943372c79c8d82ad2634b04861da81308fee",
+  "sourceParents": [
+    "3d751d52bedf983cbac223ddf25ce08ca7af27b8"
+  ],
+  "sourceLeafCount": 11150,
+  "sourceDirectoryCountIncludingRoot": 1683,
+  "paths": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "preimage": {
+        "file": "preimage/scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 27188,
+        "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a",
+        "lines": 489
+      },
+      "candidate": {
+        "file": "candidate/scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 28094,
+        "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+        "sha256": "67a1e7413eff11ddc087f35a64cd3c8b242c061988b2fbd661497a9f6b5dfd11",
+        "lines": 506
+      },
+      "addedLines": 30,
+      "removedLines": 13,
+      "strictPatchForwardExact": true,
+      "strictPatchReverseExact": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "preimage": {
+        "file": "preimage/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "bytes": 111672,
+        "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+        "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445",
+        "lines": 1896
+      },
+      "candidate": {
+        "file": "candidate/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "bytes": 118885,
+        "blob": "8694096d0aafcd7130589d97f12ad5a4fd65a616",
+        "sha256": "9411c8171255880a187382e5ceef1c44e74172fe4c9eb6c357b3654388cceb70",
+        "lines": 2010
+      },
+      "addedLines": 118,
+      "removedLines": 4,
+      "strictPatchForwardExact": true,
+      "strictPatchReverseExact": true
+    }
+  ],
+  "exactChangedPaths": [
+    "scripts/legacy-agent-host/desktop-ui-controls.ts",
+    "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+  ],
+  "totalAddedLines": 148,
+  "totalRemovedLines": 17,
+  "candidatePatch": {
+    "file": "candidate.patch",
+    "bytes": 12271,
+    "blob": "d58db63706739f3d78dde1ec175881dce0f800b1",
+    "sha256": "ad63f15b0fd0f61a8fc3117e906a1162f4203472e57e4a62b5662844c86fb545"
+  },
+  "prospectiveSourceOnlyTree": "5d1184fb771af1e86eb8db2cb11c883ae83e700d",
+  "prospectiveLeafCount": 11150,
+  "unchangedLeafCount": 11148,
+  "prospectiveDirectoryCountIncludingRoot": 1683,
+  "merkleComputation": "Pure byte/tree hashing over git ls-tree inputs; no Git object/ref/worktree writes.",
+  "unchangedHelperPrefix": {
+    "bytes": 18673,
+    "blob": "9c573c0f1857bf9e2bdc7e1b91e028f424e3e346",
+    "sha256": "1b23cc7b15a8602855c18ba1184b11b413e58ecd1db00f2936299341dd6e0f98"
+  },
+  "unchangedHelperSuffix": {
+    "bytes": 7561,
+    "blob": "37c9363c712ab4ff70068607928c3f9ef4901d65",
+    "sha256": "4732514a05015e4004c5f7576fc361af0937fc0a71472729577250010b4de6cb"
+  },
+  "oldWholeClickExpression": {
+    "bytes": 6234,
+    "blob": "f831acb1570515d7f56419c604287198a33e1b5c",
+    "sha256": "255f42a70b7595f09d7a630ccacda9830bfd88c40fab16daad5dd6b56c5912de"
+  },
+  "wholeFileInverseProof": true,
+  "patchExactlyRegenerated": true,
+  "workflowConfigsRuntimeProductAndOtherFilesUnchanged": true,
+  "supportingFiles": [
+    {
+      "path": "click-preinput-stabilization-r1/source-and-venue-pins.json",
+      "bytes": 16833,
+      "blob": "6c9a88c8cd1496b32130b3df681db7c8f6e4291f",
+      "sha256": "7eddd4b03e6df71579425ad38812b927ffbbc18d1996533de5d053c6b8e0f0dd"
+    },
+    {
+      "path": "click-preinput-stabilization-r1/source-evidence-analysis.json",
+      "bytes": 22170,
+      "blob": "b9f0ed4ae75501f21878f40fd6ee319c5be7b2e2",
+      "sha256": "c88e32622dce4d4a4b018c772ed334db2c226bbb56a8d665e4ece6cf7816942f"
+    }
+  ],
+  "noRuntimeQualification": true,
+  "noLocalExecutionAuthorization": true,
+  "rootFreshSourceAndPublicationSelectionRequired": true
+}

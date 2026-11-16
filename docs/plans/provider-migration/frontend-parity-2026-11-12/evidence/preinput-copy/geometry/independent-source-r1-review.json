@@ -1,0 +1,119 @@
+{
+  "kind": "Independent exact source/R1 review of prospective bounded pre-input stabilization",
+  "reviewer": "/root/native_failures",
+  "author": "/root/migration_scope",
+  "createdAt": "2026-11-16T07:44:39.764578+00:00",
+  "decision": "APPROVE_EXACT_PROSPECTIVE_TWO_FILE_AMENDMENT_FOR_ROOT_SELECTION; UNAPPLIED_AND_UNEXECUTED",
+  "findings": [],
+  "exactR1": {
+    "path": "click-preinput-stabilization-r1/R1-appendix.md",
+    "bytes": 20857,
+    "gitBlob": "9bb3777ca076dea9dd60f76d9759dc1815e0dde0",
+    "sha256": "7d07956cc3f0d6929c2d3fd5907d121254c073294dfcae4573e37763b4b4510d"
+  },
+  "byteProof": {
+    "path": "click-preinput-stabilization-r1/independent-source-byte-proof.json",
+    "bytes": 10267,
+    "gitBlob": "ac99bae999088f5d06d172e3e361a5651e50197e",
+    "sha256": "053381860c85c246ce950ad09c382d23e0d1d2f8e01ec09cfc2eddd39c241de8"
+  },
+  "sourceBoundary": {
+    "examinedProposalBase": "00d7497b3a620fe360a3fedd6d9b955b7fb9ae2d",
+    "laterReadOnlyComparison": "57885c055a18b27c180c304762643eac632513ad",
+    "bothPreimagesAndAll21PinsEqualOnE1BaseAnd578": true,
+    "newHeadSelectionOrComposition": false,
+    "historicalProjectedTree": "5d1184fb771af1e86eb8db2cb11c883ae83e700d",
+    "exactLeaves": {
+      "scripts/legacy-agent-host/desktop-ui-controls.ts": {
+        "preimage": {
+          "bytes": 27188,
+          "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+          "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a",
+          "lines": 489
+        },
+        "candidate": {
+          "bytes": 28094,
+          "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+          "sha256": "67a1e7413eff11ddc087f35a64cd3c8b242c061988b2fbd661497a9f6b5dfd11",
+          "lines": 506
+        },
+        "exactPreimageOnAllThreeHeads": true
+      },
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts": {
+        "preimage": {
+          "bytes": 111672,
+          "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+          "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445",
+          "lines": 1896
+        },
+        "candidate": {
+          "bytes": 118885,
+          "blob": "8694096d0aafcd7130589d97f12ad5a4fd65a616",
+          "sha256": "9411c8171255880a187382e5ceef1c44e74172fe4c9eb6c357b3654388cceb70",
+          "lines": 2010
+        },
+        "exactPreimageOnAllThreeHeads": true
+      }
+    },
+    "sourceRefOrCIWrite": false
+  },
+  "scopeAndPolicy": [
+    "The old final coordinate-mismatch refusal is intentionally amended. The historical old moved negative is retained in its preimage; the candidate replaces it with a same-tag finite-coordinate continuation and retains unavailable, retagged, nonnumeric and nonfinite final refusals. This is an explicit change of TEST acceptance, not a silently preserved oracle.",
+    "Only the existing clickExpression stability/final-read block changes. Entire helper prefix/suffix are exact; target construction, passive metadata, both initial readPoint calls, one hover, final pre-press ownership, attempted-click record and one press/release remain. hoverExpression, Sidebar and separate Review Taskcard stability code remain exact.",
+    "The new Number.isFinite settled-coordinate assertion is an explicit strengthening. It does not prevent the unchanged earlier hover at a malformed point; the R1 and finite case say so. No coordinate tolerance, string coercion, alternate selector, business input, new ownership authority or retry after physical input is added."
+  ],
+  "independentControlFlowReasoning": [
+    {
+      "boundary": "shared observation counter",
+      "judgment": "After the two original initial logical reads, both each outer stability read and each direct final read charge one counter. Counter is never reset. while observations<15 reserves the final slot. A continuation occurs only with observations+3<=16; stableSamples resets to0. The retained final point is only a seed: two NEW matching stability reads are needed before another final read. Thus S+F<=16, S<=15, S>=2F and F<=5; outer100ms sleeps=S<=15. Continuous motion uses2+15=17 reads; at most18 logical initial/stability/final invocations otherwise."
+    },
+    {
+      "boundary": "continuation predicate",
+      "judgment": "Only final same-tag finite x/y with an actual coordinate difference and three remaining slots continues. Null/nonobject/array final values refuse in record; final unavailable refuses before continuation; changed tag, nonnumeric/nonfinite tuple and insufficient allowance cannot continue. Original exact x/y/tag deep equality remains required immediately before confirmed success."
+    },
+    {
+      "boundary": "fresh owner and full lookup",
+      "judgment": "Every original readPoint executes the complete expression through unchanged waitRead and its fresh owner callback. Every direct final read is immediately preceded by fresh assertOwnedRenderer. Pending final equality still reaches the original separate pre-press owner check. An owner refusal propagates; no prior owner result is cached or accepted across mutable observations."
+    },
+    {
+      "boundary": "input and errors",
+      "judgment": "One bringToFront and one original hover remain. Continuation cannot return to the initial hover. Exactly one attempted-click row is emitted only after confirmed equality and fresh pre-press ownership, then the existing sequential mousePressed and mouseReleased. A press or release rejection preserves that exact error and does not reenter observation or repeat input. Direct final CDP errors propagate even if their text resembles a context-destroyed retryable error; no waitRead wrapper is introduced at that boundary."
+    },
+    {
+      "boundary": "timing and dynamic work",
+      "judgment": "The16 bound is on logical invocations, not raw CDP calls or a new1.5s absolute deadline. Existing readPoint waitRead can perform repeated owner/evaluate/100ms operations within its unchanged30s admission check; it has no newly added strict post-read cutoff. Direct CDP transport timeout and job/lane limits are unchanged. Up to5 direct final owner/read pairs replace the former at-most1, so dynamic ownership observations and costs are expressly amended, not claimed identical."
+    },
+    {
+      "boundary": "callback cost and non-atomicity",
+      "judgment": "Fresh immutable caller chain binds the same assertOwnedCdpListener. Its normal success path has two ps group reads, one scoped lsof and Linux birth reads, with existing3s/10s/1MiB limits; failure-only observations unchanged. With immediately ready reads, owner invocations can reach20 including pre-hover/pre-press; internal waitRead retries make20 non-global. There is still a non-atomic gap between final DOM observation, synchronous ownership and input. No future layout freeze or guaranteed historical convergence is claimed."
+    }
+  ],
+  "finiteCasesSourceReview": {
+    "actualImplementation": "Existing test imports createDesktopUiControls and calls the actual helper with finite CDP/owner fakes; no copied algorithm, source-text execution seam or fixture-only replacement loop. All old bytes outside the explicitly amended loop, added continuous-motion assertion and appended suffix are preserved by strict whole-file inverse.",
+    "sameTagShift": "Actual original owner callback changes point after four observations. Static walk gives original four points then shifted four, ownership indices[0,1,1,2,3,4,5,6,7,8], eight reads, one bringToFront, initial hover100/100, one press/release100/200. Every evaluated expression is exact and every read has the immediately preceding owner trace.",
+    "lastSharedSlot": "Literal18-read fixture consumes S=11 and F=5 after two initial reads. Four final mismatches exhaust the remaining allowance in steps; the fifth final at total18 either agrees or refuses. The no-nineteenth-read guard and zero/one attempted-click assertions observe actual boundary behavior, not the counter implementation itself.",
+    "nonFiniteSettled": "Actual helper receives Infinity during original initial/stability reads, retains its one old hover, and must refuse before the fifth/final read or press. This is a source-level test of the newly authorized stricter guard.",
+    "errorsAfterContinuation": "Four cases retain exact owner/final-CDP/press/release Error objects. Owner stops at7 reads; final-CDP/press/release use8. Context-destroyed-shaped final error must propagate directly. Press/release dispatch lists prove no replay after uncertainty.",
+    "retainedNegatives": "Existing unavailable final case and pending-final owner/cutoff cases remain, including exact error identity, five-read boundary and no attempted input. Added final retagged/non-numeric/non-finite cases refuse after original5 reads. Continuous movement retains original refusal and now asserts17 reads.",
+    "typing": "Node assert calls use its existing supported message/filter forms. Added TypeScript values stay within existing UiCdpPort Record/unknown contracts; installed declared Number.isFinite(number:unknown):boolean was read and hashed without compiler invocation. This static review is not an actual typecheck.",
+    "count": "Eight appended cases plus old2-to-new4 loop yields net10 by static source arithmetic only. No total suite outcome, actualRED, actualGREEN or historical successful replay is invented.",
+    "staging": "R1 deliberately chooses no separate test-only RED source stage for this explicit acceptance amendment. Existing historical refusals remain actual; finite expected results await original resulting-source CI."
+  },
+  "venueAndCoverage": {
+    "fullExistingCommand": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "originalCiOnly": "Full original8-file Node command runs the whole changed test before Desktop business actions on the resulting source. The Team lane retains its10-file contracts, workspace scripts types, dedicated backend project and typed scopes. No local command, new job, manual dispatch, rerun, fixture launch, real vendor or fallback is authorized.",
+    "types": "Original workspace scripts project includes both changed files; static source identity alone is not an execution result.",
+    "fastLint": "Original93 fast-lint operands contain the test but omit desktop-ui-controls.ts. Typed src scopes do not close that gap. R1 explicitly preserves that limitation without claiming helper-lint success or adding a fourth path/workflow.",
+    "sourceClosure": "Both files already occur in existing captured rosters; unchanged roster objects and all21 context/venue leaves were independently joined to E1,00d and578. No new pin or complete dependency census is claimed.",
+    "caps": "Helper506<800; test2010 remains under the existing filename exclusion. No guard command was executed and no cap exception changed."
+  },
+  "evidenceAndCompositionLimits": [
+    "O Collaboration and E1 OpenCode independent original failures support only a pre-press unequal-coordinate boundary, not animation/hydration/ownership-cost cause, unused allowance or later stability. I independently completed those historical packets separately; this candidate review does not repeat or reclassify them.",
+    "E1 Review excerpt remains a bounded author/source join rather than a new whole-lane independent audit in this report. Its other Taskcard oracle and all failed/unreached business/cleanup outcomes remain unchanged.",
+    "Original first-failure geometry and retained cleanup debt are distinct. A future helper-suite or UI success would not retroactively repair missing captured Host, process identity, P08/P09 or any other failed original cleanup.",
+    "The frozen R1 correctly reports its then-unexamined578 drift. This later reviewer now independently verified both exact preimages and all21 pins on578; that equality does not authorize applying the historical00d tree or override root fresh-history/source/ref/current-useful-cohort checks.",
+    "Dormant P11A test3c2548 uses the same95b preimage; its62-line/4264-byte suffix is absent from this candidate. Any later selection needs an exact new full-test composition and explicit source/order R1/R2. No overwrite or implicit parallel application is approved.",
+    "Canonical plan-first documentation, current byte/tree validation, independent R2, full publication readback and later root selection remain mandatory. Current source and refs were not changed by this review."
+  ],
+  "result": "No source or prose blocker found in exact9bb3777 R1,76dda75 helper and8694096 test. Approve only the bounded prospective policy amendment and its finite existing-CI verification plan; resulting-source execution remains unobserved."
+}

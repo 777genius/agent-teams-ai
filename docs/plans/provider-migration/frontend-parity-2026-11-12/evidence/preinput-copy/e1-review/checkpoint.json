@@ -1,0 +1,82 @@
+{
+  "kind": "E1 Review original failure author checkpoint",
+  "createdAtUTC": "2026-11-16T07:23:09.978974+00:00",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "runId": 43813731227,
+  "jobId": 133120928945,
+  "artifactId": 14204298663,
+  "originalOutcome": "FAIL / INCOMPLETE",
+  "payloadCount": 10,
+  "payloadBytes": 1779097,
+  "payloads": [
+    {
+      "path": "ci-e1d14b9/review/job-original-response.json",
+      "bytes": 198287,
+      "blob": "fbef5f9028e95e8b241903b0182ecd64a510891a",
+      "sha256": "f9f4f433d6a826db3a12432bdba16d9b7cae1cef4ef4580458da49f0f3832d22"
+    },
+    {
+      "path": "ci-e1d14b9/review/job.log",
+      "bytes": 188081,
+      "blob": "7cc514f1ad52cec3d686daa1b147ca558039f424",
+      "sha256": "7ebbc5901ff88148bc8e5c37edf459f74c80c5abc27a672937f2ddd331f69451"
+    },
+    {
+      "path": "ci-e1d14b9/review/artifact-14204298663.zip",
+      "bytes": 650542,
+      "blob": "cbf46f3661998a6eec4bd044d6704df96acd0339",
+      "sha256": "9e9dd46183fba4b5d56eeb85f525a94739c35e7d1c99cf257cb6e7c8dfe37803"
+    },
+    {
+      "path": "ci-e1d14b9/review/archive-retention.json",
+      "bytes": 4619,
+      "blob": "9ec1a281d541c8968759e1c02e71e7551d67bb3a",
+      "sha256": "26ae2904f8ea1e7cac0d5bad18937b652bfbcd3da516049b52c09957d7591aca"
+    },
+    {
+      "path": "ci-e1d14b9/review/source-pin-audit.json",
+      "bytes": 518454,
+      "blob": "9f90d76d728f3e9ec30ca420a66e692f7757b358",
+      "sha256": "76b64b9bcb7cacf375552804b71e76a81860dfbc51a3bedbad68dc1f29e4fc32"
+    },
+    {
+      "path": "ci-e1d14b9/review/visual-review.json",
+      "bytes": 907,
+      "blob": "11132e79a4a3cb8f0aca0ffb1d721b8814b001c0",
+      "sha256": "b16f3d48177b7897b3373a016a70a44213533fdf81d68a2ba6a8b5b6ff03eeaf"
+    },
+    {
+      "path": "ci-e1d14b9/official-host-artifacts-0713.json",
+      "bytes": 5755,
+      "blob": "84c5bcde7125687403ce0e8712e41fe691710b0e",
+      "sha256": "b5646d12ff61199802615d79030f462625b4fe630b1a31eff48d9e9ae094ea3e"
+    },
+    {
+      "path": "ci-e1d14b9/owned-jobs-0712.json",
+      "bytes": 62929,
+      "blob": "a7baa556f7b0b374caa97bf60e0ac7dd9fccc19f",
+      "sha256": "e44e8dd5d19ae38dfaafe2049e064a2770984279e0034efb0c917893cbcd4c1b"
+    },
+    {
+      "path": "ci-e1d14b9/review/audit.json",
+      "bytes": 144547,
+      "blob": "c773fe28d469a1e6763b31f528c5b4435dd0538f",
+      "sha256": "9341e9ec98445db83733494a4a9f3f1b0ccbc6e0d3b26c49d0338ec5aeeb2b68"
+    },
+    {
+      "path": "ci-e1d14b9/review/Plan29-appendix.md",
+      "bytes": 4976,
+      "blob": "a992766d8aa085bae1a5462b57cc747b1462bc59",
+      "sha256": "b632da17c642160588ca7dd7eb99e189096d6e602fa0e611f58b9a06c357adc7"
+    }
+  ],
+  "archiveMembers": 14,
+  "pngCount": 1,
+  "actuallyViewedPngs": 1,
+  "selectedSourceCount": 1757,
+  "selectedSourceBytes": 20343408,
+  "overallCleanupQualified": false,
+  "nativeOrReleaseQualified": false,
+  "independentReview": "pending",
+  "originalBytesFrozen": true
+}

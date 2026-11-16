@@ -1,0 +1,3452 @@
+{
+  "kind": "E1 original native V2 Management author audit",
+  "reviewedAtUTC": "2026-11-16T07:43:30.369078+00:00",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "runId": 43813731227,
+  "jobId": 133120928883,
+  "artifactId": 14205700298,
+  "outcome": "PASS within original native V2 finite Settings scope",
+  "job": {
+    "id": 133120928883,
+    "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43813731227,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Verify original checkout and runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Prepare private Linux display",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Install frozen workspace and Electron",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build existing Desktop prerequisites and verify admission",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Verify original Runtime and Team conversation contracts",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 9
+      },
+      {
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 10
+      },
+      {
+        "name": "Capture package-manager and Host inputs without vendor executables",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Capture original controlled Linux process input without a provider",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Exercise ordinary Team controls and renderer reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Exercise ordinary Taskboard controls and persistence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Exercise original Skills and cross-Team controls",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15
+      },
+      {
+        "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Exercise original Review after a cold Host and app restart",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Exercise saved next-launch selection while the original Team remains live",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 24
+      },
+      {
+        "name": "Exercise stock Codex Update while the original Team retains its captured source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 25
+      },
+      {
+        "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 26
+      },
+      {
+        "name": "Prepare exact OpenCode V2 Bun and engine graph",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 27
+      },
+      {
+        "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 28
+      },
+      {
+        "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 29
+      },
+      {
+        "name": "Verify exact source, original screenshots, receipts and cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 30
+      },
+      {
+        "name": "Preserve original Desktop evidence, including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 60
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 61
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 62
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 63
+      }
+    ]
+  },
+  "artifact": {
+    "id": 14205700298,
+    "name": "host-emulated-linux-x64-e1d14b9cd0fa1d7896b58e513f9040639e9e4940-opencode-v2-management",
+    "size_in_bytes": 1011280,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14205700298",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14205700298/zip",
+    "expired": false,
+    "created_at": "2026-11-16T07:19:09Z",
+    "expires_at": "2026-11-30T07:19:04Z",
+    "updated_at": "2026-11-16T07:19:09Z",
+    "digest": "sha256:fc92eb2535b413ccf4d1d126045879b57048fee42aad16e8099c58e2a99d0471",
+    "workflow_run": {
+      "id": 43813731227,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940"
+    }
+  },
+  "rawLog": {
+    "path": "ci-e1d14b9/v2-management/job.log",
+    "bytes": 110305,
+    "blob": "2b52eb7e41f07ac23149c0d9464e12fc2568c553",
+    "sha256": "5d5d62b99e73bcd2b97d937e9d62bdfcba291a00561f990c00eebca95240b156"
+  },
+  "rawResponse": {
+    "path": "ci-e1d14b9/v2-management/job-original-response.json",
+    "bytes": 112803,
+    "blob": "4ae4b4ac508ea84129e0d809bc25a2db327ede3c",
+    "sha256": "5c4c94d650e55a9bd9ab76de03dc48fea5aeb4f7a4e42d272ea53dd05fd645ae"
+  },
+  "rawMcpContentExact": true,
+  "wholeTee": {
+    "path": "ci-e1d14b9/v2-management/extracted/host-emulated-opencode-v2-management-ui.log",
+    "bytes": 260,
+    "blob": "f975c0027fc8fb629a26e3866fef3866575448e0",
+    "sha256": "9b39e43ca9150258114ddd8fc4c971ababf2f6561d148980d98e96ddd2246fec"
+  },
+  "wholeTeeTimestampOnlyJoin": true,
+  "officialArtifactApi": {
+    "path": "ci-e1d14b9/official-host-artifacts-0724.json",
+    "bytes": 6703,
+    "blob": "5e09ac757d3d5bd7c87090455c76f1fa917641e0",
+    "sha256": "ede0890fd0f959530b35753235420b59cb9d8a0b47c6947a2c85f037107f40b9"
+  },
+  "terminalApi": {
+    "path": "ci-e1d14b9/owned-jobs-0724.json",
+    "bytes": 64602,
+    "blob": "b342c62d6806d2ec685da5b6cc08ed6910829552",
+    "sha256": "a4ff073cfe3cfb0c02f45af0a10480ebfc8b2220674269280f15f47ccc8c86f5"
+  },
+  "archive": {
+    "artifactId": 14205700298,
+    "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "archive": {
+      "bytes": 1011280,
+      "blob": "04e1609fa83a12c3d90efa464f56ff3b1a737f6a",
+      "sha256": "fc92eb2535b413ccf4d1d126045879b57048fee42aad16e8099c58e2a99d0471"
+    },
+    "memberCount": 33,
+    "pngCount": 5,
+    "safePaths": true,
+    "crcMatched": true,
+    "members": [
+      {
+        "path": "TEST-desktop-backend-7W0EkD/desktop-backend-app.log",
+        "bytes": 17085,
+        "blob": "e318664d23b551f9c165a3c77c91fe8d50092117",
+        "sha256": "d022c53990274fbfe5f3d5d488c287ffedf3b577e4c13231906e9751bdf6a6e3",
+        "crc32": "af626f4b"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/desktop-descriptor.json",
+        "bytes": 3319,
+        "blob": "8ad72ca70d53e261c78ce8a83d266fdb3f856648",
+        "sha256": "e799e2394f2121976f9ebb0de941d4e7af0580c3d4160669dac6468edef76aa8",
+        "crc32": "c5ec0764"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/desktop-backend-receipt.json",
+        "bytes": 728456,
+        "blob": "dfe564e7f29bc249a1948dbe086413f1b5f9002e",
+        "sha256": "2a7b9d0b29fb67bf6e235b0822b1adf8f7f6ec6f6a8daff987954d9cc6afe88f",
+        "crc32": "e9028c62"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/host-profile.json",
+        "bytes": 5011,
+        "blob": "ffac7dca3b11fbf6df193c0ccfa21a34415232e9",
+        "sha256": "c6b2e4f42c7d359b44e8732d7bc71b2154842b5b0ace1655a191c93773985433",
+        "crc32": "508b1ba8"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/0279f3e060b9637f36e6a805b37f5d0ac7451ddd3cfaba549f42b04a6a65752b.json",
+        "bytes": 804,
+        "blob": "80ac4c5ae5969541d2e4737a81bb058796c6bc8c",
+        "sha256": "53996026453c6e63a5af9c9dad448cb867806bd4fd62388944abf971fb5e1061",
+        "crc32": "fb803c3a"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/07a5ab4682a064ca7da51c2c4f0b835f222d0dfc931dc3afe07809063b5f9577.json",
+        "bytes": 1345,
+        "blob": "5f28862bb22b847f42c279c65e40244acb8f6731",
+        "sha256": "6e591ac2a38911b1e25a6bea72a2d7f48b16f6cbfa36f7767c506009180c273f",
+        "crc32": "80a3ca34"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/37f3b8b463f16238772a6bcdf166801c6c9e83ed2903a672c6ab0f70687d6d10.json",
+        "bytes": 2811,
+        "blob": "4bd0348b2fb10533df61269700f7c59475987448",
+        "sha256": "9c0028c63ee31e6130666875fd177206e1e3fe25baab6ce67770b1261feb3659",
+        "crc32": "306cf29b"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/557f2d94011370b1a284e4118f1d416f4fed9ba83408777855877a95161f1952.json",
+        "bytes": 1370,
+        "blob": "6c9752d0c9e24737c3d308884e839a9aff68b19f",
+        "sha256": "70d457310d9214b133226ee4f6a7628bacbc0817de07ea746280020d30f49d15",
+        "crc32": "530965ef"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/67e7374544b88e1ab2c850631ddf9c19ac6cb932e492579a664496ba9bf8f5bc.json",
+        "bytes": 3267,
+        "blob": "6388b7173a8032d80513981327f6918817875844",
+        "sha256": "6a440eea77c97dd3dc5f20453d94e5e4c0160894ea11ef183e4b7469802fb9ef",
+        "crc32": "e86c670e"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/a37f7ec902321bf036606dd54ab4c8ea817da20b70eaed4aee9523bf307ad8eb.json",
+        "bytes": 3245,
+        "blob": "41539b628466d9db0fe58e382b403c7abaa03303",
+        "sha256": "6ea4e6b2ba18a70fc8e4cb827889308511eda88db2f6dd1e052b677674a10445",
+        "crc32": "0b8bcab8"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/bc8efebfb10b68abf60fc0047553ab2f79aec4fac7e38d9d1dea756c114528c8.json",
+        "bytes": 812,
+        "blob": "8a1b9b079c7871766459864eac1477c57084bb71",
+        "sha256": "af73d04245d070102367263e6b518aac27a1a436ad27f52b724a88829cf8d619",
+        "crc32": "f6e91c7f"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/beb38a0943257cf16ba5a766d24a92c3c25b5157462d9f172a2cf5ea9a037223.json",
+        "bytes": 2832,
+        "blob": "cf9d90ec08fa1650a085d4a0045b34d4ed839092",
+        "sha256": "f35af2ac477def5801c10a95d5d3a812433defb0564e380e1987ba9d9211a8db",
+        "crc32": "b6a9a4c9"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/ce8e671b022a2ce95a81e407716d8d2ff681db6fad76e0903da65967e1d0ef7d.json",
+        "bytes": 3237,
+        "blob": "e0120a52fb5f902fb914eaf3a6d7928e612b2c05",
+        "sha256": "dd7e3cb1f3640e1ea1bb86e701ebe9b2991f2b2fcc5293da1472e544d4c8c204",
+        "crc32": "9986d5e5"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/da3239463590663398e6570f31bfdaef126de75bc5f10da4c835100c8556b5e2.json",
+        "bytes": 3237,
+        "blob": "9f11020a564f34ca09a43ad9a921f1bdf3798706",
+        "sha256": "6886695d06754d9d1682407b9c5e6ba190a7907057619d12556081e407ff48e3",
+        "crc32": "71566f40"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/dcac05fb20ffec2e78cfb52e551536adfcbe88c7f24ff7f49b08c9ff8e0d4ac8.json",
+        "bytes": 3216,
+        "blob": "3ad9e5ff0f52524a0ef7552f2c2e8604c3eeff05",
+        "sha256": "1c568cfd595ed309c1a6292addc97c1f9e0edc0a85b9c8006bb6145b197c1abe",
+        "crc32": "66a5da4f"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/ff801b58800a4cbc5839dd0f94df7ea9170dc3935bc2c87ce82cb0ca476954b0.json",
+        "bytes": 812,
+        "blob": "eb33abe018a80edb9289db24ba02613668d2cb90",
+        "sha256": "dc136e91885f26f35566cd551674aad1e1af32c5af587977ac320ec625606134",
+        "crc32": "3207270e"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/hoststore/runtime-sources/index.json",
+        "bytes": 15919,
+        "blob": "26b255d6ecab4d486467f7fe1974b2d4a894ba14",
+        "sha256": "a968a65f02c0845201a4f8cafa46065eed4d6eb53675dd2fc13849eee9fde964",
+        "crc32": "d73e5b66"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/preferences/global/global-runtime-preferences.json",
+        "bytes": 142,
+        "blob": "3bd11a2a59fd55c554fa387ff5748501b7ff1228",
+        "sha256": "f52c12478698fe9908405ad3b452608ed50c7dbdfa141368e780d7d6233cb3a0",
+        "crc32": "d85785dd"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/preferences/workspace/agent-teams-runtime-preferences.json",
+        "bytes": 123,
+        "blob": "b07e353fa9379023fae89764c83e503a661201f4",
+        "sha256": "81d147ed98617bf58f63ae53dbcbbd9f587d67840d75e7c9870655c0130ae7f9",
+        "crc32": "da9c7a25"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/sentinel-invocations.ndjson",
+        "bytes": 686,
+        "blob": "11f58ef0fcba4ace4844ef7b6e5163b9443facf8",
+        "sha256": "22f07046b2d6f9156c8345612fe82234eb4057899a9424d22ebad0a36d56e2fd",
+        "crc32": "e60f1fd1"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/ui-seed-receipt.json",
+        "bytes": 2037,
+        "blob": "1b6ba02b9b9f50e99240b88b09755bf208c53308",
+        "sha256": "39d963b5410dca2b287b0d990bd60ddd1324175233479f23ac54191d344deb9c",
+        "crc32": "ba966cb5"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/ui-v2-management-connected.png",
+        "bytes": 103684,
+        "blob": "b6d41cc8b26f9ac356644a7dba57ea44f2c28b0e",
+        "sha256": "0ea5b3dbaa9384dce0f683a7c0c5f5ef241dd493d7b730b9deab36a541ff14c9",
+        "crc32": "d21a0789"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/ui-v2-management-inherited.png",
+        "bytes": 73447,
+        "blob": "67bea4628402ee8a40ea90884918b79cdc2521d1",
+        "sha256": "eefcdcfcc1d1841b43d9ecb062e55bd6bc85f73c5dcd50382a98f0edd60119fd",
+        "crc32": "12b8d05d"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/ui-v2-management-project-override.png",
+        "bytes": 75402,
+        "blob": "76da20056b91199f4901730d50faf87c33c2e6d7",
+        "sha256": "637a6dc16bb24455ff910f8b77e328d025ce4acd1a651ad6c85d523f47c88051",
+        "crc32": "7661cd6e"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/ui-v2-management-reloaded.png",
+        "bytes": 74158,
+        "blob": "361bda4af17db6ec7e71080c1f72b1faa4e9bdb8",
+        "sha256": "2251523caf811579289921741f364f38457c4eceea4c6d41515805105ff3790f",
+        "crc32": "edb8e965"
+      },
+      {
+        "path": "TEST-desktop-backend-7W0EkD/ui-v2-management-rejected-key.png",
+        "bytes": 123422,
+        "blob": "773cd8bd8c67865e8da8724305009b4b76854726",
+        "sha256": "fc8afb4fd125d073be89bcd3fa860cc20e7a6b7eb7f2cee839ba0b094149da12",
+        "crc32": "847e06ef"
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-4eYFNI/linux-child-exec/linux-child-exec",
+        "bytes": 790608,
+        "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+        "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+        "crc32": "ed0ca14b"
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-4eYFNI/linux-child-exec/manifest.json",
+        "bytes": 2408,
+        "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+        "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+        "crc32": "e06f2443"
+      },
+      {
+        "path": "host-emulated-inputs.json",
+        "bytes": 1838,
+        "blob": "fb0fe4d6a175cde2c6210ea6a80dc73ba0981267",
+        "sha256": "d514ccc5ca6a9915c10f994fef16175708a46e3c791d596ed96a977401734fb1",
+        "crc32": "350bf173"
+      },
+      {
+        "path": "host-emulated-linux-child-exec-selection.json",
+        "bytes": 271,
+        "blob": "91af97ffa37cf24217cebcf8fcb62422fc7aba99",
+        "sha256": "1629057cf38218b5ff357834f3ea44c7e3de4f10f8760ded558d342e0f407531",
+        "crc32": "d31f5247"
+      },
+      {
+        "path": "host-emulated-opencode-v2-inputs.json",
+        "bytes": 783,
+        "blob": "0f5a02278148f223e2747acf10e239bf645c4e7f",
+        "sha256": "eb709ed2c9c292ae5130311960bf62a2f2765271a0ad746ae4008c634da911b6",
+        "crc32": "823d6f78"
+      },
+      {
+        "path": "host-emulated-opencode-v2-management-ui-verified.json",
+        "bytes": 402,
+        "blob": "c681a66ae87e83e1b6fc229ae777f05862d36622",
+        "sha256": "5e091bdc73469562cbfb8ad8925db80826c505e6d4a5b47e8f08d3f0068c72e5",
+        "crc32": "d35142c2"
+      },
+      {
+        "path": "host-emulated-opencode-v2-management-ui.log",
+        "bytes": 260,
+        "blob": "f975c0027fc8fb629a26e3866fef3866575448e0",
+        "sha256": "9b39e43ca9150258114ddd8fc4c971ababf2f6561d148980d98e96ddd2246fec",
+        "crc32": "4f385a3e"
+      }
+    ],
+    "scope": "Raw preservation only; semantic/source/image review pending. Signed transport URL not retained."
+  },
+  "allArchiveSafeCrcExtractedBytesRechecked": true,
+  "sourceProof": {
+    "path": "ci-e1d14b9/v2-management/source-pin-audit.json",
+    "bytes": 591465,
+    "blob": "5d82620f94595466da0291a04a1b0c2666a3c381",
+    "sha256": "008c2f611535cb43b478fbd169b7238a5e9bb36ca1950923f05d62e1f52d21ae"
+  },
+  "selectedSourceCount": 1769,
+  "selectedSourceBytes": 20479730,
+  "selectedHostSourceCount": 589,
+  "prerequisites": {
+    "commands": [
+      "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "node --test test/scripts/installDependenciesWithRetry.test.mjs"
+    ],
+    "counts": {
+      "tests": [
+        "119",
+        "7"
+      ],
+      "pass": [
+        "119",
+        "7"
+      ],
+      "fail": [
+        "0",
+        "0"
+      ],
+      "skipped": [
+        "0",
+        "0"
+      ],
+      "duration_ms": [
+        "9160.322856",
+        "210.113412"
+      ]
+    },
+    "caseRows": [
+      "✔ offline Desktop admission refuses inherited native selections before preparing a fixture (9.258461ms)",
+      "✔ TEST management admission retains only the exact direct detached Host peer without signaling (6.808459ms)",
+      "✔ Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder (11.619088ms)",
+      "✔ Linux zero-group rows remain observable without becoming owned app groups; malformed census stays an error (1.200068ms)",
+      "✔ the same original-root oracle uses each existing caller deadline after a long provider phase, without renewing reads (1.765711ms)",
+      "✔ read-only discovery survives navigation during the actual IPC read, then reads the new context (0.452131ms)",
+      "✔ unregistered initial discovery waits, but owner failures are never hidden as navigation (0.433743ms)",
+      "✔ initial discovery passes only its remaining captured budget to the IPC await (0.258029ms)",
+      "✔ exhausted initial observation never dispatches the backend IPC (0.312501ms)",
+      "✔ other discovery callers retain the default CDP budget (0.201524ms)",
+      "✔ an explicit IPC observation budget lets the same read settle after30s within60s (1.009351ms)",
+      "✔ default CDP evaluations still reject at30s without a resend (0.299391ms)",
+      "✔ macOS original Node zombie is the same unreaped harness child, never a changed live command (0.715348ms)",
+      "✔ live stat can become original defunct before the guard; only original child reap and whole-group absence settle it (1.242111ms)",
+      "✔ changed command/start, wrong child/group and initial descendants never authorize a recovery observation (0.260282ms)",
+      "✔ an already observed original natural exit still requires fresh group and captured Host absence (0.235254ms)",
+      "✔ original crash/signal and process-table failures remain debt (0.215655ms)",
+      "✔ the original deadline is not renewed after initial settlement consumed it (0.150397ms)",
+      "✔ numeric group absence without this original child exit observation expires within the remaining original budget (0.303017ms)",
+      "✔ a process-table read that crosses the original deadline cannot qualify natural exit (0.15257ms)",
+      "✔ an already reaped original child waits for actual descendant and original Host absence (0.515687ms)",
+      "✔ an orphan descendant, moved captured descendant or original Host cannot be cleared by an expired budget (0.471039ms)",
+      "✔ absent leader observation rejects wrong child, live/crashed/signaled child and invalid captured identities (0.256166ms)",
+      "✔ a reused leader PID and unavailable full process census retain debt without signaling (0.1928ms)",
+      "✔ absent leader observation never renews the original deadline or accepts a late census (0.164087ms)",
+      "✔ original peer observation accepts later-row only with its retained launch row (23.268402ms)",
+      "✔ original peer observation accepts exit only with its retained launch row (4.158036ms)",
+      "✔ original peer observation refuses reuse without admitting the census PID (4.367991ms)",
+      "✔ original peer observation refuses reparent without admitting the census PID (3.654537ms)",
+      "✔ original peer observation refuses argv without admitting the census PID (3.687807ms)",
+      "✔ original peer observation refuses duplicate without admitting the census PID (18.905252ms)",
+      "✔ original peer observation refuses missing without admitting the census PID (7.397287ms)",
+      "✔ original peer observation refuses late without admitting the census PID (3.506543ms)",
+      "✔ original peer observation accepts a valid empty journal with no current children (4.244756ms)",
+      "✔ original peer observation validates no-child-failure before returning without children (3.405511ms)",
+      "✔ original peer observation validates no-child-malformed before returning without children (2.866059ms)",
+      "✔ original peer observation validates no-child-late before returning without children (2.609532ms)",
+      "✔ empty peer census refuses no-child-provider-mismatch through the original journal oracle (3.051879ms)",
+      "✔ empty peer census refuses zero-host-failure through the original journal oracle (2.745327ms)",
+      "✔ empty peer census validates its journal with no current Host before the first Team read (3.204699ms)",
+      "✔ requested Quit lets the original child report its natural exit before the cleanup census (610.866866ms)",
+      "✔ finite Codex exact native MCP catalog exits with empty inventory without allocating a Runtime (176.18254ms)",
+      "✔ finite Codex catalog refuses changed argv, Runtime authority and nonempty selected configuration (341.522238ms)",
+      "✔ finite Codex answers the original D managed config before connecting its selected Team on thread start (388.729625ms)",
+      "✔ finite managed Codex policy refuses alternate syntax, extra servers and enabled apps before connection (239.212651ms)",
+      "✔ runtime-derived Codex ordinary model probe (default) completes through original Host/D once (151.840275ms)",
+      "✔ runtime-derived Codex ordinary model probe (low) completes through original Host/D once (126.74348ms)",
+      "✔ finite Codex standalone retains empty MCP readiness and completes only its original ephemeral thread (145.522165ms)",
+      "✔ finite Codex standalone refuses Team authority, persistent threads and unselected thread work (721.474783ms)",
+      "✔ extensions Settings peer exposes only isolated auth status through original custody (447.363536ms)",
+      "✔ saved-import Settings peer exposes only isolated auth status through original custody (449.089948ms)",
+      "✔ finite extension status uses the original Host auth command and retains its exact private namespace (108.085124ms)",
+      "✔ finite extensions run through original Host ownership, persist four commands and survive inventory reload without replay (793.494844ms)",
+      "✔ finite extension CLI refuses changed names/scopes and does not overwrite selected config (322.596075ms)",
+      "✔ saved-import finite metadata and actual original probe receipt preserve model/effort with no extra input on lookup (3238.467517ms)",
+      "✔ saved-import peer refuses a business input without producing a probe or touching Host receipts (396.930678ms)",
+      "✔ receipt summaries retain only the original nested mixed Settings owner (1.413671ms)",
+      "✔ retained c226 original rejected-key receipt joins its published seed and exact observed native probe (51.920796ms)",
+      "✔ V2 receipt binding rejects foreign revisions, scope, seed owner, engine and executable (22.793786ms)",
+      "✔ V2 publication rejects an internally rehashed foreign descriptor grant or replacement executable (4.893704ms)",
+      "✔ V2 source history accounts for every publication and the exact retained current chain (12.500075ms)",
+      "✔ original Host rejects old other-project cwd and accepts only its separate exact private-account seed (3.015985ms)",
+      "✔ archived V2 tuple isolation restores the real runner and preserves foreign-platform refusal (3.13937ms)",
+      "✔ original V2 default intent joins its selected saving row within the same receipt deadline (21.121566ms)",
+      "✔ published receipt reads survive the real controller writer before its atomic rename (68.40256ms)",
+      "✔ receipt reads reject foreign staging names, directories and symbolic links (17.397986ms)",
+      "✔ captured UI discovery waits for Main admission and actual mount while early diagnostics remain active (205.095332ms)",
+      "✔ the original remaining startup deadline rejects a pending snapshot without late discovery or a reset (500.348095ms)",
+      "✔ packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin (4.635675ms)",
+      "✔ HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted (2.318824ms)",
+      "✔ isolated shell fixture emits the actual framed environment and refuses shell effects (172.93386ms)",
+      "✔ original in-progress Task comment prerequisite requires its exact stage without an assignment control (9.281896ms)",
+      "✔ Task attachment comment waits for its original focused owner after one click before inserting text (206.902865ms)",
+      "✔ original Task assignment prerequisite refuses receipt-only, pending and stale renderer state (3.133902ms)",
+      "✔ original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface (3.215105ms)",
+      "✔ original desktop click waits for stable target geometry, without repeating input (302.142795ms)",
+      "✔ original Task hover waits through layout and unavailability before its one physical move (602.439372ms)",
+      "✔ original desktop click refuses a constantly moving target before dispatch (1504.451638ms)",
+      "✔ original owner-qualified click rereads its full expression through unavailability at unchanged coordinates (302.757345ms)",
+      "✔ login failure facts retain only bounded original attempts and confirmed milestones (1.080648ms)",
+      "✔ finite readiness failure summaries keep only bounded states and never private snapshot data (0.983041ms)",
+      "✔ Taskboard failure summaries compare retained identities without exposing private snapshot values (1.391727ms)",
+      "✔ installer failure summaries preserve original wait sites and attempts without inferring installation effects (1.624438ms)",
+      "✔ installer failure projection does not invoke input getters and leaves oversized observations unknown (0.515808ms)",
+      "✔ installer CDP and cleanup projection retains only exact finite observations (0.918073ms)",
+      "✔ Selection target summaries retain the exact original phase and six closed facts (0.885915ms)",
+      "✔ Selection target projection rejects unknown or malformed facts without exposing text or invoking getters (0.484651ms)",
+      "✔ Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input (1.218516ms)",
+      "✔ original desktop click refuses a target unavailable during the final ownership check (201.229376ms)",
+      "✔ original desktop click refuses a target moved during the final ownership check (202.038055ms)",
+      "✔ original default scroll preserves a disabled control before its readiness wait (1.09486ms)",
+      "✔ original scroll opt-in reveals a covered checkbox with one bounded wheel (102.126277ms)",
+      "✔ original desktop click rechecks owner after its pending final target read (201.672679ms)",
+      "✔ original desktop click rechecks cutoff after its pending final target read (202.171868ms)",
+      "✔ original clarification lookup admits its retained read without completing the assignment prerequisite (2.712647ms)",
+      "✔ original clarification lookup refuses changed owner, revision, refresh and retained-read joins (18.987014ms)",
+      "✔ original owner availability admits three captured A Teams through its actual first DOM read (2.299414ms)",
+      "✔ original owner availability retains singleton, subset and duplicate-row cardinality semantics (2.251372ms)",
+      "✔ original owner availability refuses foreign identities and preserves its existing aggregate guards (26.742607ms)",
+      "✔ original owner availability refuses invalid captured discovery before navigation (0.681958ms)",
+      "✔ owner availability admits every captured A Team through the actual first observation (0.58431ms)",
+      "✔ owner availability refuses healthy B in unavailable A rows (0.472282ms)",
+      "✔ owner availability refuses captured foreign owner in unavailable A rows (0.326883ms)",
+      "✔ owner availability refuses unknown Team in unavailable A rows (0.608597ms)",
+      "✔ owner availability refuses malformed Team in unavailable A rows (0.511761ms)",
+      "✔ owner availability refuses missing selected A before original navigation (0.302485ms)",
+      "✔ owner availability refuses non-string A handle before original navigation (0.256055ms)",
+      "✔ owner availability refuses empty A handle before original navigation (0.208694ms)",
+      "✔ owner availability refuses duplicate A handle before original navigation (0.218579ms)",
+      "✔ owner availability refuses over-bound capture before original navigation (0.31874ms)",
+      "✔ original Selection final Stop joins physical absence with its exact stopped UI within the same poll budget (10.107206ms)",
+      "✔ Selection stopped convergence refuses wrong identity, unaccepted progress, visible progress and exhausted observation budget (26.43289ms)",
+      "✔ the existing passive click recorder distinguishes the actual Team from later navigation without new actions (10.588531ms)",
+      "✔ ordinary Node imports and synchronous observations remain inert (1.747563ms)",
+      "✔ constructor subscription observes the original async child after pid assignment (47.698042ms)",
+      "✔ the observer preserves an actual unhandled child-process error (129.839916ms)",
+      "✔ failed reads, writes and unknown child fields cannot change the original operation (1.149231ms)",
+      "✔ the original TEST helper path exposes only its closed requested target class (0.625673ms)",
+      "✔ event and pending-child bounds explicitly preserve incomplete coverage (1.122572ms)",
+      "✔ original frozen install retains its lockfile and selects only the explicit serial lifecycle option (104.487298ms)",
+      "✔ unknown or duplicate frozen-install options refuse before any TEST installer is allocated (52.464461ms)",
+      "✔ long unfinished engine warning does not turn a transient 503 into a terminal failure (0.970322ms)",
+      "✔ next fatal engine line is not masked by a prior long warning (1.079647ms)",
+      "✔ 404 marker fragmented across chunks within one stream is terminal (0.149155ms)",
+      "✔ separate output streams cannot fabricate a 404 marker (0.213823ms)",
+      "✔ whole-output classifier distinguishes long warning from fatal engine (0.193441ms)"
+    ],
+    "caseCount": 126,
+    "capturedNode": "24.21.0",
+    "TeamAndStaticSkipped": true
+  },
+  "originalVerified": {
+    "mode": "opencode-v2-management-ui",
+    "status": "PASS",
+    "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "receipt": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/desktop-backend-receipt.json",
+    "receiptSha256": "2a7b9d0b29fb67bf6e235b0822b1adf8f7f6ec6f6a8daff987954d9cc6afe88f",
+    "modelRequests": 5,
+    "originalProbeProcesses": 5,
+    "screenshots": 5,
+    "nativeRemaining": 0
+  },
+  "proof": {
+    "status": "PASS",
+    "steps": [
+      {
+        "monotonicMs": 62037,
+        "action": "mouseMoved",
+        "label": "hover original Settings menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1384,
+          "y": 51.5,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 62543,
+        "action": "mouseClick",
+        "label": "original Settings menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1384,
+          "y": 51.5,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 62659,
+        "action": "mouseMoved",
+        "label": "hover original Settings",
+        "selector": "button",
+        "target": {
+          "x": 1272,
+          "y": 124.5,
+          "text": "Settings",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 63130,
+        "action": "mouseClick",
+        "label": "original Settings",
+        "selector": "button",
+        "expectedText": "Settings",
+        "target": {
+          "x": 1272,
+          "y": 124.5,
+          "text": "Settings",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 63372,
+        "action": "mouseMoved",
+        "label": "hover original Providers settings",
+        "selector": "[data-testid=\"settings-nav-providers\"]",
+        "target": {
+          "x": 95.5,
+          "y": 222,
+          "text": "Providers",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 64145,
+        "action": "mouseClick",
+        "label": "original Providers settings",
+        "selector": "[data-testid=\"settings-nav-providers\"]",
+        "target": {
+          "x": 95.5,
+          "y": 222,
+          "text": "Providers",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 64583,
+        "action": "mouseWheel",
+        "label": "original OpenCode Manage",
+        "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-opencode\"]",
+        "deltaY": 416.75
+      },
+      {
+        "monotonicMs": 64980,
+        "action": "mouseMoved",
+        "label": "hover original OpenCode Manage",
+        "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-opencode\"]",
+        "target": {
+          "x": 1005.9296875,
+          "y": 777.75,
+          "text": "Manage",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 65564,
+        "action": "mouseClick",
+        "label": "original OpenCode Manage",
+        "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-opencode\"]",
+        "target": {
+          "x": 1005.9296875,
+          "y": 777.75,
+          "text": "Manage",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 74421,
+        "action": "mouseMoved",
+        "label": "hover original provider directory",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-tab-providers\"]",
+        "target": {
+          "x": 349.7109375,
+          "y": 283,
+          "text": "Providers",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 74991,
+        "action": "mouseClick",
+        "label": "original provider directory",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-tab-providers\"]",
+        "target": {
+          "x": 349.7109375,
+          "y": 283,
+          "text": "Providers",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 91750,
+        "action": "mouseMoved",
+        "label": "hover open original API key form",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] button",
+        "target": {
+          "x": 1090.6484375,
+          "y": 388,
+          "text": "Connect",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 92448,
+        "action": "mouseClick",
+        "label": "open original API key form",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] button",
+        "expectedText": "Connect",
+        "target": {
+          "x": 1090.6484375,
+          "y": 388,
+          "text": "Connect",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 102871,
+        "action": "mouseMoved",
+        "label": "hover rejected TEST key",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form input[type=\"password\"]",
+        "target": {
+          "x": 692,
+          "y": 553.5,
+          "text": "",
+          "tag": "INPUT"
+        }
+      },
+      {
+        "monotonicMs": 103439,
+        "action": "mouseClick",
+        "label": "rejected TEST key",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form input[type=\"password\"]",
+        "target": {
+          "x": 692,
+          "y": 553.5,
+          "text": "",
+          "tag": "INPUT"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 104503,
+        "action": "mouseMoved",
+        "label": "hover submit rejected TEST key once",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form button[type=\"submit\"]",
+        "target": {
+          "x": 1069.9765625,
+          "y": 645.5,
+          "text": "Connect & verify",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 105117,
+        "action": "mouseClick",
+        "label": "submit rejected TEST key once",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form button[type=\"submit\"]",
+        "target": {
+          "x": 1069.9765625,
+          "y": 645.5,
+          "text": "Connect & verify",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 140102,
+        "action": "mouseMoved",
+        "label": "hover replacement TEST key",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form input[type=\"password\"]",
+        "target": {
+          "x": 687,
+          "y": 631.5,
+          "text": "",
+          "tag": "INPUT"
+        }
+      },
+      {
+        "monotonicMs": 140656,
+        "action": "mouseClick",
+        "label": "replacement TEST key",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form input[type=\"password\"]",
+        "target": {
+          "x": 687,
+          "y": 631.5,
+          "text": "",
+          "tag": "INPUT"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 141599,
+        "action": "mouseMoved",
+        "label": "hover submit replacement TEST key once",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form button[type=\"submit\"]",
+        "target": {
+          "x": 1059.9765625,
+          "y": 723.5,
+          "text": "Connect & verify",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 142156,
+        "action": "mouseClick",
+        "label": "submit replacement TEST key once",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local\"] form button[type=\"submit\"]",
+        "target": {
+          "x": 1059.9765625,
+          "y": 723.5,
+          "text": "Connect & verify",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 190994,
+        "action": "mouseMoved",
+        "label": "hover original Models tab",
+        "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+        "target": {
+          "x": 269.5703125,
+          "y": 283,
+          "text": "Models",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 191990,
+        "action": "mouseClick",
+        "label": "original Models tab",
+        "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+        "target": {
+          "x": 269.5703125,
+          "y": 205,
+          "text": "Models",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 218052,
+        "action": "mouseMoved",
+        "label": "hover original project context",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-project-context-trigger\"]",
+        "target": {
+          "x": 696,
+          "y": 505,
+          "text": "Select project context",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 218703,
+        "action": "mouseClick",
+        "label": "original project context",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-project-context-trigger\"]",
+        "target": {
+          "x": 696,
+          "y": 505,
+          "text": "Select project context",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 218933,
+        "action": "mouseMoved",
+        "label": "hover select original TEST project",
+        "selector": "[role=\"option\"]",
+        "target": {
+          "x": 697.0000305175781,
+          "y": 608.9819946289062,
+          "text": "workspace",
+          "tag": "DIV"
+        }
+      },
+      {
+        "monotonicMs": 219530,
+        "action": "mouseClick",
+        "label": "select original TEST project",
+        "selector": "[role=\"option\"]",
+        "expectedText": "workspace",
+        "target": {
+          "x": 697,
+          "y": 610,
+          "text": "workspace",
+          "tag": "DIV"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 236924,
+        "action": "mouseMoved",
+        "label": "hover Change: Default model",
+        "selector": "[role=\"dialog\"] button[aria-label=\"Change: Default model\"]",
+        "target": {
+          "x": 1096.9765625,
+          "y": 346,
+          "text": "Change",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 237620,
+        "action": "mouseClick",
+        "label": "Change: Default model",
+        "selector": "[role=\"dialog\"] button[aria-label=\"Change: Default model\"]",
+        "target": {
+          "x": 1096.9765625,
+          "y": 346,
+          "text": "Change",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 239388,
+        "action": "mouseMoved",
+        "label": "hover expand original configured provider",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local-header\"]",
+        "target": {
+          "x": 691,
+          "y": 463,
+          "text": "TEtest-localV2 model not verifiedConfigured2 modelsOpenCodeFrom OpenCode settingsAn API key is saved in this scope. Test a model to verify access.Connect",
+          "tag": "DIV"
+        }
+      },
+      {
+        "monotonicMs": 240170,
+        "action": "mouseClick",
+        "label": "expand original configured provider",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-directory-row-test-local-header\"]",
+        "target": {
+          "x": 691,
+          "y": 463,
+          "text": "TEtest-localV2 model not verifiedConfigured2 modelsOpenCodeFrom OpenCode settingsAn API key is saved in this scope. Test a model to verify access.Connect",
+          "tag": "DIV"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 253074,
+        "action": "mouseMoved",
+        "label": "hover select original global default once",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-model-row-test-local/TEST-model\"] button[aria-label=\"Select: TEST-model: Test this model successfully before using it.\"]",
+        "target": {
+          "x": 1093.3203125,
+          "y": 721,
+          "text": "Select",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 253536,
+        "action": "mouseClick",
+        "label": "select original global default once",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-model-row-test-local/TEST-model\"] button[aria-label=\"Select: TEST-model: Test this model successfully before using it.\"]",
+        "target": {
+          "x": 1093.3203125,
+          "y": 721,
+          "text": "Select",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 318426,
+        "action": "mouseMoved",
+        "label": "hover original Models tab",
+        "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+        "target": {
+          "x": 269.5703125,
+          "y": 251,
+          "text": "Models",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 319003,
+        "action": "mouseClick",
+        "label": "original Models tab",
+        "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+        "target": {
+          "x": 269.5703125,
+          "y": 251,
+          "text": "Models",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 319799,
+        "action": "mouseMoved",
+        "label": "hover Use another model: This project: workspace",
+        "selector": "[role=\"dialog\"] button[aria-label=\"Use another model: This project: workspace\"]",
+        "target": {
+          "x": 1067.3046875,
+          "y": 459.5,
+          "text": "Use another model",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 320415,
+        "action": "mouseClick",
+        "label": "Use another model: This project: workspace",
+        "selector": "[role=\"dialog\"] button[aria-label=\"Use another model: This project: workspace\"]",
+        "target": {
+          "x": 1067.3046875,
+          "y": 459.5,
+          "text": "Use another model",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 321715,
+        "action": "mouseMoved",
+        "label": "hover select original project default once",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-model-row-test-local/TEST-project-model\"] button[aria-label=\"Select: TEST-project-model: Test this model successfully before using it.\"]",
+        "target": {
+          "x": 1083.3203125,
+          "y": 648,
+          "text": "Select",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 322326,
+        "action": "mouseClick",
+        "label": "select original project default once",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-model-row-test-local/TEST-project-model\"] button[aria-label=\"Select: TEST-project-model: Test this model successfully before using it.\"]",
+        "target": {
+          "x": 1083.3203125,
+          "y": 648,
+          "text": "Select",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 376867,
+        "action": "mouseMoved",
+        "label": "hover Test original project model once",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-model-test-test-local/TEST-project-model\"]",
+        "target": {
+          "x": 967.296875,
+          "y": 648,
+          "text": "Test",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 377538,
+        "action": "mouseClick",
+        "label": "Test original project model once",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-model-test-test-local/TEST-project-model\"]",
+        "target": {
+          "x": 967.296875,
+          "y": 648,
+          "text": "Test",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 412135,
+        "action": "mouseMoved",
+        "label": "hover original Models tab",
+        "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+        "target": {
+          "x": 269.5703125,
+          "y": 205,
+          "text": "Models",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 413074,
+        "action": "mouseClick",
+        "label": "original Models tab",
+        "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+        "target": {
+          "x": 269.5703125,
+          "y": 205,
+          "text": "Models",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 413966,
+        "action": "mouseMoved",
+        "label": "hover original project context",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-project-context-trigger\"]",
+        "target": {
+          "x": 696,
+          "y": 464,
+          "text": "workspace",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 414575,
+        "action": "mouseClick",
+        "label": "original project context",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-project-context-trigger\"]",
+        "target": {
+          "x": 696,
+          "y": 464,
+          "text": "workspace",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 414764,
+        "action": "mouseMoved",
+        "label": "hover select original TEST project",
+        "selector": "[role=\"option\"]",
+        "target": {
+          "x": 697,
+          "y": 535.2334899902344,
+          "text": "workspace-other",
+          "tag": "DIV"
+        }
+      },
+      {
+        "monotonicMs": 415357,
+        "action": "mouseClick",
+        "label": "select original TEST project",
+        "selector": "[role=\"option\"]",
+        "expectedText": "workspace-other",
+        "target": {
+          "x": 697,
+          "y": 537,
+          "text": "workspace-other",
+          "tag": "DIV"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 433010,
+        "action": "mouseMoved",
+        "label": "hover original project context",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-project-context-trigger\"]",
+        "target": {
+          "x": 696,
+          "y": 464,
+          "text": "workspace-other",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 433595,
+        "action": "mouseClick",
+        "label": "original project context",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-project-context-trigger\"]",
+        "target": {
+          "x": 696,
+          "y": 464,
+          "text": "workspace-other",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 433765,
+        "action": "mouseMoved",
+        "label": "hover select original TEST project",
+        "selector": "[role=\"option\"]",
+        "target": {
+          "x": 697,
+          "y": 565.4902648925781,
+          "text": "workspace",
+          "tag": "DIV"
+        }
+      },
+      {
+        "monotonicMs": 434325,
+        "action": "mouseClick",
+        "label": "select original TEST project",
+        "selector": "[role=\"option\"]",
+        "expectedText": "workspace",
+        "target": {
+          "x": 697,
+          "y": 569,
+          "text": "workspace",
+          "tag": "DIV"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 436646,
+        "action": "mouseMoved",
+        "label": "hover clear original project override once",
+        "selector": "[role=\"dialog\"] button[aria-label=\"Use default: This project: workspace\"]",
+        "target": {
+          "x": 316.3515625,
+          "y": 504,
+          "text": "Use default",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 437218,
+        "action": "mouseClick",
+        "label": "clear original project override once",
+        "selector": "[role=\"dialog\"] button[aria-label=\"Use default: This project: workspace\"]",
+        "target": {
+          "x": 316.3515625,
+          "y": 504,
+          "text": "Use default",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 466058,
+        "action": "mouseMoved",
+        "label": "hover original Settings menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1384,
+          "y": 51.5,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 467231,
+        "action": "mouseClick",
+        "label": "original Settings menu",
+        "selector": "button[aria-label=\"More actions\"]",
+        "target": {
+          "x": 1384,
+          "y": 51.5,
+          "text": "",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 467398,
+        "action": "mouseMoved",
+        "label": "hover original Settings",
+        "selector": "button",
+        "target": {
+          "x": 1272,
+          "y": 124.5,
+          "text": "Settings",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 467976,
+        "action": "mouseClick",
+        "label": "original Settings",
+        "selector": "button",
+        "expectedText": "Settings",
+        "target": {
+          "x": 1272,
+          "y": 124.5,
+          "text": "Settings",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 468229,
+        "action": "mouseMoved",
+        "label": "hover original Providers settings",
+        "selector": "[data-testid=\"settings-nav-providers\"]",
+        "target": {
+          "x": 95.5,
+          "y": 222,
+          "text": "Providers",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 468943,
+        "action": "mouseClick",
+        "label": "original Providers settings",
+        "selector": "[data-testid=\"settings-nav-providers\"]",
+        "target": {
+          "x": 95.5,
+          "y": 222,
+          "text": "Providers",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 469369,
+        "action": "mouseWheel",
+        "label": "original OpenCode Manage",
+        "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-opencode\"]",
+        "deltaY": 416.75
+      },
+      {
+        "monotonicMs": 469852,
+        "action": "mouseMoved",
+        "label": "hover original OpenCode Manage",
+        "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-opencode\"]",
+        "target": {
+          "x": 1005.9296875,
+          "y": 777.75,
+          "text": "Manage",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 470402,
+        "action": "mouseClick",
+        "label": "original OpenCode Manage",
+        "selector": "[data-testid=\"provider-settings-page\"] [data-testid=\"runtime-manage-opencode\"]",
+        "target": {
+          "x": 1005.9296875,
+          "y": 777.75,
+          "text": "Manage",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 475387,
+        "action": "mouseMoved",
+        "label": "hover original Models tab",
+        "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+        "target": {
+          "x": 269.5703125,
+          "y": 283,
+          "text": "Models",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 475975,
+        "action": "mouseClick",
+        "label": "original Models tab",
+        "selector": "[role=\"dialog\"] [role=\"tab\"][id$=\"-trigger-models\"]",
+        "target": {
+          "x": 269.5703125,
+          "y": 283,
+          "text": "Models",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 490434,
+        "action": "mouseMoved",
+        "label": "hover original project context",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-project-context-trigger\"]",
+        "target": {
+          "x": 696,
+          "y": 459,
+          "text": "Select project context",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 490975,
+        "action": "mouseClick",
+        "label": "original project context",
+        "selector": "[role=\"dialog\"] [data-testid=\"runtime-provider-project-context-trigger\"]",
+        "target": {
+          "x": 696,
+          "y": 459,
+          "text": "Select project context",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 491165,
+        "action": "mouseMoved",
+        "label": "hover select original TEST project",
+        "selector": "[role=\"option\"]",
+        "target": {
+          "x": 697.0000305175781,
+          "y": 560.4901428222656,
+          "text": "workspace",
+          "tag": "DIV"
+        }
+      },
+      {
+        "monotonicMs": 491769,
+        "action": "mouseClick",
+        "label": "select original TEST project",
+        "selector": "[role=\"option\"]",
+        "expectedText": "workspace",
+        "target": {
+          "x": 697,
+          "y": 564,
+          "text": "workspace",
+          "tag": "DIV"
+        },
+        "state": "attempted"
+      }
+    ],
+    "effects": [
+      {
+        "step": "reject-key",
+        "commandId": "d41485c7-d78b-40ee-a221-f777af5741db",
+        "kind": "credential.set",
+        "phase": "held",
+        "resourceHeld": false,
+        "source": {
+          "commandId": "495bbb16-20dc-4d13-b3ca-8353c86fde06",
+          "sourceId": "3666b20ee0d51576bca9da482abe755a687e22e473559a41bbeb4ac627d17f38",
+          "revision": "f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+          "previousRevision": "158b247228d2e5309f7e7cba8fd5f23d73957e02e6865b852021c813d4203239",
+          "profileId": "runtime-source:f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+          "configRevision": "runtime-source:f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+          "projectPath": null,
+          "defaultModelId": null
+        }
+      },
+      {
+        "step": "connect-key",
+        "commandId": "7da9ee68-5df1-490d-9442-c497aca4fc9f",
+        "kind": "credential.set",
+        "phase": "completed",
+        "resourceHeld": false,
+        "source": {
+          "commandId": "495bbb16-20dc-4d13-b3ca-8353c86fde06",
+          "sourceId": "3666b20ee0d51576bca9da482abe755a687e22e473559a41bbeb4ac627d17f38",
+          "revision": "f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+          "previousRevision": "158b247228d2e5309f7e7cba8fd5f23d73957e02e6865b852021c813d4203239",
+          "profileId": "runtime-source:f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+          "configRevision": "runtime-source:f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+          "projectPath": null,
+          "defaultModelId": null
+        }
+      },
+      {
+        "step": "global-default",
+        "commandId": "279fe0b1-50dc-49a9-93be-067800b8d250",
+        "kind": "model.probe",
+        "phase": "completed",
+        "resourceHeld": false,
+        "source": {
+          "commandId": "495bbb16-20dc-4d13-b3ca-8353c86fde06",
+          "sourceId": "3666b20ee0d51576bca9da482abe755a687e22e473559a41bbeb4ac627d17f38",
+          "revision": "f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+          "previousRevision": "158b247228d2e5309f7e7cba8fd5f23d73957e02e6865b852021c813d4203239",
+          "profileId": "runtime-source:f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+          "configRevision": "runtime-source:f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+          "projectPath": null,
+          "defaultModelId": null
+        }
+      },
+      {
+        "step": "project-default",
+        "commandId": "1c6c2704-2453-47fd-bb27-a1016eb258ff",
+        "kind": "model.probe",
+        "phase": "completed",
+        "resourceHeld": false,
+        "source": {
+          "commandId": "edede954-8363-4652-b810-7a4af610afeb",
+          "sourceId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+          "revision": "9c73066505d2cab7371eec5ebeeb379b12c62daa5d34d585f8cec1defdaab67b",
+          "previousRevision": "12ec7e607365a9d5fa884ac3b7e227bfdc29a958c8d74b111c528d0d07e1ec68",
+          "profileId": "runtime-source:9c73066505d2cab7371eec5ebeeb379b12c62daa5d34d585f8cec1defdaab67b",
+          "configRevision": "runtime-source:9c73066505d2cab7371eec5ebeeb379b12c62daa5d34d585f8cec1defdaab67b",
+          "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace",
+          "defaultModelId": "test-local/TEST-model"
+        }
+      },
+      {
+        "step": "project-test",
+        "commandId": "69c5036f-065a-4ff8-aa24-d0197e021dfa",
+        "kind": "model.probe",
+        "phase": "completed",
+        "resourceHeld": false,
+        "source": {
+          "commandId": "01da48c8-cc1e-49ee-a93d-c52f68d5ac16",
+          "sourceId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+          "revision": "09a50deefdfd6faa53d938462f34ed5acba3a0727b60f8cadffe49176217a0b8",
+          "previousRevision": "9c73066505d2cab7371eec5ebeeb379b12c62daa5d34d585f8cec1defdaab67b",
+          "profileId": "runtime-source:09a50deefdfd6faa53d938462f34ed5acba3a0727b60f8cadffe49176217a0b8",
+          "configRevision": "runtime-source:09a50deefdfd6faa53d938462f34ed5acba3a0727b60f8cadffe49176217a0b8",
+          "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace",
+          "defaultModelId": "test-local/TEST-project-model"
+        }
+      }
+    ],
+    "scope": "Original Electron V2 API-key rejection/replacement, model test, global/project defaults, inheritance and renderer reload",
+    "excluded": [
+      "Claude/Codex execution",
+      "vendor authentication/inference",
+      "native V2 OAuth/forget",
+      "release qualification"
+    ],
+    "rejectionScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/ui-v2-management-rejected-key.png",
+      "sha256": "fc8afb4fd125d073be89bcd3fa860cc20e7a6b7eb7f2cee839ba0b094149da12"
+    },
+    "connectedScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/ui-v2-management-connected.png",
+      "sha256": "0ea5b3dbaa9384dce0f683a7c0c5f5ef241dd493d7b730b9deab36a541ff14c9"
+    },
+    "projectScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/ui-v2-management-project-override.png",
+      "sha256": "637a6dc16bb24455ff910f8b77e328d025ce4acd1a651ad6c85d523f47c88051"
+    },
+    "inheritanceScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/ui-v2-management-inherited.png",
+      "sha256": "eefcdcfcc1d1841b43d9ecb062e55bd6bc85f73c5dcd50382a98f0edd60119fd"
+    },
+    "sourcePublications": [
+      {
+        "commandId": "01da48c8-cc1e-49ee-a93d-c52f68d5ac16",
+        "sourceId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+        "revision": "09a50deefdfd6faa53d938462f34ed5acba3a0727b60f8cadffe49176217a0b8",
+        "previousRevision": "9c73066505d2cab7371eec5ebeeb379b12c62daa5d34d585f8cec1defdaab67b",
+        "profileId": "runtime-source:09a50deefdfd6faa53d938462f34ed5acba3a0727b60f8cadffe49176217a0b8",
+        "configRevision": "runtime-source:09a50deefdfd6faa53d938462f34ed5acba3a0727b60f8cadffe49176217a0b8",
+        "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace",
+        "defaultModelId": "test-local/TEST-project-model"
+      },
+      {
+        "commandId": "11ed35f5-30bd-439f-bff1-6c6d731d39f1",
+        "sourceId": "3666b20ee0d51576bca9da482abe755a687e22e473559a41bbeb4ac627d17f38",
+        "revision": "af5ebd22be24cfebc10972cc1dee91b47cd9c753b768a0c91b5c1006b2294d0b",
+        "previousRevision": "f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+        "profileId": "runtime-source:af5ebd22be24cfebc10972cc1dee91b47cd9c753b768a0c91b5c1006b2294d0b",
+        "configRevision": "runtime-source:af5ebd22be24cfebc10972cc1dee91b47cd9c753b768a0c91b5c1006b2294d0b",
+        "projectPath": null,
+        "defaultModelId": "test-local/TEST-model"
+      },
+      {
+        "commandId": "495bbb16-20dc-4d13-b3ca-8353c86fde06",
+        "sourceId": "3666b20ee0d51576bca9da482abe755a687e22e473559a41bbeb4ac627d17f38",
+        "revision": "f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+        "previousRevision": "158b247228d2e5309f7e7cba8fd5f23d73957e02e6865b852021c813d4203239",
+        "profileId": "runtime-source:f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+        "configRevision": "runtime-source:f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+        "projectPath": null,
+        "defaultModelId": null
+      },
+      {
+        "commandId": "87db1f3c-344c-48ed-833d-91329fdb0d18",
+        "sourceId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+        "revision": "60bfa801e440d32bbcabdc1adf1f4a6fdf914515f8608c3e2e64556e1b500f56",
+        "previousRevision": "09a50deefdfd6faa53d938462f34ed5acba3a0727b60f8cadffe49176217a0b8",
+        "profileId": "runtime-source:60bfa801e440d32bbcabdc1adf1f4a6fdf914515f8608c3e2e64556e1b500f56",
+        "configRevision": "runtime-source:60bfa801e440d32bbcabdc1adf1f4a6fdf914515f8608c3e2e64556e1b500f56",
+        "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace",
+        "defaultModelId": "test-local/TEST-model"
+      },
+      {
+        "commandId": "b9449427-7cc0-4652-8f06-96a20bdafff5",
+        "sourceId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+        "revision": "12ec7e607365a9d5fa884ac3b7e227bfdc29a958c8d74b111c528d0d07e1ec68",
+        "previousRevision": "48ea63d5097859d87ec4e9d4d7413d06e50ae90f46385cb766a04f8aecdd0d91",
+        "profileId": "runtime-source:12ec7e607365a9d5fa884ac3b7e227bfdc29a958c8d74b111c528d0d07e1ec68",
+        "configRevision": "runtime-source:12ec7e607365a9d5fa884ac3b7e227bfdc29a958c8d74b111c528d0d07e1ec68",
+        "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace",
+        "defaultModelId": null
+      },
+      {
+        "commandId": "c4a4bfd3-d89a-4ed0-88fe-5ed4e21bef67",
+        "sourceId": "fc0d32c9f966c83cb020ffc50ae13c3463ad15cc0621cd696591fec8bf79a421",
+        "revision": "ce434b8915ec4720a0481d838da0f6b6cd512f405eca687322c8dd2b31498bf7",
+        "previousRevision": "f7e08a185abf0b0d5f6f4f06917aa9293805c16ee0e7c59d0e052905033cc909",
+        "profileId": "runtime-source:ce434b8915ec4720a0481d838da0f6b6cd512f405eca687322c8dd2b31498bf7",
+        "configRevision": "runtime-source:ce434b8915ec4720a0481d838da0f6b6cd512f405eca687322c8dd2b31498bf7",
+        "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace-other",
+        "defaultModelId": "test-local/TEST-model"
+      },
+      {
+        "commandId": "edede954-8363-4652-b810-7a4af610afeb",
+        "sourceId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+        "revision": "9c73066505d2cab7371eec5ebeeb379b12c62daa5d34d585f8cec1defdaab67b",
+        "previousRevision": "12ec7e607365a9d5fa884ac3b7e227bfdc29a958c8d74b111c528d0d07e1ec68",
+        "profileId": "runtime-source:9c73066505d2cab7371eec5ebeeb379b12c62daa5d34d585f8cec1defdaab67b",
+        "configRevision": "runtime-source:9c73066505d2cab7371eec5ebeeb379b12c62daa5d34d585f8cec1defdaab67b",
+        "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace",
+        "defaultModelId": "test-local/TEST-model"
+      }
+    ],
+    "sourceIndexSha256": "a968a65f02c0845201a4f8cafa46065eed4d6eb53675dd2fc13849eee9fde964",
+    "fixturePins": {
+      "generation": "v2",
+      "version": "2.1.4",
+      "bunSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "manifestSha256": "30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce",
+      "profileSha256": "c6b2e4f42c7d359b44e8732d7bc71b2154842b5b0ace1655a191c93773985433",
+      "descriptorSha256": "e799e2394f2121976f9ebb0de941d4e7af0580c3d4160669dac6468edef76aa8",
+      "runtimeConfigured": false,
+      "managementConfigured": true,
+      "managementProfiles": 2,
+      "codexOrClaudeExecutable": false
+    },
+    "modelRequests": [
+      {
+        "step": "reject-key",
+        "model": "TEST-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "refused"
+      },
+      {
+        "step": "connect-key",
+        "model": "TEST-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "OK"
+      },
+      {
+        "step": "global-default",
+        "model": "TEST-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "OK"
+      },
+      {
+        "step": "project-default",
+        "model": "TEST-project-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "OK"
+      },
+      {
+        "step": "project-test",
+        "model": "TEST-project-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "OK"
+      }
+    ],
+    "preferences": [
+      {
+        "scope": "global",
+        "sha256": "f52c12478698fe9908405ad3b452608ed50c7dbdfa141368e780d7d6233cb3a0",
+        "defaultModelId": "test-local/TEST-model"
+      },
+      {
+        "scope": "project",
+        "sha256": "81d147ed98617bf58f63ae53dbcbbd9f587d67840d75e7c9870655c0130ae7f9",
+        "defaultModelId": null
+      },
+      {
+        "scope": "other",
+        "sha256": null,
+        "defaultModelId": null
+      }
+    ],
+    "credentials": {
+      "authSha256": "ec9a5ca72560031c0361d3b27c3c208ba5c1bc31a33bb78085a80d47ea40393a",
+      "rejectedKeyRetainedUntilExplicitReplacement": true,
+      "successfulReplacementVerified": true
+    },
+    "reloadedScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/ui-v2-management-reloaded.png",
+      "sha256": "2251523caf811579289921741f364f38457c4eceea4c6d41515805105ff3790f"
+    },
+    "visualReview": "original screenshots retained for independent inspection"
+  },
+  "stepCount": 68,
+  "actionCounts": {
+    "mouseMoved": 33,
+    "mouseClick": 33,
+    "mouseWheel": 2
+  },
+  "clickLabels": {
+    "original Settings menu": 2,
+    "original Settings": 2,
+    "original Providers settings": 2,
+    "original OpenCode Manage": 2,
+    "original provider directory": 1,
+    "open original API key form": 1,
+    "rejected TEST key": 1,
+    "submit rejected TEST key once": 1,
+    "replacement TEST key": 1,
+    "submit replacement TEST key once": 1,
+    "original Models tab": 4,
+    "original project context": 4,
+    "select original TEST project": 4,
+    "Change: Default model": 1,
+    "expand original configured provider": 1,
+    "select original global default once": 1,
+    "Use another model: This project: workspace": 1,
+    "select original project default once": 1,
+    "Test original project model once": 1,
+    "clear original project override once": 1
+  },
+  "singleAttemptLabels": [
+    "submit rejected TEST key once",
+    "submit replacement TEST key once",
+    "select original global default once",
+    "select original project default once",
+    "Test original project model once",
+    "clear original project override once"
+  ],
+  "managementJournals": [
+    {
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/hoststore/management-commands/0279f3e060b9637f36e6a805b37f5d0ac7451ddd3cfaba549f42b04a6a65752b.json",
+        "bytes": 804,
+        "blob": "80ac4c5ae5969541d2e4737a81bb058796c6bc8c",
+        "sha256": "53996026453c6e63a5af9c9dad448cb867806bd4fd62388944abf971fb5e1061"
+      },
+      "record": {
+        "schemaVersion": 1,
+        "commandId": "279fe0b1-50dc-49a9-93be-067800b8d250",
+        "profileId": "runtime-source:f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+        "configRevision": "runtime-source:f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+        "providerId": "test-local",
+        "fingerprint": "71efce062339a564b4004e7d0d83c2436c7ae67ee509fb0dbfc5cb682b788b47",
+        "selectionDigest": "c830e1b4f9992773d1fc7825d237f93bfc2869949383a7ddbbcfdb2b8cdadd64",
+        "resourceId": "4af5254fc4941b8de39d00e08b34e759421a9734b51540e1f4a6efcd2ec73dc1",
+        "resourceHeld": false,
+        "kind": "model.probe",
+        "modelId": "test-local/TEST-model",
+        "phase": "completed",
+        "expiresAt": 1794813426543,
+        "ok": true,
+        "digest": "979d874d8fc5ff16596703b41faeffa0419a5ad912e67f3e1a97a36d2174e1e2"
+      },
+      "canonicalBodyDigestMatched": true,
+      "commandFilenameDigestMatched": true
+    },
+    {
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/hoststore/management-commands/07a5ab4682a064ca7da51c2c4f0b835f222d0dfc931dc3afe07809063b5f9577.json",
+        "bytes": 1345,
+        "blob": "5f28862bb22b847f42c279c65e40244acb8f6731",
+        "sha256": "6e591ac2a38911b1e25a6bea72a2d7f48b16f6cbfa36f7767c506009180c273f"
+      },
+      "record": {
+        "schemaVersion": 1,
+        "commandId": "7da9ee68-5df1-490d-9442-c497aca4fc9f",
+        "profileId": "runtime-source:f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+        "configRevision": "runtime-source:f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+        "providerId": "test-local",
+        "fingerprint": "1146fdabcc0c3aba0612d5221ed072d7c2fb5ef7f10e7120cd70019b31140b6a",
+        "selectionDigest": "c830e1b4f9992773d1fc7825d237f93bfc2869949383a7ddbbcfdb2b8cdadd64",
+        "resourceId": "4af5254fc4941b8de39d00e08b34e759421a9734b51540e1f4a6efcd2ec73dc1",
+        "resourceHeld": false,
+        "kind": "credential.set",
+        "phase": "completed",
+        "finishedAtMs": 1794813201517,
+        "openCodeV2": {
+          "phase": "probe-completed",
+          "integrationId": "test-local",
+          "nativeNamespace": "d2bdfc76a01c92363ef3d0a37e50ff00cdd0a13568d71d57c3fbbd1ad7e85aae",
+          "beforeAuthDigest": "df6e820da0953a76d4d1419ffbfc4474207ffc90e9b1cd7f14c7008a84d4b016",
+          "credentialId": "cred_1e333d528001yCUxQKup8peLpb",
+          "authDigest": "834aef1989b4a629281dded167340d4a74325d7a992d948881c953e66180adbe",
+          "verification": {
+            "commandId": "connect-verify-07a5ab4682a064ca7da51c2c4f0b835f222d0dfc931dc3af",
+            "modelId": "test-local/TEST-model",
+            "ok": true
+          }
+        },
+        "digest": "bfb4fe48e6ef61b6915d5301988bc13cfbe61fe2528e0fbca51041e676a20b75"
+      },
+      "canonicalBodyDigestMatched": true,
+      "commandFilenameDigestMatched": true
+    },
+    {
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/hoststore/management-commands/37f3b8b463f16238772a6bcdf166801c6c9e83ed2903a672c6ab0f70687d6d10.json",
+        "bytes": 2811,
+        "blob": "4bd0348b2fb10533df61269700f7c59475987448",
+        "sha256": "9c0028c63ee31e6130666875fd177206e1e3fe25baab6ce67770b1261feb3659"
+      },
+      "record": {
+        "schemaVersion": 1,
+        "commandId": "495bbb16-20dc-4d13-b3ca-8353c86fde06",
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "providerId": "opencode",
+        "fingerprint": "3c24d58ea92603d9a5c24b6827d7a3be0b55d5018caee56dd2e230fc11e82607",
+        "selectionDigest": "158b247228d2e5309f7e7cba8fd5f23d73957e02e6865b852021c813d4203239",
+        "resourceId": "3666b20ee0d51576bca9da482abe755a687e22e473559a41bbeb4ac627d17f38",
+        "resourceHeld": false,
+        "kind": "runtime.source",
+        "phase": "published",
+        "sourceId": "3666b20ee0d51576bca9da482abe755a687e22e473559a41bbeb4ac627d17f38",
+        "revision": "f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+        "expectedRevision": "158b247228d2e5309f7e7cba8fd5f23d73957e02e6865b852021c813d4203239",
+        "publicationJson": "{\"grant\":{\"targetId\":\"3666b20ee0d51576bca9da482abe755a687e22e473559a41bbeb4ac627d17f38\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-7W0EkD\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":null,\"runtimeId\":\"opencode\",\"profileId\":\"TEST-v2-settings-management\",\"configRevision\":\"TEST-opencode-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-7W0EkD\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-7W0EkD\"}]},\"commandId\":\"495bbb16-20dc-4d13-b3ca-8353c86fde06\",\"expectedRevision\":\"158b247228d2e5309f7e7cba8fd5f23d73957e02e6865b852021c813d4203239\",\"candidate\":{\"sourceKind\":\"captured\",\"executable\":{\"path\":\"/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun\",\"sha256\":\"45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675\"},\"openCodeConfiguration\":{\"scope\":\"global\",\"files\":[{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.json\",\"digest\":\"a3870067c3d732ac929712029b666fd41f4d297c80e144c368ec5dd3c9b29072\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.jsonc\",\"digest\":\"1dfb2e001f2d95fa9cb945073bf8531401cd7691b40946cee14bb568255619d7\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.json\",\"digest\":\"b452db1f65329e8e57af129bfe5ef37d6868e1d2698907df81fd8bae420c65b1\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.jsonc\",\"digest\":\"0c69cb07dfd22acf932ff6eabb227aacd17d728719b6d837ecbcae9e68a31572\"}],\"inlineDigest\":null},\"openCodePreferences\":{\"defaultModelId\":null,\"modelLimitOverrides\":{}}},\"intent\":\"configuration\"}",
+        "digest": "4223c6eb717d6130d9eea5d03b0badd255761921b1730bb636a5219fa0fd37a7"
+      },
+      "canonicalBodyDigestMatched": true,
+      "commandFilenameDigestMatched": true
+    },
+    {
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/hoststore/management-commands/557f2d94011370b1a284e4118f1d416f4fed9ba83408777855877a95161f1952.json",
+        "bytes": 1370,
+        "blob": "6c9752d0c9e24737c3d308884e839a9aff68b19f",
+        "sha256": "70d457310d9214b133226ee4f6a7628bacbc0817de07ea746280020d30f49d15"
+      },
+      "record": {
+        "schemaVersion": 1,
+        "commandId": "d41485c7-d78b-40ee-a221-f777af5741db",
+        "profileId": "runtime-source:f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+        "configRevision": "runtime-source:f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+        "providerId": "test-local",
+        "fingerprint": "0f360362c9f0a4785c3c3440854f78432d6465917bd3aea09d89f102629d3fb2",
+        "selectionDigest": "c830e1b4f9992773d1fc7825d237f93bfc2869949383a7ddbbcfdb2b8cdadd64",
+        "resourceId": "4af5254fc4941b8de39d00e08b34e759421a9734b51540e1f4a6efcd2ec73dc1",
+        "resourceHeld": false,
+        "kind": "credential.set",
+        "phase": "held",
+        "finishedAtMs": 1794813176202,
+        "openCodeV2": {
+          "phase": "probe-completed",
+          "integrationId": "test-local",
+          "nativeNamespace": "95005e343ccd7aafcc5b27c1c3fa9fcd8faef257d4358db7bad6623948ac20d8",
+          "beforeAuthDigest": "52068023023e46a3ae968c47bc401180a99ff8947d277da9e7e93fa5d2c6415e",
+          "credentialId": "cred_1e33355c1001smRWh3EIdyG1dk",
+          "authDigest": "df6e820da0953a76d4d1419ffbfc4474207ffc90e9b1cd7f14c7008a84d4b016",
+          "verification": {
+            "commandId": "connect-verify-557f2d94011370b1a284e4118f1d416f4fed9ba834087778",
+            "modelId": "test-local/TEST-model",
+            "ok": false
+          }
+        },
+        "terminalRejection": true,
+        "digest": "7539a60ce973f87d4688d8b94c6506de238805a9229a0f87fba802eaa27fb696"
+      },
+      "canonicalBodyDigestMatched": true,
+      "commandFilenameDigestMatched": true
+    },
+    {
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/hoststore/management-commands/67e7374544b88e1ab2c850631ddf9c19ac6cb932e492579a664496ba9bf8f5bc.json",
+        "bytes": 3267,
+        "blob": "6388b7173a8032d80513981327f6918817875844",
+        "sha256": "6a440eea77c97dd3dc5f20453d94e5e4c0160894ea11ef183e4b7469802fb9ef"
+      },
+      "record": {
+        "schemaVersion": 1,
+        "commandId": "c4a4bfd3-d89a-4ed0-88fe-5ed4e21bef67",
+        "profileId": "TEST-v2-settings-management-other",
+        "configRevision": "TEST-opencode-management",
+        "providerId": "opencode",
+        "fingerprint": "8c950e3be84fa60377ce137e53999786834040bc3ffddcaada67a987218945ca",
+        "selectionDigest": "f7e08a185abf0b0d5f6f4f06917aa9293805c16ee0e7c59d0e052905033cc909",
+        "resourceId": "fc0d32c9f966c83cb020ffc50ae13c3463ad15cc0621cd696591fec8bf79a421",
+        "resourceHeld": false,
+        "kind": "runtime.source",
+        "phase": "published",
+        "sourceId": "fc0d32c9f966c83cb020ffc50ae13c3463ad15cc0621cd696591fec8bf79a421",
+        "revision": "ce434b8915ec4720a0481d838da0f6b6cd512f405eca687322c8dd2b31498bf7",
+        "expectedRevision": "f7e08a185abf0b0d5f6f4f06917aa9293805c16ee0e7c59d0e052905033cc909",
+        "publicationJson": "{\"grant\":{\"targetId\":\"fc0d32c9f966c83cb020ffc50ae13c3463ad15cc0621cd696591fec8bf79a421\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-7W0EkD\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace-other\",\"runtimeId\":\"opencode\",\"profileId\":\"TEST-v2-settings-management-other\",\"configRevision\":\"TEST-opencode-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-7W0EkD\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-7W0EkD\"}]},\"commandId\":\"c4a4bfd3-d89a-4ed0-88fe-5ed4e21bef67\",\"expectedRevision\":\"f7e08a185abf0b0d5f6f4f06917aa9293805c16ee0e7c59d0e052905033cc909\",\"candidate\":{\"sourceKind\":\"captured\",\"executable\":{\"path\":\"/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun\",\"sha256\":\"45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675\"},\"openCodeConfiguration\":{\"scope\":\"project\",\"files\":[{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.json\",\"digest\":\"a3870067c3d732ac929712029b666fd41f4d297c80e144c368ec5dd3c9b29072\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.jsonc\",\"digest\":\"1dfb2e001f2d95fa9cb945073bf8531401cd7691b40946cee14bb568255619d7\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.json\",\"digest\":\"b452db1f65329e8e57af129bfe5ef37d6868e1d2698907df81fd8bae420c65b1\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.jsonc\",\"digest\":\"0c69cb07dfd22acf932ff6eabb227aacd17d728719b6d837ecbcae9e68a31572\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace-other/opencode.json\",\"digest\":\"7e9e7079f8347dedd9e200e00fa6e8cb56c30a08a1610a707df9523067f37e15\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace-other/opencode.jsonc\",\"digest\":\"dea5e7ab543d8110b3c5cf8080336ac42fde199497f902e684a28d3ae1c199cc\"}],\"inlineDigest\":null},\"openCodePreferences\":{\"defaultModelId\":\"test-local/TEST-model\",\"modelLimitOverrides\":{}}},\"intent\":\"configuration\"}",
+        "digest": "5584e6e010a443028cc68faf67c25f0960a34a32f8b815138ac5b42cc0e572ac"
+      },
+      "canonicalBodyDigestMatched": true,
+      "commandFilenameDigestMatched": true
+    },
+    {
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/hoststore/management-commands/a37f7ec902321bf036606dd54ab4c8ea817da20b70eaed4aee9523bf307ad8eb.json",
+        "bytes": 3245,
+        "blob": "41539b628466d9db0fe58e382b403c7abaa03303",
+        "sha256": "6ea4e6b2ba18a70fc8e4cb827889308511eda88db2f6dd1e052b677674a10445"
+      },
+      "record": {
+        "schemaVersion": 1,
+        "commandId": "01da48c8-cc1e-49ee-a93d-c52f68d5ac16",
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "providerId": "opencode",
+        "fingerprint": "f221573d3b7a68503f368277d4b5d07edee5aa4454d97227dce7294c897b64e7",
+        "selectionDigest": "48ea63d5097859d87ec4e9d4d7413d06e50ae90f46385cb766a04f8aecdd0d91",
+        "resourceId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+        "resourceHeld": false,
+        "kind": "runtime.source",
+        "phase": "published",
+        "sourceId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+        "revision": "09a50deefdfd6faa53d938462f34ed5acba3a0727b60f8cadffe49176217a0b8",
+        "expectedRevision": "9c73066505d2cab7371eec5ebeeb379b12c62daa5d34d585f8cec1defdaab67b",
+        "publicationJson": "{\"grant\":{\"targetId\":\"1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-7W0EkD\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace\",\"runtimeId\":\"opencode\",\"profileId\":\"TEST-v2-settings-management\",\"configRevision\":\"TEST-opencode-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-7W0EkD\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-7W0EkD\"}]},\"commandId\":\"01da48c8-cc1e-49ee-a93d-c52f68d5ac16\",\"expectedRevision\":\"9c73066505d2cab7371eec5ebeeb379b12c62daa5d34d585f8cec1defdaab67b\",\"candidate\":{\"sourceKind\":\"captured\",\"executable\":{\"path\":\"/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun\",\"sha256\":\"45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675\"},\"openCodeConfiguration\":{\"scope\":\"project\",\"files\":[{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.json\",\"digest\":\"a3870067c3d732ac929712029b666fd41f4d297c80e144c368ec5dd3c9b29072\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.jsonc\",\"digest\":\"1dfb2e001f2d95fa9cb945073bf8531401cd7691b40946cee14bb568255619d7\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.json\",\"digest\":\"b452db1f65329e8e57af129bfe5ef37d6868e1d2698907df81fd8bae420c65b1\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.jsonc\",\"digest\":\"0c69cb07dfd22acf932ff6eabb227aacd17d728719b6d837ecbcae9e68a31572\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace/opencode.json\",\"digest\":\"98b8d404ab262a4213d4dc29826e54e43adea1affcc2ed74b85c242f1be24194\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace/opencode.jsonc\",\"digest\":\"b4468f10e2d47662abbe21d614b460ce6e455495ef0cdd396ac3b864e0460ab5\"}],\"inlineDigest\":null},\"openCodePreferences\":{\"defaultModelId\":\"test-local/TEST-project-model\",\"modelLimitOverrides\":{}}},\"intent\":\"configuration\"}",
+        "digest": "211a3483b47d09416ec546d1d78b230bcfbe3572946d39be5533f6208fb1ab8c"
+      },
+      "canonicalBodyDigestMatched": true,
+      "commandFilenameDigestMatched": true
+    },
+    {
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/hoststore/management-commands/bc8efebfb10b68abf60fc0047553ab2f79aec4fac7e38d9d1dea756c114528c8.json",
+        "bytes": 812,
+        "blob": "8a1b9b079c7871766459864eac1477c57084bb71",
+        "sha256": "af73d04245d070102367263e6b518aac27a1a436ad27f52b724a88829cf8d619"
+      },
+      "record": {
+        "schemaVersion": 1,
+        "commandId": "1c6c2704-2453-47fd-bb27-a1016eb258ff",
+        "profileId": "runtime-source:9c73066505d2cab7371eec5ebeeb379b12c62daa5d34d585f8cec1defdaab67b",
+        "configRevision": "runtime-source:9c73066505d2cab7371eec5ebeeb379b12c62daa5d34d585f8cec1defdaab67b",
+        "providerId": "test-local",
+        "fingerprint": "c412e18cccdbcd160d39aabe324be65d57ac82b89a4d172bb325d93790f9d505",
+        "selectionDigest": "43e0a069de5d0776c500701efff1e9ea7bed15b429e0d9d4f21e4362d7dc839e",
+        "resourceId": "4af5254fc4941b8de39d00e08b34e759421a9734b51540e1f4a6efcd2ec73dc1",
+        "resourceHeld": false,
+        "kind": "model.probe",
+        "modelId": "test-local/TEST-project-model",
+        "phase": "completed",
+        "expiresAt": 1794813494542,
+        "ok": true,
+        "digest": "2e02ef0690bbbdb72318b7461076be844e037451e607459eea51b3c94a1fd890"
+      },
+      "canonicalBodyDigestMatched": true,
+      "commandFilenameDigestMatched": true
+    },
+    {
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/hoststore/management-commands/beb38a0943257cf16ba5a766d24a92c3c25b5157462d9f172a2cf5ea9a037223.json",
+        "bytes": 2832,
+        "blob": "cf9d90ec08fa1650a085d4a0045b34d4ed839092",
+        "sha256": "f35af2ac477def5801c10a95d5d3a812433defb0564e380e1987ba9d9211a8db"
+      },
+      "record": {
+        "schemaVersion": 1,
+        "commandId": "11ed35f5-30bd-439f-bff1-6c6d731d39f1",
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "providerId": "opencode",
+        "fingerprint": "9a9c7bbf9f0eba1a611e22b0b8767a298a5484a841e94298681b6ca453f417d9",
+        "selectionDigest": "158b247228d2e5309f7e7cba8fd5f23d73957e02e6865b852021c813d4203239",
+        "resourceId": "3666b20ee0d51576bca9da482abe755a687e22e473559a41bbeb4ac627d17f38",
+        "resourceHeld": false,
+        "kind": "runtime.source",
+        "phase": "published",
+        "sourceId": "3666b20ee0d51576bca9da482abe755a687e22e473559a41bbeb4ac627d17f38",
+        "revision": "af5ebd22be24cfebc10972cc1dee91b47cd9c753b768a0c91b5c1006b2294d0b",
+        "expectedRevision": "f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+        "publicationJson": "{\"grant\":{\"targetId\":\"3666b20ee0d51576bca9da482abe755a687e22e473559a41bbeb4ac627d17f38\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-7W0EkD\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":null,\"runtimeId\":\"opencode\",\"profileId\":\"TEST-v2-settings-management\",\"configRevision\":\"TEST-opencode-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-7W0EkD\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-7W0EkD\"}]},\"commandId\":\"11ed35f5-30bd-439f-bff1-6c6d731d39f1\",\"expectedRevision\":\"f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef\",\"candidate\":{\"sourceKind\":\"captured\",\"executable\":{\"path\":\"/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun\",\"sha256\":\"45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675\"},\"openCodeConfiguration\":{\"scope\":\"global\",\"files\":[{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.json\",\"digest\":\"a3870067c3d732ac929712029b666fd41f4d297c80e144c368ec5dd3c9b29072\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.jsonc\",\"digest\":\"1dfb2e001f2d95fa9cb945073bf8531401cd7691b40946cee14bb568255619d7\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.json\",\"digest\":\"b452db1f65329e8e57af129bfe5ef37d6868e1d2698907df81fd8bae420c65b1\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.jsonc\",\"digest\":\"0c69cb07dfd22acf932ff6eabb227aacd17d728719b6d837ecbcae9e68a31572\"}],\"inlineDigest\":null},\"openCodePreferences\":{\"defaultModelId\":\"test-local/TEST-model\",\"modelLimitOverrides\":{}}},\"intent\":\"configuration\"}",
+        "digest": "8485e4a71076a691b72e7b05d5402b5bd4a3de3a29e06eb8d785b11ef541bb0c"
+      },
+      "canonicalBodyDigestMatched": true,
+      "commandFilenameDigestMatched": true
+    },
+    {
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/hoststore/management-commands/ce8e671b022a2ce95a81e407716d8d2ff681db6fad76e0903da65967e1d0ef7d.json",
+        "bytes": 3237,
+        "blob": "e0120a52fb5f902fb914eaf3a6d7928e612b2c05",
+        "sha256": "dd7e3cb1f3640e1ea1bb86e701ebe9b2991f2b2fcc5293da1472e544d4c8c204"
+      },
+      "record": {
+        "schemaVersion": 1,
+        "commandId": "edede954-8363-4652-b810-7a4af610afeb",
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "providerId": "opencode",
+        "fingerprint": "059095fe81e7f0c7311d868e472b80260757ec364ecdc3734e7480b06e513af0",
+        "selectionDigest": "48ea63d5097859d87ec4e9d4d7413d06e50ae90f46385cb766a04f8aecdd0d91",
+        "resourceId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+        "resourceHeld": false,
+        "kind": "runtime.source",
+        "phase": "published",
+        "sourceId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+        "revision": "9c73066505d2cab7371eec5ebeeb379b12c62daa5d34d585f8cec1defdaab67b",
+        "expectedRevision": "12ec7e607365a9d5fa884ac3b7e227bfdc29a958c8d74b111c528d0d07e1ec68",
+        "publicationJson": "{\"grant\":{\"targetId\":\"1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-7W0EkD\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace\",\"runtimeId\":\"opencode\",\"profileId\":\"TEST-v2-settings-management\",\"configRevision\":\"TEST-opencode-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-7W0EkD\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-7W0EkD\"}]},\"commandId\":\"edede954-8363-4652-b810-7a4af610afeb\",\"expectedRevision\":\"12ec7e607365a9d5fa884ac3b7e227bfdc29a958c8d74b111c528d0d07e1ec68\",\"candidate\":{\"sourceKind\":\"captured\",\"executable\":{\"path\":\"/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun\",\"sha256\":\"45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675\"},\"openCodeConfiguration\":{\"scope\":\"project\",\"files\":[{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.json\",\"digest\":\"a3870067c3d732ac929712029b666fd41f4d297c80e144c368ec5dd3c9b29072\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.jsonc\",\"digest\":\"1dfb2e001f2d95fa9cb945073bf8531401cd7691b40946cee14bb568255619d7\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.json\",\"digest\":\"b452db1f65329e8e57af129bfe5ef37d6868e1d2698907df81fd8bae420c65b1\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.jsonc\",\"digest\":\"0c69cb07dfd22acf932ff6eabb227aacd17d728719b6d837ecbcae9e68a31572\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace/opencode.json\",\"digest\":\"98b8d404ab262a4213d4dc29826e54e43adea1affcc2ed74b85c242f1be24194\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace/opencode.jsonc\",\"digest\":\"b4468f10e2d47662abbe21d614b460ce6e455495ef0cdd396ac3b864e0460ab5\"}],\"inlineDigest\":null},\"openCodePreferences\":{\"defaultModelId\":\"test-local/TEST-model\",\"modelLimitOverrides\":{}}},\"intent\":\"configuration\"}",
+        "digest": "289b06a0a674b2f3e32cf7dbeb614de93679727aa866143af6c6bcf553b49361"
+      },
+      "canonicalBodyDigestMatched": true,
+      "commandFilenameDigestMatched": true
+    },
+    {
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/hoststore/management-commands/da3239463590663398e6570f31bfdaef126de75bc5f10da4c835100c8556b5e2.json",
+        "bytes": 3237,
+        "blob": "9f11020a564f34ca09a43ad9a921f1bdf3798706",
+        "sha256": "6886695d06754d9d1682407b9c5e6ba190a7907057619d12556081e407ff48e3"
+      },
+      "record": {
+        "schemaVersion": 1,
+        "commandId": "87db1f3c-344c-48ed-833d-91329fdb0d18",
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "providerId": "opencode",
+        "fingerprint": "88d5c325fa01a95227d184ff71203c766c5114b00cc72368e99c5a800e597633",
+        "selectionDigest": "48ea63d5097859d87ec4e9d4d7413d06e50ae90f46385cb766a04f8aecdd0d91",
+        "resourceId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+        "resourceHeld": false,
+        "kind": "runtime.source",
+        "phase": "published",
+        "sourceId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+        "revision": "60bfa801e440d32bbcabdc1adf1f4a6fdf914515f8608c3e2e64556e1b500f56",
+        "expectedRevision": "09a50deefdfd6faa53d938462f34ed5acba3a0727b60f8cadffe49176217a0b8",
+        "publicationJson": "{\"grant\":{\"targetId\":\"1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-7W0EkD\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace\",\"runtimeId\":\"opencode\",\"profileId\":\"TEST-v2-settings-management\",\"configRevision\":\"TEST-opencode-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-7W0EkD\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-7W0EkD\"}]},\"commandId\":\"87db1f3c-344c-48ed-833d-91329fdb0d18\",\"expectedRevision\":\"09a50deefdfd6faa53d938462f34ed5acba3a0727b60f8cadffe49176217a0b8\",\"candidate\":{\"sourceKind\":\"captured\",\"executable\":{\"path\":\"/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun\",\"sha256\":\"45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675\"},\"openCodeConfiguration\":{\"scope\":\"project\",\"files\":[{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.json\",\"digest\":\"a3870067c3d732ac929712029b666fd41f4d297c80e144c368ec5dd3c9b29072\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.jsonc\",\"digest\":\"1dfb2e001f2d95fa9cb945073bf8531401cd7691b40946cee14bb568255619d7\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.json\",\"digest\":\"b452db1f65329e8e57af129bfe5ef37d6868e1d2698907df81fd8bae420c65b1\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.jsonc\",\"digest\":\"0c69cb07dfd22acf932ff6eabb227aacd17d728719b6d837ecbcae9e68a31572\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace/opencode.json\",\"digest\":\"98b8d404ab262a4213d4dc29826e54e43adea1affcc2ed74b85c242f1be24194\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace/opencode.jsonc\",\"digest\":\"b4468f10e2d47662abbe21d614b460ce6e455495ef0cdd396ac3b864e0460ab5\"}],\"inlineDigest\":null},\"openCodePreferences\":{\"defaultModelId\":\"test-local/TEST-model\",\"modelLimitOverrides\":{}}},\"intent\":\"configuration\"}",
+        "digest": "8bc44c363622656f91c607753b18c4ea425bf89cfcc7a999c9c79e8e8deb8a62"
+      },
+      "canonicalBodyDigestMatched": true,
+      "commandFilenameDigestMatched": true
+    },
+    {
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/hoststore/management-commands/dcac05fb20ffec2e78cfb52e551536adfcbe88c7f24ff7f49b08c9ff8e0d4ac8.json",
+        "bytes": 3216,
+        "blob": "3ad9e5ff0f52524a0ef7552f2c2e8604c3eeff05",
+        "sha256": "1c568cfd595ed309c1a6292addc97c1f9e0edc0a85b9c8006bb6145b197c1abe"
+      },
+      "record": {
+        "schemaVersion": 1,
+        "commandId": "b9449427-7cc0-4652-8f06-96a20bdafff5",
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "providerId": "opencode",
+        "fingerprint": "885a0c6fdc1cf2f7ca0ef9b7d8b544d52db3c91d2cbaca9e722c874ae437b998",
+        "selectionDigest": "48ea63d5097859d87ec4e9d4d7413d06e50ae90f46385cb766a04f8aecdd0d91",
+        "resourceId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+        "resourceHeld": false,
+        "kind": "runtime.source",
+        "phase": "published",
+        "sourceId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+        "revision": "12ec7e607365a9d5fa884ac3b7e227bfdc29a958c8d74b111c528d0d07e1ec68",
+        "expectedRevision": "48ea63d5097859d87ec4e9d4d7413d06e50ae90f46385cb766a04f8aecdd0d91",
+        "publicationJson": "{\"grant\":{\"targetId\":\"1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f\",\"ownerId\":\"TEST-desktop-owner-TEST-desktop-backend-7W0EkD\",\"ownerRevision\":\"TEST-desktop-revision-1\",\"contextId\":\"local\",\"projectPath\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace\",\"runtimeId\":\"opencode\",\"profileId\":\"TEST-v2-settings-management\",\"configRevision\":\"TEST-opencode-management\",\"teamScopes\":[{\"teamId\":\"TEST-desktop-team\",\"projectId\":\"TEST-project-TEST-desktop-backend-7W0EkD\",\"workspaceId\":\"TEST-workspace-TEST-desktop-backend-7W0EkD\"}]},\"commandId\":\"b9449427-7cc0-4652-8f06-96a20bdafff5\",\"expectedRevision\":\"48ea63d5097859d87ec4e9d4d7413d06e50ae90f46385cb766a04f8aecdd0d91\",\"candidate\":{\"sourceKind\":\"captured\",\"executable\":{\"path\":\"/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun\",\"sha256\":\"45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675\"},\"openCodeConfiguration\":{\"scope\":\"project\",\"files\":[{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.json\",\"digest\":\"a3870067c3d732ac929712029b666fd41f4d297c80e144c368ec5dd3c9b29072\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.jsonc\",\"digest\":\"1dfb2e001f2d95fa9cb945073bf8531401cd7691b40946cee14bb568255619d7\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.json\",\"digest\":\"b452db1f65329e8e57af129bfe5ef37d6868e1d2698907df81fd8bae420c65b1\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.jsonc\",\"digest\":\"0c69cb07dfd22acf932ff6eabb227aacd17d728719b6d837ecbcae9e68a31572\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace/opencode.json\",\"digest\":\"98b8d404ab262a4213d4dc29826e54e43adea1affcc2ed74b85c242f1be24194\"},{\"path\":\"/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace/opencode.jsonc\",\"digest\":\"b4468f10e2d47662abbe21d614b460ce6e455495ef0cdd396ac3b864e0460ab5\"}],\"inlineDigest\":null},\"openCodePreferences\":{\"defaultModelId\":null,\"modelLimitOverrides\":{}}},\"intent\":\"configuration\"}",
+        "digest": "727efe89eb48542d8c77ef4783f37341a372acc36d22c813e7ccaa5a60f34d5c"
+      },
+      "canonicalBodyDigestMatched": true,
+      "commandFilenameDigestMatched": true
+    },
+    {
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/hoststore/management-commands/ff801b58800a4cbc5839dd0f94df7ea9170dc3935bc2c87ce82cb0ca476954b0.json",
+        "bytes": 812,
+        "blob": "eb33abe018a80edb9289db24ba02613668d2cb90",
+        "sha256": "dc136e91885f26f35566cd551674aad1e1af32c5af587977ac320ec625606134"
+      },
+      "record": {
+        "schemaVersion": 1,
+        "commandId": "69c5036f-065a-4ff8-aa24-d0197e021dfa",
+        "profileId": "runtime-source:09a50deefdfd6faa53d938462f34ed5acba3a0727b60f8cadffe49176217a0b8",
+        "configRevision": "runtime-source:09a50deefdfd6faa53d938462f34ed5acba3a0727b60f8cadffe49176217a0b8",
+        "providerId": "test-local",
+        "fingerprint": "e0e509e87f8bee78765764ab7dcb6e7ec551d0f3264d746f3d3373d95e3b4b61",
+        "selectionDigest": "334a27d51598fdd287770eed4edb659365ff82280dd2f57998d797c8f55ee6f2",
+        "resourceId": "4af5254fc4941b8de39d00e08b34e759421a9734b51540e1f4a6efcd2ec73dc1",
+        "resourceHeld": false,
+        "kind": "model.probe",
+        "modelId": "test-local/TEST-project-model",
+        "phase": "completed",
+        "expiresAt": 1794813534689,
+        "ok": true,
+        "digest": "cabe29e5a64731488ecdfe8eff7b3f7be703af8f191b07ef462060d9add8d942"
+      },
+      "canonicalBodyDigestMatched": true,
+      "commandFilenameDigestMatched": true
+    }
+  ],
+  "runtimeSourceHistory": {
+    "file": {
+      "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/hoststore/runtime-sources/index.json",
+      "bytes": 15919,
+      "blob": "26b255d6ecab4d486467f7fe1974b2d4a894ba14",
+      "sha256": "a968a65f02c0845201a4f8cafa46065eed4d6eb53675dd2fc13849eee9fde964"
+    },
+    "records": [
+      {
+        "revision": "f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+        "previousRevision": "158b247228d2e5309f7e7cba8fd5f23d73957e02e6865b852021c813d4203239",
+        "commandId": "495bbb16-20dc-4d13-b3ca-8353c86fde06",
+        "grant": {
+          "targetId": "3666b20ee0d51576bca9da482abe755a687e22e473559a41bbeb4ac627d17f38",
+          "ownerId": "TEST-desktop-owner-TEST-desktop-backend-7W0EkD",
+          "ownerRevision": "TEST-desktop-revision-1",
+          "contextId": "local",
+          "projectPath": null,
+          "runtimeId": "opencode",
+          "profileId": "TEST-v2-settings-management",
+          "configRevision": "TEST-opencode-management",
+          "teamScopes": [
+            {
+              "teamId": "TEST-desktop-team",
+              "projectId": "TEST-project-TEST-desktop-backend-7W0EkD",
+              "workspaceId": "TEST-workspace-TEST-desktop-backend-7W0EkD"
+            }
+          ]
+        },
+        "candidate": {
+          "sourceKind": "captured",
+          "executable": {
+            "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+            "sha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675"
+          },
+          "openCodeConfiguration": {
+            "scope": "global",
+            "files": [
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.json",
+                "digest": "a3870067c3d732ac929712029b666fd41f4d297c80e144c368ec5dd3c9b29072"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.jsonc",
+                "digest": "1dfb2e001f2d95fa9cb945073bf8531401cd7691b40946cee14bb568255619d7"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.json",
+                "digest": "b452db1f65329e8e57af129bfe5ef37d6868e1d2698907df81fd8bae420c65b1"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.jsonc",
+                "digest": "0c69cb07dfd22acf932ff6eabb227aacd17d728719b6d837ecbcae9e68a31572"
+              }
+            ],
+            "inlineDigest": null
+          },
+          "openCodePreferences": {
+            "defaultModelId": null,
+            "modelLimitOverrides": {}
+          }
+        },
+        "intent": "configuration"
+      },
+      {
+        "revision": "12ec7e607365a9d5fa884ac3b7e227bfdc29a958c8d74b111c528d0d07e1ec68",
+        "previousRevision": "48ea63d5097859d87ec4e9d4d7413d06e50ae90f46385cb766a04f8aecdd0d91",
+        "commandId": "b9449427-7cc0-4652-8f06-96a20bdafff5",
+        "grant": {
+          "targetId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+          "ownerId": "TEST-desktop-owner-TEST-desktop-backend-7W0EkD",
+          "ownerRevision": "TEST-desktop-revision-1",
+          "contextId": "local",
+          "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace",
+          "runtimeId": "opencode",
+          "profileId": "TEST-v2-settings-management",
+          "configRevision": "TEST-opencode-management",
+          "teamScopes": [
+            {
+              "teamId": "TEST-desktop-team",
+              "projectId": "TEST-project-TEST-desktop-backend-7W0EkD",
+              "workspaceId": "TEST-workspace-TEST-desktop-backend-7W0EkD"
+            }
+          ]
+        },
+        "candidate": {
+          "sourceKind": "captured",
+          "executable": {
+            "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+            "sha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675"
+          },
+          "openCodeConfiguration": {
+            "scope": "project",
+            "files": [
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.json",
+                "digest": "a3870067c3d732ac929712029b666fd41f4d297c80e144c368ec5dd3c9b29072"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.jsonc",
+                "digest": "1dfb2e001f2d95fa9cb945073bf8531401cd7691b40946cee14bb568255619d7"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.json",
+                "digest": "b452db1f65329e8e57af129bfe5ef37d6868e1d2698907df81fd8bae420c65b1"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.jsonc",
+                "digest": "0c69cb07dfd22acf932ff6eabb227aacd17d728719b6d837ecbcae9e68a31572"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace/opencode.json",
+                "digest": "98b8d404ab262a4213d4dc29826e54e43adea1affcc2ed74b85c242f1be24194"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace/opencode.jsonc",
+                "digest": "b4468f10e2d47662abbe21d614b460ce6e455495ef0cdd396ac3b864e0460ab5"
+              }
+            ],
+            "inlineDigest": null
+          },
+          "openCodePreferences": {
+            "defaultModelId": null,
+            "modelLimitOverrides": {}
+          }
+        },
+        "intent": "configuration"
+      },
+      {
+        "revision": "af5ebd22be24cfebc10972cc1dee91b47cd9c753b768a0c91b5c1006b2294d0b",
+        "previousRevision": "f11dce788136bfa26a8141b58e66e95c8a26936412c47929e8dd5b30338f36ef",
+        "commandId": "11ed35f5-30bd-439f-bff1-6c6d731d39f1",
+        "grant": {
+          "targetId": "3666b20ee0d51576bca9da482abe755a687e22e473559a41bbeb4ac627d17f38",
+          "ownerId": "TEST-desktop-owner-TEST-desktop-backend-7W0EkD",
+          "ownerRevision": "TEST-desktop-revision-1",
+          "contextId": "local",
+          "projectPath": null,
+          "runtimeId": "opencode",
+          "profileId": "TEST-v2-settings-management",
+          "configRevision": "TEST-opencode-management",
+          "teamScopes": [
+            {
+              "teamId": "TEST-desktop-team",
+              "projectId": "TEST-project-TEST-desktop-backend-7W0EkD",
+              "workspaceId": "TEST-workspace-TEST-desktop-backend-7W0EkD"
+            }
+          ]
+        },
+        "candidate": {
+          "sourceKind": "captured",
+          "executable": {
+            "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+            "sha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675"
+          },
+          "openCodeConfiguration": {
+            "scope": "global",
+            "files": [
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.json",
+                "digest": "a3870067c3d732ac929712029b666fd41f4d297c80e144c368ec5dd3c9b29072"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.jsonc",
+                "digest": "1dfb2e001f2d95fa9cb945073bf8531401cd7691b40946cee14bb568255619d7"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.json",
+                "digest": "b452db1f65329e8e57af129bfe5ef37d6868e1d2698907df81fd8bae420c65b1"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.jsonc",
+                "digest": "0c69cb07dfd22acf932ff6eabb227aacd17d728719b6d837ecbcae9e68a31572"
+              }
+            ],
+            "inlineDigest": null
+          },
+          "openCodePreferences": {
+            "defaultModelId": "test-local/TEST-model",
+            "modelLimitOverrides": {}
+          }
+        },
+        "intent": "configuration"
+      },
+      {
+        "revision": "9c73066505d2cab7371eec5ebeeb379b12c62daa5d34d585f8cec1defdaab67b",
+        "previousRevision": "12ec7e607365a9d5fa884ac3b7e227bfdc29a958c8d74b111c528d0d07e1ec68",
+        "commandId": "edede954-8363-4652-b810-7a4af610afeb",
+        "grant": {
+          "targetId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+          "ownerId": "TEST-desktop-owner-TEST-desktop-backend-7W0EkD",
+          "ownerRevision": "TEST-desktop-revision-1",
+          "contextId": "local",
+          "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace",
+          "runtimeId": "opencode",
+          "profileId": "TEST-v2-settings-management",
+          "configRevision": "TEST-opencode-management",
+          "teamScopes": [
+            {
+              "teamId": "TEST-desktop-team",
+              "projectId": "TEST-project-TEST-desktop-backend-7W0EkD",
+              "workspaceId": "TEST-workspace-TEST-desktop-backend-7W0EkD"
+            }
+          ]
+        },
+        "candidate": {
+          "sourceKind": "captured",
+          "executable": {
+            "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+            "sha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675"
+          },
+          "openCodeConfiguration": {
+            "scope": "project",
+            "files": [
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.json",
+                "digest": "a3870067c3d732ac929712029b666fd41f4d297c80e144c368ec5dd3c9b29072"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.jsonc",
+                "digest": "1dfb2e001f2d95fa9cb945073bf8531401cd7691b40946cee14bb568255619d7"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.json",
+                "digest": "b452db1f65329e8e57af129bfe5ef37d6868e1d2698907df81fd8bae420c65b1"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.jsonc",
+                "digest": "0c69cb07dfd22acf932ff6eabb227aacd17d728719b6d837ecbcae9e68a31572"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace/opencode.json",
+                "digest": "98b8d404ab262a4213d4dc29826e54e43adea1affcc2ed74b85c242f1be24194"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace/opencode.jsonc",
+                "digest": "b4468f10e2d47662abbe21d614b460ce6e455495ef0cdd396ac3b864e0460ab5"
+              }
+            ],
+            "inlineDigest": null
+          },
+          "openCodePreferences": {
+            "defaultModelId": "test-local/TEST-model",
+            "modelLimitOverrides": {}
+          }
+        },
+        "intent": "configuration"
+      },
+      {
+        "revision": "09a50deefdfd6faa53d938462f34ed5acba3a0727b60f8cadffe49176217a0b8",
+        "previousRevision": "9c73066505d2cab7371eec5ebeeb379b12c62daa5d34d585f8cec1defdaab67b",
+        "commandId": "01da48c8-cc1e-49ee-a93d-c52f68d5ac16",
+        "grant": {
+          "targetId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+          "ownerId": "TEST-desktop-owner-TEST-desktop-backend-7W0EkD",
+          "ownerRevision": "TEST-desktop-revision-1",
+          "contextId": "local",
+          "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace",
+          "runtimeId": "opencode",
+          "profileId": "TEST-v2-settings-management",
+          "configRevision": "TEST-opencode-management",
+          "teamScopes": [
+            {
+              "teamId": "TEST-desktop-team",
+              "projectId": "TEST-project-TEST-desktop-backend-7W0EkD",
+              "workspaceId": "TEST-workspace-TEST-desktop-backend-7W0EkD"
+            }
+          ]
+        },
+        "candidate": {
+          "sourceKind": "captured",
+          "executable": {
+            "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+            "sha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675"
+          },
+          "openCodeConfiguration": {
+            "scope": "project",
+            "files": [
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.json",
+                "digest": "a3870067c3d732ac929712029b666fd41f4d297c80e144c368ec5dd3c9b29072"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.jsonc",
+                "digest": "1dfb2e001f2d95fa9cb945073bf8531401cd7691b40946cee14bb568255619d7"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.json",
+                "digest": "b452db1f65329e8e57af129bfe5ef37d6868e1d2698907df81fd8bae420c65b1"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.jsonc",
+                "digest": "0c69cb07dfd22acf932ff6eabb227aacd17d728719b6d837ecbcae9e68a31572"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace/opencode.json",
+                "digest": "98b8d404ab262a4213d4dc29826e54e43adea1affcc2ed74b85c242f1be24194"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace/opencode.jsonc",
+                "digest": "b4468f10e2d47662abbe21d614b460ce6e455495ef0cdd396ac3b864e0460ab5"
+              }
+            ],
+            "inlineDigest": null
+          },
+          "openCodePreferences": {
+            "defaultModelId": "test-local/TEST-project-model",
+            "modelLimitOverrides": {}
+          }
+        },
+        "intent": "configuration"
+      },
+      {
+        "revision": "ce434b8915ec4720a0481d838da0f6b6cd512f405eca687322c8dd2b31498bf7",
+        "previousRevision": "f7e08a185abf0b0d5f6f4f06917aa9293805c16ee0e7c59d0e052905033cc909",
+        "commandId": "c4a4bfd3-d89a-4ed0-88fe-5ed4e21bef67",
+        "grant": {
+          "targetId": "fc0d32c9f966c83cb020ffc50ae13c3463ad15cc0621cd696591fec8bf79a421",
+          "ownerId": "TEST-desktop-owner-TEST-desktop-backend-7W0EkD",
+          "ownerRevision": "TEST-desktop-revision-1",
+          "contextId": "local",
+          "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace-other",
+          "runtimeId": "opencode",
+          "profileId": "TEST-v2-settings-management-other",
+          "configRevision": "TEST-opencode-management",
+          "teamScopes": [
+            {
+              "teamId": "TEST-desktop-team",
+              "projectId": "TEST-project-TEST-desktop-backend-7W0EkD",
+              "workspaceId": "TEST-workspace-TEST-desktop-backend-7W0EkD"
+            }
+          ]
+        },
+        "candidate": {
+          "sourceKind": "captured",
+          "executable": {
+            "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+            "sha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675"
+          },
+          "openCodeConfiguration": {
+            "scope": "project",
+            "files": [
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.json",
+                "digest": "a3870067c3d732ac929712029b666fd41f4d297c80e144c368ec5dd3c9b29072"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.jsonc",
+                "digest": "1dfb2e001f2d95fa9cb945073bf8531401cd7691b40946cee14bb568255619d7"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.json",
+                "digest": "b452db1f65329e8e57af129bfe5ef37d6868e1d2698907df81fd8bae420c65b1"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.jsonc",
+                "digest": "0c69cb07dfd22acf932ff6eabb227aacd17d728719b6d837ecbcae9e68a31572"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace-other/opencode.json",
+                "digest": "7e9e7079f8347dedd9e200e00fa6e8cb56c30a08a1610a707df9523067f37e15"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace-other/opencode.jsonc",
+                "digest": "dea5e7ab543d8110b3c5cf8080336ac42fde199497f902e684a28d3ae1c199cc"
+              }
+            ],
+            "inlineDigest": null
+          },
+          "openCodePreferences": {
+            "defaultModelId": "test-local/TEST-model",
+            "modelLimitOverrides": {}
+          }
+        },
+        "intent": "configuration"
+      },
+      {
+        "revision": "60bfa801e440d32bbcabdc1adf1f4a6fdf914515f8608c3e2e64556e1b500f56",
+        "previousRevision": "09a50deefdfd6faa53d938462f34ed5acba3a0727b60f8cadffe49176217a0b8",
+        "commandId": "87db1f3c-344c-48ed-833d-91329fdb0d18",
+        "grant": {
+          "targetId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+          "ownerId": "TEST-desktop-owner-TEST-desktop-backend-7W0EkD",
+          "ownerRevision": "TEST-desktop-revision-1",
+          "contextId": "local",
+          "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace",
+          "runtimeId": "opencode",
+          "profileId": "TEST-v2-settings-management",
+          "configRevision": "TEST-opencode-management",
+          "teamScopes": [
+            {
+              "teamId": "TEST-desktop-team",
+              "projectId": "TEST-project-TEST-desktop-backend-7W0EkD",
+              "workspaceId": "TEST-workspace-TEST-desktop-backend-7W0EkD"
+            }
+          ]
+        },
+        "candidate": {
+          "sourceKind": "captured",
+          "executable": {
+            "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+            "sha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675"
+          },
+          "openCodeConfiguration": {
+            "scope": "project",
+            "files": [
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.json",
+                "digest": "a3870067c3d732ac929712029b666fd41f4d297c80e144c368ec5dd3c9b29072"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/home/.config/opencode/opencode.jsonc",
+                "digest": "1dfb2e001f2d95fa9cb945073bf8531401cd7691b40946cee14bb568255619d7"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.json",
+                "digest": "b452db1f65329e8e57af129bfe5ef37d6868e1d2698907df81fd8bae420c65b1"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/config/opencode/opencode.jsonc",
+                "digest": "0c69cb07dfd22acf932ff6eabb227aacd17d728719b6d837ecbcae9e68a31572"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace/opencode.json",
+                "digest": "98b8d404ab262a4213d4dc29826e54e43adea1affcc2ed74b85c242f1be24194"
+              },
+              {
+                "path": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace/opencode.jsonc",
+                "digest": "b4468f10e2d47662abbe21d614b460ce6e455495ef0cdd396ac3b864e0460ab5"
+              }
+            ],
+            "inlineDigest": null
+          },
+          "openCodePreferences": {
+            "defaultModelId": "test-local/TEST-model",
+            "modelLimitOverrides": {}
+          }
+        },
+        "intent": "configuration"
+      }
+    ],
+    "current": [
+      {
+        "sourceId": "3666b20ee0d51576bca9da482abe755a687e22e473559a41bbeb4ac627d17f38",
+        "revision": "af5ebd22be24cfebc10972cc1dee91b47cd9c753b768a0c91b5c1006b2294d0b",
+        "commandId": "11ed35f5-30bd-439f-bff1-6c6d731d39f1"
+      },
+      {
+        "sourceId": "fc0d32c9f966c83cb020ffc50ae13c3463ad15cc0621cd696591fec8bf79a421",
+        "revision": "ce434b8915ec4720a0481d838da0f6b6cd512f405eca687322c8dd2b31498bf7",
+        "commandId": "c4a4bfd3-d89a-4ed0-88fe-5ed4e21bef67"
+      },
+      {
+        "sourceId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+        "revision": "60bfa801e440d32bbcabdc1adf1f4a6fdf914515f8608c3e2e64556e1b500f56",
+        "commandId": "87db1f3c-344c-48ed-833d-91329fdb0d18"
+      }
+    ],
+    "orderedIndexAndRevisionDigestsMatched": true,
+    "descriptorTargetAndCompleteGrantsRecomputed": {
+      "3666b20ee0d51576bca9da482abe755a687e22e473559a41bbeb4ac627d17f38": {
+        "targetId": "3666b20ee0d51576bca9da482abe755a687e22e473559a41bbeb4ac627d17f38",
+        "ownerId": "TEST-desktop-owner-TEST-desktop-backend-7W0EkD",
+        "ownerRevision": "TEST-desktop-revision-1",
+        "contextId": "local",
+        "projectPath": null,
+        "runtimeId": "opencode",
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "teamScopes": [
+          {
+            "teamId": "TEST-desktop-team",
+            "projectId": "TEST-project-TEST-desktop-backend-7W0EkD",
+            "workspaceId": "TEST-workspace-TEST-desktop-backend-7W0EkD"
+          }
+        ]
+      },
+      "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f": {
+        "targetId": "1d1f85eb8004ecc698a9101572fa7be28a6a7cd4aee1ea71fda824b4193bbd4f",
+        "ownerId": "TEST-desktop-owner-TEST-desktop-backend-7W0EkD",
+        "ownerRevision": "TEST-desktop-revision-1",
+        "contextId": "local",
+        "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace",
+        "runtimeId": "opencode",
+        "profileId": "TEST-v2-settings-management",
+        "configRevision": "TEST-opencode-management",
+        "teamScopes": [
+          {
+            "teamId": "TEST-desktop-team",
+            "projectId": "TEST-project-TEST-desktop-backend-7W0EkD",
+            "workspaceId": "TEST-workspace-TEST-desktop-backend-7W0EkD"
+          }
+        ]
+      },
+      "fc0d32c9f966c83cb020ffc50ae13c3463ad15cc0621cd696591fec8bf79a421": {
+        "targetId": "fc0d32c9f966c83cb020ffc50ae13c3463ad15cc0621cd696591fec8bf79a421",
+        "ownerId": "TEST-desktop-owner-TEST-desktop-backend-7W0EkD",
+        "ownerRevision": "TEST-desktop-revision-1",
+        "contextId": "local",
+        "projectPath": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/workspace-other",
+        "runtimeId": "opencode",
+        "profileId": "TEST-v2-settings-management-other",
+        "configRevision": "TEST-opencode-management",
+        "teamScopes": [
+          {
+            "teamId": "TEST-desktop-team",
+            "projectId": "TEST-project-TEST-desktop-backend-7W0EkD",
+            "workspaceId": "TEST-workspace-TEST-desktop-backend-7W0EkD"
+          }
+        ]
+      }
+    },
+    "privateSeedSelectionDigestsMatched": true,
+    "allPublicationFingerprintsAndPredecessorsJoined": true,
+    "derivedPublicationsEqualReceipt": true,
+    "fiveEffectsJoinOriginalRevisionRatherThanLaterPointer": true,
+    "configurationBodiesArchived": false
+  },
+  "preferences": [
+    {
+      "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/preferences/global/global-runtime-preferences.json",
+      "bytes": 142,
+      "blob": "3bd11a2a59fd55c554fa387ff5748501b7ff1228",
+      "sha256": "f52c12478698fe9908405ad3b452608ed50c7dbdfa141368e780d7d6233cb3a0"
+    },
+    {
+      "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/preferences/workspace/agent-teams-runtime-preferences.json",
+      "bytes": 123,
+      "blob": "b07e353fa9379023fae89764c83e503a661201f4",
+      "sha256": "81d147ed98617bf58f63ae53dbcbbd9f587d67840d75e7c9870655c0130ae7f9"
+    }
+  ],
+  "credentialCopyDiscrepancy": {
+    "kind": "E1 V2 rejected-credential copy versus original retention boundary",
+    "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "observedVisibleMessage": "test-local could not verify this credential with a real model request. The new credential was not kept.",
+    "actualPng": "ui-v2-management-rejected-key.png",
+    "sourceJoins": [
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+        "bytes": 6481,
+        "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+        "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0",
+        "matchingLines": [
+          {
+            "line": 121,
+            "text": "    return `${displayName} rejected this API key. The new credential was not kept. Copy the key from the correct account or subscription plan, then try again.`;"
+          },
+          {
+            "line": 127,
+            "text": "    return `${displayName} rejected the verification request because of an account or security policy. The new credential was not kept. Check the key permissions and account restrictions, then try again.`;"
+          },
+          {
+            "line": 130,
+            "text": "    return `${displayName} could not verify this credential with a real model request. The new credential was not kept.\\n${error.message}`;"
+          }
+        ]
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+        "bytes": 20435,
+        "blob": "7f224d52e429bbdecb173d65b470a2ac154de475",
+        "sha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6",
+        "matchingLines": [
+          {
+            "line": 11,
+            "text": "import { desktopV2ProviderId, desktopV2RejectedKey, desktopV2SelectedKey } from './desktop-opencode-v2-management-model.ts';"
+          },
+          {
+            "line": 205,
+            "text": "  await replace(cdp, ui, input, desktopV2RejectedKey, 'rejected TEST key');"
+          },
+          {
+            "line": 208,
+            "text": "  assert.deepEqual(await privateJson(fixture.v2Management.authPath), { [desktopV2ProviderId]: { type: 'api', key: desktopV2RejectedKey } });"
+          },
+          {
+            "line": 210,
+            "text": "  await replace(cdp, ui, input, desktopV2SelectedKey, 'replacement TEST key');"
+          },
+          {
+            "line": 213,
+            "text": "  assert.deepEqual(await privateJson(fixture.v2Management.authPath), { [desktopV2ProviderId]: { type: 'api', key: desktopV2SelectedKey } });"
+          },
+          {
+            "line": 215,
+            "text": "  assert.equal(await cdp.evaluate(`document.body.innerText.includes(${desktopJsLiteral(desktopV2SelectedKey)})`), false);"
+          },
+          {
+            "line": 273,
+            "text": "  proof.credentials = { authSha256, rejectedKeyRetainedUntilExplicitReplacement: true, successfulReplacementVerified: true };"
+          }
+        ]
+      }
+    ],
+    "receiptAssertion": {
+      "authSha256": "ec9a5ca72560031c0361d3b27c3c208ba5c1bc31a33bb78085a80d47ea40393a",
+      "rejectedKeyRetainedUntilExplicitReplacement": true,
+      "successfulReplacementVerified": true
+    },
+    "authJsonArchived": false,
+    "scope": "Exact source and original receipt/PNG discrepancy; no cause, fix, rollback guarantee or independent archived auth bytes."
+  },
+  "nativeInput": {
+    "generation": "v2",
+    "version": "2.1.4",
+    "bunSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+    "manifestSha256": "30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce",
+    "profileSha256": "c6b2e4f42c7d359b44e8732d7bc71b2154842b5b0ace1655a191c93773985433",
+    "descriptorSha256": "e799e2394f2121976f9ebb0de941d4e7af0580c3d4160669dac6468edef76aa8",
+    "runtimeConfigured": false,
+    "managementConfigured": true,
+    "managementProfiles": 2,
+    "codexOrClaudeExecutable": false
+  },
+  "nativeInputAfterCleanup": {
+    "generation": "v2",
+    "version": "2.1.4",
+    "bunSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+    "manifestSha256": "30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce",
+    "profileSha256": "c6b2e4f42c7d359b44e8732d7bc71b2154842b5b0ace1655a191c93773985433",
+    "descriptorSha256": "e799e2394f2121976f9ebb0de941d4e7af0580c3d4160669dac6468edef76aa8",
+    "runtimeConfigured": false,
+    "managementConfigured": true,
+    "managementProfiles": 2,
+    "codexOrClaudeExecutable": false
+  },
+  "nativeProcesses": {
+    "children": [
+      {
+        "pid": 7019,
+        "ppid": 4846,
+        "pgid": 7019,
+        "birth": "31379",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-probe-67a0ff5e68692212-FjCKc1",
+        "role": "probe"
+      },
+      {
+        "pid": 7120,
+        "ppid": 4846,
+        "pgid": 7120,
+        "birth": "31726",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-catalog-HMVV7S",
+        "role": "catalog"
+      },
+      {
+        "pid": 7801,
+        "ppid": 4846,
+        "pgid": 7801,
+        "birth": "34408",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-probe-eda56e808017ce6b-086pee",
+        "role": "probe"
+      },
+      {
+        "pid": 9835,
+        "ppid": 4846,
+        "pgid": 9835,
+        "birth": "43473",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-catalog-yDnHg3",
+        "role": "catalog"
+      },
+      {
+        "pid": 10273,
+        "ppid": 4846,
+        "pgid": 10273,
+        "birth": "45369",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-catalog-ZsPmWT",
+        "role": "catalog"
+      },
+      {
+        "pid": 10489,
+        "ppid": 4846,
+        "pgid": 10489,
+        "birth": "46241",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-probe-e843fbdf173aaf79-IaW1vO",
+        "role": "probe"
+      },
+      {
+        "pid": 11587,
+        "ppid": 4846,
+        "pgid": 11587,
+        "birth": "49682",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-catalog-JZyvNO",
+        "role": "catalog"
+      },
+      {
+        "pid": 11702,
+        "ppid": 4846,
+        "pgid": 11702,
+        "birth": "50032",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-catalog-8UuTDN",
+        "role": "catalog"
+      },
+      {
+        "pid": 12220,
+        "ppid": 4846,
+        "pgid": 12220,
+        "birth": "51905",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-catalog-yy8Rcm",
+        "role": "catalog"
+      },
+      {
+        "pid": 12511,
+        "ppid": 4846,
+        "pgid": 12511,
+        "birth": "53206",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-probe-798bd099b9c99ec0-2zM8bs",
+        "role": "probe"
+      },
+      {
+        "pid": 12678,
+        "ppid": 4846,
+        "pgid": 12678,
+        "birth": "53970",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-catalog-HZP1D2",
+        "role": "catalog"
+      },
+      {
+        "pid": 13014,
+        "ppid": 4846,
+        "pgid": 13014,
+        "birth": "55122",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-catalog-rQYbIW",
+        "role": "catalog"
+      },
+      {
+        "pid": 13667,
+        "ppid": 4846,
+        "pgid": 13667,
+        "birth": "57242",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-probe-2473d72a0ed3cb3e-KTovu5",
+        "role": "probe"
+      },
+      {
+        "pid": 14709,
+        "ppid": 4846,
+        "pgid": 14709,
+        "birth": "61689",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-catalog-0bKfcP",
+        "role": "catalog"
+      },
+      {
+        "pid": 15271,
+        "ppid": 4846,
+        "pgid": 15271,
+        "birth": "63887",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-catalog-m2UgQa",
+        "role": "catalog"
+      },
+      {
+        "pid": 15881,
+        "ppid": 4846,
+        "pgid": 15881,
+        "birth": "66831",
+        "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-catalog-VuVJtI",
+        "role": "catalog"
+      }
+    ],
+    "probes": [
+      {
+        "step": "reject-key",
+        "pid": 7019,
+        "birth": "31379",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-probe-67a0ff5e68692212-FjCKc1",
+        "absentAfterReceipt": true
+      },
+      {
+        "step": "connect-key",
+        "pid": 7801,
+        "birth": "34408",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-probe-eda56e808017ce6b-086pee",
+        "absentAfterReceipt": true
+      },
+      {
+        "step": "global-default",
+        "pid": 10489,
+        "birth": "46241",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-probe-e843fbdf173aaf79-IaW1vO",
+        "absentAfterReceipt": true
+      },
+      {
+        "step": "project-default",
+        "pid": 12511,
+        "birth": "53206",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-probe-798bd099b9c99ec0-2zM8bs",
+        "absentAfterReceipt": true
+      },
+      {
+        "step": "project-test",
+        "pid": 13667,
+        "birth": "57242",
+        "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-probe-2473d72a0ed3cb3e-KTovu5",
+        "absentAfterReceipt": true
+      }
+    ]
+  },
+  "nativeBeforeClose": [
+    {
+      "pid": 9835,
+      "ppid": 4846,
+      "pgid": 9835,
+      "birth": "43473",
+      "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-catalog-yDnHg3",
+      "role": "catalog"
+    },
+    {
+      "pid": 10273,
+      "ppid": 4846,
+      "pgid": 10273,
+      "birth": "45369",
+      "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-catalog-ZsPmWT",
+      "role": "catalog"
+    },
+    {
+      "pid": 12220,
+      "ppid": 4846,
+      "pgid": 12220,
+      "birth": "51905",
+      "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-catalog-yy8Rcm",
+      "role": "catalog"
+    },
+    {
+      "pid": 13014,
+      "ppid": 4846,
+      "pgid": 13014,
+      "birth": "55122",
+      "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-catalog-rQYbIW",
+      "role": "catalog"
+    },
+    {
+      "pid": 14709,
+      "ppid": 4846,
+      "pgid": 14709,
+      "birth": "61689",
+      "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-catalog-0bKfcP",
+      "role": "catalog"
+    },
+    {
+      "pid": 15271,
+      "ppid": 4846,
+      "pgid": 15271,
+      "birth": "63887",
+      "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-catalog-m2UgQa",
+      "role": "catalog"
+    },
+    {
+      "pid": 15881,
+      "ppid": 4846,
+      "pgid": 15881,
+      "birth": "66831",
+      "executableSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+      "dataRoot": "/home/runner/work/_temp/TEST-desktop-backend-7W0EkD/providers/opencode-v2/data/agent-teams-v2-catalog-VuVJtI",
+      "role": "catalog"
+    }
+  ],
+  "app": {
+    "pid": 4456,
+    "processGroup": 4456,
+    "identity": "Mon Nov 16 07:10:44 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-4eYFNI/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox",
+    "invocation": [
+      "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+      "/home/runner/work/_temp/TEST-emulated-ui-inputs-4eYFNI/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+      "dev:mcp",
+      "--remoteDebuggingPort",
+      "9222",
+      "--noSandbox"
+    ]
+  },
+  "hostChild": {
+    "pid": 4846,
+    "birth": "22623",
+    "observedBeforeShutdown": true
+  },
+  "startupDiagnosticClose": {
+    "attempted": true,
+    "scope": "Close only the verified TEST window before stopping its dev wrapper",
+    "reply": "acknowledged",
+    "listenerAbsent": true
+  },
+  "originalClose": {
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "groupRemaining": [],
+    "hostAbsent": true,
+    "nativeRemaining": []
+  },
+  "originalRequestedQuitExit": {
+    "initialExitCode": 0,
+    "initialSignalCode": null,
+    "exitCode": 0,
+    "signalCode": null
+  },
+  "beforeHarnessCleanup": [],
+  "cleanup": {
+    "remaining": [],
+    "capturedHostAbsent": true,
+    "hostPid": 4846
+  },
+  "nativeRemaining": [],
+  "nativeChildExitCodesSeparatelyRetained": false,
+  "passiveMainChildRowsPresent": false,
+  "finiteModel": {
+    "requests": [
+      {
+        "step": "reject-key",
+        "model": "TEST-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "refused"
+      },
+      {
+        "step": "connect-key",
+        "model": "TEST-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "OK"
+      },
+      {
+        "step": "global-default",
+        "model": "TEST-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "OK"
+      },
+      {
+        "step": "project-default",
+        "model": "TEST-project-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "OK"
+      },
+      {
+        "step": "project-test",
+        "model": "TEST-project-model",
+        "tools": 0,
+        "authorizationMatched": true,
+        "promptMatched": true,
+        "outcome": "OK"
+      }
+    ],
+    "failures": []
+  },
+  "finiteModelCompleteAfterCleanup": true,
+  "modelServerClosed": true,
+  "finalSentinelCensus": [
+    {
+      "executable": "claude-multimodel",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    },
+    {
+      "executable": "opencode",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    },
+    {
+      "executable": "shell-env",
+      "allowed": true,
+      "argc": 2,
+      "flags": [
+        "-lic"
+      ]
+    },
+    {
+      "executable": "opencode",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    },
+    {
+      "executable": "opencode",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    },
+    {
+      "executable": "opencode",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    },
+    {
+      "executable": "opencode",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    },
+    {
+      "executable": "opencode",
+      "allowed": true,
+      "argc": 1,
+      "command": null,
+      "flags": [
+        "--version"
+      ]
+    }
+  ],
+  "images": [
+    {
+      "receiptField": "rejectionScreenshot",
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/ui-v2-management-rejected-key.png",
+        "bytes": 123422,
+        "blob": "773cd8bd8c67865e8da8724305009b4b76854726",
+        "sha256": "fc8afb4fd125d073be89bcd3fa860cc20e7a6b7eb7f2cee839ba0b094149da12"
+      },
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewedSingly": true,
+      "receiptHashMatched": true,
+      "scope": "Masked TEST key, native catalog loaded, auth-failed diagnostic. Exact visible headline: test-local could not verify this credential with a real model request. The new credential was not kept. That persistence claim conflicts with the original source assertion of retention until explicit replacement; no auth.json bytes are archived."
+    },
+    {
+      "receiptField": "connectedScreenshot",
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/ui-v2-management-connected.png",
+        "bytes": 103684,
+        "blob": "b6d41cc8b26f9ac356644a7dba57ea44f2c28b0e",
+        "sha256": "0ea5b3dbaa9384dce0f683a7c0c5f5ef241dd493d7b730b9deab36a541ff14c9"
+      },
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewedSingly": true,
+      "receiptHashMatched": true,
+      "scope": "test-local Connected badge and no key form. Connect spinner, disabled-looking controls and model skeletons remain; no fully idle-settings claim."
+    },
+    {
+      "receiptField": "projectScreenshot",
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/ui-v2-management-project-override.png",
+        "bytes": 75402,
+        "blob": "76da20056b91199f4901730d50faf87c33c2e6d7",
+        "sha256": "637a6dc16bb24455ff910f8b77e328d025ce4acd1a651ad6c85d523f47c88051"
+      },
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewedSingly": true,
+      "receiptHashMatched": true,
+      "scope": "Models active; global default test-local/TEST-model and workspace Project override test-local/TEST-project-model visible with Change and Use default controls."
+    },
+    {
+      "receiptField": "inheritanceScreenshot",
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/ui-v2-management-inherited.png",
+        "bytes": 73447,
+        "blob": "67bea4628402ee8a40ea90884918b79cdc2521d1",
+        "sha256": "eefcdcfcc1d1841b43d9ecb062e55bd6bc85f73c5dcd50382a98f0edd60119fd"
+      },
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewedSingly": true,
+      "receiptHashMatched": true,
+      "scope": "Workspace Uses default test-local/TEST-model after clear; control text is dimmed. The frame does not establish all asynchronous work settled."
+    },
+    {
+      "receiptField": "reloadedScreenshot",
+      "file": {
+        "path": "ci-e1d14b9/v2-management/extracted/TEST-desktop-backend-7W0EkD/ui-v2-management-reloaded.png",
+        "bytes": 74158,
+        "blob": "361bda4af17db6ec7e71080c1f72b1faa4e9bdb8",
+        "sha256": "2251523caf811579289921741f364f38457c4eceea4c6d41515805105ff3790f"
+      },
+      "dimensions": [
+        1400,
+        900
+      ],
+      "actuallyViewedSingly": true,
+      "receiptHashMatched": true,
+      "scope": "After original renderer reload, global and workspace inherited test-local/TEST-model are visible. Providers tab still has a spinner; no all-idle or duration claim."
+    }
+  ],
+  "pins": {
+    "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+    "corepackPackageSha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+    "corepackLibrarySha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+    "pnpmStubSha256": "2694cfa936e448f27c19a4a34ac8b8fde757a33938bc44aeae71704c5d7ab749",
+    "profileSha256": "c6b2e4f42c7d359b44e8732d7bc71b2154842b5b0ace1655a191c93773985433",
+    "descriptorSha256": "e799e2394f2121976f9ebb0de941d4e7af0580c3d4160669dac6468edef76aa8",
+    "sentinelSha256": "3a7ac370894ff254a21f9cf455723d03c99eb54284b069f4c29c44952ddf09d0",
+    "shellProbeSha256": "e96c2f9f5e647f9b43ed4268930eece75c81d2e880737b2f0d7b577aeb84c9d7",
+    "providerArchiveSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+    "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+    "electronSha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+    "smokeSourceSha256": "91bfb3b90c18e38af200e23d167811e526b339d1525ccc502db43759a5e6bf77",
+    "fixtureSourceSha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+    "uiSourceSha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf"
+  },
+  "compiledBundleHashesAfterStartup": [
+    {
+      "path": "main/chunks/index-D9GX0Q6a.cjs",
+      "sha256": "89c988b7be61f7f30f0effaed6a2626a2279b0ed753228360e77e227884d0a92"
+    },
+    {
+      "path": "main/chunks/index-yaJFGvjB.cjs",
+      "sha256": "ec64b11e28a53961fd7846392857a0167886b8b086d14f54e20041ddc9927155"
+    },
+    {
+      "path": "main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+      "sha256": "7babbc9bd69c863a2210647b3d5f589d96437a9a80fd794b54196387849217f6"
+    },
+    {
+      "path": "main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+      "sha256": "c14cfc36aeec6fd7103c507f258097aaeccf552dbbf608fea43f9e3c7a7ef3b3"
+    },
+    {
+      "path": "main/chunks/taskChangeState-rZolvpL6.cjs",
+      "sha256": "f40557112189b351692a4b0f19244d7845a4dfe754f468326a21c36386efa1cd"
+    },
+    {
+      "path": "main/chunks/taskHistory-2kbwfqIg.cjs",
+      "sha256": "1d336b6cea5aa5c4768954541a24347fe89bb46a83faddaf8b26fd6e0afb7f85"
+    },
+    {
+      "path": "main/chunks/TeamDataService-DySh5-O-.cjs",
+      "sha256": "ed455bf2423e0511bf1fb8e30069280fe99b505e8e4968df3705309a7131556e"
+    },
+    {
+      "path": "main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+      "sha256": "2915a9af73772eda67fa92bd4499976d75724d9605cc947e356bd1dc1cee600c"
+    },
+    {
+      "path": "main/index.cjs",
+      "sha256": "6c4026b6a9ca512c75bfc90eb4f84b90fc150b8111310bf49a82227e3907880c"
+    },
+    {
+      "path": "main/internal-storage-worker.cjs",
+      "sha256": "3433cb94575a5748d3133174952698af2a98ac2afb348cb159fcb1110e0b284f"
+    },
+    {
+      "path": "main/task-change-worker.cjs",
+      "sha256": "f8fcc24dd4dc9842cd0f70ffe02891d39eef84019d4aab4ed21b529ba9326446"
+    },
+    {
+      "path": "main/team-data-worker.cjs",
+      "sha256": "dc145e9f1fb5fdfa2e5f51ca6d6f2db8e22e89cb3ab34dae2745ccfd4e6f3823"
+    },
+    {
+      "path": "main/team-fs-worker.cjs",
+      "sha256": "6e6410a44a3d1b97065085259858215045ed137b5bd0dd27bf70f797091c9c83"
+    },
+    {
+      "path": "preload/index.js",
+      "sha256": "4f02e5f1659bb0373f5515d81c7edf5f9bc7af8b67a39f1600171f8acb291406"
+    }
+  ],
+  "bundleProvenance": "Actual compiled main/preload JS bytes hashed after owned app startup; no claim of reproducible source-to-bundle rebuild",
+  "linuxChildExec": {
+    "manifest": {
+      "path": "ci-e1d14b9/v2-management/extracted/TEST-emulated-ui-inputs-4eYFNI/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+    },
+    "binary": {
+      "path": "ci-e1d14b9/v2-management/extracted/TEST-emulated-ui-inputs-4eYFNI/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    "receiptPinsMatched": true,
+    "originalAfterCleanupVerificationTrue": true,
+    "auditorExecution": false
+  },
+  "sourceAcceptanceBoundary": {
+    "uiBlob": "7f224d52e429bbdecb173d65b470a2ac154de475",
+    "uiLines": 278,
+    "originalIntentBudgetMs": 250000,
+    "originalModelsReadBudgetMs": 30000,
+    "defaultPredicate": "Original terminal command plus unique visible selected model button aria-pressed=true/no direct spinner, fresh ownership and strict before/after deadline; disabled button may still qualify.",
+    "noAddedActionOrWait": true
+  },
+  "limits": [
+    "E1 native OpenCode V2 management with five finite localhost requests only, not current E2, vendor authentication/inference, Claude/Codex, native OAuth/forget or Team runtime.",
+    "Rejected-key visible text says not kept; original source asserts retained until explicit replacement. auth.json is not archived, so no independent archived secret bytes or rollback proof is claimed.",
+    "Original selected default button acceptance and configuration-currentness checks are source-enforced at original execution; their exact DOM sample and unarchived config file bodies are not independently recoverable.",
+    "Connected, inheritance and reloaded frames retain spinners/skeletons/dimmed controls. No all-idle state, latency or prior N loading-cause/fix claim.",
+    "Sixteen observed native original PID/births, including five probe-retirement witnesses, are not a complete child-event/exit-code ledger. remaining() checks original birth equality; no all-natural-zero-exit claim.",
+    "Original close verifies launcher0/null, group empty, captured Host numeric PID absent and recorded native births retired. No separate Host exit code or passive Main child callback appears in this archive.",
+    "Selected1,769 Git source pins and14 compiled hashes are not an independent native engine/Bun or full application rebuild. V2 manifest/executable hashes are retained, not their full archive bodies.",
+    "Only original119+7 prerequisites ran; Team/static steps skipped. No current-source full Team/static/frontend/native aggregate qualification.",
+    "No project/compiler/test/lint/build/install/provider/native execution, new process query, action retry, CI/ref/source mutation by this reader."
+  ],
+  "independentReview": "pending"
+}

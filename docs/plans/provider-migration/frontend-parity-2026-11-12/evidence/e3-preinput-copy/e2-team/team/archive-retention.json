@@ -1,0 +1,134 @@
+{
+  "kind": "Original terminal artifact retention only",
+  "retainedAtUTC": "2026-11-16T08:10:45.873888+00:00",
+  "sourceHead": "57885c055a18b27c180c304762643eac632513ad",
+  "officialArtifact": {
+    "id": 14207048848,
+    "name": "host-emulated-linux-x64-57885c055a18b27c180c304762643eac632513ad-team",
+    "size_in_bytes": 651631,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207048848",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14207048848/zip",
+    "expired": false,
+    "created_at": "2026-11-16T08:04:18Z",
+    "expires_at": "2026-11-30T08:04:18Z",
+    "updated_at": "2026-11-16T08:04:18Z",
+    "digest": "sha256:d16e4dd4556eb2732788275367240825716bdb2f512eeacdd8aed1e5123e37b9",
+    "workflow_run": {
+      "id": 43823212577,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "57885c055a18b27c180c304762643eac632513ad"
+    }
+  },
+  "officialApiFile": "ci-57885c/official-host-artifacts-0805.json",
+  "archive": {
+    "path": "ci-57885c/team/14207048848.zip",
+    "bytes": 651631,
+    "blob": "560ae4988302d039b43a91131d9e11a69c183c7d",
+    "sha256": "d16e4dd4556eb2732788275367240825716bdb2f512eeacdd8aed1e5123e37b9"
+  },
+  "members": [
+    {
+      "path": "TEST-desktop-backend-kPz1bG/desktop-backend-receipt.json",
+      "crc32": "0a32a705",
+      "bytes": 703611,
+      "blob": "9d983bbfb2f03e495af5ca9b2bad88132f0c22b2",
+      "sha256": "91896cb720370d16a09e190b013e9b618ded19bda2dd6d38d404631c67e912eb"
+    },
+    {
+      "path": "TEST-desktop-backend-kPz1bG/desktop-descriptor.json",
+      "crc32": "17e6c344",
+      "bytes": 1895,
+      "blob": "8f2852d649c1afbbd770805ca0b1be7c61a60553",
+      "sha256": "21293c7a50523dbacb04b6ccd1b323e5392d6c1e27aecaec9f6de507092c1756"
+    },
+    {
+      "path": "TEST-desktop-backend-kPz1bG/desktop-app.log",
+      "crc32": "6c9c3c35",
+      "bytes": 14590,
+      "blob": "d8ec8993dbea7dbc9fc9741a43c81773bb0d6db9",
+      "sha256": "f7652c01c1b8dbd91b9f298c71e08f6e41e15c7096f8c1c54022a67e0cb61cd8"
+    },
+    {
+      "path": "TEST-desktop-backend-kPz1bG/host-profile.json",
+      "crc32": "97a83c10",
+      "bytes": 1084,
+      "blob": "b10301193ee32ae053cea18a7fae46c3aaccfa22",
+      "sha256": "12ddf6ac3c094d4200d90c6bf83619eb36db2cbdf863ca224a86dfa864bfce76"
+    },
+    {
+      "path": "TEST-desktop-backend-kPz1bG/sentinel-invocations.ndjson",
+      "crc32": "9fc3bdb4",
+      "bytes": 96,
+      "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+    },
+    {
+      "path": "TEST-desktop-backend-kPz1bG/ui-seed-receipt.json",
+      "crc32": "e945b657",
+      "bytes": 2037,
+      "blob": "9d69dd1beb039b06122e757fc452173be7c702e8",
+      "sha256": "35d97ec40b4c8ee3b59fc902c0eda21bfaa9e5857713638f22ea75bcd47b7e20"
+    },
+    {
+      "path": "TEST-desktop-backend-kPz1bG/ui-task-created.png",
+      "crc32": "c10781e5",
+      "bytes": 93165,
+      "blob": "3c527ddec08a26eec4d0450712f70bd24fe556fd",
+      "sha256": "6c218cd49d230ed2c0d0df694f0de67bf840c91c643e767b1da258457c6e2ddc"
+    },
+    {
+      "path": "TEST-desktop-backend-kPz1bG/ui-task-snapshots.json",
+      "crc32": "c63aaaaa",
+      "bytes": 3023,
+      "blob": "77436c273c5a0cd40630ddf687f2e8d2a5f91b20",
+      "sha256": "4729e8e2761ed8fcc2aa483f4dba254eee59a41c54017d397aa518cd3e3ccf8c"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-Q17n40/linux-child-exec/linux-child-exec",
+      "crc32": "ed0ca14b",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-Q17n40/linux-child-exec/manifest.json",
+      "crc32": "e06f2443",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "crc32": "c0e53407",
+      "bytes": 1803,
+      "blob": "4090a7dbe7f67eb74147e12fc547c167116ca4a1",
+      "sha256": "69b40f3215278304de83b3ad4d244dd94c5b7747662683770402665e3c0f50a2"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "crc32": "4eb8a166",
+      "bytes": 271,
+      "blob": "f3b80c6ef4c2e125b8746a4275c5a154ab78141b",
+      "sha256": "f252c1a8283b693e865f8dd449a77c365efe733f23d5163dfc090bc1730851f3"
+    },
+    {
+      "path": "host-emulated-summary.json",
+      "crc32": "1b5bbd42",
+      "bytes": 575,
+      "blob": "85f14499110373dbd53e088456e8676711c31845",
+      "sha256": "61ec4acc064f67768665c4485c3d3b34207deca48d03c4a9bf5350fc28157aef"
+    },
+    {
+      "path": "host-emulated-team-ui.log",
+      "crc32": "b213bc76",
+      "bytes": 225,
+      "blob": "f3a2dc0a10aaa6c2f6dd0b2b073d0f8ffcfc1c9f",
+      "sha256": "ab964ba98b9398413165571c88e2250db2acb4755f0d405b002b9fa4e45aefe7"
+    }
+  ],
+  "safeUniquePathsCrcAndExtractedBytes": true,
+  "transportUrlRetained": false,
+  "semanticAuditPending": true
+}

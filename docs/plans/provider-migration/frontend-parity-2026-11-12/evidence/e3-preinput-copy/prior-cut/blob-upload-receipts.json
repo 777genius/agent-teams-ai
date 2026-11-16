@@ -1,0 +1,626 @@
+{
+  "createdAtUTC": "2026-11-16T08:29:22.180Z",
+  "completed": 103,
+  "total": 103,
+  "receipts": [
+    {
+      "index": 0,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/upload-manifest.json",
+      "blob": "5248df585cb5069fd7c97a81456d9872c46bfcb9",
+      "bytes": 283239
+    },
+    {
+      "index": 1,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/root-prepublication-byte-review.json",
+      "blob": "846debf2a73728d3d5e29186bbdbfbc9c0b0b14f",
+      "bytes": 48660
+    },
+    {
+      "index": 2,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-prepublication-review.json",
+      "blob": "dd723a6b2288daeaed4758f65aa5a727b42ba63b",
+      "bytes": 19981
+    },
+    {
+      "index": 3,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-prepublication-byte-tree-proof.json",
+      "blob": "ee8fb0caf70ad36ba109b9d36c7c65adfa3401bf",
+      "bytes": 568707
+    },
+    {
+      "index": 4,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/root-remote-tree-review.json",
+      "blob": "84da3ce91e35da32524360cfcd9d662d313e2241",
+      "bytes": 1758
+    },
+    {
+      "index": 5,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-remote-tree-review.json",
+      "blob": "863d307b1abd620814c5fcaa3ef9c484587d4140",
+      "bytes": 4776
+    },
+    {
+      "index": 6,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/root-actual-docs-readback.json",
+      "blob": "f50b497c0a388a8c335192c2388861b58d21b00c",
+      "bytes": 102813
+    },
+    {
+      "index": 7,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-actual-docs-readback.json",
+      "blob": "e7336c6d1737ef4e5d33a70ab891bd2546db45b7",
+      "bytes": 159244
+    },
+    {
+      "index": 8,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/root-actual-source-readback.json",
+      "blob": "662770de706887b4dc46f012b52d2f958d73508d",
+      "bytes": 102859
+    },
+    {
+      "index": 9,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/independent-actual-source-readback.json",
+      "blob": "455fb1436977d80e4dfaa572b1bace7cca853f44",
+      "bytes": 145587
+    },
+    {
+      "index": 10,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-docs-tree-response.json",
+      "blob": "e85dad73ffa1037725fb5ad44fdd5765d157208e",
+      "bytes": 196
+    },
+    {
+      "index": 11,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-source-tree-response.json",
+      "blob": "83cd7950e4a744f1f7ac7e7c73827839bf01e275",
+      "bytes": 196
+    },
+    {
+      "index": 12,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-docs-commit-response.json",
+      "blob": "e8b5040610f376f09be898eec61490bab39a23d0",
+      "bytes": 196
+    },
+    {
+      "index": 13,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-source-commit-response.json",
+      "blob": "1525b060611e1c6f571655d2e161d289b6be9a8f",
+      "bytes": 196
+    },
+    {
+      "index": 14,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-docs-commit-immutable-readback.json",
+      "blob": "d5386b1d464b973a1423d22355232c7c7602e2c7",
+      "bytes": 3847
+    },
+    {
+      "index": 15,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/created-source-commit-immutable-readback.json",
+      "blob": "7d5bf091e45cc45b0f4b51d661e343f828abef6a",
+      "bytes": 4445
+    },
+    {
+      "index": 16,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/ordinary-docs-push-response.json",
+      "blob": "7ee60341e3c13aa704e85f92cae5bb151d42c0ea",
+      "bytes": 162
+    },
+    {
+      "index": 17,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/fresh-docs-precommit-guards.json",
+      "blob": "1036af7a1227ee3d1f4ecec0b6c2cf6285516182",
+      "bytes": 175652
+    },
+    {
+      "index": 18,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/fresh-source-precommit-guards.json",
+      "blob": "64f07f23589df45b033ba246779801306e80e4cc",
+      "bytes": 175729
+    },
+    {
+      "index": 19,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/post-docs-push-readback.json",
+      "blob": "6e8f803c2ffcb777b6d61a098ad66322a103df57",
+      "bytes": 175659
+    },
+    {
+      "index": 20,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/post-source-push-readback.json",
+      "blob": "aa696f0114db585e17492976b9a14db4280565e9",
+      "bytes": 175661
+    },
+    {
+      "index": 21,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/blob-upload-receipts.json",
+      "blob": "9137bd3f95e8acc2d1f1742866fdb18de87f4f8f",
+      "bytes": 26315
+    },
+    {
+      "index": 22,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/remote-docs-tree-response.json.gz",
+      "blob": "703103805a0731ed3d869d73eb2f3cc4a8f84052",
+      "bytes": 1139896
+    },
+    {
+      "index": 23,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/remote-source-tree-response.json.gz",
+      "blob": "994cebc24190d41718000a792922b720785b8e25",
+      "bytes": 1139883
+    },
+    {
+      "index": 24,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/R1-appendix.md",
+      "blob": "9bb3777ca076dea9dd60f76d9759dc1815e0dde0",
+      "bytes": 20857
+    },
+    {
+      "index": 25,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/candidate-desktop-team-ui-smoke.test.ts.txt",
+      "blob": "8694096d0aafcd7130589d97f12ad5a4fd65a616",
+      "bytes": 118885
+    },
+    {
+      "index": 26,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/candidate-desktop-ui-controls.ts.txt",
+      "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+      "bytes": 28094
+    },
+    {
+      "index": 27,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/candidate-metadata.json",
+      "blob": "18aaa5d9ed647b952dd8a1926e58048ad0c1a7bf",
+      "bytes": 4247
+    },
+    {
+      "index": 28,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/candidate.patch",
+      "blob": "d58db63706739f3d78dde1ec175881dce0f800b1",
+      "bytes": 12271
+    },
+    {
+      "index": 29,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/freeze-manifest.json",
+      "blob": "989fb0230c86086d9878a17ab9abc35ffcd3d317",
+      "bytes": 2479
+    },
+    {
+      "index": 30,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/independent-source-byte-proof.json",
+      "blob": "ac99bae999088f5d06d172e3e361a5651e50197e",
+      "bytes": 10267
+    },
+    {
+      "index": 31,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/independent-source-r1-review.json",
+      "blob": "6d69b6f30c2aca45254275fc1c380a38426a8ae5",
+      "bytes": 13132
+    },
+    {
+      "index": 32,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/source-and-venue-pins.json",
+      "blob": "6c9a88c8cd1496b32130b3df681db7c8f6e4291f",
+      "bytes": 16833
+    },
+    {
+      "index": 33,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/source-evidence-analysis.json",
+      "blob": "b9f0ed4ae75501f21878f40fd6ee319c5be7b2e2",
+      "bytes": 22170
+    },
+    {
+      "index": 34,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/R1-appendix.md",
+      "blob": "0c2c2866685ef1270fe4052dbdb89be00ae6d3a5",
+      "bytes": 8590
+    },
+    {
+      "index": 35,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/candidate-runtimeProviderManagementPresentation.ts.txt",
+      "blob": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+      "bytes": 6382
+    },
+    {
+      "index": 36,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/candidate-useRuntimeProviderManagement.test.ts.txt",
+      "blob": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+      "bytes": 180058
+    },
+    {
+      "index": 37,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/candidate-metadata.json",
+      "blob": "1771f114d49cfffbe29661529010d5b76c861f68",
+      "bytes": 3315
+    },
+    {
+      "index": 38,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/candidate.patch",
+      "blob": "99a267cc38ccb0fa944681a74eea5049f0b48fc2",
+      "bytes": 2277
+    },
+    {
+      "index": 39,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/current-preimage-rebind.json",
+      "blob": "2beba3f76edf6243aed5b9c908cfb32f2283e494",
+      "bytes": 1763
+    },
+    {
+      "index": 40,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/independent-source-r1-review.json",
+      "blob": "9a06f1b6a41c03ae82da98a26e7b2d5b42eaab33",
+      "bytes": 16030
+    },
+    {
+      "index": 41,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/source-and-venue-review.json",
+      "blob": "055939127cca2b07091aa9a1d8fd28fec3ff7ba4",
+      "bytes": 10159
+    },
+    {
+      "index": 42,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/R1-appendix.md",
+      "blob": "e47a185b81458517b93e9eb7ab928c6fbb49f582",
+      "bytes": 12739
+    },
+    {
+      "index": 43,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/candidate-RuntimeProviderConnectErrorPresentation.test.ts.txt",
+      "blob": "1542ebe14a303845d67a48f601b25941994e8368",
+      "bytes": 2365
+    },
+    {
+      "index": 44,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/candidate-metadata.json",
+      "blob": "5aeaa6f6e115826cab983513a61dffc6c9405997",
+      "bytes": 3745
+    },
+    {
+      "index": 45,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/candidate.patch",
+      "blob": "a9a96167ed85ecc08ef2bc9ce5d49747d0753d2f",
+      "bytes": 4317
+    },
+    {
+      "index": 46,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/current-preimage-rebind.json",
+      "blob": "76f4eaffc863f69bfb009c4b6c7eec7a12b0965f",
+      "bytes": 2341
+    },
+    {
+      "index": 47,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v1-inert/source-and-venue-review.json",
+      "blob": "3318e695efd50ad5452e587a03a416973189f63d",
+      "bytes": 9917
+    },
+    {
+      "index": 48,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/freeze-manifest.json",
+      "blob": "db5f680ceaf5d6e196860f0ef44a69fee6b0d4b6",
+      "bytes": 2631
+    },
+    {
+      "index": 49,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/geometry-binding-metadata.json",
+      "blob": "78b1d8e0047824819121b2258f4478fefb34a788",
+      "bytes": 22752
+    },
+    {
+      "index": 50,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/p11-after-geometry-test.ts.txt",
+      "blob": "1b0ad5b15b056857817858d1e85f6dfe81f6e782",
+      "bytes": 123149
+    },
+    {
+      "index": 51,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/p11-after-geometry.patch",
+      "blob": "ab14668b079eacdc2ddd8b0ffb298c334503d297",
+      "bytes": 4617
+    },
+    {
+      "index": 52,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/p11-composition-metadata.json",
+      "blob": "642010d58fb1d29e542ac05f637fdba0a38cf293",
+      "bytes": 6546
+    },
+    {
+      "index": 53,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/fresh-binding/p11-regression-suffix.ts.txt",
+      "blob": "08699c4890b2ef83bcbda53094c450c6a9c3b366",
+      "bytes": 4264
+    },
+    {
+      "index": 54,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/source-pin-audit.json",
+      "blob": "5f9f1328caefdb7dbb33394149cd7222c3fa79e5",
+      "bytes": 456971
+    },
+    {
+      "index": 55,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/owned-api-jobs-0602-terminal.json",
+      "blob": "cf79db3bd08de6002f03660caef938d5f6c1d0d4",
+      "bytes": 74308
+    },
+    {
+      "index": 56,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/audit.json",
+      "blob": "d040f1e03d896ecb08cd6e108e2d52356568424d",
+      "bytes": 54770
+    },
+    {
+      "index": 57,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/Plan29-appendix.md",
+      "blob": "0f9843a76623d934c4d624f65429c53979ba4a1b",
+      "bytes": 5328
+    },
+    {
+      "index": 58,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/checkpoint.json",
+      "blob": "26ae3a9bcfc259d74fc4022767772e394f002ed3",
+      "bytes": 2987
+    },
+    {
+      "index": 59,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/independent-original-review.json",
+      "blob": "4f88a52726d56304ef7d64f87953b572c6da78a2",
+      "bytes": 37428
+    },
+    {
+      "index": 60,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/independent-byte-source-proof.json",
+      "blob": "234ca773d13469da5e24af3ea57450275a2125c9",
+      "bytes": 501790
+    },
+    {
+      "index": 61,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/o-collaboration/pre-click-geometry-source-assessment.json",
+      "blob": "b2eea65201fa699d9508e982f08811244a3ec9be",
+      "bytes": 7757
+    },
+    {
+      "index": 62,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/job-original-response.json",
+      "blob": "b48a1b24e417e89dfffa2798f61a9863d209478a",
+      "bytes": 198101
+    },
+    {
+      "index": 63,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/job.log",
+      "blob": "c210882dcb304f0f583d7bc41bbf9c12d3e0fec2",
+      "bytes": 188026
+    },
+    {
+      "index": 64,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/artifact-14205010690.zip",
+      "blob": "2b186415105a6c51824cfcb9f950af2c83dbb43d",
+      "bytes": 668772
+    },
+    {
+      "index": 65,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/archive-retention.json",
+      "blob": "fb8be0276e83b020734d0041e8ba628cd47933c2",
+      "bytes": 5408
+    },
+    {
+      "index": 66,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/source-pin-audit.json",
+      "blob": "b8477e397dad053eb7376dee24f1b5b4e216e081",
+      "bytes": 458891
+    },
+    {
+      "index": 67,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/visual-review.json",
+      "blob": "6b8e8c11f034c00ec663bdf15ea1d43febb0cae3",
+      "bytes": 870
+    },
+    {
+      "index": 68,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/official-host-artifacts-0707.json",
+      "blob": "6183c3c0f88e8514d52fb19c822a5d59a85c60e7",
+      "bytes": 3892
+    },
+    {
+      "index": 69,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/owned-jobs-0707.json",
+      "blob": "b2a21ccae083071c58239066e5d5a5eb63942cd6",
+      "bytes": 53878
+    },
+    {
+      "index": 70,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/audit.json",
+      "blob": "d1b1616a3f0d5a7b29e61c632865f6c2e48f675e",
+      "bytes": 153570
+    },
+    {
+      "index": 71,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/Plan29-appendix.md",
+      "blob": "6f7ab3524700ffda49cbc17bb28aa6967efb8226",
+      "bytes": 5150
+    },
+    {
+      "index": 72,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/checkpoint.json",
+      "blob": "41ad5f5bba867aaffa2a7e7ee6d88bceeb99ab1a",
+      "bytes": 2959
+    },
+    {
+      "index": 73,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/independent-original-review.json",
+      "blob": "552ac7d0e5627b5c4cd6ac7b03bc666fa55b95a7",
+      "bytes": 38175
+    },
+    {
+      "index": 74,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-opencode/independent-byte-source-proof.json",
+      "blob": "30ea88f71d008d9ee518787143cfa91ec2074e82",
+      "bytes": 525457
+    },
+    {
+      "index": 75,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/job-original-response.json",
+      "blob": "fbef5f9028e95e8b241903b0182ecd64a510891a",
+      "bytes": 198287
+    },
+    {
+      "index": 76,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/job.log",
+      "blob": "7cc514f1ad52cec3d686daa1b147ca558039f424",
+      "bytes": 188081
+    },
+    {
+      "index": 77,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/artifact-14204298663.zip",
+      "blob": "cbf46f3661998a6eec4bd044d6704df96acd0339",
+      "bytes": 650542
+    },
+    {
+      "index": 78,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/archive-retention.json",
+      "blob": "9ec1a281d541c8968759e1c02e71e7551d67bb3a",
+      "bytes": 4619
+    },
+    {
+      "index": 79,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/source-pin-audit.json",
+      "blob": "9f90d76d728f3e9ec30ca420a66e692f7757b358",
+      "bytes": 518454
+    },
+    {
+      "index": 80,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/visual-review.json",
+      "blob": "11132e79a4a3cb8f0aca0ffb1d721b8814b001c0",
+      "bytes": 907
+    },
+    {
+      "index": 81,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/official-host-artifacts-0713.json",
+      "blob": "84c5bcde7125687403ce0e8712e41fe691710b0e",
+      "bytes": 5755
+    },
+    {
+      "index": 82,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/owned-jobs-0712.json",
+      "blob": "a7baa556f7b0b374caa97bf60e0ac7dd9fccc19f",
+      "bytes": 62929
+    },
+    {
+      "index": 83,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/audit.json",
+      "blob": "c773fe28d469a1e6763b31f528c5b4435dd0538f",
+      "bytes": 144547
+    },
+    {
+      "index": 84,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/Plan29-appendix.md",
+      "blob": "a992766d8aa085bae1a5462b57cc747b1462bc59",
+      "bytes": 4976
+    },
+    {
+      "index": 85,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/checkpoint.json",
+      "blob": "7ade9f1c2e1ef6525af4c212691d9bb6f3cdb837",
+      "bytes": 2941
+    },
+    {
+      "index": 86,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/independent-original-review.json",
+      "blob": "4083852d4cdd8be09e2e7ab61ab96344243990a9",
+      "bytes": 19331
+    },
+    {
+      "index": 87,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-review/independent-byte-source-proof.json",
+      "blob": "0da61cf9a4f6936c893207d967f1a0519239fb5a",
+      "bytes": 609868
+    },
+    {
+      "index": 88,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/job.log",
+      "blob": "2b52eb7e41f07ac23149c0d9464e12fc2568c553",
+      "bytes": 110305
+    },
+    {
+      "index": 89,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/job-original-response.json",
+      "blob": "4ae4b4ac508ea84129e0d809bc25a2db327ede3c",
+      "bytes": 112803
+    },
+    {
+      "index": 90,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/artifact-14205700298.zip",
+      "blob": "04e1609fa83a12c3d90efa464f56ff3b1a737f6a",
+      "bytes": 1011280
+    },
+    {
+      "index": 91,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/archive-retention.json",
+      "blob": "e0d2f59941a6e1c26536b60a29b0ef88c867bc33",
+      "bytes": 10429
+    },
+    {
+      "index": 92,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/official-host-artifacts-0724.json",
+      "blob": "5e09ac757d3d5bd7c87090455c76f1fa917641e0",
+      "bytes": 6703
+    },
+    {
+      "index": 93,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/source-pin-audit.json",
+      "blob": "5d82620f94595466da0291a04a1b0c2666a3c381",
+      "bytes": 591465
+    },
+    {
+      "index": 94,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/visual-review.json",
+      "blob": "3fd78d678b90aa63cf960aab3dd9139ac30d737d",
+      "bytes": 3643
+    },
+    {
+      "index": 95,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/credential-copy-boundary.json",
+      "blob": "f19a9c650bfe972e621cfcfb5400dfc3e725e936",
+      "bytes": 3298
+    },
+    {
+      "index": 96,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/audit.json",
+      "blob": "6c41fe3695ab3c3a5d04b0be76803bf72c6a6eac",
+      "bytes": 163880
+    },
+    {
+      "index": 97,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/Plan29-appendix.md",
+      "blob": "bad398b298a867ed211e2fd744ba2df1e6e72c6b",
+      "bytes": 6577
+    },
+    {
+      "index": 98,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/checkpoint.json",
+      "blob": "4ad62dab85c2d6ab2503095a5a67f4606ce9385c",
+      "bytes": 14694
+    },
+    {
+      "index": 99,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/e1-credential-basis/credential-copy-source-assessment.json",
+      "blob": "70df42b890861fa650b6196420e9b823c0262e47",
+      "bytes": 38731
+    },
+    {
+      "index": 100,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/selection/R1-root-combined-cut.md",
+      "blob": "4e41f881a1ba86ccd2aebc637aba7638c0081353",
+      "bytes": 15604
+    },
+    {
+      "index": 101,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "blob": "c062e0a00ad2b1c0d2c55721ab7a80c2e7b79d68",
+      "bytes": 2083245
+    },
+    {
+      "index": 102,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/publication-index.json",
+      "blob": "6205631b7df8e7b816021c3f3827c3ca8160a9ca",
+      "bytes": 144176
+    }
+  ],
+  "failures": []
+}

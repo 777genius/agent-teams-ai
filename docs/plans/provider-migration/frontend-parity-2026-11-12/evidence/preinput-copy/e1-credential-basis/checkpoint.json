@@ -1,0 +1,323 @@
+{
+  "kind": "E1 V2 Management original author checkpoint",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "runId": 43813731227,
+  "jobId": 133120928883,
+  "artifactId": 14205700298,
+  "payloads": [
+    {
+      "path": "ci-e1d14b9/v2-management/job.log",
+      "bytes": 110305,
+      "blob": "2b52eb7e41f07ac23149c0d9464e12fc2568c553",
+      "sha256": "5d5d62b99e73bcd2b97d937e9d62bdfcba291a00561f990c00eebca95240b156"
+    },
+    {
+      "path": "ci-e1d14b9/v2-management/job-original-response.json",
+      "bytes": 112803,
+      "blob": "4ae4b4ac508ea84129e0d809bc25a2db327ede3c",
+      "sha256": "5c4c94d650e55a9bd9ab76de03dc48fea5aeb4f7a4e42d272ea53dd05fd645ae"
+    },
+    {
+      "path": "ci-e1d14b9/v2-management/artifact-14205700298.zip",
+      "bytes": 1011280,
+      "blob": "04e1609fa83a12c3d90efa464f56ff3b1a737f6a",
+      "sha256": "fc92eb2535b413ccf4d1d126045879b57048fee42aad16e8099c58e2a99d0471"
+    },
+    {
+      "path": "ci-e1d14b9/v2-management/archive-retention.json",
+      "bytes": 10429,
+      "blob": "e0d2f59941a6e1c26536b60a29b0ef88c867bc33",
+      "sha256": "63661f17f77edba9369cf8c59831485a04e84f0b8b33c94a0cf4983d4db21229"
+    },
+    {
+      "path": "ci-e1d14b9/official-host-artifacts-0724.json",
+      "bytes": 6703,
+      "blob": "5e09ac757d3d5bd7c87090455c76f1fa917641e0",
+      "sha256": "ede0890fd0f959530b35753235420b59cb9d8a0b47c6947a2c85f037107f40b9"
+    },
+    {
+      "path": "ci-e1d14b9/owned-jobs-0724.json",
+      "bytes": 64602,
+      "blob": "b342c62d6806d2ec685da5b6cc08ed6910829552",
+      "sha256": "a4ff073cfe3cfb0c02f45af0a10480ebfc8b2220674269280f15f47ccc8c86f5"
+    },
+    {
+      "path": "ci-e1d14b9/v2-management/source-pin-audit.json",
+      "bytes": 591465,
+      "blob": "5d82620f94595466da0291a04a1b0c2666a3c381",
+      "sha256": "008c2f611535cb43b478fbd169b7238a5e9bb36ca1950923f05d62e1f52d21ae"
+    },
+    {
+      "path": "ci-e1d14b9/v2-management/visual-review.json",
+      "bytes": 3643,
+      "blob": "3fd78d678b90aa63cf960aab3dd9139ac30d737d",
+      "sha256": "ecefe79c543a7e9666dccdb579bf1696c7a7db9a24da9765b94417c70c9d3262"
+    },
+    {
+      "path": "ci-e1d14b9/v2-management/credential-copy-boundary.json",
+      "bytes": 3298,
+      "blob": "f19a9c650bfe972e621cfcfb5400dfc3e725e936",
+      "sha256": "2bbf197f2433cf691607e04f8c833036cf77e2a6733e9dceaf34d6b16f9f8067"
+    },
+    {
+      "path": "ci-e1d14b9/v2-management/audit.json",
+      "bytes": 163880,
+      "blob": "6c41fe3695ab3c3a5d04b0be76803bf72c6a6eac",
+      "sha256": "f8e33e67e0e2f91d14c4b7c7f7ac6cc6329e0530fdd4a9ddcdf87ee9ed26e23e"
+    },
+    {
+      "path": "ci-e1d14b9/v2-management/Plan29-appendix.md",
+      "bytes": 6577,
+      "blob": "bad398b298a867ed211e2fd744ba2df1e6e72c6b",
+      "sha256": "d3e5db07bc7096759d1525e9d7f5d43c549e322cfca19d1db527b01e8be16ae0"
+    }
+  ],
+  "payloadBytes": 2084985,
+  "recoverableArchiveMembers": [
+    {
+      "path": "TEST-desktop-backend-7W0EkD/desktop-backend-app.log",
+      "bytes": 17085,
+      "blob": "e318664d23b551f9c165a3c77c91fe8d50092117",
+      "sha256": "d022c53990274fbfe5f3d5d488c287ffedf3b577e4c13231906e9751bdf6a6e3",
+      "crc32": "af626f4b"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/desktop-descriptor.json",
+      "bytes": 3319,
+      "blob": "8ad72ca70d53e261c78ce8a83d266fdb3f856648",
+      "sha256": "e799e2394f2121976f9ebb0de941d4e7af0580c3d4160669dac6468edef76aa8",
+      "crc32": "c5ec0764"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/desktop-backend-receipt.json",
+      "bytes": 728456,
+      "blob": "dfe564e7f29bc249a1948dbe086413f1b5f9002e",
+      "sha256": "2a7b9d0b29fb67bf6e235b0822b1adf8f7f6ec6f6a8daff987954d9cc6afe88f",
+      "crc32": "e9028c62"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/host-profile.json",
+      "bytes": 5011,
+      "blob": "ffac7dca3b11fbf6df193c0ccfa21a34415232e9",
+      "sha256": "c6b2e4f42c7d359b44e8732d7bc71b2154842b5b0ace1655a191c93773985433",
+      "crc32": "508b1ba8"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/0279f3e060b9637f36e6a805b37f5d0ac7451ddd3cfaba549f42b04a6a65752b.json",
+      "bytes": 804,
+      "blob": "80ac4c5ae5969541d2e4737a81bb058796c6bc8c",
+      "sha256": "53996026453c6e63a5af9c9dad448cb867806bd4fd62388944abf971fb5e1061",
+      "crc32": "fb803c3a"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/07a5ab4682a064ca7da51c2c4f0b835f222d0dfc931dc3afe07809063b5f9577.json",
+      "bytes": 1345,
+      "blob": "5f28862bb22b847f42c279c65e40244acb8f6731",
+      "sha256": "6e591ac2a38911b1e25a6bea72a2d7f48b16f6cbfa36f7767c506009180c273f",
+      "crc32": "80a3ca34"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/37f3b8b463f16238772a6bcdf166801c6c9e83ed2903a672c6ab0f70687d6d10.json",
+      "bytes": 2811,
+      "blob": "4bd0348b2fb10533df61269700f7c59475987448",
+      "sha256": "9c0028c63ee31e6130666875fd177206e1e3fe25baab6ce67770b1261feb3659",
+      "crc32": "306cf29b"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/557f2d94011370b1a284e4118f1d416f4fed9ba83408777855877a95161f1952.json",
+      "bytes": 1370,
+      "blob": "6c9752d0c9e24737c3d308884e839a9aff68b19f",
+      "sha256": "70d457310d9214b133226ee4f6a7628bacbc0817de07ea746280020d30f49d15",
+      "crc32": "530965ef"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/67e7374544b88e1ab2c850631ddf9c19ac6cb932e492579a664496ba9bf8f5bc.json",
+      "bytes": 3267,
+      "blob": "6388b7173a8032d80513981327f6918817875844",
+      "sha256": "6a440eea77c97dd3dc5f20453d94e5e4c0160894ea11ef183e4b7469802fb9ef",
+      "crc32": "e86c670e"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/a37f7ec902321bf036606dd54ab4c8ea817da20b70eaed4aee9523bf307ad8eb.json",
+      "bytes": 3245,
+      "blob": "41539b628466d9db0fe58e382b403c7abaa03303",
+      "sha256": "6ea4e6b2ba18a70fc8e4cb827889308511eda88db2f6dd1e052b677674a10445",
+      "crc32": "0b8bcab8"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/bc8efebfb10b68abf60fc0047553ab2f79aec4fac7e38d9d1dea756c114528c8.json",
+      "bytes": 812,
+      "blob": "8a1b9b079c7871766459864eac1477c57084bb71",
+      "sha256": "af73d04245d070102367263e6b518aac27a1a436ad27f52b724a88829cf8d619",
+      "crc32": "f6e91c7f"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/beb38a0943257cf16ba5a766d24a92c3c25b5157462d9f172a2cf5ea9a037223.json",
+      "bytes": 2832,
+      "blob": "cf9d90ec08fa1650a085d4a0045b34d4ed839092",
+      "sha256": "f35af2ac477def5801c10a95d5d3a812433defb0564e380e1987ba9d9211a8db",
+      "crc32": "b6a9a4c9"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/ce8e671b022a2ce95a81e407716d8d2ff681db6fad76e0903da65967e1d0ef7d.json",
+      "bytes": 3237,
+      "blob": "e0120a52fb5f902fb914eaf3a6d7928e612b2c05",
+      "sha256": "dd7e3cb1f3640e1ea1bb86e701ebe9b2991f2b2fcc5293da1472e544d4c8c204",
+      "crc32": "9986d5e5"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/da3239463590663398e6570f31bfdaef126de75bc5f10da4c835100c8556b5e2.json",
+      "bytes": 3237,
+      "blob": "9f11020a564f34ca09a43ad9a921f1bdf3798706",
+      "sha256": "6886695d06754d9d1682407b9c5e6ba190a7907057619d12556081e407ff48e3",
+      "crc32": "71566f40"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/dcac05fb20ffec2e78cfb52e551536adfcbe88c7f24ff7f49b08c9ff8e0d4ac8.json",
+      "bytes": 3216,
+      "blob": "3ad9e5ff0f52524a0ef7552f2c2e8604c3eeff05",
+      "sha256": "1c568cfd595ed309c1a6292addc97c1f9e0edc0a85b9c8006bb6145b197c1abe",
+      "crc32": "66a5da4f"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/hoststore/management-commands/ff801b58800a4cbc5839dd0f94df7ea9170dc3935bc2c87ce82cb0ca476954b0.json",
+      "bytes": 812,
+      "blob": "eb33abe018a80edb9289db24ba02613668d2cb90",
+      "sha256": "dc136e91885f26f35566cd551674aad1e1af32c5af587977ac320ec625606134",
+      "crc32": "3207270e"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/hoststore/runtime-sources/index.json",
+      "bytes": 15919,
+      "blob": "26b255d6ecab4d486467f7fe1974b2d4a894ba14",
+      "sha256": "a968a65f02c0845201a4f8cafa46065eed4d6eb53675dd2fc13849eee9fde964",
+      "crc32": "d73e5b66"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/preferences/global/global-runtime-preferences.json",
+      "bytes": 142,
+      "blob": "3bd11a2a59fd55c554fa387ff5748501b7ff1228",
+      "sha256": "f52c12478698fe9908405ad3b452608ed50c7dbdfa141368e780d7d6233cb3a0",
+      "crc32": "d85785dd"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/preferences/workspace/agent-teams-runtime-preferences.json",
+      "bytes": 123,
+      "blob": "b07e353fa9379023fae89764c83e503a661201f4",
+      "sha256": "81d147ed98617bf58f63ae53dbcbbd9f587d67840d75e7c9870655c0130ae7f9",
+      "crc32": "da9c7a25"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/sentinel-invocations.ndjson",
+      "bytes": 686,
+      "blob": "11f58ef0fcba4ace4844ef7b6e5163b9443facf8",
+      "sha256": "22f07046b2d6f9156c8345612fe82234eb4057899a9424d22ebad0a36d56e2fd",
+      "crc32": "e60f1fd1"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/ui-seed-receipt.json",
+      "bytes": 2037,
+      "blob": "1b6ba02b9b9f50e99240b88b09755bf208c53308",
+      "sha256": "39d963b5410dca2b287b0d990bd60ddd1324175233479f23ac54191d344deb9c",
+      "crc32": "ba966cb5"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/ui-v2-management-connected.png",
+      "bytes": 103684,
+      "blob": "b6d41cc8b26f9ac356644a7dba57ea44f2c28b0e",
+      "sha256": "0ea5b3dbaa9384dce0f683a7c0c5f5ef241dd493d7b730b9deab36a541ff14c9",
+      "crc32": "d21a0789"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/ui-v2-management-inherited.png",
+      "bytes": 73447,
+      "blob": "67bea4628402ee8a40ea90884918b79cdc2521d1",
+      "sha256": "eefcdcfcc1d1841b43d9ecb062e55bd6bc85f73c5dcd50382a98f0edd60119fd",
+      "crc32": "12b8d05d"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/ui-v2-management-project-override.png",
+      "bytes": 75402,
+      "blob": "76da20056b91199f4901730d50faf87c33c2e6d7",
+      "sha256": "637a6dc16bb24455ff910f8b77e328d025ce4acd1a651ad6c85d523f47c88051",
+      "crc32": "7661cd6e"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/ui-v2-management-reloaded.png",
+      "bytes": 74158,
+      "blob": "361bda4af17db6ec7e71080c1f72b1faa4e9bdb8",
+      "sha256": "2251523caf811579289921741f364f38457c4eceea4c6d41515805105ff3790f",
+      "crc32": "edb8e965"
+    },
+    {
+      "path": "TEST-desktop-backend-7W0EkD/ui-v2-management-rejected-key.png",
+      "bytes": 123422,
+      "blob": "773cd8bd8c67865e8da8724305009b4b76854726",
+      "sha256": "fc8afb4fd125d073be89bcd3fa860cc20e7a6b7eb7f2cee839ba0b094149da12",
+      "crc32": "847e06ef"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-4eYFNI/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "crc32": "ed0ca14b"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-4eYFNI/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "crc32": "e06f2443"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1838,
+      "blob": "fb0fe4d6a175cde2c6210ea6a80dc73ba0981267",
+      "sha256": "d514ccc5ca6a9915c10f994fef16175708a46e3c791d596ed96a977401734fb1",
+      "crc32": "350bf173"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "blob": "91af97ffa37cf24217cebcf8fcb62422fc7aba99",
+      "sha256": "1629057cf38218b5ff357834f3ea44c7e3de4f10f8760ded558d342e0f407531",
+      "crc32": "d31f5247"
+    },
+    {
+      "path": "host-emulated-opencode-v2-inputs.json",
+      "bytes": 783,
+      "blob": "0f5a02278148f223e2747acf10e239bf645c4e7f",
+      "sha256": "eb709ed2c9c292ae5130311960bf62a2f2765271a0ad746ae4008c634da911b6",
+      "crc32": "823d6f78"
+    },
+    {
+      "path": "host-emulated-opencode-v2-management-ui-verified.json",
+      "bytes": 402,
+      "blob": "c681a66ae87e83e1b6fc229ae777f05862d36622",
+      "sha256": "5e091bdc73469562cbfb8ad8925db80826c505e6d4a5b47e8f08d3f0068c72e5",
+      "crc32": "d35142c2"
+    },
+    {
+      "path": "host-emulated-opencode-v2-management-ui.log",
+      "bytes": 260,
+      "blob": "f975c0027fc8fb629a26e3866fef3866575448e0",
+      "sha256": "9b39e43ca9150258114ddd8fc4c971ababf2f6561d148980d98e96ddd2246fec",
+      "crc32": "4f385a3e"
+    }
+  ],
+  "actuallyViewedPngCount": 5,
+  "outcome": "PASS within original native V2 finite Settings scope",
+  "independentReview": "pending",
+  "limits": [
+    "E1 native OpenCode V2 management with five finite localhost requests only, not current E2, vendor authentication/inference, Claude/Codex, native OAuth/forget or Team runtime.",
+    "Rejected-key visible text says not kept; original source asserts retained until explicit replacement. auth.json is not archived, so no independent archived secret bytes or rollback proof is claimed.",
+    "Original selected default button acceptance and configuration-currentness checks are source-enforced at original execution; their exact DOM sample and unarchived config file bodies are not independently recoverable.",
+    "Connected, inheritance and reloaded frames retain spinners/skeletons/dimmed controls. No all-idle state, latency or prior N loading-cause/fix claim.",
+    "Sixteen observed native original PID/births, including five probe-retirement witnesses, are not a complete child-event/exit-code ledger. remaining() checks original birth equality; no all-natural-zero-exit claim.",
+    "Original close verifies launcher0/null, group empty, captured Host numeric PID absent and recorded native births retired. No separate Host exit code or passive Main child callback appears in this archive.",
+    "Selected1,769 Git source pins and14 compiled hashes are not an independent native engine/Bun or full application rebuild. V2 manifest/executable hashes are retained, not their full archive bodies.",
+    "Only original119+7 prerequisites ran; Team/static steps skipped. No current-source full Team/static/frontend/native aggregate qualification.",
+    "No project/compiler/test/lint/build/install/provider/native execution, new process query, action retry, CI/ref/source mutation by this reader."
+  ]
+}

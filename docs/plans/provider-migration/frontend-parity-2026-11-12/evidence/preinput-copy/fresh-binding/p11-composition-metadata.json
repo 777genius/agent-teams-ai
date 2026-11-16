@@ -1,0 +1,148 @@
+{
+  "kind": "inert-lossless-p11-phase-a-after-geometry-composition",
+  "status": "DORMANT_UNSELECTED_UNAPPLIED_UNEXECUTED_PREVIEW",
+  "author": "/root/migration_scope",
+  "createdAtUTC": "2026-11-16T08:10:51.128503+00:00",
+  "sourceHead": "c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+  "sourceTree": "c70232e34d2759ce287e2f224073205dcf9c18db",
+  "sourceParents": [
+    "174e27e0178025f88608650347900daac49dcc58",
+    "57885c055a18b27c180c304762643eac632513ad"
+  ],
+  "sourceLeafCount": 11269,
+  "sourceDirectoryCountIncludingRoot": 1701,
+  "actualSourceReadback": {
+    "file": "e2-reconciliation-publication/independent-actual-source-readback.json",
+    "bytes": 145587,
+    "blob": "455fb1436977d80e4dfaa572b1bace7cca853f44",
+    "sha256": "f74de4550a02640f728691f60f239604e6a328cd9d51b0620590b925833183c5"
+  },
+  "currentPlan29": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "bytes": 2038188,
+    "blob": "d5cc38cc212f9757e841decd86db35fd322e358b",
+    "sha256": "e4f671d3dcf12d23564cf2c5317a2cb702638eb3c68ad803c3b52e94feec6687"
+  },
+  "noProjectExecution": true,
+  "noGitObjectRefIndexWorktreeMutation": true,
+  "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+  "currentGitPreimage": {
+    "bytes": 111672,
+    "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+    "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445",
+    "lines": 1896
+  },
+  "futureGeometryPreimage": {
+    "bytes": 118885,
+    "blob": "8694096d0aafcd7130589d97f12ad5a4fd65a616",
+    "sha256": "9411c8171255880a187382e5ceef1c44e74172fe4c9eb6c357b3654388cceb70",
+    "lines": 2010
+  },
+  "futureGeometryPreimageFile": "click-preinput-stabilization-r1/candidate/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+  "historicalPhaseAMetadata": {
+    "file": "phase-a-composition-e1d/phase-a-metadata.json",
+    "bytes": 14412,
+    "blob": "b39eaae1967df654537bf9340c8098958e5dd290",
+    "sha256": "01bf4c260b4f12d7a0efa00d86e5489127338b5d69fc491acbf0e64668a92eb0"
+  },
+  "historicalPhaseAR1": {
+    "file": "phase-a-composition-e1d/R1-phase-a-composition.md",
+    "bytes": 8976,
+    "blob": "689d937e205582b7c0975fa193401a9627df9352",
+    "sha256": "7958fbac6f00fcb10ccb47ac102da1ec6840ae71539d428a12f35620fc12306c"
+  },
+  "originalP11RegressionSuffix": {
+    "bytes": 4264,
+    "blob": "08699c4890b2ef83bcbda53094c450c6a9c3b366",
+    "sha256": "a299b6ec1497dc542f675fd7868a430d8e9d4d0503199c9ff0343a7187b5312d",
+    "lines": 62
+  },
+  "sameSuffixDerivedFromBothHistoricalCandidates": {
+    "originalA": {
+      "bytes": 107837,
+      "blob": "a6c8df59b6fabc013b3570762d6b19a396e32c9e",
+      "sha256": "d8bfcea3677773bb7d9fd800f958728719f292c7e01a9e4a0ead4fd746276cf9",
+      "lines": 1828
+    },
+    "laterE1A": {
+      "bytes": 115936,
+      "blob": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+      "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076",
+      "lines": 1958
+    },
+    "exact": true
+  },
+  "candidate": {
+    "file": "p11-after-geometry-test.ts.txt",
+    "bytes": 123149,
+    "blob": "1b0ad5b15b056857817858d1e85f6dfe81f6e782",
+    "sha256": "c73b55cbd07ef632b174609e99e05e536d584b8dae9c124c2fc1a14e1c76c4da",
+    "lines": 2072
+  },
+  "patch": {
+    "file": "p11-after-geometry.patch",
+    "bytes": 4617,
+    "blob": "ab14668b079eacdc2ddd8b0ffb298c334503d297",
+    "sha256": "c71388877cd144ffa09dfd53421b814a722766d61d0ad61e84b80004b2153862"
+  },
+  "addedLines": 62,
+  "removedLines": 0,
+  "losslessCompositionProof": {
+    "entire118885ByteGeometryCandidateIsExactPrefix": true,
+    "last4264BytesExactOriginal62LineSuffix": true,
+    "removingOnlySuffixRestoresFullGeometryCandidate": true,
+    "strictPatchForwardAndReverseExact": true,
+    "allGeometryAssertionsPreserved": true,
+    "allIncomingPassiveTeamBytesPreserved": true,
+    "incoming130LineBlock": {
+      "bytes": 8099,
+      "blob": "9fab999b974341172ca42c222b3deb59175676e2",
+      "sha256": "64cfde8b86427a785394fce9a0b4aac55b623ae4fca8d27176323fa19e860a12",
+      "lines": 130,
+      "zeroBasedByteOffsetWithinGeometryAndCombined": 103846
+    },
+    "geometryNetTenAdditionalCasesPreservedStaticOnly": true
+  },
+  "unchangedP11Driver": {
+    "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+    "mode": "100644",
+    "bytes": 45707,
+    "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+    "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+    "lines": 570,
+    "exactOriginalExtractionMarkersEachUnique": true,
+    "extractedOriginalPoll": {
+      "bytes": 393,
+      "blob": "a94c902f6a7d8793b9e2bea6d4cb25bf9031e6af",
+      "sha256": "8d071f908160878ddbc6e789385aa9e86f3dc0ef595498c9f3a32b20dbd27059",
+      "lines": 7
+    }
+  },
+  "predictedAddedP11Cases": {
+    "semanticFailures": 3,
+    "controlPass": 1,
+    "actualResult": null,
+    "basis": "Unchanged original poll can accept true at/after90s before any post-read cutoff guard. Static prediction only; no test execution."
+  },
+  "hypotheticalAfterGeometryProjection": {
+    "tree": "f40f7f8f16ed316398b21945a37e40d8b361e91d",
+    "parentProjectionTree": "e6f38630fa4709b9ae6583ed7e44d8efe55d2fb8",
+    "changedOnlyRelativeToGeometry": [
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+    ],
+    "leafCount": 11269,
+    "unchangedRelativeToGeometry": 11268,
+    "directoryCountIncludingRoot": 1701,
+    "pureMerkleOnly": true,
+    "notSelectedOrPublished": true,
+    "excludesCopyModelsAndFutureDocumentation": true
+  },
+  "requiredOrderAndLimits": [
+    "This preview is excluded from the prospective geometry2+copy2 cut and selects no PhaseA.",
+    "Future P11A requires the then-actual complete test afterimage, new explicit ordering/composition R1, independent R2, root selection, the then-applicable actual current-source Team/static prerequisite, publication readback and useful-original-cohort preservation.",
+    "Three predicted P11 failures require actual unchanged full8-file CI output and independent attribution before selecting the separate poll correction; this is not actualRED.",
+    "No P11 driver correction, V2 route, admission/setup action, workflow, timer, business action or native qualification is selected.",
+    "ModelsA waits for the reviewed copy hook-test afterimage; no old Models whole-file candidate is applied or endorsed here.",
+    "Original geometry/P11 proposals, preimages, outcomes and independent reviews remain unchanged and recoverable."
+  ]
+}

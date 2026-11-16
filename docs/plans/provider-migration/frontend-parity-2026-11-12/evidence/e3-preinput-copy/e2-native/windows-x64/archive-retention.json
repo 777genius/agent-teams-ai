@@ -1,0 +1,43 @@
+{
+  "source": "57885c055a18b27c180c304762643eac632513ad",
+  "artifactId": 14206031385,
+  "archive": {
+    "bytes": 13276,
+    "sha256": "7dd0d7d7a061b26b931328e604054ac4fe0974f037ac09f2c7d2c875f0525c5d"
+  },
+  "safeNames": true,
+  "uniqueNames": true,
+  "crc": true,
+  "members": [
+    {
+      "path": "opencode-v2-embedded-host.json",
+      "bytes": 95079,
+      "sha256": "b3e19693abb664f176cd44b1c141c723272fd1a4a7e008d09ed45449a86400db",
+      "gitBlob": "0cfe0355ed6df0b607639db996a5e0e85f08e61f",
+      "crc32": "22af37b3"
+    },
+    {
+      "path": "opencode-v2-embedded-inputs.json",
+      "bytes": 780,
+      "sha256": "286119696591ef994fc7651e91c01786cedc2017209edc4e1249e6586a40e5d1",
+      "gitBlob": "df00cf2c0a2d457f0fc950d302b05d66dcad5927",
+      "crc32": "7762f160"
+    },
+    {
+      "path": "opencode-v2-embedded-host-auto.json",
+      "bytes": 94895,
+      "sha256": "a9ce8147fa7135b0c3daa28a473d0c9cc4462f9376f123bccef3dbcc5e467ab5",
+      "gitBlob": "1edd9881a1708e849c345b7c6778df4e9ba4f67d",
+      "crc32": "8f37f26e"
+    },
+    {
+      "path": "opencode-v2-windows-custody.json",
+      "bytes": 907,
+      "sha256": "d4656135627f8857de137e84497f0dc705a278938501c13cc4c2feb97934edc1",
+      "gitBlob": "613829dde892eef6cfcd70ef955184ed5efa1c88",
+      "crc32": "00111247"
+    }
+  ],
+  "downloadUrlRetained": false,
+  "qualification": "raw retention only; semantic audit pending"
+}

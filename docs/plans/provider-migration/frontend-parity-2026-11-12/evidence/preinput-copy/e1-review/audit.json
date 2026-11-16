@@ -1,0 +1,4048 @@
+{
+  "kind": "E1 original Review UI failure author audit",
+  "reviewedAtUTC": "2026-11-16T07:23:09.970897+00:00",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "runId": 43813731227,
+  "jobId": 133120928945,
+  "artifactId": 14204298663,
+  "originalOutcome": "FAIL / INCOMPLETE",
+  "job": {
+    "id": 133120928945,
+    "name": "Offline Host Desktop (linux-x64, review)",
+    "status": "completed",
+    "conclusion": "failure",
+    "run_id": 43813731227,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Verify original checkout and runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Prepare private Linux display",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Install frozen workspace and Electron",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build existing Desktop prerequisites and verify admission",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Verify original Runtime and Team conversation contracts",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 9
+      },
+      {
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 10
+      },
+      {
+        "name": "Capture package-manager and Host inputs without vendor executables",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Capture original controlled Linux process input without a provider",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Exercise ordinary Team controls and renderer reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Exercise ordinary Taskboard controls and persistence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Exercise original Skills and cross-Team controls",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15
+      },
+      {
+        "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 21
+      },
+      {
+        "name": "Exercise original Review after a cold Host and app restart",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Exercise saved next-launch selection while the original Team remains live",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 24
+      },
+      {
+        "name": "Exercise stock Codex Update while the original Team retains its captured source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 25
+      },
+      {
+        "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 26
+      },
+      {
+        "name": "Prepare exact OpenCode V2 Bun and engine graph",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 27
+      },
+      {
+        "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 28
+      },
+      {
+        "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 29
+      },
+      {
+        "name": "Verify exact source, original screenshots, receipts and cleanup",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 30
+      },
+      {
+        "name": "Preserve original Desktop evidence, including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 60
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 61
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 62
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 63
+      }
+    ]
+  },
+  "artifact": {
+    "id": 14204298663,
+    "name": "host-emulated-linux-x64-e1d14b9cd0fa1d7896b58e513f9040639e9e4940-review",
+    "size_in_bytes": 650542,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14204298663",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14204298663/zip",
+    "expired": false,
+    "created_at": "2026-11-16T07:07:37Z",
+    "expires_at": "2026-11-30T07:07:37Z",
+    "updated_at": "2026-11-16T07:07:37Z",
+    "digest": "sha256:9e9dd46183fba4b5d56eeb85f525a94739c35e7d1c99cf257cb6e7c8dfe37803",
+    "workflow_run": {
+      "id": 43813731227,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940"
+    }
+  },
+  "rawLog": {
+    "path": "ci-e1d14b9/review/job.log",
+    "bytes": 188081,
+    "blob": "7cc514f1ad52cec3d686daa1b147ca558039f424",
+    "sha256": "7ebbc5901ff88148bc8e5c37edf459f74c80c5abc27a672937f2ddd331f69451"
+  },
+  "rawResponse": {
+    "path": "ci-e1d14b9/review/job-original-response.json",
+    "bytes": 198287,
+    "blob": "fbef5f9028e95e8b241903b0182ecd64a510891a",
+    "sha256": "f9f4f433d6a826db3a12432bdba16d9b7cae1cef4ef4580458da49f0f3832d22"
+  },
+  "rawMcpContentExact": true,
+  "wholeTee": {
+    "path": "ci-e1d14b9/review/extracted/host-emulated-review-ui.log",
+    "bytes": 1362,
+    "blob": "f14cf89191d448a3b36896f2ccacf079b4f3eeab",
+    "sha256": "a66dc85816c886e1ada441b59d4effbf69b39084f2f425d0bdbe8d8f2b95ef28"
+  },
+  "wholeTeeMatchesTimestampStrippedJob": true,
+  "archive": {
+    "kind": "original-E1-Review-terminal-byte-retention-only",
+    "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "artifactId": 14204298663,
+    "archive": {
+      "bytes": 650542,
+      "blob": "cbf46f3661998a6eec4bd044d6704df96acd0339",
+      "sha256": "9e9dd46183fba4b5d56eeb85f525a94739c35e7d1c99cf257cb6e7c8dfe37803"
+    },
+    "safeUniquePaths": true,
+    "crcAllMembers": true,
+    "memberCount": 14,
+    "pngCount": 1,
+    "members": [
+      {
+        "path": "TEST-desktop-backend-B8oAL1/desktop-backend-receipt.json",
+        "bytes": 761599,
+        "blob": "fa1f90c8b0de3a026a30c4d9bf629fe4dff373ab",
+        "sha256": "82b4900542e8503edda7f508130fd4ace9d63752a28fbc5571335104bc6b51f5",
+        "crc32": "15cb64e6"
+      },
+      {
+        "path": "TEST-desktop-backend-B8oAL1/desktop-descriptor.json",
+        "bytes": 1925,
+        "blob": "8bd6603b0ddde2b3ff39875df1fb3eccba887fbc",
+        "sha256": "abaa50944630c6390c0f35db6fda490b5f2d09ae93f4612a42201820ce19f709",
+        "crc32": "b7d34fd3"
+      },
+      {
+        "path": "TEST-desktop-backend-B8oAL1/desktop-app.log",
+        "bytes": 13238,
+        "blob": "1fca51487904ed5b7731ddfc7596eee5de63049d",
+        "sha256": "29c202c2a95de95893af902393f7494a97fa70abc857e54a44873fc734bc25d8",
+        "crc32": "8775d315"
+      },
+      {
+        "path": "TEST-desktop-backend-B8oAL1/host-profile.json",
+        "bytes": 1200,
+        "blob": "ee32e163f89e3cbbba96db175fbdd0204b39320c",
+        "sha256": "81b2aa694874da6a46894a553a9349a1d5bcef2cdc7161392d89b1a9284f4020",
+        "crc32": "6145d3b4"
+      },
+      {
+        "path": "TEST-desktop-backend-B8oAL1/review-ui-initial-git-diff.txt",
+        "bytes": 386,
+        "blob": "28933ce454c1c59e55945f9602bddc4bf4161d90",
+        "sha256": "2fc5ff53a4f545d632661526c2c791562ffb5e9d523eb659b08204fef3465383",
+        "crc32": "d14b3a2a"
+      },
+      {
+        "path": "TEST-desktop-backend-B8oAL1/review-ui-seed.json",
+        "bytes": 1328,
+        "blob": "8b495b89403fa8b842eefcf1f07204c2acafa768",
+        "sha256": "05f031f56feb8b97c32f1d58e345a5b611136c67f902c85a549b5c97b284a97a",
+        "crc32": "1547faeb"
+      },
+      {
+        "path": "TEST-desktop-backend-B8oAL1/sentinel-invocations.ndjson",
+        "bytes": 96,
+        "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+        "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+        "crc32": "9fc3bdb4"
+      },
+      {
+        "path": "TEST-desktop-backend-B8oAL1/ui-failure.png",
+        "bytes": 87805,
+        "blob": "3289bfe80c45eaedb87fa97bcf4e7cfa1f9101de",
+        "sha256": "034b73f23ca4afa9a6ab691a97e0f3fd17c38757e2618f0dc53afcc0ffbddb1c",
+        "crc32": "4e36bd44"
+      },
+      {
+        "path": "TEST-desktop-backend-B8oAL1/ui-seed-receipt.json",
+        "bytes": 2037,
+        "blob": "c6b3702caf5f4db4bd786dbdafea73d7224214b2",
+        "sha256": "c51021c27df8b7b0073c54a62ecfcdb69bda175b12d960104670bd88d95bce32",
+        "crc32": "4b1756de"
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-n0iZIM/linux-child-exec/linux-child-exec",
+        "bytes": 790608,
+        "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+        "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+        "crc32": "ed0ca14b"
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-n0iZIM/linux-child-exec/manifest.json",
+        "bytes": 2408,
+        "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+        "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+        "crc32": "e06f2443"
+      },
+      {
+        "path": "host-emulated-inputs.json",
+        "bytes": 1803,
+        "blob": "eb4e79aaa9ae110a836725d62c24efb248ed29b5",
+        "sha256": "26dae211f66cddfb8db98dec4e7a20c0dcb1c5fb1a984925040b3cacf9f5cc0e",
+        "crc32": "49f23391"
+      },
+      {
+        "path": "host-emulated-linux-child-exec-selection.json",
+        "bytes": 271,
+        "blob": "c181d4a9d192c2269c25e961ffe996eca3d23772",
+        "sha256": "2ce0eee5f1d6f60ad3678b16bab4e7101b7449bd4fced9e3591e290842bc1ae3",
+        "crc32": "494ad171"
+      },
+      {
+        "path": "host-emulated-review-ui.log",
+        "bytes": 1362,
+        "blob": "f14cf89191d448a3b36896f2ccacf079b4f3eeab",
+        "sha256": "a66dc85816c886e1ada441b59d4effbf69b39084f2f425d0bdbe8d8f2b95ef28",
+        "crc32": "4019bb20"
+      }
+    ],
+    "semanticReview": "pending",
+    "visuallyReviewedImages": [],
+    "originalResponse": {
+      "bytes": 198287,
+      "blob": "fbef5f9028e95e8b241903b0182ecd64a510891a",
+      "sha256": "f9f4f433d6a826db3a12432bdba16d9b7cae1cef4ef4580458da49f0f3832d22"
+    },
+    "rawJobLog": {
+      "bytes": 188081,
+      "blob": "7cc514f1ad52cec3d686daa1b147ca558039f424",
+      "sha256": "7ebbc5901ff88148bc8e5c37edf459f74c80c5abc27a672937f2ddd331f69451"
+    }
+  },
+  "archiveRecheckedSafeUniqueCrcAndExtractedBytes": true,
+  "sourceProof": {
+    "path": "ci-e1d14b9/review/source-pin-audit.json",
+    "bytes": 518454,
+    "blob": "9f90d76d728f3e9ec30ca420a66e692f7757b358",
+    "sha256": "76b64b9bcb7cacf375552804b71e76a81860dfbc51a3bedbad68dc1f29e4fc32"
+  },
+  "sourceCount": 1757,
+  "sourceBytes": 20343408,
+  "selectedHostSourceCount": 586,
+  "sourceLimit": "Full selected-source census only, not complete Host build-output attestation.",
+  "compiledBundleHashesAfterStartup": [
+    {
+      "path": "main/chunks/index-D9GX0Q6a.cjs",
+      "sha256": "89c988b7be61f7f30f0effaed6a2626a2279b0ed753228360e77e227884d0a92"
+    },
+    {
+      "path": "main/chunks/index-yaJFGvjB.cjs",
+      "sha256": "ec64b11e28a53961fd7846392857a0167886b8b086d14f54e20041ddc9927155"
+    },
+    {
+      "path": "main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+      "sha256": "7babbc9bd69c863a2210647b3d5f589d96437a9a80fd794b54196387849217f6"
+    },
+    {
+      "path": "main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+      "sha256": "c14cfc36aeec6fd7103c507f258097aaeccf552dbbf608fea43f9e3c7a7ef3b3"
+    },
+    {
+      "path": "main/chunks/taskChangeState-rZolvpL6.cjs",
+      "sha256": "f40557112189b351692a4b0f19244d7845a4dfe754f468326a21c36386efa1cd"
+    },
+    {
+      "path": "main/chunks/taskHistory-2kbwfqIg.cjs",
+      "sha256": "1d336b6cea5aa5c4768954541a24347fe89bb46a83faddaf8b26fd6e0afb7f85"
+    },
+    {
+      "path": "main/chunks/TeamDataService-DySh5-O-.cjs",
+      "sha256": "ed455bf2423e0511bf1fb8e30069280fe99b505e8e4968df3705309a7131556e"
+    },
+    {
+      "path": "main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+      "sha256": "2915a9af73772eda67fa92bd4499976d75724d9605cc947e356bd1dc1cee600c"
+    },
+    {
+      "path": "main/index.cjs",
+      "sha256": "6c4026b6a9ca512c75bfc90eb4f84b90fc150b8111310bf49a82227e3907880c"
+    },
+    {
+      "path": "main/internal-storage-worker.cjs",
+      "sha256": "3433cb94575a5748d3133174952698af2a98ac2afb348cb159fcb1110e0b284f"
+    },
+    {
+      "path": "main/task-change-worker.cjs",
+      "sha256": "f8fcc24dd4dc9842cd0f70ffe02891d39eef84019d4aab4ed21b529ba9326446"
+    },
+    {
+      "path": "main/team-data-worker.cjs",
+      "sha256": "dc145e9f1fb5fdfa2e5f51ca6d6f2db8e22e89cb3ab34dae2745ccfd4e6f3823"
+    },
+    {
+      "path": "main/team-fs-worker.cjs",
+      "sha256": "6e6410a44a3d1b97065085259858215045ed137b5bd0dd27bf70f797091c9c83"
+    },
+    {
+      "path": "preload/index.js",
+      "sha256": "4f02e5f1659bb0373f5515d81c7edf5f9bc7af8b67a39f1600171f8acb291406"
+    }
+  ],
+  "bundleProvenance": "Actual compiled main/preload JS bytes hashed after owned app startup; no claim of reproducible source-to-bundle rebuild",
+  "prerequisites": {
+    "commands": [
+      "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "node --test test/scripts/installDependenciesWithRetry.test.mjs",
+      "node --test scripts/legacy-agent-host/desktop-review-fixture.test.ts"
+    ],
+    "counts": {
+      "tests": [
+        "119",
+        "7",
+        "2"
+      ],
+      "pass": [
+        "119",
+        "7",
+        "2"
+      ],
+      "fail": [
+        "0",
+        "0",
+        "0"
+      ],
+      "skipped": [
+        "0",
+        "0",
+        "0"
+      ],
+      "duration_ms": [
+        "9209.820646",
+        "212.624122",
+        "1339.704403"
+      ]
+    },
+    "caseRows": [
+      "✔ offline Desktop admission refuses inherited native selections before preparing a fixture (6.556365ms)",
+      "✔ TEST management admission retains only the exact direct detached Host peer without signaling (5.731042ms)",
+      "✔ Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder (12.786819ms)",
+      "✔ Linux zero-group rows remain observable without becoming owned app groups; malformed census stays an error (1.466729ms)",
+      "✔ the same original-root oracle uses each existing caller deadline after a long provider phase, without renewing reads (1.988064ms)",
+      "✔ read-only discovery survives navigation during the actual IPC read, then reads the new context (0.53122ms)",
+      "✔ unregistered initial discovery waits, but owner failures are never hidden as navigation (0.507154ms)",
+      "✔ initial discovery passes only its remaining captured budget to the IPC await (0.306412ms)",
+      "✔ exhausted initial observation never dispatches the backend IPC (0.341344ms)",
+      "✔ other discovery callers retain the default CDP budget (0.220372ms)",
+      "✔ an explicit IPC observation budget lets the same read settle after30s within60s (1.086306ms)",
+      "✔ default CDP evaluations still reject at30s without a resend (0.353262ms)",
+      "✔ macOS original Node zombie is the same unreaped harness child, never a changed live command (0.678452ms)",
+      "✔ live stat can become original defunct before the guard; only original child reap and whole-group absence settle it (1.58635ms)",
+      "✔ changed command/start, wrong child/group and initial descendants never authorize a recovery observation (0.262565ms)",
+      "✔ an already observed original natural exit still requires fresh group and captured Host absence (0.573484ms)",
+      "✔ original crash/signal and process-table failures remain debt (0.242325ms)",
+      "✔ the original deadline is not renewed after initial settlement consumed it (0.164037ms)",
+      "✔ numeric group absence without this original child exit observation expires within the remaining original budget (0.321875ms)",
+      "✔ a process-table read that crosses the original deadline cannot qualify natural exit (0.194693ms)",
+      "✔ an already reaped original child waits for actual descendant and original Host absence (0.621075ms)",
+      "✔ an orphan descendant, moved captured descendant or original Host cannot be cleared by an expired budget (0.424289ms)",
+      "✔ absent leader observation rejects wrong child, live/crashed/signaled child and invalid captured identities (0.256286ms)",
+      "✔ a reused leader PID and unavailable full process census retain debt without signaling (0.235595ms)",
+      "✔ absent leader observation never renews the original deadline or accepts a late census (0.174994ms)",
+      "✔ original peer observation accepts later-row only with its retained launch row (29.005759ms)",
+      "✔ original peer observation accepts exit only with its retained launch row (3.805452ms)",
+      "✔ original peer observation refuses reuse without admitting the census PID (4.360187ms)",
+      "✔ original peer observation refuses reparent without admitting the census PID (3.356706ms)",
+      "✔ original peer observation refuses argv without admitting the census PID (3.097275ms)",
+      "✔ original peer observation refuses duplicate without admitting the census PID (2.896843ms)",
+      "✔ original peer observation refuses missing without admitting the census PID (3.170726ms)",
+      "✔ original peer observation refuses late without admitting the census PID (2.877233ms)",
+      "✔ original peer observation accepts a valid empty journal with no current children (2.959678ms)",
+      "✔ original peer observation validates no-child-failure before returning without children (3.35966ms)",
+      "✔ original peer observation validates no-child-malformed before returning without children (2.77563ms)",
+      "✔ original peer observation validates no-child-late before returning without children (2.631483ms)",
+      "✔ empty peer census refuses no-child-provider-mismatch through the original journal oracle (2.935231ms)",
+      "✔ empty peer census refuses zero-host-failure through the original journal oracle (2.783593ms)",
+      "✔ empty peer census validates its journal with no current Host before the first Team read (2.737914ms)",
+      "✔ requested Quit lets the original child report its natural exit before the cleanup census (600.421739ms)",
+      "✔ finite Codex exact native MCP catalog exits with empty inventory without allocating a Runtime (229.209738ms)",
+      "✔ finite Codex catalog refuses changed argv, Runtime authority and nonempty selected configuration (350.200544ms)",
+      "✔ finite Codex answers the original D managed config before connecting its selected Team on thread start (332.554481ms)",
+      "✔ finite managed Codex policy refuses alternate syntax, extra servers and enabled apps before connection (253.117238ms)",
+      "✔ runtime-derived Codex ordinary model probe (default) completes through original Host/D once (260.239084ms)",
+      "✔ runtime-derived Codex ordinary model probe (low) completes through original Host/D once (187.438368ms)",
+      "✔ finite Codex standalone retains empty MCP readiness and completes only its original ephemeral thread (150.323211ms)",
+      "✔ finite Codex standalone refuses Team authority, persistent threads and unselected thread work (834.347141ms)",
+      "✔ extensions Settings peer exposes only isolated auth status through original custody (371.648533ms)",
+      "✔ saved-import Settings peer exposes only isolated auth status through original custody (435.168221ms)",
+      "✔ finite extension status uses the original Host auth command and retains its exact private namespace (136.373785ms)",
+      "✔ finite extensions run through original Host ownership, persist four commands and survive inventory reload without replay (969.513607ms)",
+      "✔ finite extension CLI refuses changed names/scopes and does not overwrite selected config (338.791925ms)",
+      "✔ saved-import finite metadata and actual original probe receipt preserve model/effort with no extra input on lookup (3233.250771ms)",
+      "✔ saved-import peer refuses a business input without producing a probe or touching Host receipts (402.846234ms)",
+      "✔ receipt summaries retain only the original nested mixed Settings owner (1.280699ms)",
+      "✔ retained c226 original rejected-key receipt joins its published seed and exact observed native probe (91.620609ms)",
+      "✔ V2 receipt binding rejects foreign revisions, scope, seed owner, engine and executable (6.951169ms)",
+      "✔ V2 publication rejects an internally rehashed foreign descriptor grant or replacement executable (6.752951ms)",
+      "✔ V2 source history accounts for every publication and the exact retained current chain (14.751418ms)",
+      "✔ original Host rejects old other-project cwd and accepts only its separate exact private-account seed (2.62279ms)",
+      "✔ archived V2 tuple isolation restores the real runner and preserves foreign-platform refusal (3.61144ms)",
+      "✔ original V2 default intent joins its selected saving row within the same receipt deadline (20.403661ms)",
+      "✔ published receipt reads survive the real controller writer before its atomic rename (76.712693ms)",
+      "✔ receipt reads reject foreign staging names, directories and symbolic links (15.040984ms)",
+      "✔ captured UI discovery waits for Main admission and actual mount while early diagnostics remain active (202.920207ms)",
+      "✔ the original remaining startup deadline rejects a pending snapshot without late discovery or a reset (500.412096ms)",
+      "✔ packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin (4.563154ms)",
+      "✔ HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted (2.352454ms)",
+      "✔ isolated shell fixture emits the actual framed environment and refuses shell effects (173.209907ms)",
+      "✔ original in-progress Task comment prerequisite requires its exact stage without an assignment control (9.018854ms)",
+      "✔ Task attachment comment waits for its original focused owner after one click before inserting text (206.417954ms)",
+      "✔ original Task assignment prerequisite refuses receipt-only, pending and stale renderer state (3.092468ms)",
+      "✔ original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface (3.161171ms)",
+      "✔ original desktop click waits for stable target geometry, without repeating input (301.932868ms)",
+      "✔ original Task hover waits through layout and unavailability before its one physical move (602.412113ms)",
+      "✔ original desktop click refuses a constantly moving target before dispatch (1505.1987ms)",
+      "✔ original owner-qualified click rereads its full expression through unavailability at unchanged coordinates (301.556581ms)",
+      "✔ login failure facts retain only bounded original attempts and confirmed milestones (1.070533ms)",
+      "✔ finite readiness failure summaries keep only bounded states and never private snapshot data (0.993236ms)",
+      "✔ Taskboard failure summaries compare retained identities without exposing private snapshot values (1.627441ms)",
+      "✔ installer failure summaries preserve original wait sites and attempts without inferring installation effects (1.740551ms)",
+      "✔ installer failure projection does not invoke input getters and leaves oversized observations unknown (0.488235ms)",
+      "✔ installer CDP and cleanup projection retains only exact finite observations (0.686114ms)",
+      "✔ Selection target summaries retain the exact original phase and six closed facts (0.787977ms)",
+      "✔ Selection target projection rejects unknown or malformed facts without exposing text or invoking getters (0.427123ms)",
+      "✔ Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input (1.179316ms)",
+      "✔ original desktop click refuses a target unavailable during the final ownership check (201.117905ms)",
+      "✔ original desktop click refuses a target moved during the final ownership check (201.990755ms)",
+      "✔ original default scroll preserves a disabled control before its readiness wait (1.084464ms)",
+      "✔ original scroll opt-in reveals a covered checkbox with one bounded wheel (101.093599ms)",
+      "✔ original desktop click rechecks owner after its pending final target read (200.577917ms)",
+      "✔ original desktop click rechecks cutoff after its pending final target read (201.067533ms)",
+      "✔ original clarification lookup admits its retained read without completing the assignment prerequisite (2.554297ms)",
+      "✔ original clarification lookup refuses changed owner, revision, refresh and retained-read joins (17.793963ms)",
+      "✔ original owner availability admits three captured A Teams through its actual first DOM read (2.382469ms)",
+      "✔ original owner availability retains singleton, subset and duplicate-row cardinality semantics (2.544633ms)",
+      "✔ original owner availability refuses foreign identities and preserves its existing aggregate guards (25.287351ms)",
+      "✔ original owner availability refuses invalid captured discovery before navigation (0.612693ms)",
+      "✔ owner availability admits every captured A Team through the actual first observation (0.53769ms)",
+      "✔ owner availability refuses healthy B in unavailable A rows (0.368135ms)",
+      "✔ owner availability refuses captured foreign owner in unavailable A rows (0.259872ms)",
+      "✔ owner availability refuses unknown Team in unavailable A rows (0.532493ms)",
+      "✔ owner availability refuses malformed Team in unavailable A rows (0.459482ms)",
+      "✔ owner availability refuses missing selected A before original navigation (0.304058ms)",
+      "✔ owner availability refuses non-string A handle before original navigation (0.185339ms)",
+      "✔ owner availability refuses empty A handle before original navigation (0.195895ms)",
+      "✔ owner availability refuses duplicate A handle before original navigation (0.142825ms)",
+      "✔ owner availability refuses over-bound capture before original navigation (0.261985ms)",
+      "✔ original Selection final Stop joins physical absence with its exact stopped UI within the same poll budget (8.965495ms)",
+      "✔ Selection stopped convergence refuses wrong identity, unaccepted progress, visible progress and exhausted observation budget (25.596411ms)",
+      "✔ the existing passive click recorder distinguishes the actual Team from later navigation without new actions (10.107145ms)",
+      "✔ ordinary Node imports and synchronous observations remain inert (1.670786ms)",
+      "✔ constructor subscription observes the original async child after pid assignment (38.942545ms)",
+      "✔ the observer preserves an actual unhandled child-process error (112.569891ms)",
+      "✔ failed reads, writes and unknown child fields cannot change the original operation (1.855154ms)",
+      "✔ the original TEST helper path exposes only its closed requested target class (0.99593ms)",
+      "✔ event and pending-child bounds explicitly preserve incomplete coverage (1.345346ms)",
+      "✔ original frozen install retains its lockfile and selects only the explicit serial lifecycle option (106.02551ms)",
+      "✔ unknown or duplicate frozen-install options refuse before any TEST installer is allocated (49.049059ms)",
+      "✔ long unfinished engine warning does not turn a transient 503 into a terminal failure (0.930411ms)",
+      "✔ next fatal engine line is not masked by a prior long warning (4.120708ms)",
+      "✔ 404 marker fragmented across chunks within one stream is terminal (0.151508ms)",
+      "✔ separate output streams cannot fabricate a 404 marker (0.145078ms)",
+      "✔ whole-output classifier distinguishes long warning from fatal engine (0.219561ms)",
+      "✔ review UI seed uses one actual Task, explicit captured review profiles and two dirty filesystem hunks without agents (507.724061ms)",
+      "✔ both explicit review proof modes never allocate a model or native runtime (0.750791ms)"
+    ],
+    "caseCount": 128,
+    "capturedNode": "24.21.0",
+    "TeamAndStaticSkipped": true,
+    "laterColdReviewStep22Skipped": true
+  },
+  "firstFailure": {
+    "message": "Original UI target moved after ownership check\n+ actual - expected\n\n  [\n    700,\n+   433.875,\n-   437.875,\n    'BUTTON'\n  ]\n",
+    "source": {
+      "kind": "assertion",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:321:12",
+        "scripts/legacy-agent-host/desktop-review-hunk-controls.ts:100:5",
+        "scripts/legacy-agent-host/desktop-review-ui-smoke.ts:84:3",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:480:7",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+      ]
+    },
+    "expectedStableTuple": [
+      700,
+      437.875,
+      "BUTTON"
+    ],
+    "actualFinalTuple": [
+      700,
+      433.875,
+      "BUTTON"
+    ],
+    "exactFullMessageRetainedInReceipt": true,
+    "fullJobContainsFramesAndIncompleteAssertion": true,
+    "earlierTaskCardThreeSampleClickReturned": true,
+    "hoverAlreadySent": true,
+    "sourceTwoStableSampleGuardReturned": true,
+    "failedClickPressReleaseReached": false,
+    "sourceCase": "First Changes section expansion, before the file and first Keep/Reject actions."
+  },
+  "reviewProof": {
+    "status": "INCOMPLETE",
+    "steps": [
+      {
+        "monotonicMs": 56563,
+        "action": "mouseMoved",
+        "label": "hover sidebar row before measuring click",
+        "subject": "TEST persisted Host sidebar seed",
+        "target": {
+          "x": 1261,
+          "y": 206.875
+        }
+      },
+      {
+        "monotonicMs": 56834,
+        "action": "mouseClick",
+        "label": "sidebar task",
+        "subject": "TEST persisted Host sidebar seed",
+        "target": {
+          "x": 1261,
+          "y": 206.875
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 56863,
+        "observation": "passive input delivery after sidebar click",
+        "value": {
+          "focused": true,
+          "visibility": "visible",
+          "events": [
+            {
+              "type": "pointerdown",
+              "timeMs": 31653,
+              "x": 1261,
+              "y": 206.875,
+              "button": 0,
+              "buttons": 1,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "SPAN",
+                "id": "",
+                "ariaLabel": null,
+                "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+              },
+              "focusBefore": {
+                "tag": "INPUT",
+                "id": "",
+                "ariaLabel": null,
+                "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "taskClarification": null,
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "INPUT",
+                "id": "",
+                "ariaLabel": null,
+                "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusout",
+              "timeMs": 31654,
+              "trusted": true,
+              "buttonClass": null,
+              "target": {
+                "tag": "INPUT",
+                "id": "",
+                "ariaLabel": null,
+                "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+              },
+              "focusBefore": {
+                "tag": "BODY",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BODY",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusin",
+              "timeMs": 31656,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "pointerup",
+              "timeMs": 31657,
+              "x": 1261,
+              "y": 206.875,
+              "button": 0,
+              "buttons": 0,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "SPAN",
+                "id": "",
+                "ariaLabel": null,
+                "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "taskClarification": null,
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "click",
+              "timeMs": 31657,
+              "x": 1261,
+              "y": 206,
+              "button": 0,
+              "buttons": 0,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "SPAN",
+                "id": "",
+                "ariaLabel": null,
+                "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "taskClarification": null,
+              "teamNavigation": null,
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusout",
+              "timeMs": 31675,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "focusBefore": {
+                "tag": "BODY",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusin",
+              "timeMs": 31676,
+              "trusted": true,
+              "buttonClass": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--",
+              "target": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "monotonicMs": 57428,
+        "action": "mouseMoved",
+        "label": "hover Open team",
+        "selector": "[role=\"dialog\"] button",
+        "target": {
+          "x": 1043.7169799804688,
+          "y": 207.79590606689453,
+          "text": "Open team",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "monotonicMs": 57894,
+        "action": "mouseClick",
+        "label": "Open team",
+        "selector": "[role=\"dialog\"] button",
+        "expectedText": "Open team",
+        "target": {
+          "x": 1055.3125,
+          "y": 199.625,
+          "text": "Open team",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 63430,
+        "action": "mouseClick",
+        "label": "open original Task detail",
+        "selector": ".kanban-task-card[data-task-id=\"426e833b-e44e-537f-92bc-c14242b1db9a\"]",
+        "target": {
+          "x": 468.5,
+          "y": 522,
+          "width": 257,
+          "height": 92,
+          "taskId": "426e833b-e44e-537f-92bc-c14242b1db9a",
+          "hitTaskId": "426e833b-e44e-537f-92bc-c14242b1db9a"
+        },
+        "stableGeometrySamples": 3,
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 63792,
+        "action": "mouseMoved",
+        "label": "hover expand original Changes section",
+        "selector": "[role=\"dialog\"] section:has(svg.lucide-file-diff) > div > button[aria-label=\"Expand section\"]",
+        "target": {
+          "x": 700,
+          "y": 437.875,
+          "text": "",
+          "tag": "BUTTON"
+        }
+      }
+    ],
+    "scope": "Original Task Changes controls: Keep first hunk, Reject second, real immediate filesystem apply, Undo/Redo/history and renderer reload",
+    "fixture": "Synthetic exact two-hunk canonical Task ledger; no native capture qualification",
+    "excluded": [
+      "M13 native attribution",
+      "native inference",
+      "crash recovery injection",
+      "Apply button (instant apply is enabled)"
+    ],
+    "taskId": "426e833b-e44e-537f-92bc-c14242b1db9a",
+    "filePath": "/home/runner/work/_temp/TEST-desktop-backend-B8oAL1/workspace/value.ts",
+    "seedSha256": "05f031f56feb8b97c32f1d58e345a5b611136c67f902c85a549b5c97b284a97a",
+    "sourceSha256": "b7bff873445aa7938b1a1d6e26067fb663205de8002ccca7d5a99745e61217ae",
+    "fixtureSourceSha256": "fb7e0c83af387106290e578f9f1b88f857e304d2ad6ad6413b04150e937c1f8f"
+  },
+  "actionCounts": {
+    "mouseMoved": 3,
+    "mouseClick": 3,
+    "passive input delivery after sidebar click": 1
+  },
+  "failureSnapshot": {
+    "readyState": "complete",
+    "uiDidInit": true,
+    "documentFocused": true,
+    "visibility": "visible",
+    "inputEvents": [
+      {
+        "type": "pointerdown",
+        "timeMs": 31653,
+        "x": 1261,
+        "y": 206.875,
+        "button": 0,
+        "buttons": 1,
+        "trusted": true,
+        "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+        "target": {
+          "tag": "SPAN",
+          "id": "",
+          "ariaLabel": null,
+          "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+        },
+        "focusBefore": {
+          "tag": "INPUT",
+          "id": "",
+          "ariaLabel": null,
+          "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          ""
+        ],
+        "taskClarification": null,
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "INPUT",
+          "id": "",
+          "ariaLabel": null,
+          "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        }
+      },
+      {
+        "type": "focusout",
+        "timeMs": 31654,
+        "trusted": true,
+        "buttonClass": null,
+        "target": {
+          "tag": "INPUT",
+          "id": "",
+          "ariaLabel": null,
+          "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+        },
+        "focusBefore": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        }
+      },
+      {
+        "type": "focusin",
+        "timeMs": 31656,
+        "trusted": true,
+        "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+        },
+        "focusBefore": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        }
+      },
+      {
+        "type": "pointerup",
+        "timeMs": 31657,
+        "x": 1261,
+        "y": 206.875,
+        "button": 0,
+        "buttons": 0,
+        "trusted": true,
+        "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+        "target": {
+          "tag": "SPAN",
+          "id": "",
+          "ariaLabel": null,
+          "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+        },
+        "focusBefore": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          ""
+        ],
+        "taskClarification": null,
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        }
+      },
+      {
+        "type": "click",
+        "timeMs": 31657,
+        "x": 1261,
+        "y": 206,
+        "button": 0,
+        "buttons": 0,
+        "trusted": true,
+        "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+        "target": {
+          "tag": "SPAN",
+          "id": "",
+          "ariaLabel": null,
+          "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+        },
+        "focusBefore": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          ""
+        ],
+        "taskClarification": null,
+        "teamNavigation": null,
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        }
+      },
+      {
+        "type": "focusout",
+        "timeMs": 31675,
+        "trusted": true,
+        "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+        },
+        "focusBefore": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        }
+      },
+      {
+        "type": "focusin",
+        "timeMs": 31676,
+        "trusted": true,
+        "buttonClass": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "focusBefore": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        }
+      },
+      {
+        "type": "focusout",
+        "timeMs": 31961,
+        "trusted": true,
+        "buttonClass": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "focusBefore": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        }
+      },
+      {
+        "type": "focusin",
+        "timeMs": 31980,
+        "trusted": true,
+        "buttonClass": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "focusBefore": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        }
+      },
+      {
+        "type": "focusout",
+        "timeMs": 32042,
+        "trusted": true,
+        "buttonClass": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "focusBefore": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        }
+      },
+      {
+        "type": "focusin",
+        "timeMs": 32143,
+        "trusted": true,
+        "buttonClass": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "focusBefore": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        }
+      },
+      {
+        "type": "pointerdown",
+        "timeMs": 32713,
+        "x": 1055.3125,
+        "y": 199.625,
+        "button": 0,
+        "buttons": 1,
+        "trusted": true,
+        "buttonClass": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te"
+        },
+        "focusBefore": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          ""
+        ],
+        "taskClarification": null,
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te"
+        }
+      },
+      {
+        "type": "focusout",
+        "timeMs": 32714,
+        "trusted": true,
+        "buttonClass": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "focusBefore": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te"
+        }
+      },
+      {
+        "type": "focusin",
+        "timeMs": 32714,
+        "trusted": true,
+        "buttonClass": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te"
+        },
+        "focusBefore": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te"
+        }
+      },
+      {
+        "type": "pointerup",
+        "timeMs": 32715,
+        "x": 1055.3125,
+        "y": 199.625,
+        "button": 0,
+        "buttons": 0,
+        "trusted": true,
+        "buttonClass": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te"
+        },
+        "focusBefore": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          ""
+        ],
+        "taskClarification": null,
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        }
+      },
+      {
+        "type": "click",
+        "timeMs": 32715,
+        "x": 1055,
+        "y": 199,
+        "button": 0,
+        "buttons": 0,
+        "trusted": true,
+        "buttonClass": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te"
+        },
+        "focusBefore": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          ""
+        ],
+        "taskClarification": null,
+        "teamNavigation": null,
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        }
+      },
+      {
+        "type": "focusout",
+        "timeMs": 32763,
+        "trusted": true,
+        "buttonClass": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--color-te"
+        },
+        "focusBefore": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        }
+      },
+      {
+        "type": "pointerdown",
+        "timeMs": 38249,
+        "x": 468.5,
+        "y": 522,
+        "button": 0,
+        "buttons": 1,
+        "trusted": true,
+        "buttonClass": null,
+        "target": {
+          "tag": "H5",
+          "id": "",
+          "ariaLabel": null,
+          "className": "line-clamp-2 font-medium text-[var(--color-text)] text-sm leading-5 h-10 min-w-0"
+        },
+        "focusBefore": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": "426e833b-e44e-537f-92bc-c14242b1db9a",
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "taskClarification": null,
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        }
+      },
+      {
+        "type": "focusin",
+        "timeMs": 38255,
+        "trusted": true,
+        "buttonClass": null,
+        "target": {
+          "tag": "DIV",
+          "id": "",
+          "ariaLabel": null,
+          "className": "kanban-task-card relative cursor-pointer kanban-task-card-flat group rounded-none bg-transparent py-3 pl-3 pr-1.5 "
+        },
+        "focusBefore": {
+          "tag": "DIV",
+          "id": "",
+          "ariaLabel": null,
+          "className": "kanban-task-card relative cursor-pointer kanban-task-card-flat group rounded-none bg-transparent py-3 pl-3 pr-1.5 "
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": "426e833b-e44e-537f-92bc-c14242b1db9a",
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "DIV",
+          "id": "",
+          "ariaLabel": null,
+          "className": "kanban-task-card relative cursor-pointer kanban-task-card-flat group rounded-none bg-transparent py-3 pl-3 pr-1.5 "
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        }
+      },
+      {
+        "type": "pointerup",
+        "timeMs": 38257,
+        "x": 468.5,
+        "y": 522,
+        "button": 0,
+        "buttons": 0,
+        "trusted": true,
+        "buttonClass": null,
+        "target": {
+          "tag": "H5",
+          "id": "",
+          "ariaLabel": null,
+          "className": "line-clamp-2 font-medium text-[var(--color-text)] text-sm leading-5 h-10 min-w-0"
+        },
+        "focusBefore": {
+          "tag": "DIV",
+          "id": "",
+          "ariaLabel": null,
+          "className": "kanban-task-card relative cursor-pointer kanban-task-card-flat group rounded-none bg-transparent py-3 pl-3 pr-1.5 "
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": "426e833b-e44e-537f-92bc-c14242b1db9a",
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "taskClarification": null,
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "DIV",
+          "id": "",
+          "ariaLabel": null,
+          "className": "kanban-task-card relative cursor-pointer kanban-task-card-flat group rounded-none bg-transparent py-3 pl-3 pr-1.5 "
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        }
+      },
+      {
+        "type": "click",
+        "timeMs": 38257,
+        "x": 468,
+        "y": 522,
+        "button": 0,
+        "buttons": 0,
+        "trusted": true,
+        "buttonClass": null,
+        "target": {
+          "tag": "H5",
+          "id": "",
+          "ariaLabel": null,
+          "className": "line-clamp-2 font-medium text-[var(--color-text)] text-sm leading-5 h-10 min-w-0"
+        },
+        "focusBefore": {
+          "tag": "DIV",
+          "id": "",
+          "ariaLabel": null,
+          "className": "kanban-task-card relative cursor-pointer kanban-task-card-flat group rounded-none bg-transparent py-3 pl-3 pr-1.5 "
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": "426e833b-e44e-537f-92bc-c14242b1db9a",
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "taskClarification": null,
+        "teamNavigation": {
+          "targetTeamKey": "host-team:TEST-desktop-handle-TEST-desktop-backend-B8oAL1",
+          "before": {
+            "selectedTeamKey": "host-team:TEST-desktop-handle-TEST-desktop-backend-B8oAL1",
+            "activeSurface": "team",
+            "activeTeamKey": "host-team:TEST-desktop-handle-TEST-desktop-backend-B8oAL1"
+          },
+          "afterMicrotask": {
+            "selectedTeamKey": "host-team:TEST-desktop-handle-TEST-desktop-backend-B8oAL1",
+            "activeSurface": "team",
+            "activeTeamKey": "host-team:TEST-desktop-handle-TEST-desktop-backend-B8oAL1"
+          },
+          "afterDispatch": {
+            "selectedTeamKey": "host-team:TEST-desktop-handle-TEST-desktop-backend-B8oAL1",
+            "activeSurface": "team",
+            "activeTeamKey": "host-team:TEST-desktop-handle-TEST-desktop-backend-B8oAL1"
+          }
+        },
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "DIV",
+          "id": "",
+          "ariaLabel": null,
+          "className": "kanban-task-card relative cursor-pointer kanban-task-card-flat group rounded-none bg-transparent py-3 pl-3 pr-1.5 "
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        }
+      },
+      {
+        "type": "focusout",
+        "timeMs": 38326,
+        "trusted": true,
+        "buttonClass": null,
+        "target": {
+          "tag": "DIV",
+          "id": "",
+          "ariaLabel": null,
+          "className": "kanban-task-card relative cursor-pointer kanban-task-card-flat group rounded-none bg-transparent py-3 pl-3 pr-1.5 "
+        },
+        "focusBefore": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": "426e833b-e44e-537f-92bc-c14242b1db9a",
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        }
+      },
+      {
+        "type": "focusin",
+        "timeMs": 38327,
+        "trusted": true,
+        "buttonClass": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "focusBefore": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+        }
+      }
+    ],
+    "mixedProgress": [],
+    "store": {
+      "teamsLoading": false,
+      "globalTasksLoading": false,
+      "globalTasksInitialized": true,
+      "globalTaskCount": 1,
+      "selectedTeamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-B8oAL1",
+      "selectedRawMemberCapabilities": {
+        "source": "selected",
+        "state": "available",
+        "count": 1,
+        "overflow": false,
+        "members": [
+          {
+            "valid": true,
+            "provider": "unknown",
+            "capturedOwner": true,
+            "attachments": null,
+            "textAttachments": null,
+            "catalog": {
+              "state": "absent",
+              "count": null,
+              "overflow": false,
+              "hasCost": null
+            }
+          }
+        ]
+      },
+      "provisioning": [
+        {
+          "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-B8oAL1",
+          "currentProvisioningRunId": null,
+          "currentRuntimeRunId": null,
+          "startedAtFloor": null,
+          "error": null,
+          "ignoredProvisioning": false,
+          "ignoredRuntime": false,
+          "progress": null
+        }
+      ],
+      "globalTaskDetail": null,
+      "paneTabs": [
+        {
+          "type": "team",
+          "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-B8oAL1"
+        }
+      ]
+    },
+    "commandComposer": {
+      "observedAfterFailure": true,
+      "atomicWithInput": false,
+      "textareaCount": 1,
+      "textareaOverflow": false,
+      "single": {
+        "focused": false,
+        "connected": true,
+        "disabled": false,
+        "readOnly": true,
+        "bareSlash": false,
+        "length": 0,
+        "lengthOverflow": false,
+        "cursorStart": 0,
+        "cursorEnd": 0
+      },
+      "listboxCount": 0,
+      "listboxOverflow": false,
+      "optionCount": 0,
+      "optionOverflow": false,
+      "hasCostOption": false
+    },
+    "rootChildCount": 1,
+    "dialogs": [
+      {
+        "text": "Close\n#426e833b\nPending\nOpen in a separate tab\nTEST persisted Host sidebar seed\nUnassigned\nuser\n1 minute ago\nDelete\nDescription\n\nTEST persisted Host sidebar seed\n\nAttachments\n0\nChanges\nTask Logs\nWorkflow History\n1\nComments\nTip: Use @ for members/files and # for tasks",
+        "buttons": [
+          {
+            "text": "Close",
+            "disabled": false,
+            "x": 1107,
+            "y": 169.625,
+            "width": 28,
+            "height": 28
+          },
+          {
+            "text": "Open in a separate tab",
+            "disabled": false,
+            "x": 949.90625,
+            "y": 181.625,
+            "width": 165.09375,
+            "height": 28
+          },
+          {
+            "text": "TEST persisted Host sidebar seed",
+            "disabled": true,
+            "x": 277,
+            "y": 215.625,
+            "width": 248.578125,
+            "height": 24
+          },
+          {
+            "text": "Delete",
+            "disabled": true,
+            "x": 1048.3125,
+            "y": 245.625,
+            "width": 74.6875,
+            "height": 24
+          },
+          {
+            "text": "",
+            "disabled": false,
+            "x": 258,
+            "y": 281.625,
+            "width": 884,
+            "height": 39
+          },
+          {
+            "text": "",
+            "disabled": false,
+            "x": 1103,
+            "y": 327.625,
+            "width": 20,
+            "height": 20
+          },
+          {
+            "text": "",
+            "disabled": false,
+            "x": 258,
+            "y": 374.375,
+            "width": 884,
+            "height": 39
+          },
+          {
+            "text": "",
+            "disabled": false,
+            "x": 258,
+            "y": 414.375,
+            "width": 884,
+            "height": 39
+          },
+          {
+            "text": "",
+            "disabled": false,
+            "x": 258,
+            "y": 454.375,
+            "width": 884,
+            "height": 39
+          },
+          {
+            "text": "Task Log Stream",
+            "disabled": false,
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "text": "Task Activity",
+            "disabled": false,
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "text": "Execution Sessions",
+            "disabled": false,
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "text": "",
+            "disabled": false,
+            "x": 258,
+            "y": 494.375,
+            "width": 884,
+            "height": 39
+          },
+          {
+            "text": "",
+            "disabled": false,
+            "x": 258,
+            "y": 534.375,
+            "width": 884,
+            "height": 40
+          },
+          {
+            "text": "",
+            "disabled": true,
+            "x": 1042,
+            "y": 637.375,
+            "width": 32,
+            "height": 32
+          },
+          {
+            "text": "",
+            "disabled": false,
+            "x": 1082,
+            "y": 637.375,
+            "width": 32,
+            "height": 32
+          }
+        ]
+      }
+    ],
+    "tabs": [
+      {
+        "text": "TEST private backend",
+        "selected": "true"
+      },
+      {
+        "text": "Task Log Stream",
+        "selected": "true"
+      },
+      {
+        "text": "Task Activity",
+        "selected": "false"
+      },
+      {
+        "text": "Execution Sessions",
+        "selected": "false"
+      }
+    ],
+    "visibleTaskCardIds": [
+      "426e833b-e44e-537f-92bc-c14242b1db9a"
+    ],
+    "splashPresent": false,
+    "startup": {
+      "state": "returned",
+      "ready": true,
+      "phase": "ready",
+      "errorPresent": false,
+      "steps": [
+        {
+          "phase": "runtime-flavor",
+          "startedAt": 1794812816195,
+          "finishedAt": 1794812816195
+        },
+        {
+          "phase": "runtime-configured-path",
+          "startedAt": 1794812816195,
+          "finishedAt": 1794812816196
+        },
+        {
+          "phase": "runtime-configured-path-found",
+          "startedAt": 1794812816196,
+          "finishedAt": 1794812816196
+        },
+        {
+          "phase": "runtime-environment",
+          "startedAt": 1794812816196,
+          "finishedAt": 1794812816201
+        },
+        {
+          "phase": "runtime-work-sync",
+          "startedAt": 1794812816201,
+          "finishedAt": 1794812816207
+        },
+        {
+          "phase": "runtime-mcp",
+          "startedAt": 1794812816207,
+          "finishedAt": 1794812816207
+        },
+        {
+          "phase": "mcp-source-entry",
+          "startedAt": 1794812816207,
+          "finishedAt": 1794812816207
+        },
+        {
+          "phase": "mcp-workspace-bundle",
+          "startedAt": 1794812816207,
+          "finishedAt": 1794812816207
+        },
+        {
+          "phase": "mcp-node-runtime",
+          "startedAt": 1794812816207,
+          "finishedAt": 1794812816305
+        },
+        {
+          "phase": "mcp-node-runtime-found",
+          "startedAt": 1794812816305,
+          "finishedAt": 1794812818093
+        },
+        {
+          "phase": "runtime-bridge",
+          "startedAt": 1794812818093,
+          "finishedAt": 1794812818102
+        },
+        {
+          "phase": "settings",
+          "startedAt": 1794812818102,
+          "finishedAt": 1794812818112
+        },
+        {
+          "phase": "team-backups",
+          "startedAt": 1794812818112,
+          "finishedAt": 1794812820765
+        },
+        {
+          "phase": "ipc",
+          "startedAt": 1794812820765,
+          "finishedAt": 1794812820798
+        },
+        {
+          "phase": "readying",
+          "startedAt": 1794812820798,
+          "finishedAt": 1794812820798
+        },
+        {
+          "phase": "ready",
+          "startedAt": 1794812820798,
+          "finishedAt": 1794812820798
+        }
+      ]
+    },
+    "moduleScripts": [
+      {
+        "path": null,
+        "inline": true,
+        "importsMain": false
+      },
+      {
+        "path": "/@vite/client",
+        "inline": false,
+        "importsMain": false
+      },
+      {
+        "path": "/index.html",
+        "inline": false,
+        "importsMain": false
+      },
+      {
+        "path": "/index.html",
+        "inline": false,
+        "importsMain": false
+      }
+    ],
+    "resources": [
+      {
+        "path": "/store/team/teamToolApprovalSettingsSync.ts",
+        "type": "script",
+        "startTime": 5249,
+        "duration": 15465,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/team/teamViewVisibility.ts",
+        "type": "script",
+        "startTime": 5249,
+        "duration": 15476,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/team/toolApprovalEvents.ts",
+        "type": "script",
+        "startTime": 5249,
+        "duration": 15476,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/codexStartupStatusRevalidation.ts",
+        "type": "script",
+        "startTime": 5249,
+        "duration": 15494,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/leadActivityTeamAlive.ts",
+        "type": "script",
+        "startTime": 5249,
+        "duration": 15493,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/teamProcessFanoutDryRun.ts",
+        "type": "script",
+        "startTime": 5250,
+        "duration": 15494,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/teamRefreshFanoutDebugBridge.ts",
+        "type": "script",
+        "startTime": 5251,
+        "duration": 15492,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/teamRefreshFanoutDiagnostics.ts",
+        "type": "script",
+        "startTime": 5251,
+        "duration": 15493,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/viewedTeamNotificationSync.ts",
+        "type": "script",
+        "startTime": 5251,
+        "duration": 15502,
+        "responseStatus": 200
+      },
+      {
+        "path": "/assets/participant-avatars/01.png",
+        "type": "script",
+        "startTime": 5372,
+        "duration": 15380,
+        "responseStatus": 200
+      },
+      {
+        "path": "/assets/participant-avatars/02.png",
+        "type": "script",
+        "startTime": 5372,
+        "duration": 15381,
+        "responseStatus": 200
+      },
+      {
+        "path": "/assets/participant-avatars/03.png",
+        "type": "script",
+        "startTime": 5372,
+        "duration": 15381,
+        "responseStatus": 200
+      },
+      {
+        "path": "/assets/participant-avatars/04.png",
+        "type": "script",
+        "startTime": 5372,
+        "duration": 15384,
+        "responseStatus": 200
+      },
+      {
+        "path": "/assets/participant-avatars/05.png",
+        "type": "script",
+        "startTime": 5372,
+        "duration": 15385,
+        "responseStatus": 200
+      },
+      {
+        "path": "/assets/participant-avatars/07.png",
+        "type": "script",
+        "startTime": 5372,
+        "duration": 15398,
+        "responseStatus": 200
+      },
+      {
+        "path": "/assets/participant-avatars/06.png",
+        "type": "script",
+        "startTime": 5372,
+        "duration": 15393,
+        "responseStatus": 200
+      },
+      {
+        "path": "/assets/participant-avatars/08.png",
+        "type": "script",
+        "startTime": 5372,
+        "duration": 15405,
+        "responseStatus": 200
+      },
+      {
+        "path": "/assets/participant-avatars/09.png",
+        "type": "script",
+        "startTime": 5372,
+        "duration": 15410,
+        "responseStatus": 200
+      },
+      {
+        "path": "/assets/participant-avatars/11.png",
+        "type": "script",
+        "startTime": 5372,
+        "duration": 15412,
+        "responseStatus": 200
+      },
+      {
+        "path": "/assets/participant-avatars/10.png",
+        "type": "script",
+        "startTime": 5372,
+        "duration": 15412,
+        "responseStatus": 200
+      },
+      {
+        "path": "/assets/participant-avatars/12.png",
+        "type": "script",
+        "startTime": 5372,
+        "duration": 15424,
+        "responseStatus": 200
+      },
+      {
+        "path": "/assets/participant-avatars/13.png",
+        "type": "script",
+        "startTime": 5372,
+        "duration": 15424,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/announcements/renderer/AnnouncementHost.tsx",
+        "type": "script",
+        "startTime": 6040,
+        "duration": 14757,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/announcements/renderer/AnnouncementNewsButton.tsx",
+        "type": "script",
+        "startTime": 6040,
+        "duration": 14757,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/announcements/renderer/newsNavigation.ts",
+        "type": "script",
+        "startTime": 6040,
+        "duration": 14756,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/appearance/core/domain/appearancePreferences.ts",
+        "type": "script",
+        "startTime": 6042,
+        "duration": 14755,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/appearance/renderer/adapters/appearanceStore.ts",
+        "type": "script",
+        "startTime": 6043,
+        "duration": 14763,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/appearance/renderer/adapters/availableFonts.ts",
+        "type": "script",
+        "startTime": 6043,
+        "duration": 14759,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/appearance/renderer/hooks/useAppearance.ts",
+        "type": "script",
+        "startTime": 6044,
+        "duration": 14770,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/appearance/renderer/ui/ThemeJsonEditorDialog.tsx",
+        "type": "script",
+        "startTime": 6044,
+        "duration": 14770,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/localization/renderer/hooks/useAppTranslation.ts",
+        "type": "script",
+        "startTime": 6083,
+        "duration": 14729,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/localization/renderer/hooks/useLocaleFormatters.ts",
+        "type": "script",
+        "startTime": 6083,
+        "duration": 14734,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/localization/renderer/ui/LocalizationProvider.tsx",
+        "type": "script",
+        "startTime": 6083,
+        "duration": 14735,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/localization/renderer/ui/AppLanguageSelect.tsx",
+        "type": "script",
+        "startTime": 6083,
+        "duration": 14734,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.vite/electron-renderer/deps/@radix-ui_react-tooltip.js",
+        "type": "script",
+        "startTime": 6089,
+        "duration": 14728,
+        "responseStatus": 200
+      },
+      {
+        "path": "/lib/utils.ts",
+        "type": "script",
+        "startTime": 6089,
+        "duration": 14738,
+        "responseStatus": 200
+      },
+      {
+        "path": "/hooks/useOverlayOccupancy.ts",
+        "type": "script",
+        "startTime": 6572,
+        "duration": 14256,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.vite/electron-renderer/deps/lucide-react.js",
+        "type": "script",
+        "startTime": 6573,
+        "duration": 14310,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/bugReportUtils.ts",
+        "type": "script",
+        "startTime": 6602,
+        "duration": 14229,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.vite/electron-renderer/deps/@dnd-kit_core.js",
+        "type": "script",
+        "startTime": 6624,
+        "duration": 14210,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/team-task-detail/renderer/index.ts",
+        "type": "script",
+        "startTime": 6624,
+        "duration": 14210,
+        "responseStatus": 200
+      },
+      {
+        "path": "/constants/layout.ts",
+        "type": "script",
+        "startTime": 6624,
+        "duration": 14210,
+        "responseStatus": 200
+      },
+      {
+        "path": "/hooks/useFullScreen.ts",
+        "type": "script",
+        "startTime": 6624,
+        "duration": 14210,
+        "responseStatus": 200
+      },
+      {
+        "path": "/hooks/useZoomFactor.ts",
+        "type": "script",
+        "startTime": 6624,
+        "duration": 14220,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.vite/electron-renderer/deps/zustand_react_shallow.js",
+        "type": "script",
+        "startTime": 6624,
+        "duration": 14220,
+        "responseStatus": 200
+      },
+      {
+        "path": "/hooks/useKeyboardShortcuts.ts",
+        "type": "script",
+        "startTime": 6624,
+        "duration": 14220,
+        "responseStatus": 200
+      },
+      {
+        "path": "/components/common/CliInstallWarningBanner.tsx",
+        "type": "script",
+        "startTime": 6624,
+        "duration": 14220,
+        "responseStatus": 200
+      },
+      {
+        "path": "/components/common/UpdateDialog.tsx",
+        "type": "script",
+        "startTime": 6624,
+        "duration": 14220,
+        "responseStatus": 200
+      },
+      {
+        "path": "/components/common/WorkspaceIndicator.tsx",
+        "type": "script",
+        "startTime": 6624,
+        "duration": 14234,
+        "responseStatus": 200
+      },
+      {
+        "path": "/components/search/CommandPalette.tsx",
+        "type": "script",
+        "startTime": 6624,
+        "duration": 14236,
+        "responseStatus": 200
+      },
+      {
+        "path": "/components/layout/GlobalTaskDetailDialogSlot.tsx",
+        "type": "script",
+        "startTime": 6624,
+        "duration": 14235,
+        "responseStatus": 200
+      },
+      {
+        "path": "/components/layout/PaneContainer.tsx",
+        "type": "script",
+        "startTime": 6624,
+        "duration": 14235,
+        "responseStatus": 200
+      },
+      {
+        "path": "/components/layout/CustomTitleBar.tsx",
+        "type": "script",
+        "startTime": 6624,
+        "duration": 14234,
+        "responseStatus": 200
+      },
+      {
+        "path": "/components/layout/Sidebar.tsx",
+        "type": "script",
+        "startTime": 6624,
+        "duration": 14257,
+        "responseStatus": 200
+      },
+      {
+        "path": "/components/layout/SortableTab.tsx",
+        "type": "script",
+        "startTime": 6624,
+        "duration": 14257,
+        "responseStatus": 200
+      },
+      {
+        "path": "/components/layout/TabBarRow.tsx",
+        "type": "script",
+        "startTime": 6625,
+        "duration": 14257,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/agent-backend/renderer/index.ts",
+        "type": "script",
+        "startTime": 7353,
+        "duration": 13529,
+        "responseStatus": 200
+      },
+      {
+        "path": "/constants/teamColors.ts",
+        "type": "script",
+        "startTime": 7353,
+        "duration": 13529,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/team/teamToolApprovalSettings.ts",
+        "type": "script",
+        "startTime": 7353,
+        "duration": 13566,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/pathDisplay.ts",
+        "type": "script",
+        "startTime": 7353,
+        "duration": 13567,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/syntaxHighlighter.ts",
+        "type": "script",
+        "startTime": 7353,
+        "duration": 13567,
+        "responseStatus": 200
+      },
+      {
+        "path": "/components/team/dialogs/ToolApprovalSettingsPanel.tsx",
+        "type": "script",
+        "startTime": 7353,
+        "duration": 13571,
+        "responseStatus": 200
+      },
+      {
+        "path": "/components/team/editor/FileIcon.tsx",
+        "type": "script",
+        "startTime": 7353,
+        "duration": 13577,
+        "responseStatus": 200
+      },
+      {
+        "path": "/components/team/MemberBadge.tsx",
+        "type": "script",
+        "startTime": 7353,
+        "duration": 13577,
+        "responseStatus": 200
+      },
+      {
+        "path": "/components/team/ToolApprovalDiffPreview.tsx",
+        "type": "script",
+        "startTime": 7353,
+        "duration": 13594,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/package.json",
+        "type": "script",
+        "startTime": 7393,
+        "duration": 13555,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/utils/contextScopedRequestEpoch.ts",
+        "type": "script",
+        "startTime": 7439,
+        "duration": 13506,
+        "responseStatus": 200
+      },
+      {
+        "path": "/api/createContextScopedExtensionApi.ts",
+        "type": "script",
+        "startTime": 7439,
+        "duration": 13508,
+        "responseStatus": 200
+      },
+      {
+        "path": "/api/httpClient.ts",
+        "type": "script",
+        "startTime": 7439,
+        "duration": 13512,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/utils/sentryArtifactInventory.ts",
+        "type": "script",
+        "startTime": 10480,
+        "duration": 10470,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/utils/buildMetadata.ts",
+        "type": "script",
+        "startTime": 10650,
+        "duration": 10301,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/utils/redactDiagnosticAssignments.ts",
+        "type": "script",
+        "startTime": 10650,
+        "duration": 10311,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.vite/electron-renderer/deps/posthog-js.js",
+        "type": "script",
+        "startTime": 10863,
+        "duration": 10114,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/team-task-detail/core/index.ts",
+        "type": "script",
+        "startTime": 10878,
+        "duration": 10085,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.vite/electron-renderer/deps/idb-keyval.js",
+        "type": "script",
+        "startTime": 10878,
+        "duration": 10088,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/utils/platformPath.ts",
+        "type": "script",
+        "startTime": 10899,
+        "duration": 10065,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/utils/teamTaskState.ts",
+        "type": "script",
+        "startTime": 10899,
+        "duration": 10065,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/utils/taskChangeSince.ts",
+        "type": "script",
+        "startTime": 11127,
+        "duration": 9847,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/utils/taskChangeState.ts",
+        "type": "script",
+        "startTime": 11127,
+        "duration": 9847,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.vite/electron-renderer/deps/chunk-CJTYEGNG.js",
+        "type": "script",
+        "startTime": 18311,
+        "duration": 2662,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.vite/electron-renderer/deps/chunk-KQ3MGMY2.js",
+        "type": "script",
+        "startTime": 18311,
+        "duration": 2664,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.vite/electron-renderer/deps/chunk-CJSQICT5.js",
+        "type": "script",
+        "startTime": 18311,
+        "duration": 2668,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.vite/electron-renderer/deps/chunk-XPNZZM2K.js",
+        "type": "script",
+        "startTime": 18311,
+        "duration": 2670,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.vite/electron-renderer/deps/chunk-V62AMQMY.js",
+        "type": "script",
+        "startTime": 18311,
+        "duration": 2694,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.vite/electron-renderer/deps/chunk-GLIOYBH3.js",
+        "type": "script",
+        "startTime": 18521,
+        "duration": 2485,
+        "responseStatus": 200
+      },
+      {
+        "path": "/analytics/productAnalytics.ts",
+        "type": "script",
+        "startTime": 19486,
+        "duration": 1520,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/geminiUiFreeze.ts",
+        "type": "script",
+        "startTime": 19487,
+        "duration": 1520,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/teamModelAvailability.ts",
+        "type": "script",
+        "startTime": 19487,
+        "duration": 1520,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/types/cliInstaller.ts",
+        "type": "script",
+        "startTime": 19487,
+        "duration": 1520,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/utils/providerExtensionCapabilities.ts",
+        "type": "script",
+        "startTime": 19487,
+        "duration": 1541,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/slices/cliInstallerStatusReconciliation.ts",
+        "type": "script",
+        "startTime": 19487,
+        "duration": 1541,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/slices/cliProviderStatusScope.ts",
+        "type": "script",
+        "startTime": 19487,
+        "duration": 1542,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/slices/codexRuntimeStatusActions.ts",
+        "type": "script",
+        "startTime": 19487,
+        "duration": 1542,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/slices/openCodeMetadataPublication.ts",
+        "type": "script",
+        "startTime": 19487,
+        "duration": 1542,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/slices/openCodeRuntimeActions.ts",
+        "type": "script",
+        "startTime": 19487,
+        "duration": 1542,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/reviewDecisionScope.ts",
+        "type": "script",
+        "startTime": 19487,
+        "duration": 1553,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/reviewKey.ts",
+        "type": "script",
+        "startTime": 19487,
+        "duration": 1553,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/utils/reviewChunks.ts",
+        "type": "script",
+        "startTime": 19487,
+        "duration": 1553,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/taskChangePresence.ts",
+        "type": "script",
+        "startTime": 19487,
+        "duration": 1553,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/slices/changeReviewSaveCache.ts",
+        "type": "script",
+        "startTime": 19487,
+        "duration": 1565,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/slices/reviewDecisionPersistence.ts",
+        "type": "script",
+        "startTime": 19487,
+        "duration": 1565,
+        "responseStatus": 200
+      },
+      {
+        "path": "/services/contextStorage.ts",
+        "type": "script",
+        "startTime": 19599,
+        "duration": 1459,
+        "responseStatus": 200
+      },
+      {
+        "path": "/services/draftStorage.ts",
+        "type": "script",
+        "startTime": 19599,
+        "duration": 1459,
+        "responseStatus": 200
+      },
+      {
+        "path": "/types/tabs.ts",
+        "type": "script",
+        "startTime": 19599,
+        "duration": 1461,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/utils/extensionsContext.ts",
+        "type": "script",
+        "startTime": 19599,
+        "duration": 1466,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/changeReviewLifecycleCoordinator.ts",
+        "type": "script",
+        "startTime": 19599,
+        "duration": 1466,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/utils/stateResetHelpers.ts",
+        "type": "script",
+        "startTime": 19599,
+        "duration": 1476,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/aiGroupEnhancer.ts",
+        "type": "script",
+        "startTime": 19679,
+        "duration": 1396,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/constants/agentBlocks.ts",
+        "type": "script",
+        "startTime": 19680,
+        "duration": 1395,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/editor-tab-sessions/renderer/index.ts",
+        "type": "script",
+        "startTime": 19680,
+        "duration": 1395,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/codemirrorLanguages.ts",
+        "type": "script",
+        "startTime": 19680,
+        "duration": 1395,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/editorBridge.ts",
+        "type": "script",
+        "startTime": 19681,
+        "duration": 1414,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/editorSaveActions.ts",
+        "type": "script",
+        "startTime": 19681,
+        "duration": 1428,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/quickOpenCache.ts",
+        "type": "script",
+        "startTime": 19681,
+        "duration": 1413,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/editorTabActions.ts",
+        "type": "script",
+        "startTime": 19681,
+        "duration": 1413,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/tabLabelDisambiguation.ts",
+        "type": "script",
+        "startTime": 19681,
+        "duration": 1432,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/utils/notificationTeam.ts",
+        "type": "script",
+        "startTime": 19683,
+        "duration": 1431,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/utils/paneHelpers.ts",
+        "type": "script",
+        "startTime": 19684,
+        "duration": 1430,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/utils/extensionNormalizers.ts",
+        "type": "script",
+        "startTime": 19685,
+        "duration": 1431,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/utils/mcpScopes.ts",
+        "type": "script",
+        "startTime": 19685,
+        "duration": 1425,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/utils/extensionsOperationState.ts",
+        "type": "script",
+        "startTime": 19685,
+        "duration": 1450,
+        "responseStatus": 200
+      },
+      {
+        "path": "/types/panes.ts",
+        "type": "script",
+        "startTime": 19849,
+        "duration": 1285,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/claudeMdTracker.ts",
+        "type": "script",
+        "startTime": 20463,
+        "duration": 674,
+        "responseStatus": 200
+      },
+      {
+        "path": "/types/data.ts",
+        "type": "script",
+        "startTime": 20463,
+        "duration": 674,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/contextTracker.ts",
+        "type": "script",
+        "startTime": 20463,
+        "duration": 680,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/groupTransformer.ts",
+        "type": "script",
+        "startTime": 20463,
+        "duration": 680,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/session/sessionRequestIdentity.ts",
+        "type": "script",
+        "startTime": 20463,
+        "duration": 680,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/utils/pathResolution.ts",
+        "type": "script",
+        "startTime": 20463,
+        "duration": 681,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/slices/taskDetailResourcesSlice.ts",
+        "type": "script",
+        "startTime": 20695,
+        "duration": 461,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/slices/teamTaskDetailSlice.ts",
+        "type": "script",
+        "startTime": 20695,
+        "duration": 464,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/utils/teamsCreationNavigation.ts",
+        "type": "script",
+        "startTime": 20702,
+        "duration": 457,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/utils/version.ts",
+        "type": "script",
+        "startTime": 20718,
+        "duration": 441,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/utils/updaterRecovery.ts",
+        "type": "script",
+        "startTime": 20718,
+        "duration": 441,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/agent-backend/contracts/index.ts",
+        "type": "script",
+        "startTime": 20718,
+        "duration": 437,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/utils/normalizeTeamAggregateRead.ts",
+        "type": "script",
+        "startTime": 20718,
+        "duration": 441,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/team/teamLocalStateEpoch.ts",
+        "type": "script",
+        "startTime": 20718,
+        "duration": 441,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/team/teamProvisioningStateRules.ts",
+        "type": "script",
+        "startTime": 20724,
+        "duration": 439,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/manual-message-queue/index.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 403,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/features/team-read-recovery/renderer/index.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 409,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/openCodeRuntimeDeliveryDiagnostics.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 413,
+        "responseStatus": 200
+      },
+      {
+        "path": "/services/composerDraftRepository.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 417,
+        "responseStatus": 200
+      },
+      {
+        "path": "/utils/unwrapIpc.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 414,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/constants/teamGraphLayoutMode.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 417,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/utils/leadDetection.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 417,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/utils/taskWorkDuration.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 438,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/types/team.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 440,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/team/selectTeamLoadLatch.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 439,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/team/createHostTeamFromDialog.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 439,
+        "responseStatus": 200
+      },
+      {
+        "path": "/@fs/home/runner/work/agent-teams-ai/agent-teams-ai/src/shared/utils/teamGraphDefaultLayout.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 439,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/team/sidebarLogsHeight.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 440,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/team/teamDataRefreshTimestamps.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 451,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/team/teamAgentRuntimeSnapshotEquality.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 452,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/team/teamAgentRuntimeSnapshotStabilizer.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 452,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/team/teamDataSelectors.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 451,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/team/teamDataRequestKeys.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 452,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/team/teamErrorPolicies.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 451,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/team/teamGlobalTaskNotifications.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 463,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/team/teamLaunchParams.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 464,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/team/teamGraphLayout.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 464,
+        "responseStatus": 200
+      },
+      {
+        "path": "/store/team/teamGlobalTaskProjection.ts",
+        "type": "script",
+        "startTime": 20760,
+        "duration": 463,
+        "responseStatus": 200
+      }
+    ]
+  },
+  "passiveEventCount": 23,
+  "passiveEventCounts": {
+    "pointerdown": 3,
+    "focusout": 7,
+    "focusin": 7,
+    "pointerup": 3,
+    "click": 3
+  },
+  "seed": {
+    "file": {
+      "path": "ci-e1d14b9/review/extracted/TEST-desktop-backend-B8oAL1/review-ui-seed.json",
+      "bytes": 1328,
+      "blob": "8b495b89403fa8b842eefcf1f07204c2acafa768",
+      "sha256": "05f031f56feb8b97c32f1d58e345a5b611136c67f902c85a549b5c97b284a97a"
+    },
+    "body": {
+      "schemaVersion": 1,
+      "taskId": "426e833b-e44e-537f-92bc-c14242b1db9a",
+      "memberName": "alice",
+      "filePath": "/home/runner/work/_temp/TEST-desktop-backend-B8oAL1/workspace/value.ts",
+      "before": "// TEST pre-existing dirty content\nconst first = 1;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst last = 1;\n",
+      "after": "// TEST pre-existing dirty content\nconst first = 2;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst last = 2;\n",
+      "mixed": "// TEST pre-existing dirty content\nconst first = 2;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst middle = true;\nconst last = 1;\n",
+      "gitIndexSha256": "f1f0349c9e4a64776773de2a7ce142599afb6c6f8cee95630bf7777119400e87"
+    },
+    "seedShaMatchesReceipt": true,
+    "canonicalTaskSeed": {
+      "file": {
+        "path": "ci-e1d14b9/review/extracted/TEST-desktop-backend-B8oAL1/ui-seed-receipt.json",
+        "bytes": 2037,
+        "blob": "c6b3702caf5f4db4bd786dbdafea73d7224214b2",
+        "sha256": "c51021c27df8b7b0073c54a62ecfcdb69bda175b12d960104670bd88d95bce32"
+      },
+      "body": {
+        "schemaVersion": 1,
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-B8oAL1",
+          "teamId": "TEST-desktop-team",
+          "teamName": "test-desktop-backend"
+        },
+        "commandId": "TEST-ui-offline-seed",
+        "principalId": "TEST-human",
+        "fingerprint": "613bbc0aacbea4f444e8e5277f48d2f4b5b2c2249a1f3c0a20f8098cd7808984",
+        "command": {
+          "commandId": "TEST-ui-offline-seed",
+          "operation": "task.create",
+          "payload": {
+            "subject": "TEST persisted Host sidebar seed"
+          }
+        },
+        "effects": {
+          "taskId": "426e833b-e44e-537f-92bc-c14242b1db9a",
+          "commentId": "98e89360-2194-5ff2-86f8-89f5ae4feeef",
+          "messageId": "af57d12b-b0bd-513d-ab7f-3793cfbee407",
+          "deliveryId": "e394e9e5-2bd0-56ae-8b6e-1afe00c896c8"
+        },
+        "createdAt": "2026-11-16T07:06:31.904Z",
+        "phase": "completed",
+        "authorityRevision": 1,
+        "taskPlanVersion": 1,
+        "taskPreimage": "1b802328a62f3572ad595e4b693b67472c629d3c21692368e457dda7518a0f9f",
+        "taskRecipients": [
+          {
+            "name": "alice"
+          }
+        ],
+        "result": {
+          "id": "426e833b-e44e-537f-92bc-c14242b1db9a",
+          "displayId": "426e833b",
+          "subject": "TEST persisted Host sidebar seed",
+          "description": "TEST persisted Host sidebar seed",
+          "createdBy": "user",
+          "status": "pending",
+          "createdAt": "2026-11-16T07:06:31.904Z",
+          "updatedAt": "2026-11-16T07:06:31.904Z",
+          "historyEvents": [
+            {
+              "id": "f84916af-bfb1-494d-ac41-2c1663f54e6b",
+              "timestamp": "2026-11-16T07:06:31.904Z",
+              "type": "task_created",
+              "status": "pending",
+              "actor": "user"
+            }
+          ],
+          "blocks": [],
+          "blockedBy": [],
+          "reviewState": "none",
+          "creationCommand": {
+            "namespace": "legacy-agent-host",
+            "scopeKey": "test-desktop-backend",
+            "operation": "task.create",
+            "commandId": "426e833b-e44e-537f-92bc-c14242b1db9a",
+            "payloadHash": "613bbc0aacbea4f444e8e5277f48d2f4b5b2c2249a1f3c0a20f8098cd7808984"
+          }
+        },
+        "taskHash": "e64dcb0140d4e5a40283ff51db76875ab38524526437a63188858f1c51641af4"
+      }
+    },
+    "taskIdAndSyntheticBeforeAfterMixedExact": true,
+    "initialGitDiff": {
+      "file": {
+        "path": "ci-e1d14b9/review/extracted/TEST-desktop-backend-B8oAL1/review-ui-initial-git-diff.txt",
+        "bytes": 386,
+        "blob": "28933ce454c1c59e55945f9602bddc4bf4161d90",
+        "sha256": "2fc5ff53a4f545d632661526c2c791562ffb5e9d523eb659b08204fef3465383"
+      },
+      "text": "diff --git a/value.ts b/value.ts\nindex ce1f0fc..8c49bf4 100644\n--- a/value.ts\n+++ b/value.ts\n@@ -1,4 +1,5 @@\n-const first = 1;\n+// TEST pre-existing dirty content\n+const first = 2;\n const middle = true;\n const middle = true;\n const middle = true;\n@@ -11,4 +12,4 @@ const middle = true;\n const middle = true;\n const middle = true;\n const middle = true;\n-const last = 1;\n+const last = 2;\n",
+      "pureGitBlobPrefixMatch": true
+    },
+    "finalWorkspaceBytesOrReviewSnapshotsRetained": false
+  },
+  "cleanup": {
+    "app": {
+      "pid": 4300,
+      "processGroup": 4300,
+      "identity": "Mon Nov 16 07:06:31 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-n0iZIM/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox",
+      "invocation": [
+        "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+        "/home/runner/work/_temp/TEST-emulated-ui-inputs-n0iZIM/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "dev:mcp",
+        "--remoteDebuggingPort",
+        "9222",
+        "--noSandbox"
+      ]
+    },
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "originalRequestedQuitExit": {
+      "initialExitCode": null,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [
+      {
+        "pid": 4374,
+        "ppid": 1,
+        "pgid": 4300
+      }
+    ],
+    "cleanup": {
+      "processGroup": 4300,
+      "remaining": [
+        {
+          "pid": 4374,
+          "ppid": 1,
+          "pgid": 4300
+        }
+      ],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "cleanupFailure": "captured leader absent; retain cleanup debt without signaling",
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "sameReturnedCensusNotIndependentSamples": true,
+    "originalExitedGroupPresent": false,
+    "remainingPidIdentityUnknown": true,
+    "laterIdentityZombieSignalBranchUnreached": true,
+    "runtimePeerCleanupAbsentByOriginalNonRuntimeMode": true
+  },
+  "passiveMainOriginalChildTrace": {
+    "appLog": {
+      "path": "ci-e1d14b9/review/extracted/TEST-desktop-backend-B8oAL1/desktop-app.log",
+      "bytes": 13238,
+      "blob": "1fca51487904ed5b7731ddfc7596eee5de63049d",
+      "sha256": "29c202c2a95de95893af902393f7494a97fa70abc857e54a44873fc734bc25d8"
+    },
+    "observations": [
+      {
+        "line": 62,
+        "mainPid": 4425,
+        "event": "trace-active",
+        "limit": 256,
+        "childLimit": 64,
+        "coverage": "node-async-and-unix-process-table-only"
+      },
+      {
+        "line": 76,
+        "mainPid": 4425,
+        "event": "async-spawn",
+        "pid": 4515,
+        "requestedCommand": "linux-child-exec",
+        "linuxChildExecTarget": "ps",
+        "versionOnly": false,
+        "observedBirth": {
+          "startTicks": "21015",
+          "parentPid": 4425,
+          "processGroupId": 4300
+        },
+        "atomic": false,
+        "observedAtMs": 1794812816149
+      },
+      {
+        "line": 77,
+        "mainPid": 4425,
+        "event": "async-exit",
+        "pid": 4515,
+        "status": 0,
+        "signal": null,
+        "observedAtMs": 1794812816190
+      },
+      {
+        "line": 79,
+        "mainPid": 4425,
+        "event": "sync-result",
+        "requestedCommand": "unix-process-table",
+        "pid": 4529,
+        "status": 0,
+        "signal": null,
+        "observedBirth": null,
+        "atomic": false,
+        "observedAtMs": 1794812816279
+      },
+      {
+        "line": 80,
+        "mainPid": 4425,
+        "event": "async-spawn",
+        "pid": 4528,
+        "requestedCommand": "linux-child-exec",
+        "linuxChildExecTarget": "node",
+        "versionOnly": false,
+        "observedBirth": {
+          "startTicks": "21023",
+          "parentPid": 4425,
+          "processGroupId": 4300
+        },
+        "atomic": false,
+        "observedAtMs": 1794812816291
+      },
+      {
+        "line": 81,
+        "mainPid": 4425,
+        "event": "async-exit",
+        "pid": 4528,
+        "status": 0,
+        "signal": null,
+        "observedAtMs": 1794812816305
+      },
+      {
+        "line": 82,
+        "mainPid": 4425,
+        "event": "sync-result",
+        "requestedCommand": "unix-process-table",
+        "pid": 4542,
+        "status": 0,
+        "signal": null,
+        "observedBirth": null,
+        "atomic": false,
+        "observedAtMs": 1794812816539
+      },
+      {
+        "line": 83,
+        "mainPid": 4425,
+        "event": "async-spawn",
+        "pid": 4540,
+        "requestedCommand": "linux-child-exec",
+        "linuxChildExecTarget": "node",
+        "versionOnly": false,
+        "observedBirth": {
+          "startTicks": "21050",
+          "parentPid": 4425,
+          "processGroupId": 4300
+        },
+        "atomic": false,
+        "observedAtMs": 1794812816561
+      },
+      {
+        "line": 86,
+        "mainPid": 4425,
+        "event": "async-exit",
+        "pid": 4540,
+        "status": 0,
+        "signal": null,
+        "observedAtMs": 1794812818035
+      },
+      {
+        "line": 87,
+        "mainPid": 4425,
+        "event": "async-spawn",
+        "pid": 4636,
+        "requestedCommand": "linux-child-exec",
+        "linuxChildExecTarget": "node",
+        "versionOnly": false,
+        "observedBirth": {
+          "startTicks": "21295",
+          "parentPid": 4425,
+          "processGroupId": 4300
+        },
+        "atomic": false,
+        "observedAtMs": 1794812818946
+      },
+      {
+        "line": 88,
+        "mainPid": 4425,
+        "event": "async-exit",
+        "pid": 4636,
+        "status": 0,
+        "signal": null,
+        "observedAtMs": 1794812818951
+      },
+      {
+        "line": 89,
+        "mainPid": 4425,
+        "event": "async-spawn",
+        "pid": 4638,
+        "requestedCommand": "linux-child-exec",
+        "linuxChildExecTarget": "node",
+        "versionOnly": false,
+        "observedBirth": {
+          "startTicks": "21297",
+          "parentPid": 4425,
+          "processGroupId": 4300
+        },
+        "atomic": false,
+        "observedAtMs": 1794812818969
+      },
+      {
+        "line": 96,
+        "mainPid": 4425,
+        "event": "async-spawn",
+        "pid": 4965,
+        "requestedCommand": "linux-child-exec",
+        "linuxChildExecTarget": "ps",
+        "versionOnly": false,
+        "observedBirth": {
+          "startTicks": "22483",
+          "parentPid": 4425,
+          "processGroupId": 4300
+        },
+        "atomic": false,
+        "observedAtMs": 1794812830831
+      },
+      {
+        "line": 97,
+        "mainPid": 4425,
+        "event": "async-exit",
+        "pid": 4965,
+        "status": 0,
+        "signal": null,
+        "observedAtMs": 1794812830852
+      },
+      {
+        "line": 116,
+        "mainPid": 4425,
+        "event": "async-exit",
+        "pid": 4638,
+        "status": 0,
+        "signal": null,
+        "observedAtMs": 1794812855353
+      },
+      {
+        "line": 118,
+        "mainPid": 4425,
+        "event": "async-spawn",
+        "pid": 5485,
+        "requestedCommand": "linux-child-exec",
+        "linuxChildExecTarget": "ps",
+        "versionOnly": false,
+        "observedBirth": {
+          "startTicks": "24938",
+          "parentPid": 4425,
+          "processGroupId": 4300
+        },
+        "atomic": false,
+        "observedAtMs": 1794812855369
+      },
+      {
+        "line": 119,
+        "mainPid": 4425,
+        "event": "async-exit",
+        "pid": 5485,
+        "status": 0,
+        "signal": null,
+        "observedAtMs": 1794812855377
+      },
+      {
+        "line": 120,
+        "mainPid": 4425,
+        "event": "async-spawn",
+        "pid": 5486,
+        "requestedCommand": "linux-child-exec",
+        "linuxChildExecTarget": "ps",
+        "versionOnly": false,
+        "observedBirth": {
+          "startTicks": "24939",
+          "parentPid": 4425,
+          "processGroupId": 4300
+        },
+        "atomic": false,
+        "observedAtMs": 1794812855385
+      },
+      {
+        "line": 121,
+        "mainPid": 4425,
+        "event": "async-exit",
+        "pid": 5486,
+        "status": 0,
+        "signal": null,
+        "observedAtMs": 1794812855393
+      },
+      {
+        "line": 125,
+        "mainPid": 4425,
+        "event": "trace-summary",
+        "rows": 18,
+        "droppedObservations": 0,
+        "observedChildren": 8,
+        "unobservedChildren": 0,
+        "observationFailures": 0,
+        "limited": false,
+        "coverage": "node-async-and-unix-process-table-only"
+      }
+    ],
+    "node4638Spawn": {
+      "line": 89,
+      "mainPid": 4425,
+      "event": "async-spawn",
+      "pid": 4638,
+      "requestedCommand": "linux-child-exec",
+      "linuxChildExecTarget": "node",
+      "versionOnly": false,
+      "observedBirth": {
+        "startTicks": "21297",
+        "parentPid": 4425,
+        "processGroupId": 4300
+      },
+      "atomic": false,
+      "observedAtMs": 1794812818969
+    },
+    "node4638Exit": {
+      "line": 116,
+      "mainPid": 4425,
+      "event": "async-exit",
+      "pid": 4638,
+      "status": 0,
+      "signal": null,
+      "observedAtMs": 1794812855353
+    },
+    "summary": {
+      "line": 125,
+      "mainPid": 4425,
+      "event": "trace-summary",
+      "rows": 18,
+      "droppedObservations": 0,
+      "observedChildren": 8,
+      "unobservedChildren": 0,
+      "observationFailures": 0,
+      "limited": false,
+      "coverage": "node-async-and-unix-process-table-only"
+    },
+    "capturedHostSubstitution": false
+  },
+  "pins": {
+    "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+    "corepackPackageSha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+    "corepackLibrarySha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+    "pnpmStubSha256": "9b7e0393337e1ac2b450a7145c57f8d24e947ae197e715c6510be003389f22f4",
+    "profileSha256": "81b2aa694874da6a46894a553a9349a1d5bcef2cdc7161392d89b1a9284f4020",
+    "descriptorSha256": "abaa50944630c6390c0f35db6fda490b5f2d09ae93f4612a42201820ce19f709",
+    "sentinelSha256": "b8b8896daff907a847b446633c95e32f342dcd2ef9dd9b63c055c1179d8c506c",
+    "shellProbeSha256": "360c5d1e77ea713b19ff1ab89115953f78afbd7e54cfc4bd0a6694da44236346",
+    "providerArchiveSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+    "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+    "electronSha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+    "smokeSourceSha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+    "fixtureSourceSha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+    "uiSourceSha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf"
+  },
+  "emulation": {
+    "only": true,
+    "runtimeConfigured": false,
+    "managementConfigured": false,
+    "noNativeHostChildrenBeforeUi": true
+  },
+  "sentinel": {
+    "invocations": [
+      {
+        "executable": "claude-multimodel",
+        "allowed": true,
+        "argc": 1,
+        "command": null,
+        "flags": [
+          "--version"
+        ]
+      }
+    ],
+    "preQuitCount": null,
+    "postQuitOrCleanupInvocations": null,
+    "refusedInvocations": [],
+    "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+  },
+  "linuxChildExec": {
+    "manifest": {
+      "path": "ci-e1d14b9/review/extracted/TEST-emulated-ui-inputs-n0iZIM/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+    },
+    "binary": {
+      "path": "ci-e1d14b9/review/extracted/TEST-emulated-ui-inputs-n0iZIM/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    "sourceDigestMatched": true,
+    "receiptManifestAndBinaryMatched": true,
+    "originalAfterCleanupVerified": true,
+    "toolchainRecompiledOrExecutedByReader": false
+  },
+  "visual": {
+    "file": {
+      "path": "ci-e1d14b9/review/extracted/TEST-desktop-backend-B8oAL1/ui-failure.png",
+      "bytes": 87805,
+      "blob": "3289bfe80c45eaedb87fa97bcf4e7cfa1f9101de",
+      "sha256": "034b73f23ca4afa9a6ab691a97e0f3fd17c38757e2618f0dc53afcc0ffbddb1c"
+    },
+    "dimensions": [
+      1400,
+      900
+    ],
+    "receiptSha256Matched": true,
+    "actuallyViewedSingly": true,
+    "scope": "Original seeded Task dialog with subject TEST persisted Host sidebar seed, Pending and Unassigned labels, expanded Description, collapsed Changes with badge1, collapsed Task Logs and Workflow History1, and Comments textarea. Background has the same sidebar Task seed and Team overview. No opened change file, hunk decision, history or reload image is present.",
+    "limit": "This later non-atomic frame cannot establish the earlier geometry-change cause or duration, and does not prove a user could mutate the read-only form."
+  },
+  "limits": [
+    "Current source E1 original first Changes-section refusal; no cross-cohort cause or renderer layout fault established.",
+    "Hover occurred and source two-stable-sample predicate returned; the refused click journal/press/release were not reached. Prior Task-card click used its separate three-sample guard. Individual stable samples and final read geometry object are not serialized.",
+    "Later snapshot and sole PNG are non-atomic with input; no exact React/layout transition or animation cause is retained.",
+    "Keep/Reject, file content postconditions, Undo/Redo/history, renderer reload, readback/stale external-write branch and unrelated-workspace preservation postconditions were not executed.",
+    "Archived seed and initial Git diff document synthetic two-hunk setup, not native capture or successful review effects. Original workspace file/index, ledger blob bodies and final review snapshots are not archived.",
+    "Wrapper exit0/null and acknowledged Quit do not discharge unidentified remaining row4374/1/4300. Host identity missing; same returned census appears twice, no separate second sample or executable/zombie classification.",
+    "Passive original Node-child4638 exit0/null is not a substitute for missing captured Host identity or a native custody certificate.",
+    "Original three prerequisite commands passed119+7+2; Team contracts and full static gates skipped. No native provider or broad source gate transfer.",
+    "All1757 selected Git identities are fresh;14 compiled hashes remain receipt claims without archived bodies or an independent rebuild.",
+    "No project execution, source edits, replay, new actions/budgets or CI/ref mutations by this reader."
+  ],
+  "qualification": {
+    "originalJobPass": false,
+    "reviewFlowPass": false,
+    "cleanupPass": false,
+    "nativeProvider": false,
+    "release": false,
+    "sourceFixOrCauseEstablished": false,
+    "independentReview": "pending"
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "kind": "E2 original bounded V2 Management failure checkpoint",
+  "sourceHead": "57885c055a18b27c180c304762643eac632513ad",
+  "runId": 43823212577,
+  "jobId": 133150851423,
+  "artifactId": 14206792564,
+  "payloads": [
+    {
+      "path": "ci-57885c/v2-management/job.log",
+      "bytes": 114343,
+      "blob": "4a30dd5f9aed9a5df7ac45a8499498f7639e2e33",
+      "sha256": "194c93706ed989595c8c151b326b5f1f350c7fbd95faa5a9770bc81927b30760"
+    },
+    {
+      "path": "ci-57885c/v2-management/job-original-response.json",
+      "bytes": 116894,
+      "blob": "389139ab8a32b9b9379607495032d615d461d0a2",
+      "sha256": "29950e2439969bc9ba07fe5e5779a9158c6946f5e2ccb8389235cc20a78535f8"
+    },
+    {
+      "path": "ci-57885c/v2-management/artifact-14206792564.zip",
+      "bytes": 846718,
+      "blob": "0adbc72e454b21b5ee51910b527b4202b95233ea",
+      "sha256": "5ddecbc018c17032aed6ab4e72d6861999b9eb575dfc8b1805743cffe2c0ab50"
+    },
+    {
+      "path": "ci-57885c/v2-management/archive-retention.json",
+      "bytes": 6994,
+      "blob": "83e9c3bd2926508c2d8f16b587c5597bb6386220",
+      "sha256": "7945ec31e06d1f066c72b5e79acb28d46d81a8b5b139ad546b78fce466e67218"
+    },
+    {
+      "path": "ci-57885c/official-host-artifacts-0752.json",
+      "bytes": 13236,
+      "blob": "400f5b56e18d3db529fd5349f3aa56eff4048b2f",
+      "sha256": "475dce5e3a041bfd9a045d096a9d15fc4224a212869af003102ad6b76934ceda"
+    },
+    {
+      "path": "ci-57885c/owned-jobs-0810.json",
+      "bytes": 168882,
+      "blob": "6a83b45edb2e6357680c8b802394595a92ac0609",
+      "sha256": "37e2f2681244e99e5a181b0363d7918cf341207a21d226e3d7203d8f31362db0"
+    },
+    {
+      "path": "ci-57885c/initial-owned-api-0729.json",
+      "bytes": 104681,
+      "blob": "539d2a83b1f7b5ed443531fc6b73f37aad5805b9",
+      "sha256": "484c9e33e89e964f61d4475d6835f9167bbe8cd3c0e816901420d06df00b42c6"
+    },
+    {
+      "path": "ci-57885c/v2-management/source-pin-audit.json",
+      "bytes": 574685,
+      "blob": "f10507daf365b1b42d281caf45e2816d2ea3f451",
+      "sha256": "cdb4ca85962715b2669b2a5c0db0d7a3ed9cff31e7aa65a27d2e0b15bb7f5830"
+    },
+    {
+      "path": "ci-57885c/v2-management/visual-review.json",
+      "bytes": 2110,
+      "blob": "b7d0f060f976bea4dc1a51f3931bc4fa17e022ba",
+      "sha256": "7aff873fd4e3956c803e23b694e0ffad2b032442255a9296afba864c857dec5b"
+    },
+    {
+      "path": "ci-57885c/v2-management/audit.json",
+      "bytes": 66201,
+      "blob": "79cafa573f8a3073c1205bd1f5b3e6d6ff49d19f",
+      "sha256": "e24223e2d034311d7b5f059155582d758d01afe5e3267516c893f8858c4a974f"
+    },
+    {
+      "path": "ci-57885c/v2-management/Plan29-appendix.md",
+      "bytes": 4570,
+      "blob": "08fe9a7c645c92f979ef1d3022c635e396fc124d",
+      "sha256": "518b6116d7cc92a20f52bbf87e8895f48cfaada92b144248694ac1d5e1a57b5e"
+    }
+  ],
+  "payloadBytes": 2019314,
+  "archiveMembers": 19,
+  "actuallyViewedPngs": 3,
+  "outcome": "FAIL/INCOMPLETE",
+  "independentReview": "pending",
+  "broadNativeQualified": false
+}
