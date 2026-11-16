@@ -1,0 +1,406 @@
+{
+  "schema": "root-independent-N608-static-windows-readback/v1",
+  "reviewer": "/root",
+  "reviewedUtc": "2026-11-16T03:43:39.726883+00:00",
+  "source": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "verdict": "APPROVE exactly original Windows Static scope with one original FIFO skip",
+  "run": 43795234721,
+  "job": 133062438887,
+  "authorReport": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/static-windows-qualification-audit.json",
+    "bytes": 8992,
+    "blob": "30ebf2f01a8560e943c48f0a4bca368809b16544",
+    "sha256": "5879f603b9d88f17d06b45d1829d7951d6a69ca9e19eb69228bcb68713c74a08"
+  },
+  "fullLog": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/static-windows/job-133062438887.log",
+    "bytes": 104364,
+    "blob": "1dcc29f97f80bc28e5279267987e45cc808cb551",
+    "sha256": "268429c4dabcd86d247037f9c40c50a4d0e18e4be18d3c1426adaa4714192d86"
+  },
+  "officialJobApi": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/v2-jobs-0310.json",
+    "bytes": 22625,
+    "blob": "5ff3f452e79bebcb81f7e3beb1e915de3e3072e1",
+    "sha256": "27cdaefa35039cbec461a3a26a907666ea86cb775290d12093266d3e663af629"
+  },
+  "officialRunApi": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/v2-run-0304.json",
+    "bytes": 30041,
+    "blob": "0a2a637ed1140ce87d6954fad7d6e559709111e0",
+    "sha256": "f74e5db88b9a64c836e1ad48be6630f7a7420123159e770ee79fd41e7e06db82"
+  },
+  "runAttempt": 1,
+  "event": "pull_request",
+  "actualCounts": {
+    "tests": [
+      7,
+      41,
+      225
+    ],
+    "pass": [
+      7,
+      41,
+      224
+    ],
+    "fail": [
+      0,
+      0,
+      0
+    ],
+    "cancelled": [
+      0,
+      0,
+      0
+    ],
+    "skipped": [
+      0,
+      0,
+      1
+    ]
+  },
+  "vitestFiles": 2,
+  "vitestPass": 189,
+  "actualPassTotal": 461,
+  "sourceDefinitionsFreshGit": [
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36013,
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14"
+    },
+    {
+      "path": "package.json",
+      "bytes": 26839,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "bytes": 12355,
+      "blob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts",
+      "bytes": 6371,
+      "blob": "1983b2b0f01d772e6123d31af3561612fd16fe92",
+      "sha256": "e0a5c8ff31efcdbce6d8eb6cac62244ef8c1aef17af892c777efc63b1a08e761"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts",
+      "bytes": 8182,
+      "blob": "feba72a8eb93750884cadac1c85b50f2f52f7fc9",
+      "sha256": "01bd31f6654cfc338f689bc6b5023f960d33a691d44465eb91cbe11976027900"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts",
+      "bytes": 182299,
+      "blob": "de09aac5ead356339b87fcc568798f930067f1cc",
+      "sha256": "c3c736d96b9df0808b7841a593205afc2648a41f70e202b359244e756e9750da"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-model-variant-spi.test.ts",
+      "bytes": 7526,
+      "blob": "88d5566ac11ac22a44148c531b71f38301ccb2b7",
+      "sha256": "a76782b2232e5d075a5030a1b7e81d615480d0b9f7ec4253d346442ff1255ecd"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-model-variant.test.ts",
+      "bytes": 1610,
+      "blob": "7d7b7bbb086db9ceafdbaf335d17a108c0d71248",
+      "sha256": "a2ee1cedc9025a4a0bb4a1219c497ff309ed1483e18a49af6a02e2c67cc85050"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs",
+      "bytes": 1531,
+      "blob": "bc9914a072c9e8594e0b9c39fb6d8b4ab5c1c2fd",
+      "sha256": "70e3c228531051e6ed6f70b0a3a30ed2f796f3ba011dd4747de0d47e65333fb6"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "bytes": 19696,
+      "blob": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+      "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts",
+      "bytes": 4592,
+      "blob": "1fa5a98e0e05c1ea599a53dee39491d2c0d767ea",
+      "sha256": "5e8fd85821f44ccc16c40976ca1c9e7a1ff7f69a9e1acbdfe57618db34e4d988"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts",
+      "bytes": 7511,
+      "blob": "a30a60d6de1b6474e1d83333543c270533aaeadf",
+      "sha256": "04b83469c258cd180dc016a62d3e56216b7fcec170c2d6afa25557296a61f80c"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts",
+      "bytes": 37133,
+      "blob": "a346d346c617b8fb79192cd19970e7cde2e98854",
+      "sha256": "d0c5c343bb732f7c6d3063bc55edf2ad7e2431a14eb7c57dc99694e61d38844f"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "bytes": 456,
+      "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.test.json",
+      "bytes": 174,
+      "blob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+      "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356"
+    },
+    {
+      "path": "runtime.lock.json",
+      "bytes": 6127,
+      "blob": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+      "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87"
+    },
+    {
+      "path": "test/features/opencode-runtime-installer/installPolicy.test.ts",
+      "bytes": 19945,
+      "blob": "d8ed1c1f27f2eb15ff9db5ad626d46644bbd8e3e",
+      "sha256": "ed3586db3673cd452ecb0b6c51db540ab6210a743aba295f5ab3e58de2130818"
+    },
+    {
+      "path": "test/main/services/infrastructure/OpenCodeRuntimeInstallerService.test.ts",
+      "bytes": 114010,
+      "blob": "06e69833aaf06daefd474aaeb93c6233f91f3c1f",
+      "sha256": "693db7ca0471e5143b45390500450ea2e809c9da1fd706ee681937e8a64a7481"
+    },
+    {
+      "path": "test/scripts/installDependenciesWithRetry.test.mjs",
+      "bytes": 4939,
+      "blob": "c1c0232d09e5cd898d7acabcc48b87bab58f3c82",
+      "sha256": "3aab9d6568157c883993c43b8057193175e69c16c31129ce3867a14e686a8f00"
+    }
+  ],
+  "actualOneSkip": [
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts",
+      "excerpt": [
+        {
+          "line": 455,
+          "text": "});"
+        },
+        {
+          "line": 456,
+          "text": ""
+        },
+        {
+          "line": 457,
+          "text": "test('V01 read-only measurement rejects a TEST-owned FIFO without blocking native preflight', async (t) => {"
+        },
+        {
+          "line": 458,
+          "text": "  // Windows device aliases are rejected lexically. POSIX mkfifo is a real"
+        },
+        {
+          "line": 459,
+          "text": "  // blocking-open regression, so invoke the measurement in a TEST-owned child"
+        },
+        {
+          "line": 460,
+          "text": "  // with a hard deadline; never leave a waiting open() in the CI runner."
+        },
+        {
+          "line": 461,
+          "text": "  if (process.platform === 'win32') { t.skip('POSIX FIFO only'); return; }"
+        },
+        {
+          "line": 462,
+          "text": "  const temp = await mkdtemp(join(tmpdir(), 'TEST-v2-fifo-'));"
+        },
+        {
+          "line": 463,
+          "text": "  t.after(() => rm(temp, { recursive: true, force: true }));"
+        },
+        {
+          "line": 464,
+          "text": "  const fifo = join(await realpath(temp), 'TEST-native-engine-fifo');"
+        },
+        {
+          "line": 465,
+          "text": "  execFileSync('mkfifo', [fifo]);"
+        },
+        {
+          "line": 466,
+          "text": "  const moduleUrl = new URL(sourceMode"
+        },
+        {
+          "line": 467,
+          "text": "    ? '../src/composition/openCodeV2StaticPreflight.ts'"
+        }
+      ]
+    }
+  ],
+  "source619IndependentReadback": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/root-independent-x64-original-review.json",
+    "bytes": 30994,
+    "blob": "44e136b3d9e3c77c8b712ddf739841c035bb7b3a",
+    "sha256": "76263b3750d97ab798d9a4e997eec5df1e4c07058cf57547bc01da5c69fed9a7"
+  },
+  "hostBuildAndTestTypecheck": "Original separate CI steps10/11 SUCCESS; not reviewer rebuilt output",
+  "originalCommands": [
+    "actions/checkout@v6",
+    "set -euo pipefail",
+    "actions/checkout@v6",
+    "git -C .current-product-lock rev-parse HEAD",
+    "pnpm/action-setup@v6",
+    "actions/setup-node@v6",
+    "node --test test/scripts/installDependenciesWithRetry.test.mjs",
+    "node ./scripts/ci/install-dependencies-with-retry.mjs",
+    "pnpm --filter @agent-teams/legacy-agent-host build",
+    "pnpm --filter @agent-teams/legacy-agent-host typecheck:test",
+    "node --test packages/legacy-agent-host/tests/opencode-v2-model-variant.test.ts packages/legacy-agent-host/tests/opencode-v2-model-variant-spi.test.ts",
+    "pnpm exec vitest run test/features/opencode-runtime-installer/installPolicy.test.ts test/main/services/infrastructure/OpenCodeRuntimeInstallerService.test.ts",
+    "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts"
+  ],
+  "currentProductLock": {
+    "originalRecordedCommit": "d9ac4a9b0bc652c813761e5e14fdb78e949b94aa",
+    "manifestPath": ".current-product-lock/runtime.lock.json",
+    "limit": "The original source command and actual recorded checkout are proved; the separate manifest body is not archived or independently reconstructed in this packet."
+  },
+  "steps": [
+    {
+      "name": "Set up job",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 1
+    },
+    {
+      "name": "Run actions/checkout@v6",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 2
+    },
+    {
+      "name": "Require immutable PR source HEAD",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 3
+    },
+    {
+      "name": "Run actions/checkout@v6",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 4
+    },
+    {
+      "name": "Record exact current product commit",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5
+    },
+    {
+      "name": "Run pnpm/action-setup@v6",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 6
+    },
+    {
+      "name": "Run actions/setup-node@v6",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 7
+    },
+    {
+      "name": "Prove retry classification on the exact source HEAD",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 8
+    },
+    {
+      "name": "Install pinned workspace dependencies",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 9
+    },
+    {
+      "name": "Build Stage1 Host without launching providers",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 10
+    },
+    {
+      "name": "Typecheck Host TEST contracts",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 11
+    },
+    {
+      "name": "Verify captured and native model variants through Host SPI",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 12
+    },
+    {
+      "name": "Verify generation-preserving install and update policy",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 13
+    },
+    {
+      "name": "Execute V2 static preflight, current-main lock and FIFO negatives",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 14
+    },
+    {
+      "name": "Native V1 baseline and latest Host compatibility (Linux TEST)",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 15
+    },
+    {
+      "name": "Preserve native V1 version evidence",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 16
+    },
+    {
+      "name": "Post Run actions/setup-node@v6",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 29
+    },
+    {
+      "name": "Post Run pnpm/action-setup@v6",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 30
+    },
+    {
+      "name": "Post Run actions/checkout@v6",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 31
+    },
+    {
+      "name": "Post Run actions/checkout@v6",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 32
+    },
+    {
+      "name": "Complete job",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 33
+    }
+  ],
+  "limits": [
+    "Only original N608 immutable checkout/Node24.21 Windows static evidence; no transfer from General merge checkout or older M results.",
+    "The full ten-file Team177/24 privacy command and93-path typed lint are not executed by this static job; neither prescribed semantic GREEN nor full frontend/workspace qualification follows.",
+    "The original Host build and Host TEST typecheck succeeded in this original CI. No independent rebuilt output is claimed and the old local K SIGKILL remains unchanged.",
+    "Linux-only native V1/evidence steps remain skipped. This log has no own native runtime/Desktop/release qualification.",
+    "No reviewer project/native/provider execution, source/ref mutation, rerun or new CI action.",
+    "The raw job log is retained; no standalone original MCP-response/UTF8 equality is claimed here before its separate original-response supplement.",
+    "Current source shared619 closure is reused from the exact immutable root-reviewed608 Git readback, not inferred from an older0660 result."
+  ],
+  "projectExecution": false,
+  "sourceRefCiMutation": false
+}

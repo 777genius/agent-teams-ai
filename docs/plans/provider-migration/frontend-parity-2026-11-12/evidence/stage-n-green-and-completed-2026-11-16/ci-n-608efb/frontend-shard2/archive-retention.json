@@ -1,0 +1,27 @@
+{
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234483,
+  "jobId": 133062441445,
+  "artifactId": 14196032665,
+  "officialDigestVerified": true,
+  "safeUniquePaths": true,
+  "crcAllPassed": true,
+  "archiveBytes": 312761,
+  "archiveSha256": "aa6c748bc41443e55bb8355d594a0733ff6fe0fc7a63ab5c0de5c9f7645486b9",
+  "logBytes": 179619,
+  "logSha256": "05aecbd5f58bfeee688f580bf685df3e68c670806c3ff5de6dcb916ae0ef7376",
+  "entries": [
+    {
+      "path": "host-offline-tests-2.json",
+      "bytes": 2384800,
+      "sha256": "b8d8525f960a5fb00fc6fa646de5a1cb43092748ec82235b90ed452112bf39e5",
+      "crc32": "4daae0f1"
+    },
+    {
+      "path": "host-offline-tests-2.log",
+      "bytes": 107167,
+      "sha256": "3bd3bf8ccc04735c47a4f73e50aca3e7972d6458c06dcc5eb5312eae0f274a8c",
+      "crc32": "c4a5a179"
+    }
+  ]
+}

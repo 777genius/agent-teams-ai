@@ -1,0 +1,351 @@
+{
+  "schemaVersion": 1,
+  "kind": "bounded-current-source-join-of-existing-OpenCode-geometry-review",
+  "result": "PRIOR_FINDING_CONFIRMED_NO_CAUSAL_REPAIR_OR_SOURCE_CANDIDATE",
+  "createdAt": "2026-11-16T03:40:13.986858+00:00",
+  "reviewer": "native_failures",
+  "priorIndependentReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/opencode-first-target-source-review/independent-source-review.json",
+    "bytes": 20818,
+    "blob": "1abf06447d00f0005d433eb0ab4a867f2417e9d8",
+    "sha256": "259041017d8f15980620c0e9bebd52a4750df1890c06e814afaafc302c95a863"
+  },
+  "historicalSource": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "currentPrimarySource": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "historicalRunId": 43780997237,
+  "historicalJobId": 133017915900,
+  "receipt": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/extracted/TEST-desktop-backend-DXg4Xj/desktop-backend-receipt.json",
+    "bytes": 756997,
+    "blob": "aeb2650c4ce00e53c7a8b746b506d992eac985e0",
+    "sha256": "189e97065f05e8afba47064b1eb8c63ffc87d97cc6a4b292fd1ca461a092bde3"
+  },
+  "sourceRows": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 25052,
+      "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+      "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7",
+      "oldAndCurrentGitAndWorktreeEqual": true,
+      "originalReceiptPin": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7",
+      "previousSemanticReviewRanges": [
+        [
+          26,
+          44
+        ],
+        [
+          149,
+          319
+        ]
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "bytes": 68760,
+      "blob": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+      "sha256": "6ca239d1ea242a3ac64323bf28d41b84450fc1d5d7e4ae2324a069d03bff18ad",
+      "oldAndCurrentGitAndWorktreeEqual": true,
+      "originalReceiptPin": "6ca239d1ea242a3ac64323bf28d41b84450fc1d5d7e4ae2324a069d03bff18ad",
+      "previousSemanticReviewRanges": [
+        [
+          25,
+          95
+        ]
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 54778,
+      "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "oldAndCurrentGitAndWorktreeEqual": true,
+      "originalReceiptPin": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "previousSemanticReviewRanges": [
+        [
+          690,
+          789
+        ]
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "bytes": 26258,
+      "blob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+      "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+      "oldAndCurrentGitAndWorktreeEqual": true,
+      "originalReceiptPin": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+      "previousSemanticReviewRanges": [
+        [
+          373,
+          394
+        ]
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 103573,
+      "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+      "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921",
+      "oldAndCurrentGitAndWorktreeEqual": true,
+      "originalReceiptPin": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921",
+      "previousSemanticReviewRanges": [
+        [
+          611,
+          637
+        ],
+        [
+          665,
+          681
+        ],
+        [
+          1192,
+          1223
+        ]
+      ]
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+      "oldAndCurrentGitAndWorktreeEqual": true,
+      "originalReceiptPin": null,
+      "previousSemanticReviewRanges": []
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "bytes": 132317,
+      "blob": "4bd95a0f2e5636a21d1f0d83dd45f228b054b048",
+      "sha256": "af7b6f9da352008ef014dad120b868090626e071cd5d94037fd03385e2234d40",
+      "oldAndCurrentGitAndWorktreeEqual": true,
+      "originalReceiptPin": "af7b6f9da352008ef014dad120b868090626e071cd5d94037fd03385e2234d40",
+      "previousSemanticReviewRanges": [
+        [
+          1530,
+          1668
+        ],
+        [
+          1712,
+          1818
+        ],
+        [
+          1999,
+          2045
+        ],
+        [
+          2125,
+          2148
+        ],
+        [
+          2484,
+          2501
+        ],
+        [
+          2641,
+          2677
+        ],
+        [
+          2991,
+          3085
+        ],
+        [
+          3183,
+          3208
+        ]
+      ]
+    },
+    {
+      "path": "src/renderer/components/ui/dialog.tsx",
+      "bytes": 4914,
+      "blob": "046c7452239fccb9d18858c86e9d075984888031",
+      "sha256": "038c9966ee8a0047c0ab1e32f5feb61ca8a2a38ea838260139187b5f041767f2",
+      "oldAndCurrentGitAndWorktreeEqual": true,
+      "originalReceiptPin": null,
+      "previousSemanticReviewRanges": [
+        [
+          30,
+          70
+        ]
+      ]
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/OptionalSettingsSection.tsx",
+      "bytes": 7553,
+      "blob": "83244b15d0af25a146b8c61dbd2fb300dc251348",
+      "sha256": "bad2fe006d0a6b0e14ae38e1a31c953ff0ecc71821a1353579815a0c22ed4cc8",
+      "oldAndCurrentGitAndWorktreeEqual": true,
+      "originalReceiptPin": null,
+      "previousSemanticReviewRanges": [
+        [
+          68,
+          220
+        ]
+      ]
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/OptionalSettingsSection.css",
+      "bytes": 766,
+      "blob": "744e2ab6eb8a310c325765a0fd447e6620d84ab0",
+      "sha256": "a60ca13dcb40ee4f1201c32ab52e4c00378379534b9bdf91d5a7140243a55840",
+      "oldAndCurrentGitAndWorktreeEqual": true,
+      "originalReceiptPin": null,
+      "previousSemanticReviewRanges": [
+        [
+          1,
+          38
+        ]
+      ]
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/ProvisioningProviderStatusList.tsx",
+      "bytes": 42571,
+      "blob": "c56bf49a427da2fca02ff2e292ba62c9288db124",
+      "sha256": "a4af6df3ec0f99964a80167236c7183f88d94beb860f901deca3ba8fb00593c4",
+      "oldAndCurrentGitAndWorktreeEqual": true,
+      "originalReceiptPin": null,
+      "previousSemanticReviewRanges": [
+        [
+          820,
+          885
+        ],
+        [
+          954,
+          1075
+        ]
+      ]
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/ProviderPrepareReadyNotice.tsx",
+      "bytes": 1747,
+      "blob": "d78e8b5ceb64ed0dd09594bc534b676483ac8bfe",
+      "sha256": "d9dd93413682339b0bd61fe8207c8e47ae6354f2b0cc77b03af433681e88a158",
+      "oldAndCurrentGitAndWorktreeEqual": true,
+      "originalReceiptPin": null,
+      "previousSemanticReviewRanges": [
+        [
+          1,
+          51
+        ]
+      ]
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/useProvisioningPreparePresentationState.ts",
+      "bytes": 759,
+      "blob": "efa7bea6889ed9db9850a7d1a98a9fbe92816fe6",
+      "sha256": "9da4aa3ef0042593ddf92967259ed7c06b4189349600fe0138807ddd29bccce4",
+      "oldAndCurrentGitAndWorktreeEqual": true,
+      "originalReceiptPin": null,
+      "previousSemanticReviewRanges": [
+        [
+          1,
+          27
+        ]
+      ]
+    },
+    {
+      "path": "src/renderer/components/ui/collapsible.tsx",
+      "bytes": 252,
+      "blob": "3cf31c06566691aa8fb978cef99a02844e5f11cd",
+      "sha256": "d4f388e9ff2403b018b75d05f4ae3fd93887e2a0f417cd41e7c970b5f5100f36",
+      "oldAndCurrentGitAndWorktreeEqual": true,
+      "originalReceiptPin": null,
+      "previousSemanticReviewRanges": [
+        [
+          1,
+          5
+        ]
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "bytes": 33173,
+      "blob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+      "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23",
+      "oldAndCurrentGitAndWorktreeEqual": true,
+      "originalReceiptPin": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23",
+      "newlyReadRanges": [
+        [
+          99,
+          119
+        ],
+        [
+          366,
+          427
+        ]
+      ]
+    }
+  ],
+  "checks": {
+    "all15HistoricalCurrentAndWorktreeSourceBytesEqual": true,
+    "existing14SourceHashesPreserved": true,
+    "orderedOriginal1757PinsPrePostEqual": true,
+    "exactOriginalEightStepsAndErrorRejoined": true,
+    "originalBusinessCommandsEmpty": true
+  },
+  "retainedBoundary": {
+    "lastHoverPoint": [
+      700,
+      507.5
+    ],
+    "lastStablePointRecoveredFromOriginalAssertion": [
+      700,
+      494.75,
+      "BUTTON"
+    ],
+    "originalFinalPointRecoveredFromOriginalAssertion": [
+      700,
+      505.75,
+      "BUTTON"
+    ],
+    "failureAt": "desktop-ui-controls.ts:288",
+    "expansionPressReleaseNotReached": true,
+    "businessLaunchNotReached": true,
+    "note": "These are separate observations; no intermediate sample count, layout rectangle, elapsed interval or preparation-state transition is reconstructed."
+  },
+  "sourceSequence": [
+    {
+      "source": [
+        "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts:84-93"
+      ],
+      "finding": "The original settings wait proves one button and the saved-model summary. Expansion precedes the original enabled-Launch preflight wait. Neither the wait result nor the later failure snapshot proves preflight state at both geometry samples."
+    },
+    {
+      "source": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:269-316"
+      ],
+      "finding": "After two accepted stable samples, the original ownership guard runs, then the complete original target expression is evaluated again. The x/y/tag equality refusal occurs before the next ownership guard, attempted-click evidence row, press and release. The failure is the intended current-target oracle, not an observed click onto a changed target."
+    },
+    {
+      "source": [
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:421",
+        "scripts/legacy-agent-host/desktop-backend-observations.ts:99-119",
+        "scripts/legacy-agent-host/desktop-backend-observations.ts:366-427"
+      ],
+      "finding": "For this macOS journey assertOwnedRenderer delegates to assertOwnedCdpListener: original process-group census, bounded original lsof listener query, then a second process-group membership census. This verifies listener ownership; it does not freeze renderer layout. The source therefore permits a separate renderer geometry observation after genuine ownership work, but the retained receipt supplies no duration or layout transition for that interval. No original observation is redundant on this evidence."
+    },
+    {
+      "source": [
+        "src/renderer/components/ui/dialog.tsx:42-55",
+        "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx:2664-2677",
+        "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx:2999-3072"
+      ],
+      "finding": "The centered variable-height dialog contains the settings control before a preparation footer whose loading/ready branches have different content. A parent-height change is a source-supported possible movement mechanism. The old report already recorded this; this review discovers no new actual causal operand."
+    }
+  ],
+  "smallestUnimplementedWitnessAlreadyIdentified": {
+    "origin": "priorIndependentReview.minimalProspectiveObservation",
+    "data": "Two closed fixed slots for the last accepted stable sample and original final sample: reuse the existing target rectangle, and retain the nearest dialog rectangle plus scrollTop as finite primitives or unknown.",
+    "purpose": "Separate parent-dialog movement/resize from target movement within a stable parent. It would not establish a particular readiness event, animation, hydration cause, unchanged DOM-node identity, or cause of cleanup debt.",
+    "carrier": "Existing hover evidence row retained by the original proof.steps callback; no new file, listener, timer, poll, CDP evaluation, guard or input action.",
+    "additionalWorkMustBeExplicit": "Nearest-dialog lookup, one additional parent rectangle read and scrollTop read at existing eligible target evaluations, protected projection/updates and bounded extra serialization all consume original budgets. Auxiliary failure must not replace the original target result or error.",
+    "authorization": "Design only from the existing report. No candidate, byte-cap claim, implementation, R1 publication or changed test is supplied here. Any later exact proposal must preserve every original target/ownership/error/action oracle and first retain actual 177/24 privacy GREEN through original CI.",
+    "overlap": "A future exact composition must preserve the dormant Installer observer candidate in the same controls/test/workflow paths. Neither dormant proposal is applied."
+  },
+  "separateCleanupBoundary": "Historical PID4354/PPID1/PGID4281 debt remains separate. This geometry review adds no current process identity, zombie claim, cleanup cause or signal authority.",
+  "scopeLimits": [
+    "No project, Node, compiler, lint, install, native/provider, signal, source/ref or CI mutation.",
+    "No retry, wait reordering, relaxed equality, extra click or timeout extension is justified.",
+    "No full historical artifact/source-census requalification; previous original artifact reviews remain authoritative.",
+    "No new current-job result or privacy GREEN is inferred from this source-only addendum."
+  ]
+}

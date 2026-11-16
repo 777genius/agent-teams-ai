@@ -1,0 +1,35 @@
+{
+  "observedAt": "2026-11-16T04:11:19Z",
+  "response": {
+    "ref": "refs/heads/fix/frontend-parity-e2e-followups-20261115",
+    "node_id": "REF_kwDORVTEtNoANXJlZnMvaGVhZHMvZml4L2Zyb250ZW5kLXBhcml0eS1lMmUtZm9sbG93dXBzLTIwMjYxMTE1",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs/heads/fix/frontend-parity-e2e-followups-20261115",
+    "object": {
+      "sha": "dee9448e2c8771bed2f4e403259446b1d3b4d4e0",
+      "type": "commit",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/dee9448e2c8771bed2f4e403259446b1d3b4d4e0"
+    }
+  },
+  "originalToolResponse": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "content": "{\"ref\":\"refs/heads/fix/frontend-parity-e2e-followups-20261115\",\"node_id\":\"REF_kwDORVTEtNoANXJlZnMvaGVhZHMvZml4L2Zyb250ZW5kLXBhcml0eS1lMmUtZm9sbG93dXBzLTIwMjYxMTE1\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/refs/heads/fix/frontend-parity-e2e-followups-20261115\",\"object\":{\"sha\":\"dee9448e2c8771bed2f4e403259446b1d3b4d4e0\",\"type\":\"commit\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/dee9448e2c8771bed2f4e403259446b1d3b4d4e0\"}}",
+      "title": "frontend-parity-e2e-followups-20261115",
+      "modified_date": null,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/ref/heads/fix/frontend-parity-e2e-followups-20261115",
+      "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/ref/heads/fix/frontend-parity-e2e-followups-20261115",
+      "display_title": "frontend-parity-e2e-followups-20261115",
+      "structuredContent": {
+        "title": "frontend-parity-e2e-followups-20261115",
+        "content": "{\"ref\":\"refs/heads/fix/frontend-parity-e2e-followups-20261115\",\"node_id\":\"REF_kwDORVTEtNoANXJlZnMvaGVhZHMvZml4L2Zyb250ZW5kLXBhcml0eS1lMmUtZm9sbG93dXBzLTIwMjYxMTE1\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/refs/heads/fix/frontend-parity-e2e-followups-20261115\",\"object\":{\"sha\":\"dee9448e2c8771bed2f4e403259446b1d3b4d4e0\",\"type\":\"commit\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/dee9448e2c8771bed2f4e403259446b1d3b4d4e0\"}}",
+        "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/ref/heads/fix/frontend-parity-e2e-followups-20261115"
+      }
+    },
+    "isError": false
+  }
+}

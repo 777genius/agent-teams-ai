@@ -1,0 +1,22 @@
+{
+  "artifactId": 14196373078,
+  "zipBytes": 294919,
+  "zipSha256": "c1df314c03ac33ee0c3f835c8193b1377e7876bd4d5819298d1083bb3bc30fc5",
+  "safePaths": true,
+  "uniqueNames": true,
+  "crcPassed": true,
+  "members": [
+    {
+      "name": "host-offline-tests-1.json",
+      "bytes": 2168235,
+      "sha256": "62fa7715f838406a3befc1e636de1314fc23366155c737ec7b587ea5307e3b12",
+      "crc32": "a7926083"
+    },
+    {
+      "name": "host-offline-tests-1.log",
+      "bytes": 99173,
+      "sha256": "04a6e260dcb2d204a102dbe3807a06c37b33350def50b725e09055cff8a65e91",
+      "crc32": "3118699a"
+    }
+  ]
+}
