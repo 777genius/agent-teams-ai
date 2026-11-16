@@ -393,10 +393,47 @@ try {
   await until(() => cdp!.evaluate(
     "!document.querySelector('[data-testid=\"team-task-table\"]') && !!document.querySelector('[data-testid=\"kanban-view-grid\"][aria-pressed=\"true\"]')"
   ), 'return to legacy grid mode');
+  // Real Electron + IPC + on-disk acceptance of the opt-in approval policy.
+  // A hidden loading skeleton button must not count as the loaded Grid header.
+  const toggleHumanApproval = async (layout: 'grid' | 'columns', checked: boolean): Promise<void> => {
+    const selector = layout === 'grid'
+      ? '.kanban-grid-item-wrapper button[aria-label="Approved column settings"]'
+      : 'button[aria-label="Approved column settings"]';
+    await until(() => cdp!.evaluate(
+      `(()=>{const b=document.querySelector(${JSON.stringify(selector)});return b instanceof HTMLButtonElement&&b.getBoundingClientRect().width>0;})()`
+    ), `loaded ${layout} Approved-column settings button`);
+    await cdp!.evaluate(
+      `(()=>{const b=document.querySelector(${JSON.stringify(selector)});if(!(b instanceof HTMLButtonElement))throw Error('Approved settings missing');b.click();})()`
+    );
+    await until(() => cdp!.evaluate(
+      "!!document.querySelector('[role=menuitemcheckbox]')"
+    ), `${layout} approval policy menu opened`);
+    await cdp!.evaluate(
+      "(()=>{const item=document.querySelector('[role=menuitemcheckbox]');if(!(item instanceof HTMLElement))throw Error('Approval policy checkbox missing');item.click();})()"
+    );
+    await until(async () => {
+      const state = JSON.parse(await readFile(tableTeam.kanbanFile, 'utf8')) as {
+        humanOnlyApproval?: boolean;
+      };
+      return (state.humanOnlyApproval === true) === checked;
+    }, `${layout} human approval policy persisted via real IPC`);
+    await cdp!.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' });
+  };
+  const initialPolicy = JSON.parse(await readFile(tableTeam.kanbanFile, 'utf8')) as {
+    humanOnlyApproval?: boolean;
+  };
+  assert.notEqual(initialPolicy.humanOnlyApproval, true, 'approval policy defaults to disabled');
+  await toggleHumanApproval('grid', true);
+  await cdp.screenshot(join(root, 'kanban-table-human-approval-grid.png'));
+  await toggleHumanApproval('grid', false);
   await cdp.evaluate("document.querySelector('[data-testid=\"kanban-view-columns\"]')?.click()");
   await until(() => cdp!.evaluate(
     "!!document.querySelector('[data-testid=\"kanban-view-columns\"][aria-pressed=\"true\"]')"
   ), 'legacy columns mode works');
+  await toggleHumanApproval('columns', true);
+  await cdp.screenshot(join(root, 'kanban-table-human-approval-columns.png'));
+  await toggleHumanApproval('columns', false);
+
   // Exercise the actual shared search and virtualized DOM at 0, 1, 50 and 1004 tasks.
   await cdp.evaluate("document.querySelector('[data-testid=\"kanban-view-table\"]')?.click()");
   await until(() => cdp!.evaluate(
