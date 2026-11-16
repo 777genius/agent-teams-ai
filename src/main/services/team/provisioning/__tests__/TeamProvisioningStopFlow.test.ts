@@ -180,6 +180,7 @@ describe('team provisioning stop flow', () => {
     const emitter = new EventEmitter();
     const kill = vi.fn((signal: NodeJS.Signals) => {
       if (behavior === 'exit') queueMicrotask(() => emitter.emit('exit', null, signal));
+      else queueMicrotask(() => emitter.emit('error', new Error('Test refusal')));
       return behavior === 'exit';
     });
     const child = Object.assign(emitter, { pid, exitCode: null, signalCode: null, kill });
@@ -188,7 +189,7 @@ describe('team provisioning stop flow', () => {
 
   it('stops the original Windows app-managed member handle and waits for exit', async () => {
     const bob = originalChild(6200, 'exit');
-    await expect(stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32'))
+    await expect(stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32', async () => undefined))
       .resolves.toBeUndefined();
     expect(bob.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
   });
@@ -196,9 +197,29 @@ describe('team provisioning stop flow', () => {
   it('attempts every original Windows member even if another handle refuses', async () => {
     const alice = originalChild(7100, 'refuse');
     const bob = originalChild(7200, 'exit');
-    await expect(stopOriginalWindowsDirectMembers(new Set([alice.child, bob.child]), 'win32'))
-      .rejects.toThrow('Could not signal the original Windows teammate handle');
+    await expect(stopOriginalWindowsDirectMembers(new Set([alice.child, bob.child]), 'win32', async () => undefined))
+      .rejects.toThrow('Original Windows teammate process failed on exit');
     expect(alice.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
+    expect(bob.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
+  });
+
+  it('awaits tree-kill completion before falling back to the original Windows handle', async () => {
+    const bob = originalChild(8300, 'exit');
+    let finishTree!: () => void;
+    const stopTree = vi.fn(() => new Promise<void>((resolve) => { finishTree = resolve; }));
+    const stopping = stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32', stopTree);
+    expect(stopTree).toHaveBeenCalledWith(bob.child);
+    expect(bob.kill).not.toHaveBeenCalled();
+    finishTree();
+    await expect(stopping).resolves.toBeUndefined();
+    expect(bob.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
+  });
+
+  it('fails closed on tree failure but still retires the original Windows member', async () => {
+    const bob = originalChild(8400, 'exit');
+    const stopTree = vi.fn(async () => { throw new Error('tree stop failed'); });
+    await expect(stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32', stopTree))
+      .rejects.toThrow('tree stop failed');
     expect(bob.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
   });
 
