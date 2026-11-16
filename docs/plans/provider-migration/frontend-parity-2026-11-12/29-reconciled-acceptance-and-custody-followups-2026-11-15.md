@@ -11063,3 +11063,14 @@ The preceding recovery summary's phrase assigning binding020f/sourcee6 to both h
 
 
 Exact-literal correction: the GREEN binding in the preceding clarification is 020f6efa5dce4a1a5fe269836136ce554d76792c. Its manually transcribed long reference omitted three characters; the clarification manifest, original receipt and R1 already contain this exact 40-character identity. No outcome, scope or execution authority changes.
+
+
+### Reviewed isolated Cross validation recovery controls — 2026-11-16
+
+The complete actual R1 publication chain ending at 34f3090480edff81beb56507e0f2b7e2f0060b1e is independently closed by e695dd8aca0559256e01175166317ab905f467a4. Recovery R1 e664eaa666943272570ec13012bf6d6439d3d454 remains limited to one new isolated ordered lint/source-size/diff-check package with zero source/test changes.
+
+Exact runner b961d5e8283a775ae66afcb5475247c55b859547 (52074 bytes) and binding 0186765f4d0dacf349efda2a0c45fd7333227fb0 (3385634 bytes) have complete accepted Guard fdb2dff24e92a15cae19ac2f50604cc1e71d878c and Parity 07c3f2f7902665b0fe085ea4ff7aac3f51a62292 R2 reviews. Root composition c9e0e07b32dfd21ee55a0852975164faee29d36b retains the exact inverses and AST checks. The bounded reader uses at most8 workers/32 pending entries, preserves complete byte identities, symlink/census rules and initiating errors, and joins owned readers before return or propagation. All28 other original functions and the complete final execution/finalization tail are unchanged; original180s primary/30s metadata clocks, eight inputs and five source overlays remain exact.
+
+Historical RED e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a remains bound to cb12381b46948c807d443fc41581a9a48d18e051/c0ead43f21d5ed90776d4080fa372f48cf8270d5. Historical GREEN 8e03dc33aca8c5dbd8ebc354e8a41a2361fa525f remains bound to 020f6efa5dce4a1a5fe269836136ce554d76792c/e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb. Recovery controls are distinct. The prior validation remains INCOMPLETE/SPENT with UNKNOWN outer outcome and supervisor lifetime; its evidence is protected.
+
+No new recovery controls have been locally staged and no recovery runtime has executed at this checkpoint. After complete actual root and independent publication readback, root may exclusively stage the exact controls and execute one run validation-package invocation. Full fresh input boundaries, every lifecycle receipt, complete final cutoff/cleanup and separately observed outer0 remain required. Outcome d2ec7a9926b3a7cb948099010fba5255ae2b94ab records the exact scope. Next139 remains unpublished/blocked; canonical typing/build, fresh GUI/native/platform, integration and wholeE2E remain open. All8798 non-doc leaves,42 workflows,5020 production files,141 frozen exceptions and cap800 remain unchanged.
