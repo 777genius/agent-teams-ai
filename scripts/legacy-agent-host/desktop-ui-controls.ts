@@ -46,6 +46,35 @@ export function createDesktopUiControls(
       window.__TEST_desktopInputEvents=[];
       window.__TEST_desktopDragEvents=[];
       const describe=el=>el instanceof Element?{tag:el.tagName,id:el.id,ariaLabel:el.getAttribute('aria-label'),className:String(el.className).slice(0,120)}:null;
+      // Passive click identity only; these observations never navigate or authorize a retry.
+      const hostTeamKey=value=>typeof value==='string'&&value.length>10&&value.length<=256&&
+        value.startsWith('host-team:')&&!/[\\u0000-\\u001f\\u007f]/u.test(value)?value:null;
+      const teamNavigationState=()=>{
+        try{
+          const state=window.__agentTeamsDevStore?.getState(),tabs=state?.openTabs,selected=state?.selectedTeamName;
+          if(!state||(selected!==null&&hostTeamKey(selected)===null)||!Array.isArray(tabs)||tabs.length>64)return null;
+          const id=state.activeTabId;
+          if(typeof id!=='string'||!id||id.length>256)return null;
+          const active=tabs.filter(tab=>tab&&typeof tab==='object'&&tab.id===id);
+          if(active.length!==1)return null;
+          const type=active[0].type,team=type==='team'||type==='graph';
+          if(typeof type!=='string'||!type||type.length>32)return null;
+          const activeTeamKey=team?hostTeamKey(active[0].teamName):null;
+          if(team&&activeTeamKey===null)return null;
+          return {selectedTeamKey:selected,activeSurface:team?type:type==='teams'?'teams':'other',activeTeamKey};
+        }catch{return null;}
+      };
+      const boundedTeamNavigation=value=>{
+        try{return new TextEncoder().encode(JSON.stringify(value)).byteLength<=4096?value:null;}catch{return null;}
+      };
+      const teamNavigation=e=>{
+        try{
+          if(e.isTrusted!==true)return null;
+          const targetTeamKey=hostTeamKey(e.target instanceof Element?
+            e.target.closest('[data-team-name]')?.getAttribute('data-team-name'):null);
+          return targetTeamKey===null?null:boundedTeamNavigation({targetTeamKey,before:teamNavigationState()});
+        }catch{return null;}
+      };
       const taskClarification=e=>{
         try{
           const target=e.target instanceof Element?e.target:null,dialog=target?.closest('[role="dialog"]');
@@ -136,8 +165,12 @@ export function createDesktopUiControls(
           activeSortable:[...document.querySelectorAll('[aria-roledescription="sortable"][aria-pressed="true"]')].map(el=>({taskId:el.querySelector('.kanban-task-card')?.getAttribute('data-task-id'),transform:el.style.transform})),
           dragAnnouncement:[...document.querySelectorAll('[id^="DndLiveRegion-"]')].map(el=>el.textContent)};
         if(type==='pointerdown'||type==='pointerup'||type==='click')row.taskClarification=taskClarification(e);
+        if(type==='click')row.teamNavigation=teamNavigation(e);
         rows.push(row);queueMicrotask(()=>{row.defaultPreventedAfterMicrotask=e.defaultPrevented;row.focusAfterMicrotask=describe(document.activeElement);
-          setTimeout(()=>{row.defaultPreventedAfterDispatch=e.defaultPrevented;row.focusAfterDispatch=describe(document.activeElement);},0);});
+          if(row.teamNavigation)row.teamNavigation=boundedTeamNavigation({...row.teamNavigation,afterMicrotask:teamNavigationState()});
+          setTimeout(()=>{row.defaultPreventedAfterDispatch=e.defaultPrevented;row.focusAfterDispatch=describe(document.activeElement);
+            if(row.teamNavigation)row.teamNavigation=boundedTeamNavigation({...row.teamNavigation,afterDispatch:teamNavigationState()});
+          },0);});
       },{capture:true,passive:true});return true;
     })()`);
     assert.equal(

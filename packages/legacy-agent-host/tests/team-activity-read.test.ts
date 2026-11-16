@@ -379,3 +379,49 @@ test('large retained facts produce a partial bounded log rather than losing the 
   assert.ok(logs[0]!.events.length < 12);
   assert.ok(logs[0]!.gaps.includes('bounded activity projection limit'));
 });
+
+
+test('retained thinking keeps original task and child identities without duplicating messages or inventing usage', (t) => {
+  const f = fixture(t);
+  const thinking = {
+    kind: 'thinking', messageRef: 'TEST-message', block: 1, text: 'partial thought', phase: 'snapshot',
+  };
+  f.push(thinking);
+  f.push({ ...thinking, text: 'complete thought', phase: 'complete' });
+  const first = readTeamActivity(f.options, { memberName: 'alice' })[0]!;
+  assert.deepEqual(first.events.map((event) => event.data.kind), ['thinking', 'thinking']);
+  assert.equal(first.messageCount, 1);
+  assert.equal(first.lastOutputPreview, undefined, 'thinking is not ordinary conversation output');
+  f.push({ kind: 'text', messageRef: 'TEST-message', block: 2, text: 'answer', phase: 'complete' });
+  f.push({ ...thinking, messageRef: 'TEST-thinking-only', text: 'another thought', phase: 'complete' });
+  for (const child of ['a', 'c']) f.push({
+    kind: 'subagent', phase: 'fact', childId: 'child-' + child.repeat(64),
+    parentToolRef: 'tool-' + 'b'.repeat(64), fact: { ...thinking, phase: 'complete' },
+  });
+  const logs = readTeamActivity(f.options, { taskId: f.taskId });
+  assert.deepEqual(logs[0]!.events.map((event) => event.eventId), f.events.map((event) => event.eventId));
+  assert.deepEqual(logs[0]!.events.slice(-2).map((event) => event.data.childId), [
+    'child-' + 'a'.repeat(64), 'child-' + 'c'.repeat(64),
+  ]);
+  assert.equal(logs[0]!.messageCount, 2, 'output and thinking share a message; child messages stay separate');
+  assert.equal(logs[0]!.lastOutputPreview, 'answer');
+  const stats = summarizeTeamActivity('alice', logs);
+  assert.equal(stats.observedMessages, 2);
+  assert.equal(stats.inputTokens, null);
+  assert.equal(stats.outputTokens, null);
+  assert.equal(stats.costUsd, null);
+  const recovered = readTeamActivity({
+    ...f.options,
+    runtime: { ...f.options.runtime, readCapturedSession: () => ({ record: f.record, attached: false }) },
+  }, { taskId: f.taskId });
+  assert.deepEqual(recovered[0]!.events, logs[0]!.events);
+  assert.equal(recovered[0]!.isOngoing, false);
+  f.push({ ...thinking, text: 'PRIVATE-foreign thought' });
+  f.events.at(-1)!.operationRef = 'foreign-operation';
+  const refused = readTeamActivity(f.options, { taskId: f.taskId });
+  assert.equal(refused[0]!.events.length, 6);
+  assert.ok(refused[0]!.gaps.includes('unattributed input'));
+  assert.ok(!JSON.stringify(refused).includes('PRIVATE-'));
+  f.connection.revoke('human');
+  assert.throws(() => readTeamActivity(f.options, { memberName: 'alice' }), { code: 'forbidden' });
+});

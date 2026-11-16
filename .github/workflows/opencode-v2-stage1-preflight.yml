@@ -59,6 +59,10 @@ jobs:
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     steps:
+      - name: Enable Windows long paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -359,6 +363,10 @@ jobs:
       OPENCODE_V2_EMBEDDED_WINDOWS_CUSTODY_RECEIPT: ${{ github.workspace }}/opencode-v2-windows-custody.json
       OPENCODE_V2_EMBEDDED_HOST_RECEIPT: ${{ github.workspace }}/opencode-v2-embedded-host.json
     steps:
+      - name: Enable Windows long paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}

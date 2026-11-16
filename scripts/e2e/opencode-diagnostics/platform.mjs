@@ -137,7 +137,10 @@ export function windowsProcessListenerSnapshot(port = 9222, execute = powershell
   assertCdpPort(port);
   const output = execute(
     `$TESTProcessOutput = ${windowsProcessQuery};\n` +
-    `$TESTListenerOutput = ${windowsListenerQuery(port)};\n` +
+    // Empty listeners can only refuse the live guard; standalone absence queries stay unchanged.
+    `$TESTListenerOutput = Get-CimInstance -Namespace root/StandardCimv2 ` +
+    `-ClassName MSFT_NetTCPConnection -Filter "State = 2 AND LocalPort = ${port}" ` +
+    '-Property OwningProcess | Select-Object -ExpandProperty OwningProcess;\n' +
     '[pscustomobject]@{ processes = [string]$TESTProcessOutput; ' +
     'listeners = [string]($TESTListenerOutput -join [Environment]::NewLine) } | ConvertTo-Json -Compress'
   );

@@ -71,7 +71,8 @@ function validateSourceRefusal(value: Record<string, unknown>, persisted: boolea
   assert.ok(Object.getOwnPropertySymbols(value).length === 0 && Object.values(Object.getOwnPropertyDescriptors(value)).every(row => 'value' in row));
   const hash = (raw: unknown) => typeof raw === 'string' && /^[a-f0-9]{64}$/.test(raw), clock = (raw: unknown) => typeof raw === 'number' && Number.isSafeInteger(raw) && raw >= 0;
   const fields: Record<string, string> = { native: 'capability phase reason dispatched staged rootCaptured deadlineExpired',
-    consumer: 'actionDigest groupDigest bindingDigest consumerId phase reason cutoff observedAt',
+    consumer: 'actionDigest groupDigest bindingDigest consumerId phase reason cutoff observedAt currentCalls',
+    'opencode-open': 'bindingDigest phase reason',
     reference: 'commandDigest contextDigest phase reason probeCutoff probeNow scopeCutoff scopeNow preparationCutoff preparationNow', limit: '' };
   assert.ok(typeof value.kind === 'string' && Object.hasOwn(fields, value.kind));
   const keys = fields[value.kind]; assert.ok(typeof keys === 'string'); assert.deepEqual(Object.keys(value).sort(), ['kind', ...keys.split(' ').filter(Boolean), ...(persisted ? ['ordinal'] : [])].sort());
@@ -83,8 +84,22 @@ function validateSourceRefusal(value: Record<string, unknown>, persisted: boolea
     assert.ok('sealed current-false current-threw launch-deadline refused unknown result-mismatch preparation-failed'.split(' ').includes(value.reason));
     assert.ok(['dispatched', 'staged', 'rootCaptured'].every(key => typeof value[key] === 'boolean'));
     assert.equal(value.deadlineExpired, value.reason === 'launch-deadline' ? true : null);
+  } else if (value.kind === 'opencode-open') {
+    assert.ok(hash(value.bindingDigest)); assert.equal(value.reason, 'threw');
+    assert.ok('configuration server-launch native-ready startup-authority startup-configuration startup-delay session-authority session-create driver-readiness'.split(' ').includes(value.phase));
   } else {
     assert.ok(value.reason === 'held' || value.reason === 'threw'); const consumer = value.kind === 'consumer';
+    if (consumer) {
+      const timing = object(value.currentCalls);
+      assert.ok(timing && typeof timing === 'object' && !Array.isArray(timing) && [Object.prototype, null].includes(Object.getPrototypeOf(timing)));
+      assert.ok(Object.getOwnPropertySymbols(timing).length === 0 && Object.values(Object.getOwnPropertyDescriptors(timing)).every(row => 'value' in row));
+      assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'totalMs', 'truncated']);
+      assert.ok(clock(timing.count) && (timing.count as number) <= 4096 && clock(timing.totalMs) && clock(timing.maxMs) && (timing.maxMs as number) <= (timing.totalMs as number));
+      assert.equal(typeof timing.truncated, 'boolean');
+      assert.ok(timing.lastMs === null || clock(timing.lastMs) && (timing.lastMs as number) <= (timing.maxMs as number));
+      if (timing.count === 0) assert.ok(timing.totalMs === 0 && timing.maxMs === 0 && timing.lastMs === null);
+      else if (!timing.truncated) assert.notEqual(timing.lastMs, null);
+    }
     assert.ok((consumer ? ['actionDigest', 'groupDigest', 'bindingDigest', 'consumerId'] : ['commandDigest', 'contextDigest']).every(key => hash(value[key])));
     assert.ok((consumer ? 'initial-authority read-consumer identity continuation requirements cutoff reference equality final-authority' :
       'read inspect admission target scope retired completion probe-expiry scope-cutoff preparation-expiry origin purpose readiness account projection').split(' ').includes(value.phase));
@@ -411,8 +426,6 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         assert.equal(object(selected[0]!.attempt).claimed, false);
         const timeoutMs = member.timeoutMs;
         assert.ok(typeof timeoutMs === 'number' && Number.isSafeInteger(timeoutMs) && timeoutMs > 0);
-        // Start and its acknowledgement consume the original captured member budget.
-        memberReadinessDeadline = performance.now() + timeoutMs;
       }
       if (provider === 'opencode') {
         // Reuse the original Main aggregate phases with this fixture's private native inputs.
@@ -454,6 +467,8 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         unwrap(await router.request(handle, { commandId, method: 'team.launch.start', payload,
           guard, requestBudget: budget, localModelReadinessOrigin: createReadinessPreparation(origin, budget) }));
       } else await first.rpc(team, 'team.launch.start', commandId, payload);
+      // Original readiness observation starts once after the Start acknowledgement.
+      if (provider !== 'claude') memberReadinessDeadline = performance.now() + 15000;
       let view: Record<string, unknown> = {};
       const readiness = { source: sourceRef(source), image, launchId, readCount: 0, elapsedMs: 0,
         lastRuntimeRead: null as Record<string, unknown> | null };
@@ -584,8 +599,8 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
           ...(provider === 'claude' ? { effort: 'low', resolvedFastMode: false } : {}) },
         ...(provider === 'claude' ? { maxTurns: 6, maxBudgetUsd: 0.25 } : {}) };
       const before = first.jobs.length;
-      const standaloneStarted = performance.now();
       await first.rpc(1, 'schedule.run.start', scheduled.runId, scheduled);
+      const standaloneStarted = performance.now();
       let standaloneDeadline: number | undefined;
       if (provider === 'codex') {
         const budgetCapture = readScheduledRunCapture(new TeamOwnerStore(fixture.profile.owner.storageRoot,
@@ -596,8 +611,8 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         const recipe = resolveRuntimeRecipe(fixture.profile.runtime, fixture.profile.teams[1]!.binding.teamId,
           budgetCapture.memberId, scheduled.config.providerId);
         assert.equal(runtimeDigest(recipe), budgetCapture.recipeDigest);
-        // Bound this TEST observation by the original recipe, including Start and acknowledgement.
-        standaloneDeadline = standaloneStarted + recipe.limits.timeoutMs;
+        // The original post-ACK observation includes these captured-source checks.
+        standaloneDeadline = standaloneStarted + 15000;
       }
       let completed: Record<string, unknown> = {};
       const completion = { source: sourceRef(b.source), runId: scheduled.runId, scheduleId: scheduled.scheduleId,
@@ -750,6 +765,10 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
         assert.equal(matches.length, 1); return { row, launch: matches[0]! };
       });
       const observations = records.map(row => {
+        if (row.kind === 'opencode-open') {
+          const matches = diagnosticLaunches.filter(value => value.bindingDigests.includes(text(row.bindingDigest)));
+          assert.equal(matches.length, 1); return { ...row, launchId: matches[0]!.launchId, source: matches[0]!.source };
+        }
         if (row.kind === 'native') { const matches = epochs.flatMap(epoch => epoch.jobs).filter(job => job.capability === row.capability);
           assert.equal(matches.length, 1); assert.ok(matches[0]!.origin); const { capability: _capability, ...observed } = row;
           return { ...observed, source: sourceRef(matches[0]!.origin) }; }

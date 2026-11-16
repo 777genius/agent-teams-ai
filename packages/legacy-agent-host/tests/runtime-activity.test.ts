@@ -15,6 +15,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
+import { projectRuntimeActivity } from '../dist/composition/runtimeActivityProjection.js';
 import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
 import { RuntimeOwnerError } from '../dist/runtime/contracts.js';
 import { runtimeDigest } from '../dist/runtime/identity.js';
@@ -1065,6 +1066,53 @@ test('process diagnostics use the existing serialized event budget and storage d
   const { activitySequence: previous, ...prior } = original; void ignored; void previous;
   assert.deepEqual(after, prior);
   assert.ok((await stat(f.path())).size <= f.store.activityLimits.maxBytes);
+});
+
+
+test('typed thinking survives the original bounded journal cold read and projection without a provider', async (t) => {
+  const f = await setup(t), target = binding(), resource = runtimeDigest(target);
+  const thinking = {
+    kind: 'thinking', messageRef: 'TEST-message', block: 1, text: 'TEST retained thought', phase: 'complete',
+  };
+  const child = {
+    kind: 'subagent', childId: 'child-' + 'a'.repeat(64), parentToolRef: 'tool-' + 'b'.repeat(64),
+    phase: 'fact', fact: thinking,
+  };
+  const facts: RuntimeActivityRecord['events'][number]['data'][] = [
+    { ...thinking, privateNative: 'PRIVATE-source' }, child,
+  ];
+  const body = {
+    schemaVersion: 1 as const, binding: target, sequence: 2, writerIncarnation: 'host-1',
+    stateDigest: runtimeDigest({}),
+    events: facts.map((data, index) => ({
+      sequence: index + 1, eventId: resource + ':' + (index + 1),
+      inputId: 'TEST-input', operationRef: 'PRIVATE-operation', data,
+    })),
+  };
+  const retained: RuntimeActivityRecord = { ...body, digest: runtimeDigest(body) };
+  f.store.fenced(target, () => f.store.writeActivity(retained));
+  const originalBytes = await readFile(f.path(), 'utf8');
+  const cold = new FileRuntimeStore(f.root);
+  const read = cold.fenced(target, () => cold.readActivity(target));
+  assert.deepEqual(read, retained);
+  assert.ok(read);
+  const projected = projectRuntimeActivity({
+    memberId: target.memberId,
+    source: {
+      binding: target, cursor: { resource, hostIncarnation: 'cold-host', sequence: 2 },
+      retainedFrom: 1, events: read.events, hasMore: false,
+    },
+    nativeReady: false,
+  });
+  assert.ok(projected && typeof projected === 'object' && !Array.isArray(projected));
+  assert.deepEqual(projected.events, [
+    { sequence: 1, eventId: resource + ':1', inputId: 'TEST-input', data: thinking },
+    { sequence: 2, eventId: resource + ':2', inputId: 'TEST-input', data: child },
+  ]);
+  assert.ok(!JSON.stringify(projected).includes('PRIVATE-'));
+  assert.equal(await readFile(f.path(), 'utf8'), originalBytes);
+  assert.equal(cold.fenced(target, () => cold.readConversation(target)), undefined);
+  assert.equal(f.sessions.length, 0, 'read-side fixture does not create a provider or conversation cache');
 });
 
 test('distinct Thinking retains original attribution without becoming text, conversation or state', async t => {

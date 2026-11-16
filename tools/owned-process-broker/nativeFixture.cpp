@@ -35,7 +35,8 @@ enum class PrerequisiteStage : DWORD {
   Wow64Query, Wow64Architecture, Wow64Wait, Wow64ExitRead, Wow64ExitCode,
   Wow64HandleClose, Wow64PublicationOpen, Wow64PublicationWrite, Wow64PublicationCount,
   Wow64PublicationClose, ApplicationWait, ApplicationExitRead, ApplicationExitCode,
-  ApplicationHandleClose
+  ApplicationHandleClose, I386Query, I386Architecture, I386Wait, I386ExitRead,
+  I386ExitCode, I386HandleClose
 };
 static bool prerequisiteFailure(PrerequisiteStage stage,const DWORD* result=nullptr) {
   if(result) std::printf("{\"TEST_SERVICE_PAIR_PREREQUISITE\":{\"stage\":%lu,\"result\":%lu}}\n",
@@ -97,6 +98,33 @@ static bool wow64Startup() {
     PrerequisiteStage::Wow64PublicationWrite,wrote?&count:nullptr);
   if(!closed) return prerequisiteFailure(PrerequisiteStage::Wow64PublicationClose);
   return true;
+}
+static bool i386ApplicationChild(const std::wstring& executable) {
+  const auto module=GetModuleHandleW(L"Kernel32.dll");
+  const auto machine=module?reinterpret_cast<BOOL (WINAPI*)(HANDLE,USHORT*,USHORT*)>(
+    GetProcAddress(module,"IsWow64Process2")):nullptr;
+  if(!machine) return prerequisiteFailure(PrerequisiteStage::I386Query);
+  const auto process=child(executable,L"application-breakpoints");
+  const auto originalBirth=birth(process.hProcess);
+  USHORT architecture=IMAGE_FILE_MACHINE_UNKNOWN;
+  DWORD code=MAXDWORD, result=0;
+  auto stage=PrerequisiteStage::I386Query;
+  const bool passed=[&] {
+    result=machine(process.hProcess,&architecture,nullptr); if(!result) return false;
+    stage=PrerequisiteStage::I386Architecture; result=architecture;
+    if(result!=IMAGE_FILE_MACHINE_I386) return false;
+    stage=PrerequisiteStage::I386Wait; result=WaitForSingleObject(process.hProcess,5000);
+    if(result!=WAIT_OBJECT_0) return false;
+    stage=PrerequisiteStage::I386ExitRead; result=GetExitCodeProcess(process.hProcess,&code);
+    if(!result) return false;
+    stage=PrerequisiteStage::I386ExitCode; result=code; return result==0;
+  }();
+  const bool closed=CloseHandle(process.hProcess)!=FALSE;
+  if(!passed) return prerequisiteFailure(stage,&result);
+  if(!closed) return prerequisiteFailure(PrerequisiteStage::I386HandleClose);
+  std::printf("{\"TEST_I386_CHILD\":{\"pid\":%lu,\"birth\":\"%016llx\",\"machine\":%u,\"exitCode\":0}}\n",
+    process.dwProcessId,static_cast<unsigned long long>(originalBirth),static_cast<unsigned>(architecture));
+  std::fflush(stdout); return true;
 }
 int wmain(int argc,wchar_t** argv) {
   if(argc<2) return 22;
@@ -264,6 +292,9 @@ int wmain(int argc,wchar_t** argv) {
     if(!applicationPassed) { prerequisiteFailure(stage,&result); return 63; }
     if(!closed) { prerequisiteFailure(PrerequisiteStage::ApplicationHandleClose); return 63; }
     std::puts("{\"wow64StartupAndApplicationBreakpoints\":true}"); std::fflush(stdout);
+    wchar_t i386Fixture[32768]{};
+    const auto i386Length=GetEnvironmentVariableW(L"OWNED_PROCESS_TEST_I386_FIXTURE",i386Fixture,32768);
+    if(i386Length>=32768||(i386Length&&!i386ApplicationChild(i386Fixture))) return 63;
     // Sequential original HANDLE exits exceed the debug registry's64 live cap.
     // This is cumulative churn, never80 simultaneously owned live children.
     for(DWORD index=0;index<80;++index) {

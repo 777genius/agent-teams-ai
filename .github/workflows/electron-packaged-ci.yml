@@ -85,6 +85,10 @@ jobs:
       OPENCODE_V2_TEST_PLATFORM: ${{ matrix.platform }}
 
     steps:
+      - name: Enable Windows long paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}

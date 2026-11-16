@@ -57,6 +57,7 @@ test('standalone stderr uses selected private values without a Team endpoint', a
   };
   assert.equal('endpoint' in context, false);
   observeMemberProcessStderr(f.child, context, ['--token', 'TEST_STANDALONE_ARG_CANARY']);
+  assert.equal(f.observations.length, 0, 'no diagnostic is synthesized before original stderr arrives');
   const canaries = ['TEST_ENV_FIRST_CANARY', 'TEST_ENV_SECOND_CANARY', 'TEST_HEADER_PRIVATE_CANARY',
     'TEST_CUSTOM_HEADER_CANARY', 'TEST_MCP_ENV_CANARY', 'TEST_MCP_ARG_CANARY', 'TEST_STANDALONE_ARG_CANARY'];
   f.child.stderr.write(`TEST standalone startup\n${canaries.join('\n')}\nTEST standalone final tail`);

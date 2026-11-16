@@ -74,6 +74,10 @@ jobs:
       HOST_PROCESS_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
       HOST_PROCESS_PLATFORM: ${{ matrix.platform }}
     steps:
+      - name: Enable Windows long paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -177,6 +181,26 @@ jobs:
           if ((($scopedFiles | Sort-Object) -join ',') -ne 'manifest.json,owned-process-broker.exe') { throw 'Unexpected scoped stage fixture' }
           "HOST_PROCESS_SCOPED_STAGE=$scoped" >> $env:GITHUB_ENV
           Copy-Item "$scoped\manifest.json" process-acceptance-evidence/windows-scoped-manifest.json
+          $i386Build = "$build-i386"
+          $i386Target = Join-Path $build 'Release\owned-process-fixture-i386.exe'
+          if (Test-Path -LiteralPath $i386Target) { throw 'I386 TEST target must be fresh' }
+          $compileI386 = @'
+          import { spawnSync } from 'node:child_process';
+          const [cmake, source, build] = process.argv.slice(1);
+          for (const args of [['-S', source, '-B', build, '-A', 'Win32'],
+            ['--build', build, '--config', 'Release', '--target', 'owned-process-fixture']]) {
+            const result = spawnSync(cmake, args, { stdio: 'inherit', timeout: 120000 });
+            if (result.error || result.status !== 0) throw new Error('Same-source TEST Win32 fixture build failed');
+          }
+          '@
+          node --input-type=module -e $compileI386 $cmake (Join-Path $PWD 'tools\owned-process-broker') $i386Build
+          if ($LASTEXITCODE -ne 0) { throw 'Same-source TEST Win32 fixture build failed' }
+          $i386Built = Join-Path $i386Build 'Release\owned-process-fixture.exe'
+          Copy-Item -LiteralPath $i386Built -Destination $i386Target -ErrorAction Stop
+          if ((Get-FileHash -LiteralPath $i386Built -Algorithm SHA256).Hash -cne (Get-FileHash -LiteralPath $i386Target -Algorithm SHA256).Hash) {
+            throw 'I386 TEST fixture copy changed bytes'
+          }
+          "HOST_PROCESS_NATIVE_I386_FIXTURE=$i386Target" >> $env:GITHUB_ENV
           Get-ChildItem -File "$build\Release\*.exe" | Get-FileHash -Algorithm SHA256 | Format-List | Out-File process-acceptance-evidence/windows-binary-sha256.txt
           New-Item -ItemType Directory -Path native-evidence | Out-Null
           Copy-Item process-acceptance-evidence/windows-binary-sha256.txt native-evidence/binary-sha256.txt
@@ -184,6 +208,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          if (-not $env:HOST_PROCESS_NATIVE_I386_FIXTURE) { throw 'Original Windows fixture gate requires its built I386 TEST target' }
           $build = $env:HOST_PROCESS_NATIVE_BUILD
           $controller = "$build\Release\owned-process-gate-controller.exe"
           $node = (Get-Command node.exe -ErrorAction Stop).Source
@@ -197,6 +222,7 @@ jobs:
         env:
           ELECTRON_RUN_AS_NODE: '1'
         run: |
+          if (-not $env:HOST_PROCESS_NATIVE_I386_FIXTURE) { throw 'Original Electron fixture gate requires its built I386 TEST target' }
           $build = $env:HOST_PROCESS_NATIVE_BUILD
           $controller = "$build\Release\owned-process-gate-controller.exe"
           $electron = Join-Path $PWD 'node_modules\electron\dist\electron.exe'
