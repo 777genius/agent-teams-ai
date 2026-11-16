@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "kind": "root-complete-actual-recovery-controls-publication-readback",
+  "accepted": true,
+  "at": "2026-11-16T19:54:22.854Z",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "commit": "d9e8e189143c8f20017aa5c184ba8adcaa83c198",
+  "tree": "73ffb7652b15cff0ed55d2279f44cce90e4b8106",
+  "parent": "34f3090480edff81beb56507e0f2b7e2f0060b1e",
+  "docsTree": "370803ca708f5c132478443981cc9934cbd442c8",
+  "actualBodies": {
+    "checked": [
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-reviewed-runner-20261116.py",
+        "bytes": 52074,
+        "sha256": "fa3920cdf633c585db18c2fc30fa0e97f2103c5ae00a133145f1e069105753cd",
+        "gitBlob": "b961d5e8283a775ae66afcb5475247c55b859547",
+        "actualCompleteBodyEqual": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-reviewed-binding-20261116.json",
+        "bytes": 3385634,
+        "sha256": "cd0556c67d0275061a834c08ac901dd34f26c11b3367a85adaecdd623344f5e7",
+        "gitBlob": "0186765f4d0dacf349efda2a0c45fd7333227fb0",
+        "actualCompleteBodyEqual": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-r2-guard-review-20261116.json",
+        "bytes": 458734,
+        "sha256": "3fd478af5405f47ae315b8be703f3f9a760ab4c60f71c806e7fb797b1dd07786",
+        "gitBlob": "fdb2dff24e92a15cae19ac2f50604cc1e71d878c",
+        "actualCompleteBodyEqual": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-r2-parity-review-20261116.json",
+        "bytes": 258164,
+        "sha256": "337f9c2afedcf83425beeee2892c3d0c49ea1fb139a279f0f5973a2db61f223e",
+        "gitBlob": "07c3f2f7902665b0fe085ea4ff7aac3f51a62292",
+        "actualCompleteBodyEqual": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-root-composition-20261116.json",
+        "bytes": 26069,
+        "sha256": "f2d388f392b042c08abd846b691afb89835e325aa4e154c9695dfea8416a08e8",
+        "gitBlob": "c9e0e07b32dfd21ee55a0852975164faee29d36b",
+        "actualCompleteBodyEqual": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-r1-composite-publication-readback-20261116.json",
+        "bytes": 231365,
+        "sha256": "393a6ee912d88ff0faf979c8229a705578e1bd6723a3cf58769449205dbe2335",
+        "gitBlob": "e695dd8aca0559256e01175166317ab905f467a4",
+        "actualCompleteBodyEqual": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-controls-outcome-20261116.json",
+        "bytes": 5708,
+        "sha256": "3f4170646abff743ee8842e051e56b362845e2ff09ad6fae7cc52467f306c610",
+        "gitBlob": "d2ec7a9926b3a7cb948099010fba5255ae2b94ab",
+        "actualCompleteBodyEqual": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "bytes": 2526318,
+        "sha256": "b8182cbd6babe6d58b51547c0cfc159eff5a11639e2e387580d3e42b668925f3",
+        "gitBlob": "7f35a0dc29d9658b671ec8bf293eca966e3b3138",
+        "actualCompleteBodyEqual": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "bytes": 33583,
+        "sha256": "a1ec9df8f5c8d661bc3512bcf2a63427f47a50d5a95978d4bf081b7de5ebcd88",
+        "gitBlob": "08530261914af6689ffb9765f1696c93b8ed8891",
+        "actualCompleteBodyEqual": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+        "bytes": 84542,
+        "sha256": "489303963ae0461ed8a9f9ded2d9c338465df4d0bdfd0882788fba362af2c80e",
+        "gitBlob": "0f2aac3719acf15284afb4076b1c3ee1e67a49d9",
+        "actualCompleteBodyEqual": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-controls-publication-manifest-20261116.json",
+        "bytes": 6715,
+        "sha256": "5c89e6a1cd29e28d50d62bdff33f5f2dca7f2fe3d00fe524f4e09f15971b6e94",
+        "gitBlob": "d60ac116182083820e737ab346162e3efc281ad5",
+        "actualCompleteBodyEqual": true
+      }
+    ],
+    "bytes": 7068906,
+    "readAt": "2026-11-16T19:54:09.981Z"
+  },
+  "changedDocs": [
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-controls-outcome-20261116.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-controls-publication-manifest-20261116.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-r1-composite-publication-readback-20261116.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-r2-guard-review-20261116.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-r2-parity-review-20261116.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-reviewed-binding-20261116.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-reviewed-runner-20261116.py",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-root-composition-20261116.json",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json"
+  ],
+  "totalDocsLeaves": 2959,
+  "totalNonDocsLeaves": 8798,
+  "totalLeaves": 11757,
+  "nonDocsRootEntriesUnchanged": 53,
+  "workflowsUnchanged": 42,
+  "sourceSnapshot": "8860893e39a0daf17e8b499baee64b7040a9b3a2",
+  "fullSourceReconstructionBasis": {
+    "currentAll53NonDocsRootEntriesEqualActualParent": true,
+    "parentCompleteIndependentProof": {
+      "bytes": 231365,
+      "sha256": "393a6ee912d88ff0faf979c8229a705578e1bd6723a3cf58769449205dbe2335",
+      "gitBlob": "e695dd8aca0559256e01175166317ab905f467a4"
+    }
+  },
+  "planAppend": {
+    "bytes": 2342,
+    "sha256": "d94c5338b74b4531b2777595ab6b0fe64c839d0041f1235393d49e67caae733a",
+    "gitBlob": "faa7d5b6e191b3306b3550b9ccd3053402c6280f"
+  },
+  "statusAppend": {
+    "bytes": 1179,
+    "sha256": "fd975bf1edfe87e24a3f87523f152ad1b0dc5ff2a84cc7bf86b78da6d896e1d2",
+    "gitBlob": "d7a82a556abea64f1dce51337c0d221fb7c3f48a"
+  },
+  "allOriginalCatalogFieldsPreservedExceptExactCurrentStageHistory": true,
+  "original27BundlesAndTotalsPreserved": true,
+  "rootStagingPerformed": false,
+  "runtimeExecuted": false,
+  "independentActualReadbackStillRequired": true
+}

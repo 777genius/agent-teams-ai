@@ -1,0 +1,199 @@
+{
+  "schemaVersion": 1,
+  "kind": "complete-recovery-publication-manifest",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "parentCommit": "d9e8e189143c8f20017aa5c184ba8adcaa83c198",
+  "parentTree": "73ffb7652b15cff0ed55d2279f44cce90e4b8106",
+  "parentDocsTree": "370803ca708f5c132478443981cc9934cbd442c8",
+  "changedFilesExcludingThisManifest": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-complete-actual-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4dfdbf5272044f933c5d3015511633487cbf3946",
+      "bytes": 269555,
+      "sha256": "c3de8b5712f022466023598b7c90c6ef7cee302780014f11bd1c16a84e43c3bd",
+      "previous": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-observed-outer-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7584acad72adf2795b5d3a42fb70187911a121ef",
+      "bytes": 4067,
+      "sha256": "5796655855f0bb0b095230a0c6e8b1c4918059cdecd64fb5d8a57a481a008d61",
+      "previous": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-owner-supplement-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4b5d1b1b165ad4fdc9b9f5b37002dc120f0b2d2e",
+      "bytes": 1609,
+      "sha256": "7688a7e8ccc4174707e2a384fd0b5fbf9c4617b19f8d6abc2a0854da430735df",
+      "previous": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-launch-and-staging-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7572497a63219fdfc2189d098c16cd079d07f7e1",
+      "bytes": 4298,
+      "sha256": "9186a0d82c29b01ee4115ee4b218a1941cc071aa5b74ebd0fe61a3e6162cd29d",
+      "previous": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-controls-root-publication-readback-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a3170d1db4f640e099ba30865c76d79ae9646c3b",
+      "bytes": 7823,
+      "sha256": "f182745f4099e43b0b0e0c0327e67561a6eb946411a813161063516ec5758d22",
+      "previous": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-controls-independent-publication-readback-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "29b1b7667f6922fff37c5267f1c68bcc13ed0fbf",
+      "bytes": 149755,
+      "sha256": "6570365bd48361045f497d43a3abb4b9b40d8f37c44c63e45681bc6ce53abf45",
+      "previous": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-actual-primaries-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1a9cc459f4341dc7b2fdad452a770b3fd018bea1",
+      "bytes": 15521,
+      "sha256": "634f3efbbfea00155fb95d1a6c7e66183e7930a5747b6e4da3aa54a015ef6ac5",
+      "previous": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-actual-primaries-independent-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cab1f33146fbcb1b21a002be18b2886c2f3fc4ad",
+      "bytes": 33804,
+      "sha256": "b5d5bcffcb43f34574d5f31880c4d4f3a44286cb0f18b8bbdd8fc63f9d2fc0b2",
+      "previous": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-complete-guard-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "09152b2789a95f88bce969abc6e6b15edf9e622a",
+      "bytes": 289916,
+      "sha256": "b57ebd0e55861a2e1a563ca4b61337a1ad6a1d238d9c842062c8b3f6c69da49b",
+      "previous": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-complete-parity-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f4f064ff95214119ed799a445d7ed3f0c9abc722",
+      "bytes": 271768,
+      "sha256": "f2f8d1b394f5954c89ade5c425af2f5b7cd2df70ac6211eeda79ffb5ed32e21a",
+      "previous": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-complete-outcome-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "073f5ce539ef20b5f50869cdb9cb7098d13da895",
+      "bytes": 7189,
+      "sha256": "ce3b87e6a0923f88f55a69dc6b10b66c1b524646a97afb51e105bb10f7462c18",
+      "previous": null
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "119a3e8a2d1dccf642afe9118f42e1504ddf9851",
+      "bytes": 2529160,
+      "sha256": "33334ccd4f286b7d1533853ec7ad994f56e986c60d67de7ed772e319522bdd5b",
+      "previous": {
+        "sha": "7f35a0dc29d9658b671ec8bf293eca966e3b3138",
+        "size": 2526318,
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c8184d01e962d2b069d46e97523fe55d17d2d13c",
+      "bytes": 34778,
+      "sha256": "4e22230864f0ef40882f2f266289d4a1a51e959939f17b6f711219f83fd73d1e",
+      "previous": {
+        "sha": "08530261914af6689ffb9765f1696c93b8ed8891",
+        "size": 33583,
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2f730e3c40b9ed98a25c276f0b3ea89368b590ff",
+      "bytes": 102165,
+      "sha256": "e89c368870f5001379fc3df1329393dca272c3efff127c48262c659b1d049dc9",
+      "previous": {
+        "sha": "0f2aac3719acf15284afb4076b1c3ee1e67a49d9",
+        "size": 84542,
+        "mode": "100644"
+      }
+    }
+  ],
+  "appendProof": {
+    "plan": {
+      "parent": {
+        "bytes": 2526318,
+        "sha256": "b8182cbd6babe6d58b51547c0cfc159eff5a11639e2e387580d3e42b668925f3",
+        "gitBlob": "7f35a0dc29d9658b671ec8bf293eca966e3b3138"
+      },
+      "append": {
+        "bytes": 2842,
+        "sha256": "2a21743c656f5369d943310e8e939794d83f8eb1646ba0058113e8147e28fcc9",
+        "gitBlob": "48463ccb134f2015f1d518bb71dc16be10422378"
+      },
+      "result": {
+        "bytes": 2529160,
+        "sha256": "33334ccd4f286b7d1533853ec7ad994f56e986c60d67de7ed772e319522bdd5b",
+        "gitBlob": "119a3e8a2d1dccf642afe9118f42e1504ddf9851"
+      }
+    },
+    "status": {
+      "parent": {
+        "bytes": 33583,
+        "sha256": "a1ec9df8f5c8d661bc3512bcf2a63427f47a50d5a95978d4bf081b7de5ebcd88",
+        "gitBlob": "08530261914af6689ffb9765f1696c93b8ed8891"
+      },
+      "append": {
+        "bytes": 1195,
+        "sha256": "9300c28535293e52965cf1ab2c25226ac5d98ef29a373e313c2f7c8d1094776e",
+        "gitBlob": "1bda4958e1b0b4ddc865293a5f30cb789ae9bf6c"
+      },
+      "result": {
+        "bytes": 34778,
+        "sha256": "4e22230864f0ef40882f2f266289d4a1a51e959939f17b6f711219f83fd73d1e",
+        "gitBlob": "c8184d01e962d2b069d46e97523fe55d17d2d13c"
+      }
+    }
+  },
+  "preservation": {
+    "sourceLeaves": 8798,
+    "workflows": 42,
+    "nonDocsRootEntries": 53,
+    "originalBundles": 27,
+    "originalTotals": {
+      "bundles": 27,
+      "outerBytes": 17894693,
+      "payloadInstances": 219,
+      "payloadBytes": 15911913
+    },
+    "sourceOrWorkflowChanges": 0
+  },
+  "scope": "Publish accepted completed recovery only; no new R1, source, test, runner, CI or whole-E2E selection."
+}

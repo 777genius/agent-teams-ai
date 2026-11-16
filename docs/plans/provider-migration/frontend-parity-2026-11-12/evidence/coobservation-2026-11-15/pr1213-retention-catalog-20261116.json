@@ -982,7 +982,7 @@
     }
   },
   "currentCrossCloseStage": {
-    "phase": "Actual133 GREEN accepted; original validation INCOMPLETE/SPENT; exact isolated recovery controls R2 accepted, local staging/runtime pending actual publication readback",
+    "phase": "Actual whole133 GREEN and distinct isolated recovery three-guard package fully accepted; next source scope unselected",
     "sourceCommit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
     "sourceSnapshot": {
       "bytes": 2478650,
@@ -1117,8 +1117,8 @@
       "originalUnknownOutcomeUnchanged": true,
       "runnerAuthored": true,
       "bindingAuthored": true,
-      "executed": false,
-      "nextGate": "Complete actual root and independent publication readback before exclusive staging and one invocation. Retain complete fresh pre/post boundaries, all14 metadata and3 primary receipts, final cutoff/cleanup and separately observed new outer0.",
+      "executed": true,
+      "nextGate": "Recovery exhausted and accepted. Any next source scope requires a new exact reviewed R1 and complete actual publication readback.",
       "runner": {
         "bytes": 52074,
         "sha256": "fa3920cdf633c585db18c2fc30fa0e97f2103c5ae00a133145f1e069105753cd",
@@ -1149,7 +1149,8 @@
         "sha256": "393a6ee912d88ff0faf979c8229a705578e1bd6723a3cf58769449205dbe2335",
         "gitBlob": "e695dd8aca0559256e01175166317ab905f467a4"
       },
-      "locallyStaged": false
+      "locallyStaged": true,
+      "completed": true
     },
     "next139": {
       "r1": "9bc91d0a53d775528ffe9a9040c67493a5f10546",
@@ -1157,9 +1158,148 @@
       "testPostimageAuthored": false,
       "producerPostimagesAuthored": false,
       "runnerPostimageAuthored": false,
-      "status": "BLOCKED pending complete new recovery validation and a separately reviewed predecessor-gate amendment; no source scope silently expanded"
+      "status": "Unpublished; prerequisite recovery now completed, but no postimage authorship or execution admitted. A new proposed combined scope requires its own exact R1 gate."
     },
-    "qualification": "No whole E2E, fresh GUI, native/provider or canonical typing/build claim."
+    "qualification": "No whole E2E, fresh GUI, native/provider or canonical typing/build claim.",
+    "completedRecovery": {
+      "session": 55483,
+      "outerExit": 0,
+      "commands": [
+        {
+          "command": "lint",
+          "argv": [
+            "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+            "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+            "--config.pm-on-fail=error",
+            "--config.verify-deps-before-run=false",
+            "--config.engine-strict=true",
+            "lint:fast:files",
+            "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+            "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+            "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+          ],
+          "exitCode": 0,
+          "durationSeconds": 132.44411284700618,
+          "receipt": {
+            "path": "/tmp/c714-cross-validation-recovery-evidence/validation-package-lint-1-receipt.json",
+            "bytes": 1240,
+            "sha256": "44b197a40030833533cf6011fa920937442487da5db5a7f81c109124d24499d7",
+            "gitBlob": "3c7f0c1e7f3fcf949fa899768dc0388d72aa49b0"
+          }
+        },
+        {
+          "command": "source-size",
+          "argv": [
+            "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+            "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+            "--config.pm-on-fail=error",
+            "--config.verify-deps-before-run=false",
+            "--config.engine-strict=true",
+            "guard:source-file-size"
+          ],
+          "exitCode": 0,
+          "durationSeconds": 25.007133935003367,
+          "receipt": {
+            "path": "/tmp/c714-cross-validation-recovery-evidence/validation-package-source-size-1-receipt.json",
+            "bytes": 1057,
+            "sha256": "fc24e0fdc4af62ae303038c1ef40e3f34612f1500ecf15fd5ab595b16cd2ee27",
+            "gitBlob": "2fc1f6153dd1d16b947ee5b665780f9de2259884"
+          }
+        },
+        {
+          "command": "diff-check",
+          "argv": [
+            "/usr/local/bin/git",
+            "diff",
+            "--check",
+            "--",
+            "scripts/legacy-agent-host/desktop-ui-controls.ts",
+            "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+            "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+            "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+            "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+          ],
+          "exitCode": 0,
+          "durationSeconds": 0.14719924100063508,
+          "receipt": {
+            "path": "/tmp/c714-cross-validation-recovery-evidence/validation-package-diff-check-1-receipt.json",
+            "bytes": 1141,
+            "sha256": "cfb961e4f7fc07b0456ff05c53d8a55473c6600121899c51313939e29e8c411a",
+            "gitBlob": "4564c90fd42eeabd0241c597dc936e358561c173"
+          }
+        }
+      ],
+      "metadataCalls": 14,
+      "allMetadataExit0": true,
+      "perPrimarySeconds": 180,
+      "perMetadataSeconds": 30,
+      "preflightSeconds": 536.5100564920067,
+      "commandPhaseSeconds": 157.6279635729952,
+      "postflightSeconds": 451.4619881670005,
+      "totalSeconds": 1145.6118705659974,
+      "sourceWrites": 0,
+      "fullInputsInspectedAndPreserved": true,
+      "finalSignalCutoff": {
+        "at": "2026-11-16T20:17:12.984041+00:00",
+        "pendingSignals": [],
+        "supervisorExitZeroRequired": true,
+        "scope": "Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission."
+      },
+      "capturedCleanup": {
+        "unknownPrimaryLaunches": [],
+        "capturedSessionMembersAfter": [],
+        "newTestTempsRemaining": [],
+        "scope": "All captured primary sessions/groups and TEST-prefixed task temps; metadata sessions are checked individually. No universal escaped-child/native custody proof."
+      },
+      "packet": {
+        "bytes": 269555,
+        "sha256": "c3de8b5712f022466023598b7c90c6ef7cee302780014f11bd1c16a84e43c3bd",
+        "gitBlob": "4dfdbf5272044f933c5d3015511633487cbf3946"
+      },
+      "outerObservation": {
+        "bytes": 4067,
+        "sha256": "5796655855f0bb0b095230a0c6e8b1c4918059cdecd64fb5d8a57a481a008d61",
+        "gitBlob": "7584acad72adf2795b5d3a42fb70187911a121ef"
+      },
+      "ownerSupplement": {
+        "bytes": 1609,
+        "sha256": "7688a7e8ccc4174707e2a384fd0b5fbf9c4617b19f8d6abc2a0854da430735df",
+        "gitBlob": "4b5d1b1b165ad4fdc9b9f5b37002dc120f0b2d2e"
+      },
+      "guard": {
+        "bytes": 289916,
+        "sha256": "b57ebd0e55861a2e1a563ca4b61337a1ad6a1d238d9c842062c8b3f6c69da49b",
+        "gitBlob": "09152b2789a95f88bce969abc6e6b15edf9e622a"
+      },
+      "parity": {
+        "bytes": 271768,
+        "sha256": "f2f8d1b394f5954c89ade5c425af2f5b7cd2df70ac6211eeda79ffb5ed32e21a",
+        "gitBlob": "f4f064ff95214119ed799a445d7ed3f0c9abc722"
+      },
+      "census": {
+        "phaseFiles": 73,
+        "phaseBytes": 90212195,
+        "completeLiteralFiles": 63,
+        "completeLiteralBytes": 77395,
+        "largeActualFileInstances": 10,
+        "uniqueLargeCompleteBodies": 5,
+        "additionalOwnerBytes": 528,
+        "sourceRows": 8798,
+        "workflowLeaves": 42,
+        "C5TreeAndIndexLeaves": 11567,
+        "sourceOverlays": 5,
+        "dependencyRows": 122773,
+        "compiledRows": 1454,
+        "productionFiles": 5020,
+        "frozenExceptions": 141,
+        "ordinarySourceCap": 800
+      },
+      "outcome": {
+        "bytes": 7189,
+        "sha256": "ce3b87e6a0923f88f55a69dc6b10b66c1b524646a97afb51e105bb10f7462c18",
+        "gitBlob": "073f5ce539ef20b5f50869cdb9cb7098d13da895"
+      }
+    }
   },
   "priorCrossCloseStageAtTestPublication": {
     "stage": "test-only-R2-published-runtime-pending",
@@ -1989,6 +2129,284 @@
       "sha": "08530261914af6689ffb9765f1696c93b8ed8891",
       "bytes": 33583,
       "sha256": "a1ec9df8f5c8d661bc3512bcf2a63427f47a50d5a95978d4bf081b7de5ebcd88"
+    }
+  ],
+  "priorCrossCloseStageAtRecoveryCompletion": {
+    "phase": "Actual133 GREEN accepted; original validation INCOMPLETE/SPENT; exact isolated recovery controls R2 accepted, local staging/runtime pending actual publication readback",
+    "sourceCommit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+    "sourceSnapshot": {
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+    },
+    "actualGreen": {
+      "envelope": {
+        "bytes": 166444,
+        "sha256": "c1ec7ed1270235d520b436e28cbdeb0988bc1af4c8473b5226e34b081b305981",
+        "gitBlob": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b"
+      },
+      "primarySemantic": {
+        "bytes": 182384,
+        "sha256": "1f77eaa85a42e3373b40426cafba5c22dd5b1f4c5807040207e46283841db683",
+        "gitBlob": "7a110b7c85a6dfce5d5f2fe4a389e1d1205baf82"
+      },
+      "finalSemantic": {
+        "bytes": 140647,
+        "sha256": "74936b31eeefd735ec329d286ae145b2eddb16fa025e5fb8cc6f715c5b133fd3",
+        "gitBlob": "4a49adfedbc84301e88d524d71b766a7ad785d14"
+      },
+      "fullGuard": {
+        "bytes": 209270,
+        "sha256": "b56c4d2a4328f11a679a73de100d13af4ec7e8ccc6fe8f6333de98dec4d2d329",
+        "gitBlob": "848e6efd0b924e4415848551cfea034f22b84221"
+      },
+      "receipt": {
+        "bytes": 33963,
+        "sha256": "04b75f107619fb1fcdd89659cbde2d5ba030bd22583e233be7acd8a6fbd45d0b",
+        "gitBlob": "8e03dc33aca8c5dbd8ebc354e8a41a2361fa525f"
+      },
+      "cases": 133,
+      "pass": 133,
+      "fail": 0,
+      "skip": 0,
+      "cancelled": 0,
+      "todo": 0,
+      "old97Pass": 97,
+      "new36Pass": 36,
+      "targetVariantsComplete": 13,
+      "observedOuterSession": 17386,
+      "outerExit": 0,
+      "primarySeconds": 25.643054378,
+      "preflightSeconds": 349.629988461,
+      "postflightSeconds": 533.882963653,
+      "completeInputsPreserved": true,
+      "capturedCleanupDebt": false,
+      "qualification": "Finite actual-source GREEN only; no live GUI/native/provider or whole E2E qualification"
+    },
+    "originalValidation": {
+      "envelope": {
+        "bytes": 147631,
+        "sha256": "ebad9bfc9758fd75a6337e2281fc5012dc10302e591581ffac2429107ea9a0b1",
+        "gitBlob": "f0cb8ed61933af59c64991f3396274073587366f"
+      },
+      "guardClassification": {
+        "bytes": 146237,
+        "sha256": "22813b7c3fa165d506e7eb487b5be229ea7910d4208c73a930a9621978a4703e",
+        "gitBlob": "736df253a457b9a7260febbd74071ed2615be2bd"
+      },
+      "parityClassification": {
+        "bytes": 169081,
+        "sha256": "0863878d6085e61a91e8f96d970bdb9cd83a3ea6ce0a174c80bf0a0eb5cd9175",
+        "gitBlob": "7567c92bcc194c2de5e26abfed0a8604522fe589"
+      },
+      "phase": "INCOMPLETE",
+      "attempt": "SPENT",
+      "primaryCommands": [
+        {
+          "command": "lint",
+          "exitCode": 0,
+          "seconds": 60.415341385
+        },
+        {
+          "command": "source-size",
+          "exitCode": 0,
+          "seconds": 23.660546493
+        },
+        {
+          "command": "diff-check",
+          "exitCode": 0,
+          "seconds": 0.873901859
+        }
+      ],
+      "metadataExit0": 14,
+      "filesRetained": 71,
+      "totalRecordedBytes": 50611631,
+      "fullPreflightSeconds": 961.419392913,
+      "afterSource": {
+        "bytes": 2478650,
+        "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+        "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+      },
+      "afterDependencies": "MISSING",
+      "afterCompiled": "MISSING",
+      "finalAggregate": "MISSING",
+      "observedOuterExit": "UNKNOWN",
+      "physicalSupervisorLifetime": "UNKNOWN",
+      "noRemainingAuthorizedPrimaryPath": true,
+      "noRemainingPathBasis": "Three finalized primary receipts, after-metadata8..14 and full after-source886 joined to complete165f control flow. No primary back-edge after final postflight entry.",
+      "oldEvidenceAndControlsProtected": true,
+      "reclassifiedAsPass": false
+    },
+    "reviewedRecovery": {
+      "r1": {
+        "bytes": 22522,
+        "sha256": "9376703a1fead5196e12b16da75f20d723cac8647dd2593701c80f7a5976b185",
+        "gitBlob": "e664eaa666943272570ec13012bf6d6439d3d454"
+      },
+      "guard": {
+        "bytes": 167262,
+        "sha256": "9375e23aeba4b871ad016c82c76ae539f769bea1a5f2ab72c63a8d615af24585",
+        "gitBlob": "0fdbe9a84daa354332d61c13a532090199d50c88"
+      },
+      "parity": {
+        "bytes": 133047,
+        "sha256": "d94fb2464c47195fadfcaf311732025c578e8084b9b7ef701dd52c76e6aeca77",
+        "gitBlob": "97bfd42e46bc1dd2160f8c9826de68219303b67d"
+      },
+      "rootBothFullBodiesReadAndRehashed": true,
+      "sourceWrites": 0,
+      "allowedCommands": [
+        "lint",
+        "source-size",
+        "diff-check"
+      ],
+      "attempts": 1,
+      "newControlRoot": "/tmp/c714-cross-validation-recovery-controls",
+      "newOutputRoot": "/tmp/c714-cross-validation-recovery-evidence",
+      "oldScopeResumed": false,
+      "originalUnknownOutcomeUnchanged": true,
+      "runnerAuthored": true,
+      "bindingAuthored": true,
+      "executed": false,
+      "nextGate": "Complete actual root and independent publication readback before exclusive staging and one invocation. Retain complete fresh pre/post boundaries, all14 metadata and3 primary receipts, final cutoff/cleanup and separately observed new outer0.",
+      "runner": {
+        "bytes": 52074,
+        "sha256": "fa3920cdf633c585db18c2fc30fa0e97f2103c5ae00a133145f1e069105753cd",
+        "gitBlob": "b961d5e8283a775ae66afcb5475247c55b859547"
+      },
+      "binding": {
+        "bytes": 3385634,
+        "sha256": "cd0556c67d0275061a834c08ac901dd34f26c11b3367a85adaecdd623344f5e7",
+        "gitBlob": "0186765f4d0dacf349efda2a0c45fd7333227fb0"
+      },
+      "r2Guard": {
+        "bytes": 458734,
+        "sha256": "3fd478af5405f47ae315b8be703f3f9a760ab4c60f71c806e7fb797b1dd07786",
+        "gitBlob": "fdb2dff24e92a15cae19ac2f50604cc1e71d878c"
+      },
+      "r2Parity": {
+        "bytes": 258164,
+        "sha256": "337f9c2afedcf83425beeee2892c3d0c49ea1fb139a279f0f5973a2db61f223e",
+        "gitBlob": "07c3f2f7902665b0fe085ea4ff7aac3f51a62292"
+      },
+      "composition": {
+        "bytes": 26069,
+        "sha256": "f2d388f392b042c08abd846b691afb89835e325aa4e154c9695dfea8416a08e8",
+        "gitBlob": "c9e0e07b32dfd21ee55a0852975164faee29d36b"
+      },
+      "r1ActualCompositePublicationReadback": {
+        "bytes": 231365,
+        "sha256": "393a6ee912d88ff0faf979c8229a705578e1bd6723a3cf58769449205dbe2335",
+        "gitBlob": "e695dd8aca0559256e01175166317ab905f467a4"
+      },
+      "locallyStaged": false
+    },
+    "next139": {
+      "r1": "9bc91d0a53d775528ffe9a9040c67493a5f10546",
+      "published": false,
+      "testPostimageAuthored": false,
+      "producerPostimagesAuthored": false,
+      "runnerPostimageAuthored": false,
+      "status": "BLOCKED pending complete new recovery validation and a separately reviewed predecessor-gate amendment; no source scope silently expanded"
+    },
+    "qualification": "No whole E2E, fresh GUI, native/provider or canonical typing/build claim."
+  },
+  "crossValidationRecoveryCompletionEvidenceFiles": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-complete-actual-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4dfdbf5272044f933c5d3015511633487cbf3946",
+      "bytes": 269555,
+      "sha256": "c3de8b5712f022466023598b7c90c6ef7cee302780014f11bd1c16a84e43c3bd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-observed-outer-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7584acad72adf2795b5d3a42fb70187911a121ef",
+      "bytes": 4067,
+      "sha256": "5796655855f0bb0b095230a0c6e8b1c4918059cdecd64fb5d8a57a481a008d61"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-owner-supplement-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4b5d1b1b165ad4fdc9b9f5b37002dc120f0b2d2e",
+      "bytes": 1609,
+      "sha256": "7688a7e8ccc4174707e2a384fd0b5fbf9c4617b19f8d6abc2a0854da430735df"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-launch-and-staging-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7572497a63219fdfc2189d098c16cd079d07f7e1",
+      "bytes": 4298,
+      "sha256": "9186a0d82c29b01ee4115ee4b218a1941cc071aa5b74ebd0fe61a3e6162cd29d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-controls-root-publication-readback-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a3170d1db4f640e099ba30865c76d79ae9646c3b",
+      "bytes": 7823,
+      "sha256": "f182745f4099e43b0b0e0c0327e67561a6eb946411a813161063516ec5758d22"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-controls-independent-publication-readback-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "29b1b7667f6922fff37c5267f1c68bcc13ed0fbf",
+      "bytes": 149755,
+      "sha256": "6570365bd48361045f497d43a3abb4b9b40d8f37c44c63e45681bc6ce53abf45"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-actual-primaries-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1a9cc459f4341dc7b2fdad452a770b3fd018bea1",
+      "bytes": 15521,
+      "sha256": "634f3efbbfea00155fb95d1a6c7e66183e7930a5747b6e4da3aa54a015ef6ac5"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-actual-primaries-independent-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cab1f33146fbcb1b21a002be18b2886c2f3fc4ad",
+      "bytes": 33804,
+      "sha256": "b5d5bcffcb43f34574d5f31880c4d4f3a44286cb0f18b8bbdd8fc63f9d2fc0b2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-complete-guard-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "09152b2789a95f88bce969abc6e6b15edf9e622a",
+      "bytes": 289916,
+      "sha256": "b57ebd0e55861a2e1a563ca4b61337a1ad6a1d238d9c842062c8b3f6c69da49b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-complete-parity-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f4f064ff95214119ed799a445d7ed3f0c9abc722",
+      "bytes": 271768,
+      "sha256": "f2f8d1b394f5954c89ade5c425af2f5b7cd2df70ac6211eeda79ffb5ed32e21a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-complete-outcome-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "073f5ce539ef20b5f50869cdb9cb7098d13da895",
+      "bytes": 7189,
+      "sha256": "ce3b87e6a0923f88f55a69dc6b10b66c1b524646a97afb51e105bb10f7462c18"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c8184d01e962d2b069d46e97523fe55d17d2d13c",
+      "bytes": 34778,
+      "sha256": "4e22230864f0ef40882f2f266289d4a1a51e959939f17b6f711219f83fd73d1e"
     }
   ]
 }

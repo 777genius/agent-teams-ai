@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "kind": "accepted-complete-isolated-cross-validation-recovery",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "parentCommit": "d9e8e189143c8f20017aa5c184ba8adcaa83c198",
+  "parentTree": "73ffb7652b15cff0ed55d2279f44cce90e4b8106",
+  "accepted": true,
+  "packet": {
+    "bytes": 269555,
+    "sha256": "c3de8b5712f022466023598b7c90c6ef7cee302780014f11bd1c16a84e43c3bd",
+    "gitBlob": "4dfdbf5272044f933c5d3015511633487cbf3946"
+  },
+  "outerObservation": {
+    "bytes": 4067,
+    "sha256": "5796655855f0bb0b095230a0c6e8b1c4918059cdecd64fb5d8a57a481a008d61",
+    "gitBlob": "7584acad72adf2795b5d3a42fb70187911a121ef"
+  },
+  "ownerSupplement": {
+    "bytes": 1609,
+    "sha256": "7688a7e8ccc4174707e2a384fd0b5fbf9c4617b19f8d6abc2a0854da430735df",
+    "gitBlob": "4b5d1b1b165ad4fdc9b9f5b37002dc120f0b2d2e"
+  },
+  "independentReviews": {
+    "guard": {
+      "bytes": 289916,
+      "sha256": "b57ebd0e55861a2e1a563ca4b61337a1ad6a1d238d9c842062c8b3f6c69da49b",
+      "gitBlob": "09152b2789a95f88bce969abc6e6b15edf9e622a"
+    },
+    "parity": {
+      "bytes": 271768,
+      "sha256": "f2f8d1b394f5954c89ade5c425af2f5b7cd2df70ac6211eeda79ffb5ed32e21a",
+      "gitBlob": "f4f064ff95214119ed799a445d7ed3f0c9abc722"
+    }
+  },
+  "execution": {
+    "session": 55483,
+    "outerExit": 0,
+    "commands": [
+      {
+        "command": "lint",
+        "argv": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+          "--config.pm-on-fail=error",
+          "--config.verify-deps-before-run=false",
+          "--config.engine-strict=true",
+          "lint:fast:files",
+          "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ],
+        "exitCode": 0,
+        "durationSeconds": 132.44411284700618,
+        "receipt": {
+          "path": "/tmp/c714-cross-validation-recovery-evidence/validation-package-lint-1-receipt.json",
+          "bytes": 1240,
+          "sha256": "44b197a40030833533cf6011fa920937442487da5db5a7f81c109124d24499d7",
+          "gitBlob": "3c7f0c1e7f3fcf949fa899768dc0388d72aa49b0"
+        }
+      },
+      {
+        "command": "source-size",
+        "argv": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+          "--config.pm-on-fail=error",
+          "--config.verify-deps-before-run=false",
+          "--config.engine-strict=true",
+          "guard:source-file-size"
+        ],
+        "exitCode": 0,
+        "durationSeconds": 25.007133935003367,
+        "receipt": {
+          "path": "/tmp/c714-cross-validation-recovery-evidence/validation-package-source-size-1-receipt.json",
+          "bytes": 1057,
+          "sha256": "fc24e0fdc4af62ae303038c1ef40e3f34612f1500ecf15fd5ab595b16cd2ee27",
+          "gitBlob": "2fc1f6153dd1d16b947ee5b665780f9de2259884"
+        }
+      },
+      {
+        "command": "diff-check",
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--check",
+          "--",
+          "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ],
+        "exitCode": 0,
+        "durationSeconds": 0.14719924100063508,
+        "receipt": {
+          "path": "/tmp/c714-cross-validation-recovery-evidence/validation-package-diff-check-1-receipt.json",
+          "bytes": 1141,
+          "sha256": "cfb961e4f7fc07b0456ff05c53d8a55473c6600121899c51313939e29e8c411a",
+          "gitBlob": "4564c90fd42eeabd0241c597dc936e358561c173"
+        }
+      }
+    ],
+    "metadataCalls": 14,
+    "allMetadataExit0": true,
+    "perPrimarySeconds": 180,
+    "perMetadataSeconds": 30,
+    "preflightSeconds": 536.5100564920067,
+    "commandPhaseSeconds": 157.6279635729952,
+    "postflightSeconds": 451.4619881670005,
+    "totalSeconds": 1145.6118705659974,
+    "sourceWrites": 0,
+    "fullInputsInspectedAndPreserved": true,
+    "finalSignalCutoff": {
+      "at": "2026-11-16T20:17:12.984041+00:00",
+      "pendingSignals": [],
+      "supervisorExitZeroRequired": true,
+      "scope": "Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission."
+    },
+    "capturedCleanup": {
+      "unknownPrimaryLaunches": [],
+      "capturedSessionMembersAfter": [],
+      "newTestTempsRemaining": [],
+      "scope": "All captured primary sessions/groups and TEST-prefixed task temps; metadata sessions are checked individually. No universal escaped-child/native custody proof."
+    }
+  },
+  "census": {
+    "phaseFiles": 73,
+    "phaseBytes": 90212195,
+    "completeLiteralFiles": 63,
+    "completeLiteralBytes": 77395,
+    "largeActualFileInstances": 10,
+    "uniqueLargeCompleteBodies": 5,
+    "additionalOwnerBytes": 528,
+    "sourceRows": 8798,
+    "workflowLeaves": 42,
+    "C5TreeAndIndexLeaves": 11567,
+    "sourceOverlays": 5,
+    "dependencyRows": 122773,
+    "compiledRows": 1454,
+    "productionFiles": 5020,
+    "frozenExceptions": 141,
+    "ordinarySourceCap": 800
+  },
+  "whole133": {
+    "status": "Previously completed and independently accepted; not rerun in this recovery",
+    "pass": 133,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0,
+    "envelope": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b"
+  },
+  "oldOriginalValidation": {
+    "session": 81561,
+    "status": "INCOMPLETE",
+    "attempt": "SPENT",
+    "aggregate": "UNKNOWN",
+    "outer": "UNKNOWN",
+    "physicalSupervisorLifetime": "UNKNOWN",
+    "reclassified": false,
+    "protected": true
+  },
+  "stateLoss": {
+    "observedAfterAllNewRuntimeEvidenceWasRetained": "2026-11-16T20:26:04.868Z",
+    "cause": "UNKNOWN",
+    "newRuntimeOutcomePreservedByImmutableRetainedEvidence": true,
+    "independentReviewsReconstructedFromCompleteBodies": true,
+    "newRuntimeReplayed": false
+  },
+  "nextScope": {
+    "nodeOnlyProposal": "9bc91d0a53d775528ffe9a9040c67493a5f10546",
+    "published": false,
+    "sourceTestOrRunnerPostimagesAuthored": false,
+    "combinedNode139Renderer85": "Feasibility preparation only; a new independently reviewed exact R1, publication and complete actual readback are required before any new postimage authorship."
+  },
+  "open": [
+    "canonical typing/build",
+    "fresh GUI/platform acceptance",
+    "Windows Process15s",
+    "Windows Packaged10s",
+    "strictDarwinP09",
+    "laterP11/genuineM16",
+    "incoming source/package integration",
+    "whole E2E completion"
+  ],
+  "qualification": "Acceptance covers only the completed isolated three-guard recovery with full source/runtime-input preservation and captured cleanup. No native/provider or whole-E2E qualification is inferred."
+}

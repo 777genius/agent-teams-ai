@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "kind": "separately-observed-new-recovery-supervisor-exit",
+  "selectedInvocation": {
+    "at": "2026-11-16T19:58:04.138Z",
+    "argv": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+      "/tmp/c714-cross-validation-recovery-controls/runner.py",
+      "/tmp/c714-cross-validation-recovery-controls/binding.json",
+      "cd0556c67d0275061a834c08ac901dd34f26c11b3367a85adaecdd623344f5e7",
+      "run",
+      "validation-package"
+    ],
+    "publication": "d9e8e189143c8f20017aa5c184ba8adcaa83c198",
+    "runner": {
+      "bytes": 52074,
+      "sha256": "fa3920cdf633c585db18c2fc30fa0e97f2103c5ae00a133145f1e069105753cd",
+      "gitBlob": "b961d5e8283a775ae66afcb5475247c55b859547"
+    },
+    "binding": {
+      "bytes": 3385634,
+      "sha256": "cd0556c67d0275061a834c08ac901dd34f26c11b3367a85adaecdd623344f5e7",
+      "gitBlob": "0186765f4d0dacf349efda2a0c45fd7333227fb0"
+    },
+    "attempts": 1
+  },
+  "launchChronology": {
+    "bytes": 4298,
+    "sha256": "9186a0d82c29b01ee4115ee4b218a1941cc071aa5b74ebd0fe61a3e6162cd29d",
+    "gitBlob": "7572497a63219fdfc2189d098c16cd079d07f7e1"
+  },
+  "observedSession": 55483,
+  "actualToolCompletion": {
+    "chunk_id": "266b73",
+    "wall_time_seconds": 0.000021185,
+    "exit_code": 0,
+    "original_token_count": 288,
+    "output": "{\"command\": \"validation-package\", \"action\": \"run\", \"exitCode\": 0, \"exitSignal\": null, \"timedOut\": false, \"executionError\": null, \"postflightError\": null, \"inputsPreserved\": true, \"fullRuntimeInputsInspected\": true, \"fullRuntimeInputsPreserved\": true, \"sourceAndSupervisorMetadataPreserved\": true, \"commandCompletedNormally\": true, \"scopeCompleted\": true, \"preflightSeconds\": 536.5100564920067, \"commandPhaseSeconds\": 157.6279635729952, \"cleanupSeconds\": 0, \"postflightSeconds\": 451.4619881670005, \"totalInvocationSeconds\": 1145.6118705659974, \"unreachedValidationCommands\": [], \"rawCombinedOutput\": null, \"cleanup\": {\"unknownPrimaryLaunches\": [], \"capturedSessionMembersAfter\": [], \"newTestTempsRemaining\": [], \"scope\": \"All captured primary sessions/groups and TEST-prefixed task temps; metadata sessions are checked individually. No universal escaped-child/native custody proof.\"}, \"signalAdmissionCutoff\": {\"at\": \"2026-11-16T20:17:12.984041+00:00\", \"pendingSignals\": [], \"supervisorExitZeroRequired\": true, \"scope\": \"Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.\"}}\n"
+  },
+  "printedFinalSummary": {
+    "command": "validation-package",
+    "action": "run",
+    "exitCode": 0,
+    "exitSignal": null,
+    "timedOut": false,
+    "executionError": null,
+    "postflightError": null,
+    "inputsPreserved": true,
+    "fullRuntimeInputsInspected": true,
+    "fullRuntimeInputsPreserved": true,
+    "sourceAndSupervisorMetadataPreserved": true,
+    "commandCompletedNormally": true,
+    "scopeCompleted": true,
+    "preflightSeconds": 536.5100564920067,
+    "commandPhaseSeconds": 157.6279635729952,
+    "cleanupSeconds": 0,
+    "postflightSeconds": 451.4619881670005,
+    "totalInvocationSeconds": 1145.6118705659974,
+    "unreachedValidationCommands": [],
+    "rawCombinedOutput": null,
+    "cleanup": {
+      "unknownPrimaryLaunches": [],
+      "capturedSessionMembersAfter": [],
+      "newTestTempsRemaining": [],
+      "scope": "All captured primary sessions/groups and TEST-prefixed task temps; metadata sessions are checked individually. No universal escaped-child/native custody proof."
+    },
+    "signalAdmissionCutoff": {
+      "at": "2026-11-16T20:17:12.984041+00:00",
+      "pendingSignals": [],
+      "supervisorExitZeroRequired": true,
+      "scope": "Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission."
+    }
+  },
+  "observedAt": "2026-11-16T20:18:33.614Z",
+  "oldOriginalValidation": "INCOMPLETE/SPENT/UNKNOWN unchanged",
+  "newRecoveryIndependentFullPacketReview": "pending"
+}

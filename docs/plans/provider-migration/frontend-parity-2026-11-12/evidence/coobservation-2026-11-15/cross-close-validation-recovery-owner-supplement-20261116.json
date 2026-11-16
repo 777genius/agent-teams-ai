@@ -1,0 +1,38 @@
+{
+  "kind": "completed-recovery-owned-output-identity-supplement",
+  "packet": "4dfdbf5272044f933c5d3015511633487cbf3946",
+  "ownerFile": {
+    "path": "/tmp/c714-cross-validation-recovery-evidence/owner.json",
+    "mode": "0o644",
+    "bytes": 528,
+    "sha256": "0cbd35316ad57ae4d91f1b61533c79f4737eceea5ac03e05c96d1c9f59dd57aa",
+    "gitBlob": "46f73b4ec2f22ad64ba54f1d9ca6a3cb536c5e5e",
+    "body": "{\n  \"kind\": \"c714-cross-validation-recovery-evidence\",\n  \"base\": \"c5ff4fc283e58d486c58147b4dfb00144ca10d34\",\n  \"publishedR1\": \"34f3090480edff81beb56507e0f2b7e2f0060b1e\",\n  \"runner\": {\n    \"bytes\": 52074,\n    \"sha256\": \"fa3920cdf633c585db18c2fc30fa0e97f2103c5ae00a133145f1e069105753cd\",\n    \"gitBlob\": \"b961d5e8283a775ae66afcb5475247c55b859547\"\n  },\n  \"test\": {\n    \"bytes\": 155423,\n    \"sha256\": \"b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409\",\n    \"gitBlob\": \"0aec698e88cc3af8d12c48f6d93b038efcc84900\"\n  }\n}\n"
+  },
+  "directories": [
+    {
+      "path": "/tmp/c714-cross-validation-recovery-evidence",
+      "mode": "0o700",
+      "device": 39,
+      "inode": 2069906,
+      "isSymlink": false
+    },
+    {
+      "path": "/tmp/c714-cross-validation-recovery-evidence/test-tmp",
+      "mode": "0o700",
+      "device": 39,
+      "inode": 2069908,
+      "isSymlink": false
+    },
+    {
+      "path": "/tmp/c714-cross-validation-recovery-controls",
+      "mode": "0o700",
+      "device": 39,
+      "inode": 2069714,
+      "isSymlink": false
+    }
+  ],
+  "currentTaskTmpEntries": [],
+  "rootDataReadOnly": true,
+  "noRuntimeRerun": true
+}

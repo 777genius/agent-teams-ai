@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "kind": "cross-validation-recovery-publication-staging-and-launch-observation",
+  "publication": "d9e8e189143c8f20017aa5c184ba8adcaa83c198",
+  "rootActualPublicationReadback": {
+    "bytes": 7823,
+    "sha256": "f182745f4099e43b0b0e0c0327e67561a6eb946411a813161063516ec5758d22",
+    "gitBlob": "a3170d1db4f640e099ba30865c76d79ae9646c3b"
+  },
+  "independentActualPublicationReadback": {
+    "bytes": 149755,
+    "sha256": "6570365bd48361045f497d43a3abb4b9b40d8f37c44c63e45681bc6ce53abf45",
+    "gitBlob": "29b1b7667f6922fff37c5267f1c68bcc13ed0fbf"
+  },
+  "stagingAdmission": {
+    "at": "2026-11-16T19:57:20.646Z",
+    "published": "d9e8e189143c8f20017aa5c184ba8adcaa83c198",
+    "root": {
+      "bytes": 7823,
+      "sha256": "f182745f4099e43b0b0e0c0327e67561a6eb946411a813161063516ec5758d22",
+      "gitBlob": "a3170d1db4f640e099ba30865c76d79ae9646c3b"
+    },
+    "independent": {
+      "bytes": 149755,
+      "sha256": "6570365bd48361045f497d43a3abb4b9b40d8f37c44c63e45681bc6ce53abf45",
+      "gitBlob": "29b1b7667f6922fff37c5267f1c68bcc13ed0fbf"
+    }
+  },
+  "staging": {
+    "initial": {
+      "chunk_id": "b5981d",
+      "wall_time_seconds": 1.000695011,
+      "session_id": 60628,
+      "original_token_count": 0,
+      "output": ""
+    },
+    "ready": {
+      "chunk_id": "03ab02",
+      "wall_time_seconds": 5.001235927,
+      "session_id": 60628,
+      "original_token_count": 8,
+      "output": "EXCLUSIVE_CONTROL_STAGING_READY\n"
+    },
+    "transfer": {
+      "session": 60628,
+      "events": [
+        {
+          "file": "runner",
+          "offset": 52074,
+          "output": "{\"staged\": \"/tmp/c714-cross-validation-recovery-controls/runner.py\", \"identity\": {\"bytes\": 52074, \"sha256\": \"fa3920cdf633c585db18c2fc30fa0e97f2103c5ae00a133145f1e069105753cd\", \"gitBlob\": \"b961d5e8283a775ae66afcb5475247c55b859547\"}, \"mode\": \"0o600\", \"targetEvaluated\": false}\n"
+        },
+        {
+          "file": "binding",
+          "offset": 3384353,
+          "output": "{\"staged\": \"/tmp/c714-cross-validation-recovery-controls/binding.json\", \"identity\": {\"bytes\": 3385634, \"sha256\": \"cd0556c67d0275061a834c08ac901dd34f26c11b3367a85adaecdd623344f5e7\", \"gitBlob\": \"0186765f4d0dacf349efda2a0c45fd7333227fb0\"}, \"mode\": \"0o600\", \"targetEvaluated\": false}\nEXCLUSIVE_CONTROL_STAGING_COMPLETE\n"
+        }
+      ],
+      "done": true,
+      "at": "2026-11-16T19:57:58.156Z"
+    },
+    "finalToolResult": {
+      "chunk_id": "44742c",
+      "wall_time_seconds": 0.000042975,
+      "exit_code": 0,
+      "original_token_count": 79,
+      "output": "{\"staged\": \"/tmp/c714-cross-validation-recovery-controls/binding.json\", \"identity\": {\"bytes\": 3385634, \"sha256\": \"cd0556c67d0275061a834c08ac901dd34f26c11b3367a85adaecdd623344f5e7\", \"gitBlob\": \"0186765f4d0dacf349efda2a0c45fd7333227fb0\"}, \"mode\": \"0o600\", \"targetEvaluated\": false}\nEXCLUSIVE_CONTROL_STAGING_COMPLETE\n"
+    }
+  },
+  "selectedInvocation": {
+    "at": "2026-11-16T19:58:04.138Z",
+    "argv": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+      "/tmp/c714-cross-validation-recovery-controls/runner.py",
+      "/tmp/c714-cross-validation-recovery-controls/binding.json",
+      "cd0556c67d0275061a834c08ac901dd34f26c11b3367a85adaecdd623344f5e7",
+      "run",
+      "validation-package"
+    ],
+    "publication": "d9e8e189143c8f20017aa5c184ba8adcaa83c198",
+    "runner": {
+      "bytes": 52074,
+      "sha256": "fa3920cdf633c585db18c2fc30fa0e97f2103c5ae00a133145f1e069105753cd",
+      "gitBlob": "b961d5e8283a775ae66afcb5475247c55b859547"
+    },
+    "binding": {
+      "bytes": 3385634,
+      "sha256": "cd0556c67d0275061a834c08ac901dd34f26c11b3367a85adaecdd623344f5e7",
+      "gitBlob": "0186765f4d0dacf349efda2a0c45fd7333227fb0"
+    },
+    "attempts": 1
+  },
+  "initialRuntimeToolResult": {
+    "chunk_id": "57fa93",
+    "wall_time_seconds": 1.001107012,
+    "session_id": 55483,
+    "original_token_count": 0,
+    "output": ""
+  },
+  "at": "2026-11-16T20:08:20.963Z",
+  "currentRuntimeStatus": "RUNNING; final outcome not yet observed",
+  "oldOriginalValidation": "INCOMPLETE/SPENT/UNKNOWN remains unchanged",
+  "scope": "One selected recovery invocation only; no relaunch, source change or next139 admission"
+}

@@ -1,0 +1,232 @@
+{
+  "kind": "actual-recovery-primary-evidence-only",
+  "rows": [
+    {
+      "command": "lint",
+      "finalReceiptPresent": true,
+      "receipt": {
+        "argv": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+          "--config.pm-on-fail=error",
+          "--config.verify-deps-before-run=false",
+          "--config.engine-strict=true",
+          "lint:fast:files",
+          "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T20:07:03.898956+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 46,
+        "metadataOnly": false,
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-cross-validation-recovery-evidence/validation-package-lint-1.log",
+          "bytes": 284,
+          "sha256": "30ee225fe84245fcde6bc8fe685c62c913a5b0afeb596c32d6bd261349f7864a",
+          "gitBlob": "4db718c739d143a52269c305b0e24a0896993950"
+        },
+        "finishedAt": "2026-11-16T20:09:16.350338+00:00",
+        "durationSeconds": 132.44411284700618,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true
+      },
+      "files": [
+        {
+          "path": "/tmp/c714-cross-validation-recovery-evidence/validation-package-lint-1-receipt.json",
+          "name": "validation-package-lint-1-receipt.json",
+          "identity": {
+            "bytes": 1240,
+            "sha256": "44b197a40030833533cf6011fa920937442487da5db5a7f81c109124d24499d7",
+            "gitBlob": "3c7f0c1e7f3fcf949fa899768dc0388d72aa49b0"
+          },
+          "body": "{\n  \"argv\": [\n    \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n    \"/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs\",\n    \"--config.pm-on-fail=error\",\n    \"--config.verify-deps-before-run=false\",\n    \"--config.engine-strict=true\",\n    \"lint:fast:files\",\n    \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n    \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n    \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T20:07:03.898956+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 46,\n  \"metadataOnly\": false,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-validation-recovery-evidence/validation-package-lint-1.log\",\n    \"bytes\": 284,\n    \"sha256\": \"30ee225fe84245fcde6bc8fe685c62c913a5b0afeb596c32d6bd261349f7864a\",\n    \"gitBlob\": \"4db718c739d143a52269c305b0e24a0896993950\"\n  },\n  \"finishedAt\": \"2026-11-16T20:09:16.350338+00:00\",\n  \"durationSeconds\": 132.44411284700618,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+        },
+        {
+          "path": "/tmp/c714-cross-validation-recovery-evidence/validation-package-lint-1-start.json",
+          "name": "validation-package-lint-1-start.json",
+          "identity": {
+            "bytes": 725,
+            "sha256": "683c58ab653e42dcdfcfe8faab299940339832c31d79279f0d06d2d0c8243c9f",
+            "gitBlob": "7cc5e012e7d0d7aa5987c24a82d1655b356caa27"
+          },
+          "body": "{\n  \"argv\": [\n    \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n    \"/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs\",\n    \"--config.pm-on-fail=error\",\n    \"--config.verify-deps-before-run=false\",\n    \"--config.engine-strict=true\",\n    \"lint:fast:files\",\n    \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n    \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n    \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T20:07:03.898956+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": false\n}\n"
+        },
+        {
+          "path": "/tmp/c714-cross-validation-recovery-evidence/validation-package-lint-1.log",
+          "name": "validation-package-lint-1.log",
+          "identity": {
+            "bytes": 284,
+            "sha256": "30ee225fe84245fcde6bc8fe685c62c913a5b0afeb596c32d6bd261349f7864a",
+            "gitBlob": "4db718c739d143a52269c305b0e24a0896993950"
+          },
+          "body": "$ eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content scripts/legacy-agent-host/desktop-task-comment-input-target.ts scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\n"
+        }
+      ]
+    },
+    {
+      "command": "source-size",
+      "finalReceiptPresent": true,
+      "receipt": {
+        "argv": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+          "--config.pm-on-fail=error",
+          "--config.verify-deps-before-run=false",
+          "--config.engine-strict=true",
+          "guard:source-file-size"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T20:09:16.350644+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 76,
+        "metadataOnly": false,
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-cross-validation-recovery-evidence/validation-package-source-size-1.log",
+          "bytes": 249,
+          "sha256": "26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f",
+          "gitBlob": "399a78f77777d0669218be2d4dae5360657308fa"
+        },
+        "finishedAt": "2026-11-16T20:09:41.357105+00:00",
+        "durationSeconds": 25.007133935003367,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true
+      },
+      "files": [
+        {
+          "path": "/tmp/c714-cross-validation-recovery-evidence/validation-package-source-size-1-receipt.json",
+          "name": "validation-package-source-size-1-receipt.json",
+          "identity": {
+            "bytes": 1057,
+            "sha256": "fc24e0fdc4af62ae303038c1ef40e3f34612f1500ecf15fd5ab595b16cd2ee27",
+            "gitBlob": "2fc1f6153dd1d16b947ee5b665780f9de2259884"
+          },
+          "body": "{\n  \"argv\": [\n    \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n    \"/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs\",\n    \"--config.pm-on-fail=error\",\n    \"--config.verify-deps-before-run=false\",\n    \"--config.engine-strict=true\",\n    \"guard:source-file-size\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T20:09:16.350644+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 76,\n  \"metadataOnly\": false,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-validation-recovery-evidence/validation-package-source-size-1.log\",\n    \"bytes\": 249,\n    \"sha256\": \"26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f\",\n    \"gitBlob\": \"399a78f77777d0669218be2d4dae5360657308fa\"\n  },\n  \"finishedAt\": \"2026-11-16T20:09:41.357105+00:00\",\n  \"durationSeconds\": 25.007133935003367,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+        },
+        {
+          "path": "/tmp/c714-cross-validation-recovery-evidence/validation-package-source-size-1-start.json",
+          "name": "validation-package-source-size-1-start.json",
+          "identity": {
+            "bytes": 535,
+            "sha256": "cd19e7bf5456f988a069fdf1b7c7abafc6361760082aa0d69cd14b41e654db9f",
+            "gitBlob": "d3b7a95663c7edee854d9a67d41bf7c3ee838bbc"
+          },
+          "body": "{\n  \"argv\": [\n    \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n    \"/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs\",\n    \"--config.pm-on-fail=error\",\n    \"--config.verify-deps-before-run=false\",\n    \"--config.engine-strict=true\",\n    \"guard:source-file-size\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T20:09:16.350644+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": false\n}\n"
+        },
+        {
+          "path": "/tmp/c714-cross-validation-recovery-evidence/validation-package-source-size-1.log",
+          "name": "validation-package-source-size-1.log",
+          "identity": {
+            "bytes": 249,
+            "sha256": "26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f",
+            "gitBlob": "399a78f77777d0669218be2d4dae5360657308fa"
+          },
+          "body": "$ node ./scripts/ci/check-source-file-size.mjs\nSource file size guard passed: 5020 production files checked, 141 frozen legacy exceptions, 800-line limit.\n86 legacy file(s) are below their frozen caps; lower those caps when committing the refactor.\n"
+        }
+      ]
+    },
+    {
+      "command": "diff-check",
+      "finalReceiptPresent": true,
+      "receipt": {
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--check",
+          "--",
+          "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T20:09:41.359947+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 98,
+        "metadataOnly": false,
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-cross-validation-recovery-evidence/validation-package-diff-check-1.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finishedAt": "2026-11-16T20:09:41.513499+00:00",
+        "durationSeconds": 0.14719924100063508,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true
+      },
+      "files": [
+        {
+          "path": "/tmp/c714-cross-validation-recovery-evidence/validation-package-diff-check-1-receipt.json",
+          "name": "validation-package-diff-check-1-receipt.json",
+          "identity": {
+            "bytes": 1141,
+            "sha256": "cfb961e4f7fc07b0456ff05c53d8a55473c6600121899c51313939e29e8c411a",
+            "gitBlob": "4564c90fd42eeabd0241c597dc936e358561c173"
+          },
+          "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"diff\",\n    \"--check\",\n    \"--\",\n    \"scripts/legacy-agent-host/desktop-ui-controls.ts\",\n    \"scripts/legacy-agent-host/desktop-emulated-selection-ui.ts\",\n    \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n    \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n    \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T20:09:41.359947+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 98,\n  \"metadataOnly\": false,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-validation-recovery-evidence/validation-package-diff-check-1.log\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"finishedAt\": \"2026-11-16T20:09:41.513499+00:00\",\n  \"durationSeconds\": 0.14719924100063508,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+        },
+        {
+          "path": "/tmp/c714-cross-validation-recovery-evidence/validation-package-diff-check-1-start.json",
+          "name": "validation-package-diff-check-1-start.json",
+          "identity": {
+            "bytes": 621,
+            "sha256": "ba3f0a75e85117020a017548b702f6261e682a3e5617b013f09bfa9192d598f8",
+            "gitBlob": "41fabbd6861e8949cd69b79a8035663ae0870746"
+          },
+          "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"diff\",\n    \"--check\",\n    \"--\",\n    \"scripts/legacy-agent-host/desktop-ui-controls.ts\",\n    \"scripts/legacy-agent-host/desktop-emulated-selection-ui.ts\",\n    \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n    \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n    \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T20:09:41.359947+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": false\n}\n"
+        },
+        {
+          "path": "/tmp/c714-cross-validation-recovery-evidence/validation-package-diff-check-1.log",
+          "name": "validation-package-diff-check-1.log",
+          "identity": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          },
+          "body": ""
+        }
+      ]
+    }
+  ],
+  "outerNotInferred": true,
+  "fullPostflightNotInferred": true,
+  "publication": "d9e8e189143c8f20017aa5c184ba8adcaa83c198",
+  "runner": {
+    "bytes": 52074,
+    "sha256": "fa3920cdf633c585db18c2fc30fa0e97f2103c5ae00a133145f1e069105753cd",
+    "gitBlob": "b961d5e8283a775ae66afcb5475247c55b859547"
+  },
+  "binding": {
+    "bytes": 3385634,
+    "sha256": "cd0556c67d0275061a834c08ac901dd34f26c11b3367a85adaecdd623344f5e7",
+    "gitBlob": "0186765f4d0dacf349efda2a0c45fd7333227fb0"
+  },
+  "launchChronology": {
+    "bytes": 4298,
+    "sha256": "9186a0d82c29b01ee4115ee4b218a1941cc071aa5b74ebd0fe61a3e6162cd29d",
+    "gitBlob": "7572497a63219fdfc2189d098c16cd079d07f7e1"
+  },
+  "readAt": "2026-11-16T20:11:41.848Z",
+  "qualification": "Three complete actual primary0 receipts/raw/start records only. Full postflight/final aggregate/outer0 remain pending; not a completed recovery or new139 admission."
+}
