@@ -479,8 +479,9 @@ export function createDesktopUiControls(
         const wheelTop=Math.max(0,wheelRect.top),wheelBottom=Math.min(innerHeight,wheelRect.bottom);
         if(wheelBottom<=wheelTop)return null;
         const x=Math.max(1,Math.min(innerWidth-1,wheelRect.x+wheelRect.width/2)),y=(wheelTop+wheelBottom)/2;
+        const centerY=bottom<=top?(p.top+p.bottom)/2:r.y+r.height/2;
         const hit=${scrollOptions.requireCenterHit === true ? 'document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)' : 'e'};
-        return {visible:bottom>top&&r.top>=top&&r.bottom<=bottom&&Boolean(hit&&(hit===e||e.contains(hit))),x,y,delta:Math.max(-600,Math.min(600,r.y+r.height/2-y))};
+        return {visible:bottom>top&&r.top>=top&&r.bottom<=bottom&&Boolean(hit&&(hit===e||e.contains(hit))),x,y,delta:Math.max(-600,Math.min(600,centerY-y))};
       })()`,
           label
         )
