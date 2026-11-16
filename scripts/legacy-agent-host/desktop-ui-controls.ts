@@ -216,7 +216,24 @@ export function createDesktopUiControls(
       pointerEventsNone:getComputedStyle(e).pointerEvents==='none',
       centerInViewport:x>=0&&y>=0&&x<innerWidth&&y<innerHeight,hitPresent:Boolean(hit)
     };
-    return {x,y,text:e.textContent.trim().slice(0,300),tag:e.tagName};
+    const geometry=(() => {
+      try {
+        const rectangle=value => {
+          const numbers=[value.x,value.y,value.width,value.height];
+          return numbers.every(n=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<=1000000)?numbers:null;
+        };
+        const animations=value => {
+          if(!value||typeof value.getAnimations!=='function')return null;
+          const items=value.getAnimations();
+          return items.length>64?65:items.filter(item=>item.playState==='running'||item.pending===true).length;
+        };
+        const dialog=e.closest('[role="dialog"]'), fonts=document.fonts?.status;
+        return {targetRect:rectangle(r),dialogRect:dialog?rectangle(dialog.getBoundingClientRect()):null,
+          targetAnimations:animations(e),dialogAnimations:animations(dialog),
+          fonts:fonts==='loaded'||fonts==='loading'?fonts:null};
+      } catch { return null; }
+    })();
+    return {x,y,text:e.textContent.trim().slice(0,300),tag:e.tagName,geometry};
   })()`;
   const clickExpression = async (
     expression: string,
@@ -225,6 +242,36 @@ export function createDesktopUiControls(
     text?: string
   ): Promise<void> => {
     await cdp.send('Page.bringToFront');
+    const geometryTrace: { samples: Record<string, unknown>[]; overflow: boolean } = { samples: [], overflow: false };
+    const observeGeometry = (phase: 'initial' | 'after-hover' | 'stable' | 'final', point: Record<string, unknown>): void => {
+      try {
+        if (geometryTrace.samples.length >= 18) { geometryTrace.overflow = true; return; }
+        const own = (value: unknown, key: string): unknown => {
+          if (!value || typeof value !== 'object') return undefined;
+          const descriptor = Object.getOwnPropertyDescriptor(value, key);
+          return descriptor && 'value' in descriptor ? descriptor.value : undefined;
+        };
+        const finite = (value: unknown): number | null =>
+          typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= 1_000_000 ? value : null;
+        const rectangle = (value: unknown): number[] | null => {
+          if (!Array.isArray(value) || own(value, 'length') !== 4) return null;
+          const numbers = ['0', '1', '2', '3'].map(key => finite(own(value, key)));
+          return numbers.every(number => number !== null) ? numbers as number[] : null;
+        };
+        const count = (value: unknown): number | null =>
+          typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 65 ? value : null;
+        const geometry = own(point, 'geometry'), tag = own(point, 'tag'), fonts = own(geometry, 'fonts');
+        geometryTrace.samples.push({
+          phase, unavailable: own(point, 'unavailableTarget') === true, x: finite(own(point, 'x')), y: finite(own(point, 'y')),
+          tag: tag === 'BUTTON' || tag === 'INPUT' || tag === 'TEXTAREA' ? tag : null,
+          targetRect: rectangle(own(geometry, 'targetRect')), dialogRect: rectangle(own(geometry, 'dialogRect')),
+          targetAnimations: count(own(geometry, 'targetAnimations')), dialogAnimations: count(own(geometry, 'dialogAnimations')),
+          fonts: fonts === 'loaded' || fonts === 'loading' ? fonts : null,
+        });
+      } catch {
+        // Missing diagnostic data never changes the original target or failure.
+      }
+    };
     // Reuse the original passive reads and deadline. Retain only closed facts,
     // never DOM text, attributes, HTML or another request after a failed click.
     const readPoint = async (phase: string): Promise<Record<string, unknown>> => {
@@ -257,7 +304,7 @@ export function createDesktopUiControls(
         : expression;
       let facts: Record<string, boolean | number> | undefined;
       try {
-        return record(await waitRead(readExpression, phase, 30_000, value => {
+        const observed = record(await waitRead(readExpression, phase, 30_000, value => {
           if (value && typeof value === 'object' && !Array.isArray(value)) {
             const row = value as Record<string, unknown>;
             if (row.unavailableTarget === true) {
@@ -286,6 +333,8 @@ export function createDesktopUiControls(
           }
           return Boolean(value);
         }));
+        observeGeometry(phase === label ? 'initial' : phase === label + ' after pointer enter' ? 'after-hover' : 'stable', observed);
+        return observed;
       } catch (error) {
         if (facts) throw new Error(`UI target read failed: ${phase}; facts=${JSON.stringify(facts)}`, { cause: error });
         throw error;
@@ -293,7 +342,7 @@ export function createDesktopUiControls(
     };
     let point = await readPoint(label);
     options.assertOwnedRenderer();
-    step({ action: 'mouseMoved', label: 'hover ' + label, selector, target: point });
+    step({ action: 'mouseMoved', label: 'hover ' + label, selector, target: point, geometryTrace });
     await cdp.send('Input.dispatchMouseEvent', {
       type: 'mouseMoved',
       x: point.x,
@@ -317,12 +366,22 @@ export function createDesktopUiControls(
     assert.equal(typeof point.y, 'number');
     options.assertOwnedRenderer();
     const finalPoint = record(await cdp.evaluate(expression));
-    assert.notEqual(finalPoint.unavailableTarget, true, 'Original UI target unavailable after ownership check');
-    assert.deepEqual(
-      [finalPoint.x, finalPoint.y, finalPoint.tag],
-      [point.x, point.y, point.tag],
-      'Original UI target moved after ownership check'
-    );
+    observeGeometry('final', finalPoint);
+    try {
+      assert.notEqual(finalPoint.unavailableTarget, true, 'Original UI target unavailable after ownership check');
+      assert.deepEqual(
+        [finalPoint.x, finalPoint.y, finalPoint.tag],
+        [point.x, point.y, point.tag],
+        'Original UI target moved after ownership check'
+      );
+    } catch (error) {
+      try {
+        console.log(JSON.stringify({ kind: 'TEST_DESKTOP_CLICK_GEOMETRY', geometry: geometryTrace }));
+      } catch {
+        // The exact original final-target refusal remains authoritative.
+      }
+      throw error;
+    }
     options.assertOwnedRenderer();
     step({
       action: 'mouseClick',
