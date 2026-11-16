@@ -33,6 +33,7 @@ import {
   Trash2,
   XCircle,
 } from 'lucide-react';
+
 import { KanbanTaskAttachmentMosaic } from './KanbanTaskAttachmentMosaic';
 import { useTaskCommentPulse } from './useTaskCommentPulse';
 
@@ -73,7 +74,6 @@ interface FlatDependencyRowProps extends DependencyBadgeProps {
   direction: 'backward' | 'forward';
   tone: 'blocked' | 'depends' | 'blocks';
 }
-
 const taskCardSignatureCache = new WeakMap<TeamTaskWithKanban, string>();
 function getTaskCardSignature(task: TeamTaskWithKanban): string {
   const cached = taskCardSignatureCache.get(task);

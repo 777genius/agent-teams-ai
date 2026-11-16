@@ -16,10 +16,10 @@ interface KanbanApprovedSettingsMenuProps {
   onChange: (enabled: boolean) => Promise<void>;
 }
 
-export function KanbanApprovedSettingsMenu({
+export const KanbanApprovedSettingsMenu = ({
   enabled,
   onChange,
-}: KanbanApprovedSettingsMenuProps): React.JSX.Element {
+}: Readonly<KanbanApprovedSettingsMenuProps>): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [pending, setPending] = useState(false);
 
@@ -63,4 +63,4 @@ export function KanbanApprovedSettingsMenu({
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+};
