@@ -8476,3 +8476,47 @@ In historical x64 P08, the source-bound strict reader supports only that no vali
 
 Creation retains the unproved historical animation cause and non-atomic final-read/input gap. Its published ZIP has Git-tree/index identities and the earlier original archive inspection; no fresh published binary-body readback is possible through the currently available tools. Settings/click observations retain their explicit timing costs and do not establish a cause, React commit or successful original UI scenario. Draft, original base, no Ready/main merge/release/default activation/Stage2, no real Claude/Codex including version queries, strict P09, direct I386, genuine M16/native Resume and all remaining obligations stay unchanged.
 
+
+
+
+
+## Root R1 — let the current Settings view request finish its loading state
+
+Bind this separate three-path correction to delivery 6d446d74da33681180b0eecfd13b8bf84807efd4, tree 1ddf8d07069049ed722fe077b3a467b6f49234eb, with the fresh 2026-11-16 12:14:36 UTC ref/PR read. Preserve this entire 1954492-byte Plan29 prefix c54e2a756c53f7798f33e224c09ed883ec98381b, SHA256 f76c1ace19e7f265b660e74fe5d79f3425ac90dfee566135f8df5cd72aae7aeb, the whole Plan30 bea6f50310ca47022159631131f4815a93951251 and all authored Creation/P08/Settings/geometry/scoped-lint commits. Primary remains separate B852d9bd3f9142603340f71ca998739e69da00084, open/Draft/unmerged on original base def734338f13bcc3209e78079a0cedbc48f05a5b. The former pre-extraction hook proposal is superseded inert preparation; no old whole-hook/test replacement is selected.
+
+### Source-confirmed loading ownership defect
+
+The current refresh has one sequence owner and an original project-context snapshot. A pending non-silent request sets loading=true. A newer silent refresh takes that same sequence ownership; the older request is now refused. The current silent request's finally skips setLoading(false), so neither request can clear that loading state. This follows from current source and is exercised by the existing mounted-hook case that deliberately preserved the defect. It does not prove the cause of the original578/608 first-Models spinner, absent inheritance card or any native catalog delay.
+
+Change only the existing private refresh helper's finally to call the existing sequence-first/context-second requestIsCurrent guard regardless of silent mode. Only a current request may call the existing setLoading(false). Since silent finally now actually evaluates that guard, remove only its two forced-null diagnostic overrides and report the actual recorded sequence/context results. All other loadView inputs/count, response/error processing, view/selection setters, Boolean results and diagnostic privacy/schema/phase/cap behavior stay intact. No new state/ref owner, request, module, API, timer, retry, workflow job or framework is introduced.
+
+The additional silent-finally work is one sequence equality read and, only on equality, one original project-context check; a current request also invokes the existing loading setter. Its cost is real and remains inside original budgets. The actual project-context callback33744a0abc543ab39e13d0b5a784de719e40ec58 compares plain path/runtimeId/generation refs, has no user callback/IPC/await/explicit throw, and invalidates its generation on unmount. Do not catch or mask the authoritative guard as a diagnostic. Sequence mismatch still short-circuits context lookup; stale/unmounted completion cannot clear a newer request's loading state.
+
+### Exact source and meaningful regression coverage
+
+src/features/runtime-provider-management/renderer/hooks/runtimeProviderViewRefresh.ts: ae36029a51a805c1a1a45e17fd08fa3874d8c85e,5784 bytes/174 lines → e8fbf803614d4fecc90b8e8f34c64b9e6350a81f,5660 bytes/174 lines,SHA256 89707a4d23754519902d2a9413410e7468e41584fa1104bc4fb304ee8a889ea2.
+
+test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts: 7342e99150860ac599c3614973334509329ae9b8,189367 bytes/5887 lines → c9e19b14b433c58494c10b06eac9f82d5f5cd118,195789 bytes/6034 lines,SHA256 008d47eafc5f9113af654cd42c29bdc398ed1969695d15c3650898b281cbb195.
+
+.github/workflows/host-emulated-acceptance.yml: bcb0a96cda38afc462161fcfdd25bb0626e43ce3,101993 bytes/1316 lines → b9f7f33d7752f0029c970268ac82d7598746ea7e,102095 bytes/1317 lines,SHA256 d56ef0062fe0dc9974bf5c4c1e7093f4e79f183d5219071e7690e609ed20bdca.
+
+The complete 10407-byte candidate.patch is e5a05445207411f642ab83c45e18250f22abb61e,SHA256 3a18fa63e76b0e85733dc25b5cd7e3c489dfbe5e9793dd034adcd81b81e88fc1. Exact patch/inverse comparison reconstructs all three full bodies; every other leaf/mode is preserved. Helper174 stays within the original800-line limit; the hook2026 and its reduced cap remain unchanged. No import-order correction, source-cap change, suppression or formatting compression is selected.
+
+Modify the one existing stale/silent hook case only for the corrected loading/final-observation contract, its title and explanatory comment. The other five Settings diagnostic cases and all other prior test bytes remain. Add four cases through two existing it.each pairs: current silent response-error/rejection clears pending loading and retains the original error; a silent completion after a newer request or unmount stays refused, does not paint its view and cannot clear the newer loading owner. Controlled deferred promises drive the actual hook, refreshDirectory route and real project-context callback. Assert exact original request counts, retained current view/error, late old response refusal and actual finished diagnostic decisions. There is no elapsed-time oracle, copied implementation, added test framework or new file.
+
+### Close only the missing test lint invocation
+
+Root strict tsconfig568952f5025a88c16b0568c7279d8e85a4288b43 already includes test/**/* and src/**/*; packagef80ec83172d0aec0dec8a8ab055426b4fca4a1f7 typecheck:workspace runs that compiler. GeneralCI da94c393b024d3c8a40159edbf9975cd528007a6 Fast feedback invokes lint:fast on src/, covering the helper; original Host Team typed lint covers src/features. Neither those source-only commands nor the current97 explicit fast-lint operands includes this renderer test. Vitest discovery is not lint or compiler qualification.
+
+Append only test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts after the current final Windows fixture operand:97→98, all existing operands/order preserved. Existing fast configuration8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb admits that test; no rules/ignores/plugins change. The same Team-only step,45-minute job, remaining workflow bytes and41 other workflows stay exact. Processing one additional file has unmeasured cost in that original budget. No extra compiler context, command, matrix, job, trigger or manual Actions operation is needed.
+
+### Publication, original execution and remaining limits
+
+Select only this append-only Plan29, candidate.patch and scope.json under evidence/loading-owner-completion-2026-11-16 as documentary payloads. Independently review the exact three source images, full current Plan prefix, all three documentary bodies and both complete leaf maps. Publish the documentation-only child with immediate ordinary expected-parent push, fully read back bodies/tree/parent/ref, then obtain independent published-binding R2. Only that verified documentary parent may receive the separate three-source child. Immediately ordinarily push and fully read back its complete bodies/three-path diff/tree/ref. A moved lease requires fresh reconciliation; never force, rewrite or remove authored evidence.
+
+This independent delivery cut does not advance primary or select C. Actual B original123-case full8 GREEN, install-retry, separate Runtime/Team contracts, full workspace/dedicated types, original typed lint and independent actual R2 still precede further primary integration/C selection. Preserve useful already-started original jobs, stop terminal/old cohort polls and retain the owned five-minute cadence. Queued-only work adds no gate. Keep continuation cuts separate in history without adding a mandatory extra CI round before C; future C preserves the then-current whole source/tests/roster and98 operands, then its five reviewed paths yield103.
+
+Require actual original resulting-source General fast lint, full compiler/typed-lint scopes, the same98-path Team invocation and all four complete safe frontend shards including this complete hook suite. The existing Settings runner/verifier,30-second wait, screenshots/receipt/source/owner/business/cleanup oracles and45-minute lane remain unchanged and must precede C's added P11 journey. The correction does not claim original Settings or migration E2E success. No artificial test-only RED round, selective replacement run or local project/test/compiler/lint/install/build/application/provider/native/GUI execution is selected.
+
+Existing Creation/geometry non-atomicity and causal limits, unread published/archive binary limits, P08 two Stops and historical missing settlement row, Windows15s, strict P09 authorized-writer/consumed-image compatibility, direct I386/genuine M16/native Resume and all other unproved gates remain. Preserve no real Claude/Codex including versions, Draft/original base, no Ready/main merge/release/default activation/Stage2. Source reasoning and prospective tests are not actual GREEN.
+
