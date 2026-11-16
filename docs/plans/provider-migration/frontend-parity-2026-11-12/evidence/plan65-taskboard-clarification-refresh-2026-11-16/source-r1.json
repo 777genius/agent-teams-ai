@@ -1,0 +1,44 @@
+{
+  "kind": "PLAN65_EXACT_TASKBOARD_SOURCE_R1",
+  "author": "root",
+  "status": "INERT_REQUIRES_INDEPENDENT_EXACT_SOURCE_R2",
+  "parent": "7136f0dfd721db2d0f3edb757b1f9f8bb7498332",
+  "parentTree": "a5e01197f9eb91bdbbdbd21b258a29c6bc812b63",
+  "sourcePath": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+  "before": {
+    "sha": "3f1ce46fce847a861850ef874017f84227c62b0c",
+    "bytes": 36207,
+    "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+    "lines": 798
+  },
+  "after": {
+    "sha": "7707de6f387471609df97f0e1d93b93fbd4a1f77",
+    "bytes": 36341,
+    "sha256": "0e4491d9c877e35b07e48e04cf5bed8716e25d3ee8b664b1c168e4b8643d9c79",
+    "lines": 799
+  },
+  "patch": {
+    "sha": "c7f80f81353cebe8151d337f9f79740daf1af99a",
+    "bytes": 677,
+    "sha256": "69394ec143815507de493f90001406e62faa46fa114f2222453a5681a1eb58af"
+  },
+  "publishedR1Review": {
+    "sha": "f048d0abe7ceacb51dd484f160862e978c90ce75",
+    "bytes": 16563,
+    "sha256": "3c8933c205915500b09c2e0dd1d669f2de64e58ae1bab229a43672a88db419c3"
+  },
+  "projectedTree": "904e0ee0ef232cea37eb2671452b0f4c9a8943a1",
+  "leafCount": 11167,
+  "change": "Only the existing banner-cleared Boolean wait expression: await default original owner/detail readiness, then unchanged banner absence.",
+  "preservation": [
+    "original captured contextId and surfaceId",
+    "default stage, no retained-loading exception",
+    "Boolean return and original label",
+    "same existing wait/CDP site and clocks",
+    "unchanged canonical assertion/receipt, Close call and every other source byte",
+    "no source or oracle compression;798 to799 lines"
+  ],
+  "inverseExact": true,
+  "localProjectExecution": false,
+  "runtimePass": false
+}

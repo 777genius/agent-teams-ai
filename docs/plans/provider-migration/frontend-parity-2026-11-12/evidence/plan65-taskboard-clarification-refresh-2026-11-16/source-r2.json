@@ -1,0 +1,155 @@
+{
+  "kind": "PLAN65_EXACT_ONE_EXPRESSION_TASKBOARD_SOURCE_INDEPENDENT_R2",
+  "reviewer": "migration_scope",
+  "decision": "APPROVE_EXACT_SOURCE_AFTERIMAGE_ON_PUBLISHED_7136_PARENT_SUBJECT_TO_ROOT_FRESH_LEASE",
+  "blockers": [],
+  "publishedR1": {
+    "commit": "7136f0dfd721db2d0f3edb757b1f9f8bb7498332",
+    "tree": "a5e01197f9eb91bdbbdbd21b258a29c6bc812b63",
+    "plan": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/65-taskboard-clarification-refresh-2026-11-16.md",
+      "gitBlob": "5df22caf981497d23ef3137783e951fc7470ab80",
+      "bytes": 8760,
+      "sha256": "ed08632a83f7918cbcba0d58d4e2cc42a6945082a342872bb863e23c1241ac2a",
+      "lines": 78
+    },
+    "independentActualPublishedReview": {
+      "path": "/tmp/migration-evidence-20261116/native/plan65-taskboard-published-r1-r2/independent-r2.json",
+      "gitBlob": "f048d0abe7ceacb51dd484f160862e978c90ce75",
+      "bytes": 16563,
+      "sha256": "3c8933c205915500b09c2e0dd1d669f2de64e58ae1bab229a43672a88db419c3",
+      "lines": 312,
+      "decision": "APPROVE_ACTUAL_PUBLISHED_R1_FOR_EXACT_ONE_EXPRESSION_SOURCE_PREPARATION_ONLY"
+    },
+    "fullReadbackPacket": {
+      "path": "/tmp/migration-evidence-20261116/root/taskboard-r1-published-full-readback.json",
+      "gitBlob": "55d394064c36d482a21c3cbe8cbb19058808673c",
+      "bytes": 121768,
+      "sha256": "d4fbfdbff0047d99f70a79e327a5b082ddce50ec06490652c448c1f06941cb1d",
+      "lines": 197
+    }
+  },
+  "source": {
+    "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+    "before": {
+      "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c",
+      "bytes": 36207,
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+      "lines": 798
+    },
+    "after": {
+      "gitBlob": "7707de6f387471609df97f0e1d93b93fbd4a1f77",
+      "bytes": 36341,
+      "sha256": "0e4491d9c877e35b07e48e04cf5bed8716e25d3ee8b664b1c168e4b8643d9c79",
+      "lines": 799
+    },
+    "patch": {
+      "gitBlob": "c7f80f81353cebe8151d337f9f79740daf1af99a",
+      "bytes": 677,
+      "sha256": "69394ec143815507de493f90001406e62faa46fa114f2222453a5681a1eb58af",
+      "lines": 12
+    },
+    "officialCandidatePatch": "--- a/scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\n+++ b/scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\n@@ -461,7 +461,8 @@\n     'clear original clarification once'\n   );\n   await ui.waitRead(\n-    `!document.querySelector('[role=\"dialog\"]')?.textContent.includes('Awaiting clarification from you')`,\n+    `(async()=>Boolean(await ${desktopTaskBoardAssignmentReadyExpression(options.handleId, taskId, { contextId, surfaceId })}) &&\n+      !document.querySelector('[role=\"dialog\"]')?.textContent.includes('Awaiting clarification from you'))()`,\n     'clarification banner cleared'\n   );\n   assert.equal((await task(taskId)).needsClarification, undefined);\n",
+    "diff": {
+      "added": 2,
+      "deleted": 1,
+      "netLines": 1,
+      "netBytes": 134
+    },
+    "completeDifflibPatchExact": true,
+    "uniqueLiteralForwardAndInverseExact": true,
+    "allBytesOutsideSoleExpressionExact": true,
+    "naturalPhysicalLinesWithin800": true,
+    "sourceCompression": false
+  },
+  "wholeTree": {
+    "parentMap": {
+      "path": "/tmp/migration-evidence-20261116/root/taskboard-r1-published-whole-tree-verification.json",
+      "gitBlob": "c0148c4a6a59e50159c257329d4149fd932fdb95",
+      "bytes": 3436124,
+      "sha256": "4ad27cc17443069e00fff2e1e0d1da462748396b01e29cedbe8327c70acbfc68",
+      "lines": 78222
+    },
+    "parentTreeIndependentlyRecomputed": "a5e01197f9eb91bdbbdbd21b258a29c6bc812b63",
+    "projectedChildTreeIndependentlyRecomputed": "904e0ee0ef232cea37eb2671452b0f4c9a8943a1",
+    "leafCount": 11167,
+    "onlyChangedPath": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+    "preservedOtherLeaves": 11166,
+    "allPublishedDocumentsAndWorkflow889332Preserved": true
+  },
+  "semanticChecks": [
+    "The existing imported desktopTaskBoardAssignmentReadyExpression is called with original options.handleId,taskId and already-captured contextId/surfaceId. No new target/context derivation or import is introduced.",
+    "Omitted fourth argument selects default stage. Exact helper3703 rejects unavailable/non-owner/non-editable React owner, changed context/Team/surface, non-ready/loading/refresh-pending/full-wrong Task, stale authority and absent/disabled/open/non-alice assignment selector. The clarification-only retained-loading exception is not used.",
+    "The async IIFE awaits the actual existing helper expression before Boolean conversion. A null/refused owner becomes false, short-circuits banner lookup and cannot become a truthy Promise. A valid owner then evaluates the unchanged original banner-absence expression; both operands are Boolean.",
+    "Same original ui.waitRead call, label, owner check, default30000ms Date deadline,100ms cadence and error handling remain. Additional imports/store/React/DOM observations consume the original interval; there is no zero-extra-work or hard per-read deadline claim.",
+    "Earlier assignment snapshot/wait and the one Mark resolved physical action remain byte-identical, including its separately selected clarification stage. No replay, retry of mutation, second Close or newly selected action is added.",
+    "Original canonical needsClarification assertion, exact task.clarification receipt join, unchanged generic Close call/dialog-closed wait, all later scenario, source pin and cleanup assertions remain byte-identical.",
+    "This joins a supported settled-owner prerequisite, not an atomic lock through Close. Later invalidation can still refuse at the unchanged generic final target guard. No exact historical geometry cause or runtime repair PASS is claimed."
+  ],
+  "originalOwnerBodies": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "localPath": "/tmp/migration-evidence-20261116/frontend/taskboard-75cf-original/source-reference/scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+      "bytes": 6433,
+      "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+      "lines": 90,
+      "currentParentJoin": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "localPath": "/tmp/migration-evidence-20261116/frontend/taskboard-75cf-original/source-reference/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "gitBlob": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+      "bytes": 30733,
+      "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e",
+      "lines": 548,
+      "currentParentJoin": true
+    }
+  ],
+  "lexicalPreservationCounts": {
+    "ui.waitRead(": {
+      "before": 25,
+      "after": 25
+    },
+    "ui.click(": {
+      "before": 15,
+      "after": 15
+    },
+    "ui.clickExpression(": {
+      "before": 1,
+      "after": 1
+    },
+    "assert.": {
+      "before": 65,
+      "after": 65
+    },
+    "receiptFor(": {
+      "before": 4,
+      "after": 4
+    },
+    "screenshot(": {
+      "before": 5,
+      "after": 5
+    }
+  },
+  "validationBoundary": {
+    "sourceAndHelperAlreadyInExistingScopedLint": true,
+    "originalCompleteEightHarnessAndStrictTypeRoutePreservedByUnchangedWorkflow": true,
+    "existingPredicateTestsReferencedByPublishedR1RemainUnchanged": true,
+    "originalTaskboardAndCrossTeamResultingSourceJourneysRemainRequired": true,
+    "noNewTestJobMatrixRouteOrCICycle": true,
+    "noValidationExecutionPerformed": true
+  },
+  "candidateSelectionMetadata": {
+    "path": "/tmp/migration-evidence-20261116/root/plan65-taskboard-source-proposal/source-r1.json",
+    "gitBlob": "0e24de10e4943f66daddd6ce73aa372657de6bd7",
+    "bytes": 1732,
+    "sha256": "954bcb9408090a706140ff4de87031ba2bb9e9ecb494707e97d301cb707349f4",
+    "lines": 44
+  },
+  "limits": [
+    "Data-only full-text/hash/diff/Merkle work; no TypeScript/JavaScript parse/import/evaluation, project tests/compiler/lint, browser/native/provider execution, API/CI polls, Git/index/ref/canonical mutations.",
+    "Only this exact one-file afterimage is approved for root publication after fresh actual parent/ref guard. A later incoming edit requires exact preservation/rebind.",
+    "No original75cf failure outcome, native cleanup limitation or other acceptance requirement is upgraded by this source review."
+  ]
+}

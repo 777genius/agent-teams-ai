@@ -1,0 +1,66 @@
+{
+  "kind": "PLAN65_ACTUAL_BF6_SOURCE_PUBLICATION_BINDING_R2",
+  "reviewer": "migration_scope",
+  "decision": "CONFIRMED_EXACT_REVIEWED_ONE_FILE_SOURCE_PUBLICATION",
+  "blockers": [],
+  "commit": "bf6aa99756dabde0fdb2bf7f3d6f794ab22c669f",
+  "soleParent": "39a00ee65eb4ecfd5ba42c4c0504db837f6db470",
+  "actualTree": "8b20a0dc3f1dcfeac6d2e236facd67e92d5130bc",
+  "leafCount": 11194,
+  "source": {
+    "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+    "before": {
+      "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c",
+      "bytes": 36207,
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7"
+    },
+    "after": {
+      "gitBlob": "7707de6f387471609df97f0e1d93b93fbd4a1f77",
+      "bytes": 36341,
+      "sha256": "0e4491d9c877e35b07e48e04cf5bed8716e25d3ee8b664b1c168e4b8643d9c79"
+    }
+  },
+  "checks": {
+    "fullOfficialBodyExactlyReviewed7707": true,
+    "officialPatchSameHunksAndSourceChange": true,
+    "patchRepresentationDifference": "GitHub hunk header retains function context and no trailing serialization LF; source hunks/content unchanged.",
+    "completeActualTreeIndependentlyRecomputed": true,
+    "exactlyOneChangedLeaf": true,
+    "allOther11193LeavesPreserved": true,
+    "allIncomingPlan64_66_67AndPlan65DocsPreserved": true,
+    "capturedDeliveryRefMatchesCommit": true
+  },
+  "reusedReviews": [
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/plan65-taskboard-source-independent-r2/independent-r2.json",
+      "gitBlob": "a1fa5f1ca45dba2d0d3b63f8821454bd94160d20",
+      "bytes": 8453,
+      "sha256": "f852a6dab12e14009c1d4854f8c80bb2947c1e1007a3d324dc8043ae7d287d2f"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/plan65-taskboard-source-independent-r2/parent-39a0-addendum.json",
+      "gitBlob": "9ce2a04b1d643507c14d017ede3f0909fb00fdae",
+      "bytes": 13050,
+      "sha256": "6b421219ae10ee2d877dfb85c2e46d26d53932227e9484a56cbded1f01bd40fd"
+    }
+  ],
+  "officialReadbackInputs": [
+    {
+      "path": "/tmp/migration-evidence-20261116/root/plan65-taskboard-actual-source-full-readback.json",
+      "gitBlob": "140cae4b0d8529e49175375f4d8ae9f972a544c1",
+      "bytes": 38605,
+      "sha256": "f1b13c1440548e682c32f191315cb4b3d2c7ae8d6ce2d29a872bc7c1d0d50042"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/plan65-taskboard-actual-source-whole-tree-verification.json",
+      "gitBlob": "5cdeccc94c0a88a2ccf392d601751dde84a88808",
+      "bytes": 3445137,
+      "sha256": "fac5924bc091ff230693c80e0d53fda6c87ca484e2010d27db3ccba3d9eb411c"
+    }
+  ],
+  "limits": [
+    "No new semantic pass on incoming unrelated source/plans. Exact prior source and parent-rebind proofs reused.",
+    "No project/parser/compiler/lint/test/native/GUI execution, API/CI polling or source/Git/ref writes.",
+    "No current live lease, primary advancement or runtime PASS inferred."
+  ]
+}

@@ -1,0 +1,312 @@
+{
+  "kind": "PLAN65_TASKBOARD_ACTUAL_PUBLISHED_R1_INDEPENDENT_R2",
+  "reviewer": "/root/native_failures",
+  "reviewedAtUtc": "2026-11-16T22:41:34.636684+00:00",
+  "decision": "APPROVE_ACTUAL_PUBLISHED_R1_FOR_EXACT_ONE_EXPRESSION_SOURCE_PREPARATION_ONLY",
+  "blockers": [],
+  "actualCommit": "7136f0dfd721db2d0f3edb757b1f9f8bb7498332",
+  "soleParent": "c6d127cc0a3736774b1d577ca37aa26730c48dd1",
+  "parentTree": "f2036213fe19d87a612b7ee4cf1293213a032fae",
+  "actualTree": "a5e01197f9eb91bdbbdbd21b258a29c6bc812b63",
+  "parentLeafCount": 11160,
+  "actualLeafCount": 11167,
+  "inputs": [
+    {
+      "path": "/tmp/migration-evidence-20261116/root/taskboard-r1-published-full-readback.json",
+      "gitBlob": "55d394064c36d482a21c3cbe8cbb19058808673c",
+      "bytes": 121768,
+      "sha256": "d4fbfdbff0047d99f70a79e327a5b082ddce50ec06490652c448c1f06941cb1d"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/taskboard-r1-published-whole-tree-verification.json",
+      "gitBlob": "c0148c4a6a59e50159c257329d4149fd932fdb95",
+      "bytes": 3436124,
+      "sha256": "4ad27cc17443069e00fff2e1e0d1da462748396b01e29cedbe8327c70acbfc68"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-c6d1-whole-tree-verification.json",
+      "gitBlob": "379ca853bfbce55fcfb99f4291bff93f793d71a5",
+      "bytes": 3430845,
+      "sha256": "c1ce92b8da61b0d4fefbdd02350c44353885e7b7ef132246a3622697be6098d2"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/taskboard-r1-lint-evidence-document-selection-c6d1.json",
+      "gitBlob": "6a11be98323c2ba2594c86e7839f5c7331cbcef8",
+      "bytes": 56352,
+      "sha256": "5aab8452711c424625e6463c55c2fb74872a2896b0787fcb32ba94a1a04f1b12"
+    }
+  ],
+  "actualDocuments": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/65-taskboard-clarification-refresh-2026-11-16.md",
+      "gitBlob": "5df22caf981497d23ef3137783e951fc7470ab80",
+      "bytes": 8760,
+      "sha256": "ed08632a83f7918cbcba0d58d4e2cc42a6945082a342872bb863e23c1241ac2a",
+      "completeOfficialAddedPatchReconstructed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan62-windows-retained-provider-2026-11-16/lint-six-actual-source-r2.json",
+      "gitBlob": "fa4d6286d7d26891d1c5fbc2e57d53e004ab36ce",
+      "bytes": 2653,
+      "sha256": "179d092f895f68eb49ed8e55f00d800b367f22b7b1ece5e00ab8de0ef0d249ca",
+      "completeOfficialAddedPatchReconstructed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan62-windows-retained-provider-2026-11-16/lint-six-parent-rebind-r2.json",
+      "gitBlob": "462db51740f413d759a3034e34a399a836e3f110",
+      "bytes": 5410,
+      "sha256": "04b30cc62f1450e8e2cc8fefb62e0418524f265098240d72b15fbe25f47007b0",
+      "completeOfficialAddedPatchReconstructed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan62-windows-retained-provider-2026-11-16/lint-six-published-r1-r2.json",
+      "gitBlob": "15e4b9e337d690997435cf8be833c93b26ed29c6",
+      "bytes": 13825,
+      "sha256": "be5c06da6c6772b803d2a19eb94249feccf39dbfa895c93a10138dbb349ec7ac",
+      "completeOfficialAddedPatchReconstructed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan62-windows-retained-provider-2026-11-16/lint-six-source-r1.json",
+      "gitBlob": "2f328e76c7e67417c94bf2e47e1e528db77d8e4c",
+      "bytes": 2169,
+      "sha256": "89218179bee6a9fcfa99d7fb786e6051edebb6cd8e139acef2e0ee15864de8ba",
+      "completeOfficialAddedPatchReconstructed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan62-windows-retained-provider-2026-11-16/lint-six-source-r2.json",
+      "gitBlob": "6d142339da567214d28bfe507aa47cb414fc05be",
+      "bytes": 7946,
+      "sha256": "c3cf43b5e3c69064ed3a5a4c8799e73ec3ce70c2e65666b3103bca1f6e48469e",
+      "completeOfficialAddedPatchReconstructed": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan65-taskboard-clarification-refresh-2026-11-16/prospective-r2.json",
+      "gitBlob": "0cb8355458560a3208efd63590d729194c889694",
+      "bytes": 9731,
+      "sha256": "e41141b37fc3304d47eb6c2458d65d53acf89f908688dd3ad194167abc9fa9fa",
+      "completeOfficialAddedPatchReconstructed": true
+    }
+  ],
+  "publicationProof": {
+    "actualCommitParentTreeAndCapturedDeliveryRefAgree": true,
+    "completeSevenOfficialAddedFilePatchesIndependentlyReconstructed": true,
+    "actualBodiesMatchExpectedGitLengthAndSha256": true,
+    "independentParentAndActualMerklesMatch": true,
+    "exactlySevenAddedDocumentLeaves": true,
+    "all11160ExistingLeavesByteIdentitiesPreserved": true,
+    "fiveLintEvidenceDocumentsArchiveCompletedReviews": true,
+    "ownArchivedLintPublishedR1ReviewByteIdentical": true,
+    "prospectiveReviewOld0f32BindingReconciledToActualC6dParentByFullSourceIdentityPreservation": true
+  },
+  "selectedScope": {
+    "sourcePath": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+    "preimage": {
+      "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c",
+      "bytes": 36207,
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7"
+    },
+    "physicalLines": 798,
+    "maximumPhysicalLines": 800,
+    "afterimageExistsInThisReview": false,
+    "soleProspectiveEdit": "Strengthen existing banner-cleared wait Boolean acceptance with the existing default assignment-ready predicate and already captured contextId/surfaceId; original label retained."
+  },
+  "sourceFindings": [
+    "Read complete current 90-line helper3703. Default stage rejects detail.loading, refreshPending, unavailable or non-ready/full-wrong Task, foreign context/Team/surface, stale authority, absent or noneditable React owner, and missing/disabled/open/non-alice unique assignment control. The clarification-special retained-loading exception is not selected.",
+    "Actual original caller437-443 already uses this default helper with the same captured context/surface. At451-462 Mark resolved uses the special clarification stage; R1 changes only the later463-466 banner acceptance, preserving those earlier admission/action bytes.",
+    "The existing wait182-204 retains its30,000ms Date deadline, 100ms retry cadence and owner check. The additional helper reads/import resolutions consume this same existing interval and may add existing-loop iterations. No new wait or CDP call site is selected; no stronger hard wall-clock guarantee is inferred.",
+    "All subsequent canonical task/clarification receipt checks467-472, original generic Close473, dialog-closed474 and later scenario bytes must remain exact. Original generic final-target availability/x-y-tag/renderer checks and one physical press remain unchanged. A later invalidation may still refuse.",
+    "Actual geometry demonstrates a changed final Close target and refusal before press. The owner/header transition is source-supported, but the exact historical invalidating event/token/epoch is absent; no layout cause or actual repair success is proved.",
+    "The physical source cap is currently798/800. Approval is for the R1 only: the future concrete expression must fit the existing cap with natural formatting and must receive exact full-afterimage/inverse review before application."
+  ],
+  "validationRoutes": {
+    "currentWorkflow": {
+      "gitBlob": "889332aafb86855e891b03f268bc33e49bd87597",
+      "bytes": 142256,
+      "sha256": "df050a35c76dfd64c74d66dfd5871cfff5459aed1e61eedc5e5d50b548edd1a9"
+    },
+    "sourceAndHelperExplicitFastLintOperands": true,
+    "existingCompleteEightFileNodeHarnessIncludesTeamTest": true,
+    "workspaceTypesAndOriginalTypedLintScopesRetained": true,
+    "unchangedExistingTest": {
+      "path": "/tmp/migration-evidence-20261116/frontend/view-load-error-diagnostic-inert-proposal/before/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "gitBlob": "a67601fe1a6785b233aef6cacf494661100df472",
+      "bytes": 162195,
+      "sha256": "e2c1fdbc87395de78a9faed0a1a9a50d1861e02d0bdb686e3530e20eb078fc02"
+    },
+    "readExistingCases": [
+      "671-736 default assignment pending/stale/refusal checks",
+      "1449-1457 default assignment/comment loading refusal",
+      "existing generic final ownership/cutoff cases reused without new execution"
+    ],
+    "historicalWorkflow458aInR1IsOriginalRouteNotCurrentExecution": "Current889332 retains those exact existing routes and adds six unrelated scoped lint operands. No current test/lint/type/runtime PASS is claimed."
+  },
+  "currentSourceBodiesRehashed": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "gitBlob": "9c724c3895e467bc1db062e5015ded70c30e65e4",
+      "bytes": 55757,
+      "sha256": "bbd6647969c1ab0ae125b6a5e0685ca0f112dca05661a6c04b37c4fbee56a33e",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+      "gitBlob": "db4d98b333e1fb1103c82cf7851a252c0ecff3a5",
+      "bytes": 8576,
+      "sha256": "4e62a8eee6a03074e05bf75f17c8cdfb2b717cd99f923d188a0ffe7f3db54e6a",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c",
+      "bytes": 36207,
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+      "bytes": 6433,
+      "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "gitBlob": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+      "bytes": 30733,
+      "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/adapters/TaskDetailPage.tsx",
+      "gitBlob": "b0bda589bc5e7db5003ebeebb5629415ebb12882",
+      "bytes": 9715,
+      "sha256": "b05535ba6b48780520bcca99d1e0b5d28b95cdfd7846f9c7f2b69fc74c3d55c4",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": null
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailPresentation.ts",
+      "gitBlob": "6640fd23e9941c261612517b6d583f7d4ddc5079",
+      "bytes": 12402,
+      "sha256": "245a59c0715bb05dc9da07c7ea51745734480a9e09863a09100bdbfe40fca019",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailReviewRoute.ts",
+      "gitBlob": "0488ba1929d37ce5dfb4b5d08a9ad0a8ebbed58d",
+      "bytes": 1875,
+      "sha256": "73b013b826058eeb3f5211f07906187909cbde6945b021b23c8c6547d6e76349",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": null
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailSession.ts",
+      "gitBlob": "4ebf5a55d7cdcc5c29cc63e2bc9915c631222165",
+      "bytes": 27853,
+      "sha256": "cc73af4fab0ee40b4711173ed71db67776e16027009156cd373a1abcb942cb30",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/ui/TaskDetailBody.tsx",
+      "gitBlob": "d039d7b35ba3e7d5e2a7bbaf0e04f85bda72cead",
+      "bytes": 22571,
+      "sha256": "fd98561aa85b8f243e75970bfb342af47fa5b65a04fe6c7d154d54b5cbc6bfde",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": null
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/ui/TaskDetailContent.tsx",
+      "gitBlob": "2ccca35825ba451dc71546d19fd273f1e7ca5ec2",
+      "bytes": 3288,
+      "sha256": "a6bc6a07fa69607529914c3b552c55dafa1ffa492fd650e565e0bb8e07b4e7c4",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": null
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "gitBlob": "68499fd50746417a48883f73ca1d25592c644089",
+      "bytes": 17067,
+      "sha256": "9aa3aabc0d50852af7010fc9dfd1834905c6c078ac4bfe691e789f002ac05bd1",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "src/renderer/components/team/MemberBadge.tsx",
+      "gitBlob": "d0285af90257ad90e1aaf0c2a6cb4be6915282e8",
+      "bytes": 6525,
+      "sha256": "9b3cb4a234416582ed836ba8358f45ea11d16c92698f3becc20b08d8c48765a9",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": null
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
+      "gitBlob": "fde63957a08c0b076bd50ae272115737c4a4af19",
+      "bytes": 14513,
+      "sha256": "7f5c23b48db6fcb519d3a8837ad77688851c21419c5ab45183632a2600c4bc77",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/TaskDetailDialog.tsx",
+      "gitBlob": "003228a68f91bd3be004b8388fbb400f5b6a7aa6",
+      "bytes": 11909,
+      "sha256": "8efb9b58de0e0b41d0a1264cccef6ac6b530792698d6b7fcd3b1aadfe3fc046b",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "src/renderer/components/ui/MemberSelect.tsx",
+      "gitBlob": "56bd2c298ec1a7c9d74568d6338151e9b0e900cb",
+      "bytes": 13481,
+      "sha256": "69bf0eb3e109ee241e61619fd73bc7515415f45414eb61cbd56fd408ec1e782c",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "src/renderer/components/ui/dialog.tsx",
+      "gitBlob": "046c7452239fccb9d18858c86e9d075984888031",
+      "bytes": 4914,
+      "sha256": "038c9966ee8a0047c0ab1e32f5feb61ca8a2a38ea838260139187b5f041767f2",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": null
+    },
+    {
+      "path": "src/renderer/store/slices/teamSlice.ts",
+      "gitBlob": "df9dd8391bdd9fcd2edc05057fa18a8cbd787dad",
+      "bytes": 184647,
+      "sha256": "87f07dfa0d132d20493add182d0bb05d40fa1c5f97b5ddb72fa9ab23b6df8e9a",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "src/renderer/store/slices/teamTaskDetailSlice.ts",
+      "gitBlob": "5d5da9534eeacf34d554b2df2ed5573876c3a09c",
+      "bytes": 27966,
+      "sha256": "7c1b2091311e921fc244e8d8d8814cd03451bd31327a91492fdf4f8730aa8fdf",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "src/renderer/store/team/taskDetailReadAuthority.ts",
+      "gitBlob": "ebe4226a87ccc0b58cd2a24fd45e6bbf797ea08f",
+      "bytes": 14291,
+      "sha256": "300d67066bf861099b83684df1cf2898229c950ab12044c57fddb32d893f2719",
+      "currentParentAndPublishedTreeEqual": true,
+      "capturedSha256Matched": true
+    }
+  ],
+  "evidenceLimits": [
+    "Original75cf result remains INCOMPLETE. Original generic Close press was not attempted; later Taskboard/Cross-Team actions are unreached.",
+    "1777 equal captured before/after vectors do not prove an independent full1777-body Git/SHA closure; only20 exact current bodies are rejoined here,14 captured and6 outside that vector.",
+    "Retained original cleanup proves acknowledged failure Quit, wrapper0/null and empty original process group before/final cleanup, not a separately observed Host birth/natural exit.",
+    "This review used retained data/source only. No network, original log/ZIP retrieval, project execution, compiler/lint/test/provider/native/GUI, Git/index/ref/canonical mutation, source authoring or extra CI cycle. The separately owned terminal V2 metadata poll is not part of this R1 approval.",
+    "The actual documentary publication/readback is verified; no unseen prior review chronology or current live ref lease is inferred. Root still owns fresh source binding, exact afterimage review and publication."
+  ]
+}

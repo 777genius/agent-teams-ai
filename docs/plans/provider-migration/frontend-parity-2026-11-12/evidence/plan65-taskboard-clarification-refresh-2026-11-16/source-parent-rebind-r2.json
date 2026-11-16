@@ -1,0 +1,321 @@
+{
+  "kind": "PLAN65_EXACT_SOURCE_39A0_PARENT_REBIND_INDEPENDENT_R2",
+  "reviewer": "migration_scope",
+  "decision": "APPROVE_SAME_EXACT_ONE_FILE_AFTERIMAGE_ON_39A0_WITH_ROOT_FRESH_LEASE",
+  "blockers": [],
+  "reusedExactSourceR2": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/plan65-taskboard-source-independent-r2/independent-r2.json",
+    "gitBlob": "a1fa5f1ca45dba2d0d3b63f8821454bd94160d20",
+    "bytes": 8453,
+    "sha256": "f852a6dab12e14009c1d4854f8c80bb2947c1e1007a3d324dc8043ae7d287d2f"
+  },
+  "parent": "39a00ee65eb4ecfd5ba42c4c0504db837f6db470",
+  "parentTree": "1084235f7e9e432b99de08f63efba773f95d89f2",
+  "sourceChildTree": "8b20a0dc3f1dcfeac6d2e236facd67e92d5130bc",
+  "leafCount": 11194,
+  "source": {
+    "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+    "before": {
+      "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c",
+      "bytes": 36207,
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7"
+    },
+    "after": {
+      "gitBlob": "7707de6f387471609df97f0e1d93b93fbd4a1f77",
+      "bytes": 36341,
+      "sha256": "0e4491d9c877e35b07e48e04cf5bed8716e25d3ee8b664b1c168e4b8643d9c79"
+    },
+    "samePatch": {
+      "gitBlob": "c7f80f81353cebe8151d337f9f79740daf1af99a",
+      "bytes": 677,
+      "sha256": "69394ec143815507de493f90001406e62faa46fa114f2222453a5681a1eb58af"
+    }
+  },
+  "preservation": {
+    "complete7136And39a0MerklesIndependentlyRecomputed": true,
+    "all33IncomingFullBeforeAfterBodiesRehashedAgainstBothMaps": true,
+    "completeCurrentMapReconstructedByOnly33Changes": true,
+    "newParentAddedLeaves": 27,
+    "noRemoval": true,
+    "exactTaskboardPreimageUnchanged": true,
+    "publishedPlan65AndItsProspectiveReviewUnchanged": true,
+    "capturedContextDefaultHelperAndControlBodyUnchanged": true,
+    "childOnlyChangesTaskboard": true,
+    "allOther11193CurrentLeavesPreserved": true,
+    "all33IncomingLeavesPreservedInChild": true
+  },
+  "unchangedHelpers": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "blob": "1c11809c6458f829bd9bb6995aea2ad60b85511e"
+    }
+  ],
+  "incomingHeader": {
+    "path": "src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+    "blob": "e9d5580a90239d0748f6b5f374d04fd827b40dce",
+    "preserved": true,
+    "scopeBoundary": "Incoming height reservation does not waive selected settled-owner prerequisite; no broad semantic approval or actual repair outcome assigned here."
+  },
+  "limits": [
+    "Reuses full exact7707 expression/source semantics R2; no repeated or new source candidate.",
+    "Incoming Plan64/66 source and Plan67/other documentary semantics are outside this narrow parent-preservation review. All bytes are retained.",
+    "No API/CI polling, project parsing/import/compiler/lint/test/GUI/native execution, source/Git/index/ref/canonical writes. Root must perform current lease before publication."
+  ],
+  "inputs": [
+    {
+      "path": "/tmp/migration-evidence-20261116/root/plan65-taskboard-source-proposal/parent-39a0-rebind.json",
+      "gitBlob": "b080ca06870c710b2e03b009fd29c5877496e974",
+      "bytes": 1581,
+      "sha256": "134f77ebe111134f98b80dda72d0fd5f9962230ff8781e6c29950e955e43c709"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-39a0-whole-tree-verification.json",
+      "gitBlob": "4fd56f9e48cb807607e2c614b3f8254cf9b3fc01",
+      "bytes": 3460865,
+      "sha256": "4917f6b0dfb92c6a14937d6912936e340733283a28edda1d10ef64673c5d538b"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-39a0-full-patch-readback.json",
+      "gitBlob": "d685767bc06f18db8bc1ecf70515eda2939cb41f",
+      "bytes": 842324,
+      "sha256": "98584d7b9dbfd58b6d59ef660d3a751ab5136769a483bbd59e5f98f55a3e2b5d"
+    }
+  ],
+  "incomingPathPins": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "kind": "modified",
+      "before": "889332aafb86855e891b03f268bc33e49bd87597",
+      "after": "f7d9534ccc58aa8b77fe7a424ff3d652873c0a15",
+      "bytes": 142325
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/66-task-detail-assignee-slot-stability-2026-11-16.md",
+      "kind": "added",
+      "before": null,
+      "after": "10d13481f2f870382770e566ec3dca5d5a052cab",
+      "bytes": 7884
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/67-windows-owner-loss-before-resume-2026-11-16.md",
+      "kind": "added",
+      "before": null,
+      "after": "b550f33385a1da00915548047fa814743fcd5324",
+      "bytes": 18528
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/historical-darwin-capture-discovery-2026-11-16/r1.json",
+      "kind": "added",
+      "before": null,
+      "after": "8217551b4066bd353ddf4c923989b1f18d843900",
+      "bytes": 9004
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/historical-darwin-capture-discovery-2026-11-16/r1.md",
+      "kind": "added",
+      "before": null,
+      "after": "53ccaa57b23845bcaa97ead5b670746984491aa1",
+      "bytes": 5719
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-ci-75cf-2026-11-16/desktop-pending-open-quit-r1.json",
+      "kind": "added",
+      "before": null,
+      "after": "b4dabc6387e196cf6f2d9992c90c4ee6d6f716f8",
+      "bytes": 15461
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-ci-75cf-2026-11-16/native-linux-x64-r1.json",
+      "kind": "added",
+      "before": null,
+      "after": "58f58125958904b6e5d02a7e953642a0159a011b",
+      "bytes": 28892
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-ci-75cf-2026-11-16/native-linux-x64-r1.md",
+      "kind": "added",
+      "before": null,
+      "after": "2d9d05119efd5156bc604aae11f0e9d49f260017",
+      "bytes": 4924
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-ci-75cf-2026-11-16/packaged-linux-x64-r1.json",
+      "kind": "added",
+      "before": null,
+      "after": "2c63a8efb84229620b9d665f9ed67324ec068c16",
+      "bytes": 7475
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan66-task-detail-assignee-slot-2026-11-16/integration-r1.json",
+      "kind": "added",
+      "before": null,
+      "after": "28e478ed762de082d568da13642558d2736c458d",
+      "bytes": 504
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan66-task-detail-assignee-slot-2026-11-16/integration-r2.json",
+      "kind": "added",
+      "before": null,
+      "after": "8c868d00dcb4bc217fc2d81c3908d72ad6703951",
+      "bytes": 9847
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan66-task-detail-assignee-slot-2026-11-16/integration-r2.md",
+      "kind": "added",
+      "before": null,
+      "after": "2f267648037a543ae1dcc2fb90160f7fe8dd73cd",
+      "bytes": 1822
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan66-task-detail-assignee-slot-2026-11-16/prior-prospective-plan.md",
+      "kind": "added",
+      "before": null,
+      "after": "7ddc05b1be98c0df91d679d8705b1be8bd312c98",
+      "bytes": 6200
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan66-task-detail-assignee-slot-2026-11-16/prospective-r1.json",
+      "kind": "added",
+      "before": null,
+      "after": "ed38a47a88bcbea6150a76114bcedd3c279ef742",
+      "bytes": 8344
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan66-task-detail-assignee-slot-2026-11-16/prospective-r1.md",
+      "kind": "added",
+      "before": null,
+      "after": "975d8f162ad4397a5f78b4a6fb144537604e5fd4",
+      "bytes": 6477
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan66-task-detail-assignee-slot-2026-11-16/prospective-r2.json",
+      "kind": "added",
+      "before": null,
+      "after": "b230696e0d2b40560709b51ad6bfc05c90ce1a2d",
+      "bytes": 15967
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan66-task-detail-assignee-slot-2026-11-16/prospective-r2.md",
+      "kind": "added",
+      "before": null,
+      "after": "ec82a82637465d047e9829b9f84b9c6b7cb4ba04",
+      "bytes": 2439
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan67-windows-owner-loss-before-resume-2026-11-16/feasibility-r1.json",
+      "kind": "added",
+      "before": null,
+      "after": "bdea28b6bb02235dc9f99c4cd365475a486de860",
+      "bytes": 31651
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan67-windows-owner-loss-before-resume-2026-11-16/feasibility-r1.md",
+      "kind": "added",
+      "before": null,
+      "after": "2a4bfcea89b59513a1659d493c1a34cfb99543f0",
+      "bytes": 9099
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan67-windows-owner-loss-before-resume-2026-11-16/feasibility-r2.json",
+      "kind": "added",
+      "before": null,
+      "after": "8ebb54bfaa2d159df77777d519ebe6c777f779a1",
+      "bytes": 35169
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan67-windows-owner-loss-before-resume-2026-11-16/feasibility-r2.md",
+      "kind": "added",
+      "before": null,
+      "after": "ef9fb0b261b4343ead5562c44414e17e0bdb58b6",
+      "bytes": 3464
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan67-windows-owner-loss-before-resume-2026-11-16/prior-revision1-plan.md",
+      "kind": "added",
+      "before": null,
+      "after": "ae767cf0cfb5604f02dfc6589845660dde749e71",
+      "bytes": 18221
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan67-windows-owner-loss-before-resume-2026-11-16/prior-revision1-r1.json",
+      "kind": "added",
+      "before": null,
+      "after": "18cde2298747174a9a3551fe8575a1bd26cac26a",
+      "bytes": 4208
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan67-windows-owner-loss-before-resume-2026-11-16/prospective-r1.json",
+      "kind": "added",
+      "before": null,
+      "after": "985196033f9ada54bc5b04cd851e569514477420",
+      "bytes": 5153
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan67-windows-owner-loss-before-resume-2026-11-16/prospective-r2.json",
+      "kind": "added",
+      "before": null,
+      "after": "a4f02e6a9e38d4d0554b07398546b02c42cc0297",
+      "bytes": 9287
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan67-windows-owner-loss-before-resume-2026-11-16/prospective-r2.md",
+      "kind": "added",
+      "before": null,
+      "after": "58ecc332d1bc77ce78af1a3be568165a4f120cd5",
+      "bytes": 2450
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan67-windows-owner-loss-before-resume-2026-11-16/revision2-doc-proof.json",
+      "kind": "added",
+      "before": null,
+      "after": "4ff0e28cb49ad280fdc5a08fa518dd714922ef76",
+      "bytes": 3639
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "kind": "modified",
+      "before": "fc47d6a0a2c38b33e8a5a6439dbddc9ee240ce10",
+      "after": "e191694db8ccd8bbd2e05bcdbcacd8cb1703e23c",
+      "bytes": 22434
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "kind": "modified",
+      "before": "68499fd50746417a48883f73ca1d25592c644089",
+      "after": "e9d5580a90239d0748f6b5f374d04fd827b40dce",
+      "bytes": 17075
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceCold.ts",
+      "kind": "added",
+      "before": null,
+      "after": "c5bf79733969eeb61e9a555818a2d966e8bb4672",
+      "bytes": 5973
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "kind": "modified",
+      "before": "e0a107ffb1f57b62396c725cef57e9cadb78c5b1",
+      "after": "0df0e08a0180c48a74aaca8d79cebe7fbe06d032",
+      "bytes": 25056
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "kind": "modified",
+      "before": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+      "after": "7fa754daff8b6d538b0a186955edffb6b97d4ca0",
+      "bytes": 59211
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "kind": "modified",
+      "before": "2d0a94f85c2d23232f9ce1a7375e7765f552ebb9",
+      "after": "6336605c2aa95ebd830b079c9e23c316231471c4",
+      "bytes": 624
+    }
+  ]
+}

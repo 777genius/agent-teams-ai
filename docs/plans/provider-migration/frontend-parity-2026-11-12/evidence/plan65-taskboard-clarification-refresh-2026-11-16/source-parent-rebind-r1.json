@@ -1,0 +1,36 @@
+{
+  "kind": "PLAN65_EXACT_SOURCE_PARENT_REBIND",
+  "parent": "39a00ee65eb4ecfd5ba42c4c0504db837f6db470",
+  "parentTree": "1084235f7e9e432b99de08f63efba773f95d89f2",
+  "projectedTree": "8b20a0dc3f1dcfeac6d2e236facd67e92d5130bc",
+  "leafCount": 11194,
+  "sourcePath": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+  "sourceBefore": {
+    "sha": "3f1ce46fce847a861850ef874017f84227c62b0c",
+    "bytes": 36207,
+    "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+    "lines": 798
+  },
+  "sourceAfter": {
+    "sha": "7707de6f387471609df97f0e1d93b93fbd4a1f77",
+    "bytes": 36341,
+    "sha256": "0e4491d9c877e35b07e48e04cf5bed8716e25d3ee8b664b1c168e4b8643d9c79",
+    "lines": 799
+  },
+  "patch": {
+    "sha": "c7f80f81353cebe8151d337f9f79740daf1af99a",
+    "bytes": 677,
+    "sha256": "69394ec143815507de493f90001406e62faa46fa114f2222453a5681a1eb58af"
+  },
+  "incomingVerification": {
+    "path": "/tmp/migration-evidence-20261116/root/incoming-39a0-whole-tree-verification.json",
+    "sha": "4fd56f9e48cb807607e2c614b3f8254cf9b3fc01",
+    "bytes": 3460865,
+    "sha256": "4917f6b0dfb92c6a14937d6912936e340733283a28edda1d10ef64673c5d538b"
+  },
+  "samePublishedR1": true,
+  "sameExactSourceR2": true,
+  "preservedAllIncomingLeaves": true,
+  "incomingTaskDetailHeader": "e9d5580a90239d0748f6b5f374d04fd827b40dce",
+  "sourceReviewBoundary": "Readiness prerequisite remains distinct from incoming min-h-8 layout reservation; original captured owner/helper, Boolean short-circuit, wait/clock/click/source oracles unchanged. No new runtime PASS."
+}
