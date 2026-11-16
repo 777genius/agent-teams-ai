@@ -807,7 +807,6 @@ export function createTeamProvisioningServiceComposition(
     host.runtimeControl
   );
   assignCompositionPart(host.installTarget, 'openCodeRuntimeControlApi', openCodeRuntimeControlApi);
-
   return {
     configFacade,
     liveRuntimeMetadataPorts: runtimeProjection.liveRuntimeMetadataPorts,

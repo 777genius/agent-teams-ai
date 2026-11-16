@@ -519,10 +519,6 @@ function parseMachO(buffer) {
   const archs = new Set();
 
   if (magicHex === 'cafebabe' || magicHex === 'cafebabf') {
-    if (buffer.length < 8) {
-      return null;
-    }
-
     const archCount = buffer.readUInt32BE(4);
     const stride = magicHex === 'cafebabf' ? 32 : 20;
     let offset = 8;
