@@ -1,0 +1,782 @@
+{
+  "schema": "c714.original-windows-process-15s-read-only-review",
+  "schemaVersion": 1,
+  "preparedAtUtc": "2026-11-16T14:06:54.775Z",
+  "repository": "777genius/agent-teams-ai",
+  "disposition": "Completed read-only diagnosis retained for root publication. No producer or timer change is selected.",
+  "source": {
+    "commit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+    "tree": "6addcdaf71094340d366dc8a97258d68aaa7a47b",
+    "providerCommit": "c79b81bf002eaac95436da71c7049d7f309906a9"
+  },
+  "originalRun": {
+    "pullRequest": 1213,
+    "runId": 43834444719,
+    "event": "pull_request",
+    "attempt": 1,
+    "workflow": ".github/workflows/host-process-acceptance.yml",
+    "workflowGitBlob": "70202d22a5840401a00025cd60b797c514f3e455"
+  },
+  "evidence": {
+    "bundles": [
+      {
+        "gitBlob": "6ef95fcb3724d5a60b285391f65ac3defc9915b6",
+        "bytes": 639253,
+        "sha256": "2b72c71be629004bcd522ffe7e9c3f97a408a24019e5c9032f505c6c957e8f46"
+      },
+      {
+        "gitBlob": "a886764b445456044172cfd91943bd2446e221dd",
+        "bytes": 735697,
+        "sha256": "f428f83de2528b005a30a29a33f3de0defbe00b1848dff7e792fb4c071197285"
+      },
+      {
+        "gitBlob": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26",
+        "bytes": 267461,
+        "sha256": "156268b9dc8bf74821b35a74b258b35d94c3fad58ace4448017f4eaee0e135ff"
+      }
+    ],
+    "all28FullOriginalBodyIdentities": [
+      {
+        "containerGitBlob": "6ef95fcb3724d5a60b285391f65ac3defc9915b6",
+        "name": "darwin-x64-log",
+        "bytes": 136316,
+        "sha256": "79ae4fbce005153fe68dbc404ab935da79bce3a076c7a45941d237f5ac451715",
+        "gitBlob": "61c43ddc8453146125379e448eebf52973b3845a"
+      },
+      {
+        "containerGitBlob": "6ef95fcb3724d5a60b285391f65ac3defc9915b6",
+        "name": "windows-arm64-log",
+        "bytes": 361617,
+        "sha256": "520857ac20ed39874594b6db3032103c4646a7f50e27e82ca593e7f11fda07b9",
+        "gitBlob": "89dc57cd7e02f49243ccec27c889f3a945776cd6"
+      },
+      {
+        "containerGitBlob": "6ef95fcb3724d5a60b285391f65ac3defc9915b6",
+        "name": "run-api",
+        "bytes": 13856,
+        "sha256": "f35a3487db5e65a81adb70febf5a7ef0d9d9b0cfae6c128c2e5744cc1ec0c62c",
+        "gitBlob": "1376ef2b6a5057aebd3188dd81b2839be2f60ac0"
+      },
+      {
+        "containerGitBlob": "6ef95fcb3724d5a60b285391f65ac3defc9915b6",
+        "name": "jobs-api",
+        "bytes": 14958,
+        "sha256": "5c7df17523820428a082243fe2aca0030ca86736daa511bc22c19f0ea34ea9c5",
+        "gitBlob": "9593fa567c26c20b87892c200fd92c0dd018b12d"
+      },
+      {
+        "containerGitBlob": "6ef95fcb3724d5a60b285391f65ac3defc9915b6",
+        "name": "artifacts-api",
+        "bytes": 1618,
+        "sha256": "b2035184afdcccb0e501cb50838ba89d5a867875a2fc7ab45a327e4157401fd6",
+        "gitBlob": "2d55b4d5112fe93164fa70a7a818af9cf1bafc16"
+      },
+      {
+        "containerGitBlob": "6ef95fcb3724d5a60b285391f65ac3defc9915b6",
+        "name": "original-host-process-workflow.yml",
+        "bytes": 34313,
+        "sha256": "71b16b1b1fd1f0c88d3cb15a18cdfcce08b2b18908d3a5ce755330b4b2aeedf1",
+        "gitBlob": "70202d22a5840401a00025cd60b797c514f3e455"
+      },
+      {
+        "containerGitBlob": "a886764b445456044172cfd91943bd2446e221dd",
+        "name": "pr1213-process-winx64-raw",
+        "bytes": 413825,
+        "sha256": "fb525878161b5ee7d7e93d8b9f8fafb177ae5643f64b11e328f734ba8709587f",
+        "gitBlob": "d0fe3f09f3fb4cc3def5023d5c8c83b5e2e308f8"
+      },
+      {
+        "containerGitBlob": "a886764b445456044172cfd91943bd2446e221dd",
+        "name": "pr1213-stage1-winarm-raw",
+        "bytes": 127768,
+        "sha256": "ecf2bcf7c716068db75c53a0fb9f598192d751d6eb15b963306d644233b1f9c2",
+        "gitBlob": "034846f2a93c8728fda044f8cee36c0693932f0e"
+      },
+      {
+        "containerGitBlob": "a886764b445456044172cfd91943bd2446e221dd",
+        "name": "pr1213-process-second-run-api",
+        "bytes": 13856,
+        "sha256": "f35a3487db5e65a81adb70febf5a7ef0d9d9b0cfae6c128c2e5744cc1ec0c62c",
+        "gitBlob": "1376ef2b6a5057aebd3188dd81b2839be2f60ac0"
+      },
+      {
+        "containerGitBlob": "a886764b445456044172cfd91943bd2446e221dd",
+        "name": "pr1213-process-second-jobs-api",
+        "bytes": 20121,
+        "sha256": "0b8ee3ae668e8446c91adf7235791d3f164b2e1e406b203362c49ff270591f68",
+        "gitBlob": "fedba5ae53ec10806387da28675bab5c0e05b065"
+      },
+      {
+        "containerGitBlob": "a886764b445456044172cfd91943bd2446e221dd",
+        "name": "pr1213-process-second-artifacts-api",
+        "bytes": 2410,
+        "sha256": "bac1e0cc94f463da6b996185cbe0086089707373ae3a0bd8343ef2ddb5abb52b",
+        "gitBlob": "3bc4cbc15f5a67f3440c0d1874ca471c7776027f"
+      },
+      {
+        "containerGitBlob": "a886764b445456044172cfd91943bd2446e221dd",
+        "name": "pr1213-stage1-first-run-api",
+        "bytes": 13878,
+        "sha256": "366b04f268a3ceb9383605b1a0a1e55ea2c03deb5206d8be052ce7e718901ad9",
+        "gitBlob": "d88b333d50920fb76057d5c2b8bf258de455716a"
+      },
+      {
+        "containerGitBlob": "a886764b445456044172cfd91943bd2446e221dd",
+        "name": "pr1213-stage1-first-jobs-api",
+        "bytes": 23631,
+        "sha256": "da521bea6335c1f6c3c86e783c876b43f9430418c3243f35e8c1c463d1e67997",
+        "gitBlob": "d8dfa5d147058b56267caf055be11c9de34efb6b"
+      },
+      {
+        "containerGitBlob": "a886764b445456044172cfd91943bd2446e221dd",
+        "name": "pr1213-stage1-first-artifacts-api",
+        "bytes": 790,
+        "sha256": "184fd53785e61fa03444502e586c29f233da9bce23d20143b5c5d3638b17c598",
+        "gitBlob": "092da17a5436877a221d4e7f83bf3370d5f472a1"
+      },
+      {
+        "containerGitBlob": "a886764b445456044172cfd91943bd2446e221dd",
+        "name": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "bytes": 36013,
+        "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+        "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+      },
+      {
+        "containerGitBlob": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26",
+        "name": null,
+        "bytes": 25485,
+        "sha256": "5b86eb0fd4ad47a9e5417a5bde4d84bd3aab90852792da16ac5c021a22721d2a",
+        "gitBlob": "ec6306c5871599afd3a89bb33f3ed45d56212630"
+      },
+      {
+        "containerGitBlob": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26",
+        "name": null,
+        "bytes": 15142,
+        "sha256": "a8da5647752148d7e891d41a79f2cbaccd3543680c291111f8787add3175d850",
+        "gitBlob": "a8ae44d5070fdb22fc0dd5628960c3a206b7aa84"
+      },
+      {
+        "containerGitBlob": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26",
+        "name": null,
+        "bytes": 2908,
+        "sha256": "2d08fafa4e7aec0872117ad291e5bbafbfcbf23b90e9e58e8f8e67cb3db1585c",
+        "gitBlob": "40a0d06713500c67649d070519de030f06aeba1a"
+      },
+      {
+        "containerGitBlob": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26",
+        "name": null,
+        "bytes": 4162,
+        "sha256": "ceb10fd146941ddaf46aeaae2e19c78d805f2578f54c1240699ae21f52a9ae87",
+        "gitBlob": "96aa9562d0ece5c19d5a1d431f6911f855e00c29"
+      },
+      {
+        "containerGitBlob": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26",
+        "name": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+        "bytes": 27229,
+        "sha256": "964c9b512a8cdb81053ddbd316cb74fb230bf57730541ad9550b102733c82f8a",
+        "gitBlob": "740f654c9c04318779fb4fd9f15b79b76711e53f"
+      },
+      {
+        "containerGitBlob": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26",
+        "name": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "bytes": 60524,
+        "sha256": "07007c2c67a27fbab6bd4906982b9460a634928ca80f7349abd47fa7eb747447",
+        "gitBlob": "f2af726dd2f352a1ecc0fa40753b76e72d008e14"
+      },
+      {
+        "containerGitBlob": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26",
+        "name": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+        "bytes": 14011,
+        "sha256": "4d95aa3c8c58d15554689224a3b8da78522932349370d88bdc609428fea24a30",
+        "gitBlob": "24aeae90de179269ff616a725d38ccc49374094b"
+      },
+      {
+        "containerGitBlob": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26",
+        "name": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+        "bytes": 15002,
+        "sha256": "75184e7328f9449a9f449994f0cd5dbbd2e954bd0170b79c2fbd236fec66e9c4",
+        "gitBlob": "f1d7efcb34f5c91953b474828bf09dbf3c092e98"
+      },
+      {
+        "containerGitBlob": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26",
+        "name": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+        "bytes": 3398,
+        "sha256": "352c62fcce347599a89658a5dc98d3d05d35d4a6d26618cc87faa6ece2f995df",
+        "gitBlob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f"
+      },
+      {
+        "containerGitBlob": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26",
+        "name": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+        "bytes": 30469,
+        "sha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d",
+        "gitBlob": "a566efc5987b6859d004a8531cb8e6bac80bec30"
+      },
+      {
+        "containerGitBlob": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26",
+        "name": "packages/legacy-agent-host/src/adapters/providers/readCodexMcpCatalog.ts",
+        "bytes": 2224,
+        "sha256": "1cb3368063310cde3d3824709dcbb941738e65b8beee283c005fbd493d84ae0c",
+        "gitBlob": "7230804bd10e8a521cb3e1b1e9760920e9ebcef5"
+      },
+      {
+        "containerGitBlob": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26",
+        "name": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-factory.ts",
+        "bytes": 2933,
+        "sha256": "7446362f7a05fee6807acbed8905138986342b8ef777afa7be1fc04a9c263d83",
+        "gitBlob": "daeeb1f64df310c895aa2df1c84f66d04a3d33b8"
+      },
+      {
+        "containerGitBlob": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26",
+        "name": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-session.ts",
+        "bytes": 19978,
+        "sha256": "5086b0b6551da1775330366a82a83c28785cd3183fadfef74d81dbc67c670388",
+        "gitBlob": "c77809d097940bed17cebc13b849f57f13a0db0b"
+      }
+    ],
+    "bodyInstances": 28,
+    "bodyBytes": 1438435,
+    "allRehashedExact": true,
+    "qualification": "Original retained Git evidence only. No new CI/API polling, runtime/test/shell invocation or artifact extraction. Root's original ZIP verification remains separately attributed."
+  },
+  "sourcePins": [
+    {
+      "repository": "777genius/agent-teams-ai",
+      "commit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "bytes": 27229,
+      "sha256": "964c9b512a8cdb81053ddbd316cb74fb230bf57730541ad9550b102733c82f8a",
+      "gitBlob": "740f654c9c04318779fb4fd9f15b79b76711e53f"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "commit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "bytes": 60524,
+      "sha256": "07007c2c67a27fbab6bd4906982b9460a634928ca80f7349abd47fa7eb747447",
+      "gitBlob": "f2af726dd2f352a1ecc0fa40753b76e72d008e14"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "commit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "bytes": 14011,
+      "sha256": "4d95aa3c8c58d15554689224a3b8da78522932349370d88bdc609428fea24a30",
+      "gitBlob": "24aeae90de179269ff616a725d38ccc49374094b"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "commit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "bytes": 15002,
+      "sha256": "75184e7328f9449a9f449994f0cd5dbbd2e954bd0170b79c2fbd236fec66e9c4",
+      "gitBlob": "f1d7efcb34f5c91953b474828bf09dbf3c092e98"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "commit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "bytes": 3398,
+      "sha256": "352c62fcce347599a89658a5dc98d3d05d35d4a6d26618cc87faa6ece2f995df",
+      "gitBlob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "commit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "bytes": 30469,
+      "sha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d",
+      "gitBlob": "a566efc5987b6859d004a8531cb8e6bac80bec30"
+    },
+    {
+      "repository": "777genius/agent-teams-ai",
+      "commit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "path": "packages/legacy-agent-host/src/adapters/providers/readCodexMcpCatalog.ts",
+      "bytes": 2224,
+      "sha256": "1cb3368063310cde3d3824709dcbb941738e65b8beee283c005fbd493d84ae0c",
+      "gitBlob": "7230804bd10e8a521cb3e1b1e9760920e9ebcef5"
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "commit": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-factory.ts",
+      "bytes": 2933,
+      "sha256": "7446362f7a05fee6807acbed8905138986342b8ef777afa7be1fc04a9c263d83",
+      "gitBlob": "daeeb1f64df310c895aa2df1c84f66d04a3d33b8"
+    },
+    {
+      "repository": "agent-teams-ai/old-provider-implementations",
+      "commit": "c79b81bf002eaac95436da71c7049d7f309906a9",
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-session.ts",
+      "bytes": 19978,
+      "sha256": "5086b0b6551da1775330366a82a83c28785cd3183fadfef74d81dbc67c670388",
+      "gitBlob": "c77809d097940bed17cebc13b849f57f13a0db0b"
+    }
+  ],
+  "sourceAnchors": [
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "gitBlob": "f1d7efcb34f5c91953b474828bf09dbf3c092e98",
+      "startLine": 88,
+      "endLine": 118,
+      "claim": "Captured private binding/source context and fixed sequential observer",
+      "sha256": "58a8384f99c8fe082d2e01ffc6bb46edb5368ae5cc763c76ebdaa90aefd56e32",
+      "sourceExcerptPreservedInBundle": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "gitBlob": "f1d7efcb34f5c91953b474828bf09dbf3c092e98",
+      "startLine": 160,
+      "endLine": 184,
+      "claim": "Catalog before/after/returned reports existing awaited read and comparison",
+      "sha256": "6dbb20cd67251f56e4351320e20251903502a288ae0f4b444db6bf5c23d454ad",
+      "sourceExcerptPreservedInBundle": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "gitBlob": "f1d7efcb34f5c91953b474828bf09dbf3c092e98",
+      "startLine": 258,
+      "endLine": 288,
+      "claim": "Original native.open and wrapper readiness boundaries",
+      "sha256": "750813812c595e335636ec690a291276cc4682164c67db72d655858eda2a7760",
+      "sourceExcerptPreservedInBundle": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26"
+    },
+    {
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-factory.ts",
+      "gitBlob": "daeeb1f64df310c895aa2df1c84f66d04a3d33b8",
+      "startLine": 17,
+      "endLine": 43,
+      "claim": "D configuration/open/post-thread readiness order",
+      "sha256": "eabd53307b94a3c28479be5dcd7f4f36964100b57adadd88641235c7e1240b22",
+      "sourceExcerptPreservedInBundle": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26"
+    },
+    {
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-session.ts",
+      "gitBlob": "c77809d097940bed17cebc13b849f57f13a0db0b",
+      "startLine": 74,
+      "endLine": 77,
+      "claim": "Native open catalog and thread order",
+      "sha256": "a728d7cdac60d2f52ed0f9d6c46eae7519bf3eb1bb0cfacc76e4e0bd72a6b1c8",
+      "sourceExcerptPreservedInBundle": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26"
+    },
+    {
+      "path": "packages/provider-implementations/src/features/provider-session-implementation/adapters/codex-protocol/driver-session.ts",
+      "gitBlob": "c77809d097940bed17cebc13b849f57f13a0db0b",
+      "startLine": 94,
+      "endLine": 110,
+      "claim": "Post-open D readiness order, native MCP checks, Host probe and bounded result",
+      "sha256": "c2530f90d39ed793fec716235456ca5aaeb94e091ab19a84ba345a3d7538d99b",
+      "sourceExcerptPreservedInBundle": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "gitBlob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f",
+      "startLine": 18,
+      "endLine": 26,
+      "claim": "Short-circuit record/provider/owner Boolean evaluation",
+      "sha256": "bacd6e57d81220b78e0abd63980cb5a559adac7bc26b473dde115d1d45105417",
+      "sourceExcerptPreservedInBundle": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "gitBlob": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+      "startLine": 222,
+      "endLine": 258,
+      "claim": "Original allocation stores driver before awaiting readiness and publishing ready result",
+      "sha256": "be90aabce6c408d3df18841ff12adccf7fee91e2622b89e2e1c293e1507da8c2",
+      "sourceExcerptPreservedInBundle": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "gitBlob": "740f654c9c04318779fb4fd9f15b79b76711e53f",
+      "startLine": 248,
+      "endLine": 264,
+      "claim": "View event count replaces previous same-digest count; separate exit ledger",
+      "sha256": "168ea095f602f7e64584e2b2b990fe16462b6a631450ebf86f0ac1f154f099dd",
+      "sourceExcerptPreservedInBundle": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "gitBlob": "24aeae90de179269ff616a725d38ccc49374094b",
+      "startLine": 100,
+      "endLine": 125,
+      "claim": "Confirmed exit and original launch/source/view identity admission",
+      "sha256": "f0b614c89b051da0ae2457093ac3d129d02f0716a8ce7c051a4896a02f452004",
+      "sourceExcerptPreservedInBundle": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+      "gitBlob": "24aeae90de179269ff616a725d38ccc49374094b",
+      "startLine": 168,
+      "endLine": 179,
+      "claim": "Unique context, last matching view and global event-prefix readback",
+      "sha256": "e477e4a7b8eed83f61ce01be8d7d9458f6a88e6acbffac6d06650cf2e7be94a9",
+      "sourceExcerptPreservedInBundle": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "gitBlob": "f2af726dd2f352a1ecc0fa40753b76e72d008e14",
+      "startLine": 492,
+      "endLine": 507,
+      "claim": "Original poll/current Runtime view and failure observation",
+      "sha256": "be30ad3308551306866486b0b63cbda5ffc350e5e0de7528a678cbeb966bd1e2",
+      "sourceExcerptPreservedInBundle": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "gitBlob": "f2af726dd2f352a1ecc0fa40753b76e72d008e14",
+      "startLine": 733,
+      "endLine": 763,
+      "claim": "Post-cleanup completed-exit reader",
+      "sha256": "9492711bc0c85da7cce3b6f08d1f81eb496e7162117365066e5c333f66382d27",
+      "sourceExcerptPreservedInBundle": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26"
+    }
+  ],
+  "originalAbsolutePoll": {
+    "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+    "gitBlob": "f2af726dd2f352a1ecc0fa40753b76e72d008e14",
+    "lines": [
+      59,
+      67
+    ],
+    "literal": "async function poll(check: () => Promise<boolean>, message: string, budget = 15000): Promise<void> {\n  const deadline = performance.now() + budget;\n  for (;;) {\n    assert.ok(performance.now() < deadline, message);\n    const ready = await check();\n    assert.ok(performance.now() < deadline, message);\n    if (ready) return;\n    await delay(25);\n  }\n",
+    "predicate": "The original Team-A readiness callback returns true only when the matched runtime row has nativeReady === true.",
+    "interpretation": "The same original 15,000ms deadline is checked before and after each await. allocated, owned or attached alone is insufficient. A true result returning after the deadline still refuses; no new or reset deadline is proposed."
+  },
+  "priorCompleteReadOnlyFindings": {
+    "source": {
+      "commit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "tree": "6addcdaf71094340d366dc8a97258d68aaa7a47b",
+      "providerCommit": "c79b81bf002eaac95436da71c7049d7f309906a9"
+    },
+    "evidence": [
+      "6ef95fcb3724d5a60b285391f65ac3defc9915b6",
+      "a886764b445456044172cfd91943bd2446e221dd",
+      "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26"
+    ],
+    "innerHashReview": {
+      "count": 28,
+      "bytes": 1438435,
+      "allExact": true
+    },
+    "joins": [
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+        "gitBlob": "740f654c9c04318779fb4fd9f15b79b76711e53f",
+        "lfExact": true,
+        "crlfExact": true,
+        "receiptExact": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "gitBlob": "f2af726dd2f352a1ecc0fa40753b76e72d008e14",
+        "lfExact": true,
+        "crlfExact": true,
+        "receiptExact": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+        "gitBlob": "24aeae90de179269ff616a725d38ccc49374094b",
+        "lfExact": true,
+        "crlfExact": true,
+        "receiptExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+        "gitBlob": "f1d7efcb34f5c91953b474828bf09dbf3c092e98",
+        "lfExact": true,
+        "crlfExact": true,
+        "receiptExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+        "gitBlob": "65d53a2beff3b3a36d554601dcf57d67b086aa0f",
+        "lfExact": true,
+        "crlfExact": true,
+        "receiptExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+        "gitBlob": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+        "lfExact": true,
+        "crlfExact": true,
+        "receiptExact": null
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/readCodexMcpCatalog.ts",
+        "gitBlob": "7230804bd10e8a521cb3e1b1e9760920e9ebcef5",
+        "lfExact": true,
+        "crlfExact": true,
+        "receiptExact": null
+      }
+    ],
+    "arm": {
+      "job": 133187477481,
+      "sourceRaw": "89dc57cd7e02f49243ccec27c889f3a945776cd6",
+      "actualReceipt": "ec6306c5871599afd3a89bb33f3ed45d56212630",
+      "predicate": "nativeReady === true",
+      "readCount": 112,
+      "lastReadElapsedMs": 15046.186400000002,
+      "pollFailureLine": 64,
+      "recordReady": false,
+      "attached": true,
+      "ledgerEvents": 15,
+      "openAwaitReturned": true,
+      "secondReadinessAfterAwaitObserved": false,
+      "fourthCatalogReturned": true,
+      "atomicWithFailure": false,
+      "providerReady": null,
+      "ownerCurrent": null,
+      "firstRefusal": "unknown/empty",
+      "finalReceiptCleanup": true
+    },
+    "x64": {
+      "job": 133187476861,
+      "sourceRaw": "d0fe3f09f3fb4cc3def5023d5c8c83b5e2e308f8",
+      "provider": "opencode",
+      "readCount": 69,
+      "lastReadElapsedMs": 14994.408500000001,
+      "pollFailureLine": 62,
+      "phase": "held",
+      "attached": false,
+      "nativeReady": false,
+      "diagnostic": "open-unknown",
+      "referencePhase": "probe-expiry",
+      "referenceNow": 1794820290380,
+      "cutoff": 1794820290326,
+      "consumerEarlierNow": 1794820290103,
+      "referenceLateMs": 54,
+      "bracketWallMs": 277,
+      "exactSubphaseCostUnknown": true
+    },
+    "limits": [
+      "No CI query or mutation",
+      "No local shell/test/runtime",
+      "No source/ref/PR changes",
+      "No postimage created",
+      "No timeout or currentness relaxation proposed",
+      "No common historical cause proved",
+      "No new ZIP extraction claim"
+    ]
+  },
+  "arm64": {
+    "jobId": 133187477481,
+    "provider": "codex",
+    "image": "A",
+    "stage": "Team-A",
+    "originalRaw": "89dc57cd7e02f49243ccec27c889f3a945776cd6",
+    "actualFinalReceipt": "ec6306c5871599afd3a89bb33f3ed45d56212630",
+    "actualReadiness": {
+      "job": 133187477481,
+      "sourceRaw": "89dc57cd7e02f49243ccec27c889f3a945776cd6",
+      "actualReceipt": "ec6306c5871599afd3a89bb33f3ed45d56212630",
+      "predicate": "nativeReady === true",
+      "readCount": 112,
+      "lastReadElapsedMs": 15046.186400000002,
+      "pollFailureLine": 64,
+      "recordReady": false,
+      "attached": true,
+      "ledgerEvents": 15,
+      "openAwaitReturned": true,
+      "secondReadinessAfterAwaitObserved": false,
+      "fourthCatalogReturned": true,
+      "atomicWithFailure": false,
+      "providerReady": null,
+      "ownerCurrent": null,
+      "firstRefusal": "unknown/empty",
+      "finalReceiptCleanup": true
+    },
+    "actualLastObserverPrefix": {
+      "schemaVersion": 1,
+      "status": "observed",
+      "atomicWithFailure": false,
+      "samplePoint": "last-original-projection-with-matching-view-digest",
+      "source": {
+        "sourceId": "352efdc21ae30111f1a1cebb6270ec7aafd9f81ee5c06dd46059155bd8cf739b",
+        "revision": "9f655d470fa6fe849cc3a955bbd50c03c36c1aa9b9f9d2753465f8618782843c"
+      },
+      "bindingDigest": "63f61439297662562f387c548fb03b6644154a511ad6903a6a51cbe6ac6bcb5d",
+      "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+      "mainEpoch": "d7923c44-3ff0-48fe-b88f-251c17243e51",
+      "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+      "observedEventCount": 15,
+      "events": [
+        [
+          1,
+          1,
+          "open",
+          "before-await",
+          null
+        ],
+        [
+          2,
+          2,
+          "catalog",
+          "before-await",
+          null
+        ],
+        [
+          3,
+          2,
+          "catalog",
+          "after-await",
+          null
+        ],
+        [
+          4,
+          2,
+          "catalog",
+          "returned",
+          true
+        ],
+        [
+          5,
+          3,
+          "catalog",
+          "before-await",
+          null
+        ],
+        [
+          6,
+          3,
+          "catalog",
+          "after-await",
+          null
+        ],
+        [
+          7,
+          3,
+          "catalog",
+          "returned",
+          true
+        ],
+        [
+          8,
+          4,
+          "catalog",
+          "before-await",
+          null
+        ],
+        [
+          9,
+          4,
+          "catalog",
+          "after-await",
+          null
+        ],
+        [
+          10,
+          4,
+          "catalog",
+          "returned",
+          true
+        ],
+        [
+          11,
+          1,
+          "open",
+          "after-await",
+          null
+        ],
+        [
+          12,
+          5,
+          "readiness",
+          "before-await",
+          null
+        ],
+        [
+          13,
+          6,
+          "catalog",
+          "before-await",
+          null
+        ],
+        [
+          14,
+          6,
+          "catalog",
+          "after-await",
+          null
+        ],
+        [
+          15,
+          6,
+          "catalog",
+          "returned",
+          true
+        ]
+      ]
+    },
+    "completedPrefixInterpretation": "The first three catalog callbacks belong to configuration resolution, native.open, and mandatory post-thread D readiness before native.open returns. The fourth occurs inside the subsequent Host-wrapped source.checkReadiness. Its original catalog await and digest comparison returned true. No wrapper readiness after/returned/threw is present in the captured prefix.",
+    "unevaluatedOperands": "bindingMatches=true and recordReady=false short-circuit providerReady and ownerCurrent; null for those operands is unevaluated, not false. RuntimeOwner publishes allocated+owned before awaiting driver.checkReadiness, and only later stores the readiness result.",
+    "samplingLimits": "The ledger uses the last original runtime-projection callback for the matching digest. A repeated digest can replace its event-count cutoff. It is explicitly atomicWithFailure=false, not an RPC- or exception-atomic snapshot, and not a latency measurement.",
+    "remainingUnknown": "D readiness may subsequently perform native matchesMcpConfiguration, exactMcpPolicyReady, and the original Host probe. This source and receipt do not identify which particular operation had not settled, isolate CPU/I/O/queue time, or establish a repair. Missing observer events alone are not an absence/cause proof.",
+    "cleanupChronology": "Earlier complete artifact log/CI stdout emitted handleAbsent=false for slots1–6. The later final post-cleanup receipt records all seven handleAbsent=true and cleanup=true. These are different observation points, not byte discrepancies; earlier originals remain untouched. Failure/controller rootExit1 stays failure despite final cleanup.",
+    "conclusion": "Original native.open returned and the later Host-wrapped checkReadiness began. Its fourth captured catalog await/digest comparison returned true. The captured prefix contains no after-await/returned/threw event for that wrapper readiness. The original readiness record is still false; nativeReady remains false and the original post-await deadline assertion at64 fails after112 reads/15046.1864ms. The ledger is not failure-atomic, does not time individual D operations and cannot identify a specific native MCP/probe call as the cause.",
+    "qualification": "Original E WinARM Process remains INCOMPLETE at Codex Team-A under unchanged15-second readiness. Later Claude/OpenCode/final-platform verifier skipped. Wrapper provider receiptPASS applies only to its executed prior TEST-peer route. No P08, real provider, Desktop or release transfer."
+  },
+  "x64": {
+    "jobId": 133187476861,
+    "provider": "opencode",
+    "originalRaw": "d0fe3f09f3fb4cc3def5023d5c8c83b5e2e308f8",
+    "priorRoutes": "Earlier original Codex and Claude source routes passed in this same job; this does not qualify OpenCode.",
+    "actualReadiness": {
+      "job": 133187476861,
+      "sourceRaw": "d0fe3f09f3fb4cc3def5023d5c8c83b5e2e308f8",
+      "provider": "opencode",
+      "readCount": 69,
+      "lastReadElapsedMs": 14994.408500000001,
+      "pollFailureLine": 62,
+      "phase": "held",
+      "attached": false,
+      "nativeReady": false,
+      "diagnostic": "open-unknown",
+      "referencePhase": "probe-expiry",
+      "referenceNow": 1794820290380,
+      "cutoff": 1794820290326,
+      "consumerEarlierNow": 1794820290103,
+      "referenceLateMs": 54,
+      "bracketWallMs": 277,
+      "exactSubphaseCostUnknown": true
+    },
+    "deadlineArithmetic": {
+      "cutoff": 1794820290326,
+      "consumerEarlierNow": 1794820290103,
+      "referenceNow": 1794820290380,
+      "consumerBeforeCutoffMs": 223,
+      "referenceAfterCutoffMs": 54,
+      "bracketWallMs": 277
+    },
+    "conclusion": "The last retained runtime row remains held, unattached and not nativeReady after69 reads. The next original pre-iteration deadline assertion at62 refuses. The earlier consumer check was223ms before cutoff and later probe-expiry reference54ms after, a277ms wall-clock bracket. Those are distinct original observations; the bracket is not an isolated hash/filesystem/currentness cost and does not prove one particular operation caused the delay."
+  },
+  "finiteContract": {
+    "providerCommit": "c79b81bf002eaac95436da71c7049d7f309906a9",
+    "description": "Existing source-profile TEST peers and original native ownership/witness/readiness path, not real Claude/Codex account execution. Preserve exact provider source, catalog/currentness fences and original finite native gates.",
+    "noTransfers": [
+      "Packaged Refresh/Retry10s",
+      "Desktop/GUI",
+      "real provider authorization",
+      "whole Windows Process PASS",
+      "later source"
+    ]
+  },
+  "hypothesesAndLimits": [
+    "No common historical cause is proven for ARM Codex and x64 OpenCode.",
+    "ARM attached is not nativeReady; null providerReady/ownerCurrent fields represent unevaluated short-circuited operands, not false values.",
+    "Missing later observer events are not an atomic absence proof or a latency measurement.",
+    "x64's277ms bracket does not isolate CPU, I/O, queue, source hashing or native ACK duration.",
+    "Earlier stdout handle-absence observations remain preserved; later final ARM receipt cleanup=true/all seven absent is a later observation and does not convert the original test failure to PASS.",
+    "No currentness caching, authority reuse, deadline extension, replay or producer change is justified by this evidence."
+  ],
+  "minimumFutureScope": {
+    "status": "Recommendation only; no new R1/action or source object authorized.",
+    "requirement": "If a separate R1 is considered, first specify a passive, bounded observation of the original unresolved await/currentness boundary with exact existing source/launch/view identity. Preserve every original guard/read/order and the15s deadline; add no native/provider action, retry or reused authority. Do not infer a repair from the current event prefix or bracket. Require a reviewed actual-source regression and original exact-source platform qualification only after separately authorized design and publication."
+  },
+  "actions": {
+    "newCiQueries": 0,
+    "runtimeOrTests": 0,
+    "sourcePostimages": 0,
+    "refsOrPrActions": 0,
+    "bareReportOnly": true
+  }
+}

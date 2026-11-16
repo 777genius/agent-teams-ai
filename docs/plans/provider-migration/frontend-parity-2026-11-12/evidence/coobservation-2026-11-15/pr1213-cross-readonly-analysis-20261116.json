@@ -1,0 +1,771 @@
+{
+  "schema": "c714.original-cross-team-close-geometry-read-only-review",
+  "schemaVersion": 1,
+  "preparedAtUtc": "2026-11-16T14:09:14.910Z",
+  "repository": "777genius/agent-teams-ai",
+  "disposition": "Retains the completed source/evidence diagnosis. No source/test/runner postimage, runtime, ref, PR or CI action; no geometry or deadline relaxation.",
+  "source": {
+    "commit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+    "tree": "6addcdaf71094340d366dc8a97258d68aaa7a47b",
+    "pullRequest": 1213,
+    "runId": 43834444967,
+    "attempt": 1,
+    "jobId": 133187479780,
+    "name": "Offline Host Desktop (linux-x64, cross-team)",
+    "workflow": {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "gitBlob": "9ec6dfb68e98480a12224528e2637153f4274a6b",
+      "completeBodyRetainedInPart1": true
+    }
+  },
+  "evidence": {
+    "originalTerminalBundle": {
+      "gitBlob": "9dc5d5e1969803676fe649cc2c8d085d5923f351",
+      "bytes": 1114398,
+      "sha256": "5effcfcbb29530280b6cc750757f559e6624734be4c7cf501c82b0a66488b5be"
+    },
+    "originalTerminalPayloads": [
+      {
+        "id": "host-job-133187479780.log",
+        "bytes": 192925,
+        "sha256": "ebb7e43cb9c6bafa2f3101fa2e456084a3afef6af707fe41a35f0600feefba63",
+        "gitBlob": "932f0e260daa0da01a08217f3956d08381f7385e"
+      },
+      {
+        "id": "host-job-133187479726.log",
+        "bytes": 190989,
+        "sha256": "af1a6f4b054d2eb8ddbed8acdd4fcc571ae61c0cb23d3885c234b0d13a119de3",
+        "gitBlob": "21bfbf8733af834b82af0645727c42977dc90ef6"
+      },
+      {
+        "id": "host-job-133187480664.log",
+        "bytes": 189846,
+        "sha256": "8d486463c5e749b6fd074b37e780b22f2b2df87705013ed7b7d05b955de8d577",
+        "gitBlob": "46918c2122e6d767a51ac6ef4532f46ab760373b"
+      },
+      {
+        "id": "host-job-133187479656.log",
+        "bytes": 116014,
+        "sha256": "51eaf5b2f407a826271c826a8123074df8b1cc3d2e996d660589d532924bbca8",
+        "gitBlob": "2189f532a5c758f05f59a71de4fa4f1bad37101e"
+      },
+      {
+        "id": "hostrun-110006.json",
+        "bytes": 13850,
+        "sha256": "e7b763a0031a00fb7e56981631d1d8ede311eae2b6d36dbfa1267ce569d8519b",
+        "gitBlob": "24126de968d636c7d70b707edb2739351ee239a0"
+      },
+      {
+        "id": "hostjobs-110006.json",
+        "bytes": 155173,
+        "sha256": "8a0cf49f0370889345e280dc417cd955613e10f90b34be01aa2bd0ea661cdeab",
+        "gitBlob": "40c1415b928af1886991b7f16537dfc688ac6167"
+      },
+      {
+        "id": "hostArtifacts-110006.json",
+        "bytes": 17491,
+        "sha256": "3f9de7ea33acc316ff7c3fb9707a7d233672f5e64f5e23a645dc0f08bc291627",
+        "gitBlob": "16bacbff7922192a0af41cf76c1ed2a036272928"
+      },
+      {
+        "id": "desktop-ui-controls.ts",
+        "bytes": 28741,
+        "sha256": "9d5233b82df6a7dfa0d735b27c11f39f130824f3947c38896a0d052ca549cba4",
+        "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78"
+      },
+      {
+        "id": "desktop-task-board-ui-smoke.ts",
+        "bytes": 36207,
+        "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+        "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c"
+      },
+      {
+        "id": "desktop-task-board-cross-team-ui-smoke.ts",
+        "bytes": 8576,
+        "sha256": "4e62a8eee6a03074e05bf75f17c8cdfb2b717cd99f923d188a0ffe7f3db54e6a",
+        "gitBlob": "db4d98b333e1fb1103c82cf7851a252c0ecff3a5"
+      },
+      {
+        "id": "verify-desktop-v2-management-receipt.ts",
+        "bytes": 18828,
+        "sha256": "1693e23f265b2d1e4024c5553e1577827ebe8e98c8a7e347346e6aa229bb7e72",
+        "gitBlob": "b7d447d7acea4c55fcb578b922194a528440e3b1"
+      }
+    ],
+    "all11FullInnerBodiesRehashed": true,
+    "originalRaw": {
+      "id": "host-job-133187479780.log",
+      "jobId": 133187479780,
+      "utf8Bytes": 192925,
+      "sha256": "ebb7e43cb9c6bafa2f3101fa2e456084a3afef6af707fe41a35f0600feefba63",
+      "gitBlobSha": "932f0e260daa0da01a08217f3956d08381f7385e"
+    },
+    "actualArtifact": {
+      "id": 14217443334,
+      "bytes": 887724,
+      "sha256": "71f12413d863f9cc175144cd22a2cfda9899e025ed856810b0ca1fd2b3a35931",
+      "safeUniqueRegularMembers": 16,
+      "verification": "Root downloaded the original artifact and verified exact ZIP bytes/digest/CRC/member safety; this reviewer did not download or re-extract it."
+    },
+    "actualWholeReceipt": {
+      "gitBlob": "88c036dee168ec241a479de765b844bd59249abe",
+      "bytes": 902855,
+      "sha256": "31627f800809b7571a1bb98e0b173a960b28b77405c305f752a72ed8f859f1a2",
+      "memberBasename": "desktop-backend-receipt.json",
+      "rootOriginalPath": "/home/runner/work/_temp/TEST-desktop-backend-mEbel2",
+      "source": {
+        "head": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "dirty": false
+      }
+    },
+    "failureImage": {
+      "sha256": "0fe6047dfc9bc757e38505b4efae13e43124072240b483fea051cfed361c3633",
+      "qualification": "Root's original image review; no independent pixel reinspection is claimed here. The receipt's saved dialog snapshot independently records the still-open dialog, owner alice, dependency and absent clarification banner."
+    },
+    "historicalPreservation": "The earlier Host04 bundle correctly said exact coordinates/full cleanup receipt were unavailable to that snapshot. This later recovered receipt supplements those facts without rewriting the original bundle or its non-atomic printed failure projection."
+  },
+  "completeReceiptFacts": {
+    "status": "INCOMPLETE",
+    "mode": "task-board-cross-team-ui",
+    "failureSource": {
+      "kind": "assertion",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:325:12",
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts:473:3",
+        "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts:137:5",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:470:7",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+      ]
+    },
+    "failure": "Original UI target moved after ownership check\n+ actual - expected\n\n  [\n    1121,\n+   171.125,\n-   167.125,\n    'BUTTON'\n  ]\n",
+    "expectedTarget": {
+      "x": 1121,
+      "y": 167.125,
+      "tag": "BUTTON"
+    },
+    "actualTarget": {
+      "x": 1121,
+      "y": 171.125,
+      "tag": "BUTTON"
+    },
+    "deltaY": 4,
+    "taskBoardStatus": "INCOMPLETE",
+    "stepCount": 41,
+    "lastFiveSteps": [
+      {
+        "monotonicMs": 64838,
+        "action": "mouseMoved",
+        "label": "assign alice through original member option",
+        "target": {
+          "x": 377,
+          "y": 323
+        }
+      },
+      {
+        "monotonicMs": 64927,
+        "action": "mouseClick",
+        "label": "assign alice through original member option",
+        "target": {
+          "x": 377,
+          "y": 323
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 66190,
+        "action": "mouseMoved",
+        "label": "hover clear original clarification once",
+        "target": {
+          "x": 1060.3203125,
+          "y": 264.125
+        }
+      },
+      {
+        "monotonicMs": 66568,
+        "action": "mouseClick",
+        "label": "clear original clarification once",
+        "target": {
+          "x": 1060.3203125,
+          "y": 264.125
+        },
+        "state": "attempted"
+      },
+      {
+        "monotonicMs": 68530,
+        "action": "mouseMoved",
+        "label": "hover close original Task detail",
+        "selector": "[role=\"dialog\"] button",
+        "target": {
+          "x": 1121,
+          "y": 167.125,
+          "text": "Close",
+          "tag": "BUTTON"
+        }
+      }
+    ],
+    "clarificationReceipt": {
+      "schemaVersion": 1,
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-mEbel2",
+        "teamId": "TEST-desktop-team",
+        "teamName": "test-desktop-backend"
+      },
+      "commandId": "34ebb10c-6a17-43e7-be0e-a39b709d4c02",
+      "principalId": "TEST-human",
+      "fingerprint": "5b416816cd83b05766a9d68f2d0ce13463874a2ea975e65e7275f58b7e8d0b13",
+      "command": {
+        "operation": "task.clarification",
+        "payload": {
+          "taskId": "5010382b-9049-5613-8a59-3e9f2c29c92b",
+          "value": null
+        },
+        "commandId": "34ebb10c-6a17-43e7-be0e-a39b709d4c02"
+      },
+      "effects": {
+        "taskId": "f25b7cb4-7149-56fa-b955-f958da35f90d",
+        "commentId": "ffbf29d7-7706-5cdc-a12d-3ea1da3c559a",
+        "messageId": "7a7e279b-9042-5174-85aa-a974d262f50f",
+        "deliveryId": "d71b2fe7-ee9c-5713-bcd0-362de3504784"
+      },
+      "createdAt": "2026-11-16T10:48:50.705Z",
+      "phase": "completed",
+      "authorityRevision": 1,
+      "taskPlanVersion": 1,
+      "taskPreimage": "76462be5e6ce63655e4a4978d2a109b92f98c312a4d37906c469031d84b451dd",
+      "taskRecipients": [
+        {
+          "name": "alice"
+        },
+        {
+          "name": "board-peer"
+        }
+      ],
+      "result": {
+        "id": "5010382b-9049-5613-8a59-3e9f2c29c92b",
+        "displayId": "5010382b",
+        "subject": "TEST ordinary dependent board task",
+        "description": "TEST ordinary dependent board task",
+        "groupChatId": "10000000-0000-4000-8000-000000000017",
+        "createdBy": "user",
+        "status": "pending",
+        "createdAt": "2026-11-16T10:48:39.893Z",
+        "updatedAt": "2026-11-16T10:48:50.725Z",
+        "historyEvents": [
+          {
+            "id": "22dc5776-beb8-492c-a3f8-9c0b8401a2b6",
+            "timestamp": "2026-11-16T10:48:39.893Z",
+            "type": "task_created",
+            "status": "pending",
+            "actor": "user"
+          },
+          {
+            "id": "d85ecb21-5c7f-47cc-a0be-20ec78f1d177",
+            "timestamp": "2026-11-16T10:48:48.342Z",
+            "type": "owner_changed",
+            "to": "alice",
+            "actor": "user"
+          }
+        ],
+        "blocks": [],
+        "blockedBy": [
+          "8f7e927a-f8ba-5978-932b-50473ff26c41"
+        ],
+        "reviewState": "none",
+        "creationCommand": {
+          "namespace": "legacy-agent-host",
+          "scopeKey": "test-desktop-backend",
+          "operation": "task.create",
+          "commandId": "5010382b-9049-5613-8a59-3e9f2c29c92b",
+          "payloadHash": "73ee5e0aa8b6c99aa52dd80de67dc879938494477f1f00ed83a0b5cc82a98b0a"
+        },
+        "owner": "alice"
+      },
+      "taskHash": "d5b039e35096c228ab7d8e83e55260f7244d780bd3aecd3f5bd0c849d1e33e9f"
+    },
+    "clarificationOutcome": "completed",
+    "canonicalResultOwner": "alice",
+    "canonicalClarificationAbsent": true,
+    "canonicalDependencyRetained": [
+      "8f7e927a-f8ba-5978-932b-50473ff26c41"
+    ],
+    "actualSavedDialog": {
+      "text": "Close\n#5010382b\nPending\nOpen in a separate tab\nTEST ordinary dependent board task\nalice\nuser\nless than a minute ago\nDelete\nBlocked by\n#8f7e927a\nDescription\n\nTEST ordinary dependent board task\n\nAttachments\n0\nChanges\nTask Logs\nWorkflow History\n2\nComments\nTip: Use @ for members/files and # for tasks",
+      "buttons": [
+        {
+          "text": "Close",
+          "disabled": false,
+          "x": 1107,
+          "y": 157.125,
+          "width": 28,
+          "height": 28
+        },
+        {
+          "text": "Open in a separate tab",
+          "disabled": false,
+          "x": 949.90625,
+          "y": 169.125,
+          "width": 165.09375,
+          "height": 28
+        },
+        {
+          "text": "TEST ordinary dependent board task",
+          "disabled": true,
+          "x": 277,
+          "y": 203.125,
+          "width": 266.5,
+          "height": 24
+        },
+        {
+          "text": "Delete",
+          "disabled": true,
+          "x": 1048.3125,
+          "y": 233.125,
+          "width": 74.6875,
+          "height": 24
+        },
+        {
+          "text": "#8f7e927a",
+          "disabled": false,
+          "x": 355.703125,
+          "y": 263.125,
+          "width": 59.28125,
+          "height": 19
+        },
+        {
+          "text": "",
+          "disabled": false,
+          "x": 258,
+          "y": 294.125,
+          "width": 884,
+          "height": 39
+        },
+        {
+          "text": "",
+          "disabled": false,
+          "x": 1103,
+          "y": 340.125,
+          "width": 20,
+          "height": 20
+        },
+        {
+          "text": "",
+          "disabled": false,
+          "x": 258,
+          "y": 386.875,
+          "width": 884,
+          "height": 39
+        },
+        {
+          "text": "",
+          "disabled": false,
+          "x": 258,
+          "y": 426.875,
+          "width": 884,
+          "height": 39
+        },
+        {
+          "text": "",
+          "disabled": false,
+          "x": 258,
+          "y": 466.875,
+          "width": 884,
+          "height": 39
+        },
+        {
+          "text": "Task Log Stream",
+          "disabled": false,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "text": "Task Activity",
+          "disabled": false,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "text": "Execution Sessions",
+          "disabled": false,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        {
+          "text": "",
+          "disabled": false,
+          "x": 258,
+          "y": 506.875,
+          "width": 884,
+          "height": 39
+        },
+        {
+          "text": "",
+          "disabled": false,
+          "x": 258,
+          "y": 546.875,
+          "width": 884,
+          "height": 40
+        },
+        {
+          "text": "",
+          "disabled": true,
+          "x": 1042,
+          "y": 649.875,
+          "width": 32,
+          "height": 32
+        },
+        {
+          "text": "",
+          "disabled": false,
+          "x": 1082,
+          "y": 649.875,
+          "width": 32,
+          "height": 32
+        }
+      ]
+    },
+    "dialogCount": 1,
+    "snapshotCloseCenter": {
+      "x": 1121,
+      "y": 171.125
+    },
+    "selectedSourceHashRowsBefore": 1757,
+    "selectedSourceHashRowsAfter": 1757,
+    "all1757BeforeAfterRowsExactlyEqual": true,
+    "all1757PathsExistInFrozenE": true,
+    "cleanup": {
+      "processGroup": 4450,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "cleanupQualification": "App exit0 and empty captured process group are retained. capturedHostObserved=false and capturedHostAbsent=null remain unknown; no separate Host exit code is manufactured. These cleanup observations do not turn the failed UI journey into PASS."
+  },
+  "sourcePins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 36207,
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+      "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c",
+      "receiptRow": {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7"
+      },
+      "receiptHashMatches": true,
+      "fullEBodyHashVerified": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 8576,
+      "sha256": "4e62a8eee6a03074e05bf75f17c8cdfb2b717cd99f923d188a0ffe7f3db54e6a",
+      "gitBlob": "db4d98b333e1fb1103c82cf7851a252c0ecff3a5",
+      "receiptRow": {
+        "path": "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+        "sha256": "4e62a8eee6a03074e05bf75f17c8cdfb2b717cd99f923d188a0ffe7f3db54e6a"
+      },
+      "receiptHashMatches": true,
+      "fullEBodyHashVerified": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "bytes": 28741,
+      "sha256": "9d5233b82df6a7dfa0d735b27c11f39f130824f3947c38896a0d052ca549cba4",
+      "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78",
+      "receiptRow": {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "sha256": "9d5233b82df6a7dfa0d735b27c11f39f130824f3947c38896a0d052ca549cba4"
+      },
+      "receiptHashMatches": true,
+      "fullEBodyHashVerified": true
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/TaskDetailDialog.tsx",
+      "mode": "100644",
+      "bytes": 11909,
+      "sha256": "8efb9b58de0e0b41d0a1264cccef6ac6b530792698d6b7fcd3b1aadfe3fc046b",
+      "gitBlob": "003228a68f91bd3be004b8388fbb400f5b6a7aa6",
+      "receiptRow": {
+        "path": "src/renderer/components/team/dialogs/TaskDetailDialog.tsx",
+        "sha256": "8efb9b58de0e0b41d0a1264cccef6ac6b530792698d6b7fcd3b1aadfe3fc046b"
+      },
+      "receiptHashMatches": true,
+      "fullEBodyHashVerified": true
+    },
+    {
+      "path": "src/renderer/components/ui/dialog.tsx",
+      "mode": "100644",
+      "bytes": 4914,
+      "sha256": "038c9966ee8a0047c0ab1e32f5feb61ca8a2a38ea838260139187b5f041767f2",
+      "gitBlob": "046c7452239fccb9d18858c86e9d075984888031",
+      "receiptRow": null,
+      "receiptHashMatches": null,
+      "fullEBodyHashVerified": true
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/ui/TaskDetailBody.tsx",
+      "mode": "100644",
+      "bytes": 22571,
+      "sha256": "fd98561aa85b8f243e75970bfb342af47fa5b65a04fe6c7d154d54b5cbc6bfde",
+      "gitBlob": "d039d7b35ba3e7d5e2a7bbaf0e04f85bda72cead",
+      "receiptRow": null,
+      "receiptHashMatches": null,
+      "fullEBodyHashVerified": true
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "mode": "100644",
+      "bytes": 17067,
+      "sha256": "9aa3aabc0d50852af7010fc9dfd1834905c6c078ac4bfe691e789f002ac05bd1",
+      "gitBlob": "68499fd50746417a48883f73ca1d25592c644089",
+      "receiptRow": {
+        "path": "src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+        "sha256": "9aa3aabc0d50852af7010fc9dfd1834905c6c078ac4bfe691e789f002ac05bd1"
+      },
+      "receiptHashMatches": true,
+      "fullEBodyHashVerified": true
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailPresentation.ts",
+      "mode": "100644",
+      "bytes": 12402,
+      "sha256": "245a59c0715bb05dc9da07c7ea51745734480a9e09863a09100bdbfe40fca019",
+      "gitBlob": "6640fd23e9941c261612517b6d583f7d4ddc5079",
+      "receiptRow": {
+        "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailPresentation.ts",
+        "sha256": "245a59c0715bb05dc9da07c7ea51745734480a9e09863a09100bdbfe40fca019"
+      },
+      "receiptHashMatches": true,
+      "fullEBodyHashVerified": true
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailSession.ts",
+      "mode": "100644",
+      "bytes": 27853,
+      "sha256": "cc73af4fab0ee40b4711173ed71db67776e16027009156cd373a1abcb942cb30",
+      "gitBlob": "4ebf5a55d7cdcc5c29cc63e2bc9915c631222165",
+      "receiptRow": {
+        "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailSession.ts",
+        "sha256": "cc73af4fab0ee40b4711173ed71db67776e16027009156cd373a1abcb942cb30"
+      },
+      "receiptHashMatches": true,
+      "fullEBodyHashVerified": true
+    },
+    {
+      "path": "src/renderer/components/team/CollapsibleTeamSection.tsx",
+      "mode": "100644",
+      "bytes": 7926,
+      "sha256": "db8ad2dba3b3e1e98f8a84ad88237e1156b02193e2923c168f3e9d1c4e9f000d",
+      "gitBlob": "44d3fe74a1b9e6f720b8638a402f5d3721fe12eb",
+      "receiptRow": null,
+      "receiptHashMatches": null,
+      "fullEBodyHashVerified": true
+    }
+  ],
+  "sourcePinQualification": "Ten full critical source bodies match E Git/SHA/byte identities. Seven have individually matching receipt source rows; ui/dialog, TaskDetailBody and CollapsibleTeamSection are E-tree/full-body bound but not present in the1757-row local selected-source list. All1757 recorded before/after rows are identical; this review does not claim separate full-body rehashing of every one.",
+  "anchors": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c",
+      "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "lines": [
+        425,
+        474
+      ],
+      "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts#L425-L474",
+      "claim": "After original assignment, clarify-clear action, banner absence, canonical needsClarification absence and terminal receipt, the original Close click is attempted. Actual receipt proves phase completed, not merely terminal.",
+      "originalExcerpt": "    )\n  );\n  await waitProduct(\n    () => task(taskId),\n    (row) => row.owner === 'alice',\n    'canonical Task assignment'\n  );\n  proof.assignmentReceipt = await receiptFor(\n    'task.assign',\n    taskId,\n    (payload) => payload.owner === 'alice'\n  );\n  proof.assignmentUiReady = await ui.waitRead(\n    desktopTaskBoardAssignmentReadyExpression(options.handleId, taskId, {\n      contextId,\n      surfaceId,\n    }),\n    'original assignment refresh and accepted Task owner settle before Mark resolved'\n  );\n  await ui.waitRead(\n    `[...document.querySelectorAll('[role=\"dialog\"] button')].some(e => e.textContent.trim() === ${desktopJsLiteral('#' + String(before[0]!.displayId))})`,\n    'original dependency reference visible'\n  );\n  proof.dependencyScreenshot = await screenshot('ui-task-board-assigned-blocked.png');\n  // Re-read the original owner and enabled hit-tested control at each shared\n  // settling sample before one physical press. No effect retry.\n  await ui.clickExpression(\n    `(async()=>{\n      const owner=await ${desktopTaskBoardAssignmentReadyExpression(options.handleId, taskId, { contextId, surfaceId }, 'clarification')};\n      if(!owner)return null;\n      return ${pointOf(`\n        const dialog=document.getElementById(owner.inputId)?.closest('[role=\"dialog\"]');\n        const buttons=[...dialog?.querySelectorAll('button')??[]].filter(e=>e.textContent.trim()==='Mark resolved');\n        return buttons.length===1?buttons[0]:null;\n      `)};\n    })()`,\n    'clear original clarification once'\n  );\n  await ui.waitRead(\n    `!document.querySelector('[role=\"dialog\"]')?.textContent.includes('Awaiting clarification from you')`,\n    'clarification banner cleared'\n  );\n  assert.equal((await task(taskId)).needsClarification, undefined);\n  proof.clarificationReceipt = await receiptFor(\n    'task.clarification',\n    taskId,\n    (payload) => payload.value === null\n  );\n  await ui.click('[role=\"dialog\"] button', 'close original Task detail', 'Close');\n  await ui.waitRead(`!document.querySelector('[role=\"dialog\"]')`, 'Task detail closed');\n"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+      "gitBlob": "db4d98b333e1fb1103c82cf7851a252c0ecff3a5",
+      "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "lines": [
+        15,
+        27
+      ],
+      "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts#L15-L27",
+      "claim": "The optional clarification-failure observer applies only when the last step is attempted clear-clarification click; actual last Close hover does not meet that condition.",
+      "originalExcerpt": "async function observeClarificationFailure(\n  error: unknown,\n  options: Parameters<typeof runDesktopTaskBoardUiSmoke>[1]\n): Promise<void> {\n  const object = (value: unknown): Record<string, unknown> => {\n    assert.ok(value && typeof value === 'object' && !Array.isArray(value));\n    return value as Record<string, unknown>;\n  };\n  const proof = object(options.evidence.taskBoardUiProof);\n  if (!Array.isArray(proof.steps)) return;\n  const last = object(proof.steps.at(-1));\n  if (last.action !== 'mouseClick' || last.state !== 'attempted' ||\n      last.label !== 'clear original clarification once') return;\n"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+      "gitBlob": "db4d98b333e1fb1103c82cf7851a252c0ecff3a5",
+      "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "lines": [
+        126,
+        162
+      ],
+      "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts#L126-L162",
+      "claim": "Ordinary taskboard journey runs before review/notifications/cross-team/oversized-comment journeys; original error is rethrown."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78",
+      "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "lines": [
+        186,
+        209
+      ],
+      "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/scripts/legacy-agent-host/desktop-ui-controls.ts#L186-L209",
+      "claim": "Original read wait has its30s default, ownership check before each DOM evaluation,100ms cadence and only limited destroyed-context read retry."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78",
+      "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "lines": [
+        298,
+        354
+      ],
+      "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/scripts/legacy-agent-host/desktop-ui-controls.ts#L298-L354",
+      "claim": "Original hover, at most15 stability samples/two equal points, ownership and final exact geometry equality precede attempted and single physical press/release.",
+      "originalExcerpt": "    let point = await readPoint(label);\n    options.assertOwnedRenderer();\n    step({ action: 'mouseMoved', label: 'hover ' + label, selector, target: point });\n    await cdp.send('Input.dispatchMouseEvent', {\n      type: 'mouseMoved',\n      x: point.x,\n      y: point.y,\n    });\n    point = await readPoint(label + ' after pointer enter');\n    // Async Host hydration can shift the DOM after hover. Check the original\n    // target is stable before ONE physical click, never replay an uncertain click.\n    let stableSamples = 0;\n    for (let sample = 0; sample < 15 && stableSamples < 2; sample++) {\n      await new Promise<void>((done) => setTimeout(done, 100));\n      const next = await readPoint(label + ' stable target');\n      stableSamples =\n        next.x === point.x && next.y === point.y && next.tag === point.tag\n          ? stableSamples + 1\n          : 0;\n      point = next;\n    }\n    assert.ok(stableSamples === 2, 'Original UI target did not settle before one click');\n    assert.equal(typeof point.x, 'number');\n    assert.equal(typeof point.y, 'number');\n    options.assertOwnedRenderer();\n    const finalPoint = record(await cdp.evaluate(expression));\n    assert.notEqual(finalPoint.unavailableTarget, true, 'Original UI target unavailable after ownership check');\n    assert.deepEqual(\n      [finalPoint.x, finalPoint.y, finalPoint.tag],\n      [point.x, point.y, point.tag],\n      'Original UI target moved after ownership check'\n    );\n    options.assertOwnedRenderer();\n    step({\n      action: 'mouseClick',\n      label,\n      selector,\n      expectedText: text,\n      target: point,\n      state: 'attempted',\n    });\n    // Never repeat a click after an uncertain response.\n    await cdp.send('Input.dispatchMouseEvent', {\n      type: 'mousePressed',\n      x: point.x,\n      y: point.y,\n      button: 'left',\n      clickCount: 1,\n    });\n    await cdp.send('Input.dispatchMouseEvent', {\n      type: 'mouseReleased',\n      x: point.x,\n      y: point.y,\n      button: 'left',\n      clickCount: 1,\n    });\n  };\n"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/TaskDetailDialog.tsx",
+      "gitBlob": "003228a68f91bd3be004b8388fbb400f5b6a7aa6",
+      "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "lines": [
+        248,
+        304
+      ],
+      "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/src/renderer/components/team/dialogs/TaskDetailDialog.tsx#L248-L304",
+      "claim": "The retained original Task-detail content renders inside generic DialogContent with task identity/presentation and original close behavior."
+    },
+    {
+      "path": "src/renderer/components/ui/dialog.tsx",
+      "gitBlob": "046c7452239fccb9d18858c86e9d075984888031",
+      "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "lines": [
+        41,
+        68
+      ],
+      "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/src/renderer/components/ui/dialog.tsx#L41-L68",
+      "claim": "A flex vertically centered parent contains variable-height dialog content; Close is absolutely positioned relative to the dialog. Content size changes can move its center, but no historical height trace proves a specific cause.",
+      "originalExcerpt": "  return (\n    <DialogPortal forceMount={props.forceMount}>\n      <DialogOverlay />\n      <div className=\"pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4\">\n        <div className=\"pointer-events-auto relative w-full max-w-full\">\n          <DialogPrimitive.Content\n            ref={ref}\n            className={cn(\n              'relative mx-auto grid w-full max-w-lg grid-cols-[minmax(0,1fr)] gap-4 border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg',\n              'max-h-[90vh] min-h-0 overflow-y-auto overflow-x-hidden',\n              'focus:outline-none',\n              className\n            )}\n            {...props}\n          >\n            <OverlayOccupancyMarker active={blocksAnnouncements} />\n            <DialogPrimitive.Close\n              disabled={closeDisabled}\n              aria-disabled={closeDisabled}\n              className=\"absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--color-border)] transition-opacity hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-[var(--color-border-emphasis)] disabled:pointer-events-none disabled:opacity-30\"\n            >\n              <X className=\"size-4 text-[var(--color-text-muted)]\" />\n              <span className=\"sr-only\">{t('actions.close')}</span>\n            </DialogPrimitive.Close>\n            {children}\n          </DialogPrimitive.Content>\n        </div>\n      </div>\n"
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "gitBlob": "68499fd50746417a48883f73ca1d25592c644089",
+      "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "lines": [
+        277,
+        355
+      ],
+      "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx#L277-L355",
+      "claim": "Owner row has conditional MemberSelect/MemberBadge rendering; clarification banner is conditionally mounted. These are source-level possible layout changes, not identified historical causes."
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailPresentation.ts",
+      "gitBlob": "6640fd23e9941c261612517b6d583f7d4ddc5079",
+      "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "lines": [
+        315,
+        330
+      ],
+      "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/src/features/team-task-detail/renderer/hooks/useTaskDetailPresentation.ts#L315-L330",
+      "claim": "Presentation wires clarification resolution to the original session controller."
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailSession.ts",
+      "gitBlob": "4ebf5a55d7cdcc5c29cc63e2bc9915c631222165",
+      "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "lines": [
+        275,
+        367
+      ],
+      "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/src/features/team-task-detail/renderer/hooks/useTaskDetailSession.ts#L275-L367",
+      "claim": "Original clarification origin/owner/read token/pending intent guards remain; actual completed command is separate from subsequent layout stability."
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/ui/TaskDetailBody.tsx",
+      "gitBlob": "d039d7b35ba3e7d5e2a7bbaf0e04f85bda72cead",
+      "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "lines": [
+        80,
+        118
+      ],
+      "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/src/features/team-task-detail/renderer/ui/TaskDetailBody.tsx#L80-L118",
+      "claim": "Task detail also includes variable-content sections; their existence does not prove which element moved."
+    },
+    {
+      "path": "src/renderer/components/team/CollapsibleTeamSection.tsx",
+      "gitBlob": "44d3fe74a1b9e6f720b8638a402f5d3721fe12eb",
+      "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+      "lines": [
+        216,
+        233
+      ],
+      "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/src/renderer/components/team/CollapsibleTeamSection.tsx#L216-L233",
+      "claim": "Section visibility/mounting can affect height; no retained historical animation or section-state transition identifies it as the4px cause."
+    }
+  ],
+  "provedBoundary": [
+    "The completed task.clarification receipt and canonical result confirm clarification was cleared; it was not rejected.",
+    "The saved final dialog remains open with alice assigned, original task dependency visible and no clarification banner.",
+    "The41st/last recorded step is only hover close original Task detail at68530ms. There is no later Close attempted step.",
+    "The exact exception is the final [x,y,tag] equality at controls325; the original later ownership guard and attempted/pressed/released statements are unreachable for that call after this throw.",
+    "Expected versus actual y differs by4px. The saved Close rectangle has center171.125, matching the actual failing tuple.",
+    "Original later board sorting, review, notifications, cross-team journey and oversized-comment stages were not reached.",
+    "Recorded1757 selected source hashes before/after are identical."
+  ],
+  "timingLimits": {
+    "lastClarificationAttemptMs": 66568,
+    "lastCloseHoverMs": 68530,
+    "qualification": "These original step markers are monotonic but do not capture each stability/final check. Command receipt wall-clock times are separate. No measured dialog-height series, exact owner-guard duration, pending layout queue or causal mutation is retained.",
+    "nonAtomicSnapshot": true,
+    "preciseShiftTimeUnknown": true,
+    "closePhysicalPairNotDispatchedByThisAttempt": true,
+    "callbackEntryQualification": "No React callback-entry/return observer exists for Close. The precise proven fact is that this invocation threw before its physical press/release pair."
+  },
+  "hypotheses": [
+    {
+      "status": "plausible_source_supported_not_proven",
+      "claim": "A content-height change in a vertically centered dialog can translate an absolutely positioned Close control. Conditional clarification/owner/section content supplies possible layout changes.",
+      "limit": "The retained receipt has no before/after dialog-height or responsible-node trace. It does not identify which branch changed or whether that mechanism caused this exact4px move."
+    },
+    {
+      "status": "not_established",
+      "claim": "Specific CSS animation, owner hydration, assignee branch or clarification banner removal caused the failure.",
+      "limit": "No individual one is selected as the historical cause. The actual clarification command completed and banner was absent by the saved snapshot."
+    }
+  ],
+  "minimalFutureAdmissionAndRegressionRequirements": {
+    "status": "Read-only requirements for a separately reviewed R1, not source/test authoring or execution permission.",
+    "admission": "If a new proposal is made, bind the existing pre-Close readiness to the same original task/dialog and enabled unique Close control, with observed stable finite geometry/hit target and only relevant own layout state. Preserve all original currentness/final equality/action behavior. Do not treat clarification text disappearance or canonical command completion alone as geometry stability.",
+    "sameBudget": "Reuse an existing readiness loop/cadence/deadline where justified; a stronger predicate can take additional ordinary iterations and adds observation cost. Do not reset/enlarge the deadline, add arbitrary sleep, repeated Close, synthetic click or bypass the final geometry refusal.",
+    "currentGuard": "The final exact geometry check remains hard. A stable earlier observation does not guarantee no later movement; that later movement must still refuse before input.",
+    "testRequirements": [
+      "Exercise actual readiness/click code with completed clarification and a target shifting after initial apparent stability; no stale press/release and no action replay.",
+      "Positive original identity/geometry readiness permits exactly one physical pair and the original close predicate.",
+      "Wrong/replaced task or dialog, ambiguous/missing/disabled/covered Close, malformed geometry, active relevant layout and perpetual movement remain finite refusals under the original budget.",
+      "Final movement after admission still trips the unchanged final equality guard.",
+      "Preserve original task creation/assignment/clarification receipts, original command count, later-stage ordering and cleanup, with whole existing test-file preservation."
+    ],
+    "noCurrentSelection": "No exact producer, extra source pin, new test seam, command, runtime, CI venue or deadline change is selected by this retention report."
+  },
+  "limits": [
+    "No new CI polling or mutations.",
+    "No source/test/runner postimages or local runtime/shell.",
+    "No new ZIP/image verification claimed.",
+    "No causal fix inferred from4px alone.",
+    "Distinct from current conversation readiness and Windows Process/Packaged deadlines."
+  ]
+}

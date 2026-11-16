@@ -1,0 +1,955 @@
+{
+  "schemaVersion": 1,
+  "kind": "Independent exact fresh whole97 replacement runner and RED binding R2",
+  "reviewer": "/root/parity_audit",
+  "repository": "777genius/agent-teams-ai",
+  "disposition": "ACCEPTED for this exact runner/binding under the already published R1 and recovery scope. Actual documentary publication/full readback still precede any local materialization or execution.",
+  "finalRunner": {
+    "bytes": 35916,
+    "sha256": "495fac79660eb36f0795f74ff14bd665d79ac3e43534349c2f65234bda89d0f5",
+    "gitBlob": "6af0ac85f09ef02488ce15331828713882a73d13",
+    "physicalLines": 640
+  },
+  "finalRedBinding": {
+    "bytes": 306274,
+    "sha256": "b118c22fea2bc63c402fa4e6e86e9244d8ee7ec1a54f8ac965e9cafa05cca77f",
+    "gitBlob": "04d501260b4ac275bf52d6381d6d2e7d93bb973e"
+  },
+  "source": {
+    "commit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+    "tree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+    "allTreeLeaves": 11567,
+    "nonDocumentLeaves": 8798,
+    "workflows": 42,
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24630,
+        "sha256": "20163a0e2b654c5ff3c778ffe4a3cd2138716172eb90e6aa5aa4fe6550864c43",
+        "gitBlob": "dcd0cc29a73a46a24126ec3552714fa1b057aaf4"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 136700,
+        "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+        "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28741,
+        "sha256": "9d5233b82df6a7dfa0d735b27c11f39f130824f3947c38896a0d052ca549cba4",
+        "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78"
+      }
+    ],
+    "redBeforeSourceOverlay": [],
+    "redSourceOverlay": [],
+    "redSourceWrites": 0,
+    "sourcePreservation": "The runner requires exact detached c5 HEAD/tree and full tree/index equality; no staged or nonignored untracked changes; complete8798 working-source mode/byte/SHA/Git census; exact local Git config; actual tracked change set equals the admitted overlay. RED has no overlays and no source-write route.",
+    "laterProducerScope": "Only the two original controls/selection paths can appear in a later independently reviewed GREEN binding; the published97 test remains exact. No such producer or GREEN binding is selected by this record."
+  },
+  "authority": {
+    "originalR1": "f3fb3ead0315508901531e8f54b75f21518492a7",
+    "recoveryR1": "7e6f32741ccdb470e7688cec9de9481fd05827a1",
+    "transportAmendment": "0042eec33e3bcf145de25db96f5fc7c5b026a1fe",
+    "originalScopeBlob": "72dc53b078dd5f5ab9d9e41b40b588d4a8cec419",
+    "recoveryScopeIdentity": {
+      "bytes": 29929,
+      "sha256": "9647bc6b307b7021ba8a79f5b49e98d18556cc47db376ac1203adb9cb691edc6",
+      "gitBlob": "bfc88525478b3617a98b624d5bd4bf601b07e8cc"
+    },
+    "transportScopeIdentity": {
+      "bytes": 19834,
+      "sha256": "847fd6ab0fd34326c00a24193ade91953fa601bd1b454c898cf87ee94b55ab9d",
+      "gitBlob": "84d33979aa07e265e65fcbd6be154f05281ac21f"
+    },
+    "setupBinding": {
+      "path": "/tmp/c714-fresh-bootstrap-review/binding.json",
+      "bytes": 2790411,
+      "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+      "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+    },
+    "readbackEvidence": {
+      "root": {
+        "commit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+        "tree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+        "parent": "f3fb3ead0315508901531e8f54b75f21518492a7",
+        "fullPublishedBodiesExact": true,
+        "refExact": true,
+        "leaves": 11567,
+        "sourceLeaves": 8798,
+        "workflows": 42,
+        "bodies": [
+          {
+            "bytes": 136700,
+            "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+            "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+          },
+          {
+            "bytes": 21625,
+            "sha256": "af30d41eb3940caab04d0c046f13c0b25268ac86e77cb69520a5a078733fb460",
+            "gitBlob": "7274eb96eb64ff45a89a375d3813c107325fd607"
+          },
+          {
+            "bytes": 23429,
+            "sha256": "57984d8ae20f0a28d59bbf67cd0a205dce622d99f0c0e9377bc27ee3cb3c909a",
+            "gitBlob": "aa2b68f26771baef0e41d209a23cb4d0a48a70f4"
+          },
+          {
+            "bytes": 2481729,
+            "sha256": "15db53a3c413d687c6f84f847f0d7726aa0178e9b5d062706208da43413028bf",
+            "gitBlob": "e1c2d929522a5b53b47513ca2559261ecbce8719"
+          }
+        ],
+        "producerPostimages": 0,
+        "localApplied": false,
+        "commandsExecuted": 0
+      },
+      "independent": {
+        "accepted": true,
+        "reviewer": "/root/pr_graph",
+        "commit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+        "tree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+        "parent": "f3fb3ead0315508901531e8f54b75f21518492a7",
+        "leaves": 11567,
+        "fullFourBodiesExact": true,
+        "other8797SourceAnd42WorkflowsUnchanged": true
+      }
+    },
+    "cap": "640 physical lines remains within the published replacement-runner650-line cap.",
+    "oldBudgets": {
+      "red": 1,
+      "green": 1,
+      "lint": 1,
+      "sourceSize": 1,
+      "diffCheck": 1,
+      "previousExecutions": 0
+    }
+  },
+  "exactInputFiles": {
+    "setupBinding": {
+      "path": "/tmp/c714-fresh-bootstrap-review/binding.json",
+      "bytes": 2790411,
+      "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+      "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+    },
+    "sourceFull": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/source-restore-source-after.json",
+      "bytes": 3451167,
+      "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+      "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+    },
+    "sourceNonDoc": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-source-after.json",
+      "bytes": 2478318,
+      "sha256": "59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751",
+      "gitBlob": "51bf0d0962e07fcc7843fcd65c3202ec9133a607"
+    },
+    "dependencies": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json",
+      "bytes": 39168001,
+      "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+      "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+    },
+    "compiled": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-compiled-after.json",
+      "bytes": 400300,
+      "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+      "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+    },
+    "pnpm": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/pnpm-inventory.json",
+      "bytes": 253936,
+      "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+      "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c"
+    },
+    "currentBoundary": {
+      "path": "/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json",
+      "bytes": 3654,
+      "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+      "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+    },
+    "providers": {
+      "path": "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json",
+      "bytes": 789090,
+      "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+      "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+    }
+  },
+  "inputJoins": {
+    "allEightIdentitiesMatchAcceptedActualEvidence": true,
+    "setupBodyFreshlyFetchedRehashed": true,
+    "currentBoundaryFreshlyFetchedRehashed": true,
+    "sourcePacket": {
+      "bytes": 3741214,
+      "sha256": "02677dff135a550015d02e50e23d8092b9db02abe241e750e83f8f70017397c3",
+      "gitBlob": "96c42804f1c4d616d5aa2fadb99c5d27578ed17b",
+      "fullRows": 11567,
+      "nonDocRows": 8798,
+      "operation": "Full literal11567-row snapshot rehashed; parse preserving key order, change includeDocuments=false and filter docs/ rows, re-encode exact Python indent2/ensure_ascii/LF to recover complete8798-row snapshot.",
+      "completeBindingPathModeSizeGitRowsEqual": true,
+      "all42WorkflowRowsRetained": true
+    },
+    "remainingLargePacket": {
+      "bytes": 2572284,
+      "sha256": "22fe3985fc1fa3708a4c0387ecbb955c687d653538e11ba1fed1a64d19633652",
+      "gitBlob": "5192e6e0290dd5beaf486a3315b984759fef96bd",
+      "rehashedWholeBodies": [
+        {
+          "name": "host-build-compiled-after.json",
+          "bytes": 400300,
+          "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+          "gitBlob": "224ff561f65772393140302de26b584bf08b06d9",
+          "selected": "compiled"
+        },
+        {
+          "name": "host-build-metadata-33.log",
+          "bytes": 1527575,
+          "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+          "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec",
+          "selected": null
+        },
+        {
+          "name": "host-build-pnpm-after.json",
+          "bytes": 238649,
+          "sha256": "e814a4ca22111e747db4386274e92f596f0a26d7e4b5bc687f8d1ccf61510a77",
+          "gitBlob": "2f917a18c33c04a1c6398d1adf644ce62fb8e39f",
+          "selected": null
+        },
+        {
+          "name": "pnpm-inventory.json",
+          "bytes": 253936,
+          "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+          "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c",
+          "selected": "pnpm"
+        }
+      ]
+    },
+    "dependencies": {
+      "identity": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json",
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "rows": 122773,
+      "qualification": "Identity joined to accepted6253 complete four-part lossless reconstruction and75f89 member-to-inventory review; no redundant39MB reconstruction performed in this runner R2."
+    },
+    "compiled": {
+      "rows": 1454,
+      "legacyHostRows": 1238,
+      "ledgerRows": 216,
+      "historical1504Transfer": false
+    },
+    "pnpm": {
+      "regularExtractedFiles": 891,
+      "archivePlusFiles": 892,
+      "version": "11.22.0"
+    },
+    "providers": {
+      "regularMembers": [
+        253,
+        12
+      ],
+      "evidence": {
+        "path": "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json",
+        "bytes": 789090,
+        "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+        "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+      },
+      "runnerCheck": "Each exact selected tar archive is read as data; safe unique regular members are compared path/mode/bytes/hash to installed files and the full retained regular-member list. No archive program is executed."
+    },
+    "representation": "Some original inventory Git hashes are computed identities retained losslessly inside the accepted packets rather than separately uploaded blobs; this review uses those complete packet bodies and does not claim independent bare-object availability for each inventory."
+  },
+  "acceptedImportReviews": [
+    {
+      "role": "freshBootstrapGuardActualReview",
+      "identity": {
+        "bytes": 32514,
+        "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+        "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075"
+      },
+      "completeEmbeddedBodyRehashed": true
+    },
+    {
+      "role": "freshSdkIndependentReview",
+      "identity": {
+        "bytes": 84719,
+        "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+        "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6"
+      },
+      "completeEmbeddedBodyRehashed": true
+    },
+    {
+      "role": "freshMcpIndependentReview",
+      "identity": {
+        "bytes": 155439,
+        "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+        "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239"
+      },
+      "completeEmbeddedBodyRehashed": true
+    }
+  ],
+  "importScope": {
+    "rootCombinedAdmission": {
+      "accepted": true,
+      "reviewer": "/root",
+      "sourceCommit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+      "sourceTree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+      "bootstrapReview": {
+        "bytes": 32514,
+        "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+        "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075"
+      },
+      "sdkReview": {
+        "bytes": 84719,
+        "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+        "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6"
+      },
+      "mcpReview": {
+        "bytes": 155439,
+        "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+        "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239"
+      },
+      "allBodiesFetchedAndRehashed": true,
+      "scope": "Static source admission of exact fresh upstream provider/SDK/MCP/Zod import closure for the already published finite whole97 test, after complete fresh input verification. This permits only replacement runner/binding authorship now; exact R2 and actual publication/readback still precede execution. No producer before accepted actual semantic RED.",
+      "packageImportsExecuted": 0,
+      "testExecutions": 0,
+      "providerExecutions": 0,
+      "producerPostimages": 0,
+      "cacheRequirement": "Strip inherited NODE_COMPILE_CACHE and NODE_COMPILE_CACHE_PORTABLE; force NODE_DISABLE_COMPILE_CACHE=1; bind and preserve existing seven bootstrap cache files."
+    },
+    "sdkEffects": "The separate24ed review retains eager /proc/version OS metadata observation, process-local NoDefaultCurrentDirectoryInExePath assignment, conditional Symbol setup and in-memory schema/registry/cache construction. It grants no provider API call.",
+    "mcpEffects": "The separate75f89 review retains conditional Hono global.crypto assignment and module-owned schema/prototype setup. Server/listen/timers and AJV dynamic compilation are later API paths.",
+    "noTestRuntimeClaim": true
+  },
+  "testCensus": {
+    "prefix": {
+      "bytes": 127790,
+      "sha256": "10803ce752a05140acbfa8270e97e782c452213f39589d52991a503e29db5c17",
+      "gitBlob": "3e5d5a5a765b503943bd72f68b2877311ee34479"
+    },
+    "full": {
+      "bytes": 136700,
+      "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+      "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+    },
+    "suffix": {
+      "bytes": 8910,
+      "sha256": "e1c52971337871d30c53a93c6f7a537f529fc1297a330edb150c3a3f1ec10f95",
+      "gitBlob": "74a180307f8d0cd975903de54d4fcb2ba264fa76"
+    },
+    "sourceCensus": {
+      "oldDefinitions": 49,
+      "oldLoopMultiplicities": [
+        2,
+        2,
+        2,
+        4,
+        5,
+        5,
+        14,
+        2,
+        2
+      ],
+      "oldExpanded": 78,
+      "newDefinitions": 7,
+      "newRuntimeGroups": [
+        1,
+        1,
+        9,
+        1,
+        1,
+        2,
+        4
+      ],
+      "newExpanded": 19
+    },
+    "sourcePrediction": {
+      "unchangedOldPass": 78,
+      "newPass": 9,
+      "newSemanticFail": 10,
+      "totalPass": 87,
+      "totalFail": 10,
+      "actualExecution": false,
+      "mandatoryRule": "Original 78 pass, actual designated delayed-preview semantic RED; setup/compile/import/signal/timeout/cancel/skips do not count."
+    },
+    "explicitLaunches": {
+      "module": "node:child_process",
+      "api": "execFileSync",
+      "lexicalSites": [
+        175,
+        181,
+        183
+      ],
+      "expandedInvocations": 6,
+      "executable": "process.execPath",
+      "args": "fresh mkdtemp shell-probe.mjs plus finite '-lic'/'-ic' and data-only accepted/refused probe strings",
+      "environment": {
+        "TEST_ONLY_VALUE": "exact fixture value"
+      },
+      "shell": false,
+      "acceptedProbeCount": 3,
+      "refusedProbeCount": 3,
+      "refusedExitCode": 78,
+      "traceAllowedSequence": [
+        true,
+        true,
+        true,
+        false,
+        false,
+        false
+      ],
+      "agentBackendTestNodeReadDirectly": false,
+      "realProviderCalls": 0,
+      "realVersionCalls": 0,
+      "calledTarVerifier": false,
+      "tempDirectoryKinds": [
+        "TEST-desktop-shell-probe-",
+        "TEST-attachment-comment-focus-",
+        "TEST-provider-receipt-positive-",
+        "TEST-provider-receipt-digest-",
+        "TEST-provider-receipt-shape-"
+      ],
+      "fixtureNodeHeaderIsExecutedByShell": false,
+      "notes": [
+        "The polyglot /bin/sh header is data for explicit Node file execution; the ':' line is JavaScript literal plus comment.",
+        "The entire child environment is the explicit TEST_ONLY_VALUE object, so NODE_OPTIONS, PATH and inherited provider credentials are not copied.",
+        "No per-child timeout is added by the unchanged test; future runner must retain its existing whole-command deadline and actual captured-group cleanup."
+      ]
+    },
+    "noSkippedDefinitions": true,
+    "testSourceIsNotRuntimeQualification": true,
+    "staticPredictionIsNotActualRed": true,
+    "actualRequiredRed": "All78 existing cases execute and pass; actual designated delayed-owned-preview case fails semantically at original final geometry guard. No skipped/cancelled/import/setup/timeout/unreached result can qualify. Independent full raw/input/cleanup acceptance precedes any producer.",
+    "clarification": "There are56 test definitions expanded to97 runtime cases. Six is the count of explicitly test-authored child launches, not a claim about every process in the whole Node test invocation.",
+    "peerSupplement": "Guard's retained773 APP source-body search found zero literal AGENT_BACKEND_TEST_NODE occurrences. The file itself also has zero occurrences; its six finite shell-probe children explicitly use process.execPath."
+  },
+  "commandVectors": {
+    "red": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--test",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+    ],
+    "green": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--test",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+    ],
+    "lint": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+      "--config.pm-on-fail=error",
+      "--config.verify-deps-before-run=false",
+      "--config.engine-strict=true",
+      "lint:fast:files",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+    ],
+    "source-size": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+      "--config.pm-on-fail=error",
+      "--config.verify-deps-before-run=false",
+      "--config.engine-strict=true",
+      "guard:source-file-size"
+    ],
+    "diff-check": [
+      "/usr/local/bin/git",
+      "diff",
+      "--check",
+      "--",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+    ]
+  },
+  "environmentAndTools": {
+    "node": {
+      "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "version": "v24.22.1",
+      "bytes": 126939688,
+      "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d"
+    },
+    "pnpm": {
+      "version": "11.22.0",
+      "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621",
+      "archiveUrl": "https://registry.npmjs.org/pnpm/-/pnpm-11.22.0.tgz",
+      "archiveSha512": "1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621",
+      "registryMetadataSha256": "d7838c3582e9357885e5cacdbc85201712b19a6debcf97c9d8753fc30768525d",
+      "executable": "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+      "launcher": "/workspace/scratch/c714-fresh-20261116/bin/pnpm",
+      "expectedPackageJsonName": "pnpm",
+      "expectedPackageJsonVersion": "11.22.0",
+      "archiveMaxBytes": 67108864,
+      "unpackedMaxBytes": 134217728,
+      "maximumMembers": 10000
+    },
+    "exactTransportRulesIdentity": {
+      "bytes": 19834,
+      "sha256": "847fd6ab0fd34326c00a24193ade91953fa601bd1b454c898cf87ee94b55ab9d",
+      "gitBlob": "84d33979aa07e265e65fcbd6be154f05281ac21f"
+    },
+    "oneCapturedInheritedTransportPerInvocation": true,
+    "unknownKeyOrAliasOrFixedValueDriftRefuses": true,
+    "preserveHomeAndCodexHome": true,
+    "pinnedTaskPathsAndShell": true,
+    "workspaceNodePnpmBinShadowRefusal": true,
+    "noImplicitInstallOrManagerDelegation": "Both explicit pnpm command flags and retained recognized config assignments preserve pm-on-fail=error, verify-deps-before-run=false and engine-strict=true.",
+    "noInheritedNodePreload": "NODE_OPTIONS/NODE_PATH/coverage and published shell/Git/provider-selector overrides are stripped by the retained R1 sanitation.",
+    "compileCache": {
+      "strip": [
+        "NODE_COMPILE_CACHE",
+        "NODE_COMPILE_CACHE_PORTABLE"
+      ],
+      "force": {
+        "NODE_DISABLE_COMPILE_CACHE": "1"
+      },
+      "bootstrapResidueFiles": 7,
+      "bootstrapResidueBytes": 2225548,
+      "eraseResidue": false,
+      "taskTestTmp": "/tmp/c714-ui-conversation-evidence/test-tmp"
+    },
+    "explicitNodeChildSeam": "The six existing test-created children use process.execPath with explicit TEST_ONLY_VALUE-only env. AGENT_BACKEND_TEST_NODE remains bound to the same Node but is not the selector used by those six calls."
+  },
+  "supervisionReview": {
+    "singlePopenPath": true,
+    "noShellTrue": true,
+    "exactOneCommandPerSelectedAttempt": true,
+    "absoluteCommandSeconds": 180,
+    "clockStart": "After complete preflight and initial receipt, before start-record/raw/Popen overhead; child receives the remainder without reset.",
+    "metadata": "Read-only Git metadata uses the same captured-session supervisor and a separate30-second refusal bound, not a behavioral retry.",
+    "failedCommandPostflight": "Full original input snapshot is attempted in finally after execution failure; failure cannot qualify scope completion.",
+    "rawIdentity": "Raw stdout/stderr identities are retained only after captured command/session cleanup and absence check.",
+    "cleanupTiming": "Each actual termination/reap duration is retained and summed; cleanupSeconds is explicitly a subset of commandPhaseSeconds.",
+    "phaseAccounting": "Preflight, command, cleanup, postflight and whole-invocation timings are separate. No whole-invocation-under180-second claim.",
+    "laterPhasePrerequisites": "Accepted RED and GREEN require inputsPreserved, commandCompletedNormally, scopeCompleted===true, empty interruptions, empty captured-session members, no new TEST temp debt and no execution/postflight errors. RED identity additionally joins its separate accepted semantic review.",
+    "terminalCutoff": "Managed SIGINT/SIGTERM are blocked before the terminal pending snapshot; captured plus pending signals determine the retained receipt. The file is written while blocked; original handlers are restored before the prior mask.",
+    "externalAdmission": "The binding and runner explicitly require separately observed actual supervisor exit0 for any continuation. Signals after the recorded cutoff are outside that receipt; a successful inner receipt alone is insufficient.",
+    "noEscapedProcessOrNativeCustodyProof": true,
+    "guardLane": "Guard independently reported full lifetime acceptance of this same6af0/04d pair. This record retains parity's complete runner/source/binding review; root joins the separate guard evidence."
+  },
+  "deltaClosure": {
+    "initialUnselectedRunner": {
+      "bytes": 34243,
+      "sha256": "c5c0b5db478566c1eefa3952644399b14870fb5312c5f2aa5da0348adec8f0cf",
+      "gitBlob": "5745f1eaba449114dd90baef279f9a52baadd85b"
+    },
+    "intermediateUnselectedRunner": {
+      "bytes": 35382,
+      "sha256": "0e4a392343f6c56394d43d875869ca6aa84e2130776b1fa24e285cf027c9a2b9",
+      "gitBlob": "32263a67cda2fd02f7f4c101da7737c75b8f11cd"
+    },
+    "firstRevision": {
+      "addedLines": 19,
+      "removedLines": 3,
+      "fullForwardAndInverseExact": true,
+      "hunks": [
+        {
+          "oldStart": 232,
+          "newStart": 232,
+          "removed": [],
+          "added": [
+            "    cleanup_started = time.monotonic()"
+          ]
+        },
+        {
+          "oldStart": 250,
+          "newStart": 251,
+          "removed": [],
+          "added": [
+            "        cleanup['durationSeconds'] = time.monotonic() - cleanup_started"
+          ]
+        },
+        {
+          "oldStart": 314,
+          "newStart": 316,
+          "removed": [],
+          "added": [
+            "                record['cleanupSeconds'] = sum(row['durationSeconds'] for row in record.get('abnormalCleanup', []))"
+          ]
+        },
+        {
+          "oldStart": 530,
+          "newStart": 533,
+          "removed": [],
+          "added": [
+            "    assert red['scopeCompleted'] is True and red['interruptions'] == []",
+            "    assert red['cleanup']['capturedSessionMembersAfter'] == []"
+          ]
+        },
+        {
+          "oldStart": 535,
+          "newStart": 540,
+          "removed": [],
+          "added": [
+            "    assert green['scopeCompleted'] is True and green['interruptions'] == []",
+            "    assert green['cleanup']['capturedSessionMembersAfter'] == []"
+          ]
+        },
+        {
+          "oldStart": 550,
+          "newStart": 557,
+          "removed": [
+            "           'exitCode': None, 'exitSignal': None, 'timedOut': False,"
+          ],
+          "added": [
+            "           'exitCode': None, 'exitSignal': None, 'timedOut': False, 'cleanupSeconds': 0,",
+            "           'cleanupTimeAccounting': 'Captured termination/reap time is a subset of commandPhaseSeconds.',"
+          ]
+        },
+        {
+          "oldStart": 581,
+          "newStart": 589,
+          "removed": [],
+          "added": [
+            "        receipt['cleanupSeconds'] = primary['cleanupSeconds']"
+          ]
+        },
+        {
+          "oldStart": 587,
+          "newStart": 596,
+          "removed": [],
+          "added": [
+            "    if 'preflightSeconds' not in receipt:",
+            "        receipt['preflightSeconds'] = time.monotonic() - preflight_start"
+          ]
+        },
+        {
+          "oldStart": 615,
+          "newStart": 626,
+          "removed": [],
+          "added": [
+            "        if phase_signals != receipt['interruptions']:",
+            "            receipt['interruptions'] = list(phase_signals)",
+            "            receipt['scopeCompleted'] = False",
+            "            receipt['lateFinalizationInterruption'] = True",
+            "            receipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')"
+          ]
+        },
+        {
+          "oldStart": 617,
+          "newStart": 633,
+          "removed": [
+            "      'scopeCompleted', 'preflightSeconds', 'commandPhaseSeconds', 'postflightSeconds', 'totalInvocationSeconds',"
+          ],
+          "added": [
+            "      'scopeCompleted', 'preflightSeconds', 'commandPhaseSeconds', 'cleanupSeconds', 'postflightSeconds', 'totalInvocationSeconds',"
+          ]
+        },
+        {
+          "oldStart": 619,
+          "newStart": 635,
+          "removed": [
+            "sys.exit(0 if receipt['scopeCompleted'] else 2)"
+          ],
+          "added": [
+            "sys.exit(0 if receipt['scopeCompleted'] and not phase_signals else 2)"
+          ]
+        }
+      ]
+    },
+    "finalRevision": {
+      "addedLines": 23,
+      "removedLines": 18,
+      "fullForwardAndInverseExact": true,
+      "changedLines": [
+        {
+          "op": "+",
+          "oldLine": 519,
+          "newLine": 519,
+          "text": "assert cfg['executionScope']['requiresObservedSupervisorExitZeroForContinuation'] is True"
+        },
+        {
+          "op": "-",
+          "oldLine": 613,
+          "newLine": 614,
+          "text": "        receipt['postflightSeconds'] = time.monotonic() - postflight_start"
+        },
+        {
+          "op": "-",
+          "oldLine": 614,
+          "newLine": 614,
+          "text": "        receipt['finishedAt'] = utc()"
+        },
+        {
+          "op": "-",
+          "oldLine": 615,
+          "newLine": 614,
+          "text": "        receipt['totalInvocationSeconds'] = time.monotonic() - invocation_start"
+        },
+        {
+          "op": "-",
+          "oldLine": 616,
+          "newLine": 614,
+          "text": "        receipt['interruptions'] = list(phase_signals)"
+        },
+        {
+          "op": "-",
+          "oldLine": 617,
+          "newLine": 614,
+          "text": "        receipt['metadataCommands'] = metadata_counter"
+        },
+        {
+          "op": "-",
+          "oldLine": 618,
+          "newLine": 614,
+          "text": "        receipt['primaryUnreached'] = action == 'run' and primary is None"
+        },
+        {
+          "op": "-",
+          "oldLine": 619,
+          "newLine": 614,
+          "text": "        receipt['scopeCompleted'] = bool(receipt['inputsPreserved'] and not receipt.get('executionError')"
+        },
+        {
+          "op": "-",
+          "oldLine": 620,
+          "newLine": 614,
+          "text": "                                         and not receipt.get('postflightError') and not phase_signals"
+        },
+        {
+          "op": "-",
+          "oldLine": 621,
+          "newLine": 614,
+          "text": "                                         and (action == 'materialize' or receipt['commandCompletedNormally'])"
+        },
+        {
+          "op": "-",
+          "oldLine": 622,
+          "newLine": 614,
+          "text": "                                         and receipt.get('cleanup', {}).get('newTestTempsRemaining') == [])"
+        },
+        {
+          "op": "-",
+          "oldLine": 623,
+          "newLine": 614,
+          "text": "        receipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')"
+        },
+        {
+          "op": "-",
+          "oldLine": 624,
+          "newLine": 614,
+          "text": "        for sig, previous in previous_handlers.items():"
+        },
+        {
+          "op": "-",
+          "oldLine": 625,
+          "newLine": 614,
+          "text": "            signal.signal(sig, previous)"
+        },
+        {
+          "op": "-",
+          "oldLine": 626,
+          "newLine": 614,
+          "text": "        if phase_signals != receipt['interruptions']:"
+        },
+        {
+          "op": "-",
+          "oldLine": 627,
+          "newLine": 614,
+          "text": "            receipt['interruptions'] = list(phase_signals)"
+        },
+        {
+          "op": "-",
+          "oldLine": 628,
+          "newLine": 614,
+          "text": "            receipt['scopeCompleted'] = False"
+        },
+        {
+          "op": "-",
+          "oldLine": 629,
+          "newLine": 614,
+          "text": "            receipt['lateFinalizationInterruption'] = True"
+        },
+        {
+          "op": "+",
+          "oldLine": 630,
+          "newLine": 614,
+          "text": "        managed_signals = set(previous_handlers)"
+        },
+        {
+          "op": "+",
+          "oldLine": 630,
+          "newLine": 615,
+          "text": "        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, managed_signals)"
+        },
+        {
+          "op": "+",
+          "oldLine": 630,
+          "newLine": 616,
+          "text": "        try:"
+        },
+        {
+          "op": "+",
+          "oldLine": 630,
+          "newLine": 617,
+          "text": "            pending_signals = sorted(int(sig) for sig in signal.sigpending() & managed_signals)"
+        },
+        {
+          "op": "+",
+          "oldLine": 630,
+          "newLine": 618,
+          "text": "            receipt['signalAdmissionCutoff'] = {"
+        },
+        {
+          "op": "+",
+          "oldLine": 630,
+          "newLine": 619,
+          "text": "                'at': utc(), 'pendingSignals': pending_signals, 'supervisorExitZeroRequired': True,"
+        },
+        {
+          "op": "+",
+          "oldLine": 630,
+          "newLine": 620,
+          "text": "                'scope': 'Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.'}"
+        },
+        {
+          "op": "+",
+          "oldLine": 630,
+          "newLine": 621,
+          "text": "            receipt['postflightSeconds'] = time.monotonic() - postflight_start"
+        },
+        {
+          "op": "+",
+          "oldLine": 630,
+          "newLine": 622,
+          "text": "            receipt['finishedAt'] = utc()"
+        },
+        {
+          "op": "+",
+          "oldLine": 630,
+          "newLine": 623,
+          "text": "            receipt['totalInvocationSeconds'] = time.monotonic() - invocation_start"
+        },
+        {
+          "op": "+",
+          "oldLine": 630,
+          "newLine": 624,
+          "text": "            receipt['interruptions'] = [*phase_signals, *pending_signals]"
+        },
+        {
+          "op": "+",
+          "oldLine": 630,
+          "newLine": 625,
+          "text": "            receipt['metadataCommands'] = metadata_counter"
+        },
+        {
+          "op": "+",
+          "oldLine": 630,
+          "newLine": 626,
+          "text": "            receipt['primaryUnreached'] = action == 'run' and primary is None"
+        },
+        {
+          "op": "+",
+          "oldLine": 630,
+          "newLine": 627,
+          "text": "            receipt['scopeCompleted'] = bool(receipt['inputsPreserved'] and not receipt.get('executionError')"
+        },
+        {
+          "op": "+",
+          "oldLine": 630,
+          "newLine": 628,
+          "text": "                                             and not receipt.get('postflightError') and not receipt['interruptions']"
+        },
+        {
+          "op": "+",
+          "oldLine": 630,
+          "newLine": 629,
+          "text": "                                             and (action == 'materialize' or receipt['commandCompletedNormally'])"
+        },
+        {
+          "op": "+",
+          "oldLine": 630,
+          "newLine": 630,
+          "text": "                                             and receipt.get('cleanup', {}).get('newTestTempsRemaining') == [])"
+        },
+        {
+          "op": "+",
+          "oldLine": 631,
+          "newLine": 632,
+          "text": "        finally:"
+        },
+        {
+          "op": "+",
+          "oldLine": 631,
+          "newLine": 633,
+          "text": "            for sig, previous in previous_handlers.items():"
+        },
+        {
+          "op": "+",
+          "oldLine": 631,
+          "newLine": 634,
+          "text": "                signal.signal(sig, previous)"
+        },
+        {
+          "op": "+",
+          "oldLine": 631,
+          "newLine": 635,
+          "text": "            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)"
+        },
+        {
+          "op": "-",
+          "oldLine": 634,
+          "newLine": 639,
+          "text": "      'rawCombinedOutput', 'cleanup']}), flush=True)"
+        },
+        {
+          "op": "+",
+          "oldLine": 635,
+          "newLine": 639,
+          "text": "      'rawCombinedOutput', 'cleanup', 'signalAdmissionCutoff']}), flush=True)"
+        }
+      ],
+      "bindingDelta": [
+        {
+          "path": ".runnerIdentity.bytes",
+          "old": 35382,
+          "new": 35916
+        },
+        {
+          "path": ".runnerIdentity.sha256",
+          "old": "0e4a392343f6c56394d43d875869ca6aa84e2130776b1fa24e285cf027c9a2b9",
+          "new": "495fac79660eb36f0795f74ff14bd665d79ac3e43534349c2f65234bda89d0f5"
+        },
+        {
+          "path": ".runnerIdentity.gitBlob",
+          "old": "32263a67cda2fd02f7f4c101da7737c75b8f11cd",
+          "new": "6af0ac85f09ef02488ce15331828713882a73d13"
+        },
+        {
+          "path": ".executionScope.requiresObservedSupervisorExitZeroForContinuation",
+          "new": true
+        },
+        {
+          "path": ".executionScope.signalReceiptBoundary",
+          "new": "The receipt covers managed signals captured or pending at its explicitly recorded blocked-mask cutoff. Root must separately observe actual supervisor exit0 before any continuation, and join that outcome into independent actual semantic RED/GREEN acceptance; a successful receipt alone does not cover later signals."
+        }
+      ]
+    },
+    "allOriginalInputCommandSourceTestBodiesUnchanged": true,
+    "allThreeEmbeddedReviewBodiesUnchanged": true
+  },
+  "limits": [
+    "Exact independent R2 and complete actual documentary publication/readback precede root materialization/execution.",
+    "This record is a static source/binding acceptance, not actual import success, RED, GREEN, compiler, GUI, native or vendor qualification.",
+    "Actual entire97-case raw/output, input preservation, process/temp cleanup and outer supervisor exit must be independently reviewed. All78 original cases must pass and designated semantic RED must be observed before any producer.",
+    "No setup/compile/import/timeout/signal/skipped/cancelled/unreached result is a semantic RED.",
+    "Later GREEN and the three original scoped guards retain their own single unused attempts and conditional gates. No retry, extra install/build/compiler, new CI venue or incoming source adoption is selected."
+  ],
+  "reviewerActions": {
+    "shellExecutions": 0,
+    "nodeExecutions": 0,
+    "packageImports": 0,
+    "testRuns": 0,
+    "providerInvocations": 0,
+    "sourceOrTestOrRunnerPostimagesAuthored": 0,
+    "localMaterialization": 0,
+    "commitRefPrCiMutations": 0,
+    "pureAnalysis": "Immutable Git reads and pure in-memory UTF8 hashing, JSON reconstruction and full source/delta comparison only.",
+    "permittedBareReviewEvidenceBlobs": 1
+  }
+}

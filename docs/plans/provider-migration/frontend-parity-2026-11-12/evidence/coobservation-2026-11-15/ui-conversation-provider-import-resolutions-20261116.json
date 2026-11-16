@@ -1,0 +1,71 @@
+{
+  "kind": "fresh actual D/SPI/SDK/Zod link resolution data-only",
+  "sourceCommit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+  "rows": [
+    {
+      "path": "node_modules/.pnpm/@agent-teams+provider-implementations@file+vendor+provider-migration+host-logs-thinking_48e4df431a7220290a3704447d5814ff/node_modules/@anthropic-ai/claude-agent-sdk",
+      "present": true,
+      "mode": "120000",
+      "target": "../../../@anthropic-ai+claude-agent-sdk@0.3.305_@anthropic-ai+sdk@0.122.0_zod@4.6.7__@modelconte_62c9a77da74e02db303bb50cb88ff403/node_modules/@anthropic-ai/claude-agent-sdk",
+      "bytes": 173,
+      "sha256": "a852bed176c5ddd615487f1ee83b42c142718217d8cc4fe98d0898b1a8d3b63e",
+      "gitBlob": "bc68ce6e38086324e7834d30f53d973031b0d99d",
+      "resolvedPath": "node_modules/.pnpm/@anthropic-ai+claude-agent-sdk@0.3.305_@anthropic-ai+sdk@0.122.0_zod@4.6.7__@modelconte_62c9a77da74e02db303bb50cb88ff403/node_modules/@anthropic-ai/claude-agent-sdk",
+      "manifestIdentity": {
+        "bytes": 2596,
+        "sha256": "4fc353f124cb602e15455ec9c886505d8a92dc5829a60b343b75d697f5f32531",
+        "gitBlob": "6cb248be049acbb31ddb8003f50be6adbc23e0bf"
+      }
+    },
+    {
+      "path": "node_modules/.pnpm/@agent-teams+provider-implementations@file+vendor+provider-migration+host-logs-thinking_48e4df431a7220290a3704447d5814ff/node_modules/zod",
+      "present": true,
+      "mode": "120000",
+      "target": "../../zod@4.6.7/node_modules/zod",
+      "bytes": 32,
+      "sha256": "47b845de2c2fca86170a14c26f6dbe6e005000989b41c7755da8f27d3d7dd329",
+      "gitBlob": "761e9c2f5d9f0adbe673ccdaa2a207aa5d88afc0",
+      "resolvedPath": "node_modules/.pnpm/zod@4.6.7/node_modules/zod",
+      "manifestIdentity": {
+        "bytes": 4142,
+        "sha256": "c2d190d9ee4e0bdb60332aaa2130a6a98d65ddb903fe1d29248b15de57832c45",
+        "gitBlob": "5ba776c0d5bdf1487da2f26af302a1ab7e1e40ce"
+      }
+    },
+    {
+      "path": "node_modules/@agent-teams/provider-implementations",
+      "present": false
+    },
+    {
+      "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations",
+      "present": true,
+      "mode": "120000",
+      "target": "../../../../node_modules/.pnpm/@agent-teams+provider-implementations@file+vendor+provider-migration+host-logs-thinking_48e4df431a7220290a3704447d5814ff/node_modules/@agent-teams/provider-implementations",
+      "bytes": 202,
+      "sha256": "e7b339e2925dec30d5d25c55b20391cf75f78a1c630dba88728097d59c323ce2",
+      "gitBlob": "7721fcbff2c9b29ae33b2ad67de9ea4b1a865cca",
+      "resolvedPath": "node_modules/.pnpm/@agent-teams+provider-implementations@file+vendor+provider-migration+host-logs-thinking_48e4df431a7220290a3704447d5814ff/node_modules/@agent-teams/provider-implementations",
+      "manifestIdentity": {
+        "bytes": 2342,
+        "sha256": "352e52211f8ab50b0c3133babd7dc54c574b588811a69c2701d26afd22e72472",
+        "gitBlob": "735998e54f0df2ff1812e78d910c86753cbe891b"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/node_modules/@agent-teams/provider-session-contracts",
+      "present": true,
+      "mode": "120000",
+      "target": "../../../../node_modules/.pnpm/@agent-teams+provider-session-contracts@file+vendor+provider-migration+host-logs-thinki_891f7522c1eccbe293fc8c68cf5f1397/node_modules/@agent-teams/provider-session-contracts",
+      "bytes": 204,
+      "sha256": "f272ea312c57298565ac5012066a43c5684b7ed7bbccc6187d8807d9db23b1fb",
+      "gitBlob": "96bebddc37195f7de12fe2c68811ea329003b87f",
+      "resolvedPath": "node_modules/.pnpm/@agent-teams+provider-session-contracts@file+vendor+provider-migration+host-logs-thinki_891f7522c1eccbe293fc8c68cf5f1397/node_modules/@agent-teams/provider-session-contracts",
+      "manifestIdentity": {
+        "bytes": 1016,
+        "sha256": "17efb3c7a5ad50fe1a3480067aafff75e7495e0c580cf7200143ea69c556dc31",
+        "gitBlob": "2559d70676edd5be6b7d1cfc48072ae8f7dd59c2"
+      }
+    }
+  ],
+  "packageImports": 0
+}

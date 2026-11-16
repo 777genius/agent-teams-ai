@@ -1,0 +1,545 @@
+{
+  "schemaVersion": 1,
+  "kind": "c714-fresh-conversation-whole97-runner-independent-lifetime-R2",
+  "reviewer": "/root/guard_review",
+  "reviewedAt": "2026-11-16T14:31:48.311Z",
+  "verdict": "ACCEPTED for exact documentary publication and subsequent root-only application after complete actual published readback; no execution result is asserted.",
+  "repository": "777genius/agent-teams-ai",
+  "exactCandidate": {
+    "runner": {
+      "bytes": 35916,
+      "sha256": "495fac79660eb36f0795f74ff14bd665d79ac3e43534349c2f65234bda89d0f5",
+      "gitBlob": "6af0ac85f09ef02488ce15331828713882a73d13",
+      "physicalLines": 640,
+      "lineCap": 650
+    },
+    "redBinding": {
+      "bytes": 306274,
+      "sha256": "b118c22fea2bc63c402fa4e6e86e9244d8ee7ec1a54f8ac965e9cafa05cca77f",
+      "gitBlob": "04d501260b4ac275bf52d6381d6d2e7d93bb973e"
+    },
+    "runnerLocalPath": "/tmp/c714-conversation-fresh-review/runner.py",
+    "bindingLocalPath": "/tmp/c714-conversation-fresh-review/binding-red.json",
+    "fullBodiesFetched": true,
+    "fullGitAndSha256Recomputed": true,
+    "fullRunnerRead": true,
+    "targetCodeEvaluated": false,
+    "bindingEmbeddedReviewsRehashed": [
+      {
+        "role": "freshBootstrapGuardActualReview",
+        "bytes": 32514,
+        "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+        "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075",
+        "fullIdentityMatched": true
+      },
+      {
+        "role": "freshSdkIndependentReview",
+        "bytes": 84719,
+        "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+        "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6",
+        "fullIdentityMatched": true
+      },
+      {
+        "role": "freshMcpIndependentReview",
+        "bytes": 155439,
+        "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+        "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239",
+        "fullIdentityMatched": true
+      }
+    ]
+  },
+  "scopeAndOwnership": {
+    "rootOnlyApplicationAndExecution": true,
+    "reviewerOperations": [
+      "Git immutable body reads",
+      "pure in-memory text comparison and JSON parsing",
+      "pure in-memory SHA-256 and Git-blob hashing",
+      "static source/control-flow analysis",
+      "this bare evidence JSON creation and exact remote readback"
+    ],
+    "shellCommandsByReviewer": 0,
+    "childExecutionsByReviewer": 0,
+    "packageImportsByReviewer": 0,
+    "providerExecutionsByReviewer": 0,
+    "guiExecutionsByReviewer": 0,
+    "productSourceWritesByReviewer": 0,
+    "runnerMaterializationsByReviewer": 0,
+    "refCommitPrCiMutationsByReviewer": 0,
+    "sourceBindingInputLane": "/root/parity_audit independently owns the complete binding/source/input-case review. This report independently rehashes the exact final pair and embedded accepted reviews and closes the lifetime/environment/configuration/negative-path lane.",
+    "syntaxCheck": "Root reported static ast.parse on in-memory source; this reviewer did not run Python or evaluate the runner."
+  },
+  "source": {
+    "publishedR1": "f3fb3ead0315508901531e8f54b75f21518492a7",
+    "publishedRecoveryR1": "7e6f32741ccdb470e7688cec9de9481fd05827a1",
+    "publishedTransportAmendment": "0042eec33e3bcf145de25db96f5fc7c5b026a1fe",
+    "publishedSubject": {
+      "commit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+      "tree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+      "qualification": "Exact unchanged published 97-case test and original controls/selection producers; actual clean detached local HEAD is this c5 commit. No conversation producer exists."
+    },
+    "wholeTreeLeaves": 11567,
+    "nonDocumentLeaves": 8798,
+    "workflowLeaves": 42,
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24630,
+        "sha256": "20163a0e2b654c5ff3c778ffe4a3cd2138716172eb90e6aa5aa4fe6550864c43",
+        "gitBlob": "dcd0cc29a73a46a24126ec3552714fa1b057aaf4"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 136700,
+        "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+        "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28741,
+        "sha256": "9d5233b82df6a7dfa0d735b27c11f39f130824f3947c38896a0d052ca549cba4",
+        "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78"
+      }
+    ],
+    "sourceOverlay": [],
+    "beforeSourceOverlay": [],
+    "currentProducerPostimages": 0,
+    "incoming1192Adoption": false,
+    "separateHistoricalEQualification": "No existing E cohort/compiler/native/GUI result is transferred to this unexecuted c5 whole97 subject."
+  },
+  "inputs": {
+    "completeExactPins": {
+      "setupBinding": {
+        "path": "/tmp/c714-fresh-bootstrap-review/binding.json",
+        "bytes": 2790411,
+        "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+        "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+      },
+      "sourceFull": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/source-restore-source-after.json",
+        "bytes": 3451167,
+        "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+        "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+      },
+      "sourceNonDoc": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-source-after.json",
+        "bytes": 2478318,
+        "sha256": "59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751",
+        "gitBlob": "51bf0d0962e07fcc7843fcd65c3202ec9133a607"
+      },
+      "dependencies": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json",
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "compiled": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-compiled-after.json",
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      },
+      "pnpm": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/pnpm-inventory.json",
+        "bytes": 253936,
+        "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+        "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c"
+      },
+      "currentBoundary": {
+        "path": "/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json",
+        "bytes": 3654,
+        "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+        "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+      },
+      "providers": {
+        "path": "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json",
+        "bytes": 789090,
+        "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+        "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+      }
+    },
+    "actualInputReviews": {
+      "accepted": true,
+      "reviewer": "/root",
+      "sourceCommit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+      "sourceTree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+      "bootstrapReview": {
+        "bytes": 32514,
+        "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+        "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075"
+      },
+      "sdkReview": {
+        "bytes": 84719,
+        "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+        "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6"
+      },
+      "mcpReview": {
+        "bytes": 155439,
+        "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+        "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239"
+      },
+      "allBodiesFetchedAndRehashed": true,
+      "scope": "Static source admission of exact fresh upstream provider/SDK/MCP/Zod import closure for the already published finite whole97 test, after complete fresh input verification. This permits only replacement runner/binding authorship now; exact R2 and actual publication/readback still precede execution. No producer before accepted actual semantic RED.",
+      "packageImportsExecuted": 0,
+      "testExecutions": 0,
+      "providerExecutions": 0,
+      "producerPostimages": 0,
+      "cacheRequirement": "Strip inherited NODE_COMPILE_CACHE and NODE_COMPILE_CACHE_PORTABLE; force NODE_DISABLE_COMPILE_CACHE=1; bind and preserve existing seven bootstrap cache files."
+    },
+    "freshCounts": {
+      "sourceTreeLeaves": 11567,
+      "sourceNonDocumentLeaves": 8798,
+      "dependencyRows": 122773,
+      "compiledRows": 1454,
+      "bootstrapResidualCacheFiles": 7
+    },
+    "sourceRechecks": "Each boundary checks exact HEAD/tree, complete ls-tree rows, no staged changes, no nonignored untracked source, full non-document index rows at stage0, exact tracked change set, every 8,798 source row and local Git config. All 42 workflow identities remain inside the source checks.",
+    "dependencyRechecks": "Full seven-workspace node_modules census is re-enumerated; regular/executable modes, complete file bytes, symlink text and in-repository targets must match. Complete Host and ledger compiled census is separately re-enumerated. Written actual snapshots precede equality assertions.",
+    "providerRechecks": "Pinned archive bytes and every ordered regular archive member must match exact installed member bytes/modes; traversal, absolute names, duplicates and special/link members are refused. This is read-only archive inspection, not a provider import or execution.",
+    "toolingRechecks": "Pinned Node/Git/Python/dash bytes and real paths; current Python executable; PATH Node; complete staged pnpm member-plus-archive census; exact launcher link; bin contains only pnpm; no workspace .bin/node or .bin/pnpm shadow.",
+    "equality": "Before/after source, dependency and compiled pointer digests and exact provider/tool/pnpm/environment/bootstrap-cache values must match. GREEN materialization instead checks the exact reviewed two-file postimage overlay while preserving all other inputs.",
+    "computedIdentityQualification": "Some raw inventory Git IDs are computed body identities, not separately uploaded bare blobs. The source/compiled/pnpm bodies were reconstructed or read from the already accepted 96c428/5192 packets; full dependency reconstruction is closed by 6253. A 404 on an unuploaded raw identity is not a missing admitted input.",
+    "noHistoricalCompiledTransfer": "Fresh compiled1454 is the admitted current census; it is not relabelled as the former1504."
+  },
+  "commands": {
+    "exactVectors": {
+      "red": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "green": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "lint": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "lint:fast:files",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "source-size": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "guard:source-file-size"
+      ],
+      "diff-check": [
+        "/usr/local/bin/git",
+        "diff",
+        "--check",
+        "--",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ]
+    },
+    "selectedBindingAction": "run",
+    "selectedBindingCommand": "red",
+    "allAttempts": {
+      "red": 1,
+      "green": 1,
+      "lint": 1,
+      "sourceSize": 1,
+      "diffCheck": 1,
+      "previousExecutions": 0
+    },
+    "restrictions": "This binding selects only the one RED run after required publication/readback. Generic GREEN materialization/run and guard branches are reviewed prospective paths; actual accepted semantic RED, exact future producer/binding reviews and publication gates remain required. No reinstall, compiler, broad root build, provider query, native CLI, GUI, test filter, retry or CI route is introduced.",
+    "laterMaterialization": "Only the two exact controls/selection producer files are admissible in the GREEN overlay. The complete 97-case test remains pinned unchanged. Partial materialization on an exception is retained as a failure with writtenPaths; there is no silent rollback or retry."
+  },
+  "environment": {
+    "selected": {
+      "inheritSameAdmittedTransportPerInvocation": true,
+      "homeAndCodexHomePreserved": true,
+      "cache": "Strip NODE_COMPILE_CACHE/NODE_COMPILE_CACHE_PORTABLE and force NODE_DISABLE_COMPILE_CACHE=1. Preserve and rehash seven bootstrap residue files.",
+      "testTmp": "/tmp/c714-ui-conversation-evidence/test-tmp",
+      "nodeChildSeam": "The six existing test-created children use process.execPath with explicit TEST_ONLY_VALUE-only env. AGENT_BACKEND_TEST_NODE remains bound to the same Node but is not the selector used by those six calls."
+    },
+    "exactOneSnapshotPerInvocation": true,
+    "transport": "Uses the published amendment: exact key sets and case alias agreement; strict canonical credential-free loopback HTTP and SOCKS URL shapes; only already-evidenced per-invocation ports vary. Each child inherits the same admitted snapshot; no mid-invocation recapture, route replacement or bypass.",
+    "fixedSettings": "Retains all published fixed npm values, absent-config checks, task XDG isolation, HOME/CODEX_HOME preservation, exact recognized PNPM_CONFIG settings and explicit pnpm CLI flags. No inherited unreviewed PNPM variable, Node/Python/shell hook override or package-script tool shadow is admitted.",
+    "compileCache": "Removes NODE_COMPILE_CACHE and NODE_COMPILE_CACHE_PORTABLE; forces NODE_DISABLE_COMPILE_CACHE=1. Complete seven-file bootstrap cache residue remains hashed and unchanged, rather than being removed or described as empty.",
+    "tmp": "Uses the owned evidence/test-tmp directory, retains complete top-entry names and TEST-prefixed inode/device/type census. New remaining TEST-prefixed objects invalidate scope.",
+    "childSeam": "The six existing test-created finite children select process.execPath and their explicit TEST_ONLY_VALUE-only environment. AGENT_BACKEND_TEST_NODE is bound to the same Node but is not claimed to select those six calls."
+  },
+  "timing": {
+    "originalCommandSeconds": 180,
+    "placement": "command_start is taken after full successful preflight and its receipt save, before the primary start record, raw open and Popen. Exactly command_start+180 is passed through; Popen and wait receive only the remaining absolute budget. There is no reset after launch.",
+    "refusal": "Pre-spawn deadline or pending-signal refusal prevents launch. Timeout kills/reaps only the captured group and cannot qualify as an expected RED semantic failure. deadlineExceeded, timeout, signal, abnormal cleanup and finalization/execution errors all prevent ordinary completion.",
+    "metadataSecondsPerRead": 30,
+    "metadataScope": "Each read-only Git metadata command uses the same captured-child supervisor with its own original finite30-second cap. These reads occur in pre/postflight and do not grant behavioral retries.",
+    "separateMeasurements": [
+      "preflightSeconds including failed preflight",
+      "commandPhaseSeconds",
+      "cleanupSeconds",
+      "postflightSeconds",
+      "totalInvocationSeconds"
+    ],
+    "cleanupAccounting": "Each terminate_captured call measures its own duration and the child record sums them. The primary receipt carries that sum as cleanupSeconds, a subset of commandPhaseSeconds, not an extension or a second clock.",
+    "wholeInvocationQualification": "Full input hashing is outside the original180-second command clock. No claim is made that the entire preflight-plus-command-plus-postflight invocation fits180 seconds.",
+    "sharedCleanupWaitSeconds": 3
+  },
+  "supervision": {
+    "exclusiveAttempts": "Exclusive new RED evidence directory/owner record, exact owner for later phases, and exclusive per-action attempt files. Refusals do not permit reusing an attempt. Raw and child receipts are exclusive files.",
+    "launch": "Popen is given only exact argv/cwd/environment with start_new_session=True. Managed signals during launch are retained until the child PID is captured; a pending signal then forces failure and captured cleanup.",
+    "capturedScope": "Census selects the captured process session or process group. Cleanup sends SIGKILL only to that captured group and waits for the captured child; it never targets a global process name.",
+    "quiescence": "Both live/error finalization and surviving captured descendants invoke retained cleanup. Empty remainingCapturedSession is required before raw output identity is computed. Failed finalization retains its error and performs captured cleanup.",
+    "raw": "Full primary combined stdout/stderr is retained. Metadata retains full stdout and a separate stderr file. Byte/SHA/Git identities are taken only after the captured quiescence check; raw is not filtered to successful assertions.",
+    "ordinaryCompletion": "Only primary exit0 or exit1, null exit signal, no timeout/deadline/error/abnormal cleanup/interruption and empty captured session count as ordinary completion. Expected RED exit1 is preserved; it is not itself proof of a semantic RED.",
+    "postflight": "The outer finally performs a fresh full postflight independently of primary failure. Failure or interruption is recorded and cannot produce scopeCompleted. Missing/unreached primary is explicitly recorded. No failed-input equality or missing scope is promoted.",
+    "limitation": "This finite captured-session/group and TEST-temp proof does not certify arbitrary escaped children, uncatchable supervisor termination, all host processes, native custody or GUI/provider behavior."
+  },
+  "terminalSignalAdmission": {
+    "managedSignals": [
+      "SIGINT",
+      "SIGTERM"
+    ],
+    "sequence": [
+      "Earlier initial/preflight receipts never contain scopeCompleted=true.",
+      "Block the two managed signals before the first potentially successful final receipt snapshot.",
+      "Read pending managed signals while blocked and combine them with the handler-collected phase_signals.",
+      "Record the explicit signalAdmissionCutoff and compute scopeCompleted from that reconciled interruption set and all completed input/command/cleanup checks.",
+      "Write the final receipt while the managed signals remain blocked.",
+      "In finally, restore the previous handlers before restoring the previous signal mask.",
+      "A separate actual supervisor exit0 must be observed by root before any continuation; final exit also rejects recorded phase_signals."
+    ],
+    "closedRace": "A signal captured during the old first successful write can no longer be omitted from a still-admissible success receipt before a second default signal interrupts a corrective rewrite: the old successful-then-corrective two-write path is removed.",
+    "cutoffDefinition": "The managed-signal pending snapshot under the blocked mask is the receipt boundary. Its timestamp records the boundary; it is not a claim that later OS signals are included.",
+    "continuationRequirement": "The receipt covers managed signals captured or pending at its explicitly recorded blocked-mask cutoff. Root must separately observe actual supervisor exit0 before any continuation, and join that outcome into independent actual semantic RED/GREEN acceptance; a successful receipt alone does not cover later signals.",
+    "requirementAssertedInRunner": true,
+    "receiptAloneSufficient": false,
+    "postCutoffSignals": "Signals after the recorded cutoff may affect the outer process; they are explicitly outside this receipt. The independent actual RED/GREEN acceptance must join the real supervisor outcome and must not infer it from scopeCompleted alone."
+  },
+  "prerequisiteGates": {
+    "red": {
+      "requiredExit": 1,
+      "fullReceiptIdentityPinned": true,
+      "independentSemanticReviewRequired": true,
+      "scopeCompleted": true,
+      "interruptions": [],
+      "capturedSessionMembersAfter": [],
+      "newTestTempsRemaining": [],
+      "inputsPreserved": true,
+      "commandCompletedNormally": true,
+      "executionOrPostflightErrorAllowed": false
+    },
+    "green": {
+      "requiredExit": 0,
+      "scopeCompleted": true,
+      "interruptions": [],
+      "capturedSessionMembersAfter": [],
+      "newTestTempsRemaining": [],
+      "inputsPreserved": true,
+      "commandCompletedNormally": true,
+      "samePublishedSubject": true,
+      "executionOrPostflightErrorAllowed": false
+    },
+    "outerOutcome": "These inner prerequisites accompany the explicit separately observed supervisor exit0 requirement; they do not replace it."
+  },
+  "reviewedNegativePaths": [
+    {
+      "case": "binding/tool/source/config/cache drift",
+      "result": "Refuse before the behavioral launch; retained attempted scope cannot qualify."
+    },
+    {
+      "case": "preflight exception or interruption",
+      "result": "Primary remains unreached; failed preflight time/error is retained; independent postflight is attempted and scope fails."
+    },
+    {
+      "case": "launch-time managed signal",
+      "result": "Capture child PID before releasing the launch guard; retained interruption causes cleanup and scope failure."
+    },
+    {
+      "case": "primary timeout or signal",
+      "result": "Captured-only cleanup, raw/receipt retention after quiescence, failed ordinary completion; never counted as semantic RED."
+    },
+    {
+      "case": "leader exits with captured descendants",
+      "result": "Retained descendant cleanup occurs; abnormal cleanup prevents ordinary success even if final census becomes empty."
+    },
+    {
+      "case": "raw hashing or child finalization failure",
+      "result": "Finalization error and captured cleanup retained; cannot qualify."
+    },
+    {
+      "case": "postflight drift/exception/managed signal",
+      "result": "inputsPreserved or overall scope fails even if the primary command exited normally."
+    },
+    {
+      "case": "managed signal already pending at final cutoff",
+      "result": "Included in interruptions; successful scope is denied before final receipt write."
+    },
+    {
+      "case": "new signal after terminal cutoff",
+      "result": "No receipt coverage claimed; actual outer exit must be independently observed before continuation."
+    },
+    {
+      "case": "future producer materialization interrupted or incomplete",
+      "result": "Exact after-overlay checks fail and writtenPaths are retained; no automatic rollback or retry."
+    },
+    {
+      "case": "later gate receives incomplete/interrupted RED or GREEN receipt",
+      "result": "Explicit scopeCompleted, interruptions and captured-session predicates now reject it."
+    }
+  ],
+  "completedCorrections": [
+    {
+      "rejectedRunner": "5745f1eaba449114dd90baef279f9a52baadd85b",
+      "issue": "RED/GREEN prerequisites omitted overall scopeCompleted, interruption and captured-session predicates.",
+      "resolution": "All are explicit in final source; expected RED exit1 remains unchanged."
+    },
+    {
+      "rejectedRunner": "5745f1eaba449114dd90baef279f9a52baadd85b",
+      "issue": "Separate cleanup time accounting was absent.",
+      "resolution": "Per-cleanup duration and summed cleanupSeconds are retained without changing absolute command clock."
+    },
+    {
+      "rejectedRunner": "5745f1eaba449114dd90baef279f9a52baadd85b",
+      "issue": "A deferred signal during final successful receipt write could leave stale success and exit0.",
+      "resolution": "Protected blocked-mask admission and separate outer-exit requirement."
+    },
+    {
+      "rejectedRunner": "32263a67cda2fd02f7f4c101da7737c75b8f11cd",
+      "issue": "Restoring handlers before correcting a prior deferred signal permitted a second signal to leave a stale successful receipt.",
+      "resolution": "No successful receipt precedes blocked/pending/captured reconciliation; corrective two-write protocol removed."
+    }
+  ],
+  "exactDeltaReview": {
+    "fromV2": {
+      "runner": {
+        "bytes": 35382,
+        "sha256": "0e4a392343f6c56394d43d875869ca6aa84e2130776b1fa24e285cf027c9a2b9",
+        "gitBlob": "32263a67cda2fd02f7f4c101da7737c75b8f11cd"
+      },
+      "binding": {
+        "bytes": 305864,
+        "sha256": "cf391ac00cc8b6c866b46487e7f60608e0e2836011423f15fe5dfe3de903c614",
+        "gitBlob": "081d9cfabf4c6b6e1a56b6b3c3d301fc737cf201"
+      }
+    },
+    "runnerHunks": [
+      {
+        "oldStart": 519,
+        "newStart": 519,
+        "removed": [],
+        "added": [
+          "assert cfg['executionScope']['requiresObservedSupervisorExitZeroForContinuation'] is True"
+        ]
+      },
+      {
+        "oldStart": 613,
+        "newStart": 614,
+        "removed": [
+          "        receipt['postflightSeconds'] = time.monotonic() - postflight_start",
+          "        receipt['finishedAt'] = utc()",
+          "        receipt['totalInvocationSeconds'] = time.monotonic() - invocation_start",
+          "        receipt['interruptions'] = list(phase_signals)",
+          "        receipt['metadataCommands'] = metadata_counter",
+          "        receipt['primaryUnreached'] = action == 'run' and primary is None",
+          "        receipt['scopeCompleted'] = bool(receipt['inputsPreserved'] and not receipt.get('executionError')",
+          "                                         and not receipt.get('postflightError') and not phase_signals",
+          "                                         and (action == 'materialize' or receipt['commandCompletedNormally'])",
+          "                                         and receipt.get('cleanup', {}).get('newTestTempsRemaining') == [])",
+          "        receipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')",
+          "        for sig, previous in previous_handlers.items():",
+          "            signal.signal(sig, previous)",
+          "        if phase_signals != receipt['interruptions']:",
+          "            receipt['interruptions'] = list(phase_signals)",
+          "            receipt['scopeCompleted'] = False",
+          "            receipt['lateFinalizationInterruption'] = True"
+        ],
+        "added": [
+          "        managed_signals = set(previous_handlers)",
+          "        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, managed_signals)",
+          "        try:",
+          "            pending_signals = sorted(int(sig) for sig in signal.sigpending() & managed_signals)",
+          "            receipt['signalAdmissionCutoff'] = {",
+          "                'at': utc(), 'pendingSignals': pending_signals, 'supervisorExitZeroRequired': True,",
+          "                'scope': 'Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.'}",
+          "            receipt['postflightSeconds'] = time.monotonic() - postflight_start",
+          "            receipt['finishedAt'] = utc()",
+          "            receipt['totalInvocationSeconds'] = time.monotonic() - invocation_start",
+          "            receipt['interruptions'] = [*phase_signals, *pending_signals]",
+          "            receipt['metadataCommands'] = metadata_counter",
+          "            receipt['primaryUnreached'] = action == 'run' and primary is None",
+          "            receipt['scopeCompleted'] = bool(receipt['inputsPreserved'] and not receipt.get('executionError')",
+          "                                             and not receipt.get('postflightError') and not receipt['interruptions']",
+          "                                             and (action == 'materialize' or receipt['commandCompletedNormally'])",
+          "                                             and receipt.get('cleanup', {}).get('newTestTempsRemaining') == [])"
+        ]
+      },
+      {
+        "oldStart": 631,
+        "newStart": 632,
+        "removed": [],
+        "added": [
+          "        finally:",
+          "            for sig, previous in previous_handlers.items():",
+          "                signal.signal(sig, previous)",
+          "            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)"
+        ]
+      },
+      {
+        "oldStart": 634,
+        "newStart": 639,
+        "removed": [
+          "      'rawCombinedOutput', 'cleanup']}), flush=True)"
+        ],
+        "added": [
+          "      'rawCombinedOutput', 'cleanup', 'signalAdmissionCutoff']}), flush=True)"
+        ]
+      }
+    ],
+    "runnerInverseReproducesEveryV2Byte": true,
+    "bindingChangedKeys": [
+      "runnerIdentity",
+      "executionScope"
+    ],
+    "bindingExtraFields": [
+      "executionScope.requiresObservedSupervisorExitZeroForContinuation",
+      "executionScope.signalReceiptBoundary"
+    ],
+    "bindingInverseReproducesEveryV2Byte": true,
+    "unchanged": "All eight input pins, complete embedded accepted review bodies, commands, source pins, case census, transport/config and five attempt budgets are byte-preserved across the final revision."
+  },
+  "testAndResultBoundary": {
+    "reviewedTestCensus": {
+      "wholeRuntimeCases": 97,
+      "oldRuntimeCases": 78,
+      "addedRuntimeCases": 19,
+      "oldDefinitions": 49,
+      "addedDefinitions": 7,
+      "oldSourceExactPrefix": true,
+      "wholeTest": {
+        "bytes": 136700,
+        "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+        "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+      },
+      "staticPrediction": {
+        "pass": 87,
+        "semanticFail": 10,
+        "observed": false
+      },
+      "requiredActualRed": "All78 existing cases execute and pass; actual designated delayed-owned-preview case fails semantically at original final geometry guard. No skipped/cancelled/import/setup/timeout/unreached result can qualify. Independent full raw/input/cleanup acceptance precedes any producer."
+    },
+    "actualWhole97Executions": 0,
+    "actualBehavioralGuardExecutions": 0,
+    "newProducerPostimages": 0,
+    "predictionIsObserved": false,
+    "expectedActualReview": "After the one admitted RED command, independently read the entire actual raw and all receipts/input censuses. Confirm all78 existing cases execute and pass and designated new regression failures are semantic. Setup/import/timeout/cancel/skip/unreached outcomes do not qualify. Join actual supervisor exit0, inner expected exit1, exact source/input identities and complete captured cleanup before producer authorship.",
+    "noNativeOrWholeE2ETransfer": true,
+    "publicationReadbackRequiredBeforeApplication": true
+  },
+  "remainingBlockers": [],
+  "retention": "This bare Git review is evidence only. It does not mutate a ref, publish a PR, authorize CI, apply a runner, write a product source postimage or spend a behavioral execution attempt."
+}

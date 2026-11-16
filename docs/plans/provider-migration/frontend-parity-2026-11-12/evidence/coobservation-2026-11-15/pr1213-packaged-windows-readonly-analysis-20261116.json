@@ -1,0 +1,2229 @@
+{
+  "schema": "c714.packaged-windows-original-10s-read-only-review",
+  "schemaVersion": 1,
+  "preparedAtUtc": "2026-11-16T14:02:30.329Z",
+  "repository": "777genius/agent-teams-ai",
+  "authorAgent": "pr_graph",
+  "disposition": "Evidence/source diagnosis only. No producer, deadline, ownership, geometry, replay, workflow or runtime change selected or authored.",
+  "source": {
+    "commit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+    "tree": "6addcdaf71094340d366dc8a97258d68aaa7a47b",
+    "pullRequest": 1213,
+    "runId": 43834444828,
+    "event": "pull_request",
+    "attempt": 1,
+    "workflow": ".github/workflows/electron-packaged-ci.yml",
+    "workflowGitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69"
+  },
+  "reviewLimits": {
+    "newCiQueries": 0,
+    "newCiRuns": 0,
+    "sourcePostimages": 0,
+    "testOrRuntimeInvocations": 0,
+    "refOrPrActions": 0,
+    "artifactVerification": "Root downloaded the original artifacts and verified ZIP bytes/digests/CRC, safe unique regular-member manifests and metadata. This reviewer read the immutable wrappers and independently rehashed all13 complete textual members. It did not independently download/re-extract ZIPs or inspect PNG pixels.",
+    "sourceVerification": "All19 critical full E source bodies were read and independently Git/SHA256 hashed. Their receipt rows match the explicit LF-to-CRLF checkout transformation. All1798 before/after receipt rows are equal, unique, well-formed and present in the frozen E source inventory. This is not a claim that all1798 full source bodies were separately re-fetched and rehashed in this review.",
+    "originalEvidence": "Both owned02/03 bundles and all16 complete original payload instances were independently rehashed. Original raw/API failures remain authoritative; recovered archives add information without replacing them.",
+    "scopeSeparation": "Separate from Process15s, Cross geometry, the current conversation-readiness97-case work and dormant Driver.close. No qualification transfer to later source."
+  },
+  "evidence": {
+    "catalog": {
+      "gitBlob": "23581508887ecb51fdbfde84fe15dab969bf8f90",
+      "bytes": 16220,
+      "sha256": "9934b0d8e37eb36b70e12fc0817ee3732660abba71ee71a756bb020804b318c2"
+    },
+    "originalBundles": [
+      {
+        "key": "owned-02",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-owned-02-20261116.json",
+        "bytes": 635681,
+        "sha256": "c26ee669ab5aba35f8719367c2e6876156d60cd1aa6abcc8dd686f3aad8b6442",
+        "gitBlob": "a00a554cc2be4143872b673bc9c08bb9d9fe3184",
+        "payloadInstances": 7,
+        "payloadBytes": 540813
+      },
+      {
+        "key": "owned-03",
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-owned-03-20261116.json",
+        "bytes": 652087,
+        "sha256": "0da14bcfd814b1cbc500a2bc20bb321d9fd9582dd6eed31682d8dacf42f3a570",
+        "gitBlob": "cbba7f893aae203c26f74b54e2b5a64ca9e3a1b3",
+        "payloadInstances": 9,
+        "payloadBytes": 577420
+      }
+    ],
+    "originalPayloads": [
+      {
+        "containerGitBlob": "a00a554cc2be4143872b673bc9c08bb9d9fe3184",
+        "id": "packaged-win32-x64-job-133212589526.log",
+        "bytes": 296003,
+        "sha256": "f43245594d8546d729c2b55dcf4c597f24972b02a34789b8d81fb2e76b868cd1",
+        "gitBlob": "08eecf8b27dc3a6648e70b7a1734014187fe6c13"
+      },
+      {
+        "containerGitBlob": "a00a554cc2be4143872b673bc9c08bb9d9fe3184",
+        "id": "packaged-run-at-windows-x64-terminal.json",
+        "bytes": 13844,
+        "sha256": "925322c3652de37bc1a81989a999e87d28bc158561ab0527fcfaa10468b1aac2",
+        "gitBlob": "ec3378f1440e83dd71083d3ae13c7ecc6da9fbdf"
+      },
+      {
+        "containerGitBlob": "a00a554cc2be4143872b673bc9c08bb9d9fe3184",
+        "id": "packaged-jobs-102523.json",
+        "bytes": 37900,
+        "sha256": "f256d066110182fd89bf7798e098b1baf58fa17621018eedb02ee320b37e451e",
+        "gitBlob": "73b015252551fbccf2d0ac1dfbe086ee7db02774"
+      },
+      {
+        "containerGitBlob": "a00a554cc2be4143872b673bc9c08bb9d9fe3184",
+        "id": "packaged-artifacts-at-windows-x64-terminal.json",
+        "bytes": 1611,
+        "sha256": "d62fe6f2bab3dc0cc7bf3053b6b78e9f8d9d920ec25303fe9b3ed5d1f9fb5c74",
+        "gitBlob": "e138a0ad44d28d6bcce5547303613f2e0a1174e7"
+      },
+      {
+        "containerGitBlob": "a00a554cc2be4143872b673bc9c08bb9d9fe3184",
+        "id": "head-runs-102523.json",
+        "bytes": 125022,
+        "sha256": "d81594b852b0cd2a4243cbf4a9176fa681e5221c99e3469a9bffe96daf69cc02",
+        "gitBlob": "a90be6656068f900d9ffe7156c1541a7716282e1"
+      },
+      {
+        "containerGitBlob": "a00a554cc2be4143872b673bc9c08bb9d9fe3184",
+        "id": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+      },
+      {
+        "containerGitBlob": "a00a554cc2be4143872b673bc9c08bb9d9fe3184",
+        "id": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 28741,
+        "sha256": "9d5233b82df6a7dfa0d735b27c11f39f130824f3947c38896a0d052ca549cba4",
+        "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78"
+      },
+      {
+        "containerGitBlob": "cbba7f893aae203c26f74b54e2b5a64ca9e3a1b3",
+        "id": "packaged-win32-arm64-terminal-raw",
+        "bytes": 304926,
+        "sha256": "6f927bbcf327fcf14ea8c77ca3018f825b206661916c7a08000f6d5b9fb81347",
+        "gitBlob": "8b9b608f7969f3309ed5af34ae070d5525f17a3f"
+      },
+      {
+        "containerGitBlob": "cbba7f893aae203c26f74b54e2b5a64ca9e3a1b3",
+        "id": "packaged-original-run-api",
+        "bytes": 13844,
+        "sha256": "925322c3652de37bc1a81989a999e87d28bc158561ab0527fcfaa10468b1aac2",
+        "gitBlob": "ec3378f1440e83dd71083d3ae13c7ecc6da9fbdf"
+      },
+      {
+        "containerGitBlob": "cbba7f893aae203c26f74b54e2b5a64ca9e3a1b3",
+        "id": "packaged-original-jobs-api",
+        "bytes": 39319,
+        "sha256": "fbf8182bce8971dd08ef5681b4e359dd4d961f9628294d5f6616d3584c12a355",
+        "gitBlob": "f9a2d2f5d364ec8d752d718cef56e0dacf420477"
+      },
+      {
+        "containerGitBlob": "cbba7f893aae203c26f74b54e2b5a64ca9e3a1b3",
+        "id": "packaged-original-artifacts-api",
+        "bytes": 2401,
+        "sha256": "bd44c8cf32e00f40384e240592ad7d511913d6cfc6ab0d0a7c6288128e8f4b91",
+        "gitBlob": "5466a7757c7f7d747272b3ede7aabe83fa0f579e"
+      },
+      {
+        "containerGitBlob": "cbba7f893aae203c26f74b54e2b5a64ca9e3a1b3",
+        "id": "original-E-head-runs-api",
+        "bytes": 125030,
+        "sha256": "d9b52d74b22021040576481dfcd40d81190557182def3432ec3c57c40b1953ce",
+        "gitBlob": "ccc607be5148c2c19cc74158fc99dc1d03b7d254"
+      },
+      {
+        "containerGitBlob": "cbba7f893aae203c26f74b54e2b5a64ca9e3a1b3",
+        "id": "nativeWindowsAppGate.mjs",
+        "bytes": 37692,
+        "sha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b"
+      },
+      {
+        "containerGitBlob": "cbba7f893aae203c26f74b54e2b5a64ca9e3a1b3",
+        "id": "desktop-ui-controls.ts",
+        "bytes": 28741,
+        "sha256": "9d5233b82df6a7dfa0d735b27c11f39f130824f3947c38896a0d052ca549cba4",
+        "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78"
+      },
+      {
+        "containerGitBlob": "cbba7f893aae203c26f74b54e2b5a64ca9e3a1b3",
+        "id": "gateController.cpp",
+        "bytes": 5935,
+        "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+        "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5"
+      },
+      {
+        "containerGitBlob": "cbba7f893aae203c26f74b54e2b5a64ca9e3a1b3",
+        "id": "electron-packaged-ci.yml",
+        "bytes": 19532,
+        "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f",
+        "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69"
+      }
+    ],
+    "originalPayloadInstances": 16,
+    "originalPayloadBytes": 1118233,
+    "recoveredArchives": [
+      {
+        "wrapper": {
+          "bytes": 2110971,
+          "sha256": "937fdf58301146a631223d2dca7a7f143972170e1b6daf63b4b23b9beb3b2de7",
+          "gitBlob": "0ad58ced472fe1f3beae76c911ba3d6ca376fc62"
+        },
+        "arch": "x64",
+        "capturedAt": "2026-11-16T13:49:50.233965+00:00",
+        "artifactId": 14215698201,
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "archiveIdentity": {
+          "bytes": 625533,
+          "sha256": "2f6eb7bdbd88beedced5a101b5ffcf1273f9d564fb6592e12457b1a386d29220",
+          "gitBlob": "d7696c586b65d1051ae7450c5deaed0730d632f3"
+        },
+        "crcVerified": true,
+        "safeUniqueMembers": true,
+        "members": [
+          {
+            "name": "_temp/opencode-v2-packaged-inputs.json",
+            "bytes": 780,
+            "sha256": "348a4ed03f86dd331170ff44b147c2f4fff0940e322a223aaa379a02fa25e82b",
+            "gitBlob": "72ff61e285928b8e428b3c508bb92320d66c3b93"
+          },
+          {
+            "name": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+            "bytes": 1154517,
+            "sha256": "5c249dd8259b920afdee2b84d2a4255956e8fac18a6db5cd3221581129f4fc1e",
+            "gitBlob": "e74e17fee179264efd4fd6a11e02f86eba3453b1"
+          },
+          {
+            "name": "_temp/opencode-v2-packaged-native.json",
+            "bytes": 5382,
+            "sha256": "362ab687f0f1a50af73538e50591c50ed6d85d69f7d41523fc6d347581e205e0",
+            "gitBlob": "1697bff7b5542525a1a9b0aa486428af41930414"
+          },
+          {
+            "name": "_temp/opencode-v2-packaged.json",
+            "bytes": 1186,
+            "sha256": "0c9ccae72b24e44f0d7074787bab3a5d66a7621920b98f6e6841ec68f5040d17",
+            "gitBlob": "7c5fd076c4ef73bbaffc08ee07fdbd0a224f42dc"
+          },
+          {
+            "name": "_temp/windows-same-main-process-ui.app.log",
+            "bytes": 4618,
+            "sha256": "f7590d4dc379c570130a3903c48bd2c5b17300e71c87a108b97221b10d00e0a5",
+            "gitBlob": "76471dc546ac069296c2998b534a4fe8add79895"
+          },
+          {
+            "name": "_temp/windows-same-main-process-ui.before-crash.png",
+            "bytes": 79459,
+            "sha256": "fe38cf9aeedbf29f5a6d7c124be1de93a1ea6d4bc3ab4d2048d6e0667d4a86a4",
+            "gitBlob": "92badc21f44f79028011f4310459ed4370592edc"
+          },
+          {
+            "name": "_temp/windows-same-main-process-ui.controller.log",
+            "bytes": 43440,
+            "sha256": "0bbdcb03b2e73444311d50630166f4911a76d62a1f0749b9e608544ddc0882d0",
+            "gitBlob": "fabd8a4eb23f80093784c27e711830b2e4d0849c"
+          },
+          {
+            "name": "_temp/windows-same-main-process-ui.json",
+            "bytes": 751117,
+            "sha256": "a11fc755f4fa12704f3ae111d73c24647749d403c5c7d50c8137b0dfc9dba0d5",
+            "gitBlob": "aab390b6645b29c26da1fe92bd3981888dba2cb0"
+          }
+        ],
+        "images": [
+          {
+            "member": "_temp/windows-same-main-process-ui.before-crash.png",
+            "localPath": "/tmp/c714-original-packaged-windows-review/x64/windows-same-main-process-ui.before-crash.png",
+            "bytes": 79459,
+            "sha256": "fe38cf9aeedbf29f5a6d7c124be1de93a1ea6d4bc3ab4d2048d6e0667d4a86a4",
+            "gitBlob": "92badc21f44f79028011f4310459ed4370592edc"
+          }
+        ],
+        "dataPackagingCorrection": "Prior local artifact-review.json is unselected: its serialization used literal backslash-n and Git blob framing used literal backslash-zero. This separate v2 file corrects only data packaging from the same verified original ZIP; archive/member SHA256 and bytes are unchanged. No original workflow/source/test was rerun."
+      },
+      {
+        "wrapper": {
+          "bytes": 1285686,
+          "sha256": "6f8bfc9eccbf556598145d1f58edb9baac88b90e487377103a5564ce6b7e5ecb",
+          "gitBlob": "6703f2b6a5a334c73ef7122e942abf5ec3022288"
+        },
+        "arch": "arm64",
+        "capturedAt": "2026-11-16T13:49:50.303823+00:00",
+        "artifactId": 14217975048,
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "archiveIdentity": {
+          "bytes": 426943,
+          "sha256": "eabb263441a4df6ef92bf9fda940202b2e23d9351d024365697b02fe402d04ab",
+          "gitBlob": "d7867be12e2f7cdd8bb08ce99bdc9d29fd37f451"
+        },
+        "crcVerified": true,
+        "safeUniqueMembers": true,
+        "members": [
+          {
+            "name": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+            "bytes": 1154527,
+            "sha256": "6756f6438bf3873a6bef1e11233fcbdc44f24ac799de9db881819daf06fe34d7",
+            "gitBlob": "8a8cab63016df348ea6d34feaf209b30d94c6a3e"
+          },
+          {
+            "name": "_temp/opencode-v2-packaged-inputs.json",
+            "bytes": 782,
+            "sha256": "149dca55d6b09055644608c8c042e6d7ef475cb88f647c4a5b545e772baab3d7",
+            "gitBlob": "cf7f0b7445c469cb65bf5ee8926695f992ee049a"
+          },
+          {
+            "name": "_temp/opencode-v2-packaged-native.json",
+            "bytes": 5389,
+            "sha256": "a35f48f9bed298c95716485e373e9ef750de339742aeb808225fb06b5f2d8b8f",
+            "gitBlob": "8e61d76bb65ea72364c9e2a11c91b76d466dc636"
+          },
+          {
+            "name": "_temp/opencode-v2-packaged.json",
+            "bytes": 1188,
+            "sha256": "20c895c936959d3c05a1785d8550709547f9c7cbbc66b00bcdcf221c2d320bcc",
+            "gitBlob": "ee50199d4c803f86dddb4e121a02ae88939f3c85"
+          },
+          {
+            "name": "_temp/windows-same-main-process-ui.app.log",
+            "bytes": 5506,
+            "sha256": "ebf72c8d3a8403dc90df489ea2e0dd7596e6e53b8b83c4015416849d7add6756",
+            "gitBlob": "8f73aff09c8a66e419cd091b601757c54bd45d79"
+          },
+          {
+            "name": "_temp/windows-same-main-process-ui.before-crash.png",
+            "bytes": 79812,
+            "sha256": "8d958e577b1cfe02bdbbd3633cc404d908ce8a65f4f68b66ad43e2d4b9011e9c",
+            "gitBlob": "cf29c4b53b71a889cc783f96f963f27f4f94cb3b"
+          },
+          {
+            "name": "_temp/windows-same-main-process-ui.controller.log",
+            "bytes": 26671,
+            "sha256": "0b9a2553cc17a42c8ce29d59b9f60bde4dd6f6f1b1149b1abda2898f9d624468",
+            "gitBlob": "58b8452d2025dbff16b697681b084ff14f61cdc4"
+          }
+        ],
+        "images": [
+          {
+            "member": "_temp/windows-same-main-process-ui.before-crash.png",
+            "localPath": "/tmp/c714-original-packaged-windows-review/arm64/windows-same-main-process-ui.before-crash.png",
+            "bytes": 79812,
+            "sha256": "8d958e577b1cfe02bdbbd3633cc404d908ce8a65f4f68b66ad43e2d4b9011e9c",
+            "gitBlob": "cf29c4b53b71a889cc783f96f963f27f4f94cb3b"
+          }
+        ],
+        "dataPackagingCorrection": "Prior local artifact-review.json is unselected: its serialization used literal backslash-n and Git blob framing used literal backslash-zero. This separate v2 file corrects only data packaging from the same verified original ZIP; archive/member SHA256 and bytes are unchanged. No original workflow/source/test was rerun."
+      }
+    ],
+    "recoveredTextBodies": [
+      {
+        "containerGitBlob": "0ad58ced472fe1f3beae76c911ba3d6ca376fc62",
+        "arch": "x64",
+        "name": "_temp/opencode-v2-packaged-inputs.json",
+        "bytes": 780,
+        "sha256": "348a4ed03f86dd331170ff44b147c2f4fff0940e322a223aaa379a02fa25e82b",
+        "gitBlob": "72ff61e285928b8e428b3c508bb92320d66c3b93"
+      },
+      {
+        "containerGitBlob": "0ad58ced472fe1f3beae76c911ba3d6ca376fc62",
+        "arch": "x64",
+        "name": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+        "bytes": 1154517,
+        "sha256": "5c249dd8259b920afdee2b84d2a4255956e8fac18a6db5cd3221581129f4fc1e",
+        "gitBlob": "e74e17fee179264efd4fd6a11e02f86eba3453b1"
+      },
+      {
+        "containerGitBlob": "0ad58ced472fe1f3beae76c911ba3d6ca376fc62",
+        "arch": "x64",
+        "name": "_temp/opencode-v2-packaged-native.json",
+        "bytes": 5382,
+        "sha256": "362ab687f0f1a50af73538e50591c50ed6d85d69f7d41523fc6d347581e205e0",
+        "gitBlob": "1697bff7b5542525a1a9b0aa486428af41930414"
+      },
+      {
+        "containerGitBlob": "0ad58ced472fe1f3beae76c911ba3d6ca376fc62",
+        "arch": "x64",
+        "name": "_temp/opencode-v2-packaged.json",
+        "bytes": 1186,
+        "sha256": "0c9ccae72b24e44f0d7074787bab3a5d66a7621920b98f6e6841ec68f5040d17",
+        "gitBlob": "7c5fd076c4ef73bbaffc08ee07fdbd0a224f42dc"
+      },
+      {
+        "containerGitBlob": "0ad58ced472fe1f3beae76c911ba3d6ca376fc62",
+        "arch": "x64",
+        "name": "_temp/windows-same-main-process-ui.app.log",
+        "bytes": 4618,
+        "sha256": "f7590d4dc379c570130a3903c48bd2c5b17300e71c87a108b97221b10d00e0a5",
+        "gitBlob": "76471dc546ac069296c2998b534a4fe8add79895"
+      },
+      {
+        "containerGitBlob": "0ad58ced472fe1f3beae76c911ba3d6ca376fc62",
+        "arch": "x64",
+        "name": "_temp/windows-same-main-process-ui.controller.log",
+        "bytes": 43440,
+        "sha256": "0bbdcb03b2e73444311d50630166f4911a76d62a1f0749b9e608544ddc0882d0",
+        "gitBlob": "fabd8a4eb23f80093784c27e711830b2e4d0849c"
+      },
+      {
+        "containerGitBlob": "0ad58ced472fe1f3beae76c911ba3d6ca376fc62",
+        "arch": "x64",
+        "name": "_temp/windows-same-main-process-ui.json",
+        "bytes": 751117,
+        "sha256": "a11fc755f4fa12704f3ae111d73c24647749d403c5c7d50c8137b0dfc9dba0d5",
+        "gitBlob": "aab390b6645b29c26da1fe92bd3981888dba2cb0"
+      },
+      {
+        "containerGitBlob": "6703f2b6a5a334c73ef7122e942abf5ec3022288",
+        "arch": "arm64",
+        "name": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+        "bytes": 1154527,
+        "sha256": "6756f6438bf3873a6bef1e11233fcbdc44f24ac799de9db881819daf06fe34d7",
+        "gitBlob": "8a8cab63016df348ea6d34feaf209b30d94c6a3e"
+      },
+      {
+        "containerGitBlob": "6703f2b6a5a334c73ef7122e942abf5ec3022288",
+        "arch": "arm64",
+        "name": "_temp/opencode-v2-packaged-inputs.json",
+        "bytes": 782,
+        "sha256": "149dca55d6b09055644608c8c042e6d7ef475cb88f647c4a5b545e772baab3d7",
+        "gitBlob": "cf7f0b7445c469cb65bf5ee8926695f992ee049a"
+      },
+      {
+        "containerGitBlob": "6703f2b6a5a334c73ef7122e942abf5ec3022288",
+        "arch": "arm64",
+        "name": "_temp/opencode-v2-packaged-native.json",
+        "bytes": 5389,
+        "sha256": "a35f48f9bed298c95716485e373e9ef750de339742aeb808225fb06b5f2d8b8f",
+        "gitBlob": "8e61d76bb65ea72364c9e2a11c91b76d466dc636"
+      },
+      {
+        "containerGitBlob": "6703f2b6a5a334c73ef7122e942abf5ec3022288",
+        "arch": "arm64",
+        "name": "_temp/opencode-v2-packaged.json",
+        "bytes": 1188,
+        "sha256": "20c895c936959d3c05a1785d8550709547f9c7cbbc66b00bcdcf221c2d320bcc",
+        "gitBlob": "ee50199d4c803f86dddb4e121a02ae88939f3c85"
+      },
+      {
+        "containerGitBlob": "6703f2b6a5a334c73ef7122e942abf5ec3022288",
+        "arch": "arm64",
+        "name": "_temp/windows-same-main-process-ui.app.log",
+        "bytes": 5506,
+        "sha256": "ebf72c8d3a8403dc90df489ea2e0dd7596e6e53b8b83c4015416849d7add6756",
+        "gitBlob": "8f73aff09c8a66e419cd091b601757c54bd45d79"
+      },
+      {
+        "containerGitBlob": "6703f2b6a5a334c73ef7122e942abf5ec3022288",
+        "arch": "arm64",
+        "name": "_temp/windows-same-main-process-ui.controller.log",
+        "bytes": 26671,
+        "sha256": "0b9a2553cc17a42c8ce29d59b9f60bde4dd6f6f1b1149b1abda2898f9d624468",
+        "gitBlob": "58b8452d2025dbff16b697681b084ff14f61cdc4"
+      }
+    ],
+    "recoveredTextBodyCount": 13,
+    "recoveredTextBytes": 3155103,
+    "x64WholeReceipt": {
+      "member": "_temp/windows-same-main-process-ui.json",
+      "gitBlob": "aab390b6645b29c26da1fe92bd3981888dba2cb0",
+      "bytes": 751117,
+      "sha256": "a11fc755f4fa12704f3ae111d73c24647749d403c5c7d50c8137b0dfc9dba0d5",
+      "containerGitBlob": "0ad58ced472fe1f3beae76c911ba3d6ca376fc62"
+    },
+    "arm64WholeReceipt": {
+      "present": false,
+      "regularMemberCount": 7,
+      "containerGitBlob": "6703f2b6a5a334c73ef7122e942abf5ec3022288",
+      "qualification": "Actual archive has no windows-same-main-process-ui.json. Missing evidence is not PASS; x64 timing/cleanup values cannot be attributed to ARM."
+    },
+    "originalWarnings": {
+      "owned-02": {
+        "powershellXmlStreamMessages": 85,
+        "note": "Repeated PowerShell XML-stream diagnostics, package/action warnings and all original stderr are retained in full. No causal or timing attribution is made."
+      },
+      "owned-03": {
+        "powerShellXmlStreamDiagnostics": 51,
+        "qualification": "All51 complete diagnostics remain in raw; neither timing impact nor failure causality is inferred."
+      }
+    },
+    "warningInterpretation": "Original XML-stream/engine and other retained warnings are not silently discarded and are not independently established as the cause of either refusal. In x64 all57 recorded original census reads returned."
+  },
+  "sourceReview": {
+    "criticalFullBodies": [
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "gitBytes": 37692,
+        "gitSha256": "03504561bde7c7db7456fba26b72eb8d9238b7a22a17e2a5f5d2bab7001ab0aa",
+        "receiptSha256": "a76135c8e2a09fbcc939c2856f626e1299c6dc9d684fe6fb31458a4f957d167f",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+        "gitBytes": 31223,
+        "gitSha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+        "receiptSha256": "9be5af55b58539523c03194b62ebb68f5b1b5363c8c3994deee833d91fed7499",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      },
+      {
+        "path": "tools/owned-process-broker/gateController.cpp",
+        "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+        "gitBytes": 5935,
+        "gitSha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+        "receiptSha256": "604a73ce8f1e31c3ee094a1ceb7a866c71270590ba40f94c70d7f0c1a7543518",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78",
+        "gitBytes": 28741,
+        "gitSha256": "9d5233b82df6a7dfa0d735b27c11f39f130824f3947c38896a0d052ca549cba4",
+        "receiptSha256": "5ad425e348ddc57bf65195de8b8198549b120d2899816498cc5e7b90020e8428",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.ts",
+        "gitBlob": "12f4a7b122843acea95e8c37f876917331842a4a",
+        "gitBytes": 22604,
+        "gitSha256": "ebb52ab95cdbf0ddc86ce44b534a3c7255c7e8454e5cadb2cbb83278daa53a0f",
+        "receiptSha256": "7e66f25cba75a9e13940a41175471659231095248113bd7139e07b4a4a7e9e1e",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      },
+      {
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "gitBytes": 12335,
+        "gitSha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e",
+        "receiptSha256": "8b44f15d068ebda80de79947b58cd41ef0c8e7f86006ca2897d0b046394b9bdf",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      },
+      {
+        "path": "src/features/agent-backend/renderer/HostBackendRetryAction.tsx",
+        "gitBlob": "512a39a6e562fb8101dfbd1a6a7e59aae31da6d4",
+        "gitBytes": 7574,
+        "gitSha256": "1b287c8db9594b42e69e2d77f4e4bf07d9caf836f9c39ff1fd95903703035cfc",
+        "receiptSha256": "2c4e1860e607d64ae2e4ce6011439b6e2935f33a4e58c67b5f5a9093aa3957ed",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      },
+      {
+        "path": "src/renderer/components/team/TeamDetailView.tsx",
+        "gitBlob": "e1fe249d7e5f760f80f87e93918b0ff253b3f450",
+        "gitBytes": 137728,
+        "gitSha256": "ea327a3b17e896013d88693deea9f0844ae7d52733dd9be23ffdfabe38c62f82",
+        "receiptSha256": "ff353272117a07df2f97631a3922582140091bb6ce353efcd2682c3a0b5182ba",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      },
+      {
+        "path": "src/renderer/store/slices/teamSlice.ts",
+        "gitBlob": "df9dd8391bdd9fcd2edc05057fa18a8cbd787dad",
+        "gitBytes": 184647,
+        "gitSha256": "87f07dfa0d132d20493add182d0bb05d40fa1c5f97b5ddb72fa9ab23b6df8e9a",
+        "receiptSha256": "f29179d32ba09db26409232510463c0fb49b9aabd86b613a2f5eda54d3431ac8",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      },
+      {
+        "path": "src/renderer/components/team/ProcessesSection.tsx",
+        "gitBlob": "fdfa9b971390730492af0359f5b59c233cc5ee7b",
+        "gitBytes": 9397,
+        "gitSha256": "aabad65903c8ef3abb1351309cacea2ef3db4ac4ecb043c0255244e75ad87717",
+        "receiptSha256": "f8790cf0bcc07a212e400d76212ad53a77ab31d2e15005e5205193d72fd40133",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      },
+      {
+        "path": "src/features/agent-backend/renderer/createHostTeamsApi.ts",
+        "gitBlob": "506b1c56e2fda091040c1864ed3b3b1258208543",
+        "gitBytes": 31402,
+        "gitSha256": "7d85e02663936b51c92d447a407262559f2578057c9197067d11918bbd807bb9",
+        "receiptSha256": "31b069373af42cada5ae8d261bac4b1e31cf92250797fd35369d24be027874fc",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      },
+      {
+        "path": "src/features/agent-backend/main/adapters/input/BackendOperationsFacade.ts",
+        "gitBlob": "08a0bb6bad50602e9057bc34a64c74fce7f42937",
+        "gitBytes": 9941,
+        "gitSha256": "4e63144f259dde983042b83e382a4dc307732579b0c8dcec10ffc6e20515165d",
+        "receiptSha256": "49c846fe7af2dc5200d9fb8e42c170d28e7429f113b3c82433f52c21116878e3",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      },
+      {
+        "path": "src/features/agent-backend/main/composition/recoverCapturedHost.ts",
+        "gitBlob": "91a5862903f8a32c067ae0cff00eb166ed7eff62",
+        "gitBytes": 3835,
+        "gitSha256": "d6aa188569187aba0eb0182828f89b220152b9af458eb3ffdfa258fd5e299566",
+        "receiptSha256": "7249924f2ba58cfc10b51064af31f368c286c02de06f71a6d334924b071b4af1",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+        "gitBlob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+        "gitBytes": 32767,
+        "gitSha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138",
+        "receiptSha256": "d01efff1f115509ab8c1fe2f84ff897dce091588c51ad7dd653b49a0cd03c25e",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+        "gitBlob": "e84ee4b6e2ff4cea7d468c3173bc0851c59cdeae",
+        "gitBytes": 7213,
+        "gitSha256": "f12be6e141ab12b41feb394e17d5b373e6eeb6511c6425212bb9c33bf44afb72",
+        "receiptSha256": "1285fe02075a4329f66b6655e87da87b66728e2ef6f2d6fd3bf6c4f9a367f358",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      },
+      {
+        "path": "src/features/agent-backend/main/application/BackendOwnerRouter.ts",
+        "gitBlob": "28e8f2961201673801b48969e2178f4cbf9c2636",
+        "gitBytes": 24165,
+        "gitSha256": "971e852ef229e650974912d2e03765a263a6e4b1188283b414a758851f9d4e6c",
+        "receiptSha256": "0f1566c0c9cd7cdde94394388488457eb2824fcb898dbfd19dc0b8e029dc3b6f",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      },
+      {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+        "gitBytes": 19532,
+        "gitSha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f",
+        "receiptSha256": "da22b80b85d39ebb9b0587ccd6d8ff7e5317e427c3b7ebfa00b42d4fcce840a2",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+        "gitBlob": "67180ac5c567cbeb089d4ef3248391c792e1ba4d",
+        "gitBytes": 7926,
+        "gitSha256": "8cdc9a1bcc80b61998e93813959f53542a85cb5953c93ae1feb2397e37d9080e",
+        "receiptSha256": "19ad26755e1655bcc8c2169a9d03d84d15dd8f8bfea17750f2194bf6a9c8d961",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+        "gitBlob": "44c8cba99e4932905da77539a59c904a39da4e36",
+        "gitBytes": 9569,
+        "gitSha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd",
+        "receiptSha256": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+        "matchingForm": [
+          "lfToCrlf"
+        ]
+      }
+    ],
+    "anchors": [
+      {
+        "id": "gate-deadline",
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          121,
+          163
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/tools/owned-process-broker/nativeWindowsAppGate.mjs#L121-L163",
+        "claim": "Absolute phase and outer deadlines remain authoritative before and after awaited operations; original poll cadence uses remaining time.",
+        "originalExcerpt": "const remaining = () => {\n  const left = Math.floor(Math.min(outerDeadline, activeDeadline) - performance.now());\n  assert.ok(left > 0, 'Original Windows UI phase expired: ' + activePhase);\n  return left;\n};\nconst begin = (name, milliseconds) => {\n  activePhase = name;\n  activeDeadline = Math.min(outerDeadline, performance.now() + milliseconds);\n  const phase = { phase: name, atMs: performance.now() - startedAt, budgetMs: milliseconds };\n  proof.phases.push(phase);\n  try {\n    const line = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_UI_PHASE', ...phase }) + '\\n';\n    if (Buffer.byteLength(line, 'utf8') <= 512) writeSync(1, line);\n  } catch { /* The original phase admission remains authoritative. */ }\n  remaining();\n};\nconst within = async action => {\n  const left = remaining();\n  let timer;\n  try {\n    const result = await Promise.race([Promise.resolve().then(action), new Promise((_, reject) => {\n      timer = setTimeout(() => reject(new Error('Original Windows UI phase expired: ' + activePhase)), left);\n    })]);\n    remaining();\n    return result;\n  } finally { clearTimeout(timer); }\n};\nconst check = () => {\n  remaining();\n  if (!acceptingExit) {\n    fixture.assertPeer();\n    assert.equal(exit, undefined, 'Original packaged Main must remain alive');\n  }\n};\nconst poll = async (read, label) => {\n  void label;\n  for (;;) {\n    check();\n    const value = await within(read);\n    if (value !== false && value !== null && value !== undefined) return value;\n    await delay(Math.min(100, remaining()));\n  }\n};\n"
+      },
+      {
+        "id": "gate-census-owner",
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          164,
+          212
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/tools/owned-process-broker/nativeWindowsAppGate.mjs#L164-L212",
+        "claim": "The original owner check obtains a fresh ordered process/listener observation. validateCensus checks original identities/lineage and remaining(); listener membership is checked only after that return.",
+        "originalExcerpt": "const validateCensus = snapshot => {\n  assert.ok(snapshot.length <= 10000, 'Complete original Windows process census');\n  sameIdentity(controllerIdentity, snapshot.find(row => row.pid === controllerIdentity.pid));\n  const currentDriver = snapshot.find(row => row.pid === driverIdentity.pid);\n  sameIdentity(driverIdentity, currentDriver);\n  assert.equal(currentDriver.parent, controllerIdentity.pid, 'Same original controller parent');\n  const liveMain = main && snapshot.find(row => row.pid === main.pid && row.birth === main.birth);\n  if (main && !acceptingExit) sameIdentity(main, liveMain);\n  if (liveMain) {\n    const retained = retainPackagedLineage(lineage, ownedTree(snapshot, main));\n    assert.equal(retained.truncated, false); lineage = retained.records;\n  }\n  const orphans = packagedOrphanObservation(lineage, snapshot);\n  assert.equal(orphans.censusTruncated, false); assert.equal(orphans.candidatesTruncated, false);\n  assert.deepEqual(orphans.candidates, [], 'No unexplained child of any original retained ancestor');\n  remaining();\n  return snapshot;\n};\nconst observeCensus = (operation, read) => {\n  const phase = activePhase;\n  let from;\n  try { from = performance.now(); } catch { /* Observation only. */ }\n  let returned = false;\n  try {\n    const value = read(); returned = true; return value;\n  } finally {\n    try {\n      if (from !== undefined) {\n        if (proof.censusReads.length < 512) proof.censusReads.push({\n          phase, operation, startMs: from - startedAt, endMs: performance.now() - startedAt, returned,\n        });\n        else proof.censusReadsTruncated = true;\n      }\n    } catch { /* Preserve the original read result or refusal. */ }\n  }\n};\nconst captureCensus = () => {\n  check();\n  return validateCensus(observeCensus('process-census', processes));\n};\nconst assertOwnedRenderer = () => {\n  check();\n  const observation = observeCensus('process-listener-snapshot', windowsProcessListenerSnapshot);\n  const snapshot = validateCensus(observation.processes), ids = observation.listeners;\n  assert.ok(ids.length > 0 && ids.every(pid => snapshot.some(current =>\n    current.pid === pid && lineage.some(original => original.pid === pid && original.birth === current.birth))),\n  'CDP listener belongs to this original Main family');\n  remaining();\n};\n"
+      },
+      {
+        "id": "gate-cdp-currentness",
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          219,
+          235
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/tools/owned-process-broker/nativeWindowsAppGate.mjs#L219-L235",
+        "claim": "Original sends retain phase/peer/Main before and after; renderer evaluation retains original URL/preload/backend identities."
+      },
+      {
+        "id": "gate-refresh",
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          439,
+          466
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/tools/owned-process-broker/nativeWindowsAppGate.mjs#L439-L466",
+        "claim": "One original10s phase includes positive Host-A exit, fixture validation, retained surface, one explicit Refresh and retained rows.",
+        "originalExcerpt": "  begin('actual-Host-A-exit-and-metadata-Refresh', 10000);\n  fixture.crashOriginal();\n  proof.hostExitCensus = await poll(async () => {\n    const current = captureCensus();\n    if (current.some(row => row.pid === hostA.pid && row.birth === hostA.birth)) return false;\n    return current;\n  }, 'positive original Host A birth absence');\n  await within(() => fixture.afterOriginalExit(activeDeadline));\n  const surface = '[data-testid=\"host-backend-recovery\"]';\n  await ui.waitRead('Boolean(document.querySelector(' + desktopJsLiteral(surface) + '))', 'retained Team recovery surface', remaining());\n  proof.counts.refreshClicks++;\n  await ui.click(surface + ' button', 'explicit original metadata Refresh', 'Refresh');\n  proof.readError = await ui.waitRead('(() => { const surface=document.querySelector(' + desktopJsLiteral(surface) + ');' +\n    'if(!surface)return null; const errors=[...surface.querySelectorAll(\\'[role=\"alert\"] p\\')].map(node=>node.textContent?.trim())' +\n    '.filter(text=>text===\"Host team read unavailable\"||text===\"Host teams unavailable\");' +\n    'const buttons=[...surface.querySelectorAll(\"button\")]; if(errors.length!==1||!buttons.some(b=>b.textContent.trim()===\"Refresh\"&&!b.disabled)' +\n    '||!buttons.some(b=>b.textContent.trim()===\"Retry\"&&!b.disabled))return null;return errors[0];})()',\n  'genuine closed Host read marker with separate controls', remaining());\n  const retainedRows = await ui.waitRead('(() => { const rows=[' +\n    original.rows.map(row => processOwner(row)).join(',') +\n    ']; return rows.every(Boolean) ? rows : null; })()',\n  'original rows retained during outage', remaining());\n  assert.ok(Array.isArray(retainedRows));\n  assert.equal(retainedRows.length, original.rows.length);\n  for (const [index, row] of original.rows.entries())\n    assert.equal(object(retainedRows[index]).process.processRef, row.processRef);\n\n  assertHostBirths();\n"
+      },
+      {
+        "id": "gate-retry-action",
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          467,
+          505
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/tools/owned-process-broker/nativeWindowsAppGate.mjs#L467-L505",
+        "claim": "One original10s phase begins before Retry click; clickReturned is recorded after click promise resolves, then successor writer and Host birth are checked."
+      },
+      {
+        "id": "gate-retry-ui-predicate",
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          506,
+          542
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/tools/owned-process-broker/nativeWindowsAppGate.mjs#L506-L542",
+        "claim": "The original readiness predicate requires retained surface, enabled Refresh, no Retry and no alert; its diagnostic is explicitly not atomic with failure.",
+        "originalExcerpt": "  await ui.waitRead('(() => {const s=document.querySelector(' + desktopJsLiteral(surface) +\n    ');let firstRefresh=null,refresh=\"not-observed\",retryPresent=null,alertPresent=null;' +\n    'if(!s)return {surfacePresent:false,refresh,firstRefreshBusy:null,retryPresent,alertPresent,ready:false};' +\n    'const b=[...s.querySelectorAll(\"button\")];refresh=\"absent\";' +\n    'const ready=b.some(x=>{if(x.textContent.trim()!==\"Refresh\")return false;if(!firstRefresh)firstRefresh=x;' +\n    'const enabled=!x.disabled;refresh=enabled?\"enabled\":\"disabled\";return enabled;})' +\n    '&&!(retryPresent=b.some(x=>x.textContent.trim()===\"Retry\"))&&!(alertPresent=!!s.querySelector(\\'[role=\"alert\"]\\'));' +\n    'let firstRefreshBusy=null;try{if(firstRefresh){const busy=firstRefresh.getAttribute(\"aria-busy\");' +\n    'firstRefreshBusy=busy===\"true\"?true:busy===\"false\"?false:null;}}catch{}' +\n    'return {surfacePresent:true,refresh,firstRefreshBusy,retryPresent,alertPresent,ready};})()',\n  'original refreshed Team after positive product recovery', remaining(), value => {\n    let last, ready;\n    try {\n      if (!value || typeof value !== 'object' || Array.isArray(value)) return false;\n      const prototype = Object.getPrototypeOf(value);\n      if (prototype !== Object.prototype && prototype !== null) return false;\n      const names = ['surfacePresent', 'refresh', 'firstRefreshBusy', 'retryPresent', 'alertPresent', 'ready'];\n      const keys = Reflect.ownKeys(value);\n      if (keys.length !== names.length || names.some(name => !keys.includes(name))) return false;\n      const fields = names.map(name => Object.getOwnPropertyDescriptor(value, name));\n      if (fields.some(field => !field || !Object.hasOwn(field, 'value'))) return false;\n      const [surfacePresent, refresh, firstRefreshBusy, retryPresent, alertPresent, observedReady] = fields.map(field => field.value);\n      if (typeof surfacePresent !== 'boolean' || typeof observedReady !== 'boolean' ||\n        !['not-observed', 'absent', 'disabled', 'enabled'].includes(refresh) ||\n        ![firstRefreshBusy, retryPresent, alertPresent].every(field => field === null || typeof field === 'boolean')) return false;\n      if (!surfacePresent && (refresh !== 'not-observed' || firstRefreshBusy !== null || retryPresent !== null || alertPresent !== null) ||\n        surfacePresent && refresh === 'not-observed' || refresh === 'absent' && firstRefreshBusy !== null) return false;\n      if (refresh !== 'enabled' ? retryPresent !== null || alertPresent !== null :\n        typeof retryPresent !== 'boolean' || (retryPresent ? alertPresent !== null : typeof alertPresent !== 'boolean')) return false;\n      ready = surfacePresent && refresh === 'enabled' && retryPresent === false && alertPresent === false;\n      if (observedReady !== ready) return false;\n      last = { surfacePresent, refresh, firstRefreshBusy, retryPresent, alertPresent, ready };\n    } catch { return false; }\n    recordRetryUi('sample', last);\n    return ready;\n  });\n  recordRetryUi('uiReadyMs');\n"
+      },
+      {
+        "id": "gate-retry-postconditions",
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          543,
+          569
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/tools/owned-process-broker/nativeWindowsAppGate.mjs#L543-L569",
+        "claim": "After UI-ready, original binding/native fixture/public processes are checked, then each original processOwner DOM row. x64 fails in this row wait, before the UI Stops.",
+        "originalExcerpt": "  await originalBinding();\n  await within(() => fixture.afterRetry(activeDeadline));\n  proof.afterRetryPublic = await readProcesses();\n  for (const row of original.rows) {\n    const owner = object(await ui.waitRead(processOwner(row), 'same original process refs after Retry', remaining()));\n    assert.deepEqual(owner.process, { ...row, observation: 'same-live', canTerminate: true });\n  }\n  proof.sameMainAfterRetry = captureCensus().find(row => row.pid === main.pid);\n  sameIdentity(main, proof.sameMainAfterRetry);\n  await screenshot('after-retry');\n\n  proof.stops = [];\n  for (const [index, role] of ['primary', 'neighbor'].entries()) {\n    begin('original-UI-Kill-' + role, 10000);\n    const row = original.rows[index];\n    await ui.scrollTo('[data-section-id=\"processes\"] span.font-medium', 'original visible target ' + role, row.label);\n    fixture.beginStop(role, activeDeadline);\n    proof.counts.uiStops++;\n    await ui.clickExpression(killTarget(row), 'original UI Kill ' + role);\n    const receipt = await within(() => fixture.completeStop(role));\n    const stopped = object(await ui.waitRead(processOwner(row, true), 'original stopped row ' + role, remaining()));\n    assert.equal(stopped.teamName, selection); assert.deepEqual(stopped.process, receipt.result);\n    proof.stops.push({ role, receipt, renderer: stopped });\n    await readProcesses();\n    sameIdentity(main, captureCensus().find(value => value.pid === main.pid));\n    assertHostBirths();\n    await screenshot('after-' + role);\n"
+      },
+      {
+        "id": "gate-failure-sink",
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          575,
+          587
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/tools/owned-process-broker/nativeWindowsAppGate.mjs#L575-L587",
+        "claim": "The existing caught failure publication has an8192-byte ceiling and occurs before cleanup/final receipt.",
+        "originalExcerpt": "} catch (error) {\n  primaryError = error;\n  proof.error = errorText(error);\n  try {\n    const failureText = proof.error;\n    if (typeof failureText === 'string') {\n      const line = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_UI_FAILURE', phase: activePhase,\n        error: failureText.slice(0, 1024), errorTruncated: failureText.length > 1024,\n        retryUiObservation: proof.retryUiObservation ?? null }) + '\\n';\n      writeSync(1, Buffer.byteLength(line, 'utf8') <= 8192 ? line :\n        '{\"kind\":\"TEST_WINDOWS_PACKAGED_UI_FAILURE\",\"reason\":\"projection-limit\"}\\n');\n    }\n  } catch { /* The original failure and cleanup remain authoritative. */ }\n"
+      },
+      {
+        "id": "gate-final-receipt",
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "gitBlob": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          588,
+          647
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/tools/owned-process-broker/nativeWindowsAppGate.mjs#L588-L647",
+        "claim": "Original cleanup, source freeze and whole receipt write occur after the failure publication; PASS also requires both original UI Stops and full native cleanup."
+      },
+      {
+        "id": "control-wait",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          186,
+          209
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/scripts/legacy-agent-host/desktop-ui-controls.ts#L186-L209",
+        "claim": "Every iteration checks owner before DOM evaluation; false results retain100ms cadence and only destroyed-context read errors retry.",
+        "originalExcerpt": "  const waitRead = async (\n    expression: string,\n    label: string,\n    timeoutMs = 30_000,\n    isReady: (value: unknown) => boolean = Boolean\n  ): Promise<unknown> => {\n    const deadline = Date.now() + timeoutMs;\n    while (Date.now() < deadline) {\n      options.assertOwnedRenderer();\n      try {\n        const value = await cdp.evaluate(expression);\n        if (isReady(value)) return value;\n      } catch (error) {\n        if (\n          !/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(\n            String(error)\n          )\n        )\n          throw error;\n      }\n      await new Promise<void>((done) => setTimeout(done, 100));\n    }\n    throw new Error(`UI read timed out: ${label}; no mutation retry`);\n  };\n"
+      },
+      {
+        "id": "control-click-stability",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          298,
+          329
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/scripts/legacy-agent-host/desktop-ui-controls.ts#L298-L329",
+        "claim": "Original hover, up to15 stability samples, two equal points, current ownership and hard exact geometry equality."
+      },
+      {
+        "id": "control-click-final-admission",
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          330,
+          354
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/scripts/legacy-agent-host/desktop-ui-controls.ts#L330-L354",
+        "claim": "Last owner check precedes attempted marker and the one awaited pressed/released pair. An error at330 dispatches neither event.",
+        "originalExcerpt": "    options.assertOwnedRenderer();\n    step({\n      action: 'mouseClick',\n      label,\n      selector,\n      expectedText: text,\n      target: point,\n      state: 'attempted',\n    });\n    // Never repeat a click after an uncertain response.\n    await cdp.send('Input.dispatchMouseEvent', {\n      type: 'mousePressed',\n      x: point.x,\n      y: point.y,\n      button: 'left',\n      clickCount: 1,\n    });\n    await cdp.send('Input.dispatchMouseEvent', {\n      type: 'mouseReleased',\n      x: point.x,\n      y: point.y,\n      button: 'left',\n      clickCount: 1,\n    });\n  };\n"
+      },
+      {
+        "id": "platform-powershell",
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          8,
+          25
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/scripts/e2e/opencode-diagnostics/platform.mjs#L8-L25",
+        "claim": "The fresh synchronous Windows PowerShell process retains its30s safety timeout; this does not extend the10s Gate authority.",
+        "originalExcerpt": "const windowsProcessQuery =\n  \"@(Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,CreationDate,ExecutablePath | Where-Object CreationDate | ForEach-Object { [pscustomobject]@{pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; birth=$_.CreationDate.ToUniversalTime().ToString('o'); executable=$_.ExecutablePath} }) | ConvertTo-Json -Compress\";\nconst windowsListenerQuery = port =>\n  `Get-NetTCPConnection -State Listen | Where-Object LocalPort -eq ${port} | Select-Object -ExpandProperty OwningProcess`;\nexport function powershell(script) {\n  return execFileSync(\n    path.join(\n      process.env.SystemRoot || 'C:\\\\Windows',\n      'System32/WindowsPowerShell/v1.0/powershell.exe'\n    ),\n    [\n      '-NoProfile',\n      '-NonInteractive',\n      '-EncodedCommand',\n      Buffer.from(`$ErrorActionPreference='Stop'; ${script}`, 'utf16le').toString('base64'),\n    ],\n    { encoding: 'utf8', windowsHide: true, timeout: 30000 }\n  );\n"
+      },
+      {
+        "id": "platform-observation",
+        "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+        "gitBlob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          135,
+          150
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/scripts/e2e/opencode-diagnostics/platform.mjs#L135-L150",
+        "claim": "One command performs ordered process and TCP listener queries with closed-envelope parsing; observations are explicitly not atomic.",
+        "originalExcerpt": "/** Fresh ordered observations, not an atomic snapshot or retained authority. */\nexport function windowsProcessListenerSnapshot(port = 9222, execute = powershell) {\n  assertCdpPort(port);\n  const output = execute(\n    `$TESTProcessOutput = ${windowsProcessQuery};\\n` +\n    `$TESTListenerOutput = ${windowsListenerQuery(port)};\\n` +\n    '[pscustomobject]@{ processes = [string]$TESTProcessOutput; ' +\n    'listeners = [string]($TESTListenerOutput -join [Environment]::NewLine) } | ConvertTo-Json -Compress'\n  );\n  const value = JSON.parse(output.replace(/^\\uFEFF/, '').trim());\n  assert.ok(value && typeof value === 'object' && !Array.isArray(value), 'Invalid Windows observation envelope');\n  assert.deepEqual(Object.keys(value).sort(), ['listeners', 'processes']);\n  assert.equal(typeof value.processes, 'string');\n  assert.equal(typeof value.listeners, 'string');\n  return { processes: parseWindowsProcesses(value.processes), listeners: parseListeners(value.listeners) };\n}\n"
+      },
+      {
+        "id": "fixture-after-retry",
+        "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          384,
+          404
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/tools/owned-process-broker/nativeWindowsAppFixture.ts#L384-L404",
+        "claim": "Original post-exit/post-Retry provider/native witness/runtime checks retain exact identities and original deadline."
+      },
+      {
+        "id": "fixture-after-quit",
+        "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          466,
+          478
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/tools/owned-process-broker/nativeWindowsAppFixture.ts#L466-L478",
+        "claim": "Final product cleanup first requires two completed UI Stops; x64 retains the0!==2 failure because those Stops were unreached.",
+        "originalExcerpt": "      async afterQuit(deadline: number) {\n        assert.equal(stops.size, 2); assert.ok([...stops.values()].every(stop => stop.completed));\n        assert.equal(await within(deadline, () => provider!.wait()), 0);\n        assert.equal(witnesses.size, 3);\n        for (const child of witnesses) assert.deepEqual(await within(deadline, () => exits.get(child)!), { code: 0, signal: null });\n        assert.throws(() => lstatSync(join(prepared.profile.owner.storageRoot, '.legacy-agent-host-writer.lock')), { code: 'ENOENT' });\n        assertPins(); assertPeer(); await runtimeIdentity(); remaining(deadline);\n        const peer = peerEvidence();\n        assert.equal(peer.connected, 1); assert.equal(peer.registrations, 1);\n        assert.equal(peer.serviceExitObservations, 2); phase = 'completed';\n        return { phase, cleanup: true, originalQueryWitnesses: 3, runtimeGenerations: 1, runtimeInputs: 1,\n          modelRequests: 0, probes: 0, realVendorExecutions: 0,\n          serviceExitObservations: 2, originalUiStops: stops.size };\n"
+      },
+      {
+        "id": "controller-lifetime",
+        "path": "tools/owned-process-broker/gateController.cpp",
+        "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          63,
+          87
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/tools/owned-process-broker/gateController.cpp#L63-L87",
+        "claim": "Original controller wait120s starts at child launch, followed by original quiet/emergency bounds; this is distinct from Gate preparation and phase clocks.",
+        "originalExcerpt": "  bool emergency=false, rootExited=false; DWORD code=99;\n  if(ResumeThread(process.hThread)!=1) emergency=true;\n  CloseHandle(process.hThread);\n  if(!emergency) {\n    auto result=WaitForSingleObject(process.hProcess,120000);\n    rootExited=result==WAIT_OBJECT_0;\n    if(!rootExited||!GetExitCodeProcess(process.hProcess,&code)) emergency=true;\n  }\n  // Drop original handle after retaining signaled exit witness, so accounting can decay.\n  if(rootExited) { CloseHandle(process.hProcess); process.hProcess=nullptr; }\n  auto quietDeadline=GetTickCount64()+3000;\n  while(!emergency&&!zero(job)&&GetTickCount64()<quietDeadline) Sleep(10);\n  if(!zero(job)) emergency=true;\n  if(emergency) {\n    if(!TerminateJobObject(job,99)) { CloseHandle(job); return 100; }\n    auto cleanupDeadline=GetTickCount64()+10000;\n    while(GetTickCount64()<cleanupDeadline) {\n      if(process.hProcess&&WaitForSingleObject(process.hProcess,0)==WAIT_OBJECT_0) {\n        CloseHandle(process.hProcess); process.hProcess=nullptr; rootExited=true;\n      }\n      if(!process.hProcess&&zero(job)) break;\n      Sleep(10);\n    }\n  }\n  if(process.hProcess||!rootExited||!zero(job)) { CloseHandle(job); return 101; }\n"
+      },
+      {
+        "id": "renderer-currentness",
+        "path": "src/features/agent-backend/renderer/HostBackendRetryAction.tsx",
+        "gitBlob": "512a39a6e562fb8101dfbd1a6a7e59aae31da6d4",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          88,
+          169
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/src/features/agent-backend/renderer/HostBackendRetryAction.tsx#L88-L169",
+        "claim": "Mounted session/current epoch/context/team/no switch, pending latch, closed entry conditions, guarded capture/start/onReady."
+      },
+      {
+        "id": "team-recovery-surface",
+        "path": "src/renderer/components/team/TeamDetailView.tsx",
+        "gitBlob": "e1fe249d7e5f760f80f87e93918b0ff253b3f450",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          3704,
+          3722
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/src/renderer/components/team/TeamDetailView.tsx#L3704-L3722",
+        "claim": "Recovery surface receives refreshTeamData as onReady."
+      },
+      {
+        "id": "team-refresh",
+        "path": "src/renderer/store/slices/teamSlice.ts",
+        "gitBlob": "df9dd8391bdd9fcd2edc05057fa18a8cbd787dad",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          3185,
+          3440
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/src/renderer/store/slices/teamSlice.ts#L3185-L3440",
+        "claim": "Scoped request/read/selection guards and retained closed Host errors remain; background refresh means DOM facts are not callback-return tracing."
+      },
+      {
+        "id": "public-team-read",
+        "path": "src/features/agent-backend/renderer/createHostTeamsApi.ts",
+        "gitBlob": "506b1c56e2fda091040c1864ed3b3b1258208543",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          346,
+          368
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/src/features/agent-backend/renderer/createHostTeamsApi.ts#L346-L368",
+        "claim": "Original team/public-process reads bind scope and currentness before accepting results."
+      },
+      {
+        "id": "recovery-facade",
+        "path": "src/features/agent-backend/main/adapters/input/BackendOperationsFacade.ts",
+        "gitBlob": "08a0bb6bad50602e9057bc34a64c74fce7f42937",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          73,
+          85
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/src/features/agent-backend/main/adapters/input/BackendOperationsFacade.ts#L73-L85",
+        "claim": "Validated recovery forwarding under the original request guard."
+      },
+      {
+        "id": "recovery-source",
+        "path": "src/features/agent-backend/main/composition/recoverCapturedHost.ts",
+        "gitBlob": "91a5862903f8a32c067ae0cff00eb166ed7eff62",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          24,
+          75
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/src/features/agent-backend/main/composition/recoverCapturedHost.ts#L24-L75",
+        "claim": "Exact profile/descriptor/native-custody currentness; no reused historical authority."
+      },
+      {
+        "id": "recovery-cutoff",
+        "path": "src/features/agent-backend/main/application/BackendOwnerRouter.ts",
+        "gitBlob": "28e8f2961201673801b48969e2178f4cbf9c2636",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          167,
+          257
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/src/features/agent-backend/main/application/BackendOwnerRouter.ts#L167-L257",
+        "claim": "Capability binds command/handle/scope/owner/guards and has its own startup cutoff assigned at capture."
+      },
+      {
+        "id": "recovery-candidate",
+        "path": "src/features/agent-backend/main/application/BackendOwnerRouter.ts",
+        "gitBlob": "28e8f2961201673801b48969e2178f4cbf9c2636",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          259,
+          329
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/src/features/agent-backend/main/application/BackendOwnerRouter.ts#L259-L329",
+        "claim": "One guarded recovery flight installs the original successor candidate."
+      },
+      {
+        "id": "captured-client",
+        "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+        "gitBlob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          169,
+          230
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/src/features/agent-backend/main/infrastructure/CapturedHostClient.ts#L169-L230",
+        "claim": "Original one start promise, input validation, launch/handshake and remaining-time checks."
+      },
+      {
+        "id": "native-custody",
+        "path": "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+        "gitBlob": "e84ee4b6e2ff4cea7d468c3173bc0851c59cdeae",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          1,
+          150
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts#L1-L150",
+        "claim": "Whole source read: fresh source/pins and original physical owner custody remain; no new cache route."
+      },
+      {
+        "id": "process-row",
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.ts",
+        "gitBlob": "12f4a7b122843acea95e8c37f876917331842a4a",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          31,
+          83
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/scripts/legacy-agent-host/desktop-native-process-ui.ts#L31-L83",
+        "claim": "Exact original processRef renderer owner predicate and original public-process binding guards."
+      },
+      {
+        "id": "process-row-render",
+        "path": "src/renderer/components/team/ProcessesSection.tsx",
+        "gitBlob": "fdfa9b971390730492af0359f5b59c233cc5ee7b",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          1,
+          236
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/src/renderer/components/team/ProcessesSection.tsx#L1-L236",
+        "claim": "Whole source read includes original processRef/observation/canTerminate comparison and Kill processRef authority."
+      },
+      {
+        "id": "finite-profile",
+        "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+        "gitBlob": "67180ac5c567cbeb089d4ef3248391c792e1ba4d",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          1,
+          105
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/tools/owned-process-broker/nativeEmulatedProfile.ts#L1-L105",
+        "claim": "Pinned finite Codex Node peer; Host startup10s is separate from Runtime/request15s and Gate phases."
+      },
+      {
+        "id": "finite-peer",
+        "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+        "gitBlob": "44c8cba99e4932905da77539a59c904a39da4e36",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          1,
+          153
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/tools/owned-process-broker/fixtures/providerPeer.mjs#L1-L153",
+        "claim": "Finite TEST local protocol and native fixture services, without real Claude/Codex provider execution."
+      },
+      {
+        "id": "workflow",
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+        "sourceCommit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+        "lines": [
+          1,
+          313
+        ],
+        "url": "https://github.com/777genius/agent-teams-ai/blob/3e41e39b101ccc06bb24203be245ac55dcf1502f/.github/workflows/electron-packaged-ci.yml#L1-L313",
+        "claim": "Whole original workflow/checkout/commands/artifact authority preserved; no workflow edit or rerun.",
+        "relevantOriginalVerificationLines": [
+          222,
+          249
+        ],
+        "originalVerificationExcerpt": "      - name: Qualify packaged Windows same-Main Retry and original Processes UI Kill with finite peers\n        if: matrix.os == 'win32'\n        shell: pwsh\n        env:\n          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}\n        run: |\n          $ErrorActionPreference = 'Stop'\n          $bundle = (Resolve-Path '${{ matrix.bundle }}').Path\n          $apps = @(Get-ChildItem -LiteralPath $bundle -File -Filter '*.exe' | Where-Object { $_.Name -notmatch 'uninstall' })\n          if ($apps.Count -ne 1) { throw 'Expected one original packaged application executable' }\n          $app = $apps[0].FullName\n          $broker = Join-Path $bundle 'resources\\legacy-agent-host\\windows-retry-custody\\owned-process-broker.exe'\n          $query = Join-Path $env:WINDOWS_RETRY_BUILD 'Release\\owned-process-fixture.exe'\n          $receipt = Join-Path $env:RUNNER_TEMP 'windows-same-main-process-ui.json'\n          $controller = Join-Path $env:WINDOWS_RETRY_BUILD 'Release\\owned-process-gate-controller.exe'\n          $controllerHash = (Get-FileHash -Algorithm SHA256 $controller).Hash\n          $controllerLog = Join-Path $env:RUNNER_TEMP 'windows-same-main-process-ui.controller.log'\n          $node = (Get-Command node.exe -ErrorAction Stop).Source\n          $loader = ([System.Uri]((Resolve-Path 'node_modules\\tsx\\dist\\loader.mjs').Path)).AbsoluteUri\n          $gate = (Resolve-Path 'tools\\owned-process-broker\\nativeWindowsAppGate.mjs').Path\n          $env:TSX_TSCONFIG_PATH = (Resolve-Path 'tsconfig.json').Path\n          & $controller $node --import $loader $gate $app $broker $query $receipt 2>&1 | Tee-Object -FilePath $controllerLog\n          if ($LASTEXITCODE -ne 0) { throw 'Original controller did not confirm finite UI cleanup' }\n          if ((Get-FileHash -Algorithm SHA256 $controller).Hash -ne $controllerHash) { throw 'Original controller changed' }\n          node --input-type=module -e \"import assert from 'node:assert/strict';import fs from 'node:fs';const b=fs.readFileSync(process.argv[1]);assert.ok(b.length>0&&b.length<=65536);const lines=b.toString('utf8').trim().split(/\\r?\\n/u);const rows=lines.filter(line=>line.startsWith('{')).map(line=>JSON.parse(line)).filter(row=>row.gateController!==undefined);assert.deepEqual(rows,[{gateController:'drained',rootExitCode:0,activeProcesses:0}]);\" $controllerLog\n          if ($LASTEXITCODE -ne 0) { throw 'Exact original controller accounting refused' }\n          node --input-type=module -e \"import assert from 'node:assert/strict';import fs from 'node:fs';const r=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));assert.equal(r.kind,'TEST_WINDOWS_PACKAGED_SAME_MAIN_PROCESS_UI');assert.equal(r.status,'PASS');assert.equal(r.cleanup,true);assert.equal(r.sourceHead,process.env.EXPECTED_SOURCE_SHA);assert.equal(r.platform,'win32-'+process.arch);assert.deepEqual(r.counts,{mainStarts:1,initialRuntimeOpen:1,businessInput:1,refreshClicks:1,retryClicks:1,uiStops:2,quit:1});assert.equal(r.actualHostSuccessors,1);assert.equal(r.originalRuntimeGenerations,1);assert.equal(r.modelRequests,0);assert.equal(r.modelProbes,0);assert.equal(r.realVendorExecutions,0);assert.equal(r.peer.provider,'codex');assert.equal(r.peer.connected,1);assert.equal(r.peer.registrations,1);assert.equal(r.peer.serviceExitObservations,2);assert.equal(r.peer.failures,0);assert.deepEqual(r.nativeCleanup,{phase:'completed',cleanup:true,originalQueryWitnesses:3,runtimeGenerations:1,runtimeInputs:1,modelRequests:0,probes:0,realVendorExecutions:0,originalUiStops:2,serviceExitObservations:2});assert.equal(r.packagedAndNativeInputsUnchanged,true);assert.equal(r.sourceFreezeFailure,undefined);assert.equal(r.peerEvidenceFailure,undefined);assert.equal(r.originalMain.pid,r.sameMainAfterRetry.pid);assert.equal(r.originalMain.birth,r.sameMainAfterRetry.birth);\" $receipt\n          if ($LASTEXITCODE -ne 0) { throw 'Exact finite same-Main UI receipt refused' }\n"
+      }
+    ],
+    "selectedReceiptSourceRows": 1798,
+    "selectedReceiptSourceRowsAfterFlow": 1798,
+    "allBeforeAfterRowsIdentical": true,
+    "allRowsUniqueAndPresentInE": true,
+    "criticalCheckoutHashTransform": "LF to CRLF",
+    "criticalFullyRehashedCount": 19
+  },
+  "commonContract": {
+    "phases": {
+      "refreshMs": 10000,
+      "retryMs": 10000,
+      "outerGateMs": 300000,
+      "initialGateStartupMs": 120000,
+      "controllerRootWaitMs": 120000,
+      "quitPhaseMs": 30000
+    },
+    "cutoff": "begin() assigns each phase deadline once; remaining() checks the minimum phase/outer deadline. waitRead's local timeout, a successful UI sample, a new Host or a returning observation does not reset it.",
+    "ownerObservation": "Each assertOwnedRenderer checks phase/peer/Main, obtains one fresh ordered process/listener observation, validates controller/driver/Main/retained lineage/orphans, checks remaining(), then validates listener PID/birth lineage and remaining() again.",
+    "decisiveBoundary": "Both failures are validateCensus:179 after the fresh synchronous observation returned and its process/lineage checks completed. This is a deadline refusal, not an observed owner mismatch. The subsequent CDP listener membership assertion was not reached by that invocation.",
+    "waitPredicate": "waitRead checks owner before each DOM evaluation. x64 is at the exact processOwner(row) wait at Gate547; its failing guard prevents that iteration's DOM evaluation. ARM remains in Refresh click's final admission guard at controls330.",
+    "clickAuthority": "Original hover/stability/final exact geometry precede last owner guard, attempted marker and one pressed/released pair. No uncertain physical action is retried.",
+    "productCurrentness": "Renderer session/epoch/context/team and Main owner/profile/descriptor/native-custody/capability are separately guarded. Product recovery startup10s starts at capture; it neither resets nor enlarges the Gate phase10s.",
+    "finiteScope": "The same-Main Windows proof uses the pinned TEST Codex Node peer and real finite native fixture/witness/custody path. It does not run an actual real Claude/Codex provider. Earlier V2 qualification is separate and cannot qualify this failed journey.",
+    "workflowVerification": {
+      "sourceAnchor": "workflow",
+      "lines": [
+        222,
+        249
+      ],
+      "controllerLogMaximumBytes": 65536,
+      "exactExpectedController": {
+        "gateController": "drained",
+        "rootExitCode": 0,
+        "activeProcesses": 0
+      },
+      "exactExpectedReceipt": "PASS, cleanup true, same source/platform/Main PID+birth, one Retry/successor/runtime generation/input, two original UI Stops and both service exits, zero model/probe/real-vendor counts, unchanged original inputs.",
+      "qualification": "Both original failed controller invocations stop the workflow at line244. Later controller-log/whole-receipt PASS validators are not claimed executed. No cap or acceptance change is proposed."
+    }
+  },
+  "observedFailures": [
+    {
+      "arch": "x64",
+      "failure": {
+        "line": 2144,
+        "value": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_FAILURE",
+          "phase": "one-explicit-same-Main-Retry",
+          "error": "AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: one-explicit-same-Main-Retry\n    at remaining (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:123:10)\n    at validateCensus (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:179:3)\n    at Object.assertOwnedRenderer (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:207:20)\n    at Object.waitRead (D:\\a\\agent-teams-ai\\agent-teams-ai\\scripts\\legacy-agent-host\\desktop-ui-controls.ts:194:15)\n    at file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:547:35",
+          "errorTruncated": false,
+          "retryUiObservation": {
+            "schemaVersion": 1,
+            "source": "original-recovery-wait",
+            "atomicWithFailure": false,
+            "stages": {
+              "clickReturnedMs": 5088,
+              "writerObservedMs": 6419,
+              "hostCheckedMs": 6751,
+              "uiReadyMs": 8381
+            },
+            "sampleCount": 2,
+            "sampleCountCapped": false,
+            "lastAtMs": 8381,
+            "last": {
+              "surfacePresent": true,
+              "refresh": "enabled",
+              "firstRefreshBusy": false,
+              "retryPresent": false,
+              "alertPresent": false,
+              "ready": true
+            }
+          }
+        }
+      },
+      "phases": [
+        {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "packaged-App-startup",
+          "atMs": 0.058399999999892316,
+          "budgetMs": 120000
+        },
+        {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "one-initial-Runtime-Open",
+          "atMs": 4231.047500000001,
+          "budgetMs": 45000
+        },
+        {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "one-original-business-input-and-UI",
+          "atMs": 7879.715,
+          "budgetMs": 35000
+        },
+        {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "atMs": 26467.0335,
+          "budgetMs": 10000
+        },
+        {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "one-explicit-same-Main-Retry",
+          "atMs": 33957.0065,
+          "budgetMs": 10000
+        },
+        {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "original-product-Quit",
+          "atMs": 44520.3774,
+          "budgetMs": 30000
+        }
+      ],
+      "controller": {
+        "gateController": "drained",
+        "rootExitCode": 1,
+        "activeProcesses": 0
+      },
+      "rawControllerValuesExactlyEqual": true
+    },
+    {
+      "arch": "arm64",
+      "failure": {
+        "line": 2437,
+        "value": {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_FAILURE",
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "error": "AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: actual-Host-A-exit-and-metadata-Refresh\n    at remaining (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:123:10)\n    at validateCensus (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:179:3)\n    at Object.assertOwnedRenderer (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:207:20)\n    at clickExpression (C:\\a\\agent-teams-ai\\agent-teams-ai\\scripts\\legacy-agent-host\\desktop-ui-controls.ts:330:13)\n    at async file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:450:3",
+          "errorTruncated": false,
+          "retryUiObservation": null
+        }
+      },
+      "phases": [
+        {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "packaged-App-startup",
+          "atMs": 0.07660000000032596,
+          "budgetMs": 120000
+        },
+        {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "one-initial-Runtime-Open",
+          "atMs": 12861.870499999997,
+          "budgetMs": 45000
+        },
+        {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "one-original-business-input-and-UI",
+          "atMs": 18679.876299999996,
+          "budgetMs": 35000
+        },
+        {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "atMs": 50736.9536,
+          "budgetMs": 10000
+        },
+        {
+          "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+          "phase": "original-product-Quit",
+          "atMs": 61169.281599999995,
+          "budgetMs": 30000
+        }
+      ],
+      "controller": {
+        "gateController": "emergency-fail",
+        "rootExitCode": 99,
+        "activeProcesses": 0
+      },
+      "rawControllerValuesExactlyEqual": true
+    }
+  ],
+  "x64": {
+    "jobId": 133212589526,
+    "artifactId": 14215698201,
+    "status": "INCOMPLETE",
+    "cleanup": false,
+    "counts": {
+      "mainStarts": 1,
+      "initialRuntimeOpen": 1,
+      "businessInput": 1,
+      "refreshClicks": 1,
+      "retryClicks": 1,
+      "uiStops": 0,
+      "quit": 1
+    },
+    "inputDelivery": {
+      "originalAttemptedSteps": [
+        {
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "action": "mouseMoved",
+          "label": "hover explicit original metadata Refresh",
+          "selector": "[data-testid=\"host-backend-recovery\"] button",
+          "target": {
+            "x": 49.2734375,
+            "y": 96,
+            "text": "Refresh",
+            "tag": "BUTTON"
+          },
+          "atMs": 28871.2383
+        },
+        {
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "action": "mouseClick",
+          "label": "explicit original metadata Refresh",
+          "selector": "[data-testid=\"host-backend-recovery\"] button",
+          "expectedText": "Refresh",
+          "target": {
+            "x": 49.2734375,
+            "y": 96,
+            "text": "Refresh",
+            "tag": "BUTTON"
+          },
+          "state": "attempted",
+          "atMs": 32564.9978
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "action": "mouseMoved",
+          "label": "hover explicit product Retry once",
+          "selector": "[data-testid=\"host-backend-recovery\"] button",
+          "target": {
+            "x": 700.5546875,
+            "y": 100,
+            "text": "Retry",
+            "tag": "BUTTON"
+          },
+          "atMs": 35371.59849999999
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "action": "mouseClick",
+          "label": "explicit product Retry once",
+          "selector": "[data-testid=\"host-backend-recovery\"] button",
+          "expectedText": "Retry",
+          "target": {
+            "x": 700.5546875,
+            "y": 100,
+            "text": "Retry",
+            "tag": "BUTTON"
+          },
+          "state": "attempted",
+          "atMs": 39037.144100000005
+        }
+      ],
+      "clickReturnedMs": 5088,
+      "conclusion": "Gate493 returned from ui.click before clickReturnedMs was recorded. Exact controls source proves both original pressed/released CDP sends resolved. This is stronger than an attempted marker but is not a direct React callback-entry/return record."
+    },
+    "positivePartialRecovery": {
+      "main": {
+        "pid": 4676,
+        "parent": 7228,
+        "birth": "2026-11-16T10:19:40.9855410Z",
+        "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\AgentTeamsAI.exe"
+      },
+      "originalHost": {
+        "identity": {
+          "pid": 6860,
+          "parent": 4676,
+          "birth": "2026-11-16T10:19:43.3972640Z",
+          "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe"
+        },
+        "writer": {
+          "pid": 6860,
+          "token": "ab6cbd1a-ce97-4ede-989a-6dfe02b78a39",
+          "publishedAtMs": 1794824384726,
+          "sha256": "d2d209750ee93ce8b9eef0e86a2c01c4de42a56d4cfcd701c1a6cf9205d91f8b",
+          "dev": "2695480082",
+          "ino": "844424931462021"
+        }
+      },
+      "successorHost": {
+        "identity": {
+          "pid": 2020,
+          "parent": 4676,
+          "birth": "2026-11-16T10:20:20.2679310Z",
+          "executable": "D:\\a\\agent-teams-ai\\agent-teams-ai\\release\\win-unpacked\\resources\\legacy-agent-host\\node\\v24.21.0\\win32-x64\\node.exe"
+        },
+        "writer": {
+          "pid": 2020,
+          "token": "2b1eb051-2d52-4990-99b8-8f85d4de7734",
+          "publishedAtMs": 1794824421299,
+          "sha256": "e67ef7d25c9c28b58acd4293a31c3ddb8b376428cbfa50261232804562da4533",
+          "dev": "2695480082",
+          "ino": "1125899908172677"
+        }
+      },
+      "hostBirths": [
+        {
+          "pid": 6860,
+          "parentPid": 4676
+        },
+        {
+          "pid": 2020,
+          "parentPid": 4676
+        }
+      ],
+      "actualHostSuccessors": 1,
+      "readError": "Host team read unavailable",
+      "retryUiObservation": {
+        "schemaVersion": 1,
+        "source": "original-recovery-wait",
+        "atomicWithFailure": false,
+        "stages": {
+          "clickReturnedMs": 5088,
+          "writerObservedMs": 6419,
+          "hostCheckedMs": 6751,
+          "uiReadyMs": 8381
+        },
+        "sampleCount": 2,
+        "sampleCountCapped": false,
+        "lastAtMs": 8381,
+        "last": {
+          "surfacePresent": true,
+          "refresh": "enabled",
+          "firstRefreshBusy": false,
+          "retryPresent": false,
+          "alertPresent": false,
+          "ready": true
+        }
+      },
+      "beforeCrashPublic": {
+        "processes": [
+          {
+            "id": "11a674f1-1717-4a34-a82c-c62b2ab53467",
+            "pid": 7908,
+            "label": "TEST-primary",
+            "registeredAt": "2026-11-16T10:19:51.770Z",
+            "processRef": "p1:11a674f1-1717-4a34-a82c-c62b2ab53467:4a8ac7f14c47b68311b4ab97fa3a59ee0df6d4d233224a9ea35c1d8e1643e40d",
+            "canTerminate": true,
+            "observation": "same-live",
+            "registeredBy": "alice"
+          },
+          {
+            "id": "8e35cf41-fcc4-4c59-9d33-7d5955a5d91a",
+            "pid": 7272,
+            "label": "TEST-neighbor",
+            "registeredAt": "2026-11-16T10:19:52.563Z",
+            "processRef": "p1:8e35cf41-fcc4-4c59-9d33-7d5955a5d91a:a45f35ab98321e7539bbfb7cf788fe6ad38f900034e6b837b39daac4ee9d7405",
+            "canTerminate": true,
+            "observation": "same-live",
+            "registeredBy": "alice"
+          }
+        ],
+        "readRoute": "packaged-public-process-list"
+      },
+      "afterRetryPublic": {
+        "processes": [
+          {
+            "id": "11a674f1-1717-4a34-a82c-c62b2ab53467",
+            "pid": 7908,
+            "label": "TEST-primary",
+            "registeredAt": "2026-11-16T10:19:51.770Z",
+            "processRef": "p1:11a674f1-1717-4a34-a82c-c62b2ab53467:4a8ac7f14c47b68311b4ab97fa3a59ee0df6d4d233224a9ea35c1d8e1643e40d",
+            "canTerminate": true,
+            "observation": "same-live",
+            "registeredBy": "alice"
+          },
+          {
+            "id": "8e35cf41-fcc4-4c59-9d33-7d5955a5d91a",
+            "pid": 7272,
+            "label": "TEST-neighbor",
+            "registeredAt": "2026-11-16T10:19:52.563Z",
+            "processRef": "p1:8e35cf41-fcc4-4c59-9d33-7d5955a5d91a:a45f35ab98321e7539bbfb7cf788fe6ad38f900034e6b837b39daac4ee9d7405",
+            "canTerminate": true,
+            "observation": "same-live",
+            "registeredBy": "alice"
+          }
+        ],
+        "readRoute": "packaged-public-process-list"
+      },
+      "beforeAfterPublicExactlyEqual": true,
+      "fixtureAfterRetryCompletedBySourceOrder": true,
+      "explanation": "Click returned, successor writer changed, Host B was checked under original Main, UI observed enabled Refresh/no Retry/no alert, originalBinding and fixture.afterRetry completed, and both public rows retained original id/pid/processRef/same-live/canTerminate. This establishes partial recovery, not whole-journey PASS.",
+      "notReached": [
+        "sameMainAfterRetry census at Gate550",
+        "after-retry screenshot552",
+        "both original UI Kill phases",
+        "completed native cleanup/PASS"
+      ]
+    },
+    "censusEvidence": {
+      "completeOriginalRecords": [
+        {
+          "phase": "packaged-App-startup",
+          "operation": "process-census",
+          "startMs": 357.8647999999994,
+          "endMs": 674.350199999999,
+          "returned": true
+        },
+        {
+          "phase": "packaged-App-startup",
+          "operation": "process-listener-snapshot",
+          "startMs": 1822.0301,
+          "endMs": 2856.8408999999992,
+          "returned": true
+        },
+        {
+          "phase": "packaged-App-startup",
+          "operation": "process-listener-snapshot",
+          "startMs": 2897.625100000001,
+          "endMs": 3711.1045999999988,
+          "returned": true
+        },
+        {
+          "phase": "packaged-App-startup",
+          "operation": "process-census",
+          "startMs": 3878.6876999999986,
+          "endMs": 4228.532800000001,
+          "returned": true
+        },
+        {
+          "phase": "one-initial-Runtime-Open",
+          "operation": "process-listener-snapshot",
+          "startMs": 4231.627199999999,
+          "endMs": 5235.707600000002,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 7880.411199999999,
+          "endMs": 8640.859100000001,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 8738.1139,
+          "endMs": 9536.714499999998,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 10003.144199999999,
+          "endMs": 10883.5737,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 11076.249899999999,
+          "endMs": 11914.568800000001,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-census",
+          "startMs": 12292.954000000002,
+          "endMs": 12585.9114,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 12596.839499999998,
+          "endMs": 13433.4417,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 13439.615099999999,
+          "endMs": 14181.663499999999,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 14185.569599999999,
+          "endMs": 14946.128700000001,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 14950.9555,
+          "endMs": 15670.3815,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 15698.511299999998,
+          "endMs": 16390.8651,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 16496.6706,
+          "endMs": 17173.98,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 17178.7953,
+          "endMs": 17858.220400000002,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 17895.431500000002,
+          "endMs": 18720.7308,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 18725.813599999998,
+          "endMs": 19425.740800000003,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 19440.129100000002,
+          "endMs": 20163.635,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 20269.2073,
+          "endMs": 20987.509499999996,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 21092.505800000003,
+          "endMs": 21774.616400000003,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 21778.2184,
+          "endMs": 22471.5598,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 22475.9169,
+          "endMs": 23207.5886,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 23268.829999999998,
+          "endMs": 24179.9109,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 24185.739100000003,
+          "endMs": 24893.352000000003,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 24897.7654,
+          "endMs": 25662.722700000002,
+          "returned": true
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "operation": "process-listener-snapshot",
+          "startMs": 25706.029700000003,
+          "endMs": 26418.4592,
+          "returned": true
+        },
+        {
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "operation": "process-census",
+          "startMs": 26468.485900000003,
+          "endMs": 26735.047499999997,
+          "returned": true
+        },
+        {
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "operation": "process-listener-snapshot",
+          "startMs": 26829.813599999998,
+          "endMs": 27524.658,
+          "returned": true
+        },
+        {
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "operation": "process-listener-snapshot",
+          "startMs": 27530.584,
+          "endMs": 28202.3694,
+          "returned": true
+        },
+        {
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "operation": "process-listener-snapshot",
+          "startMs": 28206.639,
+          "endMs": 28871.0569,
+          "returned": true
+        },
+        {
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "operation": "process-listener-snapshot",
+          "startMs": 28876.955100000003,
+          "endMs": 29564.3518,
+          "returned": true
+        },
+        {
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "operation": "process-listener-snapshot",
+          "startMs": 29669.09,
+          "endMs": 30326.1396,
+          "returned": true
+        },
+        {
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "operation": "process-listener-snapshot",
+          "startMs": 30430.672799999997,
+          "endMs": 31083.5675,
+          "returned": true
+        },
+        {
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "operation": "process-listener-snapshot",
+          "startMs": 31087.5327,
+          "endMs": 31842.128200000003,
+          "returned": true
+        },
+        {
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "operation": "process-listener-snapshot",
+          "startMs": 31846.173099999996,
+          "endMs": 32564.855399999997,
+          "returned": true
+        },
+        {
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "operation": "process-listener-snapshot",
+          "startMs": 32575.524999999998,
+          "endMs": 33272.54489999999,
+          "returned": true
+        },
+        {
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "operation": "process-listener-snapshot",
+          "startMs": 33276.370299999995,
+          "endMs": 33952.475000000006,
+          "returned": true
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 33959.53599999999,
+          "endMs": 34658.0432,
+          "returned": true
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 34662.465599999996,
+          "endMs": 35371.4687,
+          "returned": true
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 35377.3729,
+          "endMs": 36060.1234,
+          "returned": true
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 36164.871,
+          "endMs": 36829.639800000004,
+          "returned": true
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 36933.82060000001,
+          "endMs": 37636.0809,
+          "returned": true
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 37639.9004,
+          "endMs": 38329.70510000001,
+          "returned": true
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 38333.732,
+          "endMs": 39036.970499999996,
+          "returned": true
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-census",
+          "startMs": 40376.000199999995,
+          "endMs": 40707.445900000006,
+          "returned": true
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 40708.725600000005,
+          "endMs": 41455.202399999995,
+          "returned": true
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 41561.802899999995,
+          "endMs": 42334.0748,
+          "returned": true
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 42338.210900000005,
+          "endMs": 43025.3563,
+          "returned": true
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 43146.18060000001,
+          "endMs": 43845.9286,
+          "returned": true
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "operation": "process-listener-snapshot",
+          "startMs": 43850.164399999994,
+          "endMs": 44516.92509999999,
+          "returned": true
+        },
+        {
+          "phase": "original-product-Quit",
+          "operation": "process-census",
+          "startMs": 44520.433099999995,
+          "endMs": 44802.2457,
+          "returned": true
+        },
+        {
+          "phase": "original-product-Quit",
+          "operation": "process-census",
+          "startMs": 44802.823099999994,
+          "endMs": 45066.624599999996,
+          "returned": true
+        },
+        {
+          "phase": "original-product-Quit",
+          "operation": "process-census",
+          "startMs": 45639.97,
+          "endMs": 45920.1314,
+          "returned": true
+        },
+        {
+          "phase": "original-product-Quit",
+          "operation": "process-census",
+          "startMs": 46494.3861,
+          "endMs": 46780.260599999994,
+          "returned": true
+        },
+        {
+          "phase": "original-product-Quit",
+          "operation": "process-census",
+          "startMs": 48457.138600000006,
+          "endMs": 48710.02190000001,
+          "returned": true
+        }
+      ],
+      "recordCount": 57,
+      "capped": false,
+      "allReturned": true,
+      "phaseSummaries": [
+        {
+          "phase": "packaged-App-startup",
+          "startMs": 0.058399999999892316,
+          "budgetMs": 120000,
+          "reads": 4,
+          "totalObservedCensusMs": 2514.620799999999,
+          "groups": {
+            "process-census": {
+              "count": 2,
+              "totalMs": 666.3305000000018,
+              "minMs": 316.4853999999996,
+              "maxMs": 349.8451000000023
+            },
+            "process-listener-snapshot": {
+              "count": 2,
+              "totalMs": 1848.290299999997,
+              "minMs": 813.4794999999976,
+              "maxMs": 1034.8107999999993
+            }
+          }
+        },
+        {
+          "phase": "one-initial-Runtime-Open",
+          "startMs": 4231.047500000001,
+          "budgetMs": 45000,
+          "reads": 1,
+          "totalObservedCensusMs": 1004.0804000000026,
+          "groups": {
+            "process-listener-snapshot": {
+              "count": 1,
+              "totalMs": 1004.0804000000026,
+              "minMs": 1004.0804000000026,
+              "maxMs": 1004.0804000000026
+            }
+          }
+        },
+        {
+          "phase": "one-original-business-input-and-UI",
+          "startMs": 7879.715,
+          "budgetMs": 35000,
+          "reads": 23,
+          "totalObservedCensusMs": 16848.717200000003,
+          "groups": {
+            "process-listener-snapshot": {
+              "count": 22,
+              "totalMs": 16555.759800000003,
+              "minMs": 677.3093999999983,
+              "maxMs": 911.0809000000008
+            },
+            "process-census": {
+              "count": 1,
+              "totalMs": 292.9573999999993,
+              "minMs": 292.9573999999993,
+              "maxMs": 292.9573999999993
+            }
+          }
+        },
+        {
+          "phase": "actual-Host-A-exit-and-metadata-Refresh",
+          "startMs": 26467.0335,
+          "budgetMs": 10000,
+          "reads": 11,
+          "totalObservedCensusMs": 7141.352700000003,
+          "groups": {
+            "process-census": {
+              "count": 1,
+              "totalMs": 266.56159999999363,
+              "minMs": 266.56159999999363,
+              "maxMs": 266.56159999999363
+            },
+            "process-listener-snapshot": {
+              "count": 10,
+              "totalMs": 6874.791100000013,
+              "minMs": 652.8947000000044,
+              "maxMs": 754.5955000000031
+            }
+          }
+        },
+        {
+          "phase": "one-explicit-same-Main-Retry",
+          "startMs": 33957.0065,
+          "budgetMs": 10000,
+          "reads": 13,
+          "totalObservedCensusMs": 8754.181599999996,
+          "groups": {
+            "process-listener-snapshot": {
+              "count": 12,
+              "totalMs": 8422.735899999985,
+              "minMs": 664.7688000000053,
+              "maxMs": 772.271900000007
+            },
+            "process-census": {
+              "count": 1,
+              "totalMs": 331.44570000001113,
+              "minMs": 331.44570000001113,
+              "maxMs": 331.44570000001113
+            }
+          }
+        },
+        {
+          "phase": "original-product-Quit",
+          "startMs": 44520.3774,
+          "budgetMs": 30000,
+          "reads": 5,
+          "totalObservedCensusMs": 1364.5332999999955,
+          "groups": {
+            "process-census": {
+              "count": 5,
+              "totalMs": 1364.5332999999955,
+              "minMs": 252.88330000000133,
+              "maxMs": 285.8744999999908
+            }
+          }
+        }
+      ],
+      "retryReads": [
+        {
+          "index": 1,
+          "operation": "process-listener-snapshot",
+          "startFromPhase": 2.529499999989639,
+          "endFromPhase": 701.0366999999969,
+          "durationMs": 698.5072000000073,
+          "returned": true
+        },
+        {
+          "index": 2,
+          "operation": "process-listener-snapshot",
+          "startFromPhase": 705.4590999999928,
+          "endFromPhase": 1414.4621999999945,
+          "durationMs": 709.0031000000017,
+          "returned": true
+        },
+        {
+          "index": 3,
+          "operation": "process-listener-snapshot",
+          "startFromPhase": 1420.366399999999,
+          "endFromPhase": 2103.1168999999936,
+          "durationMs": 682.7504999999946,
+          "returned": true
+        },
+        {
+          "index": 4,
+          "operation": "process-listener-snapshot",
+          "startFromPhase": 2207.864499999996,
+          "endFromPhase": 2872.6333000000013,
+          "durationMs": 664.7688000000053,
+          "returned": true
+        },
+        {
+          "index": 5,
+          "operation": "process-listener-snapshot",
+          "startFromPhase": 2976.8141000000032,
+          "endFromPhase": 3679.0743999999977,
+          "durationMs": 702.2602999999945,
+          "returned": true
+        },
+        {
+          "index": 6,
+          "operation": "process-listener-snapshot",
+          "startFromPhase": 3682.8938999999955,
+          "endFromPhase": 4372.698600000003,
+          "durationMs": 689.8047000000079,
+          "returned": true
+        },
+        {
+          "index": 7,
+          "operation": "process-listener-snapshot",
+          "startFromPhase": 4376.7255000000005,
+          "endFromPhase": 5079.963999999993,
+          "durationMs": 703.2384999999922,
+          "returned": true
+        },
+        {
+          "index": 8,
+          "operation": "process-census",
+          "startFromPhase": 6418.993699999992,
+          "endFromPhase": 6750.439400000003,
+          "durationMs": 331.44570000001113,
+          "returned": true
+        },
+        {
+          "index": 9,
+          "operation": "process-listener-snapshot",
+          "startFromPhase": 6751.719100000002,
+          "endFromPhase": 7498.1958999999915,
+          "durationMs": 746.4767999999895,
+          "returned": true
+        },
+        {
+          "index": 10,
+          "operation": "process-listener-snapshot",
+          "startFromPhase": 7604.796399999992,
+          "endFromPhase": 8377.068299999999,
+          "durationMs": 772.271900000007,
+          "returned": true
+        },
+        {
+          "index": 11,
+          "operation": "process-listener-snapshot",
+          "startFromPhase": 8381.204400000002,
+          "endFromPhase": 9068.349799999996,
+          "durationMs": 687.145399999994,
+          "returned": true
+        },
+        {
+          "index": 12,
+          "operation": "process-listener-snapshot",
+          "startFromPhase": 9189.174100000004,
+          "endFromPhase": 9888.922099999996,
+          "durationMs": 699.7479999999923,
+          "returned": true
+        },
+        {
+          "index": 13,
+          "operation": "process-listener-snapshot",
+          "startFromPhase": 9893.157899999991,
+          "endFromPhase": 10559.91859999999,
+          "durationMs": 666.7606999999989,
+          "returned": true
+        }
+      ],
+      "retryMeasuredTotalMs": 8754.181599999996,
+      "retryListenerReads": 12,
+      "retryListenerTotalMs": 8422.735899999985,
+      "retryProcessOnlyReads": 1,
+      "retryProcessOnlyMs": 331.44570000001113,
+      "firstSevenClickListenerCallsMs": 4850.3331000000035,
+      "clickCompletionMs": 5088,
+      "clickTimeOutsideTheseMeasuredReadsMs": 237.66689999999653,
+      "finalRead": {
+        "index": 13,
+        "operation": "process-listener-snapshot",
+        "startFromPhase": 9893.157899999991,
+        "endFromPhase": 10559.91859999999,
+        "durationMs": 666.7606999999989,
+        "returned": true
+      },
+      "approximateTimeLeftAtEntryMs": 106.84210000000894,
+      "approximateOverrunAtReturnMs": 559.91859999999,
+      "deadlineQualification": "phase.atMs is recorded after activeDeadline assignment; offsets use phase marker and are observational, not a new authority.",
+      "interpretation": "The13 original synchronous census operations consumed8754.1816ms during Retry, with12 process/listener observations totaling8422.7359ms. Last read began about106.8421ms before the nominal phase boundary and returned about559.9186ms after it. Original post-read deadline correctly refused before another DOM evaluation/action.",
+      "limits": "Durations cover original helper startup, ordered CIM/listener queries and parsing together; no internal breakdown identifies their separate costs. No freshness-preserving optimization is demonstrated. Exact row index/call-site identity is not serialized: stack proves loop547, not a particular row."
+    },
+    "cleanupEvidence": {
+      "quit": {
+        "attempted": true,
+        "command": {
+          "at": 1794824428343,
+          "id": 1,
+          "method": "Browser.close"
+        },
+        "acknowledgement": "socket-closed",
+        "socketClosed": {
+          "at": 1794824429408,
+          "afterSend": true
+        }
+      },
+      "appExit": {
+        "code": 0,
+        "signal": null
+      },
+      "finalCensus": {
+        "ownedRemaining": [],
+        "listenerPids": [],
+        "drained": true
+      },
+      "cleanupFailure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 2\n\n    at Object.afterQuit (D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeWindowsAppFixture.ts:467:16)\n    at file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:598:56\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async within (file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:141:20)\n    at async file:///D:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:598:29",
+      "peer": {
+        "provider": "codex",
+        "connected": 1,
+        "registrations": 1,
+        "serviceExitObservations": 0,
+        "failures": 0,
+        "metadata": {
+          "events": 0,
+          "claudeVersions": 0,
+          "codexVersions": 0,
+          "refused": 0
+        },
+        "modelRequests": 0,
+        "probes": 0,
+        "realVendorExecutions": 0
+      },
+      "originalRuntimeGenerations": null,
+      "packagedAndNativeInputsUnchanged": true,
+      "controller": {
+        "gateController": "drained",
+        "rootExitCode": 1,
+        "activeProcesses": 0
+      },
+      "conclusion": "Browser.close/exit and final process/listener drain were observed. Required two UI Stops were unreached; afterQuit first stops.size===2 assertion failed0!==2. cleanup remains false/status INCOMPLETE. Controller drained/rootExitCode1 is terminal test failure, not completed product cleanup."
+    }
+  },
+  "arm64": {
+    "jobId": 133212588375,
+    "artifactId": 14217975048,
+    "failureBeforeInput": true,
+    "retryReached": false,
+    "uiReceiptPresent": false,
+    "admissionConclusion": "Exact stack is controls330, after final geometry equality but before attempted331/pressed340/released347 in that Refresh invocation. No physical Refresh pair was dispatched by that invocation. This is action-admission failure, not demonstrated failed renderer Refresh handling.",
+    "predicateNotReached": "Closed Host-read marker and original retained-row predicates after450 were unreached; Retry never began and retryUiObservation is null.",
+    "countsLimit": "Source increments refreshClicks before ui.click; even a recovered counter would be attempted admission rather than input delivery. Complete ARM counts/cleanup/census receipt is absent.",
+    "controller": {
+      "gateController": "emergency-fail",
+      "rootExitCode": 99,
+      "activeProcesses": 0
+    },
+    "timing": {
+      "controllerSandboxMarker": {
+        "line": 2096,
+        "utc": "2026-11-16T10:35:04.8880559Z",
+        "literal": "2026-11-16T10:35:04.8880559Z gate-owned-sandbox:C:\\Users\\RUNNER~1\\AppData\\Local\\Temp\\opgDA26.tmp"
+      },
+      "startupPhase": {
+        "line": 2113,
+        "utc": "2026-11-16T10:35:37.8827734Z",
+        "literal": "2026-11-16T10:35:37.8827734Z {\"kind\":\"TEST_WINDOWS_PACKAGED_UI_PHASE\",\"phase\":\"packaged-App-startup\",\"atMs\":0.07660000000032596,\"budgetMs\":120000}"
+      },
+      "refreshPhase": {
+        "line": 2364,
+        "utc": "2026-11-16T10:36:28.5278894Z",
+        "literal": "2026-11-16T10:36:28.5278894Z {\"kind\":\"TEST_WINDOWS_PACKAGED_UI_PHASE\",\"phase\":\"actual-Host-A-exit-and-metadata-Refresh\",\"atMs\":50736.9536,\"budgetMs\":10000}"
+      },
+      "firstFailure": {
+        "line": 2437,
+        "utc": "2026-11-16T10:36:38.9919641Z",
+        "literal": "2026-11-16T10:36:38.9919641Z {\"kind\":\"TEST_WINDOWS_PACKAGED_UI_FAILURE\",\"phase\":\"actual-Host-A-exit-and-metadata-Refresh\",\"error\":\"AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: actual-Host-A-exit-and-metadata-Refresh\\n    at remaining (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:123:10)\\n    at validateCensus (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:179:3)\\n    at Object.assertOwnedRenderer (file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:207:20)\\n    at clickExpression (C:\\\\a\\\\agent-teams-ai\\\\agent-teams-ai\\\\scripts\\\\legacy-agent-host\\\\desktop-ui-controls.ts:330:13)\\n    at async file:///C:/a/agent-teams-ai/agent-teams-ai/tools/owned-process-broker/nativeWindowsAppGate.mjs:450:3\",\"errorTruncated\":false,\"retryUiObservation\":null}"
+      },
+      "quitPhase": {
+        "line": 2438,
+        "utc": "2026-11-16T10:36:38.9923119Z",
+        "literal": "2026-11-16T10:36:38.9923119Z {\"kind\":\"TEST_WINDOWS_PACKAGED_UI_PHASE\",\"phase\":\"original-product-Quit\",\"atMs\":61169.281599999995,\"budgetMs\":30000}"
+      },
+      "emergencyResult": {
+        "line": 2511,
+        "utc": "2026-11-16T10:37:04.9465145Z",
+        "literal": "2026-11-16T10:37:04.9465145Z {\"gateController\":\"emergency-fail\",\"rootExitCode\":99,\"activeProcesses\":0}"
+      },
+      "qualification": "Exact original raw log timestamps/lines are retained. The sandbox marker precedes the controller child wait; it is not an exact timestamp for WaitForSingleObject entry. These wall-clock log markers are not substitutes for monotonic deadline authority."
+    },
+    "interpretation": "The phase expired during the original synchronous observation/validation admission path. No retained ARM per-call census durations localize that cost. emergency-fail/rootExitCode99/activeProcesses0 proves emergency handling and failure, not normal product cleanup.",
+    "missingReceiptHypothesis": {
+      "status": "unproven",
+      "description": "Original120s controller lifetime starts before Gate preparation and ends around observed emergency time. This is consistent with termination before whole JSON write at641; retained data does not expose precise WaitForSingleObject result or interrupted cleanup instruction, so the missing receipt's cause is unproven."
+    }
+  },
+  "remainingUncertainties": [
+    "ARM lacks whole same-Main UI receipt, per-call census durations, final DOM/currentness facts and normal cleanup proof.",
+    "x64 measures full fresh observation but not separate PowerShell startup, CIM, TCP listener, parsing or validation components.",
+    "x64 stack identifies processOwner loop, not exact row index or a false DOM result for the failing iteration.",
+    "Neither observed UI-ready nor resolved CDP delivery directly records React entry, each async branch or callback return. Successor/public-state facts establish partial recovery only.",
+    "Phase marker is captured after deadline assignment; relative times are observations, not exact newly recorded cutoff authority.",
+    "No producer fix, cache, authority reuse, timer extension or replay follows from these records."
+  ],
+  "minimumFutureR1": {
+    "status": "Read-only recommendation; no new R1 publication, source proposal, runtime or CI action is authorized by this report.",
+    "purpose": "Retain existing failure-time census observations in the already-existing failure output so a missing final ARM receipt does not discard them.",
+    "minimalCandidatePath": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+    "exactPreimage": "ad04222bf2e8e84fa96cc96f24aa6f9d4b284b6b",
+    "existingSeam": {
+      "anchor": "gate-failure-sink",
+      "lines": [
+        575,
+        587
+      ],
+      "unchangedMaximumUtf8Bytes": 8192
+    },
+    "suggestedData": "Closed finite projection from already-collected censusReads/phases/counts and last relevant bounded UI step: active phase, per-operation count/sum, last existing read start/end/returned, cap flags and non-atomic/source labels. Any exact call-site/row-index not already recorded requires separate explicit source review; timing must not invent it.",
+    "preserve": [
+      "Same single existing failure output event/8192-byte bound/fallback, original error/throw and cleanup authority.",
+      "All original fresh process/listener observations, PID/birth/lineage checks/order/currentness and exact final geometry.",
+      "Original phase10s, outer controller/Gate bounds, waits/cadence/action counts and no replay.",
+      "No added OS/native/DOM query, clock, await, poll, provider invocation or success/hot-path output; use only existing bounded data in caught failure publication.",
+      "Closed own-data schema and bounded counters/strings, with diagnostic serialization/writer errors caught. Additional pure failure-path work has cost; no no-cost claim.",
+      "No callback/refusal inference from snapshots; retain unavailable/null if safe projection is impossible.",
+      "The original workflow controller-log verifier's 65536-byte limit is unchanged. A bounded failure projection is not a guarantee about future whole-log size; scope/tests must retain that original reader limit and exact original PASS conditions."
+    ],
+    "limitations": "This improves evidence only if catch executes and stdout is retained. It does not guarantee data after arbitrary termination, isolate internal PowerShell costs, repair the journey or qualify its original10s gate.",
+    "meaningfulRegressionRequirements": [
+      "Exercise actual owner guard/click or wait using finite original observation returning after original deadline: exact refusal and zero subsequent DOM evaluation or mouse pair.",
+      "Original in-budget positive path has one physical pair and unchanged predicate/cleanup, without replay.",
+      "Wrong owner/PID-birth/currentness and changed final geometry remain hard negative controls.",
+      "Malformed, oversized, accessor/serialization/writer-failure diagnostics against actual publisher preserve original result/error/action/cleanup and byte limit.",
+      "Whole existing test-file/caller/source preservation; no marker-only/missing-helper RED. Exact tests, line caps, commands and finite allowances require separately published reviewed R1."
+    ],
+    "futureOptimizationGate": "A separate proposal must identify concretely avoidable measured work while preserving fresh process+listener meaning, PID/birth/lineage and original guard order. No observation backend substitution, scan removal, cache, timer expansion or producer fix is selected. Only resulting exact source in original Windows gates can qualify the journey."
+  },
+  "conclusions": [
+    "x64 original UI/native/public-state recovery progressed positively, then a later fresh ownership observation crossed the original10s proof deadline. A substantial observation cost is measured; no product recovery defect is established.",
+    "ARM failed before physical Refresh during final fresh-owner admission. Retry was unreached and actual archive has no whole same-Main receipt; cost/callback/cleanup gaps remain explicit.",
+    "Original failures and distinct cleanup outcomes remain authoritative. Smallest justified further design is bounded preservation of existing failure observations, not producer/timer change."
+  ]
+}

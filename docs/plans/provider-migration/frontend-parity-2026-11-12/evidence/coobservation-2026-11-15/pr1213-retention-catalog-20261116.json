@@ -316,6 +316,16 @@
       "payloadInstances": 2,
       "payloadBytes": 63378,
       "evidenceState": "nonterminal-queued-census"
+    },
+    {
+      "key": "owned-09",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-owned-09-20261116.json",
+      "bytes": 286775,
+      "sha256": "d8379ae5222d4babf5eba8e272f12d08ac1da4902e03141344de8319663b84b3",
+      "gitBlob": "d9338dc2046945c709878fd7b5d58d9aaa6bafe7",
+      "payloadInstances": 10,
+      "payloadBytes": 246172,
+      "evidenceState": "terminal-aggregate-failure-census"
     }
   ],
   "conversationBinding": {
@@ -326,9 +336,10 @@
     "originalCases": 78,
     "addedCases": 19,
     "plannedWholeCases": 97,
-    "executedNewCases": 0
+    "executedNewCases": 0,
+    "executionState": "Historical old-environment binding only; unexecuted and unselected for this filesystem."
   },
-  "localEnvironment": "Read-only probes at 2026-11-16 12:06–12:36 UTC established a usable replacement bash environment and repository network access. The previous checkout, dependencies, compiled inputs and direct TEST Node are absent. No recovered input or old RED binding is admitted for execution. A separate concrete fresh bootstrap R1 is required.",
+  "localEnvironment": "The independently reviewed fresh bootstrap completed all four stages on exact c5ff sources with Node24.22.1 and pnpm11.22.0. Full actual inventories and separate SDK/MCP import reviews are accepted. Historical old binding remains unexecutable here. The separately reviewed fresh whole97 runner still requires this checkpoint's complete actual publication readback; no test or producer has executed/changed at this checkpoint.",
   "remainingRuntimeBudgets": {
     "red": 1,
     "green": 1,
@@ -337,10 +348,10 @@
     "diffCheck": 1
   },
   "totals": {
-    "bundles": 26,
-    "outerBytes": 17607918,
-    "payloadInstances": 209,
-    "payloadBytes": 15665741
+    "bundles": 27,
+    "outerBytes": 17894693,
+    "payloadInstances": 219,
+    "payloadBytes": 15911913
   },
   "incomingDeliveryAudit": {
     "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-delivery-p11-readonly-audit-20261116.json",
@@ -377,9 +388,382 @@
       "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d"
     },
     "newBootstrapSelectedForProspectiveReview": true,
-    "bootstrapExecutions": 0,
+    "bootstrapExecutions": 1,
     "sourceChanges": 0,
     "testExecutions": 0,
-    "providerExecutions": 0
+    "providerExecutions": 0,
+    "completedBootstrapStages": 4,
+    "fullInputReviewAccepted": true,
+    "combinedImportSourceReviewAccepted": true
+  },
+  "historicalLocalEnvironment": "Read-only probes at 2026-11-16 12:06–12:36 UTC established a usable replacement bash environment and repository network access. The previous checkout, dependencies, compiled inputs and direct TEST Node are absent. No recovered input or old RED binding is admitted for execution. A separate concrete fresh bootstrap R1 is required.",
+  "freshConversationBinding": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-fresh-red-binding-20261116.json",
+    "bytes": 306274,
+    "sha256": "b118c22fea2bc63c402fa4e6e86e9244d8ee7ec1a54f8ac965e9cafa05cca77f",
+    "gitBlob": "04d501260b4ac275bf52d6381d6d2e7d93bb973e",
+    "originalCases": 78,
+    "addedCases": 19,
+    "plannedWholeCases": 97,
+    "executedCases": 0
+  },
+  "originalCiFinal": {
+    "head": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+    "allNineOriginalWorkflowsTerminal": true,
+    "success": 2,
+    "failure": 5,
+    "skipped": 2,
+    "packaged": {
+      "run": 43834444828,
+      "conclusion": "failure",
+      "platformJobs": {
+        "success": 3,
+        "failure": 2
+      },
+      "aggregateJob": 133274162113,
+      "aggregateConcludedAt": "2026-11-16T12:43:47Z",
+      "runConcludedAt": "2026-11-16T12:43:48Z",
+      "owned08StillHistoricalQueuedObservation": true,
+      "latestEvidence": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-owned-09-20261116.json",
+        "bytes": 286775,
+        "sha256": "d8379ae5222d4babf5eba8e272f12d08ac1da4902e03141344de8319663b84b3",
+        "gitBlob": "d9338dc2046945c709878fd7b5d58d9aaa6bafe7"
+      }
+    },
+    "frozenPrsUnchanged": [
+      1206,
+      1207,
+      1208,
+      1211,
+      1212,
+      1213
+    ],
+    "pollingClosed": true,
+    "newCiVenueSelected": false
+  },
+  "freshRecoveryCheckpoint": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-fresh-recovery-outcome-20261116.json",
+    "state": "Bootstrap/import admission accepted; reviewed whole97 command still unexecuted; full actual publication readback required before materialization.",
+    "bytes": 35622,
+    "sha256": "5d5bd943f31ea40f6b7760bfe28dba141766d71fd24a40623326aaa91a4efc43",
+    "gitBlob": "b636a22c9cee1f1f01d35c029ed4c768dcefa04b"
+  },
+  "originalArtifactAnalyses": {
+    "cross": {
+      "bytes": 39183,
+      "sha256": "afab3b66f16c8a100d444f5f990c432c5981cd31a36decd5f09251ea9e92607e",
+      "gitBlob": "e1708fb5f076b2a03d81be0971c663a29599bbaa"
+    },
+    "windowsProcess": {
+      "bytes": 34430,
+      "sha256": "9345f46f277853d0dddfa9f20fb99e64ba13e48438c4ae7258f3b848446dac52",
+      "gitBlob": "b655c300449165d1421cbff770628b6021cebe28"
+    },
+    "windowsPackaged": {
+      "bytes": 119538,
+      "sha256": "e849a166f56480ecef2bd7d85d86bf68357a4849755870269d656cd8a7a0a0c3",
+      "gitBlob": "8210fce15c46bc5f67991442703fb82234240180"
+    }
+  },
+  "totalsQualification": "Totals count the27 original CI evidence bundles only; fresh recovery/import and readonly artifact analysis records are separately indexed and do not alter original CI census.",
+  "freshRecoveryEvidenceFiles": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-fresh-bootstrap-supervisor-20261116.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "93c536b44b553ba569a9152f2cb077ab0b2ffb86",
+      "bytes": 31343,
+      "sha256": "f5a6d18a8458c4b2438522514d1ea3b33c50273f89ca7a2e6545dff561c0af14"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-fresh-bootstrap-binding-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "37bd0dcb54d3bac498b6530a08e1f24d4a984609",
+      "bytes": 2790411,
+      "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-fresh-bootstrap-actual-small-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b1aa80114e85d93c6c5a8246a40455da56f8d13c",
+      "bytes": 199459,
+      "sha256": "b3f8d586fb418031d52095128d79a97abbc5b8b497fa42a89c0d160f26acca0f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-bootstrap-source-inputs-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "96c42804f1c4d616d5aa2fadb99c5d27578ed17b",
+      "bytes": 3741214,
+      "sha256": "02677dff135a550015d02e50e23d8092b9db02abe241e750e83f8f70017397c3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-bootstrap-tool-compiled-metadata-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5192e6e0290dd5beaf486a3315b984759fef96bd",
+      "bytes": 2572284,
+      "sha256": "22fe3985fc1fa3708a4c0387ecbb955c687d653538e11ba1fed1a64d19633652"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-bootstrap-dependencies-01-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bc970c1035aa7804b9fd6f50e45204fb466ba02f",
+      "bytes": 4326013,
+      "sha256": "78b5d2718cb8d11b44bfff74d83d29bedf28f5c6cdf74ba5fda2ae5a78cd751c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-bootstrap-dependencies-02-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "36e809c267f130aa696632f14f9f25d32b13bea3",
+      "bytes": 4141629,
+      "sha256": "867bad8dc5bea19cfabd3e5e33748228e3a119129b8be4ff72f43fea8c4b3abb"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-bootstrap-dependencies-03-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ec99ecaf06e8a2f013944e66983c5e771b9f86a5",
+      "bytes": 4204973,
+      "sha256": "1c63baf237ccf2485bb8787b50f9a243953c431f490cb970f55567d9543ebd76"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-bootstrap-dependencies-04-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "93491c2c85d205867ce5f25363d0c33d0c8f3420",
+      "bytes": 4167930,
+      "sha256": "b1c98bd7747f44ca2ff26d35c8dd3dec845bc52a47e0f85b42a4ca7560b358b0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-provider-archives-fresh-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344",
+      "bytes": 789090,
+      "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-fresh-current-input-boundary-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f8dd300b5842bae00ef3967e997b98d51a34a578",
+      "bytes": 3654,
+      "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-sdk-package-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ff27412a4f34b2ba3ef13a6ca98b350a8cbd34c3",
+      "bytes": 4992876,
+      "sha256": "a3d46fc69a68d611cdfed13cd8ac62174a6cabd2e55f36b77217dc0d1d15d5c0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-acorn-parser-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b9ab8ca45486498f34ef693956b854b8347b7176",
+      "bytes": 256229,
+      "sha256": "877948b57d595115df17e2e681164f643cbda56b06749650a6cd2b65c3fcd72a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-zod-peer-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7e1f4238a58c65c14d996353bea1d5ae87b6fef9",
+      "bytes": 2611655,
+      "sha256": "19bdf0005cebcfd82dbb49b1875dddf480e27f689af3c80a5aecbeea2e0e8f6a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-mcp-peer-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e5c8009df3797117076a0657c5ab8141087b130c",
+      "bytes": 857134,
+      "sha256": "650adc6b110f252a6c864ee97ac5062d274b625aa3485667879250337caf8c28"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-provider-import-resolutions-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "558f662ee93cba66c72fd9888ba3ddfeb06bd9e8",
+      "bytes": 3973,
+      "sha256": "c416d0474d2ac45b1ac3410cd4c9a70615a5f590a8735fd1e0afd9098b5c2cd4"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-mcp-external-peers-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "61942701bc9f29cbda042785b5495d8be6d44c5e",
+      "bytes": 2178273,
+      "sha256": "cde27aa6a041e1df8e4a5f97bce6e15e3f7b6094405ae6d251bbb2c8585f9daa"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-compiled-import-bridge-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2f115bff19bb97a448fa506f4d790311b8a4b1f9",
+      "bytes": 144030,
+      "sha256": "31285d36843206ef05ccf62053e0fa92eb1bed672ed485e1eddb8786215171d2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-bootstrap-independent-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6253ffe549fb6d93c13e955ddc94b13de74c4075",
+      "bytes": 32514,
+      "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-owned-09-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d9338dc2046945c709878fd7b5d58d9aaa6bafe7",
+      "bytes": 286775,
+      "sha256": "d8379ae5222d4babf5eba8e272f12d08ac1da4902e03141344de8319663b84b3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-cross-original-ui-receipt-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "88c036dee168ec241a479de765b844bd59249abe",
+      "bytes": 902855,
+      "sha256": "31627f800809b7571a1bb98e0b173a960b28b77405c305f752a72ed8f859f1a2"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-packaged-windows-x64-original-artifact-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0ad58ced472fe1f3beae76c911ba3d6ca376fc62",
+      "bytes": 2110971,
+      "sha256": "937fdf58301146a631223d2dca7a7f143972170e1b6daf63b4b23b9beb3b2de7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-packaged-windows-arm64-original-artifact-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6703f2b6a5a334c73ef7122e942abf5ec3022288",
+      "bytes": 1285686,
+      "sha256": "6f8bfc9eccbf556598145d1f58edb9baac88b90e487377103a5564ce6b7e5ecb"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-sdk-independent-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "24edbc3d30da325e938c72dea556ac5651858ae6",
+      "bytes": 84719,
+      "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-mcp-independent-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239",
+      "bytes": 155439,
+      "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-packaged-windows-readonly-analysis-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8210fce15c46bc5f67991442703fb82234240180",
+      "bytes": 119538,
+      "sha256": "e849a166f56480ecef2bd7d85d86bf68357a4849755870269d656cd8a7a0a0c3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-windows-process-readonly-analysis-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b655c300449165d1421cbff770628b6021cebe28",
+      "bytes": 34430,
+      "sha256": "9345f46f277853d0dddfa9f20fb99e64ba13e48438c4ae7258f3b848446dac52"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-cross-readonly-analysis-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e1708fb5f076b2a03d81be0971c663a29599bbaa",
+      "bytes": 39183,
+      "sha256": "afab3b66f16c8a100d444f5f990c432c5981cd31a36decd5f09251ea9e92607e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-fresh-runner-20261116.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6af0ac85f09ef02488ce15331828713882a73d13",
+      "bytes": 35916,
+      "sha256": "495fac79660eb36f0795f74ff14bd665d79ac3e43534349c2f65234bda89d0f5"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-fresh-red-binding-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "04d501260b4ac275bf52d6381d6d2e7d93bb973e",
+      "bytes": 306274,
+      "sha256": "b118c22fea2bc63c402fa4e6e86e9244d8ee7ec1a54f8ac965e9cafa05cca77f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-fresh-runner-parity-r2-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7df681898c1df322c3d18b9429e9e9316e420490",
+      "bytes": 38951,
+      "sha256": "ca013f0d707621a15f04821d60b02b4b9bdecc99f4999548e263210653b79c53"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-fresh-runner-guard-r2-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9f6a9d6000ec14aa750c7eb1fb11b4b9f785eec5",
+      "bytes": 32120,
+      "sha256": "cdd482790796ca7812e4a35a45fc860823c813fbf1c8611a86afe735235debc0"
+    }
+  ],
+  "freshRunnerR2": {
+    "accepted": true,
+    "reviewer": "/root",
+    "runner": {
+      "bytes": 35916,
+      "sha256": "495fac79660eb36f0795f74ff14bd665d79ac3e43534349c2f65234bda89d0f5",
+      "gitBlob": "6af0ac85f09ef02488ce15331828713882a73d13"
+    },
+    "binding": {
+      "bytes": 306274,
+      "sha256": "b118c22fea2bc63c402fa4e6e86e9244d8ee7ec1a54f8ac965e9cafa05cca77f",
+      "gitBlob": "04d501260b4ac275bf52d6381d6d2e7d93bb973e"
+    },
+    "parity": {
+      "bytes": 38951,
+      "sha256": "ca013f0d707621a15f04821d60b02b4b9bdecc99f4999548e263210653b79c53",
+      "gitBlob": "7df681898c1df322c3d18b9429e9e9316e420490"
+    },
+    "guard": {
+      "bytes": 32120,
+      "sha256": "cdd482790796ca7812e4a35a45fc860823c813fbf1c8611a86afe735235debc0",
+      "gitBlob": "9f6a9d6000ec14aa750c7eb1fb11b4b9f785eec5"
+    },
+    "materialized": false,
+    "executed": false,
+    "producerAuthored": false,
+    "sourceChanged": false,
+    "remainingAttempts": {
+      "red": 1,
+      "green": 1,
+      "lint": 1,
+      "sourceSize": 1,
+      "diffCheck": 1
+    },
+    "requirements": [
+      "Complete actual publication/ref/tree/full-body root and independent readback before materialization",
+      "Actual full97 raw semantic RED, whole input preservation, cleanup and independently observed supervisor exit0 before producer authorship",
+      "No original CI ref/action changes; no native/real-provider/full-E2E qualification inferred"
+    ],
+    "allExactReviewBodiesFetchedAndRehashed": true
   }
 }

@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "kind": "fresh data-only current input boundary",
+  "observedAt": "2026-11-16T13:43:12.691032+00:00",
+  "sourceCommit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+  "sourceTree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+  "sourceRows": 11567,
+  "sourceRowsAllEqual": true,
+  "sourceSnapshot": {
+    "bytes": 3451167,
+    "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+    "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+  },
+  "additionalGitOrSourceExecution": false,
+  "dependencies": {
+    "rows": 122773,
+    "bytes": 39168001,
+    "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+    "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7",
+    "allEqualToBootstrap": true,
+    "symlinks": 5437,
+    "regular": 117336
+  },
+  "compiled": {
+    "rows": 1454,
+    "bytes": 400300,
+    "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+    "gitBlob": "224ff561f65772393140302de26b584bf08b06d9",
+    "allEqualToBootstrap": true
+  },
+  "taskTempInventory": [
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/2c055e6a",
+      "mode": "100644",
+      "bytes": 1076,
+      "sha256": "81d68862abef75d4cddbf3c9450326b5546534bb5eac1501563f72e46a377818",
+      "gitBlob": "92cc0b39314a692ffaa55077b500ad6eef15aa92"
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/4d7e9989",
+      "mode": "100644",
+      "bytes": 2780,
+      "sha256": "2d0fab228f904b2c2e1f1e3a4ede1f5868c5d0e4007bbed6984690ccbc07143e",
+      "gitBlob": "0d8fc72131192a4d7dfb7c4f6a4d992e8d48edce"
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/60988b90",
+      "mode": "100644",
+      "bytes": 2300,
+      "sha256": "d9ea89d372b2eaa86ef5562a02aeb9d5aceb836227436880781b83467afeaa7b",
+      "gitBlob": "4587d24377ed922a99494689c3b742eedf2e56ae"
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/661efec4",
+      "mode": "100644",
+      "bytes": 2208532,
+      "sha256": "5f137a3b9d2d936472a1b3c7c540309f8fea9eed8b3614b382ee23157a259712",
+      "gitBlob": "feedc7210606667b16d2d0014d4bbb9b198afc00"
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/b6303853",
+      "mode": "100644",
+      "bytes": 2052,
+      "sha256": "c8f65ca4824827fb20024dad6e8217007163410dceb840170ced910861cccda4",
+      "gitBlob": "256197c92bc42a5921d8207741fc4334aeabbea8"
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/ceabdecc",
+      "mode": "100644",
+      "bytes": 2652,
+      "sha256": "c753344d313709d91a46d65cccc2f06988c81ceae1b83aefae0f8c34a509c165",
+      "gitBlob": "00b5784700c10e5ef5876c84e308b3b3a56a4009"
+    },
+    {
+      "path": "tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/d8c0d4fb",
+      "mode": "100644",
+      "bytes": 6156,
+      "sha256": "723856e14196bf1a3caffe7e8bd170efe3f0ed7a398f1f9c5cc672fc59260327",
+      "gitBlob": "3f3238d0c975515b3ef230c3bd61366ab85a1758"
+    }
+  ],
+  "taskTempEmpty": false,
+  "taskTmpTopEntries": [
+    "node-compile-cache"
+  ],
+  "testExecutions": 0,
+  "providerInvocations": 0,
+  "sdkImports": 0,
+  "durationSeconds": 82.95177539299948,
+  "limits": [
+    "Data-only comparison of complete recorded source rows and complete fresh dependency/compiled enumeration; Git staged/untracked queries will be repeated by the independently reviewed future runner.",
+    "Node compile cache residue is retained as data, not a claim of empty task tmp.",
+    "This inspection does not launch or import package/provider code and does not by itself grant SDK import admission."
+  ]
+}
