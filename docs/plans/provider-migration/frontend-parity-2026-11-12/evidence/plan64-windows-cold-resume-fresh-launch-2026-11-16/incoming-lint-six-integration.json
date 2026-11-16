@@ -1,0 +1,31 @@
+{
+  "kind": "plan64-incoming-lint-six-integration",
+  "incomingCommit": "0f32b408e2d2e018883ea31a96ea67b7580fc3bd",
+  "incomingParent": "2a03bbf362abb224fa53519a248fb0ead59b8902",
+  "workflow": {
+    "path": ".github/workflows/host-emulated-acceptance.yml",
+    "blob": "889332aafb86855e891b03f268bc33e49bd87597",
+    "bytes": 142256,
+    "lines": 1773,
+    "sha256": "df050a35c76dfd64c74d66dfd5871cfff5459aed1e61eedc5e5d50b548edd1a9"
+  },
+  "preservedSix": [
+    "tools/owned-process-broker/nativeVendorInputs.ts",
+    "tools/owned-process-broker/nativeRetainedHostGate.ts",
+    "tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+    "tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+    "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+    "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts"
+  ],
+  "originalPlanSha256": "94b0ce22d4a5490445dccdb396b419a4f857c63b7bb7c69db2a202f0cae35439",
+  "planSha256": "268ffa4acd591d89af90f9bb703f688c2a9fbba7229dba36f8087ab7dc41d02e",
+  "checks": [
+    "original plan exact prefix",
+    "incoming patch exact original plus six",
+    "full incoming tree has one changed leaf and no removal",
+    "new helper still absent before source preparation"
+  ],
+  "sourceAfterimagesSelected": false,
+  "workflowCountBefore": 138,
+  "workflowCountAfter": 139
+}
