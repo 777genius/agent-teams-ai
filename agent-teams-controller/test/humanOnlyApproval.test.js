@@ -2,6 +2,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { createController } = require('../src/index.js');
+const kanban = require('../src/internal/kanban.js');
+const kanbanStore = require('../src/internal/kanbanStore.js');
 
 describe('human-only review approval', () => {
   let dir;
@@ -18,7 +20,10 @@ describe('human-only review approval', () => {
     controller = createController({ teamName: 'fixture', claudeDir: dir });
     board = controller.taskBoard;
   });
-  afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+  afterEach(() => {
+    vi.restoreAllMocks();
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
 
   const taskFile = (id) => path.join(dir, 'tasks', 'fixture', id + '.json');
   const kanbanFile = () => path.join(dir, 'teams', 'fixture', 'kanban-state.json');
@@ -76,20 +81,40 @@ describe('human-only review approval', () => {
     expect(events(task.id, 'review_completed')).toHaveLength(1);
   });
 
-  it('recovers interrupted review completion without duplicating the cycle event', () => {
+  it('recovers both dependency and lead notices after an interrupted review completion', () => {
     const task = board.createTask({ subject: 'Interrupted review completion', owner: 'bob' });
     board.completeTask(task.id, 'bob');
     board.setHumanOnlyApproval(true);
     board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+    const dependent = board.createTask({
+      subject: 'Blocked during review', owner: 'bob', blockedBy: [task.id],
+    });
     const cycle = events(task.id, 'review_requested')[0].id;
-    board.completeReview(task.id, { from: 'alice', expectedReviewRequestId: cycle });
-    const state = JSON.parse(fs.readFileSync(kanbanFile(), 'utf8'));
-    state.tasks[task.id] = { column: 'review', movedAt: new Date().toISOString() };
-    fs.writeFileSync(kanbanFile(), JSON.stringify(state));
+    const inboxFile = path.join(dir, 'teams', 'fixture', 'inboxes', 'alice.json');
+    const leadInboxBefore = JSON.parse(fs.readFileSync(inboxFile, 'utf8')).length;
+    const dependentCommentsBefore = board.getTask(dependent.id).comments.length;
+    const fail = vi.spyOn(kanban, 'clearKanban').mockImplementationOnce(() => {
+      throw new Error('synthetic kanban overlay write failure');
+    });
+    expect(() => board.completeReview(task.id, {
+      from: 'alice', expectedReviewRequestId: cycle,
+    })).toThrow(/synthetic kanban/);
+    fail.mockRestore();
+    expect(board.getTask(task.id).reviewState).toBe('reviewed');
+    expect(board.getKanbanState().tasks[task.id].column).toBe('review');
+    expect(JSON.parse(fs.readFileSync(inboxFile, 'utf8'))).toHaveLength(leadInboxBefore);
+
     expect(board.completeReview(task.id, {
       from: 'alice', expectedReviewRequestId: cycle,
     })).toMatchObject({ alreadyCompleted: true, column: 'done' });
     expect(board.getKanbanState().tasks[task.id]).toBeUndefined();
+    expect(board.getTask(dependent.id).comments.length).toBeGreaterThan(dependentCommentsBefore);
+    const leadInboxAfter = JSON.parse(fs.readFileSync(inboxFile, 'utf8')).length;
+    expect(leadInboxAfter).toBeGreaterThan(leadInboxBefore);
+    expect(events(task.id, 'review_completed')).toHaveLength(1);
+
+    board.completeReview(task.id, { from: 'alice', expectedReviewRequestId: cycle });
+    expect(JSON.parse(fs.readFileSync(inboxFile, 'utf8'))).toHaveLength(leadInboxAfter);
     expect(events(task.id, 'review_completed')).toHaveLength(1);
   });
 
@@ -108,6 +133,59 @@ describe('human-only review approval', () => {
     expect(events(task.id, 'human_approved')).toHaveLength(1);
     board.approveAsHuman(task.id);
     expect(events(task.id, 'human_approved')).toHaveLength(1);
+  });
+
+  it('repairs interrupted human approval after disabling the policy', () => {
+    const task = board.createTask({ subject: 'Interrupted human acceptance', owner: 'bob' });
+    board.completeTask(task.id, 'bob');
+    board.setHumanOnlyApproval(true);
+    const fail = vi.spyOn(kanbanStore, 'setKanbanColumn').mockImplementationOnce(() => {
+      throw new Error('synthetic human overlay failure');
+    });
+    expect(() => board.approveAsHuman(task.id)).toThrow(/synthetic human overlay/);
+    fail.mockRestore();
+    expect(events(task.id, 'human_approved')).toHaveLength(1);
+    expect(board.getKanbanState().tasks[task.id]).toBeUndefined();
+    board.setHumanOnlyApproval(false);
+    expect(board.approveAsHuman(task.id)).toMatchObject({ reviewState: 'approved' });
+    expect(board.getKanbanState().tasks[task.id].column).toBe('approved');
+    expect(events(task.id, 'human_approved')).toHaveLength(1);
+  });
+
+  it('resumes an interrupted human rejection without duplicate events or owner messages', () => {
+    const task = board.createTask({ subject: 'Interrupted human rejection', owner: 'bob' });
+    board.completeTask(task.id, 'bob');
+    board.setHumanOnlyApproval(true);
+    board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+    const cycle = events(task.id, 'review_requested')[0].id;
+    board.completeReview(task.id, { from: 'alice', expectedReviewRequestId: cycle });
+
+    const fail = vi.spyOn(kanban, 'clearKanban').mockImplementationOnce(() => {
+      throw new Error('synthetic human rejection overlay failure');
+    });
+    expect(() => board.requestChangesAsHuman(task.id, {
+      comment: 'Original user feedback',
+    })).toThrow(/synthetic human rejection/);
+    fail.mockRestore();
+    expect(board.getTask(task.id)).toMatchObject({
+      status: 'completed', reviewState: 'needsFix',
+    });
+    expect(events(task.id, 'review_changes_requested')).toHaveLength(1);
+
+    const result = board.requestChangesAsHuman(task.id, { comment: 'Changed on retry' });
+    expect(result).toMatchObject({ status: 'pending', reviewState: 'needsFix' });
+    expect(events(task.id, 'review_changes_requested')).toHaveLength(1);
+    expect(board.getTask(task.id).comments.some((comment) =>
+      comment.text === 'Original user feedback'
+    )).toBe(true);
+    const inboxFile = path.join(dir, 'teams', 'fixture', 'inboxes', 'bob.json');
+    const ownerInbox = JSON.parse(fs.readFileSync(inboxFile, 'utf8'));
+    const commentCount = board.getTask(task.id).comments.length;
+    const inboxCount = ownerInbox.length;
+    board.requestChangesAsHuman(task.id, { comment: 'Original user feedback' });
+    expect(board.getTask(task.id).comments).toHaveLength(commentCount);
+    expect(JSON.parse(fs.readFileSync(inboxFile, 'utf8'))).toHaveLength(inboxCount);
+    expect(events(task.id, 'review_changes_requested')).toHaveLength(1);
   });
 
   it('rejects stale, absent, wrong-reviewer and superseded cycle IDs without mutation', () => {

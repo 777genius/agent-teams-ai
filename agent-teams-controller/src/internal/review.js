@@ -515,19 +515,32 @@ function completeReview(context, taskId, flags = {}) {
     );
     if (completedCycle && (state === 'reviewed' || state === 'approved')) {
       const placement = kanban.getKanbanState(context).tasks?.[task.id]?.column;
+      let recovered = false;
       if (state === 'reviewed' && placement === 'review') {
-        // Recover a preceding partial write: task event persisted, overlay did not.
+        // The task event committed but clearing the overlay failed. Repair the
+        // placement and dispatch the original event's previously skipped notices.
         kanban.clearKanban(context, task.id, {
           transition: 'review_complete', nextReviewState: 'reviewed',
         });
+        recovered = true;
       } else if (state === 'reviewed' && placement === 'approved') {
         throw new Error('Human approval placement awaits a recorded human decision');
       }
-      return { duplicate: true, payload: {
-        ok: true, taskId: task.id, displayId: task.displayId,
-        column: state === 'approved' ? 'approved' : 'done',
-        reviewState: state, reviewRequestId: expectedId, alreadyCompleted: true,
-      } };
+      return {
+        duplicate: true, recovered,
+        payload: {
+          ok: true, taskId: task.id, displayId: task.displayId,
+          column: state === 'approved' ? 'approved' : 'done',
+          reviewState: state, reviewRequestId: expectedId, alreadyCompleted: true,
+        },
+        ...(recovered ? {
+          task: tasks.getTask(context, task.id),
+          actor: completedCycle.actor,
+          note: completedCycle.note || 'AI review completed',
+          leadSessionId: resolveLeadSessionId(context, flags),
+          humanOnlyApproval: kanban.getKanbanState(context).humanOnlyApproval === true,
+        } : {}),
+      };
     }
     assertReviewTransitionAllowed(context, task, 'completing review');
     const actor = getReviewDecisionActor(context, task, flags, 'complete review');
@@ -553,11 +566,11 @@ function completeReview(context, taskId, flags = {}) {
     leadSessionId: resolveLeadSessionId(context, flags),
     humanOnlyApproval: kanban.getKanbanState(context).humanOnlyApproval === true };
   });
-  if (result.duplicate) return result.payload;
+  if (result.duplicate && !result.recovered) return result.payload;
+  const event = [...(result.task.historyEvents || [])].reverse()
+    .find((item) => item.type === 'review_completed' &&
+      item.reviewRequestId === result.payload.reviewRequestId);
   try {
-    const event = [...(result.task.historyEvents || [])].reverse()
-      .find((item) => item.type === 'review_completed' &&
-        item.reviewRequestId === result.payload.reviewRequestId);
     tasks.notifyUnblockedOwners(context, result.task, { reviewCycleId: event?.id });
   } catch (error) {
     warnNonCritical('[review] dependency review completion notification failed', error);
@@ -568,6 +581,7 @@ function completeReview(context, taskId, flags = {}) {
       from: result.actor,
       text: `AI review completed for task #${result.task.displayId || result.task.id}. The task is in Done${result.humanOnlyApproval ? ' awaiting human acceptance' : ''}.\n\n${result.note}`,
       summary: `AI review completed #${result.task.displayId || result.task.id}`,
+      ...(event?.id ? { messageId: event.id } : {}),
       source: 'system_notification',
       ...(result.leadSessionId ? { leadSessionId: result.leadSessionId } : {}),
     });
@@ -589,13 +603,16 @@ function approveAsHuman(context, taskId) {
       throw new Error(`Task #${task.displayId || task.id} must be completed before human approval`);
     }
     const prevReviewState = getEffectiveReviewState(context, task);
-    if (!policyEnabled && prevReviewState !== 'reviewed') {
-      throw new Error('Human-only approval policy is not enabled');
-    }
     const recordedApproval = Array.isArray(task.historyEvents) &&
       task.historyEvents.some((event) =>
         event.type === 'human_approved' || event.type === 'review_approved'
       );
+    // Finish a recorded approval whose overlay write failed, even if the user
+    // disabled the policy before retrying this trusted UI action.
+    if (!policyEnabled && prevReviewState !== 'reviewed' &&
+        !(prevReviewState === 'approved' && recordedApproval)) {
+      throw new Error('Human-only approval policy is not enabled');
+    }
     if (prevReviewState === 'approved' && recordedApproval) {
       // Recreate missing placement after an interrupted file write, if needed.
       if (kanban.getKanbanState(context).tasks?.[task.id]?.column !== 'approved') {
@@ -756,16 +773,27 @@ function requestChangesAsHuman(context, taskId, flags = {}) {
 }
 
 function requestChangesWithAuthority(context, taskId, flags, fromHuman) {
-  const { task, from, comment, leadSessionId } = withTeamBoardLock(context.paths, () => {
+  const { task, from, comment, leadSessionId, decisionId } = withTeamBoardLock(context.paths, () => {
     const currentTask = tasks.getTask(context, taskId);
     if (!currentTask.owner) {
       throw new Error(`No owner found for task ${String(taskId)}`);
     }
 
     const currentReviewState = getEffectiveReviewState(context, currentTask);
+    const latestDecision = [...(currentTask.historyEvents || [])].reverse().find(
+      (event) => [
+        'review_requested', 'review_changes_requested', 'review_completed',
+        'review_approved', 'human_approved',
+      ].includes(event.type)
+    );
+    const recoveringHumanRejection = fromHuman &&
+      currentReviewState === 'needsFix' &&
+      (currentTask.status === 'completed' || currentTask.status === 'pending') &&
+      latestDecision?.type === 'review_changes_requested' &&
+      latestDecision.actor === 'user';
     if (fromHuman) {
-      if (currentTask.status !== 'completed' ||
-          (currentReviewState !== 'review' && currentReviewState !== 'reviewed')) {
+      if (!recoveringHumanRejection && (currentTask.status !== 'completed' ||
+          (currentReviewState !== 'review' && currentReviewState !== 'reviewed'))) {
         throw new Error('Human rejection requires active Review or reviewed Done');
       }
     } else if (kanban.getKanbanState(context).humanOnlyApproval === true) {
@@ -779,48 +807,68 @@ function requestChangesWithAuthority(context, taskId, flags, fromHuman) {
     const nextFrom = fromHuman
       ? 'user'
       : getReviewDecisionActor(context, currentTask, flags, 'request changes');
-    const nextComment =
-      typeof flags.comment === 'string' && flags.comment.trim()
+    const nextComment = recoveringHumanRejection
+      ? latestDecision.note || 'Reviewer requested changes.'
+      : typeof flags.comment === 'string' && flags.comment.trim()
         ? flags.comment.trim()
         : 'Reviewer requested changes.';
     const prevReviewState = fromHuman
       ? currentReviewState
       : assertReviewTransitionAllowed(context, currentTask, 'requesting changes');
-    const timestamp = new Date().toISOString();
-
-    tasks.updateTask(context, currentTask.id, (t) => {
-      closeReviewIntervals(t, timestamp);
-      t.historyEvents = tasks.appendHistoryEvent(t.historyEvents, {
-        type: 'review_changes_requested',
-        from: prevReviewState,
-        to: 'needsFix',
-        ...(nextComment ? { note: nextComment } : {}),
-        actor: nextFrom,
-        timestamp,
+    let decisionId = recoveringHumanRejection ? latestDecision.id : null;
+    if (!recoveringHumanRejection) {
+      const timestamp = new Date().toISOString();
+      tasks.updateTask(context, currentTask.id, (t) => {
+        closeReviewIntervals(t, timestamp);
+        t.historyEvents = tasks.appendHistoryEvent(t.historyEvents, {
+          type: 'review_changes_requested',
+          from: prevReviewState,
+          to: 'needsFix',
+          ...(nextComment ? { note: nextComment } : {}),
+          actor: nextFrom,
+          timestamp,
+        });
+        t.reviewState = 'needsFix';
+        return t;
       });
-      t.reviewState = 'needsFix';
-      return t;
-    });
+      if (fromHuman) {
+        decisionId = [...(tasks.getTask(context, currentTask.id).historyEvents || [])]
+          .reverse().find((event) =>
+            event.type === 'review_changes_requested' && event.actor === 'user'
+          )?.id;
+      }
+    }
 
     kanban.clearKanban(context, currentTask.id, {
       nextReviewState: 'needsFix',
       transition: 'request_changes',
     });
-    tasks.setTaskStatus(context, currentTask.id, 'pending', nextFrom, {
-      trustedInternalWrite: true,
-    });
-    tasks.addTaskComment(context, currentTask.id, {
-      text: nextComment,
-      from: fromHuman ? runtimeHelpers.inferLeadName(context.paths) : nextFrom,
-      type: 'review_request',
-      ...(Array.isArray(flags.taskRefs) ? { taskRefs: flags.taskRefs } : {}),
-      notifyOwner: false,
-    });
+    if (currentTask.status !== 'pending') {
+      tasks.setTaskStatus(context, currentTask.id, 'pending', nextFrom, {
+        trustedInternalWrite: true,
+      });
+    }
+    if (fromHuman && !decisionId) {
+      throw new Error('Cannot resume human rejection without its recorded event ID');
+    }
+    const commentId = fromHuman ? `human-review-changes-${decisionId}` : null;
+    const existingComments = tasks.getTask(context, currentTask.id).comments || [];
+    if (!commentId || !existingComments.some((entry) => entry.id === commentId)) {
+      tasks.addTaskComment(context, currentTask.id, {
+        ...(commentId ? { id: commentId } : {}),
+        text: nextComment,
+        from: fromHuman ? runtimeHelpers.inferLeadName(context.paths) : nextFrom,
+        type: 'review_request',
+        ...(Array.isArray(flags.taskRefs) ? { taskRefs: flags.taskRefs } : {}),
+        notifyOwner: false,
+      });
+    }
 
     return {
       task: tasks.getTask(context, currentTask.id),
       from: nextFrom,
       comment: nextComment,
+      decisionId,
       leadSessionId: resolveLeadSessionId(context, flags),
     };
   });
@@ -834,6 +882,7 @@ function requestChangesWithAuthority(context, taskId, flags, fromHuman) {
         'The task has been moved back to pending. When you are ready to resume, review the task context, start it explicitly, implement the fixes, mark it completed, and request review again.',
       ...(Array.isArray(flags.taskRefs) ? { taskRefs: flags.taskRefs } : {}),
       summary: `Fix request for #${task.displayId || task.id}`,
+      ...(fromHuman && decisionId ? { messageId: decisionId } : {}),
       source: 'system_notification',
       ...(leadSessionId ? { leadSessionId } : {}),
     });
