@@ -402,7 +402,7 @@ ${getVisibleTaskReferenceFormattingRule()}
 Correct example:
 ${buildCanonicalSendMessageExample({ to: leadName, summary: 'bootstrap error', message: 'exact error text' })}
 After member_briefing succeeds, stay silent until you have a real blocker, question, or task result. Do NOT send raw tool output, JSON, dict/object dumps, or internal state payloads.
-- Review flow rule: review happens on the SAME work task. If task #X needs review and a reviewer exists or has been named, the owner completes #X and sends #X through review_request, and the reviewer handles review_start then review_approve/review_request_changes on #X. If no reviewer exists, leave #X completed. Do NOT create a separate "review task".`;
+- Review flow rule: review happens on the SAME work task. If task #X needs review and a reviewer exists or has been named, the owner completes #X and sends #X through review_request, and the reviewer handles review_start then the command appropriate to kanban_get humanOnlyApproval: when enabled use review_complete with the original reviewRequestId, otherwise review_approve; for rejected work use review_request_changes on #X. If no reviewer exists, leave #X completed. Do NOT create a separate "review task".`;
 }
 
 export function buildGeminiReconnectMemberSpawnPrompt(
@@ -434,14 +434,14 @@ ${getVisibleTaskReferenceFormattingRule()}
 Correct example:
 ${buildCanonicalSendMessageExample({ to: leadName, summary: 'bootstrap error', message: 'exact error text' })}
 After member_briefing succeeds, stay silent unless you have a real blocker, question, or task result. Do NOT send raw tool output, JSON, dict/object dumps, or internal state payloads.
-- Review flow rule: review happens on the SAME work task. If task #X needs review and a reviewer exists or has been named, the owner completes #X and sends #X through review_request, and the reviewer handles review_start then review_approve/review_request_changes on #X. If no reviewer exists, leave #X completed. Do NOT create a separate "review task".`;
+- Review flow rule: review happens on the SAME work task. If task #X needs review and a reviewer exists or has been named, the owner completes #X and sends #X through review_request, and the reviewer handles review_start then the command appropriate to kanban_get humanOnlyApproval: when enabled use review_complete with the original reviewRequestId, otherwise review_approve; for rejected work use review_request_changes on #X. If no reviewer exists, leave #X completed. Do NOT create a separate "review task".`;
 }
 
 export function buildMemberReviewFlowReminder(): string {
   return [
     '- Review flow rule: review is a state transition on the SAME work task, not a separate task.',
     '- If your task #X needs review and a reviewer exists or has been named, finish the work on #X, call task_complete on #X, then use review_request on #X for that reviewer. If no reviewer exists, leave #X completed. Do NOT create a separate "review task".',
-    '- If you are the reviewer for task #X, call review_start on #X first, then review_approve or review_request_changes on #X itself.',
+    '- If you review task #X, call review_start on #X first and preserve its reviewRequestId. Read kanban_get humanOnlyApproval at decision time: when enabled use review_complete with expectedReviewRequestId (or review_request_changes); otherwise use review_approve (or review_request_changes) on #X itself.',
     '- If review requests changes, resume/fix the SAME task #X, then task_complete #X and send #X back through review_request when ready.',
   ].join('\n');
 }
@@ -763,12 +763,14 @@ export function buildTeamCtlOpsInstructions(teamName: string, leadName: string):
       `Review operations — use MCP tools directly (text comments do NOT change kanban state):`,
       `- Request review (after task_complete): review_request { teamName: "${teamName}", taskId: "<id>", from: "${leadName}", reviewer: "<reviewer-name>" }`,
       `- Start review (reviewer signals they are beginning): review_start { teamName: "${teamName}", taskId: "<id>", from: "<reviewer-name>" }`,
-      `- Approve review: review_approve { teamName: "${teamName}", taskId: "<id>", from: "${leadName}", note?: "<note>", notifyOwner: true }`,
-      `  Call review_approve EXACTLY ONCE per review. Include your review feedback in the "note" field of that single call. Do NOT call it twice (once to approve, once with a note). The tool auto-creates a comment from the note.`,
+      `- Approve review only when humanOnlyApproval is false: review_approve { teamName: "${teamName}", taskId: "<id>", from: "${leadName}", note?: "<note>", notifyOwner: true }`,
+      `  When humanOnlyApproval is false, call review_approve EXACTLY ONCE per review. Include feedback in the note field. Do not call it twice.`,
+      `- Complete AI review when humanOnlyApproval is true: review_complete { teamName: "${teamName}", taskId: "<id>", from: "${leadName}", expectedReviewRequestId: "<reviewRequestId from the reviewed cycle>", note?: "<note>" }`,
+      `  Read humanOnlyApproval with kanban_get at decision time. Save reviewRequestId from the review request or review_start. Never fetch a newer ID at completion. review_complete returns the task to Done; only a human can approve it.`,
       `- Request changes: review_request_changes { teamName: "${teamName}", taskId: "<id>", from: "${leadName}", comment: "<what to fix>" }`,
-      `CRITICAL: Review is a state transition on the EXISTING work task. When implementation for task #X needs review, move #X through the review flow with review_request/review_start/review_approve/review_request_changes. Do NOT create a new separate task just to represent that review.`,
+      `CRITICAL: Review is a state transition on the EXISTING work task. When implementation for task #X needs review, move #X through the review flow with review_request/review_start/(review_complete or review_approve)/review_request_changes. Do NOT create a new separate task just to represent that review.`,
       `CRITICAL: Only send task #X into review when a concrete reviewer exists for #X. If no reviewer exists yet, keep #X completed until you assign/decide the reviewer. Do NOT use review_request just to park the task in REVIEW without an actual reviewer.`,
-      `CRITICAL: Writing "approved" or "LGTM" as a task comment does NOT move the task on the kanban board. You MUST call the review_approve MCP tool. Without the tool call the task stays stuck in the REVIEW column.`,
+      `CRITICAL: Comments saying "approved" or "LGTM" do NOT change review state. When humanOnlyApproval is false call review_approve; when true call review_complete with the original reviewRequestId. An agent never grants human acceptance.`,
       ``,
       `Background service operations — use MCP tools directly (dev servers, watchers, databases, etc.; NOT teammate-agent liveness):`,
       protocols.buildProcessProtocolText(teamName),
@@ -782,7 +784,7 @@ export function buildTeamCtlOpsInstructions(teamName: string, leadName: string):
       `- If you set blockedBy, create the task in pending (for example with startImmediately: false). Do NOT put blocked tasks into in_progress.`,
       `- Use related to link related work (e.g. frontend + backend) without blocking.`,
       `- Review tasks: By default, NEVER create a separate "review task". Reviews belong to the existing work task (#X) and must use the dedicated review flow on #X.`,
-      `  - Correct flow: finish implementation on #X -> task_complete #X -> review_request #X -> reviewer runs review_start #X -> reviewer runs review_approve or review_request_changes on #X.`,
+      `  - Correct flow: finish implementation on #X -> task_complete #X -> review_request #X -> reviewer runs review_start #X -> reviewer runs the policy-appropriate review_complete or review_approve, or review_request_changes, on #X.`,
       `  - Only move #X into REVIEW when a real reviewer exists for #X. If nobody is reviewing it yet, keep #X completed until the reviewer is decided.`,
       `  - The REVIEW column is for the same task #X moving through review. It is NOT a signal to create another task for review.`,
       `  - Dependencies do not auto-start tasks; the owner must explicitly start it when ready.`,
