@@ -1,0 +1,24 @@
+{"phase":"prepared","receipt":"/Users/runner/work/_temp/TEST-desktop-backend-oILXLv/desktop-backend-receipt.json"}
+{"status":"INCOMPLETE","receipt":"/Users/runner/work/_temp/TEST-desktop-backend-oILXLv/desktop-backend-receipt.json","failureSource":{"kind":"error","frames":["scripts/legacy-agent-host/desktop-ui-controls.ts:171:11","scripts/legacy-agent-host/desktop-emulated-selection-ui.ts:73:5","scripts/legacy-agent-host/desktop-emulated-selection-ui.ts:294:3","scripts/legacy-agent-host/desktop-backend-smoke.ts:421:12","scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"]},"installerFailure":{"schemaVersion":1,"status":"available","source":"retained-installer-observations","atomicWithFailure":false,"cdpFailure":{"kind":null,"method":null},"failureSite":{"operation":null,"stage":null},"proofRecorded":true,"steps":{"count":108,"overflow":false,"last":[{"action":"mouseMoved","stage":null,"attempted":null},{"action":"mouseClick","stage":null,"attempted":true},{"action":"mouseMoved","stage":null,"attempted":null},{"action":"mouseClick","stage":null,"attempted":true},{"action":"mouseMoved","stage":null,"attempted":null},{"action":"mouseClick","stage":null,"attempted":true},{"action":"mouseMoved","stage":null,"attempted":null},{"action":"mouseClick","stage":null,"attempted":true}]},"lastLiveObservation":{"phase":"after-original-installer-settings","nativeReady":true,"originalInputsUnchanged":true},"milestones":{"firstRuntimeRecorded":true,"savedSelectionRecorded":true,"nextRuntimeRecorded":true,"completedInstallerReceiptRecorded":true},"completedInstallerStatus":"PASS","settingsReceipt":{"recorded":true,"status":"PASS"},"cleanup":{"recorded":true,"remainingCount":0,"capturedHostObserved":false,"capturedHostAbsent":null,"failureRecorded":false,"appExitCodeZero":true,"appSignalPresent":false,"peerRecorded":true,"peerAbsent":true,"peerObservationFailed":null,"quitRequested":true,"failureQuit":{"recorded":true,"attempted":true,"reply":"acknowledged","listenerAbsent":true}},"snapshot":{"recorded":true,"unavailable":null,"readyText":false}},"selectionTargetFailure":{"schemaVersion":1,"status":"unavailable","reason":"unrecognized-target-facts"}}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: provider-emulation UI proof incomplete; original receipt retained
++ actual - expected
+
++ 'INCOMPLETE'
+- 'PASS'
+
+    at assertDesktopProofCompleted (file:///Users/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-proof-evidence.ts:70:28)
+    at main (file:///Users/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-backend-smoke.ts:770:5)
+    at async file:///Users/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'INCOMPLETE',
+  expected: 'PASS',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

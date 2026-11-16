@@ -1,0 +1,322 @@
+﻿2026-11-16T00:36:37.3236347Z Current runner version: '2.338.2'
+2026-11-16T00:36:37.3262067Z ##[group]Runner Image Provisioner
+2026-11-16T00:36:37.3262999Z Hosted Compute Agent
+2026-11-16T00:36:37.3263773Z Version: 20261103.629
+2026-11-16T00:36:37.3264477Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-16T00:36:37.3265222Z Build Date: 2026-11-03T17:26:59Z
+2026-11-16T00:36:37.3265943Z Worker ID: {0faf8a5e-7892-40c8-9cf7-3a16b80ec5c1}
+2026-11-16T00:36:37.3266693Z Region: us-east-1
+2026-11-16T00:36:37.3267240Z Cloud: AWS
+2026-11-16T00:36:37.3267745Z ##[endgroup]
+2026-11-16T00:36:37.3269663Z ##[group]Operating System
+2026-11-16T00:36:37.3270275Z Ubuntu
+2026-11-16T00:36:37.3270867Z 24.04.5
+2026-11-16T00:36:37.3271348Z LTS
+2026-11-16T00:36:37.3271853Z ##[endgroup]
+2026-11-16T00:36:37.3272378Z ##[group]Runner Image
+2026-11-16T00:36:37.3272937Z Image: ubuntu-24.04
+2026-11-16T00:36:37.3273723Z Version: 20261111.127.1
+2026-11-16T00:36:37.3275018Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261111.127/images/ubuntu/Ubuntu2404-Readme.md
+2026-11-16T00:36:37.3276619Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261111.127
+2026-11-16T00:36:37.3277545Z ##[endgroup]
+2026-11-16T00:36:37.3278678Z ##[group]GITHUB_TOKEN Permissions
+2026-11-16T00:36:37.3281084Z Contents: read
+2026-11-16T00:36:37.3281663Z Metadata: read
+2026-11-16T00:36:37.3282179Z ##[endgroup]
+2026-11-16T00:36:37.3284675Z Secret source: Actions
+2026-11-16T00:36:37.3285587Z Cache mode: write
+2026-11-16T00:36:37.3286515Z Prepare workflow directory
+2026-11-16T00:36:37.3614883Z Prepare all required actions
+2026-11-16T00:36:37.3666987Z Getting action download info
+2026-11-16T00:36:37.5428637Z Download action repository 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-11-16T00:36:39.4337593Z Download action repository 'actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+2026-11-16T00:36:39.5348754Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-16T00:36:39.8206944Z Complete job name: native-v2-test (ubuntu-24.04, model)
+2026-11-16T00:36:39.8861459Z ##[group]Run actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+2026-11-16T00:36:39.8862089Z with:
+2026-11-16T00:36:39.8862419Z   ref: c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-16T00:36:39.8862758Z   persist-credentials: false
+2026-11-16T00:36:39.8863177Z   repository: agent-teams-ai/old-provider-implementations
+2026-11-16T00:36:39.8865622Z   token: ***
+2026-11-16T00:36:39.8865901Z   ssh-strict: true
+2026-11-16T00:36:39.8866192Z   ssh-user: git
+2026-11-16T00:36:39.8866462Z   clean: true
+2026-11-16T00:36:39.8866772Z   sparse-checkout-cone-mode: true
+2026-11-16T00:36:39.8867075Z   fetch-depth: 1
+2026-11-16T00:36:39.8867328Z   fetch-tags: false
+2026-11-16T00:36:39.8867605Z   show-progress: true
+2026-11-16T00:36:39.8867858Z   lfs: false
+2026-11-16T00:36:39.8868141Z   submodules: false
+2026-11-16T00:36:39.8868423Z   set-safe-directory: true
+2026-11-16T00:36:39.8868710Z   allow-unsafe-pr-checkout: false
+2026-11-16T00:36:39.8869155Z ##[endgroup]
+2026-11-16T00:36:42.2197921Z Syncing repository: agent-teams-ai/old-provider-implementations
+2026-11-16T00:36:42.2199289Z ##[group]Getting Git version info
+2026-11-16T00:36:42.2199821Z Working directory is '/home/runner/work/old-provider-implementations/old-provider-implementations'
+2026-11-16T00:36:42.2200477Z [command]/usr/bin/git version
+2026-11-16T00:36:42.4912132Z git version 2.56.1
+2026-11-16T00:36:42.4929536Z ##[endgroup]
+2026-11-16T00:36:42.4942283Z Temporarily overriding HOME='/home/runner/work/_temp/a9a39330-deaf-47a7-bff0-590c01178efd' before making global git config changes
+2026-11-16T00:36:42.4943201Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T00:36:42.4947473Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/old-provider-implementations/old-provider-implementations
+2026-11-16T00:36:42.5299111Z Deleting the contents of '/home/runner/work/old-provider-implementations/old-provider-implementations'
+2026-11-16T00:36:42.5302617Z ##[group]Determining repository object format
+2026-11-16T00:36:42.5303341Z ##[endgroup]
+2026-11-16T00:36:42.5304182Z ##[group]Initializing the repository
+2026-11-16T00:36:42.5306981Z [command]/usr/bin/git init /home/runner/work/old-provider-implementations/old-provider-implementations
+2026-11-16T00:36:42.6127878Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-16T00:36:42.6128446Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-16T00:36:42.6128949Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-16T00:36:42.6129384Z hint: call:
+2026-11-16T00:36:42.6129597Z hint:
+2026-11-16T00:36:42.6129939Z hint: 	git config --global init.defaultBranch <name>
+2026-11-16T00:36:42.6130252Z hint:
+2026-11-16T00:36:42.6130575Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-16T00:36:42.6131027Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-16T00:36:42.6131369Z hint:
+2026-11-16T00:36:42.6131612Z hint: 	git branch -m <name>
+2026-11-16T00:36:42.6131924Z hint:
+2026-11-16T00:36:42.6132329Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-16T00:36:42.6133031Z Initialized empty Git repository in /home/runner/work/old-provider-implementations/old-provider-implementations/.git/
+2026-11-16T00:36:42.6141459Z [command]/usr/bin/git remote add origin https://github.com/agent-teams-ai/old-provider-implementations
+2026-11-16T00:36:42.6187639Z ##[endgroup]
+2026-11-16T00:36:42.6188383Z ##[group]Disabling automatic garbage collection
+2026-11-16T00:36:42.6194093Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-16T00:36:42.6214924Z ##[endgroup]
+2026-11-16T00:36:42.6215547Z ##[group]Setting up auth
+2026-11-16T00:36:42.6215973Z Removing SSH command configuration
+2026-11-16T00:36:42.6220462Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T00:36:42.6247301Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T00:36:43.0527272Z Removing HTTP extra header
+2026-11-16T00:36:43.0545468Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T00:36:43.0561751Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T00:36:43.0706037Z Removing includeIf entries pointing to credentials config files
+2026-11-16T00:36:43.0710177Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T00:36:43.0733474Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T00:36:43.0880782Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-63478efc-a4ed-4133-8541-1c3a84f59c86.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-16T00:36:43.0907233Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git.path /home/runner/work/_temp/git-credentials-63478efc-a4ed-4133-8541-1c3a84f59c86.config
+2026-11-16T00:36:43.0935968Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-63478efc-a4ed-4133-8541-1c3a84f59c86.config
+2026-11-16T00:36:43.0958638Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-63478efc-a4ed-4133-8541-1c3a84f59c86.config
+2026-11-16T00:36:43.0980494Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-63478efc-a4ed-4133-8541-1c3a84f59c86.config
+2026-11-16T00:36:43.1022998Z ##[endgroup]
+2026-11-16T00:36:43.1024427Z ##[group]Fetching the repository
+2026-11-16T00:36:43.1029212Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-16T00:36:43.5186499Z From https://github.com/agent-teams-ai/old-provider-implementations
+2026-11-16T00:36:43.5187204Z  * branch            c79b81bf002eaac95436da71c7049d7f309906a9 -> FETCH_HEAD
+2026-11-16T00:36:43.5196355Z [command]/usr/bin/git rev-parse --verify --quiet c79b81bf002eaac95436da71c7049d7f309906a9^{object}
+2026-11-16T00:36:43.5216319Z c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-16T00:36:43.5219324Z ##[endgroup]
+2026-11-16T00:36:43.5219826Z ##[group]Determining the checkout info
+2026-11-16T00:36:43.5220726Z ##[endgroup]
+2026-11-16T00:36:43.5226098Z [command]/usr/bin/git sparse-checkout disable
+2026-11-16T00:36:43.5292008Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-16T00:36:43.5313387Z ##[group]Checking out the ref
+2026-11-16T00:36:43.5317019Z [command]/usr/bin/git checkout --progress --force c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-16T00:36:43.5469041Z Note: switching to 'c79b81bf002eaac95436da71c7049d7f309906a9'.
+2026-11-16T00:36:43.5469443Z 
+2026-11-16T00:36:43.5469614Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-16T00:36:43.5470076Z changes and commit them, and you can discard any commits you make in this
+2026-11-16T00:36:43.5470546Z state without impacting any branches by switching back to a branch.
+2026-11-16T00:36:43.5471193Z 
+2026-11-16T00:36:43.5471394Z If you want to create a new branch to retain commits you create, you may
+2026-11-16T00:36:43.5471790Z do so (now or later) by using -c with the switch command. Example:
+2026-11-16T00:36:43.5472026Z 
+2026-11-16T00:36:43.5472204Z   git switch -c <new-branch-name>
+2026-11-16T00:36:43.5472407Z 
+2026-11-16T00:36:43.5472504Z Or undo this operation with:
+2026-11-16T00:36:43.5472825Z 
+2026-11-16T00:36:43.5472959Z   git switch -
+2026-11-16T00:36:43.5473105Z 
+2026-11-16T00:36:43.5473308Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-16T00:36:43.5473768Z 
+2026-11-16T00:36:43.5474005Z HEAD is now at c79b81b fix: retain uncertain native suggestion ownership and targeted cancellation
+2026-11-16T00:36:43.5481697Z ##[endgroup]
+2026-11-16T00:36:43.5518454Z [command]/usr/bin/git log -1 --format=%H
+2026-11-16T00:36:43.5535893Z c79b81bf002eaac95436da71c7049d7f309906a9
+2026-11-16T00:36:43.5541791Z ##[group]Removing auth
+2026-11-16T00:36:43.5542221Z Removing SSH command configuration
+2026-11-16T00:36:43.5544850Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T00:36:43.5567152Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T00:36:43.5713042Z Removing HTTP extra header
+2026-11-16T00:36:43.5716342Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T00:36:43.5738432Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T00:36:43.5882403Z Removing includeIf entries pointing to credentials config files
+2026-11-16T00:36:43.5884737Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T00:36:43.5904979Z includeif.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git.path
+2026-11-16T00:36:43.5906989Z includeif.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git/worktrees/*.path
+2026-11-16T00:36:43.5908037Z includeif.gitdir:/github/workspace/.git.path
+2026-11-16T00:36:43.5908580Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T00:36:43.5912030Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git.path
+2026-11-16T00:36:43.5928820Z /home/runner/work/_temp/git-credentials-63478efc-a4ed-4133-8541-1c3a84f59c86.config
+2026-11-16T00:36:43.5935508Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git.path /home/runner/work/_temp/git-credentials-63478efc-a4ed-4133-8541-1c3a84f59c86.config
+2026-11-16T00:36:43.5959049Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git/worktrees/*.path
+2026-11-16T00:36:43.5974982Z /home/runner/work/_temp/git-credentials-63478efc-a4ed-4133-8541-1c3a84f59c86.config
+2026-11-16T00:36:43.5981646Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/old-provider-implementations/old-provider-implementations/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-63478efc-a4ed-4133-8541-1c3a84f59c86.config
+2026-11-16T00:36:43.6011158Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-11-16T00:36:43.6026989Z /github/runner_temp/git-credentials-63478efc-a4ed-4133-8541-1c3a84f59c86.config
+2026-11-16T00:36:43.6033193Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-63478efc-a4ed-4133-8541-1c3a84f59c86.config
+2026-11-16T00:36:43.6057290Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T00:36:43.6073877Z /github/runner_temp/git-credentials-63478efc-a4ed-4133-8541-1c3a84f59c86.config
+2026-11-16T00:36:43.6078452Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-63478efc-a4ed-4133-8541-1c3a84f59c86.config
+2026-11-16T00:36:43.6134885Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T00:36:43.6280381Z Removing credentials config '/home/runner/work/_temp/git-credentials-63478efc-a4ed-4133-8541-1c3a84f59c86.config'
+2026-11-16T00:36:43.6287304Z ##[endgroup]
+2026-11-16T00:36:43.6478071Z ##[group]Run actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+2026-11-16T00:36:43.6478415Z with:
+2026-11-16T00:36:43.6478665Z   node-version: 24.21.0
+2026-11-16T00:36:43.6478904Z   package-manager-cache: false
+2026-11-16T00:36:43.6479143Z   check-latest: false
+2026-11-16T00:36:43.6480991Z   token: ***
+2026-11-16T00:36:43.6481219Z ##[endgroup]
+2026-11-16T00:36:43.8347979Z Attempting to download 24.21.0...
+2026-11-16T00:36:44.4625345Z Acquiring 24.21.0 - x64 from https://github.com/actions/node-versions/releases/download/24.21.0-34304089047/node-24.21.0-linux-x64.tar.gz
+2026-11-16T00:36:44.8478801Z Extracting ...
+2026-11-16T00:36:44.8570152Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/5e795385-66e0-4a4c-b991-b70b84ff4f89 -f /home/runner/work/_temp/5441a4d9-d851-40b4-9561-8bb025747afa
+2026-11-16T00:36:45.8990228Z Adding to the cache ...
+2026-11-16T00:36:46.8434786Z ##[group]Environment details
+2026-11-16T00:36:47.4884877Z node: v24.21.0
+2026-11-16T00:36:47.4885290Z npm: 11.19.0
+2026-11-16T00:36:47.4885606Z yarn: 1.22.22
+2026-11-16T00:36:47.4886221Z ##[endgroup]
+2026-11-16T00:36:47.5013808Z ##[group]Run node --check scripts/native-v2-readonly-proof.mjs
+2026-11-16T00:36:47.5014402Z [36;1mnode --check scripts/native-v2-readonly-proof.mjs[0m
+2026-11-16T00:36:47.5014787Z [36;1mnode --check scripts/native-v2-model-candidate.mjs[0m
+2026-11-16T00:36:47.5015128Z [36;1mnode --check scripts/verify-native-v2-cli-hold.mjs[0m
+2026-11-16T00:36:47.5015638Z [36;1mnode --check scripts/native-v2-embedded-proof.mjs[0m
+2026-11-16T00:36:47.5016005Z [36;1mnode --check scripts/native-v2-spi-proof.mjs[0m
+2026-11-16T00:36:47.5016408Z [36;1mnode --check scripts/verify-native-v2-embedded-floor-hold.mjs[0m
+2026-11-16T00:36:47.5016807Z [36;1mnode --check scripts/verify-native-v2-interrupt-proof.mjs[0m
+2026-11-16T00:36:47.5017148Z [36;1mnode --check scripts/native-v2-mcp-proof.mjs[0m
+2026-11-16T00:36:47.5017498Z [36;1mnode --test scripts/native-v2-mcp-proof.test.mjs[0m
+2026-11-16T00:36:47.5017861Z [36;1mnode --check scripts/verify-native-v2-receipt-safety.mjs[0m
+2026-11-16T00:36:47.5018364Z [36;1mnode --test scripts/verify-native-v2-receipt-safety.test.mjs[0m
+2026-11-16T00:36:47.6798115Z shell: /usr/bin/bash -e {0}
+2026-11-16T00:36:47.6798462Z ##[endgroup]
+2026-11-16T00:36:47.9594651Z ✔ MCP child records owned process before initialize (56.721962ms)
+2026-11-16T00:36:48.0640646Z ✔ MCP child upgrades same marker after real initialize (106.619774ms)
+2026-11-16T00:36:53.0654949Z ℹ tests 2
+2026-11-16T00:36:53.0655344Z ℹ suites 0
+2026-11-16T00:36:53.0655635Z ℹ pass 2
+2026-11-16T00:36:53.0656020Z ℹ fail 0
+2026-11-16T00:36:53.0656313Z ℹ cancelled 0
+2026-11-16T00:36:53.0656590Z ℹ skipped 0
+2026-11-16T00:36:53.0657007Z ℹ todo 0
+2026-11-16T00:36:53.0657563Z ℹ duration_ms 5200.962551
+2026-11-16T00:36:53.7618052Z ✔ accepts one clean receipt for the selected matrix proof (97.490705ms)
+2026-11-16T00:36:53.7621338Z ✔ rejects absent, mismatched or extra receipts (69.38941ms)
+2026-11-16T00:36:53.7622191Z ✔ rejects unsupported matrix proof and missing proof selector (43.036694ms)
+2026-11-16T00:36:53.7622934Z ✔ rejects unqualified or unsafe native error receipts (44.360917ms)
+2026-11-16T00:36:53.7623917Z ✔ rejects nested credential-like keys and recognizable token values (203.687182ms)
+2026-11-16T00:36:53.7624861Z ✔ rejects slash-normalized Windows drive and UNC paths in public receipts (67.870471ms)
+2026-11-16T00:36:53.7626229Z ✔ ordinary non-secret URL metadata is not mistaken for a Windows drive path (25.078505ms)
+2026-11-16T00:36:53.7633388Z ✔ does not reject safe Session authority assertion metadata (21.206526ms)
+2026-11-16T00:36:53.7634606Z ✔ accepts native lifecycle credential-read counter but not a string payload (44.29578ms)
+2026-11-16T00:36:53.7697396Z ℹ tests 9
+2026-11-16T00:36:53.7697790Z ℹ suites 0
+2026-11-16T00:36:53.7698246Z ℹ pass 9
+2026-11-16T00:36:53.7698597Z ℹ fail 0
+2026-11-16T00:36:53.7698921Z ℹ cancelled 0
+2026-11-16T00:36:53.7699283Z ℹ skipped 0
+2026-11-16T00:36:53.7699583Z ℹ todo 0
+2026-11-16T00:36:53.7700067Z ℹ duration_ms 661.486825
+2026-11-16T00:36:53.7774883Z ##[group]Run set -euo pipefail
+2026-11-16T00:36:53.7775194Z [36;1mset -euo pipefail[0m
+2026-11-16T00:36:53.7775637Z [36;1mmkdir -p "$RUNNER_TEMP/opencode-v2-native/npm" "$RUNNER_TEMP/opencode-v2-native/install-home"[0m
+2026-11-16T00:36:53.7776167Z [36;1mHOME="$RUNNER_TEMP/opencode-v2-native/install-home" npm install \[0m
+2026-11-16T00:36:53.7776607Z [36;1m  --prefix "$RUNNER_TEMP/opencode-v2-native/npm" \[0m
+2026-11-16T00:36:53.7777039Z [36;1m  --no-save --package-lock=true --ignore-scripts --no-audit --no-fund @opencode/cli@2.0.21[0m
+2026-11-16T00:36:53.7777525Z [36;1mnpm ls --prefix "$RUNNER_TEMP/opencode-v2-native/npm" --depth=0 @opencode/cli[0m
+2026-11-16T00:36:53.7805254Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T00:36:53.7805616Z env:
+2026-11-16T00:36:53.7805841Z   npm_config_audit: false
+2026-11-16T00:36:53.7806137Z   npm_config_fund: false
+2026-11-16T00:36:53.7806375Z ##[endgroup]
+2026-11-16T00:36:59.4112841Z 
+2026-11-16T00:36:59.4114211Z added 5 packages in 6s
+2026-11-16T00:36:59.6116044Z /home/runner/work/_temp/opencode-v2-native/npm
+2026-11-16T00:36:59.6116796Z └── @opencode/cli@2.0.21 extraneous
+2026-11-16T00:36:59.6117107Z 
+2026-11-16T00:36:59.6228439Z ##[group]Run set +e
+2026-11-16T00:36:59.6228702Z [36;1mset +e[0m
+2026-11-16T00:36:59.6228985Z [36;1mnode scripts/native-v2-model-candidate.mjs[0m
+2026-11-16T00:36:59.6229439Z [36;1mstatus=$?[0m
+2026-11-16T00:36:59.6229662Z [36;1mset -e[0m
+2026-11-16T00:36:59.6229894Z [36;1mif [ "$status" -ne 1 ]; then[0m
+2026-11-16T00:36:59.6230322Z [36;1m  echo "::error::Stock CLI changed behavior or did not execute; review native evidence before qualification"[0m
+2026-11-16T00:36:59.6230797Z [36;1m  exit 1[0m
+2026-11-16T00:36:59.6231001Z [36;1mfi[0m
+2026-11-16T00:36:59.6231257Z [36;1mnode scripts/verify-native-v2-cli-hold.mjs[0m
+2026-11-16T00:36:59.6257242Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T00:36:59.6257657Z env:
+2026-11-16T00:36:59.6258011Z   OPENCODE_V2_TEST_NPM_ROOT: /home/runner/work/_temp/opencode-v2-native/npm/node_modules/@opencode
+2026-11-16T00:36:59.6258770Z   OPENCODE_V2_TEST_MODEL_RECEIPT: /home/runner/work/old-provider-implementations/old-provider-implementations/native-v2-model-candidate.json
+2026-11-16T00:36:59.6259273Z ##[endgroup]
+2026-11-16T00:37:01.9337304Z {"completed":false,"steps":["pre_execution_native_elf_version_digest_verified","TEST_workspace_local_provider_config_written","TEST_native_model_server_identity_verified","TEST_native_local_model_selected_without_inference","TEST_native_model_session_created","TEST_native_real_prompt_admitted","TEST_native_fake_model_assistant_message_received","TEST_native_session_outcome_and_idle_consistent","TEST_native_model_cold_stop_confirmed","TEST_native_model_cold_history_retained_without_replay","TEST_native_model_session_removed"],"failure":"TEST_native_model_terminal_event_not_qualified"}
+2026-11-16T00:37:01.9733279Z {"negativeControl":"stock_cli_no_durable_events","observed":true,"qualified":false,"cleanup":true}
+2026-11-16T00:37:01.9825522Z ##[group]Run node scripts/verify-native-v2-receipt-safety.mjs
+2026-11-16T00:37:01.9825957Z [36;1mnode scripts/verify-native-v2-receipt-safety.mjs[0m
+2026-11-16T00:37:01.9851613Z shell: /usr/bin/bash -e {0}
+2026-11-16T00:37:01.9851881Z env:
+2026-11-16T00:37:01.9852163Z   OPENCODE_V2_EXPECTED_TEST_PROOF: model
+2026-11-16T00:37:01.9852434Z ##[endgroup]
+2026-11-16T00:37:02.0114871Z TEST_native_receipts_safe count=1
+2026-11-16T00:37:02.0192220Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-11-16T00:37:02.0192574Z with:
+2026-11-16T00:37:02.0192867Z   name: opencode-v2-discovery-ubuntu-24.04-model
+2026-11-16T00:37:02.0193184Z   if-no-files-found: warn
+2026-11-16T00:37:02.0193467Z   retention-days: 7
+2026-11-16T00:37:02.0195714Z   path: native-v2-readonly-proof.json
+native-v2-model-candidate.json
+native-v2-embedded-proof.json
+native-v2-embedded-model-proof.json
+native-v2-embedded-interrupt-proof.json
+native-v2-embedded-target-interrupt-proof.json
+native-v2-embedded-target-spi-proof.json
+native-v2-embedded-mcp-proof.json
+native-v2-embedded-target-mcp-proof.json
+native-v2-embedded-floor-proof.json
+native-v2-embedded-target-proof.json
+native-v2-embedded-target-model-proof.json
+native-v2-embedded-target-tool-proof.json
+native-v2-embedded-pinned-tool-proof.json
+/home/runner/work/_temp/opencode-v2-embedded/package-lock.json
+/home/runner/work/_temp/opencode-v2-native/npm/package-lock.json
+
+2026-11-16T00:37:02.0197701Z   compression-level: 6
+2026-11-16T00:37:02.0197946Z   overwrite: false
+2026-11-16T00:37:02.0198162Z   include-hidden-files: false
+2026-11-16T00:37:02.0198420Z ##[endgroup]
+2026-11-16T00:37:02.1491844Z (node:2690) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T00:37:02.1492597Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T00:37:02.1528775Z Multiple search paths detected. Calculating the least common ancestor of all paths
+2026-11-16T00:37:02.1535531Z The least common ancestor is /home/runner/work. This will be the root directory of the artifact
+2026-11-16T00:37:02.1536417Z With the provided path, there will be 1 file uploaded
+2026-11-16T00:37:02.1537398Z Artifact name is valid!
+2026-11-16T00:37:02.1537958Z Root directory input is valid!
+2026-11-16T00:37:02.4183946Z Beginning upload of artifact content to blob storage
+2026-11-16T00:37:02.4320041Z (node:2690) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-16T00:37:02.4734493Z Uploaded bytes 1062
+2026-11-16T00:37:02.4904656Z Finished uploading artifact content to blob storage!
+2026-11-16T00:37:02.4905522Z SHA256 digest of uploaded artifact zip is e21e2e6ed5afdcc2da0a356a79b9809a5b9774cc4ea4521433d4f2cdb973c0ea
+2026-11-16T00:37:02.4906692Z Finalizing artifact upload
+2026-11-16T00:37:02.8242536Z Artifact opencode-v2-discovery-ubuntu-24.04-model.zip successfully finalized. Artifact ID 14188049194
+2026-11-16T00:37:02.8243952Z Artifact opencode-v2-discovery-ubuntu-24.04-model has been successfully uploaded! Final size is 1062 bytes. Artifact ID is 14188049194
+2026-11-16T00:37:02.8248150Z Artifact download URL: https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43781376036/artifacts/14188049194
+2026-11-16T00:37:02.8379113Z Post job cleanup.
+2026-11-16T00:37:02.9438634Z Post job cleanup.
+2026-11-16T00:37:03.0091261Z [command]/usr/bin/git version
+2026-11-16T00:37:03.0119933Z git version 2.56.1
+2026-11-16T00:37:03.0145797Z Temporarily overriding HOME='/home/runner/work/_temp/2f440c0e-d7cf-488e-a322-b7a841f352e7' before making global git config changes
+2026-11-16T00:37:03.0146952Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T00:37:03.0149073Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/old-provider-implementations/old-provider-implementations
+2026-11-16T00:37:03.0173155Z Removing SSH command configuration
+2026-11-16T00:37:03.0178376Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T00:37:03.0201489Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T00:37:03.0356705Z Removing HTTP extra header
+2026-11-16T00:37:03.0359803Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T00:37:03.0382582Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T00:37:03.0524541Z Removing includeIf entries pointing to credentials config files
+2026-11-16T00:37:03.0528627Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T00:37:03.0549492Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T00:37:03.0847960Z Cleaning up orphan processes
+2026-11-16T00:37:03.1142200Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

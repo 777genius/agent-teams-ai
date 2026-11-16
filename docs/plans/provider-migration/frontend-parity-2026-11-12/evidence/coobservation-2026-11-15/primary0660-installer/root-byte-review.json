@@ -1,0 +1,41 @@
+{
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "run": 43780997237,
+  "job": 133017916038,
+  "sourceRunJobArtifactUploadJoin": true,
+  "jobConclusion": "failure",
+  "rawFiles": [
+    {
+      "path": "host-installer-0660-artifacts-api.json",
+      "blob": "18d5882ff279e51cfb7cb3eec280aef8ff79538d",
+      "bytes": 820,
+      "sha256": "47337fe71516b13f2986e226887a8eddd4d6d64f0801f05933e1a515b47410fb"
+    },
+    {
+      "path": "host-installer-0660-job.log",
+      "blob": "e60b871a82cc8cfc1757da368b2c29c3acfc13e6",
+      "bytes": 182452,
+      "sha256": "7138725a1afcbae1635fc375c630615cee185f174c5693cec16a2e6e36c93e26"
+    },
+    {
+      "path": "host-installer-0660-jobs-api.json",
+      "blob": "6fe494ce682c18424a08caea93dff68d97de8ce8",
+      "bytes": 26990,
+      "sha256": "03f5a6d2beab24f89cdd304bdbb8b3c746ccac6dbb976ebec2aef0751c6b2cd0"
+    },
+    {
+      "path": "host-installer-0660-manifest.json",
+      "blob": "3de3774f17d7b1bb42e4f5856ef5d401e629be29",
+      "bytes": 19708,
+      "sha256": "b2e13d90e4b159520f118224f1c37eb25f9c8e4428b3fcb809fd3cf0ab57df42"
+    },
+    {
+      "path": "host-installer-0660-run-api.json",
+      "blob": "be4e42e61d18361820e72eaacb0ca3c97f55d597",
+      "bytes": 13831,
+      "sha256": "0fcb1e655580135634430ab3294ebd85a3d8216b7617a4ea9b51afb438eb31ed"
+    }
+  ],
+  "actualArchiveManifest": "primary0660-installer-archive-manifest.json",
+  "qualification": "Original raw/API bytes verified; original receipt, actual ZIP/CRC and PNG separately retained. Historical incomplete result remains; no whole-workflow PASS or established navigation cause."
+}

@@ -1,0 +1,17 @@
+## Packaged relaunch CDP source pin: actual local qualification (2026-11-16)
+
+This is an evidence-only record under the published CDP-only R1 `6598021a57e78c0668713b6ac765d1bba0b56c79`. Root published commit `0e4f5863bc0be0d4ce201292d9c08e70625285bb`, sole parent `0daee7e9f4cd027b25d9131e0b180f84be70d6a5`, tree `e21c848dbded7bdb6562643049e970850f587f8e`. The sole executable change is `scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts`: source blob `3cc13374bce3c0337e113b5ff201f556a9211b42` becomes `6b37b6e264a086c1dc4cca06d65f9cc77118a422` (+2/-1, 182 lines, 13,293 UTF-8 bytes). The added literal pins the already-loaded `scripts/e2e/comment-notification/cdp.mjs` in the same local source array used by the original before-capture and final source-freeze check. Independent full-file inverse, one-path tree inventory and published readback were accepted before execution.
+
+Root then ran exactly three authorized scoped checks on that published source, from 01:23:06.144901 to 01:23:08.722542 UTC. The original one-path `pnpm lint:fast:files` command, source-only `git diff --check` against its parent, and static source-closure check all exited 0. The closure command imported the actual common/Windows rosters, extracted the actual packaged extras, required their exact three-entry order, checked every resulting path exists, and compared counts and digests. It serialized each sorted unique path list as compact JSON followed by exactly one LF; no alternative serialization or gate retry was used for this qualification.
+
+| Source set | Paths | Serialized bytes | SHA-256 |
+| --- | ---: | ---: | --- |
+| Common Desktop | 1,757 | 117,083 | `2e4566fa4aafd7b6db99195177385ffa96c2b1e50b72f260dd13fb61181473eb` |
+| Windows Retry union | 1,798 | 119,295 | `2c8ba366802fe193a354ec13a4ec39b2231e6bfccbd3462f6fec0b60797dc9f6` |
+| Packaged local union | 1,760 | 117,254 | `c33360dbea805e11577d133b488682a9f3b7de83686801ab656eafcec1b94625` |
+
+The common and Windows sets are unchanged. Only the packaged local union grows from 1,759 to 1,760 paths. Pinning adds the selected file to the original before/after filesystem observations; this record makes no I/O-cost or timing-equivalence claim.
+
+Immutable evidence tree `c4280bfc0e9475e940ed91e572e22a7c7fd5c300` retains the complete lint log (169 bytes; SHA-256 `29758fed3b96273b8d51ac39c201dc81a8d96027182648ebfd6038d3165157a7`), empty successful diff log, closure log (432 bytes; SHA-256 `2c53b68d58c40380f407657ef9eab248acbe9cb729aeea3e378509fb2497d247`), and full manifest `9e699d466616a212ea6bff15c113a635e664860a` (3,761 bytes; SHA-256 `759314a6e86cdd09bb6061630f62d5aa5cdf76725a554106b7e7bf76a67f87b1`). Independent review read all four complete payloads and recomputed their byte counts and SHA-256 values, matching the manifest and source/tree binding. The manifest retains the exact commands/timestamps, Node executable SHA-256 `7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c`, pnpm 11.22.0, no resource flags, and empty final Git status.
+
+These are scoped lint, whitespace and static source-closure results only. No build, compiler, test, native, GUI or packaged journey was executed or repeated for this pin. No runtime PASS, cleanup result or platform qualification transfers from earlier source cuts. The withdrawn post-journal missing-refusal claim remains withdrawn; the original fixture and its tests are unchanged. This appendix authorizes no new source edit, execution, CI venue, ref action or PR metadata change.

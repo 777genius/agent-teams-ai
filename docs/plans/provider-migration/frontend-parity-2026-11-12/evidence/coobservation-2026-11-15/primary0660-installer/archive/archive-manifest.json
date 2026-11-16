@@ -1,0 +1,188 @@
+{
+  "artifactId": 14189036908,
+  "runId": 43780997237,
+  "head": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "bytes": 945509,
+  "sha256": "9198d782ed088ad61e6f2b45e7ea7b0091617a89d93f1d851f91afb362b37e76",
+  "actualZipVerified": true,
+  "crcAll": true,
+  "safeUniqueMembers": true,
+  "files": [
+    {
+      "path": "TEST-desktop-backend-oILXLv/TEST-codex-install/invocations.ndjson",
+      "bytes": 16096,
+      "sha256": "b549cbaf202d9fadf1481bd36a7ead8048891621a12ce5eef7192df1d37a2d0b",
+      "crc32": "deeb92f0"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/TEST-peer-codex-scope/effects.ndjson",
+      "bytes": 16418,
+      "sha256": "285e9f134f3113d9363230f82b55c7d310fd80797d3e669a2e31950abc8ad7a8",
+      "crc32": "d123f495"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/desktop-app.log",
+      "bytes": 25348,
+      "sha256": "67661381ec8b73a87d50d95bdd162d8f4ceeb8a644987371ee7bd126a13c454b",
+      "crc32": "90d8af12"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/TEST-codex-install/registry.ndjson",
+      "bytes": 1512,
+      "sha256": "56adf91fe19d76768cf927d7623a67d45d370068c5cc2488495b687abc784a93",
+      "crc32": "d9407363"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/desktop-backend-receipt.json",
+      "bytes": 1005304,
+      "sha256": "d980f1d1e7384e1b6b0b6099a821f0254647b317c768597e02f1d96158590827",
+      "crc32": "2419260c"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/desktop-descriptor.json",
+      "bytes": 2664,
+      "sha256": "aa4263c2e0a03a636494c9678d0912f7dd48c6aec97451d8055d54073183bc17",
+      "crc32": "d7865ec6"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/host-profile.json",
+      "bytes": 7471,
+      "sha256": "7c4458fc53fb47a8f5f27d258350e0db6693245ed7917819adcfb11d82f2d549",
+      "crc32": "b8e56606"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/hoststore/management-commands/2b39493f6f719a4f647dee4c793e6905d89b98c2b34d588883d40efc2ce6771d.json",
+      "bytes": 2297,
+      "sha256": "c06979913da55ad07397d118b4302e67c07e01002202c3f6b037eeea5a11e867",
+      "crc32": "69d4ca8a"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/hoststore/management-commands/6fa3d05641c7c1fba829f6190af3ce3568c00c3083e6661d22c2b79aaec350bb.json",
+      "bytes": 929,
+      "sha256": "32b1232b63e8c6c95f78303b6fe12281367048e32ed6b64c9672846893ef2505",
+      "crc32": "e9143cb2"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/hoststore/management-commands/891eeb40fc8112bf7dfa400549f8e5ad4405d208b10a909eb8e975ce56ea55ed.json",
+      "bytes": 923,
+      "sha256": "269fa599fdf415af5b98836223540b26c16d93a99e1d27197b21467cd7079ab9",
+      "crc32": "06550c92"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/hoststore/management-commands/dab36102037ae7f7ee3022c9ed25e9585d8ae3f8fbcaf174b0d516a597c75129.json",
+      "bytes": 904,
+      "sha256": "98a7f726548c06e65fbe772e722509608d0d44b328de87a1d9387de19988da67",
+      "crc32": "743646f9"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/hoststore/runtime-checkpoints/cp1-4b0802f649988765dcdacc7ed318587755bf59902b9d54c4f610666daca818f9.json",
+      "bytes": 1895,
+      "sha256": "ed1d79b5876e48d412dda817f9cad1ef8282872d159a5074b053e462bc19943b",
+      "crc32": "c4df07d0"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/hoststore/runtime-sources/index.json",
+      "bytes": 1687,
+      "sha256": "2153a1fa90bfbcc5d83124e81f5ac97658a00e505d0483b6f45b8e79d922458b",
+      "crc32": "2a72901f"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+      "bytes": 453,
+      "sha256": "90411cf19e7f46238591c015b8ff86b849666f7444369b71ca37b60d29b5a454",
+      "crc32": "354171d3"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/hoststore/teams/test-selection-next-team/inboxes/team-lead.json",
+      "bytes": 202,
+      "sha256": "c15ce32bd8d31801e6b4d0b9ab50375c9908293a1645e171d019436374b49034",
+      "crc32": "96d5197a"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+      "crc32": "9fc3bdb4"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/ui-emulated-selection-a-launch.png",
+      "bytes": 88488,
+      "sha256": "7a3086f1b818f36e36db86cd624046ba36270c2cb00afe0a3ae9b08b1b9a8d8e",
+      "crc32": "33618361"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/ui-emulated-selection-b-launch.png",
+      "bytes": 84213,
+      "sha256": "f4b563d58ad5b4da38e88d6b6de168aa172519f6f91b5220fd0e13045af37e11",
+      "crc32": "2b2d8e66"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/ui-emulated-selection-installer-before.png",
+      "bytes": 73930,
+      "sha256": "780a104647528a420c9023ca54ccc588236c403d5af15e710ff5dcd925a960b4",
+      "crc32": "3e1a15ec"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/ui-emulated-selection-installer-ready.png",
+      "bytes": 67565,
+      "sha256": "a60b4f35cc1766253b77991ba130ec3aef78fefda0e8a072c0ab8319fb855056",
+      "crc32": "43f9e336"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/ui-emulated-selection-installer-settings-dialog.png",
+      "bytes": 91573,
+      "sha256": "009a3f1009dfec6e80ab38a8c9f0f062e617612445f9059d29f4b882ae5c4a58",
+      "crc32": "6ea6c42f"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/ui-emulated-selection-installer-settings-page.png",
+      "bytes": 87002,
+      "sha256": "7203e25117733987712109d90fb0a68e3eeb22e8ecaaaead97176b7ac22cfe6a",
+      "crc32": "8efcf897"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/ui-emulated-selection-reloaded.png",
+      "bytes": 76076,
+      "sha256": "b274516d12708ac6b3b08d59c81ad370b3a6f3aa8f63e60b0c1c180aef83b53a",
+      "crc32": "676849cf"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/ui-emulated-selection-selected.png",
+      "bytes": 70767,
+      "sha256": "811f59d46b45bd0bff4b3108d81b7cbd7d540e0531b3008115e13dbea06ad86e",
+      "crc32": "8d53f8bd"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/ui-seed-receipt.json",
+      "bytes": 2335,
+      "sha256": "74ed77057a51d3bb9557e244c4086d2ea56b8ae1b48729b5513f2c250f70b4ed",
+      "crc32": "4f9f1c20"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/ui-failure.png",
+      "bytes": 100172,
+      "sha256": "172e22eb34d64bc2b82ab8ed01fee41ba2228fb4e0bdfbb3ce9a95f2b0a7e91b",
+      "crc32": "fb70b317"
+    },
+    {
+      "path": "TEST-desktop-backend-oILXLv/userData/data/runtimes/codex/current.json",
+      "bytes": 502,
+      "sha256": "1681e36f093eff7bfc2aab5a4f43c5ef0c3a6264765f973d58b351b241436d6f",
+      "crc32": "8e4de3af"
+    },
+    {
+      "path": "host-emulated-emulated-installer-ui.log",
+      "bytes": 2960,
+      "sha256": "2b7495e9a5eb15fbc7d6aed64a5719ff238dba8d6ffb46dc5dafd0857a8166e2",
+      "crc32": "6ab420d8"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1055,
+      "sha256": "05b8ee9e602515dd565ec350f5039b4ba4a94a7e3bb170d8c3bc1686f4259ec0",
+      "crc32": "2bee2a9a"
+    }
+  ],
+  "localArchive": "/workspace/scratch/c714f5bce554/verified-ci-archives-20261115/primary0660-installer.zip",
+  "localExtracted": "/workspace/scratch/c714f5bce554/verified-ci-archives-20261115/primary0660-installer"
+}

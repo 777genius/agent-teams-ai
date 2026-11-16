@@ -1,0 +1,61 @@
+{
+  "head": "0e4f5863bc0be0d4ce201292d9c08e70625285bb",
+  "tree": "e21c848dbded7bdb6562643049e970850f587f8e",
+  "sourcePath": "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+  "sourceBlob": "6b37b6e264a086c1dc4cca06d65f9cc77118a422",
+  "sourceBytes": 13293,
+  "sourceLines": 182,
+  "parent": "0daee7e9f4cd027b25d9131e0b180f84be70d6a5",
+  "steps": [
+    {
+      "path": "packaged-cdp-pin-lint.log",
+      "argv": [
+        "pnpm",
+        "lint:fast:files",
+        "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts"
+      ],
+      "startedAt": "2026-11-16T01:23:06.144901+00:00",
+      "completedAt": "2026-11-16T01:23:08.631231+00:00",
+      "exitCode": 0,
+      "bytes": 169,
+      "sha256": "29758fed3b96273b8d51ac39c201dc81a8d96027182648ebfd6038d3165157a7"
+    },
+    {
+      "path": "packaged-cdp-pin-diff.log",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "0daee7e9f4cd027b25d9131e0b180f84be70d6a5",
+        "0e4f5863bc0be0d4ce201292d9c08e70625285bb",
+        "--",
+        "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts"
+      ],
+      "startedAt": "2026-11-16T01:23:08.631438+00:00",
+      "completedAt": "2026-11-16T01:23:08.636815+00:00",
+      "exitCode": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "packaged-cdp-pin-closure.log",
+      "argv": [
+        "node",
+        "--input-type=module",
+        "-e",
+        "import assert from 'node:assert/strict';\nimport {existsSync,readFileSync} from 'node:fs';\nimport {createHash} from 'node:crypto';\nimport {desktopProofSources} from './scripts/legacy-agent-host/desktop-proof-sources.ts';\nimport {desktopProofWindowsRetrySources} from './scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts';\nconst file='scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts',source=readFileSync(file,'utf8');\nconst blocks=[...source.matchAll(/const sources = \\[\\.\\.\\.new Set\\(\\[\\.\\.\\.desktopProofSources,([\\s\\S]*?)\\]\\)\\];/g)];\nassert.equal(blocks.length,1);\nconst extras=[...blocks[0][1].matchAll(/'([^']+)'/g)].map(m=>m[1]);\nassert.deepEqual(extras,[file,'packages/legacy-agent-host/tests/opencode-v1-version-source.ts','scripts/e2e/comment-notification/cdp.mjs']);\nconst common=[...new Set(desktopProofSources)].sort(),windows=[...new Set([...common,...desktopProofWindowsRetrySources])].sort(),packaged=[...new Set([...common,...extras])].sort();\nconst rows=[['common',common,1757,'2e4566fa4aafd7b6db99195177385ffa96c2b1e50b72f260dd13fb61181473eb'],['windows',windows,1798,'2c8ba366802fe193a354ec13a4ec39b2231e6bfccbd3462f6fec0b60797dc9f6'],['packaged',packaged,1760,'c33360dbea805e11577d133b488682a9f3b7de83686801ab656eafcec1b94625']];\nfor(const[name,paths,count,digest]of rows){const raw=JSON.stringify(paths)+'\\n',actual=createHash('sha256').update(raw).digest('hex');assert.equal(paths.length,count);assert.equal(actual,digest);for(const p of paths)assert.ok(existsSync(p),p);console.log(JSON.stringify({name,count,bytes:Buffer.byteLength(raw),sha256:actual,allPathsExist:true}));}\n"
+      ],
+      "startedAt": "2026-11-16T01:23:08.636939+00:00",
+      "completedAt": "2026-11-16T01:23:08.722542+00:00",
+      "exitCode": 0,
+      "bytes": 432,
+      "sha256": "2c53b68d58c40380f407657ef9eab248acbe9cb729aeea3e378509fb2497d247"
+    }
+  ],
+  "nodeExecutable": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "pnpmVersion": "11.22.0",
+  "resourceFlags": null,
+  "statusAfter": "",
+  "qualification": "Scoped lint/diff/static source-closure only; no build/compiler/test/native/GUI or packaged execution"
+}

@@ -1,0 +1,1910 @@
+{
+  "schemaVersion": 1,
+  "repository": "777genius/agent-teams-ai",
+  "pr": 1208,
+  "sourceHead": "6e222b57f700832cfd78a934a3b6a205a5764761",
+  "sourceTree": "2ac4903718c3ce3e615b209085226d5d35f0a2a1",
+  "sourceFixtures": {
+    "nativeFixture": "21b080fd65679e903837e1cc5eabb8a451d7d55b",
+    "cmake": "cf158110832d24afd7f97b6e9ef2dbf7472b0410",
+    "processWorkflow": "70202d22a5840401a00025cd60b797c514f3e455",
+    "desktopObserver": "3d22185325dc1f0d9d25d4b64461e521e00b9388",
+    "desktopObserverTest": "b47e3a6e0227e2c3521a4e0124074ce6ec94bae8"
+  },
+  "runMetadata": [
+    {
+      "id": 43771193709,
+      "name": "Host process fixture acceptance",
+      "node_id": "WFR_kwLORVTEtM8AAAAKMPdpbQ",
+      "head_branch": "ci/frontend-parity-native-desktop-green-c714-20261115",
+      "head_sha": "6e222b57f700832cfd78a934a3b6a205a5764761",
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "display_title": "ci: qualify native Stop custody and Desktop observations on frozen source",
+      "run_number": 79,
+      "event": "pull_request",
+      "status": "queued",
+      "conclusion": null,
+      "workflow_id": 417565613,
+      "check_suite_id": 118501099486,
+      "check_suite_node_id": "CS_kwDORVTEtM8AAAAblzdH3g",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43771193709",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43771193709",
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1208",
+          "id": 5328042516,
+          "number": 1208,
+          "head": {
+            "ref": "ci/frontend-parity-native-desktop-green-c714-20261115",
+            "sha": "6e222b57f700832cfd78a934a3b6a205a5764761",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          },
+          "base": {
+            "ref": "ci/frontend-parity-native-desktop-base-c714-20261115",
+            "sha": "58c14e5fbe6188aea70307e2b0734b125d899a03",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          }
+        }
+      ],
+      "created_at": "2026-11-15T22:47:02Z",
+      "updated_at": "2026-11-15T22:47:02Z",
+      "actor": {
+        "login": "777genius",
+        "id": 13103045,
+        "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/777genius",
+        "html_url": "https://github.com/777genius",
+        "followers_url": "https://api.github.com/users/777genius/followers",
+        "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+        "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+        "organizations_url": "https://api.github.com/users/777genius/orgs",
+        "repos_url": "https://api.github.com/users/777genius/repos",
+        "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/777genius/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "run_attempt": 1,
+      "referenced_workflows": [],
+      "run_started_at": "2026-11-15T22:47:02Z",
+      "triggering_actor": {
+        "login": "777genius",
+        "id": 13103045,
+        "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/777genius",
+        "html_url": "https://github.com/777genius",
+        "followers_url": "https://api.github.com/users/777genius/followers",
+        "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+        "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+        "organizations_url": "https://api.github.com/users/777genius/orgs",
+        "repos_url": "https://api.github.com/users/777genius/repos",
+        "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/777genius/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43771193709/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43771193709/logs",
+      "check_suite_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-suites/118501099486",
+      "artifacts_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43771193709/artifacts",
+      "cancel_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43771193709/cancel",
+      "rerun_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43771193709/rerun",
+      "previous_attempt_url": null,
+      "workflow_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/workflows/417565613",
+      "head_commit": {
+        "id": "6e222b57f700832cfd78a934a3b6a205a5764761",
+        "tree_id": "2ac4903718c3ce3e615b209085226d5d35f0a2a1",
+        "message": "fix: preserve scoped Stop custody and add isolated WOW64 checks",
+        "timestamp": "2026-11-15T22:30:32Z",
+        "author": {
+          "name": "Илия",
+          "email": "iliyazelenkog@gmail.com"
+        },
+        "committer": {
+          "name": "Илия",
+          "email": "iliyazelenkog@gmail.com"
+        }
+      },
+      "repository": {
+        "id": 1163183284,
+        "node_id": "R_kgDORVTEtA",
+        "name": "agent-teams-ai",
+        "full_name": "777genius/agent-teams-ai",
+        "private": false,
+        "owner": {
+          "login": "777genius",
+          "id": 13103045,
+          "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/777genius",
+          "html_url": "https://github.com/777genius",
+          "followers_url": "https://api.github.com/users/777genius/followers",
+          "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+          "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+          "organizations_url": "https://api.github.com/users/777genius/orgs",
+          "repos_url": "https://api.github.com/users/777genius/repos",
+          "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/777genius/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "html_url": "https://github.com/777genius/agent-teams-ai",
+        "description": "You're the boss, agents are your team. They handle tasks on their own, message each other, and review each other's work. You just watch the kanban board and give high-level commands. Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi(300+ models, 200+ LLM providers, free models no auth) Build your AI company with multiple teams",
+        "fork": false,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+        "forks_url": "https://api.github.com/repos/777genius/agent-teams-ai/forks",
+        "keys_url": "https://api.github.com/repos/777genius/agent-teams-ai/keys{/key_id}",
+        "collaborators_url": "https://api.github.com/repos/777genius/agent-teams-ai/collaborators{/collaborator}",
+        "teams_url": "https://api.github.com/repos/777genius/agent-teams-ai/teams",
+        "hooks_url": "https://api.github.com/repos/777genius/agent-teams-ai/hooks",
+        "issue_events_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/events{/number}",
+        "events_url": "https://api.github.com/repos/777genius/agent-teams-ai/events",
+        "assignees_url": "https://api.github.com/repos/777genius/agent-teams-ai/assignees{/user}",
+        "branches_url": "https://api.github.com/repos/777genius/agent-teams-ai/branches{/branch}",
+        "tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/tags",
+        "blobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs{/sha}",
+        "git_tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/tags{/sha}",
+        "git_refs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs{/sha}",
+        "trees_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees{/sha}",
+        "statuses_url": "https://api.github.com/repos/777genius/agent-teams-ai/statuses/{sha}",
+        "languages_url": "https://api.github.com/repos/777genius/agent-teams-ai/languages",
+        "stargazers_url": "https://api.github.com/repos/777genius/agent-teams-ai/stargazers",
+        "contributors_url": "https://api.github.com/repos/777genius/agent-teams-ai/contributors",
+        "subscribers_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscribers",
+        "subscription_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscription",
+        "commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/commits{/sha}",
+        "git_commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits{/sha}",
+        "comments_url": "https://api.github.com/repos/777genius/agent-teams-ai/comments{/number}",
+        "issue_comment_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/comments{/number}",
+        "contents_url": "https://api.github.com/repos/777genius/agent-teams-ai/contents/{+path}",
+        "compare_url": "https://api.github.com/repos/777genius/agent-teams-ai/compare/{base}...{head}",
+        "merges_url": "https://api.github.com/repos/777genius/agent-teams-ai/merges",
+        "archive_url": "https://api.github.com/repos/777genius/agent-teams-ai/{archive_format}{/ref}",
+        "downloads_url": "https://api.github.com/repos/777genius/agent-teams-ai/downloads",
+        "issues_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues{/number}",
+        "pulls_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls{/number}",
+        "milestones_url": "https://api.github.com/repos/777genius/agent-teams-ai/milestones{/number}",
+        "notifications_url": "https://api.github.com/repos/777genius/agent-teams-ai/notifications{?since,all,participating}",
+        "labels_url": "https://api.github.com/repos/777genius/agent-teams-ai/labels{/name}",
+        "releases_url": "https://api.github.com/repos/777genius/agent-teams-ai/releases{/id}",
+        "deployments_url": "https://api.github.com/repos/777genius/agent-teams-ai/deployments"
+      },
+      "head_repository": {
+        "id": 1163183284,
+        "node_id": "R_kgDORVTEtA",
+        "name": "agent-teams-ai",
+        "full_name": "777genius/agent-teams-ai",
+        "private": false,
+        "owner": {
+          "login": "777genius",
+          "id": 13103045,
+          "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/777genius",
+          "html_url": "https://github.com/777genius",
+          "followers_url": "https://api.github.com/users/777genius/followers",
+          "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+          "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+          "organizations_url": "https://api.github.com/users/777genius/orgs",
+          "repos_url": "https://api.github.com/users/777genius/repos",
+          "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/777genius/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "html_url": "https://github.com/777genius/agent-teams-ai",
+        "description": "You're the boss, agents are your team. They handle tasks on their own, message each other, and review each other's work. You just watch the kanban board and give high-level commands. Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi(300+ models, 200+ LLM providers, free models no auth) Build your AI company with multiple teams",
+        "fork": false,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+        "forks_url": "https://api.github.com/repos/777genius/agent-teams-ai/forks",
+        "keys_url": "https://api.github.com/repos/777genius/agent-teams-ai/keys{/key_id}",
+        "collaborators_url": "https://api.github.com/repos/777genius/agent-teams-ai/collaborators{/collaborator}",
+        "teams_url": "https://api.github.com/repos/777genius/agent-teams-ai/teams",
+        "hooks_url": "https://api.github.com/repos/777genius/agent-teams-ai/hooks",
+        "issue_events_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/events{/number}",
+        "events_url": "https://api.github.com/repos/777genius/agent-teams-ai/events",
+        "assignees_url": "https://api.github.com/repos/777genius/agent-teams-ai/assignees{/user}",
+        "branches_url": "https://api.github.com/repos/777genius/agent-teams-ai/branches{/branch}",
+        "tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/tags",
+        "blobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs{/sha}",
+        "git_tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/tags{/sha}",
+        "git_refs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs{/sha}",
+        "trees_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees{/sha}",
+        "statuses_url": "https://api.github.com/repos/777genius/agent-teams-ai/statuses/{sha}",
+        "languages_url": "https://api.github.com/repos/777genius/agent-teams-ai/languages",
+        "stargazers_url": "https://api.github.com/repos/777genius/agent-teams-ai/stargazers",
+        "contributors_url": "https://api.github.com/repos/777genius/agent-teams-ai/contributors",
+        "subscribers_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscribers",
+        "subscription_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscription",
+        "commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/commits{/sha}",
+        "git_commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits{/sha}",
+        "comments_url": "https://api.github.com/repos/777genius/agent-teams-ai/comments{/number}",
+        "issue_comment_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/comments{/number}",
+        "contents_url": "https://api.github.com/repos/777genius/agent-teams-ai/contents/{+path}",
+        "compare_url": "https://api.github.com/repos/777genius/agent-teams-ai/compare/{base}...{head}",
+        "merges_url": "https://api.github.com/repos/777genius/agent-teams-ai/merges",
+        "archive_url": "https://api.github.com/repos/777genius/agent-teams-ai/{archive_format}{/ref}",
+        "downloads_url": "https://api.github.com/repos/777genius/agent-teams-ai/downloads",
+        "issues_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues{/number}",
+        "pulls_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls{/number}",
+        "milestones_url": "https://api.github.com/repos/777genius/agent-teams-ai/milestones{/number}",
+        "notifications_url": "https://api.github.com/repos/777genius/agent-teams-ai/notifications{?since,all,participating}",
+        "labels_url": "https://api.github.com/repos/777genius/agent-teams-ai/labels{/name}",
+        "releases_url": "https://api.github.com/repos/777genius/agent-teams-ai/releases{/id}",
+        "deployments_url": "https://api.github.com/repos/777genius/agent-teams-ai/deployments"
+      }
+    },
+    {
+      "id": 43771193877,
+      "name": "Host Emulated Acceptance",
+      "node_id": "WFR_kwLORVTEtM8AAAAKMPdqFQ",
+      "head_branch": "ci/frontend-parity-native-desktop-green-c714-20261115",
+      "head_sha": "6e222b57f700832cfd78a934a3b6a205a5764761",
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "display_title": "ci: qualify native Stop custody and Desktop observations on frozen source",
+      "run_number": 80,
+      "event": "pull_request",
+      "status": "queued",
+      "conclusion": null,
+      "workflow_id": 417564953,
+      "check_suite_id": 118501099939,
+      "check_suite_node_id": "CS_kwDORVTEtM8AAAAblzdJow",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43771193877",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43771193877",
+      "pull_requests": [
+        {
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls/1208",
+          "id": 5328042516,
+          "number": 1208,
+          "head": {
+            "ref": "ci/frontend-parity-native-desktop-green-c714-20261115",
+            "sha": "6e222b57f700832cfd78a934a3b6a205a5764761",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          },
+          "base": {
+            "ref": "ci/frontend-parity-native-desktop-base-c714-20261115",
+            "sha": "58c14e5fbe6188aea70307e2b0734b125d899a03",
+            "repo": {
+              "id": 1163183284,
+              "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+              "name": "agent-teams-ai"
+            }
+          }
+        }
+      ],
+      "created_at": "2026-11-15T22:47:02Z",
+      "updated_at": "2026-11-15T22:47:02Z",
+      "actor": {
+        "login": "777genius",
+        "id": 13103045,
+        "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/777genius",
+        "html_url": "https://github.com/777genius",
+        "followers_url": "https://api.github.com/users/777genius/followers",
+        "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+        "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+        "organizations_url": "https://api.github.com/users/777genius/orgs",
+        "repos_url": "https://api.github.com/users/777genius/repos",
+        "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/777genius/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "run_attempt": 1,
+      "referenced_workflows": [],
+      "run_started_at": "2026-11-15T22:47:02Z",
+      "triggering_actor": {
+        "login": "777genius",
+        "id": 13103045,
+        "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+        "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/777genius",
+        "html_url": "https://github.com/777genius",
+        "followers_url": "https://api.github.com/users/777genius/followers",
+        "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+        "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+        "organizations_url": "https://api.github.com/users/777genius/orgs",
+        "repos_url": "https://api.github.com/users/777genius/repos",
+        "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/777genius/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "jobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43771193877/jobs",
+      "logs_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43771193877/logs",
+      "check_suite_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-suites/118501099939",
+      "artifacts_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43771193877/artifacts",
+      "cancel_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43771193877/cancel",
+      "rerun_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43771193877/rerun",
+      "previous_attempt_url": null,
+      "workflow_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/workflows/417564953",
+      "head_commit": {
+        "id": "6e222b57f700832cfd78a934a3b6a205a5764761",
+        "tree_id": "2ac4903718c3ce3e615b209085226d5d35f0a2a1",
+        "message": "fix: preserve scoped Stop custody and add isolated WOW64 checks",
+        "timestamp": "2026-11-15T22:30:32Z",
+        "author": {
+          "name": "Илия",
+          "email": "iliyazelenkog@gmail.com"
+        },
+        "committer": {
+          "name": "Илия",
+          "email": "iliyazelenkog@gmail.com"
+        }
+      },
+      "repository": {
+        "id": 1163183284,
+        "node_id": "R_kgDORVTEtA",
+        "name": "agent-teams-ai",
+        "full_name": "777genius/agent-teams-ai",
+        "private": false,
+        "owner": {
+          "login": "777genius",
+          "id": 13103045,
+          "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/777genius",
+          "html_url": "https://github.com/777genius",
+          "followers_url": "https://api.github.com/users/777genius/followers",
+          "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+          "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+          "organizations_url": "https://api.github.com/users/777genius/orgs",
+          "repos_url": "https://api.github.com/users/777genius/repos",
+          "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/777genius/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "html_url": "https://github.com/777genius/agent-teams-ai",
+        "description": "You're the boss, agents are your team. They handle tasks on their own, message each other, and review each other's work. You just watch the kanban board and give high-level commands. Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi(300+ models, 200+ LLM providers, free models no auth) Build your AI company with multiple teams",
+        "fork": false,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+        "forks_url": "https://api.github.com/repos/777genius/agent-teams-ai/forks",
+        "keys_url": "https://api.github.com/repos/777genius/agent-teams-ai/keys{/key_id}",
+        "collaborators_url": "https://api.github.com/repos/777genius/agent-teams-ai/collaborators{/collaborator}",
+        "teams_url": "https://api.github.com/repos/777genius/agent-teams-ai/teams",
+        "hooks_url": "https://api.github.com/repos/777genius/agent-teams-ai/hooks",
+        "issue_events_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/events{/number}",
+        "events_url": "https://api.github.com/repos/777genius/agent-teams-ai/events",
+        "assignees_url": "https://api.github.com/repos/777genius/agent-teams-ai/assignees{/user}",
+        "branches_url": "https://api.github.com/repos/777genius/agent-teams-ai/branches{/branch}",
+        "tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/tags",
+        "blobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs{/sha}",
+        "git_tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/tags{/sha}",
+        "git_refs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs{/sha}",
+        "trees_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees{/sha}",
+        "statuses_url": "https://api.github.com/repos/777genius/agent-teams-ai/statuses/{sha}",
+        "languages_url": "https://api.github.com/repos/777genius/agent-teams-ai/languages",
+        "stargazers_url": "https://api.github.com/repos/777genius/agent-teams-ai/stargazers",
+        "contributors_url": "https://api.github.com/repos/777genius/agent-teams-ai/contributors",
+        "subscribers_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscribers",
+        "subscription_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscription",
+        "commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/commits{/sha}",
+        "git_commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits{/sha}",
+        "comments_url": "https://api.github.com/repos/777genius/agent-teams-ai/comments{/number}",
+        "issue_comment_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/comments{/number}",
+        "contents_url": "https://api.github.com/repos/777genius/agent-teams-ai/contents/{+path}",
+        "compare_url": "https://api.github.com/repos/777genius/agent-teams-ai/compare/{base}...{head}",
+        "merges_url": "https://api.github.com/repos/777genius/agent-teams-ai/merges",
+        "archive_url": "https://api.github.com/repos/777genius/agent-teams-ai/{archive_format}{/ref}",
+        "downloads_url": "https://api.github.com/repos/777genius/agent-teams-ai/downloads",
+        "issues_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues{/number}",
+        "pulls_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls{/number}",
+        "milestones_url": "https://api.github.com/repos/777genius/agent-teams-ai/milestones{/number}",
+        "notifications_url": "https://api.github.com/repos/777genius/agent-teams-ai/notifications{?since,all,participating}",
+        "labels_url": "https://api.github.com/repos/777genius/agent-teams-ai/labels{/name}",
+        "releases_url": "https://api.github.com/repos/777genius/agent-teams-ai/releases{/id}",
+        "deployments_url": "https://api.github.com/repos/777genius/agent-teams-ai/deployments"
+      },
+      "head_repository": {
+        "id": 1163183284,
+        "node_id": "R_kgDORVTEtA",
+        "name": "agent-teams-ai",
+        "full_name": "777genius/agent-teams-ai",
+        "private": false,
+        "owner": {
+          "login": "777genius",
+          "id": 13103045,
+          "node_id": "MDQ6VXNlcjEzMTAzMDQ1",
+          "avatar_url": "https://avatars.githubusercontent.com/u/13103045?v=4",
+          "gravatar_id": "",
+          "url": "https://api.github.com/users/777genius",
+          "html_url": "https://github.com/777genius",
+          "followers_url": "https://api.github.com/users/777genius/followers",
+          "following_url": "https://api.github.com/users/777genius/following{/other_user}",
+          "gists_url": "https://api.github.com/users/777genius/gists{/gist_id}",
+          "starred_url": "https://api.github.com/users/777genius/starred{/owner}{/repo}",
+          "subscriptions_url": "https://api.github.com/users/777genius/subscriptions",
+          "organizations_url": "https://api.github.com/users/777genius/orgs",
+          "repos_url": "https://api.github.com/users/777genius/repos",
+          "events_url": "https://api.github.com/users/777genius/events{/privacy}",
+          "received_events_url": "https://api.github.com/users/777genius/received_events",
+          "type": "User",
+          "user_view_type": "public",
+          "site_admin": false
+        },
+        "html_url": "https://github.com/777genius/agent-teams-ai",
+        "description": "You're the boss, agents are your team. They handle tasks on their own, message each other, and review each other's work. You just watch the kanban board and give high-level commands. Codex/Claude/OpenCode/Cursor/Grok/GitHub/Kiro/Z.AI/Xiaomi/MiniMax/Kimi(300+ models, 200+ LLM providers, free models no auth) Build your AI company with multiple teams",
+        "fork": false,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai",
+        "forks_url": "https://api.github.com/repos/777genius/agent-teams-ai/forks",
+        "keys_url": "https://api.github.com/repos/777genius/agent-teams-ai/keys{/key_id}",
+        "collaborators_url": "https://api.github.com/repos/777genius/agent-teams-ai/collaborators{/collaborator}",
+        "teams_url": "https://api.github.com/repos/777genius/agent-teams-ai/teams",
+        "hooks_url": "https://api.github.com/repos/777genius/agent-teams-ai/hooks",
+        "issue_events_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/events{/number}",
+        "events_url": "https://api.github.com/repos/777genius/agent-teams-ai/events",
+        "assignees_url": "https://api.github.com/repos/777genius/agent-teams-ai/assignees{/user}",
+        "branches_url": "https://api.github.com/repos/777genius/agent-teams-ai/branches{/branch}",
+        "tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/tags",
+        "blobs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs{/sha}",
+        "git_tags_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/tags{/sha}",
+        "git_refs_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs{/sha}",
+        "trees_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees{/sha}",
+        "statuses_url": "https://api.github.com/repos/777genius/agent-teams-ai/statuses/{sha}",
+        "languages_url": "https://api.github.com/repos/777genius/agent-teams-ai/languages",
+        "stargazers_url": "https://api.github.com/repos/777genius/agent-teams-ai/stargazers",
+        "contributors_url": "https://api.github.com/repos/777genius/agent-teams-ai/contributors",
+        "subscribers_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscribers",
+        "subscription_url": "https://api.github.com/repos/777genius/agent-teams-ai/subscription",
+        "commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/commits{/sha}",
+        "git_commits_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits{/sha}",
+        "comments_url": "https://api.github.com/repos/777genius/agent-teams-ai/comments{/number}",
+        "issue_comment_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues/comments{/number}",
+        "contents_url": "https://api.github.com/repos/777genius/agent-teams-ai/contents/{+path}",
+        "compare_url": "https://api.github.com/repos/777genius/agent-teams-ai/compare/{base}...{head}",
+        "merges_url": "https://api.github.com/repos/777genius/agent-teams-ai/merges",
+        "archive_url": "https://api.github.com/repos/777genius/agent-teams-ai/{archive_format}{/ref}",
+        "downloads_url": "https://api.github.com/repos/777genius/agent-teams-ai/downloads",
+        "issues_url": "https://api.github.com/repos/777genius/agent-teams-ai/issues{/number}",
+        "pulls_url": "https://api.github.com/repos/777genius/agent-teams-ai/pulls{/number}",
+        "milestones_url": "https://api.github.com/repos/777genius/agent-teams-ai/milestones{/number}",
+        "notifications_url": "https://api.github.com/repos/777genius/agent-teams-ai/notifications{?since,all,participating}",
+        "labels_url": "https://api.github.com/repos/777genius/agent-teams-ai/labels{/name}",
+        "releases_url": "https://api.github.com/repos/777genius/agent-teams-ai/releases{/id}",
+        "deployments_url": "https://api.github.com/repos/777genius/agent-teams-ai/deployments"
+      }
+    }
+  ],
+  "selectedJobs": [
+    {
+      "id": 132987257822,
+      "run_id": 43771193709,
+      "workflow_name": "Host process fixture acceptance",
+      "head_branch": "ci/frontend-parity-native-desktop-green-c714-20261115",
+      "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43771193709",
+      "run_attempt": 1,
+      "node_id": "CR_kwDORVTEtM8AAAAe9qiD3g",
+      "head_sha": "6e222b57f700832cfd78a934a3b6a205a5764761",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132987257822",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43771193709/job/132987257822",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-11-15T22:47:03Z",
+      "started_at": "2026-11-15T22:51:41Z",
+      "completed_at": "2026-11-15T22:55:17Z",
+      "name": "Host process fixtures (win32-x64)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-15T22:51:42Z",
+          "completed_at": "2026-11-15T22:51:42Z"
+        },
+        {
+          "name": "Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-15T22:51:42Z",
+          "completed_at": "2026-11-15T22:51:54Z"
+        },
+        {
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-15T22:51:54Z",
+          "completed_at": "2026-11-15T22:52:01Z"
+        },
+        {
+          "name": "Select the pinned package manager with bundled Corepack",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-15T22:52:01Z",
+          "completed_at": "2026-11-15T22:52:08Z"
+        },
+        {
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-15T22:52:08Z",
+          "completed_at": "2026-11-15T22:52:09Z"
+        },
+        {
+          "name": "Bind exact source and actual process tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-15T22:52:09Z",
+          "completed_at": "2026-11-15T22:52:09Z"
+        },
+        {
+          "name": "Install frozen workspace without Desktop postinstall",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-15T22:52:09Z",
+          "completed_at": "2026-11-15T22:53:39Z"
+        },
+        {
+          "name": "Build existing controller and Host",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-15T22:53:39Z",
+          "completed_at": "2026-11-15T22:53:46Z"
+        },
+        {
+          "name": "Verify process contracts and retained Main Host transport",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-15T22:53:46Z",
+          "completed_at": "2026-11-15T22:54:55Z"
+        },
+        {
+          "name": "Verify original POSIX Node and shell lifecycle fixtures",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10,
+          "started_at": "2026-11-15T22:54:55Z",
+          "completed_at": "2026-11-15T22:54:55Z"
+        },
+        {
+          "name": "Prepare pinned Electron for native process fixtures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-11-15T22:54:55Z",
+          "completed_at": "2026-11-15T22:54:55Z"
+        },
+        {
+          "name": "Verify Linux Node exec descriptor closure under both original parents",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12,
+          "started_at": "2026-11-15T22:54:55Z",
+          "completed_at": "2026-11-15T22:54:55Z"
+        },
+        {
+          "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13,
+          "started_at": "2026-11-15T22:54:55Z",
+          "completed_at": "2026-11-15T22:54:55Z"
+        },
+        {
+          "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14,
+          "started_at": "2026-11-15T22:54:55Z",
+          "completed_at": "2026-11-15T22:54:55Z"
+        },
+        {
+          "name": "Build original Windows product broker and C++ fixtures",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 15,
+          "started_at": "2026-11-15T22:54:55Z",
+          "completed_at": "2026-11-15T22:55:13Z"
+        },
+        {
+          "name": "Qualify original Windows Job and control under Host Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 16,
+          "started_at": "2026-11-15T22:55:13Z",
+          "completed_at": "2026-11-15T22:55:13Z"
+        },
+        {
+          "name": "Qualify original Windows Job and control under Electron Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 17,
+          "started_at": "2026-11-15T22:55:13Z",
+          "completed_at": "2026-11-15T22:55:13Z"
+        },
+        {
+          "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 18,
+          "started_at": "2026-11-15T22:55:13Z",
+          "completed_at": "2026-11-15T22:55:13Z"
+        },
+        {
+          "name": "Qualify original codex source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19,
+          "started_at": "2026-11-15T22:55:13Z",
+          "completed_at": "2026-11-15T22:55:13Z"
+        },
+        {
+          "name": "Qualify original claude source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20,
+          "started_at": "2026-11-15T22:55:13Z",
+          "completed_at": "2026-11-15T22:55:13Z"
+        },
+        {
+          "name": "Qualify original opencode source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21,
+          "started_at": "2026-11-15T22:55:13Z",
+          "completed_at": "2026-11-15T22:55:13Z"
+        },
+        {
+          "name": "Require completed original platform receipts and unchanged source",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22,
+          "started_at": "2026-11-15T22:55:13Z",
+          "completed_at": "2026-11-15T22:55:13Z"
+        },
+        {
+          "name": "Preserve original process evidence including failures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23,
+          "started_at": "2026-11-15T22:55:13Z",
+          "completed_at": "2026-11-15T22:55:14Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 44,
+          "started_at": "2026-11-15T22:55:14Z",
+          "completed_at": "2026-11-15T22:55:14Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 45,
+          "started_at": "2026-11-15T22:55:14Z",
+          "completed_at": "2026-11-15T22:55:14Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 46,
+          "started_at": "2026-11-15T22:55:14Z",
+          "completed_at": "2026-11-15T22:55:15Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 47,
+          "started_at": "2026-11-15T22:55:15Z",
+          "completed_at": "2026-11-15T22:55:15Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132987257822",
+      "labels": [
+        "windows-2022"
+      ],
+      "runner_id": 1000374825,
+      "runner_name": "GitHub Actions 1000374825",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 132987258050,
+      "run_id": 43771193709,
+      "workflow_name": "Host process fixture acceptance",
+      "head_branch": "ci/frontend-parity-native-desktop-green-c714-20261115",
+      "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43771193709",
+      "run_attempt": 1,
+      "node_id": "CR_kwDORVTEtM8AAAAe9qiEwg",
+      "head_sha": "6e222b57f700832cfd78a934a3b6a205a5764761",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132987258050",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43771193709/job/132987258050",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-15T22:47:03Z",
+      "started_at": "2026-11-15T22:59:25Z",
+      "completed_at": "2026-11-15T23:03:47Z",
+      "name": "Host process fixtures (darwin-arm64)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-15T22:59:26Z",
+          "completed_at": "2026-11-15T22:59:27Z"
+        },
+        {
+          "name": "Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-15T22:59:27Z",
+          "completed_at": "2026-11-15T22:59:36Z"
+        },
+        {
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-15T22:59:36Z",
+          "completed_at": "2026-11-15T22:59:41Z"
+        },
+        {
+          "name": "Select the pinned package manager with bundled Corepack",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-15T22:59:41Z",
+          "completed_at": "2026-11-15T22:59:43Z"
+        },
+        {
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-15T22:59:43Z",
+          "completed_at": "2026-11-15T22:59:44Z"
+        },
+        {
+          "name": "Bind exact source and actual process tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-15T22:59:44Z",
+          "completed_at": "2026-11-15T22:59:44Z"
+        },
+        {
+          "name": "Install frozen workspace without Desktop postinstall",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-15T22:59:44Z",
+          "completed_at": "2026-11-15T23:01:08Z"
+        },
+        {
+          "name": "Build existing controller and Host",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-15T23:01:08Z",
+          "completed_at": "2026-11-15T23:01:17Z"
+        },
+        {
+          "name": "Verify process contracts and retained Main Host transport",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-15T23:01:17Z",
+          "completed_at": "2026-11-15T23:02:29Z"
+        },
+        {
+          "name": "Verify original POSIX Node and shell lifecycle fixtures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-11-15T23:02:29Z",
+          "completed_at": "2026-11-15T23:02:38Z"
+        },
+        {
+          "name": "Prepare pinned Electron for native process fixtures",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 11,
+          "started_at": "2026-11-15T23:02:38Z",
+          "completed_at": "2026-11-15T23:02:38Z"
+        },
+        {
+          "name": "Verify Linux Node exec descriptor closure under both original parents",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12,
+          "started_at": "2026-11-15T23:02:38Z",
+          "completed_at": "2026-11-15T23:02:38Z"
+        },
+        {
+          "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13,
+          "started_at": "2026-11-15T23:02:38Z",
+          "completed_at": "2026-11-15T23:02:38Z"
+        },
+        {
+          "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14,
+          "started_at": "2026-11-15T23:02:38Z",
+          "completed_at": "2026-11-15T23:02:38Z"
+        },
+        {
+          "name": "Build original Windows product broker and C++ fixtures",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 15,
+          "started_at": "2026-11-15T23:02:38Z",
+          "completed_at": "2026-11-15T23:02:38Z"
+        },
+        {
+          "name": "Qualify original Windows Job and control under Host Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 16,
+          "started_at": "2026-11-15T23:02:38Z",
+          "completed_at": "2026-11-15T23:02:38Z"
+        },
+        {
+          "name": "Qualify original Windows Job and control under Electron Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 17,
+          "started_at": "2026-11-15T23:02:38Z",
+          "completed_at": "2026-11-15T23:02:38Z"
+        },
+        {
+          "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 18,
+          "started_at": "2026-11-15T23:02:38Z",
+          "completed_at": "2026-11-15T23:02:38Z"
+        },
+        {
+          "name": "Qualify original codex source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19,
+          "started_at": "2026-11-15T23:02:38Z",
+          "completed_at": "2026-11-15T23:02:38Z"
+        },
+        {
+          "name": "Qualify original claude source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20,
+          "started_at": "2026-11-15T23:02:38Z",
+          "completed_at": "2026-11-15T23:02:38Z"
+        },
+        {
+          "name": "Qualify original opencode source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21,
+          "started_at": "2026-11-15T23:02:38Z",
+          "completed_at": "2026-11-15T23:02:38Z"
+        },
+        {
+          "name": "Require completed original platform receipts and unchanged source",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 22,
+          "started_at": "2026-11-15T23:02:38Z",
+          "completed_at": "2026-11-15T23:02:40Z"
+        },
+        {
+          "name": "Preserve original process evidence including failures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23,
+          "started_at": "2026-11-15T23:02:40Z",
+          "completed_at": "2026-11-15T23:02:41Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 44,
+          "started_at": "2026-11-15T23:02:41Z",
+          "completed_at": "2026-11-15T23:03:42Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 45,
+          "started_at": "2026-11-15T23:03:42Z",
+          "completed_at": "2026-11-15T23:03:43Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 46,
+          "started_at": "2026-11-15T23:03:43Z",
+          "completed_at": "2026-11-15T23:03:43Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 47,
+          "started_at": "2026-11-15T23:03:43Z",
+          "completed_at": "2026-11-15T23:03:45Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132987258050",
+      "labels": [
+        "macos-15"
+      ],
+      "runner_id": 1000374858,
+      "runner_name": "GitHub Actions 1000374858",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 132987258088,
+      "run_id": 43771193709,
+      "workflow_name": "Host process fixture acceptance",
+      "head_branch": "ci/frontend-parity-native-desktop-green-c714-20261115",
+      "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43771193709",
+      "run_attempt": 1,
+      "node_id": "CR_kwDORVTEtM8AAAAe9qiE6A",
+      "head_sha": "6e222b57f700832cfd78a934a3b6a205a5764761",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132987258088",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43771193709/job/132987258088",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-15T22:47:03Z",
+      "started_at": "2026-11-15T23:06:07Z",
+      "completed_at": "2026-11-15T23:17:57Z",
+      "name": "Host process fixtures (darwin-x64)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-15T23:05:55Z",
+          "completed_at": "2026-11-15T23:05:57Z"
+        },
+        {
+          "name": "Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-15T23:05:57Z",
+          "completed_at": "2026-11-15T23:06:32Z"
+        },
+        {
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-15T23:06:32Z",
+          "completed_at": "2026-11-15T23:06:54Z"
+        },
+        {
+          "name": "Select the pinned package manager with bundled Corepack",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-15T23:06:54Z",
+          "completed_at": "2026-11-15T23:07:00Z"
+        },
+        {
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-15T23:07:00Z",
+          "completed_at": "2026-11-15T23:07:03Z"
+        },
+        {
+          "name": "Bind exact source and actual process tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-15T23:07:03Z",
+          "completed_at": "2026-11-15T23:07:03Z"
+        },
+        {
+          "name": "Install frozen workspace without Desktop postinstall",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-15T23:07:03Z",
+          "completed_at": "2026-11-15T23:11:33Z"
+        },
+        {
+          "name": "Build existing controller and Host",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-15T23:11:33Z",
+          "completed_at": "2026-11-15T23:12:17Z"
+        },
+        {
+          "name": "Verify process contracts and retained Main Host transport",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-15T23:12:17Z",
+          "completed_at": "2026-11-15T23:15:52Z"
+        },
+        {
+          "name": "Verify original POSIX Node and shell lifecycle fixtures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-11-15T23:15:52Z",
+          "completed_at": "2026-11-15T23:16:02Z"
+        },
+        {
+          "name": "Prepare pinned Electron for native process fixtures",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 11,
+          "started_at": "2026-11-15T23:16:02Z",
+          "completed_at": "2026-11-15T23:16:02Z"
+        },
+        {
+          "name": "Verify Linux Node exec descriptor closure under both original parents",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12,
+          "started_at": "2026-11-15T23:16:02Z",
+          "completed_at": "2026-11-15T23:16:02Z"
+        },
+        {
+          "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13,
+          "started_at": "2026-11-15T23:16:02Z",
+          "completed_at": "2026-11-15T23:16:02Z"
+        },
+        {
+          "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14,
+          "started_at": "2026-11-15T23:16:02Z",
+          "completed_at": "2026-11-15T23:16:02Z"
+        },
+        {
+          "name": "Build original Windows product broker and C++ fixtures",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 15,
+          "started_at": "2026-11-15T23:16:02Z",
+          "completed_at": "2026-11-15T23:16:02Z"
+        },
+        {
+          "name": "Qualify original Windows Job and control under Host Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 16,
+          "started_at": "2026-11-15T23:16:02Z",
+          "completed_at": "2026-11-15T23:16:02Z"
+        },
+        {
+          "name": "Qualify original Windows Job and control under Electron Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 17,
+          "started_at": "2026-11-15T23:16:02Z",
+          "completed_at": "2026-11-15T23:16:02Z"
+        },
+        {
+          "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 18,
+          "started_at": "2026-11-15T23:16:02Z",
+          "completed_at": "2026-11-15T23:16:02Z"
+        },
+        {
+          "name": "Qualify original codex source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19,
+          "started_at": "2026-11-15T23:16:02Z",
+          "completed_at": "2026-11-15T23:16:02Z"
+        },
+        {
+          "name": "Qualify original claude source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20,
+          "started_at": "2026-11-15T23:16:02Z",
+          "completed_at": "2026-11-15T23:16:02Z"
+        },
+        {
+          "name": "Qualify original opencode source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21,
+          "started_at": "2026-11-15T23:16:02Z",
+          "completed_at": "2026-11-15T23:16:02Z"
+        },
+        {
+          "name": "Require completed original platform receipts and unchanged source",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 22,
+          "started_at": "2026-11-15T23:16:02Z",
+          "completed_at": "2026-11-15T23:16:03Z"
+        },
+        {
+          "name": "Preserve original process evidence including failures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23,
+          "started_at": "2026-11-15T23:16:03Z",
+          "completed_at": "2026-11-15T23:16:05Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 44,
+          "started_at": "2026-11-15T23:16:05Z",
+          "completed_at": "2026-11-15T23:17:40Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 45,
+          "started_at": "2026-11-15T23:17:40Z",
+          "completed_at": "2026-11-15T23:17:40Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 46,
+          "started_at": "2026-11-15T23:17:40Z",
+          "completed_at": "2026-11-15T23:17:41Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 47,
+          "started_at": "2026-11-15T23:17:41Z",
+          "completed_at": "2026-11-15T23:17:42Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132987258088",
+      "labels": [
+        "macos-15-intel"
+      ],
+      "runner_id": 1000374888,
+      "runner_name": "GitHub Actions 1000374888",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 132987258103,
+      "run_id": 43771193709,
+      "workflow_name": "Host process fixture acceptance",
+      "head_branch": "ci/frontend-parity-native-desktop-green-c714-20261115",
+      "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43771193709",
+      "run_attempt": 1,
+      "node_id": "CR_kwDORVTEtM8AAAAe9qiE9w",
+      "head_sha": "6e222b57f700832cfd78a934a3b6a205a5764761",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132987258103",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43771193709/job/132987258103",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-11-15T22:47:03Z",
+      "started_at": "2026-11-15T22:51:37Z",
+      "completed_at": "2026-11-15T23:04:23Z",
+      "name": "Host process fixtures (win32-arm64)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-15T22:51:38Z",
+          "completed_at": "2026-11-15T22:51:41Z"
+        },
+        {
+          "name": "Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-15T22:51:41Z",
+          "completed_at": "2026-11-15T22:52:14Z"
+        },
+        {
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-15T22:52:14Z",
+          "completed_at": "2026-11-15T22:52:31Z"
+        },
+        {
+          "name": "Select the pinned package manager with bundled Corepack",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-15T22:52:31Z",
+          "completed_at": "2026-11-15T22:52:45Z"
+        },
+        {
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-15T22:52:45Z",
+          "completed_at": "2026-11-15T22:52:47Z"
+        },
+        {
+          "name": "Bind exact source and actual process tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-15T22:52:47Z",
+          "completed_at": "2026-11-15T22:52:47Z"
+        },
+        {
+          "name": "Install frozen workspace without Desktop postinstall",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-15T22:52:47Z",
+          "completed_at": "2026-11-15T23:01:36Z"
+        },
+        {
+          "name": "Build existing controller and Host",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-15T23:01:36Z",
+          "completed_at": "2026-11-15T23:01:45Z"
+        },
+        {
+          "name": "Verify process contracts and retained Main Host transport",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-15T23:01:45Z",
+          "completed_at": "2026-11-15T23:03:45Z"
+        },
+        {
+          "name": "Verify original POSIX Node and shell lifecycle fixtures",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10,
+          "started_at": "2026-11-15T23:03:45Z",
+          "completed_at": "2026-11-15T23:03:45Z"
+        },
+        {
+          "name": "Prepare pinned Electron for native process fixtures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-11-15T23:03:45Z",
+          "completed_at": "2026-11-15T23:03:45Z"
+        },
+        {
+          "name": "Verify Linux Node exec descriptor closure under both original parents",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12,
+          "started_at": "2026-11-15T23:03:45Z",
+          "completed_at": "2026-11-15T23:03:45Z"
+        },
+        {
+          "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13,
+          "started_at": "2026-11-15T23:03:45Z",
+          "completed_at": "2026-11-15T23:03:45Z"
+        },
+        {
+          "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14,
+          "started_at": "2026-11-15T23:03:45Z",
+          "completed_at": "2026-11-15T23:03:45Z"
+        },
+        {
+          "name": "Build original Windows product broker and C++ fixtures",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 15,
+          "started_at": "2026-11-15T23:03:45Z",
+          "completed_at": "2026-11-15T23:04:16Z"
+        },
+        {
+          "name": "Qualify original Windows Job and control under Host Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 16,
+          "started_at": "2026-11-15T23:04:16Z",
+          "completed_at": "2026-11-15T23:04:16Z"
+        },
+        {
+          "name": "Qualify original Windows Job and control under Electron Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 17,
+          "started_at": "2026-11-15T23:04:16Z",
+          "completed_at": "2026-11-15T23:04:16Z"
+        },
+        {
+          "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 18,
+          "started_at": "2026-11-15T23:04:16Z",
+          "completed_at": "2026-11-15T23:04:16Z"
+        },
+        {
+          "name": "Qualify original codex source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19,
+          "started_at": "2026-11-15T23:04:16Z",
+          "completed_at": "2026-11-15T23:04:16Z"
+        },
+        {
+          "name": "Qualify original claude source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20,
+          "started_at": "2026-11-15T23:04:16Z",
+          "completed_at": "2026-11-15T23:04:16Z"
+        },
+        {
+          "name": "Qualify original opencode source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21,
+          "started_at": "2026-11-15T23:04:16Z",
+          "completed_at": "2026-11-15T23:04:16Z"
+        },
+        {
+          "name": "Require completed original platform receipts and unchanged source",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22,
+          "started_at": "2026-11-15T23:04:16Z",
+          "completed_at": "2026-11-15T23:04:16Z"
+        },
+        {
+          "name": "Preserve original process evidence including failures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23,
+          "started_at": "2026-11-15T23:04:16Z",
+          "completed_at": "2026-11-15T23:04:17Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 44,
+          "started_at": "2026-11-15T23:04:17Z",
+          "completed_at": "2026-11-15T23:04:17Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 45,
+          "started_at": "2026-11-15T23:04:17Z",
+          "completed_at": "2026-11-15T23:04:17Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 46,
+          "started_at": "2026-11-15T23:04:17Z",
+          "completed_at": "2026-11-15T23:04:22Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 47,
+          "started_at": "2026-11-15T23:04:22Z",
+          "completed_at": "2026-11-15T23:04:22Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132987258103",
+      "labels": [
+        "windows-11-arm"
+      ],
+      "runner_id": 1000374823,
+      "runner_name": "GitHub Actions 1000374823",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 132987259044,
+      "run_id": 43771193877,
+      "workflow_name": "Host Emulated Acceptance",
+      "head_branch": "ci/frontend-parity-native-desktop-green-c714-20261115",
+      "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/43771193877",
+      "run_attempt": 1,
+      "node_id": "CR_kwDORVTEtM8AAAAe9qiIpA",
+      "head_sha": "6e222b57f700832cfd78a934a3b6a205a5764761",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/132987259044",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43771193877/job/132987259044",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-11-15T22:47:03Z",
+      "started_at": "2026-11-15T23:18:01Z",
+      "completed_at": "2026-11-15T23:25:41Z",
+      "name": "Offline Host Desktop (darwin-arm64, installer)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-15T23:18:01Z",
+          "completed_at": "2026-11-15T23:18:02Z"
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-15T23:18:02Z",
+          "completed_at": "2026-11-15T23:18:11Z"
+        },
+        {
+          "name": "Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-15T23:18:11Z",
+          "completed_at": "2026-11-15T23:18:16Z"
+        },
+        {
+          "name": "Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-15T23:18:16Z",
+          "completed_at": "2026-11-15T23:18:24Z"
+        },
+        {
+          "name": "Verify original checkout and runner tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-15T23:18:24Z",
+          "completed_at": "2026-11-15T23:18:24Z"
+        },
+        {
+          "name": "Prepare private Linux display",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 6,
+          "started_at": "2026-11-15T23:18:24Z",
+          "completed_at": "2026-11-15T23:18:24Z"
+        },
+        {
+          "name": "Install frozen workspace and Electron",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-15T23:18:24Z",
+          "completed_at": "2026-11-15T23:20:10Z"
+        },
+        {
+          "name": "Build existing Desktop prerequisites and verify admission",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-15T23:20:10Z",
+          "completed_at": "2026-11-15T23:20:28Z"
+        },
+        {
+          "name": "Verify original Runtime and Team conversation contracts",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 9,
+          "started_at": "2026-11-15T23:20:28Z",
+          "completed_at": "2026-11-15T23:20:28Z"
+        },
+        {
+          "name": "Verify complete workspace types and original typed lint scopes",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10,
+          "started_at": "2026-11-15T23:20:28Z",
+          "completed_at": "2026-11-15T23:20:28Z"
+        },
+        {
+          "name": "Capture package-manager and Host inputs without vendor executables",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-11-15T23:20:28Z",
+          "completed_at": "2026-11-15T23:20:30Z"
+        },
+        {
+          "name": "Capture original controlled Linux process input without a provider",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12,
+          "started_at": "2026-11-15T23:20:30Z",
+          "completed_at": "2026-11-15T23:20:30Z"
+        },
+        {
+          "name": "Exercise ordinary Team controls and renderer reload",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13,
+          "started_at": "2026-11-15T23:20:30Z",
+          "completed_at": "2026-11-15T23:20:30Z"
+        },
+        {
+          "name": "Exercise ordinary Taskboard controls and persistence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14,
+          "started_at": "2026-11-15T23:20:30Z",
+          "completed_at": "2026-11-15T23:20:30Z"
+        },
+        {
+          "name": "Exercise original Skills and cross-Team controls",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 15,
+          "started_at": "2026-11-15T23:20:30Z",
+          "completed_at": "2026-11-15T23:20:30Z"
+        },
+        {
+          "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 16,
+          "started_at": "2026-11-15T23:20:30Z",
+          "completed_at": "2026-11-15T23:20:30Z"
+        },
+        {
+          "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 17,
+          "started_at": "2026-11-15T23:20:30Z",
+          "completed_at": "2026-11-15T23:20:30Z"
+        },
+        {
+          "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 18,
+          "started_at": "2026-11-15T23:20:30Z",
+          "completed_at": "2026-11-15T23:20:30Z"
+        },
+        {
+          "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19,
+          "started_at": "2026-11-15T23:20:30Z",
+          "completed_at": "2026-11-15T23:20:30Z"
+        },
+        {
+          "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20,
+          "started_at": "2026-11-15T23:20:30Z",
+          "completed_at": "2026-11-15T23:20:30Z"
+        },
+        {
+          "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21,
+          "started_at": "2026-11-15T23:20:30Z",
+          "completed_at": "2026-11-15T23:20:30Z"
+        },
+        {
+          "name": "Exercise original Review after a cold Host and app restart",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22,
+          "started_at": "2026-11-15T23:20:30Z",
+          "completed_at": "2026-11-15T23:20:30Z"
+        },
+        {
+          "name": "Exercise saved next-launch selection while the original Team remains live",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 23,
+          "started_at": "2026-11-15T23:20:30Z",
+          "completed_at": "2026-11-15T23:20:30Z"
+        },
+        {
+          "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 24,
+          "started_at": "2026-11-15T23:20:30Z",
+          "completed_at": "2026-11-15T23:20:30Z"
+        },
+        {
+          "name": "Exercise stock Codex Update while the original Team retains its captured source",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 25,
+          "started_at": "2026-11-15T23:20:30Z",
+          "completed_at": "2026-11-15T23:24:05Z"
+        },
+        {
+          "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 26,
+          "started_at": "2026-11-15T23:24:05Z",
+          "completed_at": "2026-11-15T23:24:05Z"
+        },
+        {
+          "name": "Prepare exact OpenCode V2 Bun and engine graph",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 27,
+          "started_at": "2026-11-15T23:24:05Z",
+          "completed_at": "2026-11-15T23:24:05Z"
+        },
+        {
+          "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 28,
+          "started_at": "2026-11-15T23:24:05Z",
+          "completed_at": "2026-11-15T23:24:05Z"
+        },
+        {
+          "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 29,
+          "started_at": "2026-11-15T23:24:05Z",
+          "completed_at": "2026-11-15T23:24:05Z"
+        },
+        {
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 30,
+          "started_at": "2026-11-15T23:24:05Z",
+          "completed_at": "2026-11-15T23:24:07Z"
+        },
+        {
+          "name": "Preserve original Desktop evidence, including failures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 31,
+          "started_at": "2026-11-15T23:24:07Z",
+          "completed_at": "2026-11-15T23:24:09Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 60,
+          "started_at": "2026-11-15T23:24:09Z",
+          "completed_at": "2026-11-15T23:25:32Z"
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 61,
+          "started_at": "2026-11-15T23:25:32Z",
+          "completed_at": "2026-11-15T23:25:33Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 62,
+          "started_at": "2026-11-15T23:25:33Z",
+          "completed_at": "2026-11-15T23:25:34Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 63,
+          "started_at": "2026-11-15T23:25:34Z",
+          "completed_at": "2026-11-15T23:25:37Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/132987259044",
+      "labels": [
+        "macos-15"
+      ],
+      "runner_id": 1000374933,
+      "runner_name": "GitHub Actions 1000374933",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  ],
+  "artifactAPI": [
+    {
+      "total_count": 4,
+      "artifacts": [
+        {
+          "id": 14185607346,
+          "node_id": "MDg6QXJ0aWZhY3QxNDE4NTYwNzM0Ng==",
+          "name": "host-process-fixtures-darwin-x64-6e222b57f700832cfd78a934a3b6a205a5764761",
+          "size_in_bytes": 12423,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14185607346",
+          "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14185607346/zip",
+          "expired": false,
+          "digest": "sha256:734e1f2e8791ecf3240dc5419fe78ff8cec6ff8c9bf97a1f7e5640a13e70e968",
+          "created_at": "2026-11-15T23:16:17Z",
+          "updated_at": "2026-11-15T23:16:17Z",
+          "expires_at": "2026-11-29T23:16:04Z",
+          "workflow_run": {
+            "id": 43771193709,
+            "repository_id": 1163183284,
+            "head_repository_id": 1163183284,
+            "head_branch": "ci/frontend-parity-native-desktop-green-c714-20261115",
+            "head_sha": "6e222b57f700832cfd78a934a3b6a205a5764761"
+          }
+        },
+        {
+          "id": 14185300539,
+          "node_id": "MDg6QXJ0aWZhY3QxNDE4NTMwMDUzOQ==",
+          "name": "host-process-fixtures-darwin-arm64-6e222b57f700832cfd78a934a3b6a205a5764761",
+          "size_in_bytes": 11930,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14185300539",
+          "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14185300539/zip",
+          "expired": false,
+          "digest": "sha256:fba65e47c92535dfc8646b56f802ce1bbd2508841c352c7e9b3928972a84acfb",
+          "created_at": "2026-11-15T23:02:41Z",
+          "updated_at": "2026-11-15T23:02:41Z",
+          "expires_at": "2026-11-29T23:02:40Z",
+          "workflow_run": {
+            "id": 43771193709,
+            "repository_id": 1163183284,
+            "head_repository_id": 1163183284,
+            "head_branch": "ci/frontend-parity-native-desktop-green-c714-20261115",
+            "head_sha": "6e222b57f700832cfd78a934a3b6a205a5764761"
+          }
+        },
+        {
+          "id": 14184986325,
+          "node_id": "MDg6QXJ0aWZhY3QxNDE4NDk4NjMyNQ==",
+          "name": "host-process-fixtures-win32-arm64-6e222b57f700832cfd78a934a3b6a205a5764761",
+          "size_in_bytes": 10016,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14184986325",
+          "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14184986325/zip",
+          "expired": false,
+          "digest": "sha256:c528a101b5334aeb7efa56e6ee0c946e335c55f209e77729b71e1290f544f11d",
+          "created_at": "2026-11-15T23:04:17Z",
+          "updated_at": "2026-11-15T23:04:17Z",
+          "expires_at": "2026-11-29T23:04:16Z",
+          "workflow_run": {
+            "id": 43771193709,
+            "repository_id": 1163183284,
+            "head_repository_id": 1163183284,
+            "head_branch": "ci/frontend-parity-native-desktop-green-c714-20261115",
+            "head_sha": "6e222b57f700832cfd78a934a3b6a205a5764761"
+          }
+        },
+        {
+          "id": 14184641705,
+          "node_id": "MDg6QXJ0aWZhY3QxNDE4NDY0MTcwNQ==",
+          "name": "host-process-fixtures-win32-x64-6e222b57f700832cfd78a934a3b6a205a5764761",
+          "size_in_bytes": 9634,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14184641705",
+          "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14184641705/zip",
+          "expired": false,
+          "digest": "sha256:08d776f6557b62175338fd00eaf899d7f401268d78c1ea21d1fa022ea9382de2",
+          "created_at": "2026-11-15T22:55:14Z",
+          "updated_at": "2026-11-15T22:55:14Z",
+          "expires_at": "2026-11-29T22:55:13Z",
+          "workflow_run": {
+            "id": 43771193709,
+            "repository_id": 1163183284,
+            "head_repository_id": 1163183284,
+            "head_branch": "ci/frontend-parity-native-desktop-green-c714-20261115",
+            "head_sha": "6e222b57f700832cfd78a934a3b6a205a5764761"
+          }
+        }
+      ]
+    },
+    {
+      "total_count": 1,
+      "artifacts": [
+        {
+          "id": 14186145110,
+          "node_id": "MDg6QXJ0aWZhY3QxNDE4NjE0NTExMA==",
+          "name": "host-emulated-darwin-arm64-6e222b57f700832cfd78a934a3b6a205a5764761-installer",
+          "size_in_bytes": 1129449,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14186145110",
+          "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14186145110/zip",
+          "expired": false,
+          "digest": "sha256:82047d2f9c553243bb6387c2e95b8e056278d27f9081e4136d9cd8c698d24158",
+          "created_at": "2026-11-15T23:24:10Z",
+          "updated_at": "2026-11-15T23:24:10Z",
+          "expires_at": "2026-11-29T23:24:08Z",
+          "workflow_run": {
+            "id": 43771193877,
+            "repository_id": 1163183284,
+            "head_repository_id": 1163183284,
+            "head_branch": "ci/frontend-parity-native-desktop-green-c714-20261115",
+            "head_sha": "6e222b57f700832cfd78a934a3b6a205a5764761"
+          }
+        }
+      ]
+    }
+  ]
+}

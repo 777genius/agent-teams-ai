@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "repository": "agent-teams-ai/old-provider-implementations",
+  "sourceCommit": "c79b81bf002eaac95436da71c7049d7f309906a9",
+  "sourceTree": "5595f99535a7cabcb0cfeda053f988fd7e17a590",
+  "pullRequest": 8,
+  "headBranch": "feat/frontend-parity-20261112",
+  "baseBranch": "bootstrap",
+  "baseCommit": "d58500bc983e897506e23d7b0bc8da1209864edd",
+  "run": {
+    "id": 43781375954,
+    "event": "pull_request",
+    "attempt": 1,
+    "createdAt": "2026-11-16T00:36:32Z",
+    "conclusion": "success"
+  },
+  "workflow": {
+    "path": ".github/workflows/ci.yml",
+    "blob": "7e2bb17761d783b7d0ed298c62c56680a6636279"
+  },
+  "files": [
+    {
+      "path": "canonical-ci-node24.log",
+      "sha256": "1e704cc5cc162dea653a82892e914f80d2092fc01d19a3a66d9f6e162699c140",
+      "bytes": 108452
+    },
+    {
+      "path": "canonical-ci-node26.log",
+      "sha256": "9c6f71872c9aca3e15532b77eb0d4acd8e407649222eda9fd6cf82f26f4d04a6",
+      "bytes": 102967
+    },
+    {
+      "path": "canonical-ci-api.json",
+      "sha256": "428d4bcaef6cd70b5d0d4d5c4ddc2665b70aa6bbe27f6914cfc285f71b3a5541",
+      "bytes": 74517
+    }
+  ],
+  "jobs": [
+    {
+      "id": 133019104723,
+      "node": "24.21.0",
+      "pnpm": "11.18.0",
+      "tests": 561,
+      "pass": 561,
+      "fail": 0,
+      "skip": 0,
+      "cancelled": 0,
+      "packed": [
+        1,
+        1
+      ],
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:37Z",
+      "completedAt": "2026-11-16T00:37:59Z"
+    },
+    {
+      "id": 133019104364,
+      "node": "26.11.1",
+      "pnpm": "11.18.0",
+      "tests": 561,
+      "pass": 561,
+      "fail": 0,
+      "skip": 0,
+      "cancelled": 0,
+      "packed": [
+        1,
+        1
+      ],
+      "conclusion": "success",
+      "startedAt": "2026-11-16T00:36:35Z",
+      "completedAt": "2026-11-16T00:37:52Z"
+    }
+  ],
+  "caseNameMultiset": {
+    "count": 561,
+    "format": "Trimmed complete check marks, terminal measured duration removed, sorted JSON plus LF",
+    "sha256": "1a1dd37bff577a252c279f54435c8bf3da1dfb09ee690152b79b4cb4e1119cf5",
+    "bothJobsEqual": true
+  },
+  "suggestionNative": [
+    {
+      "runId": 43781375960,
+      "jobId": 133019144877,
+      "name": "codex-native-sample",
+      "status": "completed",
+      "conclusion": "skipped",
+      "steps": 0
+    },
+    {
+      "runId": 43781376023,
+      "jobId": 133019106008,
+      "name": "claude-native-suggestion",
+      "status": "completed",
+      "conclusion": "skipped",
+      "steps": 0
+    }
+  ],
+  "artifact": {
+    "id": 14188512818,
+    "size": 193546,
+    "apiAndUploadSha256": "f9dfb96ce7164c6c65a3f58e5645a9683afa7e4764e3e45e1cd529141e53506e",
+    "actualZipRead": false
+  },
+  "originalReceiptInNode24Log": {
+    "sourceCommit": "c79b81bf002eaac95436da71c7049d7f309906a9",
+    "packages": [
+      {
+        "file": "agent-teams-provider-implementations-0.0.0.tgz",
+        "bytes": 186398,
+        "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8"
+      },
+      {
+        "file": "agent-teams-provider-session-contracts-0.0.0.tgz",
+        "bytes": 6230,
+        "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+      }
+    ],
+    "qualification": "source-and-packed-consumer-only",
+    "nativeHostQualified": false,
+    "packagedElectronQualified": false
+  },
+  "boundaries": [
+    "This is new canonical PR8 run43781375954; old PR10 c79 run43774891918 remains distinct.",
+    "Actual logs and original API agree on both complete561-case cohorts and packed1+1; no test/rerun/dispatch was initiated by this child.",
+    "Actual Claude/Codex suggestion jobs are skipped with zero steps.",
+    "Native OpenCode V2 run43781376036 is a separate original matrix, still incomplete at this record; no outcome is inferred.",
+    "The new artifact ZIP has only API/upload digest evidence here, not byte/CRC/member verification. Log receipt member digests equal previously root-verified PR10c79 member digests but this is not a new ZIP verification claim.",
+    "PR8 remains open Draft; PR10 was platform-indirect-merged/closed at00:36:28Z, actualdrafttrue. Its stored closed-PR base SHA is an old snapshot, not the current canonical ref."
+  ]
+}
