@@ -220,7 +220,10 @@ jobs:
             scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts \
             scripts/legacy-agent-host/desktop-mixed-native-fixture.ts \
             scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts \
-            scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts
+            scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts \
+            tools/owned-process-broker/nativeGate.ts \
+            tools/owned-process-broker/nativeGateDiagnostics.ts \
+            tools/owned-process-broker/nativeGateEvents.test.ts
           pnpm typecheck:workspace
           node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json
           pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main
