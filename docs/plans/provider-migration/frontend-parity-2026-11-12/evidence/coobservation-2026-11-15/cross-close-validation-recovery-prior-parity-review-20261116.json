@@ -1,0 +1,1282 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-incomplete-Cross-validation-classification-and-prospective-isolated-recovery-R1-review",
+  "reviewer": "/root/parity_audit",
+  "repository": "777genius/agent-teams-ai",
+  "reviewedAtUtc": "2026-11-16 19:09:42 UTC",
+  "verdict": "ACCEPTED_INCOMPLETE_CLASSIFICATION_AND_PROSPECTIVE_RECOVERY_SCOPE_ONLY",
+  "independentLane": "Complete immutable partial packet/body/primary/source-control-flow semantics and full prospectiveR1 source/scope. No runtime or postimage authorship.",
+  "reviewedObjects": {
+    "partialEvidence": {
+      "bytes": 147631,
+      "sha256": "ebad9bfc9758fd75a6337e2281fc5012dc10302e591581ffac2429107ea9a0b1",
+      "gitBlob": "f0cb8ed61933af59c64991f3396274073587366f",
+      "wholeBodyRead": true
+    },
+    "prospectiveRecoveryR1": {
+      "bytes": 18911,
+      "sha256": "f56f67cc4ee66beac761970a6ca1f3350aa10a7ab2eb7b0d3a4e6ccdf70ed398",
+      "gitBlob": "85480d2a63a6c94d9f9cd31ab4795b01a30e5851",
+      "wholeBodyRead": true,
+      "content": "{\n  \"schemaVersion\": 1,\n  \"kind\": \"Prospective isolated Cross validation recovery scope after tool-session loss; original attempt remains incomplete\",\n  \"author\": \"/root\",\n  \"preparedAtUtc\": \"2026-11-16 19:06:40 UTC\",\n  \"repository\": \"777genius/agent-teams-ai\",\n  \"branch\": \"fix/frontend-parity-coobservation-c714-20261115\",\n  \"preparedFromCommit\": \"48499a97815abc52bf43ad6905c3c8cec1b476aa\",\n  \"preparedFromTree\": \"77753b1e54274bb4d30e619dd327c123f921b18a\",\n  \"purpose\": \"Obtain one independent complete current validation result for the already published and separately accepted whole133 Cross source, after the original once-only validation attempt lost its tool session during postflight. This is a separately reviewed new invocation, not continuation, retry or reclassification under the spent original R1.\",\n  \"priorActual\": {\n    \"completeGreenEnvelope\": {\n      \"gitBlob\": \"46b7d646a2845f544c5d959bb9bf068c2bbbc49b\",\n      \"bytes\": 166444,\n      \"sha256\": \"c1ec7ed1270235d520b436e28cbdeb0988bc1af4c8473b5226e34b081b305981\"\n    },\n    \"completeGreenGuard\": {\n      \"gitBlob\": \"848e6efd0b924e4415848551cfea034f22b84221\",\n      \"bytes\": 209270,\n      \"sha256\": \"b56c4d2a4328f11a679a73de100d13af4ec7e8ccc6fe8f6333de98dec4d2d329\"\n    },\n    \"completeGreenSemantic\": {\n      \"gitBlob\": \"4a49adfedbc84301e88d524d71b766a7ad785d14\",\n      \"bytes\": 140647,\n      \"sha256\": \"74936b31eeefd735ec329d286ae145b2eddb16fa025e5fb8cc6f715c5b133fd3\"\n    },\n    \"incompleteValidationEnvelope\": {\n      \"bytes\": 147631,\n      \"sha256\": \"ebad9bfc9758fd75a6337e2281fc5012dc10302e591581ffac2429107ea9a0b1\",\n      \"gitBlob\": \"f0cb8ed61933af59c64991f3396274073587366f\"\n    },\n    \"originalScope\": {\n      \"gitBlob\": \"8abe2a1437489d5c0223d532535d6c520fd70184\",\n      \"publishedAt\": \"a4f5c2d2a05edd636ea0ff461c00615a2ff60d86\"\n    },\n    \"originalRunner\": {\n      \"gitBlob\": \"165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1\",\n      \"bytes\": 48838,\n      \"sha256\": \"e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5\"\n    },\n    \"originalBinding\": {\n      \"gitBlob\": \"020f6efa5dce4a1a5fe269836136ce554d76792c\",\n      \"bytes\": 1800456,\n      \"sha256\": \"5a37cf5a6bff3ca5da30f7813da3d73f75852f6c7ab670dd234599f4b9a6c2e2\"\n    },\n    \"oldPhase\": \"INCOMPLETE; spent attempt, no final receipt/complete post-runtime boundary/terminal cutoff/outer0; no retroactive success\",\n    \"oldPrimaries\": \"All three finalized primary receipts exit0 and14 finalized metadata receipts exit0 were actually observed. Their individual empty captured-session arrays are narrow facts only.\",\n    \"oldSupervisorLifetime\": \"UNKNOWN. New exec /proc uses another sandbox PID namespace and does not establish the old supervisor's absence. Do not kill, adopt or signal a numeric PID from the old namespace.\",\n    \"oldFutureAuthorityGate\": \"Before admitting any recovery execution, independent full actual review must join the three finalized primary receipts and after-metadata8..14/source886 records to the exact165f control flow and establish that reaching this postflight leaves no remaining authorized primary launch path in the old invocation. Old supervisor may at most finish read-only postflight/finalization and write its own old evidence; do not assert physical disappearance. Do not modify, remove, rewrite or reuse its controls, attempt marker, evidence, task temporary directory or output paths.\"\n  },\n  \"publicationGate\": \"Root and independent reviewers first accept this exact prospective recovery scope and the complete actual incomplete-evidence classification, including no remaining old primary launch path. Publish this exact R1 in a docs-only immediate-push checkpoint on the own branch, retaining complete133 GREEN and incomplete original validation evidence. Root and an independent reviewer must fully fetch actual commit/sole parent/root/changed subtrees/all changed bodies, full append-only Plan/status prefixes, original catalog preservation and unchanged8798 non-doc/42 workflows. Only after complete actual publication/readback may root author/select a new recovery runner or binding postimage. No source/test/producer postimage is admitted.\",\n  \"unchangedSource\": {\n    \"publishedSourceCommit\": \"e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb\",\n    \"currentDocsHead\": \"48499a97815abc52bf43ad6905c3c8cec1b476aa\",\n    \"actualLocalHead\": \"c5ff4fc283e58d486c58147b4dfb00144ca10d34\",\n    \"actualLocalTree\": \"3239e6e6c8182f3d8e45ee671efc9108500b5137\",\n    \"overlays\": [\n      {\n        \"path\": \"scripts/legacy-agent-host/desktop-emulated-selection-ui.ts\",\n        \"mode\": \"100644\",\n        \"bytes\": 24759,\n        \"sha256\": \"d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b\",\n        \"gitBlob\": \"cf93da72a198dac636658e512093eef7828b5927\"\n      },\n      {\n        \"path\": \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n        \"mode\": \"100644\",\n        \"bytes\": 36260,\n        \"sha256\": \"26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38\",\n        \"gitBlob\": \"4700a0052d3c58a2b3d9bc66e6803220688050fd\"\n      },\n      {\n        \"path\": \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n        \"mode\": \"100644\",\n        \"bytes\": 8457,\n        \"sha256\": \"2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b\",\n        \"gitBlob\": \"3c7b4bb53f4259ac0795d3f92fb715887acb554f\"\n      },\n      {\n        \"path\": \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\",\n        \"mode\": \"100644\",\n        \"bytes\": 155423,\n        \"sha256\": \"b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409\",\n        \"gitBlob\": \"0aec698e88cc3af8d12c48f6d93b038efcc84900\"\n      },\n      {\n        \"path\": \"scripts/legacy-agent-host/desktop-ui-controls.ts\",\n        \"mode\": \"100644\",\n        \"bytes\": 28974,\n        \"sha256\": \"7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386\",\n        \"gitBlob\": \"ed57cb0fe7d57ef076a591621289eb77667c63ad\"\n      }\n    ],\n    \"completeSource\": {\n      \"gitBlob\": \"8860893e39a0daf17e8b499baee64b7040a9b3a2\",\n      \"bytes\": 2478650,\n      \"sha256\": \"b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0\"\n    },\n    \"nonDocRows\": 8798,\n    \"workflowLeaves\": 42,\n    \"fullC5IndexLeaves\": 11567,\n    \"productionFiles\": 5020,\n    \"frozenExceptions\": 141,\n    \"ordinaryCap\": 800,\n    \"sourceMutationsAllowed\": 0,\n    \"testOrProducerPostimagesAllowed\": 0,\n    \"incomingAdoptionAllowed\": false\n  },\n  \"execution\": {\n    \"baseEnvironment\": \"Reuse the already admitted fresh root /workspace/scratch/c714-fresh-20261116, detached C5 index plus exact published source overlays. Do not restore another actor's delivery or reinstall dependencies. Retain all122773 dependency rows,1454 compiled rows,253D/12SPI archive members, pinned toolchain/pnpm/proxy/config/cache inputs and their full existing receipts.\",\n    \"newOutputRoot\": \"/tmp/c714-cross-validation-recovery-evidence\",\n    \"newControlRoot\": \"/tmp/c714-cross-validation-recovery-controls\",\n    \"attempts\": {\n      \"validationPackage\": 1\n    },\n    \"allowedAction\": \"run validation-package only; no source materialization, test command, RED/GREEN rerun, install, build, provider/GUI/native or CI action\",\n    \"runnerGate\": \"Only after exact published/read-back R1 may root author a narrowly adapted descendant of165f with new exclusive evidence/control identity, exact new publishedR1 fields, explicit argument refusal for any action/command except run validation-package, and the explicitly listed inputManifestReadPlan. Keep all other source/input/environment/provider/tool/config/cache/captured-session/deadline/launch/finalization/cutoff logic. Its full exact code and binding require independent complete R2, docs-only immediate-push publication and complete actual readback before local control staging and execution. No current165f/020f or any old evidence is modified.\",\n    \"validationPackage\": \"Only after complete independently accepted133 GREEN, one captured validation invocation uses one shared captured environment and complete full current input/source preflight, then exactly once each in order: pinned pnpm lint:fast:files for the three Cross paths, pinned pnpm guard:source-file-size, pinned git diff --check for all five approved overlay paths. Each child gets a distinct captured session/group, its own absolute180s clock started before its spawn/start/raw work (never reset afterward), full start/raw/final receipt and cleanup accounting. Admit each next child only after prior primary exit0, successful raw/receipt finalization, no timeout/deadline/execution/cleanup error, empty captured session, no managed interruption in that child and still-clear supervisor interruption state. Otherwise mark every later command permanently UNREACHED and spend the single package attempt; no partial-resume/retry path. Full exact input/source snapshots surround the whole package, not each child; do not claim per-check snapshots. Preflight, each command/cleanup subset, and postflight timing are separately reported. Actual supervisor exit0 is an independent required continuation condition. No broad lint/format, benchmark, new test/install/build/provider command or source mutation is selected.\",\n    \"commands\": [\n      {\n        \"command\": \"lint\",\n        \"argv\": [\n          \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n          \"/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs\",\n          \"--config.pm-on-fail=error\",\n          \"--config.verify-deps-before-run=false\",\n          \"--config.engine-strict=true\",\n          \"lint:fast:files\",\n          \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n          \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n          \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n        ]\n      },\n      {\n        \"command\": \"source-size\",\n        \"argv\": [\n          \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n          \"/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs\",\n          \"--config.pm-on-fail=error\",\n          \"--config.verify-deps-before-run=false\",\n          \"--config.engine-strict=true\",\n          \"guard:source-file-size\"\n        ]\n      },\n      {\n        \"command\": \"diff-check\",\n        \"argv\": [\n          \"/usr/local/bin/git\",\n          \"diff\",\n          \"--check\",\n          \"--\",\n          \"scripts/legacy-agent-host/desktop-ui-controls.ts\",\n          \"scripts/legacy-agent-host/desktop-emulated-selection-ui.ts\",\n          \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n          \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n          \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n        ]\n      }\n    ],\n    \"inputManifestReadPlan\": {\n      \"purpose\": \"Reduce repeated full dependency-file read overhead while preserving the exact complete manifest and all original admission gates. No checksum/stat-cache shortcut or weaker preservation claim is allowed.\",\n      \"scope\": \"Only the read-only directory_manifest path used by full dependency/compiled inventories may be adapted to a bounded Python standard-library ThreadPoolExecutor, plus its narrowly required worker helper/import. The existing file_row body/identity codec remains byte-identical. No other input checker, source/control/provider/tool/env/pnpm/cache path, subprocess/capture/deadline/signal algorithm or expected identity is relaxed.\",\n      \"maximumWorkerThreads\": 8,\n      \"maximumSubmittedUnconsumedJobs\": 32,\n      \"enumeration\": \"Preserve each original roots list, absent-root behavior, root directory/no-symlink assertions, os.walk(followlinks=False), sorted directories+files enumeration, relative path spelling and complete census. Every encountered entry receives the same directory/special-file/symlink/regular-file treatment and the original full-byte file_row identity checks. Keep the original dependency-link resolve-inside-REPO and literal readlink target checks. No ignored paths, early-success truncation, hash reuse, metadata-only identity, changed file-mode policy or deduplication of distinct paths.\",\n      \"collection\": \"Keep at most32 submitted unconsumed jobs and at most8 active readers. Consume results in deterministic original enumeration order, include every non-directory result, preserve exact field order/types and final path sort. Reconstruct the same complete JSON/UTF-8/SHA256/Git-framed bytes; the full expected122773/1454 inventories remain exact acceptance targets, not count-only summaries.\",\n      \"lifetime\": \"All submitted reads/futures must be accounted for and all reader threads joined before the manifest function returns or propagates an error/signal. No background reader may overlap the primary launch or the next before/after boundary. Threads only read the same admitted input paths; they create no subprocess, source/test/provider/cache output or network access. Keep the first actual error and the existing failed-preflight/primaryUNREACHED/spent-attempt behavior. Do not swallow a failed future or report a partial snapshot as inspected/preserved.\",\n      \"timing\": \"Full hashing remains separately timed outside the unchanged original primary180-second and metadata30-second clocks. No clock reset, attempt renewal, automatic retry, reduced postflight, command overlap or new benchmark execution is selected.\",\n      \"reviewAndProof\": \"The exact future runner postimage must receive independent complete R2 of both normal and exceptional/signal paths, precise helper inverse/delta accounting and publication/readback before execution. The actual selected phases must still freshly read every dependency/compiled byte before and after and match the entire retained manifest identities; any mismatch or incomplete join refuses the phase. This paragraph does not authorize any current165f/Cross runner change. This recovery has its own isolated runner and readback; it does not mutate the original current Cross runner.\"\n    },\n    \"fullBoundary\": \"Fresh complete runtime preflight and postflight for this invocation: all8798 source rows, completeC5HEAD/tree/index, all122773 dependency and1454 compiled rows, all253D+12SPI installed/archive members, pinnedNode/Python/Git/shell/pnpm/control/config/environment and7 original bootstrap-cache files. No old full preflight, source-only after snapshot, previous GREEN or partial validation file stands in for the new reads. Match entire complete retained manifest bodies/identities, not counts. Full hashing is outside, separately timed from the unchanged180s primary and30s metadata clocks.\",\n    \"orderedAdmission\": \"Exactly lint then source-size then diff-check once, with distinct captured sessions, start/raw/final receipts and original pre-spawn absolute180-second clock each. Admit next only on prior exit0, successful final raw/receipt, no errors/deadline/timeout/signal/unknown launch and empty captured session. Require no supervisor interruption. Otherwise later commands remain UNREACHED and this separately selected attempt is spent without resume/retry.\",\n    \"actualClosure\": \"Independent full actual source/input/lifetime/primary and final receipt review plus separately observed actual outer0 is required. If tool state is lost again, preserve incomplete outcome; do not synthesize outer0 or erase a spent marker. All pending reader jobs and threads must join before any primary launch, next boundary, return or error propagation. Preserve initiating failure and record managed interruptions even while draining.\",\n    \"noBenchmark\": \"No separate performance/parallel-reader benchmark or unreviewed code evaluation is selected; exact full actual validation snapshots provide byte-equivalence proof.\",\n    \"sourceWriteBehavior\": \"No tracked source, lockfile, workflow, package or exception update. Existing scoped ESLint cache behavior remains the same admitted behavior; do not broaden ignore rules or claim no writes merely from final equality.\"\n  },\n  \"nextWork\": {\n    \"nextNodeR1V2\": {\n      \"gitBlob\": \"9bc91d0a53d775528ffe9a9040c67493a5f10546\",\n      \"bytes\": 26386,\n      \"sha256\": \"ccff0fe2833b70364c761d71cdebf02ced412ffc4eb20a73f52c232d9a68998c\"\n    },\n    \"status\": \"UNPUBLISHED and BLOCKED; no future139 test, P11/Review producer or runner postimage authored/selected. After complete independent recovery acceptance a separately reviewed prospective amendment may explicitly update the next-R1 predecessor gate to cite the new complete validation while retaining the original INCOMPLETE history. This recovery R1 itself does not authorize that future source scope.\",\n    \"renderer\": \"80-to85 renderer proposal remains unselected. Data-only package/source inspection may continue; no package evaluation or renderer postimage.\"\n  },\n  \"boundaries\": {\n    \"incomingHeads\": \"Latest read-only APP source pin1ef2c16ae547129e6b6ab5c47e03caa6b3f169df and D c930d3c8b9a213762528d6e28c9ed0172ab1fa27 remain unadopted. Their source/archive analyses admit no source/package/workflow or runtime action here.\",\n    \"originalCi\": \"All original9 runs terminal. Frozen PR1206/1207/1208/1211/1212/1213 remain untouched; no rerun/cancel/dispatch/ref/metadata action or further polling. This R1 opens no PR and launches no CI.\",\n    \"forbidden\": [\n      \"real Claude/Codex even --version\",\n      \"real user projects\",\n      \"default/main merge or Ready\",\n      \"release/default activation or Stage2\",\n      \"blanket native/vendor qualification\",\n      \"deadline/currentness/census/cleanup/no-replay weakening\",\n      \"source-size cap800/exception141/sourcecount5020 changes\",\n      \"new workflow/package/source imports beyond listed exact paths\"\n    ],\n    \"open\": [\n      \"Windows Process15s\",\n      \"Windows Packaged10s\",\n      \"strictDarwinP09\",\n      \"laterP11/genuineM16\",\n      \"new-head reconciliation\",\n      \"canonical typecheck/build\",\n      \"actual fresh GUI/platform acceptance\",\n      \"whole E2E completion\"\n    ],\n    \"renderer\": \"Renderer hook/test and Vitest admission remain unselected. Only data-only source/package inspection may continue; no renderer or package code evaluation.\"\n  },\n  \"qualification\": \"Selected fast validation only for exact current five overlays. Accepted133 finite-source GREEN remains distinct. No GUI/native/vendor/platform/canonical typing/build or whole E2E completion claim. Original supervisor cleanup uncertainty is retained and never hidden by the new result.\",\n  \"draftAmendment\": {\n    \"previousUnpublishedR1\": {\n      \"bytes\": 18534,\n      \"sha256\": \"e2ed14df4512e49db6c19fef3a4a6d94ba8e59d2ea233605a3be402fd1fb22de\",\n      \"gitBlob\": \"84681960d6b064198b8d80cc030cd3faa441d71a\"\n    },\n    \"previousPublished\": false,\n    \"reason\": \"Replace estimated draft timestamp with observed clock, bind complete partial-evidence identity, and remove inherited future-six-case wording from boundaries. Source writes remain zero and only one new three-command validation scope is proposed.\"\n  }\n}\n"
+    },
+    "originalRunner": {
+      "bytes": 48838,
+      "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+      "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1",
+      "full832LinesReadAsData": true,
+      "fullBody": "import datetime\nimport hashlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport signal\nimport stat\nimport subprocess\nimport sys\nimport tarfile\nimport tempfile\nimport time\nimport urllib.parse\n\nROOT = pathlib.Path('/workspace/scratch/c714-fresh-20261116')\nREPO = ROOT / 'source'\nOUT = pathlib.Path('/tmp/c714-cross-close-evidence')\nTASK_TMP = OUT / 'test-tmp'\nSOURCE_COMMIT = 'c5ff4fc283e58d486c58147b4dfb00144ca10d34'\nSOURCE_TREE = '3239e6e6c8182f3d8e45ee671efc9108500b5137'\nR1 = 'a4f5c2d2a05edd636ea0ff461c00615a2ff60d86'\nR1_BLOB = '8abe2a1437489d5c0223d532535d6c520fd70184'\nWORKSPACES = ['', 'agent-teams-controller', 'mcp-server', 'landing',\n              'packages/agent-graph', 'packages/legacy-agent-host', 'packages/task-change-ledger']\nBASE_PATHS = ['scripts/legacy-agent-host/desktop-ui-controls.ts',\n              'scripts/legacy-agent-host/desktop-emulated-selection-ui.ts']\nPATHS = ['scripts/legacy-agent-host/desktop-task-comment-input-target.ts',\n         'scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts',\n         'scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts']\nOVERLAY_PATHS = [*BASE_PATHS, *PATHS]\nTEST_IDENTITY = {'bytes': 155423, 'sha256': 'b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409',\n                 'gitBlob': '0aec698e88cc3af8d12c48f6d93b038efcc84900'}\nINPUT_PATHS = {\n    'setupBinding': pathlib.Path('/tmp/c714-fresh-bootstrap-review/binding.json'),\n    'sourceFull': ROOT / 'evidence/source-restore-source-after.json',\n    'sourceNonDoc': ROOT / 'evidence/host-build-source-after.json',\n    'dependencies': ROOT / 'evidence/host-build-dependencies-after.json',\n    'compiled': ROOT / 'evidence/host-build-compiled-after.json',\n    'pnpm': ROOT / 'evidence/pnpm-inventory.json',\n    'currentBoundary': pathlib.Path('/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json'),\n    'providers': pathlib.Path('/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json'),\n}\n\n\ndef identity(data):\n    return {'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest(),\n            'gitBlob': hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\\0' + data).hexdigest()}\n\ndef canonical(value):\n    return json.dumps(value, sort_keys=True, separators=(',', ':')).encode()\n\ndef utc():\n    return datetime.datetime.now(datetime.timezone.utc).isoformat()\n\ndef write_new(name, value):\n    data = (json.dumps(value, indent=2) + '\\n').encode()\n    path = OUT / name\n    with path.open('xb') as handle:\n        handle.write(data)\n    return {'path': str(path), **identity(data)}\n\ndef process_rows():\n    rows = []\n    for item in pathlib.Path('/proc').iterdir():\n        if not item.name.isdigit():\n            continue\n        try:\n            raw = (item / 'stat').read_text()\n            close = raw.rfind(')')\n            tail = raw[close + 2:].split()\n            rows.append({'pid': int(item.name), 'name': raw[raw.index('(') + 1:close],\n                         'state': tail[0], 'ppid': int(tail[1]), 'pgid': int(tail[2]),\n                         'session': int(tail[3]), 'startTicks': int(tail[19])})\n        except FileNotFoundError:\n            continue\n    return sorted(rows, key=lambda row: row['pid'])\n\ndef package_values(environment):\n    return {key: value for key, value in environment.items()\n            if key.lower().startswith(('npm_config_', 'pnpm_config_'))}\n\ndef transport_values(environment):\n    return {key: value for key, value in environment.items()\n            if key.lower() in ['http_proxy', 'https_proxy', 'all_proxy', 'no_proxy', 'proxy']}\n\ndef admit_environment(original):\n    package = package_values(original)\n    network = transport_values(original)\n    admission = amendment['admission']\n    assert set(package) == set(admission['exactPackageConfigKeys']), 'package config key drift'\n    assert set(network) == set(admission['exactOrdinaryProxyKeys']), 'network key drift'\n    assert not any(key.upper().startswith('PNPM_') for key in original), 'unreviewed PNPM environment'\n    normalized = {}\n    for key, value in {**package, **network}.items():\n        lower = key.lower()\n        assert lower not in normalized or normalized[lower] == value, 'case alias conflict'\n        normalized[lower] = value\n    for pin in admission['fixedNormalizedPackageValues']:\n        data = normalized[pin['key']].encode()\n        assert len(data) == pin['bytes'] and hashlib.sha256(data).hexdigest() == pin['sha256']\n    for name in ['httpProxyGroup', 'allProxyGroup']:\n        group = admission[name]\n        values = [normalized[key] for key in group['normalizedKeys']]\n        assert len(set(values)) == 1, 'proxy group conflict'\n        value = values[0]\n        parsed = urllib.parse.urlsplit(value)\n        assert parsed.scheme == group['scheme'] and parsed.hostname == group['hostname']\n        assert parsed.username is None and parsed.password is None\n        assert parsed.path == parsed.query == parsed.fragment == ''\n        assert parsed.port is not None and group['port']['min'] <= parsed.port <= group['port']['max']\n        assert value == group['scheme'] + '://127.0.0.1:' + str(parsed.port), 'noncanonical proxy'\n    assert normalized['no_proxy'] == normalized['npm_config_noproxy']\n    selected = {**package, **network}\n    result = original.copy()\n    for key in list(result):\n        if key.lower().startswith(('npm_config_', 'pnpm_config_')):\n            del result[key]\n        elif key in r1['environment']['unset'] + r1['environment']['additionalUnset']:\n            del result[key]\n        elif any(key.startswith(prefix) for prefix in r1['environment']['unsetPrefixes']):\n            del result[key]\n    for key in r1['environment']['inheritedPackageConfigKeys']:\n        result[key] = normalized[key]\n    result.update(r1['environment']['assignments'])\n    return result, selected\n\ndef environment_check():\n    current = {**package_values(os.environ), **transport_values(os.environ)}\n    assert current == captured_transport, 'captured environment changed'\n    assert os.environ.get('HOME') == '/home/agent' and env.get('HOME') == '/home/agent'\n    assert env.get('CODEX_HOME') == original_environment.get('CODEX_HOME')\n    assert env.get('XDG_CONFIG_HOME') == str(ROOT / 'config')\n    assert all(not (pathlib.Path(path).exists() or pathlib.Path(path).is_symlink())\n               for path in absent_configs), 'new user/global config'\n    for name in ['config.yaml', 'auth.ini', 'pnpmfile.cjs', 'pnpmfile.mjs', '.pnpmfile.cjs']:\n        assert not (ROOT / 'config' / 'pnpm' / name).exists(), 'new task pnpm config'\n    assert pathlib.Path(normalized_prefix) / 'etc/npmrc' == pathlib.Path(absent_configs[-1])\n    return {'capturedTransportCanonicalSha256': hashlib.sha256(canonical(captured_transport)).hexdigest(),\n            'values': [{'key': key, 'bytes': len(value.encode()),\n                        'sha256': hashlib.sha256(value.encode()).hexdigest()}\n                       for key, value in sorted(captured_transport.items())],\n            'explicitAssignments': {key: env.get(key) for key in [*r1['environment']['assignments'],\n                                    'AGENT_BACKEND_TEST_NODE', 'NODE_DISABLE_COMPILE_CACHE']},\n            'homePreserved': True, 'codexHomePreserved': True, 'absentConfigs': absent_configs}\n\ndef tooling():\n    rows = []\n    for name in ['node', 'git', 'python', 'scriptShell']:\n        pin = r1['tools'][name]\n        path = pathlib.Path(pin['path'])\n        value = identity(path.read_bytes())\n        assert value['bytes'] == pin['bytes'] and value['sha256'] == pin['sha256'], name\n        if pin.get('realPath'):\n            assert str(path.resolve()) == pin['realPath'], name + ' resolved path'\n        rows.append({'tool': name, 'path': str(path), 'realPath': str(path.resolve()), **value})\n    assert str(pathlib.Path(sys.executable).resolve()) == r1['tools']['python']['realPath']\n    assert shutil.which('node', path=env['PATH']) == r1['tools']['node']['path']\n    return rows\n\ndef file_row(path, relative):\n    info = path.lstat()\n    if stat.S_ISLNK(info.st_mode):\n        data, mode = os.readlink(path).encode(), '120000'\n    else:\n        assert stat.S_ISREG(info.st_mode), 'special file: ' + relative\n        data = path.read_bytes()\n        mode = '100755' if info.st_mode & stat.S_IXUSR else '100644'\n    return {'path': relative, 'mode': mode, **identity(data)}\n\ndef directory_manifest(roots):\n    rows = []\n    for base in roots:\n        if not base.exists():\n            continue\n        assert base.is_dir() and not base.is_symlink(), 'unexpected root link: ' + str(base)\n        for folder, directories, files in os.walk(base, followlinks=False):\n            for name in sorted(directories + files):\n                path = pathlib.Path(folder) / name\n                info = path.lstat()\n                if stat.S_ISDIR(info.st_mode):\n                    continue\n                relative = path.relative_to(REPO).as_posix()\n                row = file_row(path, relative)\n                if stat.S_ISLNK(info.st_mode):\n                    assert path.resolve().is_relative_to(REPO), 'dependency link escapes source'\n                    row['target'] = os.readlink(path)\n                rows.append(row)\n    return sorted(rows, key=lambda row: row['path'])\n\ndef dependencies():\n    return directory_manifest([REPO / relative / 'node_modules' for relative in WORKSPACES])\n\ndef compiled():\n    return directory_manifest([REPO / 'packages/legacy-agent-host/dist',\n                               REPO / 'packages/task-change-ledger/dist'])\n\ndef toolchain_inventory():\n    rows = []\n    for folder, directories, files in os.walk(ROOT / 'toolchain', followlinks=False):\n        for name in sorted(directories + files):\n            path = pathlib.Path(folder) / name\n            if stat.S_ISDIR(path.lstat().st_mode):\n                continue\n            rows.append(file_row(path, path.relative_to(ROOT / 'toolchain').as_posix()))\n    return sorted(rows, key=lambda row: row['path'])\n\ndef verify_pnpm():\n    assert sorted(path.name for path in (ROOT / 'bin').iterdir()) == ([] if pnpm_inventory is None else ['pnpm'])\n    for relative in WORKSPACES:\n        for name in ['node', 'pnpm']:\n            shadow = REPO / relative / 'node_modules/.bin' / name\n            assert not (shadow.exists() or shadow.is_symlink()), 'unreviewed package-script tool shadow'\n    if pnpm_inventory is None:\n        return toolchain_inventory()\n    expected = [*pnpm_inventory['members'],\n                {'path': 'pnpm-11.22.0.tgz', 'mode': '100644',\n                 **{key: pnpm_inventory['archive'][key] for key in ['bytes', 'sha256', 'gitBlob']}}]\n    actual = toolchain_inventory()\n    assert actual == sorted(expected, key=lambda row: row['path']), 'complete staged pnpm inventory changed'\n    assert pathlib.Path(r1['tools']['pnpm']['launcher']).is_symlink()\n    assert os.readlink(r1['tools']['pnpm']['launcher']) == r1['tools']['pnpm']['executable']\n    assert pathlib.Path(r1['tools']['pnpm']['launcher']).resolve() == pathlib.Path(r1['tools']['pnpm']['executable'])\n    return actual\n\ndef group_members(pid):\n    return [row for row in process_rows() if row['session'] == pid or row['pgid'] == pid]\n\ndef interrupt(signum, _frame):\n    phase_signals.append(signum)\n    if cleaning or finalizing or launching:\n        return\n    raise InterruptedError('supervisor signal ' + str(signum))\n\ndef terminate_captured(child, record, reason):\n    global cleaning\n    cleaning = True\n    cleanup_started = time.monotonic()\n    cleanup = {'reason': reason, 'capturedPid': child.pid, 'reaped': False}\n    record.setdefault('abnormalCleanup', []).append(cleanup)\n    try:\n        live = child.poll() is None\n        members = [] if live else group_members(child.pid)\n        cleanup['leaderWasLive'] = live\n        cleanup['membersAfterLeaderExit'] = members\n        if live or members:\n            try:\n                os.killpg(child.pid, signal.SIGKILL)\n                cleanup['signal'] = 'SIGKILL to captured group'\n            except ProcessLookupError:\n                cleanup['alreadyAbsent'] = True\n        child.wait(timeout=3)\n        cleanup['reaped'] = True\n    except BaseException as error:\n        cleanup['error'] = type(error).__name__ + ': ' + str(error)\n    finally:\n        cleanup['durationSeconds'] = time.monotonic() - cleanup_started\n        cleaning = False\n\ndef run_child(stage, index, argv, deadline, metadata=False):\n    global launching, finalizing\n    name = stage['id'] + '-' + str(index)\n    record = {'argv': argv, 'cwd': stage['cwd'], 'startedAt': utc(), 'timedOut': False,\n              'exitCode': None, 'exitSignal': None, 'capturedPid': None, 'metadataOnly': metadata}\n    tracker = None\n    if not metadata:\n        tracker = {'id': name, 'invocationReached': True, 'spawnAttempted': False,\n                   'capturedPid': None, 'finalReceiptPersisted': False, 'record': record}\n        primary_invocations.append(tracker)\n    write_new(name + '-start.json', record)\n    raw, errors = OUT / (name + '.log'), OUT / (name + '.stderr')\n    child, pointer = None, None\n    started = time.monotonic()\n    try:\n        with raw.open('xb') as output:\n            error_stream = errors.open('xb') if metadata else None\n            try:\n                assert deadline > time.monotonic() and not phase_signals, 'deadline/interruption before spawn'\n                launching = True\n                try:\n                    if tracker is not None:\n                        tracker['spawnAttempted'] = True\n                    child = subprocess.Popen(argv, cwd=stage['cwd'], env=env, stdout=output,\n                                             stderr=error_stream if metadata else subprocess.STDOUT,\n                                             start_new_session=True)\n                finally:\n                    launching = False\n                record['capturedPid'] = child.pid\n                if tracker is not None:\n                    tracker['capturedPid'] = child.pid\n                if phase_signals:\n                    raise InterruptedError('signal during captured launch: ' + repr(phase_signals))\n                try:\n                    child.wait(timeout=max(0, deadline - time.monotonic()))\n                except subprocess.TimeoutExpired:\n                    record['timedOut'] = True\n                    terminate_captured(child, record, 'absolute command/stage deadline')\n            finally:\n                if error_stream is not None:\n                    error_stream.close()\n    except BaseException as error:\n        record['executionError'] = type(error).__name__ + ': ' + str(error)\n    finally:\n        previous_finalizing, finalizing = finalizing, True\n        try:\n            try:\n                if child is not None:\n                    record['capturedPid'] = child.pid\n                    if tracker is not None:\n                        tracker['capturedPid'] = child.pid\n                    if child.poll() is None or record.get('executionError'):\n                        terminate_captured(child, record, 'abnormal or live command at finalization')\n                    remaining = group_members(child.pid)\n                    record['remainingBeforeCleanup'] = remaining\n                    if remaining:\n                        terminate_captured(child, record, 'captured descendants after leader exit')\n                    record['remainingCapturedSession'] = group_members(child.pid)\n                    record['exitCode'] = child.returncode if child.returncode is not None and child.returncode >= 0 else None\n                    record['exitSignal'] = -child.returncode if child.returncode is not None and child.returncode < 0 else None\n                else:\n                    record['remainingCapturedSession'] = []\n                assert not record['remainingCapturedSession'], 'captured command not quiescent'\n                for path, key in [(raw, 'raw'), (errors, 'rawStderr')]:\n                    if path.exists():\n                        record[key] = {'path': str(path), **identity(path.read_bytes())}\n            except BaseException as error:\n                record['finalizationError'] = type(error).__name__ + ': ' + str(error)\n                if child is not None:\n                    terminate_captured(child, record, 'failed protected finalization')\n            finally:\n                record['finishedAt'] = utc()\n                record['durationSeconds'] = time.monotonic() - started\n                record['interruptions'] = list(phase_signals)\n                record['cleanupSeconds'] = sum(row['durationSeconds'] for row in record.get('abnormalCleanup', []))\n                record['deadlineExceeded'] = time.monotonic() >= deadline\n                record['successful'] = bool(child is not None and record['exitCode'] == 0\n                                            and not record['timedOut'] and not record.get('executionError')\n                                            and not record.get('finalizationError') and not record.get('abnormalCleanup')\n                                            and not record['interruptions'] and not record['deadlineExceeded'])\n                pointer = write_new(name + '-receipt.json', record)\n                if tracker is not None:\n                    tracker['finalReceiptPersisted'] = True\n                    tracker['finalReceipt'] = pointer\n        finally:\n            finalizing = previous_finalizing\n    return pointer, record\n\ndef git_read(*arguments):\n    global metadata_counter\n    metadata_counter += 1\n    stage = {'id': prefix + '-' + boundary + '-metadata', 'cwd': str(REPO)}\n    pointer, record = run_child(stage, metadata_counter, [r1['tools']['git']['path'], *arguments],\n                                time.monotonic() + 30, metadata=True)\n    assert record['successful'], 'Git metadata failed; retained ' + pointer['path']\n    data = pathlib.Path(record['raw']['path']).read_bytes()\n    assert identity(data) == {key: record['raw'][key] for key in ['bytes', 'sha256', 'gitBlob']}\n    return data\n\n\ndef source_snapshot(overlays):\n    assert git_read('rev-parse', 'HEAD').decode().strip() == SOURCE_COMMIT\n    assert git_read('rev-parse', 'HEAD^{tree}').decode().strip() == SOURCE_TREE\n    leaves = []\n    for raw in git_read('ls-tree', '-rz', '--full-tree', 'HEAD').split(b'\\0'):\n        if raw:\n            metadata, path = raw.split(b'\\t', 1)\n            mode, kind, blob = metadata.decode().split()\n            leaves.append({'path': path.decode(), 'mode': mode, 'type': kind, 'gitBlob': blob})\n    expected_leaves = [{key: row[key] for key in ['path', 'mode', 'type', 'gitBlob']}\n                       for row in setup['sourceTreeRows']]\n    assert sorted(leaves, key=lambda row: row['path']) == sorted(expected_leaves, key=lambda row: row['path'])\n    assert len(leaves) == 11567, 'complete source tree changed'\n    assert git_read('diff', '--cached', '--name-only', '-z') == b'', 'staged changes'\n    assert git_read('ls-files', '--others', '--exclude-standard', '-z') == b'', 'untracked files'\n    base = {row['path']: row for row in inputs['sourceNonDoc']['rows']}\n    index = {}\n    for raw in git_read('ls-files', '--stage', '-z').split(b'\\0'):\n        if raw:\n            metadata, path = raw.split(b'\\t', 1)\n            mode, blob, stage = metadata.decode().split()\n            assert stage == '0', 'unmerged index'\n            index[path.decode()] = {'mode': mode, 'gitBlob': blob}\n    assert index == {row['path']: {key: row[key] for key in ['mode', 'gitBlob']}\n                     for row in expected_leaves}, 'complete stage0 index changed'\n    expected = dict(base)\n    for row in overlays:\n        assert row['path'] in OVERLAY_PATHS and row['mode'] == '100644'\n        assert identity(row['content'].encode()) == {key: row[key] for key in ['bytes', 'sha256', 'gitBlob']}\n        expected[row['path']] = {key: row[key] for key in ['path', 'mode', 'bytes', 'sha256', 'gitBlob']}\n    assert len(base) == len(expected) == 8798 and len({x['path'] for x in overlays}) == len(overlays)\n    changed = {path for path in expected if expected[path] != base[path]}\n    actual_changed = {p.decode() for p in git_read('diff', '--name-only', '-z', 'HEAD').split(b'\\0') if p}\n    assert actual_changed == changed, 'tracked source change set differs'\n    rows = [file_row(REPO / path, path) for path in sorted(expected)]\n    actual = {'actualLocalHead': SOURCE_COMMIT, 'tree': SOURCE_TREE, 'rows': rows,\n              'changedTrackedPaths': sorted(changed), 'allTreeLeaves': len(leaves),\n              'workflowLeaves': sum(x['path'].startswith('.github/workflows/') for x in leaves),\n              'localGitConfig': identity((REPO / '.git/config').read_bytes())}\n    pointer = write_new(prefix + '-' + boundary + '-source.json', actual)\n    assert rows == [expected[path] for path in sorted(expected)], 'source bytes differ; ' + pointer['path']\n    assert actual['localGitConfig'] == inputs['sourceFull']['localGitConfig'], 'local Git configuration changed'\n    assert actual['workflowLeaves'] == 42\n    return pointer\n\n\ndef provider_archives():\n    values = []\n    for pin in inputs['providers']['providers']:\n        archive = REPO / pin['archivePath']\n        assert identity(archive.read_bytes()) == pin['archiveIdentity']\n        installed = REPO / pin['installedRoot']\n        assert installed.is_dir() and not installed.is_symlink()\n        rows, seen = [], set()\n        with tarfile.open(archive, 'r:gz') as handle:\n            for member in handle.getmembers():\n                path = pathlib.PurePosixPath(member.name)\n                assert not path.is_absolute() and '..' not in path.parts and path.parts[0] == 'package'\n                assert member.name not in seen\n                seen.add(member.name)\n                if member.isdir():\n                    continue\n                assert member.isfile(), 'provider archive special/link member'\n                relative = path.relative_to('package').as_posix()\n                data = handle.extractfile(member).read()\n                actual = file_row(installed / relative, relative)\n                mode = '100755' if member.mode & stat.S_IXUSR else '100644'\n                assert actual == {'path': relative, 'mode': mode, **identity(data)}\n                rows.append({'path': relative, 'archiveMode': oct(member.mode), 'mode': mode,\n                             **identity(data), 'installedMatch': True})\n        assert rows == pin['regularMembers'], 'provider archive member census changed'\n        values.append({'name': pin['name'], 'archive': pin['archiveIdentity'],\n                       'regularMembers': len(rows), 'allRegularMembersEqual': True})\n    return values\n\n\ndef control_snapshot():\n    rows = []\n    for path, pin in control_pins:\n        assert path.is_file() and not path.is_symlink(), 'control path alias'\n        actual = identity(path.read_bytes())\n        assert actual == pin, 'exact admission control changed: ' + str(path)\n        rows.append({'path': str(path), **actual})\n    return rows\n\n\ndef source_metadata_snapshot(overlays):\n    result = {'source': source_snapshot(overlays), 'tools': tooling(),\n              'environment': environment_check(), 'controls': control_snapshot(),\n              'fullRuntimeInputsInspected': False, 'dependencies': 'UNINSPECTED',\n              'compiled': 'UNINSPECTED', 'providers': 'UNINSPECTED', 'bootstrapCache': 'UNINSPECTED',\n              'pnpm': identity((json.dumps(verify_pnpm(), indent=2) + '\\n').encode())}\n    assert env['AGENT_BACKEND_TEST_NODE'] == r1['tools']['node']['path']\n    assert env['TMPDIR'] == str(TASK_TMP) and env['NODE_DISABLE_COMPILE_CACHE'] == '1'\n    assert all(key not in env for key in ['NODE_COMPILE_CACHE', 'NODE_COMPILE_CACHE_PORTABLE'])\n    result['processCensus'] = process_rows()\n    result['testTemps'] = sorted([{'name': path.name, 'device': path.lstat().st_dev,\n                                  'inode': path.lstat().st_ino, 'mode': stat.S_IFMT(path.lstat().st_mode)}\n                                 for path in TASK_TMP.iterdir() if path.name.startswith('TEST-')],\n                                key=lambda row: row['name'])\n    result['taskTmpTopEntries'] = sorted(path.name for path in TASK_TMP.iterdir())\n    return result\n\n\ndef input_snapshot(overlays):\n    result = {'source': source_snapshot(overlays), 'controls': control_snapshot(),\n              'fullRuntimeInputsInspected': True}\n    checks = [('dependencies', dependencies, inputs['dependencies']),\n              ('compiled', compiled, inputs['compiled'])]\n    for name, read, expected in checks:\n        actual = read()\n        pointer = write_new(prefix + '-' + boundary + '-' + name + '.json', actual)\n        result[name] = pointer\n        assert actual == expected, name + ' changed; retained ' + pointer['path']\n    result['providers'] = provider_archives()\n    result['tools'] = tooling()\n    result['pnpm'] = identity((json.dumps(verify_pnpm(), indent=2) + '\\n').encode())\n    result['environment'] = environment_check()\n    assert env['AGENT_BACKEND_TEST_NODE'] == r1['tools']['node']['path']\n    assert env['TMPDIR'] == str(TASK_TMP) and env['NODE_DISABLE_COMPILE_CACHE'] == '1'\n    assert all(key not in env for key in ['NODE_COMPILE_CACHE', 'NODE_COMPILE_CACHE_PORTABLE'])\n    cache = []\n    for folder, directories, files in os.walk(ROOT / 'tmp', followlinks=False):\n        for name in sorted(directories + files):\n            path = pathlib.Path(folder) / name\n            if stat.S_ISDIR(path.lstat().st_mode):\n                continue\n            cache.append(file_row(path, path.relative_to(ROOT).as_posix()))\n    result['bootstrapCache'] = sorted(cache, key=lambda row: row['path'])\n    assert result['bootstrapCache'] == inputs['currentBoundary']['taskTempInventory'], 'bootstrap tmp changed'\n    result['processCensus'] = process_rows()\n    result['testTemps'] = sorted([{'name': path.name, 'device': path.lstat().st_dev,\n                                  'inode': path.lstat().st_ino, 'mode': stat.S_IFMT(path.lstat().st_mode)}\n                                 for path in TASK_TMP.iterdir() if path.name.startswith('TEST-')],\n                                key=lambda row: row['name'])\n    result['taskTmpTopEntries'] = sorted(path.name for path in TASK_TMP.iterdir())\n    return result\n\n\ndef preserved(before, after, include_source=True):\n    pointer_keys = ['dependencies', 'compiled'] + (['source'] if include_source else [])\n    return all(before[key]['sha256'] == after[key]['sha256'] for key in pointer_keys) and all(\n        before[key] == after[key] for key in ['providers', 'tools', 'pnpm', 'environment', 'bootstrapCache', 'controls'])\n\n\ndef ordinary_completion(record):\n    return bool(record and record['exitCode'] in [0, 1] and record['exitSignal'] is None\n                and not record['timedOut'] and not record.get('executionError')\n                and not record.get('finalizationError') and not record.get('abnormalCleanup')\n                and not record['interruptions'] and not record['deadlineExceeded']\n                and record['remainingCapturedSession'] == [])\n\n\ndef primary_cleanup_seconds(trackers):\n    values = [row['record'].get('cleanupSeconds', 0 if not row['spawnAttempted'] else None)\n              for row in trackers]\n    return sum(values) if all(isinstance(value, (int, float)) for value in values) else None\n\n\nassert len(sys.argv) == 5, 'binding path, binding SHA256, action and command required'\nbinding_path, binding_sha, action, command = sys.argv[1:]\nbinding_bytes = pathlib.Path(binding_path).read_bytes()\nassert hashlib.sha256(binding_bytes).hexdigest() == binding_sha\ncfg = json.loads(binding_bytes)\nassert pathlib.Path(__file__).resolve() == pathlib.Path(cfg['runnerLocalPath'])\nassert pathlib.Path(binding_path).resolve() == pathlib.Path(cfg['bindingLocalPath'])\nassert identity(pathlib.Path(__file__).read_bytes()) == cfg['runnerIdentity']\nassert cfg['publishedR1'] == R1 and cfg['phase'] in ['red', 'green']\nassert identity(cfg['crossR1Body'].encode()) == cfg['crossR1Identity']\nassert cfg['crossR1Identity']['gitBlob'] == R1_BLOB\ncross_r1 = json.loads(cfg['crossR1Body'])\nassert cfg['actualPublishedSubjectReadbackAccepted'] and cfg['combinedInputImportAdmission']['accepted']\nassert cfg['combinedInputImportAdmission']['sourceCommit'] == SOURCE_COMMIT\nassert command in (['red'] if cfg['phase'] == 'red' else ['green', 'validation-package'])\nassert action in ['run', 'materialize']\nassert action != 'materialize' or command == cfg['phase']\nassert set(cfg['inputFiles']) == set(INPUT_PATHS)\nassert ROOT.is_dir() and not ROOT.is_symlink() and REPO.is_dir() and not REPO.is_symlink()\nfor name in ['toolchain', 'bin', 'evidence', 'tmp', 'store', 'cache', 'state', 'config', 'data']:\n    assert (ROOT / name).is_dir() and not (ROOT / name).is_symlink(), name + ' root alias'\ncontrol_pins = [(pathlib.Path(__file__), cfg['runnerIdentity']),\n                (pathlib.Path(binding_path), identity(binding_bytes))]\ninputs = {}\nfor name, path in INPUT_PATHS.items():\n    pin = cfg['inputFiles'][name]\n    assert str(path) == pin['path'] and path.is_file() and not path.is_symlink()\n    data = path.read_bytes()\n    expected = {key: pin[key] for key in ['bytes', 'sha256', 'gitBlob']}\n    assert identity(data) == expected, name\n    control_pins.append((path, expected))\n    inputs[name] = json.loads(data)\nsetup = inputs['setupBinding']\nr1, amendment = json.loads(setup['r1Body']), json.loads(setup['amendmentBody'])\nassert identity(setup['r1Body'].encode()) == setup['r1Identity']\nassert identity(setup['amendmentBody'].encode()) == setup['amendmentIdentity']\nassert setup['publishedR1'] == '7e6f32741ccdb470e7688cec9de9481fd05827a1'\nassert setup['publishedAmendment'] == '0042eec33e3bcf145de25db96f5fc7c5b026a1fe'\nfor review in cfg['acceptedReviewBodies']:\n    assert identity(review['body'].encode()) == review['identity']\nassert len(inputs['sourceFull']['rows']) == 11567 and len(inputs['sourceNonDoc']['rows']) == 8798\nassert len(inputs['dependencies']) == 122773 and len(inputs['compiled']) == 1454\nassert inputs['sourceFull']['head'] == inputs['sourceNonDoc']['head'] == SOURCE_COMMIT\nassert inputs['sourceFull']['tree'] == inputs['sourceNonDoc']['tree'] == SOURCE_TREE\nexpected_before = BASE_PATHS if cfg['phase'] == 'red' else [*BASE_PATHS, PATHS[2]]\nexpected_after = [*BASE_PATHS, PATHS[2]] if cfg['phase'] == 'red' else OVERLAY_PATHS\nassert sorted(x['path'] for x in cfg['beforeSourceOverlay']) == sorted(expected_before)\nassert sorted(x['path'] for x in cfg['sourceOverlay']) == sorted(expected_after)\nfor overlays in [cfg['beforeSourceOverlay'], cfg['sourceOverlay']]:\n    for pin in cross_r1['preservedBaseline']['currentTwoOverlays']:\n        row = next(x for x in overlays if x['path'] == pin['path'])\n        assert {key: row[key] for key in pin} == pin, 'previous conversation producer changed'\n    for row in overlays:\n        assert row['mode'] == '100644'\n        assert identity(row['content'].encode()) == {key: row[key] for key in ['bytes', 'sha256', 'gitBlob']}\n        if row['path'] == PATHS[2]:\n            assert identity(row['content'].encode()) == TEST_IDENTITY\n        elif row['path'] in PATHS[:2]:\n            cap = 200 if row['path'] == PATHS[0] else 800\n            assert len(row['content'].splitlines()) <= cap\nbase_source = {row['path']: row for row in inputs['sourceNonDoc']['rows']}\nexpected_source = dict(base_source)\nfor row in cfg['sourceOverlay']:\n    expected_source[row['path']] = {key: row[key] for key in ['path', 'mode', 'bytes', 'sha256', 'gitBlob']}\nassert cfg['sourcePins'] == [expected_source[path] for path in sorted(OVERLAY_PATHS)]\nassert cfg['reviewedTestCensus']['wholeRuntimeCases'] == 133\nassert cfg['reviewedTestCensus']['wholeTest'] == TEST_IDENTITY\nwritten_paths = [PATHS[2]] if cfg['phase'] == 'red' else PATHS[:2]\nassert cfg['materializePaths'] == written_paths\nbefore_source = dict(base_source)\nfor row in cfg['beforeSourceOverlay']:\n    before_source[row['path']] = {key: row[key] for key in ['path', 'mode', 'bytes', 'sha256', 'gitBlob']}\nassert sorted(path for path in expected_source if expected_source[path] != before_source[path]) == sorted(written_paths)\npnpm_inventory = inputs['pnpm']\noriginal_environment = os.environ.copy()\nenv, captured_transport = admit_environment(original_environment)\nfor key in ['NODE_COMPILE_CACHE', 'NODE_COMPILE_CACHE_PORTABLE']:\n    env.pop(key, None)\nenv.update({'NODE_DISABLE_COMPILE_CACHE': '1', 'AGENT_BACKEND_TEST_NODE': r1['tools']['node']['path'],\n            'TMPDIR': str(TASK_TMP)})\ntempfile.tempdir = str(TASK_TMP)\nabsent_configs = [*r1['environment']['absentConfigFiles'], amendment['admission']['additionalAbsentConfig']['path']]\nnormalized_prefix = next(value for key, value in captured_transport.items() if key.lower() == 'npm_config_prefix')\nNODE = r1['tools']['node']['path']\nPNPM = [NODE, r1['tools']['pnpm']['executable'], '--config.pm-on-fail=error',\n        '--config.verify-deps-before-run=false', '--config.engine-strict=true']\nCOMMANDS = {'red': [NODE, '--test', PATHS[2]], 'green': [NODE, '--test', PATHS[2]],\n            'lint': [*PNPM, 'lint:fast:files', *PATHS],\n            'source-size': [*PNPM, 'guard:source-file-size'],\n            'diff-check': [r1['tools']['git']['path'], 'diff', '--check', '--', *OVERLAY_PATHS]}\nassert cfg['commandVectors'] == COMMANDS\nassert cfg['executionScope']['requiresObservedSupervisorExitZeroForContinuation'] is True\nowner = {'kind': 'c714-cross-close-evidence', 'base': SOURCE_COMMIT, 'publishedR1': R1,\n         'runner': cfg['runnerIdentity'], 'test': TEST_IDENTITY}\nif action == 'materialize' and cfg['phase'] == 'red':\n    OUT.mkdir(mode=0o700, exist_ok=False)\n    write_new('owner.json', owner)\nelse:\n    assert OUT.is_dir() and not OUT.is_symlink()\n    assert json.loads((OUT / 'owner.json').read_text()) == owner\nif cfg['phase'] == 'green':\n    red_pin = cfg['acceptedSemanticRed']\n    assert red_pin['independentReviewAccepted'] is True and red_pin['observedOuterSupervisorExit'] == 0\n    red_bytes = (OUT / 'red-receipt.json').read_bytes()\n    assert identity(red_bytes) == red_pin['identity']\n    red = json.loads(red_bytes)\n    assert red['command'] == 'red' and red['exitCode'] == 1 and red['inputsPreserved']\n    assert red['fullRuntimeInputsInspected'] and red['fullRuntimeInputsPreserved']\n    assert red['commandCompletedNormally'] and red['cleanup']['newTestTempsRemaining'] == []\n    assert red['scopeCompleted'] is True and red['interruptions'] == []\n    assert red['cleanup']['capturedSessionMembersAfter'] == []\n    assert not red.get('executionError') and not red.get('postflightError')\n    assert red['testIdentity'] == TEST_IDENTITY\nif action == 'run' and command in ['red', 'green']:\n    materialized = json.loads((OUT / ('materialize-' + command + '-receipt.json')).read_text())\n    assert materialized['action'] == 'materialize' and materialized['command'] == command\n    assert materialized['bindingIdentity'] == identity(binding_bytes)\n    assert materialized['publishedSubject'] == cfg['publishedSubject']\n    assert materialized['scopeCompleted'] and materialized['sourceAndSupervisorMetadataPreserved']\n    assert materialized['fullRuntimeInputsInspected'] is False\n    assert materialized['fullRuntimeInputsPreserved'] is None and materialized['inputsPreserved'] is None\n    assert materialized['writtenPaths'] == written_paths and materialized['interruptions'] == []\n    assert materialized['cleanup']['capturedSessionMembersAfter'] == []\n    assert materialized['cleanup']['newTestTempsRemaining'] == []\n    assert not materialized.get('executionError') and not materialized.get('postflightError')\nif command == 'validation-package':\n    green = json.loads((OUT / 'green-receipt.json').read_text())\n    assert green['command'] == 'green' and green['exitCode'] == 0 and green['inputsPreserved']\n    assert green['fullRuntimeInputsInspected'] and green['fullRuntimeInputsPreserved']\n    assert green['commandCompletedNormally'] and green['cleanup']['newTestTempsRemaining'] == []\n    assert green['scopeCompleted'] is True and green['interruptions'] == []\n    assert green['cleanup']['capturedSessionMembersAfter'] == []\n    assert green['publishedSubject'] == cfg['publishedSubject'] and green['bindingIdentity'] == identity(binding_bytes)\n    assert not green.get('executionError') and not green.get('postflightError')\nassert OUT.is_dir() and not OUT.is_symlink()\nTASK_TMP.mkdir(mode=0o700, exist_ok=True)\nassert TASK_TMP.is_dir() and not TASK_TMP.is_symlink()\nassert shutil.disk_usage(REPO).free >= 8 * 1024 * 1024 and shutil.disk_usage(OUT).free >= 64 * 1024 * 1024\nprefix = command if action == 'run' else 'materialize-' + cfg['phase']\nwith (OUT / (prefix + '.attempt')).open('x') as handle:\n    handle.write(utc() + '\\n')\nruntime_inputs = action == 'run'\nreceipt = {'kind': 'cross-close-test-first-bounded-invocation', 'command': command,\n           'action': action, 'attempt': 1, 'startedAt': utc(), 'publishedR1': R1,\n           'publishedSubject': cfg['publishedSubject'], 'actualLocalHead': SOURCE_COMMIT,\n           'runnerIdentity': cfg['runnerIdentity'], 'bindingIdentity': identity(binding_bytes),\n           'testIdentity': TEST_IDENTITY, 'sourcePins': cfg['sourcePins'],\n           'argv': COMMANDS.get(command) if action == 'run' else None, 'cwd': str(REPO),\n           'perPrimaryCommandLimitSeconds': 180, 'metadataCommandLimitSeconds': 30,\n           'fullRuntimeInputsRequested': runtime_inputs, 'fullRuntimeInputsInspected': False,\n           'fullRuntimeInputBoundaries': {key: 'UNREACHED' if runtime_inputs else 'UNINSPECTED' for key in ['before', 'after']},\n           'fullRuntimeInputsPreserved': False if runtime_inputs else None,\n           'inputsPreserved': False if runtime_inputs else None, 'sourceAndSupervisorMetadataPreserved': False,\n           'commandCompletedNormally': False, 'exitCode': None, 'exitSignal': None, 'timedOut': False,\n           'cleanupSeconds': 0, 'commandPhaseSeconds': 0,\n           'cleanupTimeAccounting': 'Captured termination/reap time is a subset of each commandPhaseSeconds.',\n           'snapshotScope': 'whole invocation; validation children share one full preflight and postflight' if runtime_inputs else 'source-and-supervisor-metadata-only',\n           'qualification': 'Finite actual-source cases/scoped guards only. Metadata materialization is not a behavioral or all-input result. No GUI/native/vendor or whole-E2E claim.'}\nif not runtime_inputs:\n    receipt['uninspectedRuntimeInputs'] = {key: 'UNINSPECTED' for key in\n        ['dependencies', 'compiled', 'providerArchivesAndInstalledMembers', 'bootstrapNodeCache']}\nif command == 'validation-package':\n    receipt['validationCommands'] = [{'command': name, 'argv': COMMANDS[name], 'status': 'UNREACHED'}\n                                     for name in ['lint', 'source-size', 'diff-check']]\nreceipt_path = OUT / (prefix + '-receipt.json')\nreceipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')\nmetadata_counter = 0\nphase_signals = []\ncleaning = finalizing = launching = False\nprevious_handlers = {sig: signal.signal(sig, interrupt) for sig in [signal.SIGINT, signal.SIGTERM]}\ninvocation_start = time.monotonic()\nbefore = after = primary = None\nprimaries = []\nprimary_invocations = []\nreceipt['primaryInvocations'] = primary_invocations\nexpected_command_outcome = False\nboundary = 'before'\nsnapshot = input_snapshot if runtime_inputs else source_metadata_snapshot\ntry:\n    preflight_start = time.monotonic()\n    overlays = cfg['beforeSourceOverlay'] if action == 'materialize' else cfg['sourceOverlay']\n    if runtime_inputs:\n        receipt['fullRuntimeInputBoundaries']['before'] = 'STARTED'\n    before = snapshot(overlays)\n    if runtime_inputs:\n        receipt['fullRuntimeInputBoundaries']['before'] = 'COMPLETE'\n    receipt['before'] = before\n    receipt['preflightSeconds'] = time.monotonic() - preflight_start\n    receipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')\n    if action == 'materialize':\n        receipt['writtenPaths'] = []\n        for path in written_paths:\n            assert not phase_signals\n            row = next(x for x in cfg['sourceOverlay'] if x['path'] == path)\n            (REPO / path).write_bytes(row['content'].encode())\n            receipt['writtenPaths'].append(path)\n        expected_command_outcome = True\n    elif command == 'validation-package':\n        package_start = time.monotonic()\n        try:\n            for entry in receipt['validationCommands']:\n                assert not phase_signals, 'supervisor interruption before next validation child'\n                command_start = time.monotonic()\n                entry['status'] = 'STARTED'\n                stage = {'id': prefix + '-' + entry['command'], 'cwd': str(REPO)}\n                invocation_offset = len(primary_invocations)\n                try:\n                    pointer, primary = run_child(stage, 1, entry['argv'], command_start + 180)\n                    primaries.append(primary)\n                    entry.update({'status': 'EXECUTED', 'primaryReceipt': pointer, 'record': primary})\n                finally:\n                    entry['commandPhaseSeconds'] = time.monotonic() - command_start\n                    entry['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations[invocation_offset:])\n                    entry['invocationRecords'] = primary_invocations[invocation_offset:]\n                assert identity(pathlib.Path(pointer['path']).read_bytes()) == {key: pointer[key] for key in ['bytes', 'sha256', 'gitBlob']}\n                assert primary.get('raw')\n                assert identity(pathlib.Path(primary['raw']['path']).read_bytes()) == {key: primary['raw'][key] for key in ['bytes', 'sha256', 'gitBlob']}\n                assert ordinary_completion(primary) and primary['successful'] and primary['exitCode'] == 0\n                assert primary['remainingCapturedSession'] == [] and not phase_signals\n                entry['nextCommandAdmitted'] = True\n            receipt['commandCompletedNormally'] = True\n            expected_command_outcome = True\n        finally:\n            receipt['commandPhaseSeconds'] = time.monotonic() - package_start\n            receipt['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations)\n            if primary:\n                for key in ['exitCode', 'exitSignal', 'timedOut']:\n                    receipt[key] = primary[key]\n    else:\n        command_start = time.monotonic()\n        stage = {'id': prefix + '-command', 'cwd': str(REPO)}\n        try:\n            pointer, primary = run_child(stage, 1, COMMANDS[command], command_start + 180)\n            primaries.append(primary)\n            receipt['primaryReceipt'] = pointer\n            for key in ['exitCode', 'exitSignal', 'timedOut']:\n                receipt[key] = primary[key]\n            receipt['commandCompletedNormally'] = ordinary_completion(primary)\n            receipt['rawCombinedOutput'] = primary.get('raw')\n            expected_command_outcome = receipt['commandCompletedNormally'] and primary['exitCode'] == (1 if command == 'red' else 0)\n        finally:\n            receipt['commandPhaseSeconds'] = time.monotonic() - command_start\n            receipt['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations)\nexcept BaseException as error:\n    receipt['executionError'] = type(error).__name__ + ': ' + str(error)\n    if 'preflightSeconds' not in receipt:\n        receipt['preflightSeconds'] = time.monotonic() - preflight_start\nfinally:\n    finalizing = True\n    postflight_start = time.monotonic()\n    try:\n        boundary = 'after'\n        if runtime_inputs:\n            receipt['fullRuntimeInputBoundaries']['after'] = 'STARTED'\n        after = snapshot(cfg['sourceOverlay'])\n        if runtime_inputs:\n            receipt['fullRuntimeInputBoundaries']['after'] = 'COMPLETE'\n        receipt['after'] = after\n        metadata_preserved = bool(before and all(before[key] == after[key] for key in ['tools', 'pnpm', 'environment', 'controls']))\n        receipt['sourceAndSupervisorMetadataPreserved'] = metadata_preserved\n        if runtime_inputs:\n            receipt['inputsPreserved'] = bool(before and preserved(before, after))\n            receipt['fullRuntimeInputsPreserved'] = receipt['inputsPreserved']\n        unknown_launches = [row['id'] for row in primary_invocations if row['spawnAttempted'] and row['capturedPid'] is None]\n        receipt['cleanup'] = {'unknownPrimaryLaunches': unknown_launches,\n                              'capturedSessionMembersAfter': None if unknown_launches else [member for row in primary_invocations if row.get('capturedPid')\n                                                              for member in group_members(row['capturedPid'])],\n                              'newTestTempsRemaining': [x for x in after['testTemps'] if before and x not in before['testTemps']],\n                              'scope': 'All captured primary sessions/groups and TEST-prefixed task temps; metadata sessions are checked individually. No universal escaped-child/native custody proof.'}\n    except BaseException as error:\n        receipt['postflightError'] = type(error).__name__ + ': ' + str(error)\n        if runtime_inputs:\n            receipt['inputsPreserved'] = receipt['fullRuntimeInputsPreserved'] = False\n        receipt['sourceAndSupervisorMetadataPreserved'] = False\n    finally:\n        managed_signals = set(previous_handlers)\n        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, managed_signals)\n        try:\n            pending_signals = sorted(int(sig) for sig in signal.sigpending() & managed_signals)\n            receipt['signalAdmissionCutoff'] = {\n                'at': utc(), 'pendingSignals': pending_signals, 'supervisorExitZeroRequired': True,\n                'scope': 'Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.'}\n            receipt['postflightSeconds'] = time.monotonic() - postflight_start\n            receipt['finishedAt'] = utc()\n            receipt['totalInvocationSeconds'] = time.monotonic() - invocation_start\n            receipt['interruptions'] = [*phase_signals, *pending_signals]\n            receipt['metadataCommands'] = metadata_counter\n            receipt['fullRuntimeInputsInspected'] = runtime_inputs and all(\n                value == 'COMPLETE' for value in receipt['fullRuntimeInputBoundaries'].values())\n            receipt['primaryUnreached'] = action == 'run' and not primary_invocations\n            receipt['primaryFinalizationComplete'] = all(row['finalReceiptPersisted'] for row in primary_invocations)\n            receipt['primaryInvocationsWithoutFinalReceipt'] = [row['id'] for row in primary_invocations\n                                                               if not row['finalReceiptPersisted']]\n            receipt['unreachedValidationCommands'] = [x['command'] for x in receipt.get('validationCommands', [])\n                                                       if x['status'] == 'UNREACHED']\n            selected_inputs_preserved = receipt['inputsPreserved'] if runtime_inputs else receipt['sourceAndSupervisorMetadataPreserved']\n            receipt['scopeCompleted'] = bool(selected_inputs_preserved and expected_command_outcome\n                                             and (not runtime_inputs or receipt['fullRuntimeInputsInspected'])\n                                             and receipt['primaryFinalizationComplete']\n                                             and not receipt.get('executionError') and not receipt.get('postflightError')\n                                             and not receipt['interruptions'] and not receipt['unreachedValidationCommands']\n                                             and receipt.get('cleanup', {}).get('newTestTempsRemaining') == []\n                                             and receipt.get('cleanup', {}).get('capturedSessionMembersAfter') == [])\n            receipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')\n        finally:\n            for sig, previous in previous_handlers.items():\n                signal.signal(sig, previous)\n            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)\nprint(json.dumps({key: receipt.get(key) for key in ['command', 'action', 'exitCode', 'exitSignal',\n      'timedOut', 'executionError', 'postflightError', 'inputsPreserved', 'fullRuntimeInputsInspected',\n      'fullRuntimeInputsPreserved', 'sourceAndSupervisorMetadataPreserved', 'commandCompletedNormally',\n      'scopeCompleted', 'preflightSeconds', 'commandPhaseSeconds', 'cleanupSeconds', 'postflightSeconds',\n      'totalInvocationSeconds', 'unreachedValidationCommands', 'rawCombinedOutput', 'cleanup', 'signalAdmissionCutoff']}), flush=True)\nsys.exit(0 if receipt['scopeCompleted'] and not phase_signals else 2)\n"
+    },
+    "originalGreenBinding": {
+      "bytes": 1800456,
+      "sha256": "5a37cf5a6bff3ca5da30f7813da3d73f75852f6c7ab670dd234599f4b9a6c2e2",
+      "gitBlob": "020f6efa5dce4a1a5fe269836136ce554d76792c",
+      "fullBodyFetchedHashedAndParsed": true
+    },
+    "completeCurrentSource": {
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2",
+      "fullBodyFetchedHashedAndParsed": true
+    },
+    "priorCompleteGreenEnvelope": {
+      "bytes": 166444,
+      "sha256": "c1ec7ed1270235d520b436e28cbdeb0988bc1af4c8473b5226e34b081b305981",
+      "gitBlob": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+      "fullBodyFetchedHashedAndParsed": true
+    }
+  },
+  "classification": {
+    "originalPhase": "INCOMPLETE",
+    "originalAttempt": "SPENT",
+    "originalOuterSession": 81561,
+    "observedPrimaryResults": "Three distinct finalized primary receipts report exit0 with the exact selected commands and expected complete raw outcomes. This is retained as a command-level fact, not aggregate validation PASS.",
+    "observedMetadataResults": "Fourteen distinct finalized metadata receipts report exit0; after-metadata8..14 and the complete after-source886 prove the original execution entered its final postflight.",
+    "checkpoint": "6fd25d10 is the earlier persisted after-preflight checkpoint. Its empty primaryInvocations and UNREACHED command/after fields were never terminally updated. Separate actual child receipts prove those commands ran; the checkpoint must not be treated as current evidence that they did not run.",
+    "fullRuntimePostflight": "INCOMPLETE: after-dependency and after-compiled manifests are absent from the retained packet, as are a final aggregate receipt, terminal signal cutoff, final printed22fields and observed outer completion.",
+    "afterInputPreservation": "UNKNOWN; no whole-input preserved/PASS claim.",
+    "originalSupervisorPhysicalAbsence": "UNKNOWN. A later exec's different PID namespace cannot establish the old supervisor's fate.",
+    "originalSupervisorCleanup": "UNKNOWN despite the finalized individual primary/metadata captured-session arrays being empty.",
+    "exactTransportCause": "UNKNOWN. The retained tool observation is lost session/state and Unknown process id81561; no signal/OS crash/current-source defect or test failure is inferred.",
+    "next139Scope": "BLOCKED and unpublished. The accepted whole133GREEN remains separate and unchanged."
+  },
+  "exactPartialPacketProof": {
+    "files": 71,
+    "totalRecordedBytes": 50611631,
+    "literalBodies": 63,
+    "largeInstances": 8,
+    "uniqueBodies": 47,
+    "full63LiteralHashProof": [
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-10-receipt.json",
+        "bytes": 1105,
+        "sha256": "a44628947a819962c0be7e0d1570608c4c0de9251888d3ae3386de9030e4a319",
+        "gitBlob": "7bc5c2cac09215ca1f6cc741eba87ef07559e22e"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-10-start.json",
+        "bytes": 321,
+        "sha256": "6b45b4a76978c3b0b0d8ae9c8144a1a2c6af99f45c1caa46fd03fc71012450fc",
+        "gitBlob": "96c6df4f911c388aaae4bcc412ccc8614c274917"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-10.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-11-receipt.json",
+        "bytes": 1101,
+        "sha256": "0be97a5d1aaa81373c8750d4f78111239ef13fc349be63eac65c2459368b81b4",
+        "gitBlob": "ed7a1a851ef250a2bc9be9fd95149ab59a2ab8d6"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-11-start.json",
+        "bytes": 321,
+        "sha256": "cf4b3cade48e59ac4cf218c0a1dcba300619c90eb790157111ecc2b09e39e431",
+        "gitBlob": "0ceae3876bc901698a0bb664ed22eab43d9e875c"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-11.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-11.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-12-receipt.json",
+        "bytes": 1110,
+        "sha256": "1dda57f64f8253f346b02c225cac460d7613bd8cf975a078a4d0b15a21437880",
+        "gitBlob": "d14d794054451fc752ac8887b921952a06e2a1fb"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-12-start.json",
+        "bytes": 332,
+        "sha256": "5a8ffaf0ff4e5fccdb73c5e77a28981952e496cf8e6b9fada16db0d60a2673c7",
+        "gitBlob": "354d866cd54aa19468a45fc1a8baeecfa7de1d97"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-12.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-12.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-13-receipt.json",
+        "bytes": 1092,
+        "sha256": "89c3abb85bbcabeeeeb378ef39f0034682b5b7dc973b96be55ae1d2a5db506eb",
+        "gitBlob": "45e7e1c0587895c4c5a1fc2d39c8f7bdef68f4b3"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-13-start.json",
+        "bytes": 305,
+        "sha256": "1c66a822fe26638b57c04afd1a0263c1d3a81021498dc9a3e98001cbd0691322",
+        "gitBlob": "5c63a2345cd73b441abe64b1fc8bcaab098841ab"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-13.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-14-receipt.json",
+        "bytes": 1099,
+        "sha256": "1cd7ec077054374cc781f986e173b90051281bff475cf4529c1a1130242059fd",
+        "gitBlob": "d4b102562a0d8b973ebc7d26194474c01cdf63e8"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-14-start.json",
+        "bytes": 317,
+        "sha256": "7167c7e161a5b7fc412ca78525234a9af316d81623596eefbb1ea37199d8d87d",
+        "gitBlob": "cff5affa742b0afffe0c60e4cbb095e0a245a3d0"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-14.log",
+        "bytes": 284,
+        "sha256": "73314fb17f826ef0b5e37a98e2211c229a682b5036865043c2e541f2d2be47e9",
+        "gitBlob": "e1d8c27921fd7d45dcb0dfc8259e92bb2e75e2bd"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-14.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-8-receipt.json",
+        "bytes": 1072,
+        "sha256": "f2d22ab4eea3b986763c2faac9a337bc70ca5283eedb941496159c65c7694568",
+        "gitBlob": "43d43910beaeb8a7099b8913d9f207a33606e105"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-8-start.json",
+        "bytes": 293,
+        "sha256": "ec130b7cac7d8b771c8cedb8a3a479909141dbb57406d3e0e2a6e18860962721",
+        "gitBlob": "9607a16ffa7668e6536226bb796484d94859bba4"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-8.log",
+        "bytes": 41,
+        "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+        "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-8.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-9-receipt.json",
+        "bytes": 1079,
+        "sha256": "6e00685125c94188ffd62399f6ce7120555110e3f2ffb414697a7858418b25ba",
+        "gitBlob": "3c3d5c93002fce4fba9569d93105996b5502b223"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-9-start.json",
+        "bytes": 300,
+        "sha256": "4d031851fbb1181792c51ca0c64df8fa9e12b9d41ac255046c3edc7ce92aff07",
+        "gitBlob": "bc6557b98dfb932826000a3e4218efbf0e684050"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-9.log",
+        "bytes": 41,
+        "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+        "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-9.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-1-receipt.json",
+        "bytes": 1072,
+        "sha256": "b1aee9db51bd93753d805e0dd8be092606469f4a798caef5898ac3e24cdee625",
+        "gitBlob": "8b202f681f79aca600268df358f014cbc826e9b9"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-1-start.json",
+        "bytes": 293,
+        "sha256": "444e31dee0b7c9ebd291f0dd21967141b9eb0301ef2053810cbb6a8bdc03594f",
+        "gitBlob": "dbf03fc482196d5ddfdbd32ff0c16570e25be9ce"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-1.log",
+        "bytes": 41,
+        "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+        "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-1.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-2-receipt.json",
+        "bytes": 1080,
+        "sha256": "93ba436d1076fd60e0be2e8e6427ffb01b6e01f6ca3d8f8181ff9744a2cb3fab",
+        "gitBlob": "9000f5017210612e0c8f169a7b9589560e61d195"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-2-start.json",
+        "bytes": 300,
+        "sha256": "d28c1b77bfdeb55bf20116d8972d0a1b0c0b93c9445c9b4bf9561fd012f01e04",
+        "gitBlob": "d28340f6d49eb1be610e24e230c67e2044d8240d"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-2.log",
+        "bytes": 41,
+        "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+        "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-2.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-3-receipt.json",
+        "bytes": 1105,
+        "sha256": "c23e13e335e7896cf78585d50c6a6a849d953fedbdae6f055e7fdfa6f4e3e85a",
+        "gitBlob": "db3d5275dbffb15f1acacf14e5fcf06ea78f769d"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-3-start.json",
+        "bytes": 321,
+        "sha256": "f6169974d3657b3610aa12517f5b642df1443157d30ff6ba18b728eb7e534553",
+        "gitBlob": "a61a0525356c6b421adb477a7408e3e21b298af3"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-3.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-4-receipt.json",
+        "bytes": 1100,
+        "sha256": "e048d51f97087b66e79db41f6704d66428938425d28489e29b00fcaa677ec892",
+        "gitBlob": "f0eb5059116a483b9dbbcea5023670e1ddcb6c61"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-4-start.json",
+        "bytes": 321,
+        "sha256": "874ba7e3232c9b8f56970fb26e0ba5e601a13b6473d99b376bec91de0f968a16",
+        "gitBlob": "d345090e02d8aada5b982970a5ebbe7970ca6a77"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-4.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-4.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-5-receipt.json",
+        "bytes": 1108,
+        "sha256": "2792cc992e243c8c40bd5a16c9d4dc91f98885d99df78a0bc539e2ed112391b9",
+        "gitBlob": "1c806432f05576151d48a513173a139d18d09adf"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-5-start.json",
+        "bytes": 332,
+        "sha256": "49e8e27eae8410dfc1db8e63b4f758972381be5984bf7c76243c748327d3a0f7",
+        "gitBlob": "23449197c0728a18fe396aae8e1be9c62abd4e7e"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-5.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-5.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-6-receipt.json",
+        "bytes": 1090,
+        "sha256": "bc809516697a2685788f18bbfecf5ccf7f1d0b5fd726aa5fe77642982b15b459",
+        "gitBlob": "f9ca34bc1229fb30715d5bf1f7e11c1f551c4855"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-6-start.json",
+        "bytes": 305,
+        "sha256": "87d72a6ae2a726a3973e9e16a3842748c8fae6fd2544f5f010b6902b23b68092",
+        "gitBlob": "bcb336e668fbea3a1489f3f3871e14fd52a65b13"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-6.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-7-receipt.json",
+        "bytes": 1097,
+        "sha256": "e995f8dd36244a931f153c5c1ddcd412de392e47825a83e93119453b55ec8254",
+        "gitBlob": "e2310ff3ec0352489a42df0c9a85498afc5ce4d6"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-7-start.json",
+        "bytes": 317,
+        "sha256": "a1005a6964b16453fee2917a8d627da5f41a48a25ca7967e3405a2bfb50d53f2",
+        "gitBlob": "b2affad0cb136a84db114ba7eb7d23e09b2ff26b"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-7.log",
+        "bytes": 284,
+        "sha256": "73314fb17f826ef0b5e37a98e2211c229a682b5036865043c2e541f2d2be47e9",
+        "gitBlob": "e1d8c27921fd7d45dcb0dfc8259e92bb2e75e2bd"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-7.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-diff-check-1-receipt.json",
+        "bytes": 1125,
+        "sha256": "92fd66707ef5e837b4e74ff8bfa9451becdecdac7b7c05c4f4f6ca3154bb4dfc",
+        "gitBlob": "3ba70cf95e64059b7c842b0706d0f62cf010876e"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-diff-check-1-start.json",
+        "bytes": 621,
+        "sha256": "465b69231d1d7b08f1cf3672d3c8422e0726edbb312721c2273a11526fa88dee",
+        "gitBlob": "3d6b48b59155981e96589f755ab205e332641368"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-diff-check-1.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-lint-1-receipt.json",
+        "bytes": 1225,
+        "sha256": "1acc29da54ad3d595d0dd1bb0a2df5bf86be6fcd0b7b9280732ecdb01e5dc18c",
+        "gitBlob": "6f6c11af08486136c247d4dc579a8bc9399d91ca"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-lint-1-start.json",
+        "bytes": 725,
+        "sha256": "2b52316335a7bc85849da08650962143246c799b9359f1f3a287c98f6f7af222",
+        "gitBlob": "03e3ddd74682c1d99e06b82b95d9f0c34d8d68f4"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-lint-1.log",
+        "bytes": 284,
+        "sha256": "30ee225fe84245fcde6bc8fe685c62c913a5b0afeb596c32d6bd261349f7864a",
+        "gitBlob": "4db718c739d143a52269c305b0e24a0896993950"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-receipt.json",
+        "bytes": 18872,
+        "sha256": "04b3f56bd41080a5b29a9da2867cbc80bf9b07f71e31d79c7e41a7eb6046fb6a",
+        "gitBlob": "6fd25d10b96add1d31a413fefd07555f10df7b4b"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-source-size-1-receipt.json",
+        "bytes": 1043,
+        "sha256": "56024b544fb804d5ccc8cfc13c1c17867f71c2be4f1fcf01d25aea12bdaa042f",
+        "gitBlob": "2d31e9c3bdf443be45a855c1dd10be623c755ec3"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-source-size-1-start.json",
+        "bytes": 535,
+        "sha256": "a581434bb7f36cb96faf4377a95cf2077780b0a6f3bb4f97acbdcc24657b6626",
+        "gitBlob": "43c204534b531eb0942e421027881bc050a26f51"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-source-size-1.log",
+        "bytes": 249,
+        "sha256": "26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f",
+        "gitBlob": "399a78f77777d0669218be2d4dae5360657308fa"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package.attempt",
+        "bytes": 33,
+        "sha256": "3180270fee824a385f15f792481be329aa88b87a1a9384bf1747e9770da7fd9d",
+        "gitBlob": "2cd4726b9017df202b11e0afd1155e3481e080c7"
+      }
+    ],
+    "eightCompletePriorBodyIdentityJoins": [
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-10.log",
+        "bytes": 1527575,
+        "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+        "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec",
+        "completePriorBodySameIdentity": true,
+        "priorAcceptedEnvelope": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+        "priorActualFile": "/tmp/c714-cross-close-evidence/green-before-metadata-3.log"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-13.log",
+        "bytes": 1492874,
+        "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+        "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8",
+        "completePriorBodySameIdentity": true,
+        "priorAcceptedEnvelope": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+        "priorActualFile": "/tmp/c714-cross-close-evidence/green-before-metadata-6.log"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-after-source.json",
+        "bytes": 2478650,
+        "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+        "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2",
+        "completePriorBodySameIdentity": true,
+        "priorAcceptedEnvelope": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+        "priorActualFile": "/tmp/c714-cross-close-evidence/green-before-source.json"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-compiled.json",
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9",
+        "completePriorBodySameIdentity": true,
+        "priorAcceptedEnvelope": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+        "priorActualFile": "/tmp/c714-cross-close-evidence/green-before-compiled.json"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-dependencies.json",
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7",
+        "completePriorBodySameIdentity": true,
+        "priorAcceptedEnvelope": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+        "priorActualFile": "/tmp/c714-cross-close-evidence/green-before-dependencies.json"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-3.log",
+        "bytes": 1527575,
+        "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+        "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec",
+        "completePriorBodySameIdentity": true,
+        "priorAcceptedEnvelope": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+        "priorActualFile": "/tmp/c714-cross-close-evidence/green-before-metadata-3.log"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-6.log",
+        "bytes": 1492874,
+        "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+        "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8",
+        "completePriorBodySameIdentity": true,
+        "priorAcceptedEnvelope": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+        "priorActualFile": "/tmp/c714-cross-close-evidence/green-before-metadata-6.log"
+      },
+      {
+        "path": "/tmp/c714-cross-close-evidence/validation-package-before-source.json",
+        "bytes": 2478650,
+        "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+        "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2",
+        "completePriorBodySameIdentity": true,
+        "priorAcceptedEnvelope": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+        "priorActualFile": "/tmp/c714-cross-close-evidence/green-before-source.json"
+      }
+    ],
+    "priorIdentityScope": "The eight current large-file identities join complete previously accepted46b7 bodies by byte length/SHA256/Git identity. This reviewer freshly rehashed the complete886 source body and all63 current literal bodies; the unchanged huge dependency/tree/index/compiled bodies are retained through their already accepted complete prior bodies, not newly claimed to have been generated after the interruption.",
+    "source": {
+      "identity": {
+        "bytes": 2478650,
+        "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+        "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+      },
+      "rows": 8798,
+      "workflows": 42,
+      "fullIndexLeaves": 11567,
+      "fiveOverlaysExact": true,
+      "beforeAndRecordedAfterBoth886": true
+    },
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      }
+    ],
+    "actualMissing": {
+      "afterDependencies": true,
+      "afterCompiled": true,
+      "finalAggregateReceipt": true,
+      "finalPrinted22Fields": true,
+      "observedOuterCompletion": true,
+      "terminalSignalCutoff": true
+    },
+    "aggregateCheckpointIdentity": {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-receipt.json",
+      "bytes": 18872,
+      "sha256": "04b3f56bd41080a5b29a9da2867cbc80bf9b07f71e31d79c7e41a7eb6046fb6a",
+      "gitBlob": "6fd25d10b96add1d31a413fefd07555f10df7b4b"
+    },
+    "aggregateCheckpointFullBody": "{\n  \"kind\": \"cross-close-test-first-bounded-invocation\",\n  \"command\": \"validation-package\",\n  \"action\": \"run\",\n  \"attempt\": 1,\n  \"startedAt\": \"2026-11-16T18:37:21.107138+00:00\",\n  \"publishedR1\": \"a4f5c2d2a05edd636ea0ff461c00615a2ff60d86\",\n  \"publishedSubject\": {\n    \"commit\": \"e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb\",\n    \"tree\": \"e9bb2f34a94f5d936ff4145056d0ccce16ae8a58\",\n    \"qualification\": \"Exact published two-source helper3c7b/driver4700 under8abeR1, unchanged0aec whole133 test and fixeded57/cf93. Local C5 index plus five exact source overlays; remote documentation is not claimed locally materialized.\"\n  },\n  \"actualLocalHead\": \"c5ff4fc283e58d486c58147b4dfb00144ca10d34\",\n  \"runnerIdentity\": {\n    \"bytes\": 48838,\n    \"sha256\": \"e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5\",\n    \"gitBlob\": \"165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1\"\n  },\n  \"bindingIdentity\": {\n    \"bytes\": 1800456,\n    \"sha256\": \"5a37cf5a6bff3ca5da30f7813da3d73f75852f6c7ab670dd234599f4b9a6c2e2\",\n    \"gitBlob\": \"020f6efa5dce4a1a5fe269836136ce554d76792c\"\n  },\n  \"testIdentity\": {\n    \"bytes\": 155423,\n    \"sha256\": \"b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409\",\n    \"gitBlob\": \"0aec698e88cc3af8d12c48f6d93b038efcc84900\"\n  },\n  \"sourcePins\": [\n    {\n      \"path\": \"scripts/legacy-agent-host/desktop-emulated-selection-ui.ts\",\n      \"mode\": \"100644\",\n      \"bytes\": 24759,\n      \"sha256\": \"d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b\",\n      \"gitBlob\": \"cf93da72a198dac636658e512093eef7828b5927\"\n    },\n    {\n      \"path\": \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n      \"mode\": \"100644\",\n      \"bytes\": 36260,\n      \"sha256\": \"26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38\",\n      \"gitBlob\": \"4700a0052d3c58a2b3d9bc66e6803220688050fd\"\n    },\n    {\n      \"path\": \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n      \"mode\": \"100644\",\n      \"bytes\": 8457,\n      \"sha256\": \"2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b\",\n      \"gitBlob\": \"3c7b4bb53f4259ac0795d3f92fb715887acb554f\"\n    },\n    {\n      \"path\": \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\",\n      \"mode\": \"100644\",\n      \"bytes\": 155423,\n      \"sha256\": \"b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409\",\n      \"gitBlob\": \"0aec698e88cc3af8d12c48f6d93b038efcc84900\"\n    },\n    {\n      \"path\": \"scripts/legacy-agent-host/desktop-ui-controls.ts\",\n      \"mode\": \"100644\",\n      \"bytes\": 28974,\n      \"sha256\": \"7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386\",\n      \"gitBlob\": \"ed57cb0fe7d57ef076a591621289eb77667c63ad\"\n    }\n  ],\n  \"argv\": null,\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"perPrimaryCommandLimitSeconds\": 180,\n  \"metadataCommandLimitSeconds\": 30,\n  \"fullRuntimeInputsRequested\": true,\n  \"fullRuntimeInputsInspected\": false,\n  \"fullRuntimeInputBoundaries\": {\n    \"before\": \"COMPLETE\",\n    \"after\": \"UNREACHED\"\n  },\n  \"fullRuntimeInputsPreserved\": false,\n  \"inputsPreserved\": false,\n  \"sourceAndSupervisorMetadataPreserved\": false,\n  \"commandCompletedNormally\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"timedOut\": false,\n  \"cleanupSeconds\": 0,\n  \"commandPhaseSeconds\": 0,\n  \"cleanupTimeAccounting\": \"Captured termination/reap time is a subset of each commandPhaseSeconds.\",\n  \"snapshotScope\": \"whole invocation; validation children share one full preflight and postflight\",\n  \"qualification\": \"Finite actual-source cases/scoped guards only. Metadata materialization is not a behavioral or all-input result. No GUI/native/vendor or whole-E2E claim.\",\n  \"validationCommands\": [\n    {\n      \"command\": \"lint\",\n      \"argv\": [\n        \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n        \"/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs\",\n        \"--config.pm-on-fail=error\",\n        \"--config.verify-deps-before-run=false\",\n        \"--config.engine-strict=true\",\n        \"lint:fast:files\",\n        \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n        \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n        \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n      ],\n      \"status\": \"UNREACHED\"\n    },\n    {\n      \"command\": \"source-size\",\n      \"argv\": [\n        \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n        \"/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs\",\n        \"--config.pm-on-fail=error\",\n        \"--config.verify-deps-before-run=false\",\n        \"--config.engine-strict=true\",\n        \"guard:source-file-size\"\n      ],\n      \"status\": \"UNREACHED\"\n    },\n    {\n      \"command\": \"diff-check\",\n      \"argv\": [\n        \"/usr/local/bin/git\",\n        \"diff\",\n        \"--check\",\n        \"--\",\n        \"scripts/legacy-agent-host/desktop-ui-controls.ts\",\n        \"scripts/legacy-agent-host/desktop-emulated-selection-ui.ts\",\n        \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n        \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n        \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n      ],\n      \"status\": \"UNREACHED\"\n    }\n  ],\n  \"primaryInvocations\": [],\n  \"before\": {\n    \"source\": {\n      \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-source.json\",\n      \"bytes\": 2478650,\n      \"sha256\": \"b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0\",\n      \"gitBlob\": \"8860893e39a0daf17e8b499baee64b7040a9b3a2\"\n    },\n    \"controls\": [\n      {\n        \"path\": \"/tmp/c714-cross-close-review/runner.py\",\n        \"bytes\": 48838,\n        \"sha256\": \"e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5\",\n        \"gitBlob\": \"165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1\"\n      },\n      {\n        \"path\": \"/tmp/c714-cross-close-review/binding-green.json\",\n        \"bytes\": 1800456,\n        \"sha256\": \"5a37cf5a6bff3ca5da30f7813da3d73f75852f6c7ab670dd234599f4b9a6c2e2\",\n        \"gitBlob\": \"020f6efa5dce4a1a5fe269836136ce554d76792c\"\n      },\n      {\n        \"path\": \"/tmp/c714-fresh-bootstrap-review/binding.json\",\n        \"bytes\": 2790411,\n        \"sha256\": \"6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131\",\n        \"gitBlob\": \"37bd0dcb54d3bac498b6530a08e1f24d4a984609\"\n      },\n      {\n        \"path\": \"/workspace/scratch/c714-fresh-20261116/evidence/source-restore-source-after.json\",\n        \"bytes\": 3451167,\n        \"sha256\": \"de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961\",\n        \"gitBlob\": \"f0addc1fb3d74fa2005c17feeb184aa1951ab6c9\"\n      },\n      {\n        \"path\": \"/workspace/scratch/c714-fresh-20261116/evidence/host-build-source-after.json\",\n        \"bytes\": 2478318,\n        \"sha256\": \"59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751\",\n        \"gitBlob\": \"51bf0d0962e07fcc7843fcd65c3202ec9133a607\"\n      },\n      {\n        \"path\": \"/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json\",\n        \"bytes\": 39168001,\n        \"sha256\": \"d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b\",\n        \"gitBlob\": \"8fb1a488520c95d3651098a81ad0160c6b049cf7\"\n      },\n      {\n        \"path\": \"/workspace/scratch/c714-fresh-20261116/evidence/host-build-compiled-after.json\",\n        \"bytes\": 400300,\n        \"sha256\": \"bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85\",\n        \"gitBlob\": \"224ff561f65772393140302de26b584bf08b06d9\"\n      },\n      {\n        \"path\": \"/workspace/scratch/c714-fresh-20261116/evidence/pnpm-inventory.json\",\n        \"bytes\": 253936,\n        \"sha256\": \"d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5\",\n        \"gitBlob\": \"4b35e3db57d510b867f17f425c85b2612f79137c\"\n      },\n      {\n        \"path\": \"/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json\",\n        \"bytes\": 3654,\n        \"sha256\": \"a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a\",\n        \"gitBlob\": \"f8dd300b5842bae00ef3967e997b98d51a34a578\"\n      },\n      {\n        \"path\": \"/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json\",\n        \"bytes\": 789090,\n        \"sha256\": \"7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925\",\n        \"gitBlob\": \"aea94f43ce13a48e4e8e0c065926cbff2a2aa344\"\n      }\n    ],\n    \"fullRuntimeInputsInspected\": true,\n    \"dependencies\": {\n      \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-dependencies.json\",\n      \"bytes\": 39168001,\n      \"sha256\": \"d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b\",\n      \"gitBlob\": \"8fb1a488520c95d3651098a81ad0160c6b049cf7\"\n    },\n    \"compiled\": {\n      \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-compiled.json\",\n      \"bytes\": 400300,\n      \"sha256\": \"bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85\",\n      \"gitBlob\": \"224ff561f65772393140302de26b584bf08b06d9\"\n    },\n    \"providers\": [\n      {\n        \"name\": \"@agent-teams/provider-implementations\",\n        \"archive\": {\n          \"bytes\": 186398,\n          \"sha256\": \"a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8\",\n          \"gitBlob\": \"f05a05edba53aa07364d9bbd5510f468dfe7ebe3\"\n        },\n        \"regularMembers\": 253,\n        \"allRegularMembersEqual\": true\n      },\n      {\n        \"name\": \"@agent-teams/provider-session-contracts\",\n        \"archive\": {\n          \"bytes\": 6230,\n          \"sha256\": \"0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc\",\n          \"gitBlob\": \"33c2944ff8a52a9c087fba9d3cab1daffe2604d8\"\n        },\n        \"regularMembers\": 12,\n        \"allRegularMembersEqual\": true\n      }\n    ],\n    \"tools\": [\n      {\n        \"tool\": \"node\",\n        \"path\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n        \"realPath\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n        \"bytes\": 126939688,\n        \"sha256\": \"61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d\",\n        \"gitBlob\": \"97b7784b737e5bda3ec45af8c65508bd61001d0c\"\n      },\n      {\n        \"tool\": \"git\",\n        \"path\": \"/usr/local/bin/git\",\n        \"realPath\": \"/usr/local/bin/git\",\n        \"bytes\": 19295504,\n        \"sha256\": \"8a2ae22e7898e163330a96319b541f92ed6f90fc87576414f72c5a89aa1dc352\",\n        \"gitBlob\": \"d51aaf6e2f66bdf456e2d198085d4d35054433df\"\n      },\n      {\n        \"tool\": \"python\",\n        \"path\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3\",\n        \"realPath\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12\",\n        \"bytes\": 30894944,\n        \"sha256\": \"fa67443527ed9647f760d807e2a38f26340757123e643c4639cf273ed15d5ea7\",\n        \"gitBlob\": \"cdff710ca21bf61260e4c7d7f3818ecd65cba2e7\"\n      },\n      {\n        \"tool\": \"scriptShell\",\n        \"path\": \"/bin/sh\",\n        \"realPath\": \"/usr/bin/dash\",\n        \"bytes\": 129736,\n        \"sha256\": \"a6f559e00b69a4aa4d8cb607be18d9386c5aee55c509e2c075549dcf00e00fc7\",\n        \"gitBlob\": \"965067be6aaf758adf88a3ff5539f41b25770579\"\n      }\n    ],\n    \"pnpm\": {\n      \"bytes\": 238649,\n      \"sha256\": \"e814a4ca22111e747db4386274e92f596f0a26d7e4b5bc687f8d1ccf61510a77\",\n      \"gitBlob\": \"2f917a18c33c04a1c6398d1adf644ce62fb8e39f\"\n    },\n    \"environment\": {\n      \"capturedTransportCanonicalSha256\": \"a002e102e97123b6947f40cb5bea1b37167486af56ffccb29d7611fe525b6945\",\n      \"values\": [\n        {\n          \"key\": \"ALL_PROXY\",\n          \"bytes\": 25,\n          \"sha256\": \"185d17005e1a094e5e7eccc4283e121443edb02fbb1063a6aa5668c51d8503bb\"\n        },\n        {\n          \"key\": \"HTTPS_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        },\n        {\n          \"key\": \"HTTP_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        },\n        {\n          \"key\": \"NO_PROXY\",\n          \"bytes\": 63,\n          \"sha256\": \"d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_AUDIT\",\n          \"bytes\": 5,\n          \"sha256\": \"fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_FUND\",\n          \"bytes\": 5,\n          \"sha256\": \"fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_HTTPS_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_HTTP_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_NOPROXY\",\n          \"bytes\": 63,\n          \"sha256\": \"d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_PREFIX\",\n          \"bytes\": 18,\n          \"sha256\": \"e0434a72761750c4ca689ad02b7a4341b6bd7e4660489f815c604d27e6342032\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        },\n        {\n          \"key\": \"all_proxy\",\n          \"bytes\": 25,\n          \"sha256\": \"185d17005e1a094e5e7eccc4283e121443edb02fbb1063a6aa5668c51d8503bb\"\n        },\n        {\n          \"key\": \"http_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        },\n        {\n          \"key\": \"https_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        },\n        {\n          \"key\": \"no_proxy\",\n          \"bytes\": 63,\n          \"sha256\": \"d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0\"\n        },\n        {\n          \"key\": \"npm_config_http_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        },\n        {\n          \"key\": \"npm_config_https_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        },\n        {\n          \"key\": \"npm_config_noproxy\",\n          \"bytes\": 63,\n          \"sha256\": \"d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0\"\n        },\n        {\n          \"key\": \"npm_config_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        }\n      ],\n      \"explicitAssignments\": {\n        \"PATH\": \"/workspace/scratch/c714-fresh-20261116/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin\",\n        \"TMPDIR\": \"/tmp/c714-cross-close-evidence/test-tmp\",\n        \"XDG_CACHE_HOME\": \"/workspace/scratch/c714-fresh-20261116/cache\",\n        \"XDG_STATE_HOME\": \"/workspace/scratch/c714-fresh-20261116/state\",\n        \"AGENT_TEAMS_INSTALL_PROFILE\": \"node-ci\",\n        \"CI\": \"true\",\n        \"GIT_CONFIG_NOSYSTEM\": \"1\",\n        \"GIT_CONFIG_GLOBAL\": \"/dev/null\",\n        \"GIT_TERMINAL_PROMPT\": \"0\",\n        \"XDG_CONFIG_HOME\": \"/workspace/scratch/c714-fresh-20261116/config\",\n        \"XDG_DATA_HOME\": \"/workspace/scratch/c714-fresh-20261116/data\",\n        \"PNPM_HOME\": \"/workspace/scratch/c714-fresh-20261116/bin\",\n        \"PNPM_CONFIG_PM_ON_FAIL\": \"error\",\n        \"PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN\": \"false\",\n        \"PNPM_CONFIG_ENGINE_STRICT\": \"true\",\n        \"PNPM_CONFIG_ENABLE_PRE_POST_SCRIPTS\": \"true\",\n        \"PNPM_CONFIG_IGNORE_PNPMFILE\": \"true\",\n        \"PNPM_CONFIG_STORE_DIR\": \"/workspace/scratch/c714-fresh-20261116/store\",\n        \"PNPM_CONFIG_ENABLE_GLOBAL_VIRTUAL_STORE\": \"false\",\n        \"PNPM_CONFIG_UPDATE_NOTIFIER\": \"false\",\n        \"PNPM_CONFIG_SCRIPT_SHELL\": \"/bin/sh\",\n        \"AGENT_BACKEND_TEST_NODE\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n        \"NODE_DISABLE_COMPILE_CACHE\": \"1\"\n      },\n      \"homePreserved\": true,\n      \"codexHomePreserved\": true,\n      \"absentConfigs\": [\n        \"/home/agent/.npmrc\",\n        \"/home/agent/.pnpmrc\",\n        \"/home/agent/.config/pnpm/rc\",\n        \"/etc/npmrc\",\n        \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/etc/npmrc\",\n        \"/home/agent/.local/etc/npmrc\"\n      ]\n    },\n    \"bootstrapCache\": [\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/2c055e6a\",\n        \"mode\": \"100644\",\n        \"bytes\": 1076,\n        \"sha256\": \"81d68862abef75d4cddbf3c9450326b5546534bb5eac1501563f72e46a377818\",\n        \"gitBlob\": \"92cc0b39314a692ffaa55077b500ad6eef15aa92\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/4d7e9989\",\n        \"mode\": \"100644\",\n        \"bytes\": 2780,\n        \"sha256\": \"2d0fab228f904b2c2e1f1e3a4ede1f5868c5d0e4007bbed6984690ccbc07143e\",\n        \"gitBlob\": \"0d8fc72131192a4d7dfb7c4f6a4d992e8d48edce\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/60988b90\",\n        \"mode\": \"100644\",\n        \"bytes\": 2300,\n        \"sha256\": \"d9ea89d372b2eaa86ef5562a02aeb9d5aceb836227436880781b83467afeaa7b\",\n        \"gitBlob\": \"4587d24377ed922a99494689c3b742eedf2e56ae\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/661efec4\",\n        \"mode\": \"100644\",\n        \"bytes\": 2208532,\n        \"sha256\": \"5f137a3b9d2d936472a1b3c7c540309f8fea9eed8b3614b382ee23157a259712\",\n        \"gitBlob\": \"feedc7210606667b16d2d0014d4bbb9b198afc00\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/b6303853\",\n        \"mode\": \"100644\",\n        \"bytes\": 2052,\n        \"sha256\": \"c8f65ca4824827fb20024dad6e8217007163410dceb840170ced910861cccda4\",\n        \"gitBlob\": \"256197c92bc42a5921d8207741fc4334aeabbea8\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/ceabdecc\",\n        \"mode\": \"100644\",\n        \"bytes\": 2652,\n        \"sha256\": \"c753344d313709d91a46d65cccc2f06988c81ceae1b83aefae0f8c34a509c165\",\n        \"gitBlob\": \"00b5784700c10e5ef5876c84e308b3b3a56a4009\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/d8c0d4fb\",\n        \"mode\": \"100644\",\n        \"bytes\": 6156,\n        \"sha256\": \"723856e14196bf1a3caffe7e8bd170efe3f0ed7a398f1f9c5cc672fc59260327\",\n        \"gitBlob\": \"3f3238d0c975515b3ef230c3bd61366ab85a1758\"\n      }\n    ],\n    \"processCensus\": [\n      {\n        \"pid\": 1,\n        \"name\": \"codex\",\n        \"state\": \"S\",\n        \"ppid\": 0,\n        \"pgid\": 1,\n        \"session\": 1,\n        \"startTicks\": 2972711\n      },\n      {\n        \"pid\": 2,\n        \"name\": \"python3\",\n        \"state\": \"R\",\n        \"ppid\": 1,\n        \"pgid\": 1,\n        \"session\": 1,\n        \"startTicks\": 2972719\n      }\n    ],\n    \"testTemps\": [],\n    \"taskTmpTopEntries\": []\n  },\n  \"preflightSeconds\": 961.4193929130015\n}\n"
+  },
+  "primaryCommandLedger": [
+    {
+      "command": "lint",
+      "receiptIdentity": {
+        "bytes": 1225,
+        "sha256": "1acc29da54ad3d595d0dd1bb0a2df5bf86be6fcd0b7b9280732ecdb01e5dc18c",
+        "gitBlob": "6f6c11af08486136c247d4dc579a8bc9399d91ca"
+      },
+      "receipt": {
+        "argv": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+          "--config.pm-on-fail=error",
+          "--config.verify-deps-before-run=false",
+          "--config.engine-strict=true",
+          "lint:fast:files",
+          "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T18:53:22.535550+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 30,
+        "metadataOnly": false,
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-cross-close-evidence/validation-package-lint-1.log",
+          "bytes": 284,
+          "sha256": "30ee225fe84245fcde6bc8fe685c62c913a5b0afeb596c32d6bd261349f7864a",
+          "gitBlob": "4db718c739d143a52269c305b0e24a0896993950"
+        },
+        "finishedAt": "2026-11-16T18:54:22.951145+00:00",
+        "durationSeconds": 60.41534138499992,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true
+      },
+      "fullRaw": "$ eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content scripts/legacy-agent-host/desktop-task-comment-input-target.ts scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\n"
+    },
+    {
+      "command": "source-size",
+      "receiptIdentity": {
+        "bytes": 1043,
+        "sha256": "56024b544fb804d5ccc8cfc13c1c17867f71c2be4f1fcf01d25aea12bdaa042f",
+        "gitBlob": "2d31e9c3bdf443be45a855c1dd10be623c755ec3"
+      },
+      "receipt": {
+        "argv": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+          "--config.pm-on-fail=error",
+          "--config.verify-deps-before-run=false",
+          "--config.engine-strict=true",
+          "guard:source-file-size"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T18:54:22.951784+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 60,
+        "metadataOnly": false,
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-cross-close-evidence/validation-package-source-size-1.log",
+          "bytes": 249,
+          "sha256": "26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f",
+          "gitBlob": "399a78f77777d0669218be2d4dae5360657308fa"
+        },
+        "finishedAt": "2026-11-16T18:54:46.604563+00:00",
+        "durationSeconds": 23.660546492999856,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true
+      },
+      "fullRaw": "$ node ./scripts/ci/check-source-file-size.mjs\nSource file size guard passed: 5020 production files checked, 141 frozen legacy exceptions, 800-line limit.\n86 legacy file(s) are below their frozen caps; lower those caps when committing the refactor.\n"
+    },
+    {
+      "command": "diff-check",
+      "receiptIdentity": {
+        "bytes": 1125,
+        "sha256": "92fd66707ef5e837b4e74ff8bfa9451becdecdac7b7c05c4f4f6ca3154bb4dfc",
+        "gitBlob": "3ba70cf95e64059b7c842b0706d0f62cf010876e"
+      },
+      "receipt": {
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--check",
+          "--",
+          "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ],
+        "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+        "startedAt": "2026-11-16T18:54:51.516150+00:00",
+        "timedOut": false,
+        "exitCode": 0,
+        "exitSignal": null,
+        "capturedPid": 82,
+        "metadataOnly": false,
+        "remainingBeforeCleanup": [],
+        "remainingCapturedSession": [],
+        "raw": {
+          "path": "/tmp/c714-cross-close-evidence/validation-package-diff-check-1.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        "finishedAt": "2026-11-16T18:54:52.430004+00:00",
+        "durationSeconds": 0.873901858998579,
+        "interruptions": [],
+        "cleanupSeconds": 0,
+        "deadlineExceeded": false,
+        "successful": true
+      },
+      "fullRaw": ""
+    }
+  ],
+  "primarySemantics": [
+    {
+      "command": "lint",
+      "exitCode": 0,
+      "rawBytes": 284,
+      "interpretation": "Exact scoped ESLint command printed and no diagnostics; the existing --cache behavior is preserved. No complete aggregate/post-input qualification."
+    },
+    {
+      "command": "source-size",
+      "exitCode": 0,
+      "rawBytes": 249,
+      "interpretation": "Exact guard reports5020 production files,141 frozen legacy exceptions,800-line limit. The86 below-frozen-cap message is informational and retained."
+    },
+    {
+      "command": "diff-check",
+      "exitCode": 0,
+      "rawBytes": 0,
+      "interpretation": "Exact five-overlay git diff --check command completed with empty output. No additional path scope or source mutation inferred."
+    }
+  ],
+  "metadataLedger": [
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-10-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "ls-tree",
+        "-rz",
+        "--full-tree",
+        "HEAD"
+      ],
+      "startedAt": "2026-11-16T18:54:52.690449+00:00",
+      "finishedAt": "2026-11-16T18:54:59.595091+00:00",
+      "capturedPid": 105,
+      "exitCode": 0,
+      "exitSignal": null,
+      "timedOut": false,
+      "deadlineExceeded": false,
+      "remainingCapturedSession": [],
+      "remainingBeforeCleanup": [],
+      "interruptions": []
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-11-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "diff",
+        "--cached",
+        "--name-only",
+        "-z"
+      ],
+      "startedAt": "2026-11-16T18:54:59.887472+00:00",
+      "finishedAt": "2026-11-16T18:54:59.976128+00:00",
+      "capturedPid": 106,
+      "exitCode": 0,
+      "exitSignal": null,
+      "timedOut": false,
+      "deadlineExceeded": false,
+      "remainingCapturedSession": [],
+      "remainingBeforeCleanup": [],
+      "interruptions": []
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-12-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "ls-files",
+        "--others",
+        "--exclude-standard",
+        "-z"
+      ],
+      "startedAt": "2026-11-16T18:54:59.977457+00:00",
+      "finishedAt": "2026-11-16T18:55:00.619606+00:00",
+      "capturedPid": 107,
+      "exitCode": 0,
+      "exitSignal": null,
+      "timedOut": false,
+      "deadlineExceeded": false,
+      "remainingCapturedSession": [],
+      "remainingBeforeCleanup": [],
+      "interruptions": []
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-13-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "ls-files",
+        "--stage",
+        "-z"
+      ],
+      "startedAt": "2026-11-16T18:55:00.646255+00:00",
+      "finishedAt": "2026-11-16T18:55:00.690977+00:00",
+      "capturedPid": 108,
+      "exitCode": 0,
+      "exitSignal": null,
+      "timedOut": false,
+      "deadlineExceeded": false,
+      "remainingCapturedSession": [],
+      "remainingBeforeCleanup": [],
+      "interruptions": []
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-14-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "diff",
+        "--name-only",
+        "-z",
+        "HEAD"
+      ],
+      "startedAt": "2026-11-16T18:55:00.871484+00:00",
+      "finishedAt": "2026-11-16T18:55:01.287281+00:00",
+      "capturedPid": 109,
+      "exitCode": 0,
+      "exitSignal": null,
+      "timedOut": false,
+      "deadlineExceeded": false,
+      "remainingCapturedSession": [],
+      "remainingBeforeCleanup": [],
+      "interruptions": []
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-8-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "startedAt": "2026-11-16T18:54:52.434559+00:00",
+      "finishedAt": "2026-11-16T18:54:52.525743+00:00",
+      "capturedPid": 103,
+      "exitCode": 0,
+      "exitSignal": null,
+      "timedOut": false,
+      "deadlineExceeded": false,
+      "remainingCapturedSession": [],
+      "remainingBeforeCleanup": [],
+      "interruptions": []
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-9-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "rev-parse",
+        "HEAD^{tree}"
+      ],
+      "startedAt": "2026-11-16T18:54:52.550200+00:00",
+      "finishedAt": "2026-11-16T18:54:52.663512+00:00",
+      "capturedPid": 104,
+      "exitCode": 0,
+      "exitSignal": null,
+      "timedOut": false,
+      "deadlineExceeded": false,
+      "remainingCapturedSession": [],
+      "remainingBeforeCleanup": [],
+      "interruptions": []
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-1-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "startedAt": "2026-11-16T18:37:21.112091+00:00",
+      "finishedAt": "2026-11-16T18:37:21.121498+00:00",
+      "capturedPid": 3,
+      "exitCode": 0,
+      "exitSignal": null,
+      "timedOut": false,
+      "deadlineExceeded": false,
+      "remainingCapturedSession": [],
+      "remainingBeforeCleanup": [],
+      "interruptions": []
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-2-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "rev-parse",
+        "HEAD^{tree}"
+      ],
+      "startedAt": "2026-11-16T18:37:21.122205+00:00",
+      "finishedAt": "2026-11-16T18:37:21.142840+00:00",
+      "capturedPid": 4,
+      "exitCode": 0,
+      "exitSignal": null,
+      "timedOut": false,
+      "deadlineExceeded": false,
+      "remainingCapturedSession": [],
+      "remainingBeforeCleanup": [],
+      "interruptions": []
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-3-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "ls-tree",
+        "-rz",
+        "--full-tree",
+        "HEAD"
+      ],
+      "startedAt": "2026-11-16T18:37:21.143192+00:00",
+      "finishedAt": "2026-11-16T18:37:21.570891+00:00",
+      "capturedPid": 5,
+      "exitCode": 0,
+      "exitSignal": null,
+      "timedOut": false,
+      "deadlineExceeded": false,
+      "remainingCapturedSession": [],
+      "remainingBeforeCleanup": [],
+      "interruptions": []
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-4-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "diff",
+        "--cached",
+        "--name-only",
+        "-z"
+      ],
+      "startedAt": "2026-11-16T18:37:21.638810+00:00",
+      "finishedAt": "2026-11-16T18:37:21.657824+00:00",
+      "capturedPid": 6,
+      "exitCode": 0,
+      "exitSignal": null,
+      "timedOut": false,
+      "deadlineExceeded": false,
+      "remainingCapturedSession": [],
+      "remainingBeforeCleanup": [],
+      "interruptions": []
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-5-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "ls-files",
+        "--others",
+        "--exclude-standard",
+        "-z"
+      ],
+      "startedAt": "2026-11-16T18:37:21.658049+00:00",
+      "finishedAt": "2026-11-16T18:37:23.918555+00:00",
+      "capturedPid": 7,
+      "exitCode": 0,
+      "exitSignal": null,
+      "timedOut": false,
+      "deadlineExceeded": false,
+      "remainingCapturedSession": [],
+      "remainingBeforeCleanup": [],
+      "interruptions": []
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-6-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "ls-files",
+        "--stage",
+        "-z"
+      ],
+      "startedAt": "2026-11-16T18:37:23.940096+00:00",
+      "finishedAt": "2026-11-16T18:37:23.987918+00:00",
+      "capturedPid": 8,
+      "exitCode": 0,
+      "exitSignal": null,
+      "timedOut": false,
+      "deadlineExceeded": false,
+      "remainingCapturedSession": [],
+      "remainingBeforeCleanup": [],
+      "interruptions": []
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-7-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "diff",
+        "--name-only",
+        "-z",
+        "HEAD"
+      ],
+      "startedAt": "2026-11-16T18:37:24.063153+00:00",
+      "finishedAt": "2026-11-16T18:37:24.186218+00:00",
+      "capturedPid": 9,
+      "exitCode": 0,
+      "exitSignal": null,
+      "timedOut": false,
+      "deadlineExceeded": false,
+      "remainingCapturedSession": [],
+      "remainingBeforeCleanup": [],
+      "interruptions": []
+    }
+  ],
+  "metadataAllFinalizedExit0WithoutRecordedSignalsTimeoutsOrCapturedRemainders": true,
+  "observedChronology": {
+    "lastPrimaryFinishedAt": "2026-11-16T18:54:52.430004+00:00",
+    "firstAfterMetadataStartedAt": "2026-11-16T18:54:52.434559+00:00",
+    "lastAfterMetadataFinishedAt": "2026-11-16T18:55:01.287281+00:00",
+    "afterMetaSequence": [
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "sourceAfterFullByteIdentity": {
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+    }
+  },
+  "originalTransportObservation": {
+    "lastSuccessfulPoll": {
+      "session": 81561,
+      "output": "",
+      "stillRunning": true,
+      "observedAtApprox": "2026-11-16T18:55:32Z"
+    },
+    "stateLossObservedAtApprox": "2026-11-16T18:58:37Z",
+    "writeStdinError": "Unknown process id 81561",
+    "codeModePreviousStateUnavailable": true,
+    "sourceAndEvidenceFilesystemRetained": true,
+    "noRelaunch": true,
+    "noKill": true,
+    "noReceiptRewriting": true,
+    "exactCause": "UNKNOWN; tool-session/state loss observed, no attribution to source or operating-system failure",
+    "outerExitCode": null,
+    "outerExitSignal": null,
+    "originalSupervisorPhysicalAbsence": "UNKNOWN; later exec /proc is a distinct sandbox PID namespace and cannot prove absence"
+  },
+  "originalControlFlowProof": {
+    "conclusion": "Reaching the retained after-metadata8..14 and after-source886 on this exact165f invocation leaves no remaining authorized primary launch path. This is a source/control-flow statement, not proof of supervisor physical absence or terminal cleanup.",
+    "joins": [
+      {
+        "lines": [
+          680,
+          707
+        ],
+        "fact": "The exact three validation entries begin UNREACHED; initial and after-preflight receipt writes precede primary execution. This explains the stale6fd fields without contradicting finalized child records."
+      },
+      {
+        "lines": [
+          716,
+          740
+        ],
+        "fact": "A single forward-only for-loop consumes the fixed lint/source-size/diff-check list. Each run_child call is followed by exact receipt/raw checks and normal0/no-signal/no-session admission before the next. No retry or recursive primary call is present."
+      },
+      {
+        "lines": [
+          762,
+          773
+        ],
+        "fact": "Success or error leaves the try and enters its finally. Only here boundary becomes after and snapshot(cfg.sourceOverlay) is called. There is no jump back into the primary loop."
+      },
+      {
+        "lines": [
+          464,
+          473
+        ],
+        "fact": "Runtime input_snapshot first invokes source_snapshot before controls/dependency/compiled checks. Recorded after-source exists before later runtime manifolds can complete."
+      },
+      {
+        "lines": [
+          348,
+          403
+        ],
+        "fact": "source_snapshot issues exactly seven git_read metadata children with metadata=True and the current after boundary; it writes the complete8798 source snapshot only after these and all tracked file reads."
+      },
+      {
+        "lines": [
+          474,
+          496
+        ],
+        "fact": "After the source snapshot, remaining runtime checks read archives/installed members, tools/pnpm/env/cache and process/temp state; they contain no primary command invocation."
+      },
+      {
+        "lines": [
+          773,
+          832
+        ],
+        "fact": "Remaining outer code compares complete snapshots, reads captured-group state, blocks/reconciles managed signals, writes only its original aggregate evidence, restores handlers/mask, prints and exits. No later primary launch exists."
+      },
+      {
+        "lines": [
+          260,
+          346
+        ],
+        "fact": "The unique subprocess.Popen path is run_child. After the recorded source snapshot its seven after-boundary metadata calls have already completed, and no further run_child call is reachable in the remaining finalization tail."
+      }
+    ],
+    "exactSourcePassages": {
+      "snapshotAndMetadata": {
+        "start": 348,
+        "end": 403,
+        "text": "def git_read(*arguments):\n    global metadata_counter\n    metadata_counter += 1\n    stage = {'id': prefix + '-' + boundary + '-metadata', 'cwd': str(REPO)}\n    pointer, record = run_child(stage, metadata_counter, [r1['tools']['git']['path'], *arguments],\n                                time.monotonic() + 30, metadata=True)\n    assert record['successful'], 'Git metadata failed; retained ' + pointer['path']\n    data = pathlib.Path(record['raw']['path']).read_bytes()\n    assert identity(data) == {key: record['raw'][key] for key in ['bytes', 'sha256', 'gitBlob']}\n    return data\n\n\ndef source_snapshot(overlays):\n    assert git_read('rev-parse', 'HEAD').decode().strip() == SOURCE_COMMIT\n    assert git_read('rev-parse', 'HEAD^{tree}').decode().strip() == SOURCE_TREE\n    leaves = []\n    for raw in git_read('ls-tree', '-rz', '--full-tree', 'HEAD').split(b'\\0'):\n        if raw:\n            metadata, path = raw.split(b'\\t', 1)\n            mode, kind, blob = metadata.decode().split()\n            leaves.append({'path': path.decode(), 'mode': mode, 'type': kind, 'gitBlob': blob})\n    expected_leaves = [{key: row[key] for key in ['path', 'mode', 'type', 'gitBlob']}\n                       for row in setup['sourceTreeRows']]\n    assert sorted(leaves, key=lambda row: row['path']) == sorted(expected_leaves, key=lambda row: row['path'])\n    assert len(leaves) == 11567, 'complete source tree changed'\n    assert git_read('diff', '--cached', '--name-only', '-z') == b'', 'staged changes'\n    assert git_read('ls-files', '--others', '--exclude-standard', '-z') == b'', 'untracked files'\n    base = {row['path']: row for row in inputs['sourceNonDoc']['rows']}\n    index = {}\n    for raw in git_read('ls-files', '--stage', '-z').split(b'\\0'):\n        if raw:\n            metadata, path = raw.split(b'\\t', 1)\n            mode, blob, stage = metadata.decode().split()\n            assert stage == '0', 'unmerged index'\n            index[path.decode()] = {'mode': mode, 'gitBlob': blob}\n    assert index == {row['path']: {key: row[key] for key in ['mode', 'gitBlob']}\n                     for row in expected_leaves}, 'complete stage0 index changed'\n    expected = dict(base)\n    for row in overlays:\n        assert row['path'] in OVERLAY_PATHS and row['mode'] == '100644'\n        assert identity(row['content'].encode()) == {key: row[key] for key in ['bytes', 'sha256', 'gitBlob']}\n        expected[row['path']] = {key: row[key] for key in ['path', 'mode', 'bytes', 'sha256', 'gitBlob']}\n    assert len(base) == len(expected) == 8798 and len({x['path'] for x in overlays}) == len(overlays)\n    changed = {path for path in expected if expected[path] != base[path]}\n    actual_changed = {p.decode() for p in git_read('diff', '--name-only', '-z', 'HEAD').split(b'\\0') if p}\n    assert actual_changed == changed, 'tracked source change set differs'\n    rows = [file_row(REPO / path, path) for path in sorted(expected)]\n    actual = {'actualLocalHead': SOURCE_COMMIT, 'tree': SOURCE_TREE, 'rows': rows,\n              'changedTrackedPaths': sorted(changed), 'allTreeLeaves': len(leaves),\n              'workflowLeaves': sum(x['path'].startswith('.github/workflows/') for x in leaves),\n              'localGitConfig': identity((REPO / '.git/config').read_bytes())}\n    pointer = write_new(prefix + '-' + boundary + '-source.json', actual)\n    assert rows == [expected[path] for path in sorted(expected)], 'source bytes differ; ' + pointer['path']\n    assert actual['localGitConfig'] == inputs['sourceFull']['localGitConfig'], 'local Git configuration changed'\n    assert actual['workflowLeaves'] == 42\n    return pointer"
+      },
+      "remainingRuntimeInputChecks": {
+        "start": 406,
+        "end": 510,
+        "text": "def provider_archives():\n    values = []\n    for pin in inputs['providers']['providers']:\n        archive = REPO / pin['archivePath']\n        assert identity(archive.read_bytes()) == pin['archiveIdentity']\n        installed = REPO / pin['installedRoot']\n        assert installed.is_dir() and not installed.is_symlink()\n        rows, seen = [], set()\n        with tarfile.open(archive, 'r:gz') as handle:\n            for member in handle.getmembers():\n                path = pathlib.PurePosixPath(member.name)\n                assert not path.is_absolute() and '..' not in path.parts and path.parts[0] == 'package'\n                assert member.name not in seen\n                seen.add(member.name)\n                if member.isdir():\n                    continue\n                assert member.isfile(), 'provider archive special/link member'\n                relative = path.relative_to('package').as_posix()\n                data = handle.extractfile(member).read()\n                actual = file_row(installed / relative, relative)\n                mode = '100755' if member.mode & stat.S_IXUSR else '100644'\n                assert actual == {'path': relative, 'mode': mode, **identity(data)}\n                rows.append({'path': relative, 'archiveMode': oct(member.mode), 'mode': mode,\n                             **identity(data), 'installedMatch': True})\n        assert rows == pin['regularMembers'], 'provider archive member census changed'\n        values.append({'name': pin['name'], 'archive': pin['archiveIdentity'],\n                       'regularMembers': len(rows), 'allRegularMembersEqual': True})\n    return values\n\n\ndef control_snapshot():\n    rows = []\n    for path, pin in control_pins:\n        assert path.is_file() and not path.is_symlink(), 'control path alias'\n        actual = identity(path.read_bytes())\n        assert actual == pin, 'exact admission control changed: ' + str(path)\n        rows.append({'path': str(path), **actual})\n    return rows\n\n\ndef source_metadata_snapshot(overlays):\n    result = {'source': source_snapshot(overlays), 'tools': tooling(),\n              'environment': environment_check(), 'controls': control_snapshot(),\n              'fullRuntimeInputsInspected': False, 'dependencies': 'UNINSPECTED',\n              'compiled': 'UNINSPECTED', 'providers': 'UNINSPECTED', 'bootstrapCache': 'UNINSPECTED',\n              'pnpm': identity((json.dumps(verify_pnpm(), indent=2) + '\\n').encode())}\n    assert env['AGENT_BACKEND_TEST_NODE'] == r1['tools']['node']['path']\n    assert env['TMPDIR'] == str(TASK_TMP) and env['NODE_DISABLE_COMPILE_CACHE'] == '1'\n    assert all(key not in env for key in ['NODE_COMPILE_CACHE', 'NODE_COMPILE_CACHE_PORTABLE'])\n    result['processCensus'] = process_rows()\n    result['testTemps'] = sorted([{'name': path.name, 'device': path.lstat().st_dev,\n                                  'inode': path.lstat().st_ino, 'mode': stat.S_IFMT(path.lstat().st_mode)}\n                                 for path in TASK_TMP.iterdir() if path.name.startswith('TEST-')],\n                                key=lambda row: row['name'])\n    result['taskTmpTopEntries'] = sorted(path.name for path in TASK_TMP.iterdir())\n    return result\n\n\ndef input_snapshot(overlays):\n    result = {'source': source_snapshot(overlays), 'controls': control_snapshot(),\n              'fullRuntimeInputsInspected': True}\n    checks = [('dependencies', dependencies, inputs['dependencies']),\n              ('compiled', compiled, inputs['compiled'])]\n    for name, read, expected in checks:\n        actual = read()\n        pointer = write_new(prefix + '-' + boundary + '-' + name + '.json', actual)\n        result[name] = pointer\n        assert actual == expected, name + ' changed; retained ' + pointer['path']\n    result['providers'] = provider_archives()\n    result['tools'] = tooling()\n    result['pnpm'] = identity((json.dumps(verify_pnpm(), indent=2) + '\\n').encode())\n    result['environment'] = environment_check()\n    assert env['AGENT_BACKEND_TEST_NODE'] == r1['tools']['node']['path']\n    assert env['TMPDIR'] == str(TASK_TMP) and env['NODE_DISABLE_COMPILE_CACHE'] == '1'\n    assert all(key not in env for key in ['NODE_COMPILE_CACHE', 'NODE_COMPILE_CACHE_PORTABLE'])\n    cache = []\n    for folder, directories, files in os.walk(ROOT / 'tmp', followlinks=False):\n        for name in sorted(directories + files):\n            path = pathlib.Path(folder) / name\n            if stat.S_ISDIR(path.lstat().st_mode):\n                continue\n            cache.append(file_row(path, path.relative_to(ROOT).as_posix()))\n    result['bootstrapCache'] = sorted(cache, key=lambda row: row['path'])\n    assert result['bootstrapCache'] == inputs['currentBoundary']['taskTempInventory'], 'bootstrap tmp changed'\n    result['processCensus'] = process_rows()\n    result['testTemps'] = sorted([{'name': path.name, 'device': path.lstat().st_dev,\n                                  'inode': path.lstat().st_ino, 'mode': stat.S_IFMT(path.lstat().st_mode)}\n                                 for path in TASK_TMP.iterdir() if path.name.startswith('TEST-')],\n                                key=lambda row: row['name'])\n    result['taskTmpTopEntries'] = sorted(path.name for path in TASK_TMP.iterdir())\n    return result\n\n\ndef preserved(before, after, include_source=True):\n    pointer_keys = ['dependencies', 'compiled'] + (['source'] if include_source else [])\n    return all(before[key]['sha256'] == after[key]['sha256'] for key in pointer_keys) and all(\n        before[key] == after[key] for key in ['providers', 'tools', 'pnpm', 'environment', 'bootstrapCache', 'controls'])\n\n\ndef ordinary_completion(record):\n    return bool(record and record['exitCode'] in [0, 1] and record['exitSignal'] is None\n                and not record['timedOut'] and not record.get('executionError')\n                and not record.get('finalizationError') and not record.get('abnormalCleanup')\n                and not record['interruptions'] and not record['deadlineExceeded']\n                and record['remainingCapturedSession'] == [])"
+      },
+      "initialCheckpointAndValidationLoop": {
+        "start": 658,
+        "end": 746,
+        "text": "with (OUT / (prefix + '.attempt')).open('x') as handle:\n    handle.write(utc() + '\\n')\nruntime_inputs = action == 'run'\nreceipt = {'kind': 'cross-close-test-first-bounded-invocation', 'command': command,\n           'action': action, 'attempt': 1, 'startedAt': utc(), 'publishedR1': R1,\n           'publishedSubject': cfg['publishedSubject'], 'actualLocalHead': SOURCE_COMMIT,\n           'runnerIdentity': cfg['runnerIdentity'], 'bindingIdentity': identity(binding_bytes),\n           'testIdentity': TEST_IDENTITY, 'sourcePins': cfg['sourcePins'],\n           'argv': COMMANDS.get(command) if action == 'run' else None, 'cwd': str(REPO),\n           'perPrimaryCommandLimitSeconds': 180, 'metadataCommandLimitSeconds': 30,\n           'fullRuntimeInputsRequested': runtime_inputs, 'fullRuntimeInputsInspected': False,\n           'fullRuntimeInputBoundaries': {key: 'UNREACHED' if runtime_inputs else 'UNINSPECTED' for key in ['before', 'after']},\n           'fullRuntimeInputsPreserved': False if runtime_inputs else None,\n           'inputsPreserved': False if runtime_inputs else None, 'sourceAndSupervisorMetadataPreserved': False,\n           'commandCompletedNormally': False, 'exitCode': None, 'exitSignal': None, 'timedOut': False,\n           'cleanupSeconds': 0, 'commandPhaseSeconds': 0,\n           'cleanupTimeAccounting': 'Captured termination/reap time is a subset of each commandPhaseSeconds.',\n           'snapshotScope': 'whole invocation; validation children share one full preflight and postflight' if runtime_inputs else 'source-and-supervisor-metadata-only',\n           'qualification': 'Finite actual-source cases/scoped guards only. Metadata materialization is not a behavioral or all-input result. No GUI/native/vendor or whole-E2E claim.'}\nif not runtime_inputs:\n    receipt['uninspectedRuntimeInputs'] = {key: 'UNINSPECTED' for key in\n        ['dependencies', 'compiled', 'providerArchivesAndInstalledMembers', 'bootstrapNodeCache']}\nif command == 'validation-package':\n    receipt['validationCommands'] = [{'command': name, 'argv': COMMANDS[name], 'status': 'UNREACHED'}\n                                     for name in ['lint', 'source-size', 'diff-check']]\nreceipt_path = OUT / (prefix + '-receipt.json')\nreceipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')\nmetadata_counter = 0\nphase_signals = []\ncleaning = finalizing = launching = False\nprevious_handlers = {sig: signal.signal(sig, interrupt) for sig in [signal.SIGINT, signal.SIGTERM]}\ninvocation_start = time.monotonic()\nbefore = after = primary = None\nprimaries = []\nprimary_invocations = []\nreceipt['primaryInvocations'] = primary_invocations\nexpected_command_outcome = False\nboundary = 'before'\nsnapshot = input_snapshot if runtime_inputs else source_metadata_snapshot\ntry:\n    preflight_start = time.monotonic()\n    overlays = cfg['beforeSourceOverlay'] if action == 'materialize' else cfg['sourceOverlay']\n    if runtime_inputs:\n        receipt['fullRuntimeInputBoundaries']['before'] = 'STARTED'\n    before = snapshot(overlays)\n    if runtime_inputs:\n        receipt['fullRuntimeInputBoundaries']['before'] = 'COMPLETE'\n    receipt['before'] = before\n    receipt['preflightSeconds'] = time.monotonic() - preflight_start\n    receipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')\n    if action == 'materialize':\n        receipt['writtenPaths'] = []\n        for path in written_paths:\n            assert not phase_signals\n            row = next(x for x in cfg['sourceOverlay'] if x['path'] == path)\n            (REPO / path).write_bytes(row['content'].encode())\n            receipt['writtenPaths'].append(path)\n        expected_command_outcome = True\n    elif command == 'validation-package':\n        package_start = time.monotonic()\n        try:\n            for entry in receipt['validationCommands']:\n                assert not phase_signals, 'supervisor interruption before next validation child'\n                command_start = time.monotonic()\n                entry['status'] = 'STARTED'\n                stage = {'id': prefix + '-' + entry['command'], 'cwd': str(REPO)}\n                invocation_offset = len(primary_invocations)\n                try:\n                    pointer, primary = run_child(stage, 1, entry['argv'], command_start + 180)\n                    primaries.append(primary)\n                    entry.update({'status': 'EXECUTED', 'primaryReceipt': pointer, 'record': primary})\n                finally:\n                    entry['commandPhaseSeconds'] = time.monotonic() - command_start\n                    entry['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations[invocation_offset:])\n                    entry['invocationRecords'] = primary_invocations[invocation_offset:]\n                assert identity(pathlib.Path(pointer['path']).read_bytes()) == {key: pointer[key] for key in ['bytes', 'sha256', 'gitBlob']}\n                assert primary.get('raw')\n                assert identity(pathlib.Path(primary['raw']['path']).read_bytes()) == {key: primary['raw'][key] for key in ['bytes', 'sha256', 'gitBlob']}\n                assert ordinary_completion(primary) and primary['successful'] and primary['exitCode'] == 0\n                assert primary['remainingCapturedSession'] == [] and not phase_signals\n                entry['nextCommandAdmitted'] = True\n            receipt['commandCompletedNormally'] = True\n            expected_command_outcome = True\n        finally:\n            receipt['commandPhaseSeconds'] = time.monotonic() - package_start\n            receipt['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations)\n            if primary:\n                for key in ['exitCode', 'exitSignal', 'timedOut']:\n                    receipt[key] = primary[key]"
+      },
+      "finalPostflightAndTerminalTail": {
+        "start": 747,
+        "end": 832,
+        "text": "    else:\n        command_start = time.monotonic()\n        stage = {'id': prefix + '-command', 'cwd': str(REPO)}\n        try:\n            pointer, primary = run_child(stage, 1, COMMANDS[command], command_start + 180)\n            primaries.append(primary)\n            receipt['primaryReceipt'] = pointer\n            for key in ['exitCode', 'exitSignal', 'timedOut']:\n                receipt[key] = primary[key]\n            receipt['commandCompletedNormally'] = ordinary_completion(primary)\n            receipt['rawCombinedOutput'] = primary.get('raw')\n            expected_command_outcome = receipt['commandCompletedNormally'] and primary['exitCode'] == (1 if command == 'red' else 0)\n        finally:\n            receipt['commandPhaseSeconds'] = time.monotonic() - command_start\n            receipt['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations)\nexcept BaseException as error:\n    receipt['executionError'] = type(error).__name__ + ': ' + str(error)\n    if 'preflightSeconds' not in receipt:\n        receipt['preflightSeconds'] = time.monotonic() - preflight_start\nfinally:\n    finalizing = True\n    postflight_start = time.monotonic()\n    try:\n        boundary = 'after'\n        if runtime_inputs:\n            receipt['fullRuntimeInputBoundaries']['after'] = 'STARTED'\n        after = snapshot(cfg['sourceOverlay'])\n        if runtime_inputs:\n            receipt['fullRuntimeInputBoundaries']['after'] = 'COMPLETE'\n        receipt['after'] = after\n        metadata_preserved = bool(before and all(before[key] == after[key] for key in ['tools', 'pnpm', 'environment', 'controls']))\n        receipt['sourceAndSupervisorMetadataPreserved'] = metadata_preserved\n        if runtime_inputs:\n            receipt['inputsPreserved'] = bool(before and preserved(before, after))\n            receipt['fullRuntimeInputsPreserved'] = receipt['inputsPreserved']\n        unknown_launches = [row['id'] for row in primary_invocations if row['spawnAttempted'] and row['capturedPid'] is None]\n        receipt['cleanup'] = {'unknownPrimaryLaunches': unknown_launches,\n                              'capturedSessionMembersAfter': None if unknown_launches else [member for row in primary_invocations if row.get('capturedPid')\n                                                              for member in group_members(row['capturedPid'])],\n                              'newTestTempsRemaining': [x for x in after['testTemps'] if before and x not in before['testTemps']],\n                              'scope': 'All captured primary sessions/groups and TEST-prefixed task temps; metadata sessions are checked individually. No universal escaped-child/native custody proof.'}\n    except BaseException as error:\n        receipt['postflightError'] = type(error).__name__ + ': ' + str(error)\n        if runtime_inputs:\n            receipt['inputsPreserved'] = receipt['fullRuntimeInputsPreserved'] = False\n        receipt['sourceAndSupervisorMetadataPreserved'] = False\n    finally:\n        managed_signals = set(previous_handlers)\n        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, managed_signals)\n        try:\n            pending_signals = sorted(int(sig) for sig in signal.sigpending() & managed_signals)\n            receipt['signalAdmissionCutoff'] = {\n                'at': utc(), 'pendingSignals': pending_signals, 'supervisorExitZeroRequired': True,\n                'scope': 'Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.'}\n            receipt['postflightSeconds'] = time.monotonic() - postflight_start\n            receipt['finishedAt'] = utc()\n            receipt['totalInvocationSeconds'] = time.monotonic() - invocation_start\n            receipt['interruptions'] = [*phase_signals, *pending_signals]\n            receipt['metadataCommands'] = metadata_counter\n            receipt['fullRuntimeInputsInspected'] = runtime_inputs and all(\n                value == 'COMPLETE' for value in receipt['fullRuntimeInputBoundaries'].values())\n            receipt['primaryUnreached'] = action == 'run' and not primary_invocations\n            receipt['primaryFinalizationComplete'] = all(row['finalReceiptPersisted'] for row in primary_invocations)\n            receipt['primaryInvocationsWithoutFinalReceipt'] = [row['id'] for row in primary_invocations\n                                                               if not row['finalReceiptPersisted']]\n            receipt['unreachedValidationCommands'] = [x['command'] for x in receipt.get('validationCommands', [])\n                                                       if x['status'] == 'UNREACHED']\n            selected_inputs_preserved = receipt['inputsPreserved'] if runtime_inputs else receipt['sourceAndSupervisorMetadataPreserved']\n            receipt['scopeCompleted'] = bool(selected_inputs_preserved and expected_command_outcome\n                                             and (not runtime_inputs or receipt['fullRuntimeInputsInspected'])\n                                             and receipt['primaryFinalizationComplete']\n                                             and not receipt.get('executionError') and not receipt.get('postflightError')\n                                             and not receipt['interruptions'] and not receipt['unreachedValidationCommands']\n                                             and receipt.get('cleanup', {}).get('newTestTempsRemaining') == []\n                                             and receipt.get('cleanup', {}).get('capturedSessionMembersAfter') == [])\n            receipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')\n        finally:\n            for sig, previous in previous_handlers.items():\n                signal.signal(sig, previous)\n            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)\nprint(json.dumps({key: receipt.get(key) for key in ['command', 'action', 'exitCode', 'exitSignal',\n      'timedOut', 'executionError', 'postflightError', 'inputsPreserved', 'fullRuntimeInputsInspected',\n      'fullRuntimeInputsPreserved', 'sourceAndSupervisorMetadataPreserved', 'commandCompletedNormally',\n      'scopeCompleted', 'preflightSeconds', 'commandPhaseSeconds', 'cleanupSeconds', 'postflightSeconds',\n      'totalInvocationSeconds', 'unreachedValidationCommands', 'rawCombinedOutput', 'cleanup', 'signalAdmissionCutoff']}), flush=True)\nsys.exit(0 if receipt['scopeCompleted'] and not phase_signals else 2)"
+      }
+    },
+    "remainingPossibleOldActivity": "If still alive, the original invocation can finish its read-only postflight and write only its already-owned old evidence/finalization paths. It is not granted another primary by this conclusion. Any genuinely unknown physical process state stays unknown.",
+    "forbiddenInference": "Do not signal/adopt an old numeric PID from another namespace, rewrite/delete the old attempt/control/evidence/temp paths, infer global process absence, or synthesize old outer0."
+  },
+  "prospectiveRecoveryReview": {
+    "scopeAccepted": true,
+    "publicationOrExecutionAlreadyAdmitted": false,
+    "unchangedSource": {
+      "sourceCommit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+      "docsHead": "48499a97815abc52bf43ad6905c3c8cec1b476aa",
+      "localHead": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+      "localTree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+      "completeSource": {
+        "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2",
+        "bytes": 2478650,
+        "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0"
+      },
+      "overlays": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "mode": "100644",
+          "bytes": 24759,
+          "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+          "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "mode": "100644",
+          "bytes": 36260,
+          "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+          "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "mode": "100644",
+          "bytes": 8457,
+          "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+          "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "mode": "100644",
+          "bytes": 155423,
+          "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+          "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "mode": "100644",
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        }
+      ],
+      "all8798RowsRequired": true,
+      "workflows42": true,
+      "fullIndex11567": true,
+      "sourceWrites": 0,
+      "testOrProducerPostimages": 0,
+      "incomingAdoption": false
+    },
+    "exactThreeCommands": [
+      {
+        "command": "lint",
+        "argv": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+          "--config.pm-on-fail=error",
+          "--config.verify-deps-before-run=false",
+          "--config.engine-strict=true",
+          "lint:fast:files",
+          "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ]
+      },
+      {
+        "command": "source-size",
+        "argv": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+          "--config.pm-on-fail=error",
+          "--config.verify-deps-before-run=false",
+          "--config.engine-strict=true",
+          "guard:source-file-size"
+        ]
+      },
+      {
+        "command": "diff-check",
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--check",
+          "--",
+          "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ]
+      }
+    ],
+    "sameOriginalCommandVectorsVerifiedAgainst020fAndActualPartialReceipts": true,
+    "newOutputRoot": "/tmp/c714-cross-validation-recovery-evidence",
+    "newControlRoot": "/tmp/c714-cross-validation-recovery-controls",
+    "originalScopeNotResumedOrReclassified": true,
+    "newAttemptCount": 1,
+    "actionRestriction": "New runner must explicitly reject every action/command except run validation-package. No materialization, RED/GREEN test, build/install, provider/GUI/native or CI action.",
+    "originalEvidenceIsolation": "Old control/output/attempt/task-temp paths are retained unchanged and not reused. The original supervisor's unknown state remains visible in all new qualifications.",
+    "publicationGates": "Full actual incomplete-evidence/no-future-primary review and exact recoveryR1 scope acceptance precede docs-only publication. Full actual commit/parent/tree/changedbody/source/prefix/catalog readback must precede any recovery runner/binding authorship. Exact future runner/binding R2 and publication/readback precede local staging/execution.",
+    "prerequisiteGreen": "The separately accepted actual133GREEN46b7/8e03 and independent4a49/848e remain the prior behavioral qualification. No replay of that suite is authorized.",
+    "freshBoundaries": "Entire fresh current8798 source/C5index/122773 dependencies/1454 compiled/253D+12SPI/providers/tools/pnpm/control/config/env/7cache boundaries before and after. Old source-only after or previous GREEN cannot substitute.",
+    "originalClocksAndOrder": "Shared captured environment; three distinct captured children in fixed order, each absolute180 seconds before spawn/start/raw work, metadata30 seconds. Require previous0/finalized raw+receipt/no timeout/error/deadline/signal/unknown launch/empty session and no supervisor interruption. Otherwise remaining commands permanentlyUNREACHED and attempt spent; no partial resume.",
+    "finalAdmission": "New full actual evidence plus separately observed outer0 required. If transport is lost again, retain another incomplete outcome; no synthesized success or reused spent marker.",
+    "sourceWriteQualification": "Existing scoped ESLint cache writes are admitted unchanged. No blanket no-writes claim is drawn from final tracked equality.",
+    "boundedParallelRead": {
+      "allowedFutureOption": true,
+      "maximumWorkers": 8,
+      "maximumPendingUnconsumed": 32,
+      "file_rowAndIdentityCodecMustStayByteIdentical": true,
+      "fullEnumerationPathsRootSymlinkModeLinkTargetContainmentAndAllBytesRetained": true,
+      "deterministicResultsAndFinalSortWholeJSONIdentityRequired": true,
+      "allSubmittedFuturesAccountedAndThreadsJoinedBeforePrimaryBoundaryReturnOrError": true,
+      "noCacheShortcutsSkipRetriesBenchmarksOrAdditionalCommand": true,
+      "futureImplementationR2Required": "Precise worker submission/consumption/error/signal/shutdown and helper inverse must be independently reviewed; acceptance of this design is not acceptance of unwritten implementation or a speed/atomicity guarantee."
+    },
+    "next139Gate": "Exact9bc91 remains unpublished/blocked. Recovery success would require a distinct reviewed predecessor-gate amendment before the next source scope; this recoveryR1 itself grants no139, P11/Review, renderer or incoming adoption.",
+    "rendererAndOtherOpenWork": "Renderer80-to85/Vitest, Windows15s/10s, strictDarwinP09, laterP11/genuineM16, canonicaltyping/build, freshGUI/platform and wholeE2E remain open/unselected here."
+  },
+  "interpretationPrecision": {
+    "r1IdentityRoles": "partial envelope subject.publishedR1 points to R1 blob8abe; its actual checkpoint publishedR1 is publication commit a4f5. The recoveryR1 explicitly records both roles. This review does not confuse the blob with a commit.",
+    "checkpointAfterUnreachedIsHistorical": true,
+    "noOldAggregatePass": true,
+    "noNewExecutionByReviewer": true
+  },
+  "reviewToolProvenance": {
+    "originalInMemoryStateLost": true,
+    "reconstructedPureIdentityHelper": {
+      "bytes": 3982,
+      "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7",
+      "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8",
+      "role": "New pure JavaScript UTF-8/SHA256/Git-blob data-analysis helper; not the lost historical helper source, not target source/runner/test.",
+      "validatedAgainst": [
+        "empty/abc/hello newline known hash vectors",
+        "complete Unicode raw458710 exact12977-byte/SHA/Git identity",
+        "fullf0cb Git identity"
+      ],
+      "fullRemoteReadbackExact": true
+    },
+    "failedDirectCheckpointLookup": "Direct bare6fd lookup was unavailable; its complete original body is retained insidef0cb, freshly recomputed to exact18872/SHA04b3/Git6fd and joined to both the parsed checkpoint and71-file census. No missing body was inferred or fabricated.",
+    "reviewerActions": "Immutable Git read and pure text/hash analysis only, plus requested bare evidence retention; no shell, Node, target-source evaluation, test, source/ref/PR/CI mutation."
+  },
+  "outcome": "No classification or prospective recovery-scope blocker remains in exact85480. Original validation is permanently retained as spent/INCOMPLETE with three observed child successes and unknown final runtime/supervisor outcome. Only future fully reviewed/published isolated recovery may seek a new complete result."
+}

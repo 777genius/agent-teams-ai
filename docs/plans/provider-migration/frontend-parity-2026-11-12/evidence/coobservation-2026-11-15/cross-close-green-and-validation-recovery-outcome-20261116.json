@@ -1,0 +1,259 @@
+{
+  "schemaVersion": 1,
+  "kind": "Cross actual whole133 GREEN retained; original validation incomplete; isolated recovery R1 reviewed",
+  "recordedAtUtc": "2026-11-16 19:18:56 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "parent": "48499a97815abc52bf43ad6905c3c8cec1b476aa",
+  "parentTree": "77753b1e54274bb4d30e619dd327c123f921b18a",
+  "parentPublicationReadback": {
+    "bytes": 111040,
+    "sha256": "a1b7aee23fa380ac9d80d72d3ab452df939bf45c7608b146b22b2447b1315612",
+    "gitBlob": "58937745c6a44d85799aa79b50b69d2b608c6e09"
+  },
+  "actualSource": {
+    "publishedSourceCommit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+    "actualLocalHead": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+    "completeSnapshot": {
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+    },
+    "sourceRows": 8798,
+    "workflows": 42,
+    "wholeC5IndexLeaves": 11567,
+    "overlays": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      }
+    ],
+    "localDocsEqualThisRemoteCommit": false,
+    "sourceChangesInThisCheckpoint": 0
+  },
+  "actualMaterialization": {
+    "envelope": {
+      "bytes": 128038,
+      "sha256": "483c977ad6c0c3fe4d2221b78044c98f7da09472c5d531e154bc2788137c1c21",
+      "gitBlob": "9fb72e867bc14f68dd9c8c508e34fa830d9e28f3"
+    },
+    "independent": {
+      "bytes": 133668,
+      "sha256": "d8931a32bb39bb4151b3325bdb415511687e6a859e1e63341fe466663f642965",
+      "gitBlob": "6ef8855662b13d1c5e4c688a32ba5c43744d1ac4"
+    },
+    "scope": "source and supervisor metadata only; full runtime UNINSPECTED/null preservation",
+    "observedOuter": 75700,
+    "outerExit": 0,
+    "onlyChanges": [
+      "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts"
+    ]
+  },
+  "actualGreen": {
+    "envelope": {
+      "bytes": 166444,
+      "sha256": "c1ec7ed1270235d520b436e28cbdeb0988bc1af4c8473b5226e34b081b305981",
+      "gitBlob": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b"
+    },
+    "primarySemantic": {
+      "bytes": 182384,
+      "sha256": "1f77eaa85a42e3373b40426cafba5c22dd5b1f4c5807040207e46283841db683",
+      "gitBlob": "7a110b7c85a6dfce5d5f2fe4a389e1d1205baf82"
+    },
+    "finalSemantic": {
+      "bytes": 140647,
+      "sha256": "74936b31eeefd735ec329d286ae145b2eddb16fa025e5fb8cc6f715c5b133fd3",
+      "gitBlob": "4a49adfedbc84301e88d524d71b766a7ad785d14"
+    },
+    "fullGuard": {
+      "bytes": 209270,
+      "sha256": "b56c4d2a4328f11a679a73de100d13af4ec7e8ccc6fe8f6333de98dec4d2d329",
+      "gitBlob": "848e6efd0b924e4415848551cfea034f22b84221"
+    },
+    "receipt": {
+      "bytes": 33963,
+      "sha256": "04b75f107619fb1fcdd89659cbde2d5ba030bd22583e233be7acd8a6fbd45d0b",
+      "gitBlob": "8e03dc33aca8c5dbd8ebc354e8a41a2361fa525f"
+    },
+    "cases": 133,
+    "pass": 133,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0,
+    "old97Pass": 97,
+    "new36Pass": 36,
+    "targetVariantsComplete": 13,
+    "observedOuterSession": 17386,
+    "outerExit": 0,
+    "primarySeconds": 25.643054378,
+    "preflightSeconds": 349.629988461,
+    "postflightSeconds": 533.882963653,
+    "completeInputsPreserved": true,
+    "capturedCleanupDebt": false,
+    "qualification": "Finite actual-source GREEN only; no live GUI/native/provider or whole E2E qualification"
+  },
+  "originalValidation": {
+    "envelope": {
+      "bytes": 147631,
+      "sha256": "ebad9bfc9758fd75a6337e2281fc5012dc10302e591581ffac2429107ea9a0b1",
+      "gitBlob": "f0cb8ed61933af59c64991f3396274073587366f"
+    },
+    "guardClassification": {
+      "bytes": 146237,
+      "sha256": "22813b7c3fa165d506e7eb487b5be229ea7910d4208c73a930a9621978a4703e",
+      "gitBlob": "736df253a457b9a7260febbd74071ed2615be2bd"
+    },
+    "parityClassification": {
+      "bytes": 169081,
+      "sha256": "0863878d6085e61a91e8f96d970bdb9cd83a3ea6ce0a174c80bf0a0eb5cd9175",
+      "gitBlob": "7567c92bcc194c2de5e26abfed0a8604522fe589"
+    },
+    "phase": "INCOMPLETE",
+    "attempt": "SPENT",
+    "primaryCommands": [
+      {
+        "command": "lint",
+        "exitCode": 0,
+        "seconds": 60.415341385
+      },
+      {
+        "command": "source-size",
+        "exitCode": 0,
+        "seconds": 23.660546493
+      },
+      {
+        "command": "diff-check",
+        "exitCode": 0,
+        "seconds": 0.873901859
+      }
+    ],
+    "metadataExit0": 14,
+    "filesRetained": 71,
+    "totalRecordedBytes": 50611631,
+    "fullPreflightSeconds": 961.419392913,
+    "afterSource": {
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+    },
+    "afterDependencies": "MISSING",
+    "afterCompiled": "MISSING",
+    "finalAggregate": "MISSING",
+    "observedOuterExit": "UNKNOWN",
+    "physicalSupervisorLifetime": "UNKNOWN",
+    "noRemainingAuthorizedPrimaryPath": true,
+    "noRemainingPathBasis": "Three finalized primary receipts, after-metadata8..14 and full after-source886 joined to complete165f control flow. No primary back-edge after final postflight entry.",
+    "oldEvidenceAndControlsProtected": true,
+    "reclassifiedAsPass": false
+  },
+  "reviewedRecovery": {
+    "r1": {
+      "bytes": 22522,
+      "sha256": "9376703a1fead5196e12b16da75f20d723cac8647dd2593701c80f7a5976b185",
+      "gitBlob": "e664eaa666943272570ec13012bf6d6439d3d454"
+    },
+    "guard": {
+      "bytes": 167262,
+      "sha256": "9375e23aeba4b871ad016c82c76ae539f769bea1a5f2ab72c63a8d615af24585",
+      "gitBlob": "0fdbe9a84daa354332d61c13a532090199d50c88"
+    },
+    "parity": {
+      "bytes": 133047,
+      "sha256": "d94fb2464c47195fadfcaf311732025c578e8084b9b7ef701dd52c76e6aeca77",
+      "gitBlob": "97bfd42e46bc1dd2160f8c9826de68219303b67d"
+    },
+    "rootBothFullBodiesReadAndRehashed": true,
+    "sourceWrites": 0,
+    "allowedCommands": [
+      "lint",
+      "source-size",
+      "diff-check"
+    ],
+    "attempts": 1,
+    "newControlRoot": "/tmp/c714-cross-validation-recovery-controls",
+    "newOutputRoot": "/tmp/c714-cross-validation-recovery-evidence",
+    "oldScopeResumed": false,
+    "originalUnknownOutcomeUnchanged": true,
+    "runnerAuthored": false,
+    "bindingAuthored": false,
+    "executed": false,
+    "nextGate": "Complete actual docs publication readback, then exact recovery runner/binding authorship, independent full R2, immediate-push publication/readback, exclusive staging and one selected validation invocation. Full fresh input boundaries and separately observed actual new outer0 remain required."
+  },
+  "incomingSource": {
+    "assessment": {
+      "bytes": 564005,
+      "sha256": "cfae058da043274db6cd2beffb92449a962ce3ae41b3e82242cc9e38fc6a21dd",
+      "gitBlob": "6fcdaf7582ef8731e21f8bf7f8840dc21349d384"
+    },
+    "pin": "1ef2c16ae547129e6b6ab5c47e03caa6b3f169df",
+    "priorPin": "a07e2d68ece77d08e152d7b0de1eb4b85d72ca06",
+    "linearCommits": 31,
+    "fullLeafChanges": 56,
+    "nonDocChanges": 41,
+    "docsChanges": 15,
+    "ownNonDocDifferences": 110,
+    "sourceAdopted": false,
+    "ciQualification": false
+  },
+  "next139": {
+    "r1": "9bc91d0a53d775528ffe9a9040c67493a5f10546",
+    "published": false,
+    "testPostimageAuthored": false,
+    "producerPostimagesAuthored": false,
+    "runnerPostimageAuthored": false,
+    "status": "BLOCKED pending complete new recovery validation and a separately reviewed predecessor-gate amendment; no source scope silently expanded"
+  },
+  "remainingGates": [
+    "Windows Process15s",
+    "Windows Packaged10s",
+    "strictDarwinP09",
+    "laterP11/genuineM16",
+    "new-head reconciliation",
+    "canonical typecheck/build",
+    "actual fresh GUI/platform acceptance",
+    "whole E2E completion"
+  ],
+  "unchangedBoundaries": [
+    "real Claude/Codex even --version",
+    "real user projects",
+    "default/main merge or Ready",
+    "release/default activation or Stage2",
+    "blanket native/vendor qualification",
+    "deadline/currentness/census/cleanup/no-replay weakening",
+    "source-size cap800/exception141/sourcecount5020 changes",
+    "new workflow/package/source imports beyond listed exact paths"
+  ]
+}

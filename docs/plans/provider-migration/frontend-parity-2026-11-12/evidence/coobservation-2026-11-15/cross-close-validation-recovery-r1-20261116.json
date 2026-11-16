@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 1,
+  "kind": "Prospective isolated Cross validation recovery scope after tool-session loss; original attempt remains incomplete",
+  "author": "/root",
+  "preparedAtUtc": "2026-11-16 19:11:07 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "preparedFromCommit": "48499a97815abc52bf43ad6905c3c8cec1b476aa",
+  "preparedFromTree": "77753b1e54274bb4d30e619dd327c123f921b18a",
+  "purpose": "Obtain one independent complete current validation result for the already published and separately accepted whole133 Cross source, after the original once-only validation attempt lost its tool session during postflight. This is a separately reviewed new invocation, not continuation, retry or reclassification under the spent original R1.",
+  "priorActual": {
+    "completeGreenEnvelope": {
+      "gitBlob": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+      "bytes": 166444,
+      "sha256": "c1ec7ed1270235d520b436e28cbdeb0988bc1af4c8473b5226e34b081b305981"
+    },
+    "completeGreenGuard": {
+      "gitBlob": "848e6efd0b924e4415848551cfea034f22b84221",
+      "bytes": 209270,
+      "sha256": "b56c4d2a4328f11a679a73de100d13af4ec7e8ccc6fe8f6333de98dec4d2d329"
+    },
+    "completeGreenSemantic": {
+      "gitBlob": "4a49adfedbc84301e88d524d71b766a7ad785d14",
+      "bytes": 140647,
+      "sha256": "74936b31eeefd735ec329d286ae145b2eddb16fa025e5fb8cc6f715c5b133fd3"
+    },
+    "incompleteValidationEnvelope": {
+      "bytes": 147631,
+      "sha256": "ebad9bfc9758fd75a6337e2281fc5012dc10302e591581ffac2429107ea9a0b1",
+      "gitBlob": "f0cb8ed61933af59c64991f3396274073587366f"
+    },
+    "originalScope": {
+      "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184",
+      "publishedAt": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86"
+    },
+    "originalRunner": {
+      "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1",
+      "bytes": 48838,
+      "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5"
+    },
+    "originalBinding": {
+      "gitBlob": "020f6efa5dce4a1a5fe269836136ce554d76792c",
+      "bytes": 1800456,
+      "sha256": "5a37cf5a6bff3ca5da30f7813da3d73f75852f6c7ab670dd234599f4b9a6c2e2"
+    },
+    "oldPhase": "INCOMPLETE; spent attempt, no final receipt/complete post-runtime boundary/terminal cutoff/outer0; no retroactive success",
+    "oldPrimaries": "All three finalized primary receipts exit0 and14 finalized metadata receipts exit0 were actually observed. Their individual empty captured-session arrays are narrow facts only.",
+    "oldSupervisorLifetime": "UNKNOWN. New exec /proc uses another sandbox PID namespace and does not establish the old supervisor's absence. Do not kill, adopt or signal a numeric PID from the old namespace.",
+    "oldFutureAuthorityGate": "Before admitting any recovery execution, independent full actual review must join the three finalized primary receipts and after-metadata8..14/source886 records to the exact165f control flow and establish that reaching this postflight leaves no remaining authorized primary launch path in the old invocation. Old supervisor may at most finish read-only postflight/finalization and write its own old evidence; do not assert physical disappearance. Do not modify, remove, rewrite or reuse its controls, attempt marker, evidence, task temporary directory or output paths."
+  },
+  "publicationGate": "Root and independent reviewers first accept this exact prospective recovery scope and the complete actual incomplete-evidence classification, including no remaining old primary launch path. Publish this exact R1 in a docs-only immediate-push checkpoint on the own branch, retaining complete133 GREEN and incomplete original validation evidence. Root and an independent reviewer must fully fetch actual commit/sole parent/root/changed subtrees/all changed bodies, full append-only Plan/status prefixes, original catalog preservation and unchanged8798 non-doc/42 workflows. Only after complete actual publication/readback may root author/select a new recovery runner or binding postimage. No source/test/producer postimage is admitted.",
+  "unchangedSource": {
+    "publishedSourceCommit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+    "currentDocsHead": "48499a97815abc52bf43ad6905c3c8cec1b476aa",
+    "actualLocalHead": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+    "actualLocalTree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+    "overlays": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      }
+    ],
+    "completeSource": {
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2",
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0"
+    },
+    "nonDocRows": 8798,
+    "workflowLeaves": 42,
+    "fullC5IndexLeaves": 11567,
+    "productionFiles": 5020,
+    "frozenExceptions": 141,
+    "ordinaryCap": 800,
+    "sourceMutationsAllowed": 0,
+    "testOrProducerPostimagesAllowed": 0,
+    "incomingAdoptionAllowed": false
+  },
+  "execution": {
+    "baseEnvironment": "Reuse the already admitted fresh root /workspace/scratch/c714-fresh-20261116, detached C5 index plus exact published source overlays. Do not restore another actor's delivery or reinstall dependencies. Retain all122773 dependency rows,1454 compiled rows,253D/12SPI archive members, pinned toolchain/pnpm/proxy/config/cache inputs and their full existing receipts.",
+    "newOutputRoot": "/tmp/c714-cross-validation-recovery-evidence",
+    "newControlRoot": "/tmp/c714-cross-validation-recovery-controls",
+    "attempts": {
+      "validationPackage": 1
+    },
+    "allowedAction": "run validation-package only; no source materialization, test command, RED/GREEN rerun, install, build, provider/GUI/native or CI action",
+    "runnerGate": "Only after exact published/read-back R1 may root author a narrowly adapted descendant of165f with new exclusive evidence/control identity, exact new publishedR1 fields, explicit argument refusal for any action/command except run validation-package, and the explicitly listed inputManifestReadPlan. Keep all other source/input/environment/provider/tool/config/cache/captured-session/deadline/launch/finalization/cutoff logic. Its full exact code and binding require independent complete R2, docs-only immediate-push publication and complete actual readback before local control staging and execution. No current165f/020f or any old evidence is modified.",
+    "validationPackage": "Only after complete independently accepted133 GREEN, one captured validation invocation uses one shared captured environment and complete full current input/source preflight, then exactly once each in order: pinned pnpm lint:fast:files for the three Cross paths, pinned pnpm guard:source-file-size, pinned git diff --check for all five approved overlay paths. Each child gets a distinct captured session/group, its own absolute180s clock started before its spawn/start/raw work (never reset afterward), full start/raw/final receipt and cleanup accounting. Admit each next child only after prior primary exit0, successful raw/receipt finalization, no timeout/deadline/execution/cleanup error, empty captured session, no managed interruption in that child and still-clear supervisor interruption state. Otherwise mark every later command permanently UNREACHED and spend the single package attempt; no partial-resume/retry path. Full exact input/source snapshots surround the whole package, not each child; do not claim per-check snapshots. Preflight, each command/cleanup subset, and postflight timing are separately reported. Actual supervisor exit0 is an independent required continuation condition. No broad lint/format, benchmark, new test/install/build/provider command or source mutation is selected.",
+    "commands": [
+      {
+        "command": "lint",
+        "argv": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+          "--config.pm-on-fail=error",
+          "--config.verify-deps-before-run=false",
+          "--config.engine-strict=true",
+          "lint:fast:files",
+          "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ]
+      },
+      {
+        "command": "source-size",
+        "argv": [
+          "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+          "--config.pm-on-fail=error",
+          "--config.verify-deps-before-run=false",
+          "--config.engine-strict=true",
+          "guard:source-file-size"
+        ]
+      },
+      {
+        "command": "diff-check",
+        "argv": [
+          "/usr/local/bin/git",
+          "diff",
+          "--check",
+          "--",
+          "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+        ]
+      }
+    ],
+    "inputManifestReadPlan": {
+      "purpose": "Reduce repeated full dependency-file read overhead while preserving the exact complete manifest and all original admission gates. No checksum/stat-cache shortcut or weaker preservation claim is allowed.",
+      "scope": "Only the read-only directory_manifest path used by full dependency/compiled inventories may be adapted to a bounded Python standard-library ThreadPoolExecutor, plus its narrowly required worker helper/import. The existing file_row body/identity codec remains byte-identical. No other input checker, source/control/provider/tool/env/pnpm/cache path, subprocess/capture/deadline/signal algorithm or expected identity is relaxed.",
+      "maximumWorkerThreads": 8,
+      "maximumSubmittedUnconsumedJobs": 32,
+      "enumeration": "Preserve each original roots list, absent-root behavior, root directory/no-symlink assertions, os.walk(followlinks=False), sorted directories+files enumeration, relative path spelling and complete census. Every encountered entry receives the same directory/special-file/symlink/regular-file treatment and the original full-byte file_row identity checks. Keep the original dependency-link resolve-inside-REPO and literal readlink target checks. No ignored paths, early-success truncation, hash reuse, metadata-only identity, changed file-mode policy or deduplication of distinct paths.",
+      "collection": "Keep at most32 submitted unconsumed jobs and at most8 active readers. Consume results in deterministic original enumeration order, include every non-directory result, preserve exact field order/types and final path sort. Reconstruct the same complete JSON/UTF-8/SHA256/Git-framed bytes; the full expected122773/1454 inventories remain exact acceptance targets, not count-only summaries.",
+      "lifetime": "All submitted reads/futures must be accounted for and all reader threads joined before the manifest function returns or propagates an error/signal. No background reader may overlap the primary launch or the next before/after boundary. Threads only read the same admitted input paths; they create no subprocess, source/test/provider/cache output or network access. Keep the first actual error and the existing failed-preflight/primaryUNREACHED/spent-attempt behavior. Do not swallow a failed future or report a partial snapshot as inspected/preserved.",
+      "timing": "Full hashing remains separately timed outside the unchanged original primary180-second and metadata30-second clocks. No clock reset, attempt renewal, automatic retry, reduced postflight, command overlap or new benchmark execution is selected.",
+      "reviewAndProof": "The exact future runner postimage must receive independent complete R2 of both normal and exceptional/signal paths, precise helper inverse/delta accounting and publication/readback before execution. The actual selected phases must still freshly read every dependency/compiled byte before and after and match the entire retained manifest identities; any mismatch or incomplete join refuses the phase. This paragraph does not authorize any current165f/Cross runner change. This recovery has its own isolated runner and readback; it does not mutate the original current Cross runner."
+    },
+    "fullBoundary": "Fresh complete runtime preflight and postflight for this invocation: all8798 source rows, completeC5HEAD/tree/index, all122773 dependency and1454 compiled rows, all253D+12SPI installed/archive members, pinnedNode/Python/Git/shell/pnpm/control/config/environment and7 original bootstrap-cache files. No old full preflight, source-only after snapshot, previous GREEN or partial validation file stands in for the new reads. Match entire complete retained manifest bodies/identities, not counts. Full hashing is outside, separately timed from the unchanged180s primary and30s metadata clocks.",
+    "orderedAdmission": "Exactly lint then source-size then diff-check once, with distinct captured sessions, start/raw/final receipts and original pre-spawn absolute180-second clock each. Admit next only on prior exit0, successful final raw/receipt, no errors/deadline/timeout/signal/unknown launch and empty captured session. Require no supervisor interruption. Otherwise later commands remain UNREACHED and this separately selected attempt is spent without resume/retry.",
+    "actualClosure": "Independent full actual source/input/lifetime/primary and final receipt review plus separately observed actual outer0 is required. If tool state is lost again, preserve incomplete outcome; do not synthesize outer0 or erase a spent marker. All pending reader jobs and threads must join before any primary launch, next boundary, return or error propagation. Preserve initiating failure and record managed interruptions even while draining.",
+    "noBenchmark": "No separate performance/parallel-reader benchmark or unreviewed code evaluation is selected; exact full actual validation snapshots provide byte-equivalence proof.",
+    "sourceWriteBehavior": "No tracked source, lockfile, workflow, package or exception update. Existing scoped ESLint cache behavior remains the same admitted behavior; do not broaden ignore rules or claim no writes merely from final equality.",
+    "historicalAdmissionMapping": {
+      "reason": "The original165f validation path reads RED/GREEN receipts beneath its original OUT, checks GREEN binding identity against the current020f binding, and only creates OUT during materialize-red. A fresh validation-only scope has a different OUT and binding; these exact historical admission references must be mapped explicitly without inventing a new RED/GREEN execution or weakening any accepted-result predicate.",
+      "originalCrossAuthority": "Keep full original8abe Cross R1 body/identity and inherited13 accepted review bodies as historical source/runtime authority. Add the complete exact published recovery R1 body/identity and independently accepted publication/partial-evidence reviews as additional current authority. Receipt publishedR1 and owner refer to the new actual recovery publication; the original Cross R1 pin remains explicitly distinct.",
+      "priorRed": "Retain complete actual original RED receipt e49bcb5dde95d18d3e0eafc0e272b4a1c1fff54a (33946B/SHAe86f3ff0ed102ec68ccb2fbe69f279247bd0eb56eaba50c8e96921b3f2619772), whose authoritative full identity already appears in original binding acceptedSemanticRed.identity. Reuse that identity and complete literal receipt as immutable binding data or an explicitly pinned read-only control copy. Preserve all165f RED command/exit1/input/runtime/normal/scope/interruption/cleanup/test/error checks and independent outer27541 exit0 acceptance.",
+      "priorGreen": "Retain complete actual GREEN receipt8e03dc33aca8c5dbd8ebc354e8a41a2361fa525f (33963B/SHA04b75f107619fb1fcdd89659cbde2d5ba030bd22583e233be7acd8a6fbd45d0b), exact original runner165f/binding020f and published source subjecte6. Read only its full embedded literal body or exact pinned control copy, verify all bytes/SHA256/Git and preserved165f command/exit0/input/runtime/normal/scope/interruption/cleanup/error predicates. Compare its bindingIdentity to exact accepted original020f identity, never to the newly authored recovery binding. Require complete independently accepted whole133 guard848e/semantic4a49 and observed original outer17386 exit0. New recovery receipt and source controls bind the new runner/binding separately; do not masquerade them as the GREEN runtime inputs.",
+      "exclusiveOwnership": "Create the new OUT exactly once with exist_ok=False after all static R1/binding/historical admission checks, write a new exact owner record, and then create the one new attempt marker exclusively. Do not copy an owner/attempt/partial phase from old OUT or enable materialize-red. New control copies, if selected by exact binding R2, must be complete already accepted historical data only and hash-checked before consumption and in both control boundaries; no historical files are rewritten.",
+      "legacyUnreachablePaths": "The argument gate must refuse every action except run validation-package before any output creation or source-write branch can be entered. Existing unreachable materialization bookkeeping may remain byte-identical if independently reviewed; it never authorizes source application. No historical source overlay or test content changes.",
+      "scope": "Only these explicit historical-reference/current-authority/exclusive-owner adaptations, the existing new-path/argument gate, and the bounded directory-manifest reader may differ. Preserve all remaining algorithms and full source/input checks; exact R2 must enumerate every delta and inverse, including exceptional/signal/drain paths."
+    }
+  },
+  "nextWork": {
+    "nextNodeR1V2": {
+      "gitBlob": "9bc91d0a53d775528ffe9a9040c67493a5f10546",
+      "bytes": 26386,
+      "sha256": "ccff0fe2833b70364c761d71cdebf02ced412ffc4eb20a73f52c232d9a68998c"
+    },
+    "status": "UNPUBLISHED and BLOCKED; no future139 test, P11/Review producer or runner postimage authored/selected. After complete independent recovery acceptance a separately reviewed prospective amendment may explicitly update the next-R1 predecessor gate to cite the new complete validation while retaining the original INCOMPLETE history. This recovery R1 itself does not authorize that future source scope.",
+    "renderer": "80-to85 renderer proposal remains unselected. Data-only package/source inspection may continue; no package evaluation or renderer postimage."
+  },
+  "boundaries": {
+    "incomingHeads": "Latest read-only APP source pin1ef2c16ae547129e6b6ab5c47e03caa6b3f169df and D c930d3c8b9a213762528d6e28c9ed0172ab1fa27 remain unadopted. Their source/archive analyses admit no source/package/workflow or runtime action here.",
+    "originalCi": "All original9 runs terminal. Frozen PR1206/1207/1208/1211/1212/1213 remain untouched; no rerun/cancel/dispatch/ref/metadata action or further polling. This R1 opens no PR and launches no CI.",
+    "forbidden": [
+      "real Claude/Codex even --version",
+      "real user projects",
+      "default/main merge or Ready",
+      "release/default activation or Stage2",
+      "blanket native/vendor qualification",
+      "deadline/currentness/census/cleanup/no-replay weakening",
+      "source-size cap800/exception141/sourcecount5020 changes",
+      "new workflow/package/source imports beyond listed exact paths"
+    ],
+    "open": [
+      "Windows Process15s",
+      "Windows Packaged10s",
+      "strictDarwinP09",
+      "laterP11/genuineM16",
+      "new-head reconciliation",
+      "canonical typecheck/build",
+      "actual fresh GUI/platform acceptance",
+      "whole E2E completion"
+    ],
+    "renderer": "Renderer hook/test and Vitest admission remain unselected. Only data-only source/package inspection may continue; no renderer or package code evaluation."
+  },
+  "qualification": "Selected fast validation only for exact current five overlays. Accepted133 finite-source GREEN remains distinct. No GUI/native/vendor/platform/canonical typing/build or whole E2E completion claim. Original supervisor cleanup uncertainty is retained and never hidden by the new result.",
+  "draftAmendment": {
+    "previousUnpublishedR1": {
+      "bytes": 18911,
+      "sha256": "f56f67cc4ee66beac761970a6ca1f3350aa10a7ab2eb7b0d3a4e6ccdf70ed398",
+      "gitBlob": "85480d2a63a6c94d9f9cd31ab4795b01a30e5851"
+    },
+    "previousPublished": false,
+    "reason": "Explicitly map inherited RED/GREEN admission to their exact original immutable receipt/binding identities and provide exclusive new-output ownership for a validation-only invocation. This is required by reading165f prelude619–652; original outcomes and all predicates are preserved, no new RED/GREEN or source command is selected."
+  }
+}

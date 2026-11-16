@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "kind": "Docs-only actual CrossGREEN, interrupted-validation and recoveryR1 publication manifest",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "parent": "48499a97815abc52bf43ad6905c3c8cec1b476aa",
+  "parentTree": "77753b1e54274bb4d30e619dd327c123f921b18a",
+  "files": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-green-binding-independent-publication-readback-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "58937745c6a44d85799aa79b50b69d2b608c6e09",
+      "bytes": 111040,
+      "sha256": "a1b7aee23fa380ac9d80d72d3ab452df939bf45c7608b146b22b2447b1315612"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-actual-materialization-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9fb72e867bc14f68dd9c8c508e34fa830d9e28f3",
+      "bytes": 128038,
+      "sha256": "483c977ad6c0c3fe4d2221b78044c98f7da09472c5d531e154bc2788137c1c21"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-producer-actual-materialization-independent-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6ef8855662b13d1c5e4c688a32ba5c43744d1ac4",
+      "bytes": 133668,
+      "sha256": "d8931a32bb39bb4151b3325bdb415511687e6a859e1e63341fe466663f642965"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-actual-whole133-green-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+      "bytes": 166444,
+      "sha256": "c1ec7ed1270235d520b436e28cbdeb0988bc1af4c8473b5226e34b081b305981"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-actual-whole133-green-primary-semantic-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7a110b7c85a6dfce5d5f2fe4a389e1d1205baf82",
+      "bytes": 182384,
+      "sha256": "1f77eaa85a42e3373b40426cafba5c22dd5b1f4c5807040207e46283841db683"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-actual-whole133-green-semantic-closure-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4a49adfedbc84301e88d524d71b766a7ad785d14",
+      "bytes": 140647,
+      "sha256": "74936b31eeefd735ec329d286ae145b2eddb16fa025e5fb8cc6f715c5b133fd3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-actual-whole133-green-full-guard-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "848e6efd0b924e4415848551cfea034f22b84221",
+      "bytes": 209270,
+      "sha256": "b56c4d2a4328f11a679a73de100d13af4ec7e8ccc6fe8f6333de98dec4d2d329"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-green-complete-source-snapshot-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8860893e39a0daf17e8b499baee64b7040a9b3a2",
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-interrupted-validation-actual-evidence-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f0cb8ed61933af59c64991f3396274073587366f",
+      "bytes": 147631,
+      "sha256": "ebad9bfc9758fd75a6337e2281fc5012dc10302e591581ffac2429107ea9a0b1"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-r1-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e664eaa666943272570ec13012bf6d6439d3d454",
+      "bytes": 22522,
+      "sha256": "9376703a1fead5196e12b16da75f20d723cac8647dd2593701c80f7a5976b185"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-prior-guard-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "736df253a457b9a7260febbd74071ed2615be2bd",
+      "bytes": 146237,
+      "sha256": "22813b7c3fa165d506e7eb487b5be229ea7910d4208c73a930a9621978a4703e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-app-1ef-source-freshness-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6fcdaf7582ef8731e21f8bf7f8840dc21349d384",
+      "bytes": 564005,
+      "sha256": "cfae058da043274db6cd2beffb92449a962ce3ae41b3e82242cc9e38fc6a21dd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-prior-parity-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7567c92bcc194c2de5e26abfed0a8604522fe589",
+      "bytes": 169081,
+      "sha256": "0863878d6085e61a91e8f96d970bdb9cd83a3ea6ce0a174c80bf0a0eb5cd9175"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-guard-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0fdbe9a84daa354332d61c13a532090199d50c88",
+      "bytes": 167262,
+      "sha256": "9375e23aeba4b871ad016c82c76ae539f769bea1a5f2ab72c63a8d615af24585"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-parity-review-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "97bfd42e46bc1dd2160f8c9826de68219303b67d",
+      "bytes": 133047,
+      "sha256": "d94fb2464c47195fadfcaf311732025c578e8084b9b7ef701dd52c76e6aeca77"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-green-and-validation-recovery-outcome-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "37145ab5b024f43fb6f25b816c915e3a229d5e37",
+      "bytes": 9659,
+      "sha256": "fa3d1718d11556187786f520e47aa4fff2754c3edc3f84c4c74264e39a5f0246"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8791823a44b76b0b98014a54d1e6cde380db5765",
+      "bytes": 2522854,
+      "sha256": "35538d0e371b52ae0a732b1fb66358f4e537db59c08e16bed89ecff46ad4a384",
+      "beforeSha": "d75d90e41b98e2ffca9e348b1154e14762e2ef7e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "80f85459dcf20c28b830f4946bb9e56d76afb3bc",
+      "bytes": 32404,
+      "sha256": "8c7bd34921b578b624a34d7ee7079702d6d39ee8a367ba5cdd6a6a1416de7521",
+      "beforeSha": "e7e18f393bfac94a3f0430477b2b60d9452ba4f9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b2a7cb69377baa04c8e34118f849601c22edc20a",
+      "bytes": 74154,
+      "sha256": "f090e0d84b43063fa2ee03b9e1f7473d2f4fa091a3314feb7c457e75c2639e1d",
+      "beforeSha": "8fa85ac35f4851e049ab4c119f83a6967257f181"
+    }
+  ],
+  "manifestDoesNotListItself": true,
+  "expectedTreeLeaves": 11748,
+  "sourceNonDocLeaves": 8798,
+  "sourceChanges": 0,
+  "workflowLeaves": 42,
+  "workflowChanges": 0,
+  "planAppend": {
+    "bytes": 3957,
+    "sha256": "ab7f72df1b9b40eef7a7f1c94ebc054c410f58fae7119a1d8f3a50a9fab43ddf",
+    "gitBlob": "c4f24d1b329b74d45a0d688d53cb929abbe2a334",
+    "completeParentPrefixRequired": true
+  },
+  "statusAppend": {
+    "bytes": 1496,
+    "sha256": "f8ada85c972e8efd940449ec1326d5fa12fbd7b7416311e7c5e0a810c4270c89",
+    "gitBlob": "d38dce031592cefeed348bbfc3842202e6fca50c",
+    "completeParentPrefixRequired": true
+  },
+  "originalCatalogBundlesAndTotalsUnchanged": true,
+  "actualGreenComplete": true,
+  "originalValidationComplete": false,
+  "originalSupervisorLifetime": "UNKNOWN",
+  "recoveryR1": {
+    "bytes": 22522,
+    "sha256": "9376703a1fead5196e12b16da75f20d723cac8647dd2593701c80f7a5976b185",
+    "gitBlob": "e664eaa666943272570ec13012bf6d6439d3d454"
+  },
+  "recoveryRunnerAuthored": false,
+  "recoveryBindingAuthored": false,
+  "recoveryExecuted": false,
+  "next139Published": false
+}

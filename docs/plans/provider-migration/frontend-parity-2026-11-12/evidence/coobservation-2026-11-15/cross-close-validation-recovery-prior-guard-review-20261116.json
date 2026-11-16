@@ -1,0 +1,1395 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-incomplete-validation-classification-and-prospective-isolated-recovery-R1-review",
+  "reviewer": "/root/guard_review",
+  "repository": "777genius/agent-teams-ai",
+  "recordedAtUTC": "2026-11-16 19:10:35 UTC",
+  "verdict": {
+    "incompleteEvidenceClassificationAccepted": true,
+    "originalValidationCompleted": false,
+    "originalValidationOutcome": "INCOMPLETE",
+    "originalAttempt": "SPENT",
+    "originalSupervisorLifetime": "UNKNOWN",
+    "prospectiveRecoveryR1AcceptedForPublication": true,
+    "newRuntimeAuthorizedByThisBareRecord": false,
+    "next139SourceScopeAdmitted": false
+  },
+  "exactInputs": {
+    "partialEnvelope": {
+      "bytes": 147631,
+      "sha256": "ebad9bfc9758fd75a6337e2281fc5012dc10302e591581ffac2429107ea9a0b1",
+      "gitBlob": "f0cb8ed61933af59c64991f3396274073587366f"
+    },
+    "staleMainCheckpoint": {
+      "bytes": 18872,
+      "sha256": "04b3f56bd41080a5b29a9da2867cbc80bf9b07f71e31d79c7e41a7eb6046fb6a",
+      "gitBlob": "6fd25d10b96add1d31a413fefd07555f10df7b4b"
+    },
+    "originalRunner": {
+      "bytes": 48838,
+      "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+      "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+    },
+    "completePriorGreenReview": {
+      "bytes": 209270,
+      "sha256": "b56c4d2a4328f11a679a73de100d13af4ec7e8ccc6fe8f6333de98dec4d2d329",
+      "gitBlob": "848e6efd0b924e4415848551cfea034f22b84221"
+    },
+    "completeCurrentSource": {
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+    },
+    "completeStageZeroIndex": {
+      "bytes": 1492874,
+      "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+      "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+    },
+    "completeCompiledAndTreeContainer": {
+      "bytes": 2572284,
+      "sha256": "22fe3985fc1fa3708a4c0387ecbb955c687d653538e11ba1fed1a64d19633652",
+      "gitBlob": "5192e6e0290dd5beaf486a3315b984759fef96bd"
+    },
+    "recoveryR1": {
+      "bytes": 18911,
+      "sha256": "f56f67cc4ee66beac761970a6ca1f3350aa10a7ab2eb7b0d3a4e6ccdf70ed398",
+      "gitBlob": "85480d2a63a6c94d9f9cd31ab4795b01a30e5851"
+    },
+    "comparisonOnlyUnpublishedNextR1": {
+      "bytes": 26386,
+      "sha256": "ccff0fe2833b70364c761d71cdebf02ced412ffc4eb20a73f52c232d9a68998c",
+      "gitBlob": "9bc91d0a53d775528ffe9a9040c67493a5f10546"
+    }
+  },
+  "actualEvidenceAudit": {
+    "errors": [],
+    "files": 71,
+    "totalBytes": 50611631,
+    "smallFullBodies": 63,
+    "smallBytes": 45132,
+    "largeBodyInstances": 8,
+    "largeBytes": 50566499,
+    "uniqueBodies": 47,
+    "sourceRows": 8798,
+    "bothSourceBodiesExact": true,
+    "compiledBeforeRows": 1454,
+    "dependenciesBeforeRows": 122773,
+    "afterDependenciesAbsent": true,
+    "afterCompiledAbsent": true,
+    "primaries": [
+      {
+        "command": "lint",
+        "identity": {
+          "bytes": 1225,
+          "sha256": "1acc29da54ad3d595d0dd1bb0a2df5bf86be6fcd0b7b9280732ecdb01e5dc18c",
+          "gitBlob": "6f6c11af08486136c247d4dc579a8bc9399d91ca"
+        },
+        "exitCode": 0,
+        "capturedPid": 30,
+        "durationSeconds": 60.41534138499992,
+        "raw": {
+          "path": "/tmp/c714-cross-close-evidence/validation-package-lint-1.log",
+          "bytes": 284,
+          "sha256": "30ee225fe84245fcde6bc8fe685c62c913a5b0afeb596c32d6bd261349f7864a",
+          "gitBlob": "4db718c739d143a52269c305b0e24a0896993950"
+        }
+      },
+      {
+        "command": "source-size",
+        "identity": {
+          "bytes": 1043,
+          "sha256": "56024b544fb804d5ccc8cfc13c1c17867f71c2be4f1fcf01d25aea12bdaa042f",
+          "gitBlob": "2d31e9c3bdf443be45a855c1dd10be623c755ec3"
+        },
+        "exitCode": 0,
+        "capturedPid": 60,
+        "durationSeconds": 23.660546492999856,
+        "raw": {
+          "path": "/tmp/c714-cross-close-evidence/validation-package-source-size-1.log",
+          "bytes": 249,
+          "sha256": "26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f",
+          "gitBlob": "399a78f77777d0669218be2d4dae5360657308fa"
+        }
+      },
+      {
+        "command": "diff-check",
+        "identity": {
+          "bytes": 1125,
+          "sha256": "92fd66707ef5e837b4e74ff8bfa9451becdecdac7b7c05c4f4f6ca3154bb4dfc",
+          "gitBlob": "3ba70cf95e64059b7c842b0706d0f62cf010876e"
+        },
+        "exitCode": 0,
+        "capturedPid": 82,
+        "durationSeconds": 0.873901858998579,
+        "raw": {
+          "path": "/tmp/c714-cross-close-evidence/validation-package-diff-check-1.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        }
+      }
+    ],
+    "allPrimaryRecordedCleanupArraysEmpty": true,
+    "metadataCount": 14,
+    "metadataExitZero": true,
+    "metadataLastFinished": "2026-11-16T18:55:01.287281+00:00",
+    "staleCheckpointPrimaryAndAfterFieldsNotCurrentOutcome": true,
+    "oldOuterOutcome": "UNKNOWN",
+    "oldSupervisorPhysicalAbsence": "UNKNOWN",
+    "phase": "INCOMPLETE",
+    "attempt": "SPENT"
+  },
+  "actualClassification": {
+    "historicalCheckpoint": {
+      "identity": {
+        "bytes": 18872,
+        "sha256": "04b3f56bd41080a5b29a9da2867cbc80bf9b07f71e31d79c7e41a7eb6046fb6a",
+        "gitBlob": "6fd25d10b96add1d31a413fefd07555f10df7b4b"
+      },
+      "before": "COMPLETE",
+      "after": "UNREACHED",
+      "primaryInvocations": [],
+      "validationStatuses": [
+        {
+          "command": "lint",
+          "status": "UNREACHED"
+        },
+        {
+          "command": "source-size",
+          "status": "UNREACHED"
+        },
+        {
+          "command": "diff-check",
+          "status": "UNREACHED"
+        }
+      ],
+      "fullRuntimeInputsInspected": false,
+      "fullRuntimeInputsPreserved": false,
+      "exitCode": null,
+      "qualification": "This is the last persisted preflight checkpoint. Its empty primary list and UNREACHED after/command fields describe that earlier persistence boundary; later separate finalized primary and after-metadata/source files establish subsequent progress."
+    },
+    "individuallyObservedPrimaries": [
+      {
+        "command": "lint",
+        "identity": {
+          "bytes": 1225,
+          "sha256": "1acc29da54ad3d595d0dd1bb0a2df5bf86be6fcd0b7b9280732ecdb01e5dc18c",
+          "gitBlob": "6f6c11af08486136c247d4dc579a8bc9399d91ca"
+        },
+        "receipt": {
+          "argv": [
+            "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+            "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+            "--config.pm-on-fail=error",
+            "--config.verify-deps-before-run=false",
+            "--config.engine-strict=true",
+            "lint:fast:files",
+            "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+            "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+            "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+          ],
+          "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+          "startedAt": "2026-11-16T18:53:22.535550+00:00",
+          "timedOut": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "capturedPid": 30,
+          "metadataOnly": false,
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-cross-close-evidence/validation-package-lint-1.log",
+            "bytes": 284,
+            "sha256": "30ee225fe84245fcde6bc8fe685c62c913a5b0afeb596c32d6bd261349f7864a",
+            "gitBlob": "4db718c739d143a52269c305b0e24a0896993950"
+          },
+          "finishedAt": "2026-11-16T18:54:22.951145+00:00",
+          "durationSeconds": 60.41534138499992,
+          "interruptions": [],
+          "cleanupSeconds": 0,
+          "deadlineExceeded": false,
+          "successful": true
+        }
+      },
+      {
+        "command": "source-size",
+        "identity": {
+          "bytes": 1043,
+          "sha256": "56024b544fb804d5ccc8cfc13c1c17867f71c2be4f1fcf01d25aea12bdaa042f",
+          "gitBlob": "2d31e9c3bdf443be45a855c1dd10be623c755ec3"
+        },
+        "receipt": {
+          "argv": [
+            "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+            "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+            "--config.pm-on-fail=error",
+            "--config.verify-deps-before-run=false",
+            "--config.engine-strict=true",
+            "guard:source-file-size"
+          ],
+          "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+          "startedAt": "2026-11-16T18:54:22.951784+00:00",
+          "timedOut": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "capturedPid": 60,
+          "metadataOnly": false,
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-cross-close-evidence/validation-package-source-size-1.log",
+            "bytes": 249,
+            "sha256": "26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f",
+            "gitBlob": "399a78f77777d0669218be2d4dae5360657308fa"
+          },
+          "finishedAt": "2026-11-16T18:54:46.604563+00:00",
+          "durationSeconds": 23.660546492999856,
+          "interruptions": [],
+          "cleanupSeconds": 0,
+          "deadlineExceeded": false,
+          "successful": true
+        }
+      },
+      {
+        "command": "diff-check",
+        "identity": {
+          "bytes": 1125,
+          "sha256": "92fd66707ef5e837b4e74ff8bfa9451becdecdac7b7c05c4f4f6ca3154bb4dfc",
+          "gitBlob": "3ba70cf95e64059b7c842b0706d0f62cf010876e"
+        },
+        "receipt": {
+          "argv": [
+            "/usr/local/bin/git",
+            "diff",
+            "--check",
+            "--",
+            "scripts/legacy-agent-host/desktop-ui-controls.ts",
+            "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+            "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+            "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+            "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+          ],
+          "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+          "startedAt": "2026-11-16T18:54:51.516150+00:00",
+          "timedOut": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "capturedPid": 82,
+          "metadataOnly": false,
+          "remainingBeforeCleanup": [],
+          "remainingCapturedSession": [],
+          "raw": {
+            "path": "/tmp/c714-cross-close-evidence/validation-package-diff-check-1.log",
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+          },
+          "finishedAt": "2026-11-16T18:54:52.430004+00:00",
+          "durationSeconds": 0.873901858998579,
+          "interruptions": [],
+          "cleanupSeconds": 0,
+          "deadlineExceeded": false,
+          "successful": true
+        }
+      }
+    ],
+    "lateProgress": {
+      "afterMetadataRecords": 7,
+      "afterSource": {
+        "bytes": 2478650,
+        "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+        "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+      },
+      "sourceRows": 8798,
+      "workflowLeaves": 42,
+      "compiledAfter": "ABSENT",
+      "dependencyAfter": "ABSENT",
+      "postRuntimePreservation": "UNKNOWN",
+      "finalAggregateReceipt": "ABSENT",
+      "terminalSignalCutoff": "ABSENT",
+      "final22PrintedFields": "ABSENT",
+      "actualOuterCompletion": "NOT OBSERVED"
+    },
+    "transportObservation": {
+      "lastSuccessfulPoll": {
+        "session": 81561,
+        "output": "",
+        "stillRunning": true,
+        "observedAtApprox": "2026-11-16T18:55:32Z"
+      },
+      "stateLossObservedAtApprox": "2026-11-16T18:58:37Z",
+      "writeStdinError": "Unknown process id 81561",
+      "codeModePreviousStateUnavailable": true,
+      "sourceAndEvidenceFilesystemRetained": true,
+      "noRelaunch": true,
+      "noKill": true,
+      "noReceiptRewriting": true,
+      "exactCause": "UNKNOWN; tool-session/state loss observed, no attribution to source or operating-system failure",
+      "outerExitCode": null,
+      "outerExitSignal": null,
+      "originalSupervisorPhysicalAbsence": "UNKNOWN; later exec /proc is a distinct sandbox PID namespace and cannot prove absence"
+    },
+    "sourceWriteQualification": "Scoped lint retains its original --cache --cache-location .eslintcache-fast behavior. No claim of no writes is inferred from final tracked-source equality.",
+    "phaseAcceptance": false,
+    "sourceDefectInferred": false,
+    "unknownOutcomePromoted": false,
+    "previous133GreenStillSeparatelyAccepted": true
+  },
+  "noRemainingOldPrimaryPath": {
+    "acceptedWithinExactReviewedControlFlow": true,
+    "evidence": "The three distinct selected final primary receipts and all after-metadata8..14 plus full after-source886 join exact165f. The primary for-loop precedes the single finally postflight block; no code after entry to that block returns to a primary launch. Even if a last primary admission assertion failed, the postflight path still cannot re-enter the primary loop.",
+    "remainingPermittedOldBehavior": "Data-only postflight and old evidence finalization within the original process, including source/control/dependency/compiled/provider/tool/config/environment/cache reads and original final receipt/output. No new authorized guard/test/provider launch remains.",
+    "physicalAbsence": "UNKNOWN",
+    "sameNamespaceCustodyNotAvailable": true,
+    "protectedOldPaths": "Do not alter, remove, overwrite, signal by old numeric PID, resume, or reuse original controls/evidence/attempt/TMPDIR. New invocation uses separately selected exclusive control/output/temp paths.",
+    "originalSourceIdentity": {
+      "bytes": 48838,
+      "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+      "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+    },
+    "completeRelevantSourcePassages": [
+      {
+        "startLine": 360,
+        "endLine": 403,
+        "body": "def source_snapshot(overlays):\n    assert git_read('rev-parse', 'HEAD').decode().strip() == SOURCE_COMMIT\n    assert git_read('rev-parse', 'HEAD^{tree}').decode().strip() == SOURCE_TREE\n    leaves = []\n    for raw in git_read('ls-tree', '-rz', '--full-tree', 'HEAD').split(b'\\0'):\n        if raw:\n            metadata, path = raw.split(b'\\t', 1)\n            mode, kind, blob = metadata.decode().split()\n            leaves.append({'path': path.decode(), 'mode': mode, 'type': kind, 'gitBlob': blob})\n    expected_leaves = [{key: row[key] for key in ['path', 'mode', 'type', 'gitBlob']}\n                       for row in setup['sourceTreeRows']]\n    assert sorted(leaves, key=lambda row: row['path']) == sorted(expected_leaves, key=lambda row: row['path'])\n    assert len(leaves) == 11567, 'complete source tree changed'\n    assert git_read('diff', '--cached', '--name-only', '-z') == b'', 'staged changes'\n    assert git_read('ls-files', '--others', '--exclude-standard', '-z') == b'', 'untracked files'\n    base = {row['path']: row for row in inputs['sourceNonDoc']['rows']}\n    index = {}\n    for raw in git_read('ls-files', '--stage', '-z').split(b'\\0'):\n        if raw:\n            metadata, path = raw.split(b'\\t', 1)\n            mode, blob, stage = metadata.decode().split()\n            assert stage == '0', 'unmerged index'\n            index[path.decode()] = {'mode': mode, 'gitBlob': blob}\n    assert index == {row['path']: {key: row[key] for key in ['mode', 'gitBlob']}\n                     for row in expected_leaves}, 'complete stage0 index changed'\n    expected = dict(base)\n    for row in overlays:\n        assert row['path'] in OVERLAY_PATHS and row['mode'] == '100644'\n        assert identity(row['content'].encode()) == {key: row[key] for key in ['bytes', 'sha256', 'gitBlob']}\n        expected[row['path']] = {key: row[key] for key in ['path', 'mode', 'bytes', 'sha256', 'gitBlob']}\n    assert len(base) == len(expected) == 8798 and len({x['path'] for x in overlays}) == len(overlays)\n    changed = {path for path in expected if expected[path] != base[path]}\n    actual_changed = {p.decode() for p in git_read('diff', '--name-only', '-z', 'HEAD').split(b'\\0') if p}\n    assert actual_changed == changed, 'tracked source change set differs'\n    rows = [file_row(REPO / path, path) for path in sorted(expected)]\n    actual = {'actualLocalHead': SOURCE_COMMIT, 'tree': SOURCE_TREE, 'rows': rows,\n              'changedTrackedPaths': sorted(changed), 'allTreeLeaves': len(leaves),\n              'workflowLeaves': sum(x['path'].startswith('.github/workflows/') for x in leaves),\n              'localGitConfig': identity((REPO / '.git/config').read_bytes())}\n    pointer = write_new(prefix + '-' + boundary + '-source.json', actual)\n    assert rows == [expected[path] for path in sorted(expected)], 'source bytes differ; ' + pointer['path']\n    assert actual['localGitConfig'] == inputs['sourceFull']['localGitConfig'], 'local Git configuration changed'\n    assert actual['workflowLeaves'] == 42\n    return pointer\n"
+      },
+      {
+        "startLine": 464,
+        "endLine": 502,
+        "body": "def input_snapshot(overlays):\n    result = {'source': source_snapshot(overlays), 'controls': control_snapshot(),\n              'fullRuntimeInputsInspected': True}\n    checks = [('dependencies', dependencies, inputs['dependencies']),\n              ('compiled', compiled, inputs['compiled'])]\n    for name, read, expected in checks:\n        actual = read()\n        pointer = write_new(prefix + '-' + boundary + '-' + name + '.json', actual)\n        result[name] = pointer\n        assert actual == expected, name + ' changed; retained ' + pointer['path']\n    result['providers'] = provider_archives()\n    result['tools'] = tooling()\n    result['pnpm'] = identity((json.dumps(verify_pnpm(), indent=2) + '\\n').encode())\n    result['environment'] = environment_check()\n    assert env['AGENT_BACKEND_TEST_NODE'] == r1['tools']['node']['path']\n    assert env['TMPDIR'] == str(TASK_TMP) and env['NODE_DISABLE_COMPILE_CACHE'] == '1'\n    assert all(key not in env for key in ['NODE_COMPILE_CACHE', 'NODE_COMPILE_CACHE_PORTABLE'])\n    cache = []\n    for folder, directories, files in os.walk(ROOT / 'tmp', followlinks=False):\n        for name in sorted(directories + files):\n            path = pathlib.Path(folder) / name\n            if stat.S_ISDIR(path.lstat().st_mode):\n                continue\n            cache.append(file_row(path, path.relative_to(ROOT).as_posix()))\n    result['bootstrapCache'] = sorted(cache, key=lambda row: row['path'])\n    assert result['bootstrapCache'] == inputs['currentBoundary']['taskTempInventory'], 'bootstrap tmp changed'\n    result['processCensus'] = process_rows()\n    result['testTemps'] = sorted([{'name': path.name, 'device': path.lstat().st_dev,\n                                  'inode': path.lstat().st_ino, 'mode': stat.S_IFMT(path.lstat().st_mode)}\n                                 for path in TASK_TMP.iterdir() if path.name.startswith('TEST-')],\n                                key=lambda row: row['name'])\n    result['taskTmpTopEntries'] = sorted(path.name for path in TASK_TMP.iterdir())\n    return result\n\n\ndef preserved(before, after, include_source=True):\n    pointer_keys = ['dependencies', 'compiled'] + (['source'] if include_source else [])\n    return all(before[key]['sha256'] == after[key]['sha256'] for key in pointer_keys) and all(\n        before[key] == after[key] for key in ['providers', 'tools', 'pnpm', 'environment', 'bootstrapCache', 'controls'])\n"
+      },
+      {
+        "startLine": 716,
+        "endLine": 832,
+        "body": "    elif command == 'validation-package':\n        package_start = time.monotonic()\n        try:\n            for entry in receipt['validationCommands']:\n                assert not phase_signals, 'supervisor interruption before next validation child'\n                command_start = time.monotonic()\n                entry['status'] = 'STARTED'\n                stage = {'id': prefix + '-' + entry['command'], 'cwd': str(REPO)}\n                invocation_offset = len(primary_invocations)\n                try:\n                    pointer, primary = run_child(stage, 1, entry['argv'], command_start + 180)\n                    primaries.append(primary)\n                    entry.update({'status': 'EXECUTED', 'primaryReceipt': pointer, 'record': primary})\n                finally:\n                    entry['commandPhaseSeconds'] = time.monotonic() - command_start\n                    entry['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations[invocation_offset:])\n                    entry['invocationRecords'] = primary_invocations[invocation_offset:]\n                assert identity(pathlib.Path(pointer['path']).read_bytes()) == {key: pointer[key] for key in ['bytes', 'sha256', 'gitBlob']}\n                assert primary.get('raw')\n                assert identity(pathlib.Path(primary['raw']['path']).read_bytes()) == {key: primary['raw'][key] for key in ['bytes', 'sha256', 'gitBlob']}\n                assert ordinary_completion(primary) and primary['successful'] and primary['exitCode'] == 0\n                assert primary['remainingCapturedSession'] == [] and not phase_signals\n                entry['nextCommandAdmitted'] = True\n            receipt['commandCompletedNormally'] = True\n            expected_command_outcome = True\n        finally:\n            receipt['commandPhaseSeconds'] = time.monotonic() - package_start\n            receipt['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations)\n            if primary:\n                for key in ['exitCode', 'exitSignal', 'timedOut']:\n                    receipt[key] = primary[key]\n    else:\n        command_start = time.monotonic()\n        stage = {'id': prefix + '-command', 'cwd': str(REPO)}\n        try:\n            pointer, primary = run_child(stage, 1, COMMANDS[command], command_start + 180)\n            primaries.append(primary)\n            receipt['primaryReceipt'] = pointer\n            for key in ['exitCode', 'exitSignal', 'timedOut']:\n                receipt[key] = primary[key]\n            receipt['commandCompletedNormally'] = ordinary_completion(primary)\n            receipt['rawCombinedOutput'] = primary.get('raw')\n            expected_command_outcome = receipt['commandCompletedNormally'] and primary['exitCode'] == (1 if command == 'red' else 0)\n        finally:\n            receipt['commandPhaseSeconds'] = time.monotonic() - command_start\n            receipt['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations)\nexcept BaseException as error:\n    receipt['executionError'] = type(error).__name__ + ': ' + str(error)\n    if 'preflightSeconds' not in receipt:\n        receipt['preflightSeconds'] = time.monotonic() - preflight_start\nfinally:\n    finalizing = True\n    postflight_start = time.monotonic()\n    try:\n        boundary = 'after'\n        if runtime_inputs:\n            receipt['fullRuntimeInputBoundaries']['after'] = 'STARTED'\n        after = snapshot(cfg['sourceOverlay'])\n        if runtime_inputs:\n            receipt['fullRuntimeInputBoundaries']['after'] = 'COMPLETE'\n        receipt['after'] = after\n        metadata_preserved = bool(before and all(before[key] == after[key] for key in ['tools', 'pnpm', 'environment', 'controls']))\n        receipt['sourceAndSupervisorMetadataPreserved'] = metadata_preserved\n        if runtime_inputs:\n            receipt['inputsPreserved'] = bool(before and preserved(before, after))\n            receipt['fullRuntimeInputsPreserved'] = receipt['inputsPreserved']\n        unknown_launches = [row['id'] for row in primary_invocations if row['spawnAttempted'] and row['capturedPid'] is None]\n        receipt['cleanup'] = {'unknownPrimaryLaunches': unknown_launches,\n                              'capturedSessionMembersAfter': None if unknown_launches else [member for row in primary_invocations if row.get('capturedPid')\n                                                              for member in group_members(row['capturedPid'])],\n                              'newTestTempsRemaining': [x for x in after['testTemps'] if before and x not in before['testTemps']],\n                              'scope': 'All captured primary sessions/groups and TEST-prefixed task temps; metadata sessions are checked individually. No universal escaped-child/native custody proof.'}\n    except BaseException as error:\n        receipt['postflightError'] = type(error).__name__ + ': ' + str(error)\n        if runtime_inputs:\n            receipt['inputsPreserved'] = receipt['fullRuntimeInputsPreserved'] = False\n        receipt['sourceAndSupervisorMetadataPreserved'] = False\n    finally:\n        managed_signals = set(previous_handlers)\n        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, managed_signals)\n        try:\n            pending_signals = sorted(int(sig) for sig in signal.sigpending() & managed_signals)\n            receipt['signalAdmissionCutoff'] = {\n                'at': utc(), 'pendingSignals': pending_signals, 'supervisorExitZeroRequired': True,\n                'scope': 'Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.'}\n            receipt['postflightSeconds'] = time.monotonic() - postflight_start\n            receipt['finishedAt'] = utc()\n            receipt['totalInvocationSeconds'] = time.monotonic() - invocation_start\n            receipt['interruptions'] = [*phase_signals, *pending_signals]\n            receipt['metadataCommands'] = metadata_counter\n            receipt['fullRuntimeInputsInspected'] = runtime_inputs and all(\n                value == 'COMPLETE' for value in receipt['fullRuntimeInputBoundaries'].values())\n            receipt['primaryUnreached'] = action == 'run' and not primary_invocations\n            receipt['primaryFinalizationComplete'] = all(row['finalReceiptPersisted'] for row in primary_invocations)\n            receipt['primaryInvocationsWithoutFinalReceipt'] = [row['id'] for row in primary_invocations\n                                                               if not row['finalReceiptPersisted']]\n            receipt['unreachedValidationCommands'] = [x['command'] for x in receipt.get('validationCommands', [])\n                                                       if x['status'] == 'UNREACHED']\n            selected_inputs_preserved = receipt['inputsPreserved'] if runtime_inputs else receipt['sourceAndSupervisorMetadataPreserved']\n            receipt['scopeCompleted'] = bool(selected_inputs_preserved and expected_command_outcome\n                                             and (not runtime_inputs or receipt['fullRuntimeInputsInspected'])\n                                             and receipt['primaryFinalizationComplete']\n                                             and not receipt.get('executionError') and not receipt.get('postflightError')\n                                             and not receipt['interruptions'] and not receipt['unreachedValidationCommands']\n                                             and receipt.get('cleanup', {}).get('newTestTempsRemaining') == []\n                                             and receipt.get('cleanup', {}).get('capturedSessionMembersAfter') == [])\n            receipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')\n        finally:\n            for sig, previous in previous_handlers.items():\n                signal.signal(sig, previous)\n            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)\nprint(json.dumps({key: receipt.get(key) for key in ['command', 'action', 'exitCode', 'exitSignal',\n      'timedOut', 'executionError', 'postflightError', 'inputsPreserved', 'fullRuntimeInputsInspected',\n      'fullRuntimeInputsPreserved', 'sourceAndSupervisorMetadataPreserved', 'commandCompletedNormally',\n      'scopeCompleted', 'preflightSeconds', 'commandPhaseSeconds', 'cleanupSeconds', 'postflightSeconds',\n      'totalInvocationSeconds', 'unreachedValidationCommands', 'rawCombinedOutput', 'cleanup', 'signalAdmissionCutoff']}), flush=True)\nsys.exit(0 if receipt['scopeCompleted'] and not phase_signals else 2)\n"
+      }
+    ]
+  },
+  "recoveryTechnicalAudit": {
+    "errors": [],
+    "allFullR1BodyRead": true,
+    "sourcePinsExact": true,
+    "commandsExact": true,
+    "oneNewSeparateAttempt": true,
+    "oldNoRemainingPrimaryControlFlowVerified": true,
+    "oldSupervisorAbsenceUnknown": true,
+    "threadPlan": {
+      "workers": 8,
+      "pending": 32,
+      "drainBeforePrimaryBoundaryOrReturn": true,
+      "firstErrorAndRepeatedSignalsPreserved": true,
+      "fileRowByteIdenticalRequired": true,
+      "fullByteManifestsRequired": true
+    },
+    "readPlanDelta": [
+      {
+        "field": "reviewAndProof",
+        "old": "The exact future runner postimage must receive independent complete R2 of both normal and exceptional/signal paths, precise helper inverse/delta accounting and publication/readback before execution. The actual selected phases must still freshly read every dependency/compiled byte before and after and match the entire retained manifest identities; any mismatch or incomplete join refuses the phase. This paragraph does not authorize any current165f/Cross runner change.",
+        "new": "The exact future runner postimage must receive independent complete R2 of both normal and exceptional/signal paths, precise helper inverse/delta accounting and publication/readback before execution. The actual selected phases must still freshly read every dependency/compiled byte before and after and match the entire retained manifest identities; any mismatch or incomplete join refuses the phase. This paragraph does not authorize any current165f/Cross runner change. This recovery has its own isolated runner and readback; it does not mutate the original current Cross runner."
+      }
+    ],
+    "next139Admitted": false,
+    "runnerPostimageAdmittedBeforePublication": false
+  },
+  "completeRecoveryR1": {
+    "bytes": 18911,
+    "sha256": "f56f67cc4ee66beac761970a6ca1f3350aa10a7ab2eb7b0d3a4e6ccdf70ed398",
+    "gitBlob": "85480d2a63a6c94d9f9cd31ab4795b01a30e5851",
+    "body": "{\n  \"schemaVersion\": 1,\n  \"kind\": \"Prospective isolated Cross validation recovery scope after tool-session loss; original attempt remains incomplete\",\n  \"author\": \"/root\",\n  \"preparedAtUtc\": \"2026-11-16 19:06:40 UTC\",\n  \"repository\": \"777genius/agent-teams-ai\",\n  \"branch\": \"fix/frontend-parity-coobservation-c714-20261115\",\n  \"preparedFromCommit\": \"48499a97815abc52bf43ad6905c3c8cec1b476aa\",\n  \"preparedFromTree\": \"77753b1e54274bb4d30e619dd327c123f921b18a\",\n  \"purpose\": \"Obtain one independent complete current validation result for the already published and separately accepted whole133 Cross source, after the original once-only validation attempt lost its tool session during postflight. This is a separately reviewed new invocation, not continuation, retry or reclassification under the spent original R1.\",\n  \"priorActual\": {\n    \"completeGreenEnvelope\": {\n      \"gitBlob\": \"46b7d646a2845f544c5d959bb9bf068c2bbbc49b\",\n      \"bytes\": 166444,\n      \"sha256\": \"c1ec7ed1270235d520b436e28cbdeb0988bc1af4c8473b5226e34b081b305981\"\n    },\n    \"completeGreenGuard\": {\n      \"gitBlob\": \"848e6efd0b924e4415848551cfea034f22b84221\",\n      \"bytes\": 209270,\n      \"sha256\": \"b56c4d2a4328f11a679a73de100d13af4ec7e8ccc6fe8f6333de98dec4d2d329\"\n    },\n    \"completeGreenSemantic\": {\n      \"gitBlob\": \"4a49adfedbc84301e88d524d71b766a7ad785d14\",\n      \"bytes\": 140647,\n      \"sha256\": \"74936b31eeefd735ec329d286ae145b2eddb16fa025e5fb8cc6f715c5b133fd3\"\n    },\n    \"incompleteValidationEnvelope\": {\n      \"bytes\": 147631,\n      \"sha256\": \"ebad9bfc9758fd75a6337e2281fc5012dc10302e591581ffac2429107ea9a0b1\",\n      \"gitBlob\": \"f0cb8ed61933af59c64991f3396274073587366f\"\n    },\n    \"originalScope\": {\n      \"gitBlob\": \"8abe2a1437489d5c0223d532535d6c520fd70184\",\n      \"publishedAt\": \"a4f5c2d2a05edd636ea0ff461c00615a2ff60d86\"\n    },\n    \"originalRunner\": {\n      \"gitBlob\": \"165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1\",\n      \"bytes\": 48838,\n      \"sha256\": \"e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5\"\n    },\n    \"originalBinding\": {\n      \"gitBlob\": \"020f6efa5dce4a1a5fe269836136ce554d76792c\",\n      \"bytes\": 1800456,\n      \"sha256\": \"5a37cf5a6bff3ca5da30f7813da3d73f75852f6c7ab670dd234599f4b9a6c2e2\"\n    },\n    \"oldPhase\": \"INCOMPLETE; spent attempt, no final receipt/complete post-runtime boundary/terminal cutoff/outer0; no retroactive success\",\n    \"oldPrimaries\": \"All three finalized primary receipts exit0 and14 finalized metadata receipts exit0 were actually observed. Their individual empty captured-session arrays are narrow facts only.\",\n    \"oldSupervisorLifetime\": \"UNKNOWN. New exec /proc uses another sandbox PID namespace and does not establish the old supervisor's absence. Do not kill, adopt or signal a numeric PID from the old namespace.\",\n    \"oldFutureAuthorityGate\": \"Before admitting any recovery execution, independent full actual review must join the three finalized primary receipts and after-metadata8..14/source886 records to the exact165f control flow and establish that reaching this postflight leaves no remaining authorized primary launch path in the old invocation. Old supervisor may at most finish read-only postflight/finalization and write its own old evidence; do not assert physical disappearance. Do not modify, remove, rewrite or reuse its controls, attempt marker, evidence, task temporary directory or output paths.\"\n  },\n  \"publicationGate\": \"Root and independent reviewers first accept this exact prospective recovery scope and the complete actual incomplete-evidence classification, including no remaining old primary launch path. Publish this exact R1 in a docs-only immediate-push checkpoint on the own branch, retaining complete133 GREEN and incomplete original validation evidence. Root and an independent reviewer must fully fetch actual commit/sole parent/root/changed subtrees/all changed bodies, full append-only Plan/status prefixes, original catalog preservation and unchanged8798 non-doc/42 workflows. Only after complete actual publication/readback may root author/select a new recovery runner or binding postimage. No source/test/producer postimage is admitted.\",\n  \"unchangedSource\": {\n    \"publishedSourceCommit\": \"e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb\",\n    \"currentDocsHead\": \"48499a97815abc52bf43ad6905c3c8cec1b476aa\",\n    \"actualLocalHead\": \"c5ff4fc283e58d486c58147b4dfb00144ca10d34\",\n    \"actualLocalTree\": \"3239e6e6c8182f3d8e45ee671efc9108500b5137\",\n    \"overlays\": [\n      {\n        \"path\": \"scripts/legacy-agent-host/desktop-emulated-selection-ui.ts\",\n        \"mode\": \"100644\",\n        \"bytes\": 24759,\n        \"sha256\": \"d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b\",\n        \"gitBlob\": \"cf93da72a198dac636658e512093eef7828b5927\"\n      },\n      {\n        \"path\": \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n        \"mode\": \"100644\",\n        \"bytes\": 36260,\n        \"sha256\": \"26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38\",\n        \"gitBlob\": \"4700a0052d3c58a2b3d9bc66e6803220688050fd\"\n      },\n      {\n        \"path\": \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n        \"mode\": \"100644\",\n        \"bytes\": 8457,\n        \"sha256\": \"2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b\",\n        \"gitBlob\": \"3c7b4bb53f4259ac0795d3f92fb715887acb554f\"\n      },\n      {\n        \"path\": \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\",\n        \"mode\": \"100644\",\n        \"bytes\": 155423,\n        \"sha256\": \"b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409\",\n        \"gitBlob\": \"0aec698e88cc3af8d12c48f6d93b038efcc84900\"\n      },\n      {\n        \"path\": \"scripts/legacy-agent-host/desktop-ui-controls.ts\",\n        \"mode\": \"100644\",\n        \"bytes\": 28974,\n        \"sha256\": \"7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386\",\n        \"gitBlob\": \"ed57cb0fe7d57ef076a591621289eb77667c63ad\"\n      }\n    ],\n    \"completeSource\": {\n      \"gitBlob\": \"8860893e39a0daf17e8b499baee64b7040a9b3a2\",\n      \"bytes\": 2478650,\n      \"sha256\": \"b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0\"\n    },\n    \"nonDocRows\": 8798,\n    \"workflowLeaves\": 42,\n    \"fullC5IndexLeaves\": 11567,\n    \"productionFiles\": 5020,\n    \"frozenExceptions\": 141,\n    \"ordinaryCap\": 800,\n    \"sourceMutationsAllowed\": 0,\n    \"testOrProducerPostimagesAllowed\": 0,\n    \"incomingAdoptionAllowed\": false\n  },\n  \"execution\": {\n    \"baseEnvironment\": \"Reuse the already admitted fresh root /workspace/scratch/c714-fresh-20261116, detached C5 index plus exact published source overlays. Do not restore another actor's delivery or reinstall dependencies. Retain all122773 dependency rows,1454 compiled rows,253D/12SPI archive members, pinned toolchain/pnpm/proxy/config/cache inputs and their full existing receipts.\",\n    \"newOutputRoot\": \"/tmp/c714-cross-validation-recovery-evidence\",\n    \"newControlRoot\": \"/tmp/c714-cross-validation-recovery-controls\",\n    \"attempts\": {\n      \"validationPackage\": 1\n    },\n    \"allowedAction\": \"run validation-package only; no source materialization, test command, RED/GREEN rerun, install, build, provider/GUI/native or CI action\",\n    \"runnerGate\": \"Only after exact published/read-back R1 may root author a narrowly adapted descendant of165f with new exclusive evidence/control identity, exact new publishedR1 fields, explicit argument refusal for any action/command except run validation-package, and the explicitly listed inputManifestReadPlan. Keep all other source/input/environment/provider/tool/config/cache/captured-session/deadline/launch/finalization/cutoff logic. Its full exact code and binding require independent complete R2, docs-only immediate-push publication and complete actual readback before local control staging and execution. No current165f/020f or any old evidence is modified.\",\n    \"validationPackage\": \"Only after complete independently accepted133 GREEN, one captured validation invocation uses one shared captured environment and complete full current input/source preflight, then exactly once each in order: pinned pnpm lint:fast:files for the three Cross paths, pinned pnpm guard:source-file-size, pinned git diff --check for all five approved overlay paths. Each child gets a distinct captured session/group, its own absolute180s clock started before its spawn/start/raw work (never reset afterward), full start/raw/final receipt and cleanup accounting. Admit each next child only after prior primary exit0, successful raw/receipt finalization, no timeout/deadline/execution/cleanup error, empty captured session, no managed interruption in that child and still-clear supervisor interruption state. Otherwise mark every later command permanently UNREACHED and spend the single package attempt; no partial-resume/retry path. Full exact input/source snapshots surround the whole package, not each child; do not claim per-check snapshots. Preflight, each command/cleanup subset, and postflight timing are separately reported. Actual supervisor exit0 is an independent required continuation condition. No broad lint/format, benchmark, new test/install/build/provider command or source mutation is selected.\",\n    \"commands\": [\n      {\n        \"command\": \"lint\",\n        \"argv\": [\n          \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n          \"/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs\",\n          \"--config.pm-on-fail=error\",\n          \"--config.verify-deps-before-run=false\",\n          \"--config.engine-strict=true\",\n          \"lint:fast:files\",\n          \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n          \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n          \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n        ]\n      },\n      {\n        \"command\": \"source-size\",\n        \"argv\": [\n          \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n          \"/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs\",\n          \"--config.pm-on-fail=error\",\n          \"--config.verify-deps-before-run=false\",\n          \"--config.engine-strict=true\",\n          \"guard:source-file-size\"\n        ]\n      },\n      {\n        \"command\": \"diff-check\",\n        \"argv\": [\n          \"/usr/local/bin/git\",\n          \"diff\",\n          \"--check\",\n          \"--\",\n          \"scripts/legacy-agent-host/desktop-ui-controls.ts\",\n          \"scripts/legacy-agent-host/desktop-emulated-selection-ui.ts\",\n          \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n          \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n          \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n        ]\n      }\n    ],\n    \"inputManifestReadPlan\": {\n      \"purpose\": \"Reduce repeated full dependency-file read overhead while preserving the exact complete manifest and all original admission gates. No checksum/stat-cache shortcut or weaker preservation claim is allowed.\",\n      \"scope\": \"Only the read-only directory_manifest path used by full dependency/compiled inventories may be adapted to a bounded Python standard-library ThreadPoolExecutor, plus its narrowly required worker helper/import. The existing file_row body/identity codec remains byte-identical. No other input checker, source/control/provider/tool/env/pnpm/cache path, subprocess/capture/deadline/signal algorithm or expected identity is relaxed.\",\n      \"maximumWorkerThreads\": 8,\n      \"maximumSubmittedUnconsumedJobs\": 32,\n      \"enumeration\": \"Preserve each original roots list, absent-root behavior, root directory/no-symlink assertions, os.walk(followlinks=False), sorted directories+files enumeration, relative path spelling and complete census. Every encountered entry receives the same directory/special-file/symlink/regular-file treatment and the original full-byte file_row identity checks. Keep the original dependency-link resolve-inside-REPO and literal readlink target checks. No ignored paths, early-success truncation, hash reuse, metadata-only identity, changed file-mode policy or deduplication of distinct paths.\",\n      \"collection\": \"Keep at most32 submitted unconsumed jobs and at most8 active readers. Consume results in deterministic original enumeration order, include every non-directory result, preserve exact field order/types and final path sort. Reconstruct the same complete JSON/UTF-8/SHA256/Git-framed bytes; the full expected122773/1454 inventories remain exact acceptance targets, not count-only summaries.\",\n      \"lifetime\": \"All submitted reads/futures must be accounted for and all reader threads joined before the manifest function returns or propagates an error/signal. No background reader may overlap the primary launch or the next before/after boundary. Threads only read the same admitted input paths; they create no subprocess, source/test/provider/cache output or network access. Keep the first actual error and the existing failed-preflight/primaryUNREACHED/spent-attempt behavior. Do not swallow a failed future or report a partial snapshot as inspected/preserved.\",\n      \"timing\": \"Full hashing remains separately timed outside the unchanged original primary180-second and metadata30-second clocks. No clock reset, attempt renewal, automatic retry, reduced postflight, command overlap or new benchmark execution is selected.\",\n      \"reviewAndProof\": \"The exact future runner postimage must receive independent complete R2 of both normal and exceptional/signal paths, precise helper inverse/delta accounting and publication/readback before execution. The actual selected phases must still freshly read every dependency/compiled byte before and after and match the entire retained manifest identities; any mismatch or incomplete join refuses the phase. This paragraph does not authorize any current165f/Cross runner change. This recovery has its own isolated runner and readback; it does not mutate the original current Cross runner.\"\n    },\n    \"fullBoundary\": \"Fresh complete runtime preflight and postflight for this invocation: all8798 source rows, completeC5HEAD/tree/index, all122773 dependency and1454 compiled rows, all253D+12SPI installed/archive members, pinnedNode/Python/Git/shell/pnpm/control/config/environment and7 original bootstrap-cache files. No old full preflight, source-only after snapshot, previous GREEN or partial validation file stands in for the new reads. Match entire complete retained manifest bodies/identities, not counts. Full hashing is outside, separately timed from the unchanged180s primary and30s metadata clocks.\",\n    \"orderedAdmission\": \"Exactly lint then source-size then diff-check once, with distinct captured sessions, start/raw/final receipts and original pre-spawn absolute180-second clock each. Admit next only on prior exit0, successful final raw/receipt, no errors/deadline/timeout/signal/unknown launch and empty captured session. Require no supervisor interruption. Otherwise later commands remain UNREACHED and this separately selected attempt is spent without resume/retry.\",\n    \"actualClosure\": \"Independent full actual source/input/lifetime/primary and final receipt review plus separately observed actual outer0 is required. If tool state is lost again, preserve incomplete outcome; do not synthesize outer0 or erase a spent marker. All pending reader jobs and threads must join before any primary launch, next boundary, return or error propagation. Preserve initiating failure and record managed interruptions even while draining.\",\n    \"noBenchmark\": \"No separate performance/parallel-reader benchmark or unreviewed code evaluation is selected; exact full actual validation snapshots provide byte-equivalence proof.\",\n    \"sourceWriteBehavior\": \"No tracked source, lockfile, workflow, package or exception update. Existing scoped ESLint cache behavior remains the same admitted behavior; do not broaden ignore rules or claim no writes merely from final equality.\"\n  },\n  \"nextWork\": {\n    \"nextNodeR1V2\": {\n      \"gitBlob\": \"9bc91d0a53d775528ffe9a9040c67493a5f10546\",\n      \"bytes\": 26386,\n      \"sha256\": \"ccff0fe2833b70364c761d71cdebf02ced412ffc4eb20a73f52c232d9a68998c\"\n    },\n    \"status\": \"UNPUBLISHED and BLOCKED; no future139 test, P11/Review producer or runner postimage authored/selected. After complete independent recovery acceptance a separately reviewed prospective amendment may explicitly update the next-R1 predecessor gate to cite the new complete validation while retaining the original INCOMPLETE history. This recovery R1 itself does not authorize that future source scope.\",\n    \"renderer\": \"80-to85 renderer proposal remains unselected. Data-only package/source inspection may continue; no package evaluation or renderer postimage.\"\n  },\n  \"boundaries\": {\n    \"incomingHeads\": \"Latest read-only APP source pin1ef2c16ae547129e6b6ab5c47e03caa6b3f169df and D c930d3c8b9a213762528d6e28c9ed0172ab1fa27 remain unadopted. Their source/archive analyses admit no source/package/workflow or runtime action here.\",\n    \"originalCi\": \"All original9 runs terminal. Frozen PR1206/1207/1208/1211/1212/1213 remain untouched; no rerun/cancel/dispatch/ref/metadata action or further polling. This R1 opens no PR and launches no CI.\",\n    \"forbidden\": [\n      \"real Claude/Codex even --version\",\n      \"real user projects\",\n      \"default/main merge or Ready\",\n      \"release/default activation or Stage2\",\n      \"blanket native/vendor qualification\",\n      \"deadline/currentness/census/cleanup/no-replay weakening\",\n      \"source-size cap800/exception141/sourcecount5020 changes\",\n      \"new workflow/package/source imports beyond listed exact paths\"\n    ],\n    \"open\": [\n      \"Windows Process15s\",\n      \"Windows Packaged10s\",\n      \"strictDarwinP09\",\n      \"laterP11/genuineM16\",\n      \"new-head reconciliation\",\n      \"canonical typecheck/build\",\n      \"actual fresh GUI/platform acceptance\",\n      \"whole E2E completion\"\n    ],\n    \"renderer\": \"Renderer hook/test and Vitest admission remain unselected. Only data-only source/package inspection may continue; no renderer or package code evaluation.\"\n  },\n  \"qualification\": \"Selected fast validation only for exact current five overlays. Accepted133 finite-source GREEN remains distinct. No GUI/native/vendor/platform/canonical typing/build or whole E2E completion claim. Original supervisor cleanup uncertainty is retained and never hidden by the new result.\",\n  \"draftAmendment\": {\n    \"previousUnpublishedR1\": {\n      \"bytes\": 18534,\n      \"sha256\": \"e2ed14df4512e49db6c19fef3a4a6d94ba8e59d2ea233605a3be402fd1fb22de\",\n      \"gitBlob\": \"84681960d6b064198b8d80cc030cd3faa441d71a\"\n    },\n    \"previousPublished\": false,\n    \"reason\": \"Replace estimated draft timestamp with observed clock, bind complete partial-evidence identity, and remove inherited future-six-case wording from boundaries. Source writes remain zero and only one new three-command validation scope is proposed.\"\n  }\n}\n"
+  },
+  "readerContractComparison": {
+    "futureScopeUnselected": {
+      "bytes": 26386,
+      "sha256": "ccff0fe2833b70364c761d71cdebf02ced412ffc4eb20a73f52c232d9a68998c",
+      "gitBlob": "9bc91d0a53d775528ffe9a9040c67493a5f10546"
+    },
+    "allWorkerPendingEnumerationCollectionLifetimeTimingFieldsByteIdentical": true,
+    "onlyDelta": [
+      {
+        "field": "reviewAndProof",
+        "old": "The exact future runner postimage must receive independent complete R2 of both normal and exceptional/signal paths, precise helper inverse/delta accounting and publication/readback before execution. The actual selected phases must still freshly read every dependency/compiled byte before and after and match the entire retained manifest identities; any mismatch or incomplete join refuses the phase. This paragraph does not authorize any current165f/Cross runner change.",
+        "new": "The exact future runner postimage must receive independent complete R2 of both normal and exceptional/signal paths, precise helper inverse/delta accounting and publication/readback before execution. The actual selected phases must still freshly read every dependency/compiled byte before and after and match the entire retained manifest identities; any mismatch or incomplete join refuses the phase. This paragraph does not authorize any current165f/Cross runner change. This recovery has its own isolated runner and readback; it does not mutate the original current Cross runner."
+      }
+    ],
+    "noIndependentBenchmarkSelected": true
+  },
+  "requiredFutureGates": [
+    "Publish exact accepted R1 and incomplete/complete actual evidence in the own docs-only checkpoint, immediate push, then complete root+independent actual commit/tree/body/append/source readback.",
+    "Only afterward author a narrow isolated validation-only runner and binding. Require exact full R2 and separate actual publication/readback before staging or execution.",
+    "New action selection must refuse materialize, RED, GREEN, test, install, build, provider/GUI/native and CI actions. Permit only one ordered lint/source-size/diff-check package.",
+    "Keep at most8 active reader threads and32 submitted unconsumed jobs, unchanged file_row/roots/symlink policy, every input byte, stable ordered results and exact complete122773/1454 manifest identities.",
+    "Drain/account every submitted future and join every reader thread before return, error/signal propagation, next boundary or primary; retain first initiating error and repeated managed interruptions. Failed/incomplete preflight spends the new attempt without launching any primary.",
+    "Each of the three commands retains its own distinct captured session, exact argv and original180-second pre-spawn absolute deadline; full metadata children retain30seconds.",
+    "Require one complete fresh current before/after runtime and source boundary around the package. Preserve all five source overlays/42workflows/fullC5index/dependencies/compiled/provider/tool/config/environment/cache/control identities.",
+    "Require independent actual full evidence acceptance and separately observed new supervisor exit0. A second tool-state loss remains incomplete; no synthetic terminal result.",
+    "Do not promote any new result into closure of the old unknown supervisor lifetime or old incomplete validation.",
+    "Future139/P11/Review/renderer work remains unselected/unpublished until a separate reviewed predecessor amendment and its gates."
+  ],
+  "actualFileCensus": [
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-10-receipt.json",
+      "bytes": 1105,
+      "sha256": "a44628947a819962c0be7e0d1570608c4c0de9251888d3ae3386de9030e4a319",
+      "gitBlob": "7bc5c2cac09215ca1f6cc741eba87ef07559e22e"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-10-start.json",
+      "bytes": 321,
+      "sha256": "6b45b4a76978c3b0b0d8ae9c8144a1a2c6af99f45c1caa46fd03fc71012450fc",
+      "gitBlob": "96c6df4f911c388aaae4bcc412ccc8614c274917"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-10.log",
+      "bytes": 1527575,
+      "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+      "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-10.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-11-receipt.json",
+      "bytes": 1101,
+      "sha256": "0be97a5d1aaa81373c8750d4f78111239ef13fc349be63eac65c2459368b81b4",
+      "gitBlob": "ed7a1a851ef250a2bc9be9fd95149ab59a2ab8d6"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-11-start.json",
+      "bytes": 321,
+      "sha256": "cf4b3cade48e59ac4cf218c0a1dcba300619c90eb790157111ecc2b09e39e431",
+      "gitBlob": "0ceae3876bc901698a0bb664ed22eab43d9e875c"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-11.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-11.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-12-receipt.json",
+      "bytes": 1110,
+      "sha256": "1dda57f64f8253f346b02c225cac460d7613bd8cf975a078a4d0b15a21437880",
+      "gitBlob": "d14d794054451fc752ac8887b921952a06e2a1fb"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-12-start.json",
+      "bytes": 332,
+      "sha256": "5a8ffaf0ff4e5fccdb73c5e77a28981952e496cf8e6b9fada16db0d60a2673c7",
+      "gitBlob": "354d866cd54aa19468a45fc1a8baeecfa7de1d97"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-12.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-12.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-13-receipt.json",
+      "bytes": 1092,
+      "sha256": "89c3abb85bbcabeeeeb378ef39f0034682b5b7dc973b96be55ae1d2a5db506eb",
+      "gitBlob": "45e7e1c0587895c4c5a1fc2d39c8f7bdef68f4b3"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-13-start.json",
+      "bytes": 305,
+      "sha256": "1c66a822fe26638b57c04afd1a0263c1d3a81021498dc9a3e98001cbd0691322",
+      "gitBlob": "5c63a2345cd73b441abe64b1fc8bcaab098841ab"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-13.log",
+      "bytes": 1492874,
+      "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+      "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-13.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-14-receipt.json",
+      "bytes": 1099,
+      "sha256": "1cd7ec077054374cc781f986e173b90051281bff475cf4529c1a1130242059fd",
+      "gitBlob": "d4b102562a0d8b973ebc7d26194474c01cdf63e8"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-14-start.json",
+      "bytes": 317,
+      "sha256": "7167c7e161a5b7fc412ca78525234a9af316d81623596eefbb1ea37199d8d87d",
+      "gitBlob": "cff5affa742b0afffe0c60e4cbb095e0a245a3d0"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-14.log",
+      "bytes": 284,
+      "sha256": "73314fb17f826ef0b5e37a98e2211c229a682b5036865043c2e541f2d2be47e9",
+      "gitBlob": "e1d8c27921fd7d45dcb0dfc8259e92bb2e75e2bd"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-14.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-8-receipt.json",
+      "bytes": 1072,
+      "sha256": "f2d22ab4eea3b986763c2faac9a337bc70ca5283eedb941496159c65c7694568",
+      "gitBlob": "43d43910beaeb8a7099b8913d9f207a33606e105"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-8-start.json",
+      "bytes": 293,
+      "sha256": "ec130b7cac7d8b771c8cedb8a3a479909141dbb57406d3e0e2a6e18860962721",
+      "gitBlob": "9607a16ffa7668e6536226bb796484d94859bba4"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-8.log",
+      "bytes": 41,
+      "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+      "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-8.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-9-receipt.json",
+      "bytes": 1079,
+      "sha256": "6e00685125c94188ffd62399f6ce7120555110e3f2ffb414697a7858418b25ba",
+      "gitBlob": "3c3d5c93002fce4fba9569d93105996b5502b223"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-9-start.json",
+      "bytes": 300,
+      "sha256": "4d031851fbb1181792c51ca0c64df8fa9e12b9d41ac255046c3edc7ce92aff07",
+      "gitBlob": "bc6557b98dfb932826000a3e4218efbf0e684050"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-9.log",
+      "bytes": 41,
+      "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+      "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-9.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-source.json",
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-compiled.json",
+      "bytes": 400300,
+      "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+      "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-dependencies.json",
+      "bytes": 39168001,
+      "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+      "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-1-receipt.json",
+      "bytes": 1072,
+      "sha256": "b1aee9db51bd93753d805e0dd8be092606469f4a798caef5898ac3e24cdee625",
+      "gitBlob": "8b202f681f79aca600268df358f014cbc826e9b9"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-1-start.json",
+      "bytes": 293,
+      "sha256": "444e31dee0b7c9ebd291f0dd21967141b9eb0301ef2053810cbb6a8bdc03594f",
+      "gitBlob": "dbf03fc482196d5ddfdbd32ff0c16570e25be9ce"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-1.log",
+      "bytes": 41,
+      "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+      "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-1.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-2-receipt.json",
+      "bytes": 1080,
+      "sha256": "93ba436d1076fd60e0be2e8e6427ffb01b6e01f6ca3d8f8181ff9744a2cb3fab",
+      "gitBlob": "9000f5017210612e0c8f169a7b9589560e61d195"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-2-start.json",
+      "bytes": 300,
+      "sha256": "d28c1b77bfdeb55bf20116d8972d0a1b0c0b93c9445c9b4bf9561fd012f01e04",
+      "gitBlob": "d28340f6d49eb1be610e24e230c67e2044d8240d"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-2.log",
+      "bytes": 41,
+      "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+      "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-2.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-3-receipt.json",
+      "bytes": 1105,
+      "sha256": "c23e13e335e7896cf78585d50c6a6a849d953fedbdae6f055e7fdfa6f4e3e85a",
+      "gitBlob": "db3d5275dbffb15f1acacf14e5fcf06ea78f769d"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-3-start.json",
+      "bytes": 321,
+      "sha256": "f6169974d3657b3610aa12517f5b642df1443157d30ff6ba18b728eb7e534553",
+      "gitBlob": "a61a0525356c6b421adb477a7408e3e21b298af3"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-3.log",
+      "bytes": 1527575,
+      "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+      "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-3.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-4-receipt.json",
+      "bytes": 1100,
+      "sha256": "e048d51f97087b66e79db41f6704d66428938425d28489e29b00fcaa677ec892",
+      "gitBlob": "f0eb5059116a483b9dbbcea5023670e1ddcb6c61"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-4-start.json",
+      "bytes": 321,
+      "sha256": "874ba7e3232c9b8f56970fb26e0ba5e601a13b6473d99b376bec91de0f968a16",
+      "gitBlob": "d345090e02d8aada5b982970a5ebbe7970ca6a77"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-4.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-4.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-5-receipt.json",
+      "bytes": 1108,
+      "sha256": "2792cc992e243c8c40bd5a16c9d4dc91f98885d99df78a0bc539e2ed112391b9",
+      "gitBlob": "1c806432f05576151d48a513173a139d18d09adf"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-5-start.json",
+      "bytes": 332,
+      "sha256": "49e8e27eae8410dfc1db8e63b4f758972381be5984bf7c76243c748327d3a0f7",
+      "gitBlob": "23449197c0728a18fe396aae8e1be9c62abd4e7e"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-5.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-5.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-6-receipt.json",
+      "bytes": 1090,
+      "sha256": "bc809516697a2685788f18bbfecf5ccf7f1d0b5fd726aa5fe77642982b15b459",
+      "gitBlob": "f9ca34bc1229fb30715d5bf1f7e11c1f551c4855"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-6-start.json",
+      "bytes": 305,
+      "sha256": "87d72a6ae2a726a3973e9e16a3842748c8fae6fd2544f5f010b6902b23b68092",
+      "gitBlob": "bcb336e668fbea3a1489f3f3871e14fd52a65b13"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-6.log",
+      "bytes": 1492874,
+      "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+      "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-6.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-7-receipt.json",
+      "bytes": 1097,
+      "sha256": "e995f8dd36244a931f153c5c1ddcd412de392e47825a83e93119453b55ec8254",
+      "gitBlob": "e2310ff3ec0352489a42df0c9a85498afc5ce4d6"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-7-start.json",
+      "bytes": 317,
+      "sha256": "a1005a6964b16453fee2917a8d627da5f41a48a25ca7967e3405a2bfb50d53f2",
+      "gitBlob": "b2affad0cb136a84db114ba7eb7d23e09b2ff26b"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-7.log",
+      "bytes": 284,
+      "sha256": "73314fb17f826ef0b5e37a98e2211c229a682b5036865043c2e541f2d2be47e9",
+      "gitBlob": "e1d8c27921fd7d45dcb0dfc8259e92bb2e75e2bd"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-7.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-source.json",
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-diff-check-1-receipt.json",
+      "bytes": 1125,
+      "sha256": "92fd66707ef5e837b4e74ff8bfa9451becdecdac7b7c05c4f4f6ca3154bb4dfc",
+      "gitBlob": "3ba70cf95e64059b7c842b0706d0f62cf010876e"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-diff-check-1-start.json",
+      "bytes": 621,
+      "sha256": "465b69231d1d7b08f1cf3672d3c8422e0726edbb312721c2273a11526fa88dee",
+      "gitBlob": "3d6b48b59155981e96589f755ab205e332641368"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-diff-check-1.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-lint-1-receipt.json",
+      "bytes": 1225,
+      "sha256": "1acc29da54ad3d595d0dd1bb0a2df5bf86be6fcd0b7b9280732ecdb01e5dc18c",
+      "gitBlob": "6f6c11af08486136c247d4dc579a8bc9399d91ca"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-lint-1-start.json",
+      "bytes": 725,
+      "sha256": "2b52316335a7bc85849da08650962143246c799b9359f1f3a287c98f6f7af222",
+      "gitBlob": "03e3ddd74682c1d99e06b82b95d9f0c34d8d68f4"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-lint-1.log",
+      "bytes": 284,
+      "sha256": "30ee225fe84245fcde6bc8fe685c62c913a5b0afeb596c32d6bd261349f7864a",
+      "gitBlob": "4db718c739d143a52269c305b0e24a0896993950"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-receipt.json",
+      "bytes": 18872,
+      "sha256": "04b3f56bd41080a5b29a9da2867cbc80bf9b07f71e31d79c7e41a7eb6046fb6a",
+      "gitBlob": "6fd25d10b96add1d31a413fefd07555f10df7b4b"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-source-size-1-receipt.json",
+      "bytes": 1043,
+      "sha256": "56024b544fb804d5ccc8cfc13c1c17867f71c2be4f1fcf01d25aea12bdaa042f",
+      "gitBlob": "2d31e9c3bdf443be45a855c1dd10be623c755ec3"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-source-size-1-start.json",
+      "bytes": 535,
+      "sha256": "a581434bb7f36cb96faf4377a95cf2077780b0a6f3bb4f97acbdcc24657b6626",
+      "gitBlob": "43c204534b531eb0942e421027881bc050a26f51"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-source-size-1.log",
+      "bytes": 249,
+      "sha256": "26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f",
+      "gitBlob": "399a78f77777d0669218be2d4dae5360657308fa"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package.attempt",
+      "bytes": 33,
+      "sha256": "3180270fee824a385f15f792481be329aa88b87a1a9384bf1747e9770da7fd9d",
+      "gitBlob": "2cd4726b9017df202b11e0afd1155e3481e080c7"
+    }
+  ],
+  "completeActualSmallBodies": [
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-10-receipt.json",
+      "bytes": 1105,
+      "sha256": "a44628947a819962c0be7e0d1570608c4c0de9251888d3ae3386de9030e4a319",
+      "gitBlob": "7bc5c2cac09215ca1f6cc741eba87ef07559e22e",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"ls-tree\",\n    \"-rz\",\n    \"--full-tree\",\n    \"HEAD\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:54:52.690449+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 105,\n  \"metadataOnly\": true,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-after-metadata-10.log\",\n    \"bytes\": 1527575,\n    \"sha256\": \"685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f\",\n    \"gitBlob\": \"43b9f4fd5f6ce74221ee18fdb1765839397af6ec\"\n  },\n  \"rawStderr\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-after-metadata-10.stderr\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"finishedAt\": \"2026-11-16T18:54:59.595091+00:00\",\n  \"durationSeconds\": 6.904656984999747,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-10-start.json",
+      "bytes": 321,
+      "sha256": "6b45b4a76978c3b0b0d8ae9c8144a1a2c6af99f45c1caa46fd03fc71012450fc",
+      "gitBlob": "96c6df4f911c388aaae4bcc412ccc8614c274917",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"ls-tree\",\n    \"-rz\",\n    \"--full-tree\",\n    \"HEAD\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:54:52.690449+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-10.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-11-receipt.json",
+      "bytes": 1101,
+      "sha256": "0be97a5d1aaa81373c8750d4f78111239ef13fc349be63eac65c2459368b81b4",
+      "gitBlob": "ed7a1a851ef250a2bc9be9fd95149ab59a2ab8d6",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"diff\",\n    \"--cached\",\n    \"--name-only\",\n    \"-z\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:54:59.887472+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 106,\n  \"metadataOnly\": true,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-after-metadata-11.log\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"rawStderr\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-after-metadata-11.stderr\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"finishedAt\": \"2026-11-16T18:54:59.976128+00:00\",\n  \"durationSeconds\": 0.08835019199977978,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-11-start.json",
+      "bytes": 321,
+      "sha256": "cf4b3cade48e59ac4cf218c0a1dcba300619c90eb790157111ecc2b09e39e431",
+      "gitBlob": "0ceae3876bc901698a0bb664ed22eab43d9e875c",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"diff\",\n    \"--cached\",\n    \"--name-only\",\n    \"-z\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:54:59.887472+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-11.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-11.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-12-receipt.json",
+      "bytes": 1110,
+      "sha256": "1dda57f64f8253f346b02c225cac460d7613bd8cf975a078a4d0b15a21437880",
+      "gitBlob": "d14d794054451fc752ac8887b921952a06e2a1fb",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"ls-files\",\n    \"--others\",\n    \"--exclude-standard\",\n    \"-z\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:54:59.977457+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 107,\n  \"metadataOnly\": true,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-after-metadata-12.log\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"rawStderr\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-after-metadata-12.stderr\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"finishedAt\": \"2026-11-16T18:55:00.619606+00:00\",\n  \"durationSeconds\": 0.640718441001809,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-12-start.json",
+      "bytes": 332,
+      "sha256": "5a8ffaf0ff4e5fccdb73c5e77a28981952e496cf8e6b9fada16db0d60a2673c7",
+      "gitBlob": "354d866cd54aa19468a45fc1a8baeecfa7de1d97",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"ls-files\",\n    \"--others\",\n    \"--exclude-standard\",\n    \"-z\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:54:59.977457+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-12.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-12.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-13-receipt.json",
+      "bytes": 1092,
+      "sha256": "89c3abb85bbcabeeeeb378ef39f0034682b5b7dc973b96be55ae1d2a5db506eb",
+      "gitBlob": "45e7e1c0587895c4c5a1fc2d39c8f7bdef68f4b3",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"ls-files\",\n    \"--stage\",\n    \"-z\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:55:00.646255+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 108,\n  \"metadataOnly\": true,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-after-metadata-13.log\",\n    \"bytes\": 1492874,\n    \"sha256\": \"07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db\",\n    \"gitBlob\": \"bb3caf365d224fcdddc50ea0dab2b751cd54f6d8\"\n  },\n  \"rawStderr\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-after-metadata-13.stderr\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"finishedAt\": \"2026-11-16T18:55:00.690977+00:00\",\n  \"durationSeconds\": 0.044423201001336565,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-13-start.json",
+      "bytes": 305,
+      "sha256": "1c66a822fe26638b57c04afd1a0263c1d3a81021498dc9a3e98001cbd0691322",
+      "gitBlob": "5c63a2345cd73b441abe64b1fc8bcaab098841ab",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"ls-files\",\n    \"--stage\",\n    \"-z\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:55:00.646255+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-13.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-14-receipt.json",
+      "bytes": 1099,
+      "sha256": "1cd7ec077054374cc781f986e173b90051281bff475cf4529c1a1130242059fd",
+      "gitBlob": "d4b102562a0d8b973ebc7d26194474c01cdf63e8",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"diff\",\n    \"--name-only\",\n    \"-z\",\n    \"HEAD\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:55:00.871484+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 109,\n  \"metadataOnly\": true,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-after-metadata-14.log\",\n    \"bytes\": 284,\n    \"sha256\": \"73314fb17f826ef0b5e37a98e2211c229a682b5036865043c2e541f2d2be47e9\",\n    \"gitBlob\": \"e1d8c27921fd7d45dcb0dfc8259e92bb2e75e2bd\"\n  },\n  \"rawStderr\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-after-metadata-14.stderr\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"finishedAt\": \"2026-11-16T18:55:01.287281+00:00\",\n  \"durationSeconds\": 0.41536012800133904,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-14-start.json",
+      "bytes": 317,
+      "sha256": "7167c7e161a5b7fc412ca78525234a9af316d81623596eefbb1ea37199d8d87d",
+      "gitBlob": "cff5affa742b0afffe0c60e4cbb095e0a245a3d0",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"diff\",\n    \"--name-only\",\n    \"-z\",\n    \"HEAD\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:55:00.871484+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-14.log",
+      "bytes": 284,
+      "sha256": "73314fb17f826ef0b5e37a98e2211c229a682b5036865043c2e541f2d2be47e9",
+      "gitBlob": "e1d8c27921fd7d45dcb0dfc8259e92bb2e75e2bd",
+      "body": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts\u0000scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\u0000scripts/legacy-agent-host/desktop-task-comment-input-target.ts\u0000scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\u0000scripts/legacy-agent-host/desktop-ui-controls.ts\u0000"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-14.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-8-receipt.json",
+      "bytes": 1072,
+      "sha256": "f2d22ab4eea3b986763c2faac9a337bc70ca5283eedb941496159c65c7694568",
+      "gitBlob": "43d43910beaeb8a7099b8913d9f207a33606e105",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"rev-parse\",\n    \"HEAD\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:54:52.434559+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 103,\n  \"metadataOnly\": true,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-after-metadata-8.log\",\n    \"bytes\": 41,\n    \"sha256\": \"611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007\",\n    \"gitBlob\": \"509038c53ad1ea4996d45ea7b8e7eca29f7835ab\"\n  },\n  \"rawStderr\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-after-metadata-8.stderr\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"finishedAt\": \"2026-11-16T18:54:52.525743+00:00\",\n  \"durationSeconds\": 0.09034565299953101,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-8-start.json",
+      "bytes": 293,
+      "sha256": "ec130b7cac7d8b771c8cedb8a3a479909141dbb57406d3e0e2a6e18860962721",
+      "gitBlob": "9607a16ffa7668e6536226bb796484d94859bba4",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"rev-parse\",\n    \"HEAD\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:54:52.434559+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-8.log",
+      "bytes": 41,
+      "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+      "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab",
+      "body": "c5ff4fc283e58d486c58147b4dfb00144ca10d34\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-8.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-9-receipt.json",
+      "bytes": 1079,
+      "sha256": "6e00685125c94188ffd62399f6ce7120555110e3f2ffb414697a7858418b25ba",
+      "gitBlob": "3c3d5c93002fce4fba9569d93105996b5502b223",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"rev-parse\",\n    \"HEAD^{tree}\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:54:52.550200+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 104,\n  \"metadataOnly\": true,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-after-metadata-9.log\",\n    \"bytes\": 41,\n    \"sha256\": \"9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1\",\n    \"gitBlob\": \"77766cd27c7b10a8e1912acaf123f5bf5c804b1b\"\n  },\n  \"rawStderr\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-after-metadata-9.stderr\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"finishedAt\": \"2026-11-16T18:54:52.663512+00:00\",\n  \"durationSeconds\": 0.12162055699809571,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-9-start.json",
+      "bytes": 300,
+      "sha256": "4d031851fbb1181792c51ca0c64df8fa9e12b9d41ac255046c3edc7ce92aff07",
+      "gitBlob": "bc6557b98dfb932826000a3e4218efbf0e684050",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"rev-parse\",\n    \"HEAD^{tree}\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:54:52.550200+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-9.log",
+      "bytes": 41,
+      "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+      "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b",
+      "body": "3239e6e6c8182f3d8e45ee671efc9108500b5137\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-9.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-1-receipt.json",
+      "bytes": 1072,
+      "sha256": "b1aee9db51bd93753d805e0dd8be092606469f4a798caef5898ac3e24cdee625",
+      "gitBlob": "8b202f681f79aca600268df358f014cbc826e9b9",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"rev-parse\",\n    \"HEAD\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:37:21.112091+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 3,\n  \"metadataOnly\": true,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-metadata-1.log\",\n    \"bytes\": 41,\n    \"sha256\": \"611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007\",\n    \"gitBlob\": \"509038c53ad1ea4996d45ea7b8e7eca29f7835ab\"\n  },\n  \"rawStderr\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-metadata-1.stderr\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"finishedAt\": \"2026-11-16T18:37:21.121498+00:00\",\n  \"durationSeconds\": 0.00932074500087765,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-1-start.json",
+      "bytes": 293,
+      "sha256": "444e31dee0b7c9ebd291f0dd21967141b9eb0301ef2053810cbb6a8bdc03594f",
+      "gitBlob": "dbf03fc482196d5ddfdbd32ff0c16570e25be9ce",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"rev-parse\",\n    \"HEAD\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:37:21.112091+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-1.log",
+      "bytes": 41,
+      "sha256": "611a63d25e7d7d2bd3a393c3700c243d34d9a585df0cf3e5785c8ffb2bad9007",
+      "gitBlob": "509038c53ad1ea4996d45ea7b8e7eca29f7835ab",
+      "body": "c5ff4fc283e58d486c58147b4dfb00144ca10d34\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-1.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-2-receipt.json",
+      "bytes": 1080,
+      "sha256": "93ba436d1076fd60e0be2e8e6427ffb01b6e01f6ca3d8f8181ff9744a2cb3fab",
+      "gitBlob": "9000f5017210612e0c8f169a7b9589560e61d195",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"rev-parse\",\n    \"HEAD^{tree}\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:37:21.122205+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 4,\n  \"metadataOnly\": true,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-metadata-2.log\",\n    \"bytes\": 41,\n    \"sha256\": \"9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1\",\n    \"gitBlob\": \"77766cd27c7b10a8e1912acaf123f5bf5c804b1b\"\n  },\n  \"rawStderr\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-metadata-2.stderr\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"finishedAt\": \"2026-11-16T18:37:21.142840+00:00\",\n  \"durationSeconds\": 0.019714870999450795,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-2-start.json",
+      "bytes": 300,
+      "sha256": "d28c1b77bfdeb55bf20116d8972d0a1b0c0b93c9445c9b4bf9561fd012f01e04",
+      "gitBlob": "d28340f6d49eb1be610e24e230c67e2044d8240d",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"rev-parse\",\n    \"HEAD^{tree}\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:37:21.122205+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-2.log",
+      "bytes": 41,
+      "sha256": "9c371a356a3a359ffbb33207199647d0a03af173fe40f7459f27f9d393d09bb1",
+      "gitBlob": "77766cd27c7b10a8e1912acaf123f5bf5c804b1b",
+      "body": "3239e6e6c8182f3d8e45ee671efc9108500b5137\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-2.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-3-receipt.json",
+      "bytes": 1105,
+      "sha256": "c23e13e335e7896cf78585d50c6a6a849d953fedbdae6f055e7fdfa6f4e3e85a",
+      "gitBlob": "db3d5275dbffb15f1acacf14e5fcf06ea78f769d",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"ls-tree\",\n    \"-rz\",\n    \"--full-tree\",\n    \"HEAD\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:37:21.143192+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 5,\n  \"metadataOnly\": true,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-metadata-3.log\",\n    \"bytes\": 1527575,\n    \"sha256\": \"685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f\",\n    \"gitBlob\": \"43b9f4fd5f6ce74221ee18fdb1765839397af6ec\"\n  },\n  \"rawStderr\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-metadata-3.stderr\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"finishedAt\": \"2026-11-16T18:37:21.570891+00:00\",\n  \"durationSeconds\": 0.42761124599928735,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-3-start.json",
+      "bytes": 321,
+      "sha256": "f6169974d3657b3610aa12517f5b642df1443157d30ff6ba18b728eb7e534553",
+      "gitBlob": "a61a0525356c6b421adb477a7408e3e21b298af3",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"ls-tree\",\n    \"-rz\",\n    \"--full-tree\",\n    \"HEAD\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:37:21.143192+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-3.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-4-receipt.json",
+      "bytes": 1100,
+      "sha256": "e048d51f97087b66e79db41f6704d66428938425d28489e29b00fcaa677ec892",
+      "gitBlob": "f0eb5059116a483b9dbbcea5023670e1ddcb6c61",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"diff\",\n    \"--cached\",\n    \"--name-only\",\n    \"-z\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:37:21.638810+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 6,\n  \"metadataOnly\": true,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-metadata-4.log\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"rawStderr\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-metadata-4.stderr\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"finishedAt\": \"2026-11-16T18:37:21.657824+00:00\",\n  \"durationSeconds\": 0.018699672000366263,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-4-start.json",
+      "bytes": 321,
+      "sha256": "874ba7e3232c9b8f56970fb26e0ba5e601a13b6473d99b376bec91de0f968a16",
+      "gitBlob": "d345090e02d8aada5b982970a5ebbe7970ca6a77",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"diff\",\n    \"--cached\",\n    \"--name-only\",\n    \"-z\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:37:21.638810+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-4.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-4.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-5-receipt.json",
+      "bytes": 1108,
+      "sha256": "2792cc992e243c8c40bd5a16c9d4dc91f98885d99df78a0bc539e2ed112391b9",
+      "gitBlob": "1c806432f05576151d48a513173a139d18d09adf",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"ls-files\",\n    \"--others\",\n    \"--exclude-standard\",\n    \"-z\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:37:21.658049+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 7,\n  \"metadataOnly\": true,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-metadata-5.log\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"rawStderr\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-metadata-5.stderr\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"finishedAt\": \"2026-11-16T18:37:23.918555+00:00\",\n  \"durationSeconds\": 2.260589927998808,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-5-start.json",
+      "bytes": 332,
+      "sha256": "49e8e27eae8410dfc1db8e63b4f758972381be5984bf7c76243c748327d3a0f7",
+      "gitBlob": "23449197c0728a18fe396aae8e1be9c62abd4e7e",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"ls-files\",\n    \"--others\",\n    \"--exclude-standard\",\n    \"-z\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:37:21.658049+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-5.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-5.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-6-receipt.json",
+      "bytes": 1090,
+      "sha256": "bc809516697a2685788f18bbfecf5ccf7f1d0b5fd726aa5fe77642982b15b459",
+      "gitBlob": "f9ca34bc1229fb30715d5bf1f7e11c1f551c4855",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"ls-files\",\n    \"--stage\",\n    \"-z\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:37:23.940096+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 8,\n  \"metadataOnly\": true,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-metadata-6.log\",\n    \"bytes\": 1492874,\n    \"sha256\": \"07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db\",\n    \"gitBlob\": \"bb3caf365d224fcdddc50ea0dab2b751cd54f6d8\"\n  },\n  \"rawStderr\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-metadata-6.stderr\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"finishedAt\": \"2026-11-16T18:37:23.987918+00:00\",\n  \"durationSeconds\": 0.047563996999087976,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-6-start.json",
+      "bytes": 305,
+      "sha256": "87d72a6ae2a726a3973e9e16a3842748c8fae6fd2544f5f010b6902b23b68092",
+      "gitBlob": "bcb336e668fbea3a1489f3f3871e14fd52a65b13",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"ls-files\",\n    \"--stage\",\n    \"-z\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:37:23.940096+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-6.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-7-receipt.json",
+      "bytes": 1097,
+      "sha256": "e995f8dd36244a931f153c5c1ddcd412de392e47825a83e93119453b55ec8254",
+      "gitBlob": "e2310ff3ec0352489a42df0c9a85498afc5ce4d6",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"diff\",\n    \"--name-only\",\n    \"-z\",\n    \"HEAD\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:37:24.063153+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 9,\n  \"metadataOnly\": true,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-metadata-7.log\",\n    \"bytes\": 284,\n    \"sha256\": \"73314fb17f826ef0b5e37a98e2211c229a682b5036865043c2e541f2d2be47e9\",\n    \"gitBlob\": \"e1d8c27921fd7d45dcb0dfc8259e92bb2e75e2bd\"\n  },\n  \"rawStderr\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-metadata-7.stderr\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"finishedAt\": \"2026-11-16T18:37:24.186218+00:00\",\n  \"durationSeconds\": 0.12259707300108857,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-7-start.json",
+      "bytes": 317,
+      "sha256": "a1005a6964b16453fee2917a8d627da5f41a48a25ca7967e3405a2bfb50d53f2",
+      "gitBlob": "b2affad0cb136a84db114ba7eb7d23e09b2ff26b",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"diff\",\n    \"--name-only\",\n    \"-z\",\n    \"HEAD\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:37:24.063153+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-7.log",
+      "bytes": 284,
+      "sha256": "73314fb17f826ef0b5e37a98e2211c229a682b5036865043c2e541f2d2be47e9",
+      "gitBlob": "e1d8c27921fd7d45dcb0dfc8259e92bb2e75e2bd",
+      "body": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts\u0000scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\u0000scripts/legacy-agent-host/desktop-task-comment-input-target.ts\u0000scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\u0000scripts/legacy-agent-host/desktop-ui-controls.ts\u0000"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-7.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-diff-check-1-receipt.json",
+      "bytes": 1125,
+      "sha256": "92fd66707ef5e837b4e74ff8bfa9451becdecdac7b7c05c4f4f6ca3154bb4dfc",
+      "gitBlob": "3ba70cf95e64059b7c842b0706d0f62cf010876e",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"diff\",\n    \"--check\",\n    \"--\",\n    \"scripts/legacy-agent-host/desktop-ui-controls.ts\",\n    \"scripts/legacy-agent-host/desktop-emulated-selection-ui.ts\",\n    \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n    \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n    \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:54:51.516150+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 82,\n  \"metadataOnly\": false,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-diff-check-1.log\",\n    \"bytes\": 0,\n    \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n    \"gitBlob\": \"e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\"\n  },\n  \"finishedAt\": \"2026-11-16T18:54:52.430004+00:00\",\n  \"durationSeconds\": 0.873901858998579,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-diff-check-1-start.json",
+      "bytes": 621,
+      "sha256": "465b69231d1d7b08f1cf3672d3c8422e0726edbb312721c2273a11526fa88dee",
+      "gitBlob": "3d6b48b59155981e96589f755ab205e332641368",
+      "body": "{\n  \"argv\": [\n    \"/usr/local/bin/git\",\n    \"diff\",\n    \"--check\",\n    \"--\",\n    \"scripts/legacy-agent-host/desktop-ui-controls.ts\",\n    \"scripts/legacy-agent-host/desktop-emulated-selection-ui.ts\",\n    \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n    \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n    \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:54:51.516150+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": false\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-diff-check-1.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "body": ""
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-lint-1-receipt.json",
+      "bytes": 1225,
+      "sha256": "1acc29da54ad3d595d0dd1bb0a2df5bf86be6fcd0b7b9280732ecdb01e5dc18c",
+      "gitBlob": "6f6c11af08486136c247d4dc579a8bc9399d91ca",
+      "body": "{\n  \"argv\": [\n    \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n    \"/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs\",\n    \"--config.pm-on-fail=error\",\n    \"--config.verify-deps-before-run=false\",\n    \"--config.engine-strict=true\",\n    \"lint:fast:files\",\n    \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n    \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n    \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:53:22.535550+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 30,\n  \"metadataOnly\": false,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-lint-1.log\",\n    \"bytes\": 284,\n    \"sha256\": \"30ee225fe84245fcde6bc8fe685c62c913a5b0afeb596c32d6bd261349f7864a\",\n    \"gitBlob\": \"4db718c739d143a52269c305b0e24a0896993950\"\n  },\n  \"finishedAt\": \"2026-11-16T18:54:22.951145+00:00\",\n  \"durationSeconds\": 60.41534138499992,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-lint-1-start.json",
+      "bytes": 725,
+      "sha256": "2b52316335a7bc85849da08650962143246c799b9359f1f3a287c98f6f7af222",
+      "gitBlob": "03e3ddd74682c1d99e06b82b95d9f0c34d8d68f4",
+      "body": "{\n  \"argv\": [\n    \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n    \"/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs\",\n    \"--config.pm-on-fail=error\",\n    \"--config.verify-deps-before-run=false\",\n    \"--config.engine-strict=true\",\n    \"lint:fast:files\",\n    \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n    \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n    \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:53:22.535550+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": false\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-lint-1.log",
+      "bytes": 284,
+      "sha256": "30ee225fe84245fcde6bc8fe685c62c913a5b0afeb596c32d6bd261349f7864a",
+      "gitBlob": "4db718c739d143a52269c305b0e24a0896993950",
+      "body": "$ eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content scripts/legacy-agent-host/desktop-task-comment-input-target.ts scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-receipt.json",
+      "bytes": 18872,
+      "sha256": "04b3f56bd41080a5b29a9da2867cbc80bf9b07f71e31d79c7e41a7eb6046fb6a",
+      "gitBlob": "6fd25d10b96add1d31a413fefd07555f10df7b4b",
+      "body": "{\n  \"kind\": \"cross-close-test-first-bounded-invocation\",\n  \"command\": \"validation-package\",\n  \"action\": \"run\",\n  \"attempt\": 1,\n  \"startedAt\": \"2026-11-16T18:37:21.107138+00:00\",\n  \"publishedR1\": \"a4f5c2d2a05edd636ea0ff461c00615a2ff60d86\",\n  \"publishedSubject\": {\n    \"commit\": \"e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb\",\n    \"tree\": \"e9bb2f34a94f5d936ff4145056d0ccce16ae8a58\",\n    \"qualification\": \"Exact published two-source helper3c7b/driver4700 under8abeR1, unchanged0aec whole133 test and fixeded57/cf93. Local C5 index plus five exact source overlays; remote documentation is not claimed locally materialized.\"\n  },\n  \"actualLocalHead\": \"c5ff4fc283e58d486c58147b4dfb00144ca10d34\",\n  \"runnerIdentity\": {\n    \"bytes\": 48838,\n    \"sha256\": \"e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5\",\n    \"gitBlob\": \"165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1\"\n  },\n  \"bindingIdentity\": {\n    \"bytes\": 1800456,\n    \"sha256\": \"5a37cf5a6bff3ca5da30f7813da3d73f75852f6c7ab670dd234599f4b9a6c2e2\",\n    \"gitBlob\": \"020f6efa5dce4a1a5fe269836136ce554d76792c\"\n  },\n  \"testIdentity\": {\n    \"bytes\": 155423,\n    \"sha256\": \"b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409\",\n    \"gitBlob\": \"0aec698e88cc3af8d12c48f6d93b038efcc84900\"\n  },\n  \"sourcePins\": [\n    {\n      \"path\": \"scripts/legacy-agent-host/desktop-emulated-selection-ui.ts\",\n      \"mode\": \"100644\",\n      \"bytes\": 24759,\n      \"sha256\": \"d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b\",\n      \"gitBlob\": \"cf93da72a198dac636658e512093eef7828b5927\"\n    },\n    {\n      \"path\": \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n      \"mode\": \"100644\",\n      \"bytes\": 36260,\n      \"sha256\": \"26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38\",\n      \"gitBlob\": \"4700a0052d3c58a2b3d9bc66e6803220688050fd\"\n    },\n    {\n      \"path\": \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n      \"mode\": \"100644\",\n      \"bytes\": 8457,\n      \"sha256\": \"2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b\",\n      \"gitBlob\": \"3c7b4bb53f4259ac0795d3f92fb715887acb554f\"\n    },\n    {\n      \"path\": \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\",\n      \"mode\": \"100644\",\n      \"bytes\": 155423,\n      \"sha256\": \"b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409\",\n      \"gitBlob\": \"0aec698e88cc3af8d12c48f6d93b038efcc84900\"\n    },\n    {\n      \"path\": \"scripts/legacy-agent-host/desktop-ui-controls.ts\",\n      \"mode\": \"100644\",\n      \"bytes\": 28974,\n      \"sha256\": \"7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386\",\n      \"gitBlob\": \"ed57cb0fe7d57ef076a591621289eb77667c63ad\"\n    }\n  ],\n  \"argv\": null,\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"perPrimaryCommandLimitSeconds\": 180,\n  \"metadataCommandLimitSeconds\": 30,\n  \"fullRuntimeInputsRequested\": true,\n  \"fullRuntimeInputsInspected\": false,\n  \"fullRuntimeInputBoundaries\": {\n    \"before\": \"COMPLETE\",\n    \"after\": \"UNREACHED\"\n  },\n  \"fullRuntimeInputsPreserved\": false,\n  \"inputsPreserved\": false,\n  \"sourceAndSupervisorMetadataPreserved\": false,\n  \"commandCompletedNormally\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"timedOut\": false,\n  \"cleanupSeconds\": 0,\n  \"commandPhaseSeconds\": 0,\n  \"cleanupTimeAccounting\": \"Captured termination/reap time is a subset of each commandPhaseSeconds.\",\n  \"snapshotScope\": \"whole invocation; validation children share one full preflight and postflight\",\n  \"qualification\": \"Finite actual-source cases/scoped guards only. Metadata materialization is not a behavioral or all-input result. No GUI/native/vendor or whole-E2E claim.\",\n  \"validationCommands\": [\n    {\n      \"command\": \"lint\",\n      \"argv\": [\n        \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n        \"/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs\",\n        \"--config.pm-on-fail=error\",\n        \"--config.verify-deps-before-run=false\",\n        \"--config.engine-strict=true\",\n        \"lint:fast:files\",\n        \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n        \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n        \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n      ],\n      \"status\": \"UNREACHED\"\n    },\n    {\n      \"command\": \"source-size\",\n      \"argv\": [\n        \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n        \"/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs\",\n        \"--config.pm-on-fail=error\",\n        \"--config.verify-deps-before-run=false\",\n        \"--config.engine-strict=true\",\n        \"guard:source-file-size\"\n      ],\n      \"status\": \"UNREACHED\"\n    },\n    {\n      \"command\": \"diff-check\",\n      \"argv\": [\n        \"/usr/local/bin/git\",\n        \"diff\",\n        \"--check\",\n        \"--\",\n        \"scripts/legacy-agent-host/desktop-ui-controls.ts\",\n        \"scripts/legacy-agent-host/desktop-emulated-selection-ui.ts\",\n        \"scripts/legacy-agent-host/desktop-task-comment-input-target.ts\",\n        \"scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts\",\n        \"scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\"\n      ],\n      \"status\": \"UNREACHED\"\n    }\n  ],\n  \"primaryInvocations\": [],\n  \"before\": {\n    \"source\": {\n      \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-source.json\",\n      \"bytes\": 2478650,\n      \"sha256\": \"b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0\",\n      \"gitBlob\": \"8860893e39a0daf17e8b499baee64b7040a9b3a2\"\n    },\n    \"controls\": [\n      {\n        \"path\": \"/tmp/c714-cross-close-review/runner.py\",\n        \"bytes\": 48838,\n        \"sha256\": \"e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5\",\n        \"gitBlob\": \"165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1\"\n      },\n      {\n        \"path\": \"/tmp/c714-cross-close-review/binding-green.json\",\n        \"bytes\": 1800456,\n        \"sha256\": \"5a37cf5a6bff3ca5da30f7813da3d73f75852f6c7ab670dd234599f4b9a6c2e2\",\n        \"gitBlob\": \"020f6efa5dce4a1a5fe269836136ce554d76792c\"\n      },\n      {\n        \"path\": \"/tmp/c714-fresh-bootstrap-review/binding.json\",\n        \"bytes\": 2790411,\n        \"sha256\": \"6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131\",\n        \"gitBlob\": \"37bd0dcb54d3bac498b6530a08e1f24d4a984609\"\n      },\n      {\n        \"path\": \"/workspace/scratch/c714-fresh-20261116/evidence/source-restore-source-after.json\",\n        \"bytes\": 3451167,\n        \"sha256\": \"de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961\",\n        \"gitBlob\": \"f0addc1fb3d74fa2005c17feeb184aa1951ab6c9\"\n      },\n      {\n        \"path\": \"/workspace/scratch/c714-fresh-20261116/evidence/host-build-source-after.json\",\n        \"bytes\": 2478318,\n        \"sha256\": \"59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751\",\n        \"gitBlob\": \"51bf0d0962e07fcc7843fcd65c3202ec9133a607\"\n      },\n      {\n        \"path\": \"/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json\",\n        \"bytes\": 39168001,\n        \"sha256\": \"d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b\",\n        \"gitBlob\": \"8fb1a488520c95d3651098a81ad0160c6b049cf7\"\n      },\n      {\n        \"path\": \"/workspace/scratch/c714-fresh-20261116/evidence/host-build-compiled-after.json\",\n        \"bytes\": 400300,\n        \"sha256\": \"bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85\",\n        \"gitBlob\": \"224ff561f65772393140302de26b584bf08b06d9\"\n      },\n      {\n        \"path\": \"/workspace/scratch/c714-fresh-20261116/evidence/pnpm-inventory.json\",\n        \"bytes\": 253936,\n        \"sha256\": \"d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5\",\n        \"gitBlob\": \"4b35e3db57d510b867f17f425c85b2612f79137c\"\n      },\n      {\n        \"path\": \"/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json\",\n        \"bytes\": 3654,\n        \"sha256\": \"a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a\",\n        \"gitBlob\": \"f8dd300b5842bae00ef3967e997b98d51a34a578\"\n      },\n      {\n        \"path\": \"/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json\",\n        \"bytes\": 789090,\n        \"sha256\": \"7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925\",\n        \"gitBlob\": \"aea94f43ce13a48e4e8e0c065926cbff2a2aa344\"\n      }\n    ],\n    \"fullRuntimeInputsInspected\": true,\n    \"dependencies\": {\n      \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-dependencies.json\",\n      \"bytes\": 39168001,\n      \"sha256\": \"d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b\",\n      \"gitBlob\": \"8fb1a488520c95d3651098a81ad0160c6b049cf7\"\n    },\n    \"compiled\": {\n      \"path\": \"/tmp/c714-cross-close-evidence/validation-package-before-compiled.json\",\n      \"bytes\": 400300,\n      \"sha256\": \"bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85\",\n      \"gitBlob\": \"224ff561f65772393140302de26b584bf08b06d9\"\n    },\n    \"providers\": [\n      {\n        \"name\": \"@agent-teams/provider-implementations\",\n        \"archive\": {\n          \"bytes\": 186398,\n          \"sha256\": \"a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8\",\n          \"gitBlob\": \"f05a05edba53aa07364d9bbd5510f468dfe7ebe3\"\n        },\n        \"regularMembers\": 253,\n        \"allRegularMembersEqual\": true\n      },\n      {\n        \"name\": \"@agent-teams/provider-session-contracts\",\n        \"archive\": {\n          \"bytes\": 6230,\n          \"sha256\": \"0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc\",\n          \"gitBlob\": \"33c2944ff8a52a9c087fba9d3cab1daffe2604d8\"\n        },\n        \"regularMembers\": 12,\n        \"allRegularMembersEqual\": true\n      }\n    ],\n    \"tools\": [\n      {\n        \"tool\": \"node\",\n        \"path\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n        \"realPath\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n        \"bytes\": 126939688,\n        \"sha256\": \"61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d\",\n        \"gitBlob\": \"97b7784b737e5bda3ec45af8c65508bd61001d0c\"\n      },\n      {\n        \"tool\": \"git\",\n        \"path\": \"/usr/local/bin/git\",\n        \"realPath\": \"/usr/local/bin/git\",\n        \"bytes\": 19295504,\n        \"sha256\": \"8a2ae22e7898e163330a96319b541f92ed6f90fc87576414f72c5a89aa1dc352\",\n        \"gitBlob\": \"d51aaf6e2f66bdf456e2d198085d4d35054433df\"\n      },\n      {\n        \"tool\": \"python\",\n        \"path\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3\",\n        \"realPath\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12\",\n        \"bytes\": 30894944,\n        \"sha256\": \"fa67443527ed9647f760d807e2a38f26340757123e643c4639cf273ed15d5ea7\",\n        \"gitBlob\": \"cdff710ca21bf61260e4c7d7f3818ecd65cba2e7\"\n      },\n      {\n        \"tool\": \"scriptShell\",\n        \"path\": \"/bin/sh\",\n        \"realPath\": \"/usr/bin/dash\",\n        \"bytes\": 129736,\n        \"sha256\": \"a6f559e00b69a4aa4d8cb607be18d9386c5aee55c509e2c075549dcf00e00fc7\",\n        \"gitBlob\": \"965067be6aaf758adf88a3ff5539f41b25770579\"\n      }\n    ],\n    \"pnpm\": {\n      \"bytes\": 238649,\n      \"sha256\": \"e814a4ca22111e747db4386274e92f596f0a26d7e4b5bc687f8d1ccf61510a77\",\n      \"gitBlob\": \"2f917a18c33c04a1c6398d1adf644ce62fb8e39f\"\n    },\n    \"environment\": {\n      \"capturedTransportCanonicalSha256\": \"a002e102e97123b6947f40cb5bea1b37167486af56ffccb29d7611fe525b6945\",\n      \"values\": [\n        {\n          \"key\": \"ALL_PROXY\",\n          \"bytes\": 25,\n          \"sha256\": \"185d17005e1a094e5e7eccc4283e121443edb02fbb1063a6aa5668c51d8503bb\"\n        },\n        {\n          \"key\": \"HTTPS_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        },\n        {\n          \"key\": \"HTTP_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        },\n        {\n          \"key\": \"NO_PROXY\",\n          \"bytes\": 63,\n          \"sha256\": \"d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_AUDIT\",\n          \"bytes\": 5,\n          \"sha256\": \"fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_FUND\",\n          \"bytes\": 5,\n          \"sha256\": \"fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_HTTPS_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_HTTP_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_NOPROXY\",\n          \"bytes\": 63,\n          \"sha256\": \"d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_PREFIX\",\n          \"bytes\": 18,\n          \"sha256\": \"e0434a72761750c4ca689ad02b7a4341b6bd7e4660489f815c604d27e6342032\"\n        },\n        {\n          \"key\": \"NPM_CONFIG_PROXY\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        },\n        {\n          \"key\": \"all_proxy\",\n          \"bytes\": 25,\n          \"sha256\": \"185d17005e1a094e5e7eccc4283e121443edb02fbb1063a6aa5668c51d8503bb\"\n        },\n        {\n          \"key\": \"http_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        },\n        {\n          \"key\": \"https_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        },\n        {\n          \"key\": \"no_proxy\",\n          \"bytes\": 63,\n          \"sha256\": \"d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0\"\n        },\n        {\n          \"key\": \"npm_config_http_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        },\n        {\n          \"key\": \"npm_config_https_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        },\n        {\n          \"key\": \"npm_config_noproxy\",\n          \"bytes\": 63,\n          \"sha256\": \"d58298f0881c834d04fb9d406406338b6baf43b766c5242ae051f1b5b5b295e0\"\n        },\n        {\n          \"key\": \"npm_config_proxy\",\n          \"bytes\": 22,\n          \"sha256\": \"ea548f3040c4476588b0035a6c9010ff2e3e982388bec7e4d294142735d290cd\"\n        }\n      ],\n      \"explicitAssignments\": {\n        \"PATH\": \"/workspace/scratch/c714-fresh-20261116/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin\",\n        \"TMPDIR\": \"/tmp/c714-cross-close-evidence/test-tmp\",\n        \"XDG_CACHE_HOME\": \"/workspace/scratch/c714-fresh-20261116/cache\",\n        \"XDG_STATE_HOME\": \"/workspace/scratch/c714-fresh-20261116/state\",\n        \"AGENT_TEAMS_INSTALL_PROFILE\": \"node-ci\",\n        \"CI\": \"true\",\n        \"GIT_CONFIG_NOSYSTEM\": \"1\",\n        \"GIT_CONFIG_GLOBAL\": \"/dev/null\",\n        \"GIT_TERMINAL_PROMPT\": \"0\",\n        \"XDG_CONFIG_HOME\": \"/workspace/scratch/c714-fresh-20261116/config\",\n        \"XDG_DATA_HOME\": \"/workspace/scratch/c714-fresh-20261116/data\",\n        \"PNPM_HOME\": \"/workspace/scratch/c714-fresh-20261116/bin\",\n        \"PNPM_CONFIG_PM_ON_FAIL\": \"error\",\n        \"PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN\": \"false\",\n        \"PNPM_CONFIG_ENGINE_STRICT\": \"true\",\n        \"PNPM_CONFIG_ENABLE_PRE_POST_SCRIPTS\": \"true\",\n        \"PNPM_CONFIG_IGNORE_PNPMFILE\": \"true\",\n        \"PNPM_CONFIG_STORE_DIR\": \"/workspace/scratch/c714-fresh-20261116/store\",\n        \"PNPM_CONFIG_ENABLE_GLOBAL_VIRTUAL_STORE\": \"false\",\n        \"PNPM_CONFIG_UPDATE_NOTIFIER\": \"false\",\n        \"PNPM_CONFIG_SCRIPT_SHELL\": \"/bin/sh\",\n        \"AGENT_BACKEND_TEST_NODE\": \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n        \"NODE_DISABLE_COMPILE_CACHE\": \"1\"\n      },\n      \"homePreserved\": true,\n      \"codexHomePreserved\": true,\n      \"absentConfigs\": [\n        \"/home/agent/.npmrc\",\n        \"/home/agent/.pnpmrc\",\n        \"/home/agent/.config/pnpm/rc\",\n        \"/etc/npmrc\",\n        \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/etc/npmrc\",\n        \"/home/agent/.local/etc/npmrc\"\n      ]\n    },\n    \"bootstrapCache\": [\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/2c055e6a\",\n        \"mode\": \"100644\",\n        \"bytes\": 1076,\n        \"sha256\": \"81d68862abef75d4cddbf3c9450326b5546534bb5eac1501563f72e46a377818\",\n        \"gitBlob\": \"92cc0b39314a692ffaa55077b500ad6eef15aa92\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/4d7e9989\",\n        \"mode\": \"100644\",\n        \"bytes\": 2780,\n        \"sha256\": \"2d0fab228f904b2c2e1f1e3a4ede1f5868c5d0e4007bbed6984690ccbc07143e\",\n        \"gitBlob\": \"0d8fc72131192a4d7dfb7c4f6a4d992e8d48edce\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/60988b90\",\n        \"mode\": \"100644\",\n        \"bytes\": 2300,\n        \"sha256\": \"d9ea89d372b2eaa86ef5562a02aeb9d5aceb836227436880781b83467afeaa7b\",\n        \"gitBlob\": \"4587d24377ed922a99494689c3b742eedf2e56ae\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/661efec4\",\n        \"mode\": \"100644\",\n        \"bytes\": 2208532,\n        \"sha256\": \"5f137a3b9d2d936472a1b3c7c540309f8fea9eed8b3614b382ee23157a259712\",\n        \"gitBlob\": \"feedc7210606667b16d2d0014d4bbb9b198afc00\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/b6303853\",\n        \"mode\": \"100644\",\n        \"bytes\": 2052,\n        \"sha256\": \"c8f65ca4824827fb20024dad6e8217007163410dceb840170ced910861cccda4\",\n        \"gitBlob\": \"256197c92bc42a5921d8207741fc4334aeabbea8\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/ceabdecc\",\n        \"mode\": \"100644\",\n        \"bytes\": 2652,\n        \"sha256\": \"c753344d313709d91a46d65cccc2f06988c81ceae1b83aefae0f8c34a509c165\",\n        \"gitBlob\": \"00b5784700c10e5ef5876c84e308b3b3a56a4009\"\n      },\n      {\n        \"path\": \"tmp/node-compile-cache/v24.22.1-x64-964aae3f-1000/d8c0d4fb\",\n        \"mode\": \"100644\",\n        \"bytes\": 6156,\n        \"sha256\": \"723856e14196bf1a3caffe7e8bd170efe3f0ed7a398f1f9c5cc672fc59260327\",\n        \"gitBlob\": \"3f3238d0c975515b3ef230c3bd61366ab85a1758\"\n      }\n    ],\n    \"processCensus\": [\n      {\n        \"pid\": 1,\n        \"name\": \"codex\",\n        \"state\": \"S\",\n        \"ppid\": 0,\n        \"pgid\": 1,\n        \"session\": 1,\n        \"startTicks\": 2972711\n      },\n      {\n        \"pid\": 2,\n        \"name\": \"python3\",\n        \"state\": \"R\",\n        \"ppid\": 1,\n        \"pgid\": 1,\n        \"session\": 1,\n        \"startTicks\": 2972719\n      }\n    ],\n    \"testTemps\": [],\n    \"taskTmpTopEntries\": []\n  },\n  \"preflightSeconds\": 961.4193929130015\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-source-size-1-receipt.json",
+      "bytes": 1043,
+      "sha256": "56024b544fb804d5ccc8cfc13c1c17867f71c2be4f1fcf01d25aea12bdaa042f",
+      "gitBlob": "2d31e9c3bdf443be45a855c1dd10be623c755ec3",
+      "body": "{\n  \"argv\": [\n    \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n    \"/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs\",\n    \"--config.pm-on-fail=error\",\n    \"--config.verify-deps-before-run=false\",\n    \"--config.engine-strict=true\",\n    \"guard:source-file-size\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:54:22.951784+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": 0,\n  \"exitSignal\": null,\n  \"capturedPid\": 60,\n  \"metadataOnly\": false,\n  \"remainingBeforeCleanup\": [],\n  \"remainingCapturedSession\": [],\n  \"raw\": {\n    \"path\": \"/tmp/c714-cross-close-evidence/validation-package-source-size-1.log\",\n    \"bytes\": 249,\n    \"sha256\": \"26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f\",\n    \"gitBlob\": \"399a78f77777d0669218be2d4dae5360657308fa\"\n  },\n  \"finishedAt\": \"2026-11-16T18:54:46.604563+00:00\",\n  \"durationSeconds\": 23.660546492999856,\n  \"interruptions\": [],\n  \"cleanupSeconds\": 0,\n  \"deadlineExceeded\": false,\n  \"successful\": true\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-source-size-1-start.json",
+      "bytes": 535,
+      "sha256": "a581434bb7f36cb96faf4377a95cf2077780b0a6f3bb4f97acbdcc24657b6626",
+      "gitBlob": "43c204534b531eb0942e421027881bc050a26f51",
+      "body": "{\n  \"argv\": [\n    \"/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node\",\n    \"/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs\",\n    \"--config.pm-on-fail=error\",\n    \"--config.verify-deps-before-run=false\",\n    \"--config.engine-strict=true\",\n    \"guard:source-file-size\"\n  ],\n  \"cwd\": \"/workspace/scratch/c714-fresh-20261116/source\",\n  \"startedAt\": \"2026-11-16T18:54:22.951784+00:00\",\n  \"timedOut\": false,\n  \"exitCode\": null,\n  \"exitSignal\": null,\n  \"capturedPid\": null,\n  \"metadataOnly\": false\n}\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-source-size-1.log",
+      "bytes": 249,
+      "sha256": "26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f",
+      "gitBlob": "399a78f77777d0669218be2d4dae5360657308fa",
+      "body": "$ node ./scripts/ci/check-source-file-size.mjs\nSource file size guard passed: 5020 production files checked, 141 frozen legacy exceptions, 800-line limit.\n86 legacy file(s) are below their frozen caps; lower those caps when committing the refactor.\n"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package.attempt",
+      "bytes": 33,
+      "sha256": "3180270fee824a385f15f792481be329aa88b87a1a9384bf1747e9770da7fd9d",
+      "gitBlob": "2cd4726b9017df202b11e0afd1155e3481e080c7",
+      "body": "2026-11-16T18:37:21.107093+00:00\n"
+    }
+  ],
+  "actualLargeBodyBindings": [
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-10.log",
+      "bytes": 1527575,
+      "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+      "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec",
+      "completePriorBodySameIdentity": true,
+      "priorAcceptedEnvelope": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+      "priorActualFile": "/tmp/c714-cross-close-evidence/green-before-metadata-3.log"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-metadata-13.log",
+      "bytes": 1492874,
+      "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+      "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8",
+      "completePriorBodySameIdentity": true,
+      "priorAcceptedEnvelope": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+      "priorActualFile": "/tmp/c714-cross-close-evidence/green-before-metadata-6.log"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-after-source.json",
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2",
+      "completePriorBodySameIdentity": true,
+      "priorAcceptedEnvelope": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+      "priorActualFile": "/tmp/c714-cross-close-evidence/green-before-source.json"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-compiled.json",
+      "bytes": 400300,
+      "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+      "gitBlob": "224ff561f65772393140302de26b584bf08b06d9",
+      "completePriorBodySameIdentity": true,
+      "priorAcceptedEnvelope": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+      "priorActualFile": "/tmp/c714-cross-close-evidence/green-before-compiled.json"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-dependencies.json",
+      "bytes": 39168001,
+      "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+      "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7",
+      "completePriorBodySameIdentity": true,
+      "priorAcceptedEnvelope": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+      "priorActualFile": "/tmp/c714-cross-close-evidence/green-before-dependencies.json"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-3.log",
+      "bytes": 1527575,
+      "sha256": "685f26dde16dc6e1032335d05a227d1ced76cef07db52ec9dae03df1ddcf9e8f",
+      "gitBlob": "43b9f4fd5f6ce74221ee18fdb1765839397af6ec",
+      "completePriorBodySameIdentity": true,
+      "priorAcceptedEnvelope": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+      "priorActualFile": "/tmp/c714-cross-close-evidence/green-before-metadata-3.log"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-metadata-6.log",
+      "bytes": 1492874,
+      "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+      "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8",
+      "completePriorBodySameIdentity": true,
+      "priorAcceptedEnvelope": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+      "priorActualFile": "/tmp/c714-cross-close-evidence/green-before-metadata-6.log"
+    },
+    {
+      "path": "/tmp/c714-cross-close-evidence/validation-package-before-source.json",
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2",
+      "completePriorBodySameIdentity": true,
+      "priorAcceptedEnvelope": "46b7d646a2845f544c5d959bb9bf068c2bbbc49b",
+      "priorActualFile": "/tmp/c714-cross-close-evidence/green-before-source.json"
+    }
+  ],
+  "reviewerStateRecovery": {
+    "codeModeStateAlsoLost": true,
+    "restoredOnlyPureDataHashingAndImmutableBodies": true,
+    "hashPrimitiveSanityCheckedAgainstKnownEmptyAndAbc": true,
+    "priorAcceptedGreenReviewFullyRefetched": true,
+    "dependencyFullBodyProof": "Fresh current partial before dependency identity joins the previously fully reconstructed39168001-byte body documented in re-fetched848e. This record does not claim a second reconstruction after reviewer state loss and does not invent a missing after dependency snapshot.",
+    "targetCodeEvaluated": false,
+    "childRuntimeExecuted": false,
+    "filesystemSourceRefOrCIChanged": false
+  },
+  "chronology": {
+    "completeClassificationAndProspectiveAcceptanceMessageSentBeforeBareRetention": true,
+    "oldR1AttemptNeverRenewed": true,
+    "newRecoveryAttemptNotYetExecuted": true
+  },
+  "limitations": [
+    "Three individual exit0 receipts do not establish completed full-package input preservation or a normal supervisor exit.",
+    "The surviving after-source file proves only the exact complete source rows it contains; it does not imply after dependencies, compiled outputs, provider/tool/config/cache preservation or final process cleanup.",
+    "New /proc observations in another sandbox namespace cannot establish absence of the old supervisor or authorize signalling its numeric PID.",
+    "The recovery R1 permits a new separately bounded validation scope only after its future exact publication/R2 gates. It does not alter any product/test/provider source or authorize new139 source work.",
+    "Native53 archive review remains separate and unfinished in this record; no archive/native/Host/packaged qualification is transferred."
+  ]
+}
