@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createServer } from 'node:net';
-import { mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { assertNativeV1Source, buildNativeV1Host } from '../../packages/legacy-agent-host/tests/opencode-v1-version-source.ts';
@@ -11,7 +11,15 @@ import { fileHash as fileDigest } from '../../packages/legacy-agent-host/tests/f
 import { waitFor } from '../e2e/release-updater/cdp.mts';
 import { createDesktopUiControls, desktopJsLiteral } from './desktop-ui-controls.ts';
 import { startRetainedOpenCodeModel } from './desktop-retained-opencode-model.ts';
-import { originalLinuxProcessPresent, selectedLinuxProcesses, snapshotLinuxProcesses, startRetainedOpenCodeApp, testNamespaceLinuxProcesses } from './desktop-retained-opencode-app.ts';
+import {
+  exerciseRetainedDonorHistory,
+  originalLinuxProcessPresent,
+  readRetainedNativeReply,
+  selectedLinuxProcesses,
+  snapshotLinuxProcesses,
+  startRetainedOpenCodeApp,
+  testNamespaceLinuxProcesses,
+} from './desktop-retained-opencode-app.ts';
 
 const record = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value as Record<string, unknown>;
@@ -222,57 +230,9 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
       await callTeams('sendMessage', [key, { member: to, text: marker }]);
       await waitFor(async () => { assert.deepEqual(model.failures, []); return model.markers.has(marker) || null; }, 'original owner receives ' + marker, 90_000);
     };
-    const readLegacyReply = async (member: Record<string, unknown>, expectedReply: string): Promise<Record<string, unknown> | null> => {
-      assert.equal(member.memberName, 'bob'); assert.equal(member.providerId, 'opencode');
-      const laneId = member.laneId, nativeSessionId = member.runtimeSessionId;
-      assert.ok(typeof laneId === 'string' && laneId.length > 0);
-      assert.ok(typeof nativeSessionId === 'string' && nativeSessionId.length > 0);
-      assert.deepEqual(model.failures, []);
-      // This is the original member UI's native reader; generic JSONL logs are its fallback.
-      const stream: Record<string, unknown> = await app!.call(`window.__TEST_retainedApi.memberLogStream.getMemberLogStream(
-        ${literal(legacyTeam)},'bob',${literal({ laneId, limitSegments: 30, forceRefresh: true })})`);
-      assert.ok(Array.isArray(stream.segments));
-      const responseShapes: Record<string, unknown>[] = [];
-      proof.legacyHistoryRead = { laneId, nativeSessionId, coverage: stream.coverage,
-        warnings: stream.warnings, sources: stream.segments.map(value => record(value).source),
-        actors: stream.segments.slice(0, 4).map(value => record(value).actor), responses: responseShapes };
-      const segments = stream.segments.map(record).filter(segment => {
-        const source = record(segment.source), actor = record(segment.actor);
-        return source.provider === 'opencode_runtime' && source.label === 'OpenCode runtime' &&
-          source.sessionId === nativeSessionId && source.laneId === laneId &&
-          actor.memberName === 'bob' && actor.sessionId === nativeSessionId;
-      });
-      assert.ok(segments.length <= 1, 'native history binding is unambiguous');
-      const replies: Record<string, unknown>[] = [];
-      for (const segment of segments) {
-        assert.ok(Array.isArray(segment.chunks));
-        for (const value of segment.chunks) {
-          const chunk = record(value);
-          if (chunk.chunkType !== 'ai') continue;
-          assert.ok(Array.isArray(chunk.responses));
-          for (const responseValue of chunk.responses) {
-            const response = record(responseValue);
-            const shape: Record<string, unknown> = { type: response.type, role: response.role,
-              sessionId: response.sessionId, uuid: response.uuid, expectedTextMatched: null };
-            if (responseShapes.length < 16) responseShapes.push(shape);
-            if (response.type !== 'assistant' || response.role !== 'assistant' ||
-              response.sessionId !== nativeSessionId) continue;
-            const text = typeof response.content === 'string' ? response.content :
-              Array.isArray(response.content) ? response.content.map(record)
-                .filter(block => block.type === 'text' && typeof block.text === 'string')
-                .map(block => block.text).join('') : '';
-            shape.expectedTextMatched = text === expectedReply;
-            if (text !== expectedReply) continue;
-            assert.ok(typeof response.uuid === 'string' && response.uuid.length > 0);
-            replies.push({ provider: 'opencode_runtime', laneId, nativeSessionId,
-              replyUuid: response.uuid, replyContentSha256: digest(JSON.stringify(response.content)) });
-          }
-        }
-      }
-      assert.ok(replies.length <= 1, 'one actual native assistant reply');
-      assert.deepEqual(model.failures, []);
-      return replies[0] ?? null;
-    };
+    const readLegacyReply = (member: Record<string, unknown>, expectedReply: string) =>
+      readRetainedNativeReply({ app: app!, teamName: legacyTeam, memberName: 'bob', member,
+        expectedReply, failures: model.failures, observe: value => { proof.legacyHistoryRead = value; } });
     await waitLegacyControl();
     await app.call(`window.electronAPI.config.addCustomProjectPath(${literal(legacyProject)})`);
     legacySubmitted = true;
@@ -395,6 +355,10 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
     await recordAppChildren();
     await app.close(); app = undefined; source();
     assert.equal(natives.some(originalLinuxProcessPresent), false, 'all original native processes gone after ordinary Quit');
+    const donorHistory: Record<string, unknown> = { kind: 'TEST_DONOR_4A_NATIVE_HISTORY', status: 'INCOMPLETE' };
+    proof.donorHistory = donorHistory;
+    await runDonorHistory({ repo, head, root: join(root, 'donor-history'), node,
+      v1: { path: v1, sha256: await fileDigest(v1) }, source, processBaseline, proof: donorHistory, cleanupErrors });
     passed = true;
   } catch (error) {
     failure = error;
@@ -427,3 +391,210 @@ test('original Electron retains legacy fork V1 while routing new Host V2 and iso
   if (failure) throw failure;
   if (cleanupErrors.length) throw new AggregateError(cleanupErrors, 'coexistence cleanup failed');
 });
+
+/** Separate producer profile and finite oracle; never seeds a Host owner or product history. */
+async function runDonorHistory(input: {
+  repo: string; head: string; root: string; node: string; v1: { path: string; sha256: string };
+  source(): void; processBaseline: Awaited<ReturnType<typeof snapshotLinuxProcesses>>;
+  proof: Record<string, unknown>; cleanupErrors: unknown[];
+}) {
+  const { repo, root, proof } = input;
+  const inputsPath = process.env.OPENCODE_V1_V2_INPUTS_RECEIPT!;
+  assert.ok(inputsPath && isAbsolute(inputsPath));
+  const originalInputs = await json(inputsPath);
+  assert.equal(originalInputs.kind, 'TEST_RETAINED_V1_HOST_V2_INPUTS');
+  assert.equal(originalInputs.status, 'READY'); assert.equal(originalInputs.sourceHead, input.head);
+  const donor = record(originalInputs.donor);
+  assert.equal(donor.kind, 'TEST_DONOR_4A_RUNTIME_160_INPUTS');
+  assert.equal(donor.commit, '4a0e06277fe216d9f82dbbede362668fe46622ee');
+  assert.equal(donor.tree, '4bb456a5b35b6fca0e795bc8b19a13f5f1f6defd');
+  const donorRoot = await realpath(String(donor.root));
+  assert.equal(donorRoot, join(repo, '.runtime-download/TEST-donor-4a'));
+  const node = record(donor.node), electron = record(donor.electron), runtime = record(donor.runtime);
+  const custody = record(donor.custody);
+  assert.equal(node.version, 'v24.21.0'); assert.equal(electron.version, '44.10.1');
+  assert.equal(runtime.version, '0.0.160'); assert.equal(runtime.cliVersion, '2.777.777');
+  assert.equal(runtime.archiveSha256, '09b174841e74c95337f8b1be986f1501a71582ce190671c548bf4c70ab814e10');
+  assert.equal(runtime.sourceCommit, 'e13edcd3d4ffbecc0272ae30195cc6b15b710ee7');
+  assert.equal(custody.sourceCommit, runtime.sourceCommit);
+  assert.equal(custody.sourceTree, 'a5ed6ffc453a68a5454328bd79a9422ce1e4e3e9');
+  assert.equal(custody.publishedRuntimeComplete, false);
+  assert.ok(custody.kind === 'PUBLISHED_RUNTIME_ASSET' || custody.kind === 'EXACT_RELEASE_SOURCE_BUILD');
+  const sourceDirectory = await realpath(String(custody.sourceDirectory));
+  assert.equal(sourceDirectory, join(repo, '.runtime-download/TEST-donor-runtime-source'));
+  const sourceFiles = [
+    'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.npmrc', '.node-version',
+    'runtime.lock.json', 'electron.vite.config.ts', 'scripts/stage-runtime.mjs',
+    'scripts/lib/github-release-download-error.mjs', 'scripts/lib/runtime-archive-checksum.mjs',
+    'scripts/lib/runtime-payload-cache.mjs', 'scripts/lib/opencode-v2-base-inventory.mts',
+    'scripts/ci/enforce-pnpm-install.mjs', 'scripts/ci/install-dependencies-with-retry.mjs',
+    'scripts/ensure-electron-install.cjs', 'scripts/postinstall-electron.cjs',
+    'scripts/prepare-cpu-features-rebuild.cjs', 'agent-teams-controller/package.json',
+    'agent-teams-controller/scripts/build.mjs', 'mcp-server/package.json',
+    'resources/runtime/COMMIT_SHA', 'resources/runtime/VERSION',
+  ];
+  assert.ok(Array.isArray(donor.files));
+  const files = donor.files.map(record);
+  assert.deepEqual(files.map(row => row.path), sourceFiles);
+  const git = (directory: string, args: string[]) => execFileSync('/usr/bin/git', ['-C', directory, ...args],
+    { encoding: 'utf8', timeout: 5000 }).trim();
+  const verifyPin = async (row: Record<string, unknown>) => {
+    assert.ok(typeof row.path === 'string' && isAbsolute(row.path));
+    assert.match(String(row.sha256), /^[a-f0-9]{64}$/);
+    assert.equal(await realpath(row.path), row.path);
+    assert.equal(await fileDigest(row.path), row.sha256);
+  };
+  const assertInputs = async () => {
+    input.source();
+    for (const [directory, commit, tree] of [
+      [donorRoot, donor.commit, donor.tree], [sourceDirectory, custody.sourceCommit, custody.sourceTree],
+    ]) {
+      assert.equal(git(String(directory), ['rev-parse', '--show-toplevel']), directory);
+      assert.equal(git(String(directory), ['rev-parse', 'HEAD']), commit);
+      assert.equal(git(String(directory), ['rev-parse', 'HEAD^{tree}']), tree);
+      assert.equal(git(String(directory), ['diff', '--name-only', 'HEAD']), '');
+      assert.equal(git(String(directory), ['ls-files', '--others', '--exclude-standard']), '');
+    }
+    for (const row of files) await verifyPin({ path: join(donorRoot, String(row.path)), sha256: row.sha256 });
+    for (const row of [node, electron, runtime, custody, input.v1]) await verifyPin(row);
+    assert.equal(await realpath(join(donorRoot, 'node_modules/electron/dist/electron')), electron.path);
+    assert.equal(runtime.path, join(donorRoot, 'resources/runtime/claude-multimodel'));
+    const helper = custody.kind === 'PUBLISHED_RUNTIME_ASSET'
+      ? join(donorRoot, 'resources/runtime/native/opencode-custody/linux-x64/custodian')
+      : join(sourceDirectory, 'dist/native/opencode-custody/linux-x64/custodian');
+    assert.equal(custody.path, helper);
+    for (const [path, sha256] of [
+      [helper + '.json', custody.manifestSha256],
+      [join(sourceDirectory, 'native/opencode-custody/linux.c'), custody.sourceSha256],
+      [join(sourceDirectory, 'scripts/stage-opencode-custody.mts'), custody.buildScriptSha256],
+      [join(sourceDirectory, 'scripts/lib/opencode-custody-artifact.ts'), custody.validatorSha256],
+    ]) await verifyPin({ path, sha256 });
+    assert.deepEqual(await json(helper + '.json'), custody.manifest);
+    assert.equal(record(custody.manifest).sha256, custody.sha256);
+    assert.equal((await json(join(donorRoot, 'package.json'))).packageManager, donor.packageManager);
+    assert.equal((await readFile(join(donorRoot, 'resources/runtime/COMMIT_SHA'), 'utf8')).trim(), runtime.sourceCommit);
+    assert.equal((await readFile(join(donorRoot, 'resources/runtime/VERSION'), 'utf8')).trim(), runtime.version);
+  };
+  await assertInputs();
+  await mkdir(root, { mode: 0o700 });
+  for (const directory of ['home', 'tmp', 'config/opencode', 'config/codex', 'data', 'cache', 'state',
+    'userData', 'claude', 'claude/local/node_modules/.bin', 'bin', 'project', 'runtime-data', 'runtime-cache', 'evidence-corpus'])
+    await mkdir(join(root, directory), { recursive: true, mode: 0o700 });
+  proof.inputs = donor; proof.root = root;
+  const { desktopAgentSentinelSource, desktopShellEnvironmentProbeSource } = await import('./desktop-backend-fixture.ts');
+  const sentinelLog = join(root, 'sentinel-invocations.ndjson');
+  const sentinel = desktopAgentSentinelSource(String(node.path), sentinelLog, String(runtime.cliVersion), 'metadata');
+  for (const directory of ['bin', 'claude/local/node_modules/.bin'])
+    for (const name of ['claude', 'codex', 'opencode', 'gemini', 'claude-multimodel', 'terminal-daemon'])
+      await writeFile(join(root, directory, name), sentinel, { mode: 0o700, flag: 'wx' });
+  await writeFile(join(root, 'bin/shell-env'), desktopShellEnvironmentProbeSource(String(node.path), sentinelLog), { mode: 0o700, flag: 'wx' });
+  const environment: Record<string, string> = {
+    HOME: join(root, 'home'), TMPDIR: join(root, 'tmp'), CFFIXED_USER_HOME: join(root, 'home'),
+    MAC_CHROMIUM_TMPDIR: join(root, 'tmp'), XDG_CONFIG_HOME: join(root, 'config'),
+    XDG_DATA_HOME: join(root, 'data'), XDG_CACHE_HOME: join(root, 'cache'), XDG_STATE_HOME: join(root, 'state'),
+    PATH: `${join(root, 'bin')}:${dirname(String(node.path))}:/usr/bin:/bin`, SHELL: join(root, 'bin/shell-env'),
+    NODE_ENV: 'development', NO_COLOR: '1', TERM: 'dumb', pnpm_config_verify_deps_before_run: 'warn',
+    DISPLAY: process.env.LEGACY_DESKTOP_TEST_DISPLAY ?? '', XAUTHORITY: process.env.LEGACY_DESKTOP_TEST_XAUTHORITY ?? '',
+    ...(process.env.LEGACY_DESKTOP_COREPACK_HOME ? { COREPACK_HOME: process.env.LEGACY_DESKTOP_COREPACK_HOME } : {}),
+    AGENT_TEAMS_ELECTRON_USER_DATA_DIR: join(root, 'userData'), AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: join(root, 'claude'),
+    CLAUDE_ROOT: join(root, 'claude'), CLAUDE_CONFIG_DIR: join(root, 'claude'),
+    CODEX_HOME: join(root, 'config/codex'), OPENCODE_CONFIG_DIR: join(root, 'config/opencode'),
+    CLAUDE_CLI_PATH: join(root, 'bin/claude'), CODEX_CLI_PATH: join(root, 'bin/codex'),
+    CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: String(runtime.path),
+    CLAUDE_MULTIMODEL_OPENCODE_CUSTODY_HELPER: String(custody.path),
+    OPENCODE_CLI_PATH: input.v1.path, OPENCODE_BIN_PATH: input.v1.path,
+    CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: input.v1.path,
+    CLAUDE_TERMINAL_DAEMON_BINARY: join(root, 'bin/terminal-daemon'),
+    CLAUDE_DEV_RUNTIME_DISABLE_GH: '1', CLAUDE_DEV_RUNTIME_CACHE_ROOT: join(root, 'cache/runtime'),
+    CLAUDE_MULTIMODEL_DATA_HOME: join(root, 'runtime-data'), CLAUDE_MULTIMODEL_CACHE_HOME: join(root, 'runtime-cache'),
+    CLAUDE_TEAM_OPENCODE_MCP_HTTP: '1', CLAUDE_TEAM_OPENCODE_MCP_HTTP_PORT: String(await reservePort()),
+    NODE_BINARY: String(node.path), DISABLE_AUTOUPDATER: '1', DISABLE_TELEMETRY: '1',
+    OPENCODE_DISABLE_AUTOUPDATE: '1', OPENCODE_DISABLE_MODELS_FETCH: '1',
+    OPENCODE_DISABLE_LSP_DOWNLOAD: '1', OPENCODE_DISABLE_CLAUDE_CODE: '1', NO_PROXY: '127.0.0.1,localhost',
+  };
+  await writeFile(join(root, 'claude/agent-teams-config.json'), JSON.stringify({
+    general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark' },
+    httpServer: { enabled: false, port: await reservePort() },
+  }), { mode: 0o600, flag: 'wx' });
+  const model = await startRetainedOpenCodeModel();
+  const errorsBefore = input.cleanupErrors.length;
+  let failure: unknown, completed = false;
+  const assertClosedInputs = async () => {
+    await assertInputs();
+    try {
+      await lstat(join(root, 'userData/data/runtimes/codex/current.json'));
+      assert.fail('fresh TEST profile must not publish a managed Codex binary');
+    } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+  };
+  try {
+    const config = { $schema: 'https://opencode.ai/config.json', plugin: [],
+      model: 'test-legacy/TEST-model', small_model: 'test-legacy/TEST-model', enabled_providers: ['test-legacy'],
+      provider: { 'test-legacy': { npm: '@ai-sdk/openai-compatible', name: 'TEST donor V1 local only',
+        options: { baseURL: `${model.url}/legacy/v1`, apiKey: 'TEST-LOCALHOST-ONLY' },
+        models: { 'TEST-model': { name: 'TEST-model', tool_call: true, limit: { context: 200000, output: 2000 } } } } } };
+    for (const path of ['project/opencode.json', 'config/opencode/opencode.json'])
+      await writeFile(join(root, path), JSON.stringify(config), { mode: 0o600, flag: 'wx' });
+    await exerciseRetainedDonorHistory({ repo, sourceHead: input.head, root, node: input.node,
+      port: await reservePort(), donor: { root: donorRoot, commit: String(donor.commit), tree: String(donor.tree),
+        node: { path: String(node.path) }, runtime: { path: String(runtime.path), sha256: String(runtime.sha256) },
+        custody: { sha256: String(custody.sha256) } }, v1: input.v1, env: environment, model, proof,
+      cleanupErrors: input.cleanupErrors, baseline: input.processBaseline, assertInputs: assertClosedInputs,
+      preserveCorpus: teamName => preserveDonorCorpus(root, teamName),
+    });
+    assert.deepEqual(model.failures, []);
+    completed = true;
+  } catch (error) { failure = error; }
+  finally {
+    try { await model.close(); } catch (error) { input.cleanupErrors.push(error); }
+    if (completed) {
+      try {
+        assert.deepEqual(model.failures, []);
+        assert.equal(model.observations.length, proof.inferenceAtDonorQuit, 'closed model has no upgrade or cold replay');
+      } catch (error) { failure ??= error; completed = false; }
+    }
+    try { assert.deepEqual(await testNamespaceLinuxProcesses(root, input.processBaseline), []); }
+    catch (error) { input.cleanupErrors.push(error); }
+    proof.model = { observations: model.observations, failures: model.failures };
+    proof.cleanup = input.cleanupErrors.length === errorsBefore;
+    proof.status = completed && proof.cleanup ? 'PASS' : 'FAIL';
+    proof.cleanupFailures = input.cleanupErrors.slice(errorsBefore).map(error => error instanceof Error ? error.message : String(error));
+    if (failure) proof.failure = failure instanceof Error ? failure.message : String(failure);
+  }
+  if (failure) throw failure;
+  assert.equal(proof.status, 'PASS', 'donor history and original cleanup are required before final PASS');
+}
+
+/** Preserve raw stopped product/history bytes; exclude executables and unrelated Electron caches. */
+async function preserveDonorCorpus(root: string, teamName: string) {
+  const directory = join(root, 'evidence-corpus');
+  const files: { path: string; copy: string; bytes: number; sha256: string }[] = [];
+  let totalBytes = 0;
+  const visit = async (relative: string): Promise<void> => {
+    if (relative === 'claude/local' || /\/host-authority\/[a-f0-9]{64}\/images$/.test(relative)) return;
+    // The stock profile links dependencies to its shared cache and owns a separate temp directory.
+    if (/^runtime-data\/opencode\/profiles\/[^/]+\/(?:config\/opencode\/node_modules|tmp)$/.test(relative)) return;
+    const path = join(root, relative), before = await lstat(path, { bigint: true });
+    assert.equal(before.isSymbolicLink(), false, 'raw corpus never follows a link');
+    if (before.isDirectory()) {
+      for (const entry of (await readdir(path)).sort()) await visit(relative + '/' + entry);
+      return;
+    }
+    assert.ok(before.isFile() && before.nlink === 1n && before.uid === BigInt(process.getuid!()));
+    assert.ok(files.length < 4096 && before.size <= 64n * 1024n * 1024n, 'finite raw corpus file budget');
+    const bytes = await readFile(path), after = await lstat(path, { bigint: true });
+    assert.ok(before.dev === after.dev && before.ino === after.ino && before.size === after.size &&
+      before.mtimeNs === after.mtimeNs && before.ctimeNs === after.ctimeNs, 'stopped corpus stays current during capture');
+    totalBytes += bytes.length; assert.ok(totalBytes <= 256 * 1024 * 1024, 'finite raw corpus byte budget');
+    const copy = `file-${String(files.length).padStart(5, '0')}.bin`;
+    await writeFile(join(directory, copy), bytes, { mode: 0o600, flag: 'wx' });
+    files.push({ path: relative, copy, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') });
+  };
+  for (const path of ['claude', 'runtime-data', 'data', 'state', 'config/opencode', 'project/opencode.json']) await visit(path);
+  assert.ok(files.some(row => row.path.startsWith(`claude/teams/${teamName}/`)), 'real donor team corpus');
+  assert.ok(files.some(row => row.path.startsWith(`claude/tasks/${teamName}/`)), 'real donor task corpus');
+  assert.ok(files.some(row => /^runtime-data\/opencode\/profiles\/[^/]+\/data\/opencode\//.test(row.path)),
+    'real native OpenCode managed-profile history corpus');
+  const manifest = { directory, files, bytes: totalBytes };
+  await writeFile(join(directory, 'manifest.json'), JSON.stringify(manifest, null, 2), { mode: 0o600, flag: 'wx' });
+  return manifest;
+}

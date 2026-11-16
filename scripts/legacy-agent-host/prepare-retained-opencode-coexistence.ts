@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { appendFile, lstat, readFile, realpath, writeFile } from 'node:fs/promises';
-import { isAbsolute, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { assertNativeV1Source } from '../../packages/legacy-agent-host/tests/opencode-v1-version-source.ts';
 
 const repo = resolve(import.meta.dirname, '../..');
@@ -17,6 +17,148 @@ async function pin(file: string) {
   assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size > 0 && stat.size <= 256 * 1024 * 1024);
   return { path, sha256: createHash('sha256').update(await readFile(path)).digest('hex') };
 }
+async function captureDonorInputs() {
+  const donorCommit = '4a0e06277fe216d9f82dbbede362668fe46622ee';
+  const donorTree = '4bb456a5b35b6fca0e795bc8b19a13f5f1f6defd';
+  const sourceCommit = 'e13edcd3d4ffbecc0272ae30195cc6b15b710ee7';
+  const sourceTree = 'a5ed6ffc453a68a5454328bd79a9422ce1e4e3e9';
+  const root = await realpath(process.env.OPENCODE_V1_V2_DONOR_REPO!);
+  const sourceDirectory = await realpath(process.env.OPENCODE_V1_V2_DONOR_CUSTODY_SOURCE!);
+  assert.equal(root, join(repo, '.runtime-download/TEST-donor-4a'));
+  assert.equal(sourceDirectory, join(repo, '.runtime-download/TEST-donor-runtime-source'));
+  const git = (directory: string, args: string[]) => execFileSync('/usr/bin/git',
+    ['-C', directory, ...args], { encoding: 'utf8', timeout: 5000 }).trim();
+  const verifySource = () => {
+    for (const [directory, commit, tree] of [
+      [root, donorCommit, donorTree], [sourceDirectory, sourceCommit, sourceTree],
+    ]) {
+      assert.equal(git(directory!, ['rev-parse', '--show-toplevel']), directory);
+      assert.equal(git(directory!, ['rev-parse', 'HEAD']), commit);
+      assert.equal(git(directory!, ['rev-parse', 'HEAD^{tree}']), tree);
+      assert.equal(git(directory!, ['diff', '--name-only', 'HEAD']), '', 'donor inputs stay immutable');
+      assert.equal(git(directory!, ['ls-files', '--others', '--exclude-standard']), '');
+    }
+    assertNativeV1Source(repo, sourceHead);
+  };
+  verifySource();
+  const packageJson = await readJson(join(root, 'package.json'));
+  const packageManager = 'pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621';
+  assert.equal(packageJson.packageManager, packageManager);
+  const lock = await readJson(join(root, 'runtime.lock.json'));
+  assert.equal(lock.version, '0.0.160'); assert.equal(lock.cliVersion, '2.777.777');
+  assert.equal(lock.sourceRepository, '777genius/agent_teams_orchestrator');
+  assert.equal(lock.releaseRepository, '777genius/agent_teams_orchestrator_binaries');
+  assert.equal(lock.releaseTag, 'runtime-v0.0.160');
+  const asset = (lock.assets as Record<string, Record<string, unknown>>)['linux-x64']!;
+  const archiveSha256 = '09b174841e74c95337f8b1be986f1501a71582ce190671c548bf4c70ab814e10';
+  assert.equal(asset.file, 'agent-teams-runtime-linux-x64-v0.0.160.tar.gz');
+  assert.equal(asset.archiveKind, 'tar.gz'); assert.equal(asset.binaryName, 'claude-multimodel');
+  assert.equal(asset.sha256, archiveSha256);
+  const delivery = (lock.opencodeV2Delivery as Record<string, Record<string, unknown>>)['linux-x64']!;
+  assert.equal(delivery.sourceCommit, sourceCommit);
+  const runtimeRoot = join(root, 'resources/runtime');
+  assert.equal(await realpath(runtimeRoot), runtimeRoot);
+  assert.equal((await readFile(join(runtimeRoot, 'COMMIT_SHA'), 'utf8')).trim(), sourceCommit);
+  assert.equal((await readFile(join(runtimeRoot, 'VERSION'), 'utf8')).trim(), '0.0.160');
+  const runtime = await pin(join(runtimeRoot, 'claude-multimodel'));
+  assert.equal(runtime.path, join(runtimeRoot, 'claude-multimodel'));
+  const files = await Promise.all([
+    'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.npmrc', '.node-version',
+    'runtime.lock.json', 'electron.vite.config.ts', 'scripts/stage-runtime.mjs',
+    'scripts/lib/github-release-download-error.mjs', 'scripts/lib/runtime-archive-checksum.mjs',
+    'scripts/lib/runtime-payload-cache.mjs', 'scripts/lib/opencode-v2-base-inventory.mts',
+    'scripts/ci/enforce-pnpm-install.mjs', 'scripts/ci/install-dependencies-with-retry.mjs',
+    'scripts/ensure-electron-install.cjs',
+    'scripts/postinstall-electron.cjs', 'scripts/prepare-cpu-features-rebuild.cjs',
+    'agent-teams-controller/package.json', 'agent-teams-controller/scripts/build.mjs',
+    'mcp-server/package.json', 'resources/runtime/COMMIT_SHA', 'resources/runtime/VERSION',
+  ].map(async (path) => {
+    const measured = await pin(join(root, path));
+    assert.equal(measured.path, join(root, path));
+    return { path, sha256: measured.sha256 };
+  }));
+  const node = { ...await pin(process.execPath), version: process.version };
+  assert.equal(node.version, 'v24.21.0');
+  const electronManifest = await realpath(join(root, 'node_modules/electron/package.json'));
+  const electronRoot = dirname(electronManifest);
+  assert.ok(electronRoot.startsWith(join(root, 'node_modules') + '/'));
+  const electronPackage = await readJson(electronManifest);
+  assert.equal(electronPackage.name, 'electron'); assert.equal(electronPackage.version, '44.10.1');
+  assert.equal((await readFile(join(electronRoot, 'path.txt'), 'utf8')).trim(), 'electron');
+  assert.equal((await readFile(join(electronRoot, 'dist/version'), 'utf8')).trim().replace(/^v/, ''), '44.10.1');
+  const electron = { ...await pin(join(electronRoot, 'dist/electron')), version: '44.10.1' };
+  assert.equal(electron.path, join(electronRoot, 'dist/electron'));
+  const source = await pin(join(sourceDirectory, 'native/opencode-custody/linux.c'));
+  const buildScript = await pin(join(sourceDirectory, 'scripts/stage-opencode-custody.mts'));
+  const validator = await pin(join(sourceDirectory, 'scripts/lib/opencode-custody-artifact.ts'));
+  assert.equal(source.path, join(sourceDirectory, 'native/opencode-custody/linux.c'));
+  assert.equal(buildScript.path, join(sourceDirectory, 'scripts/stage-opencode-custody.mts'));
+  assert.equal(validator.path, join(sourceDirectory, 'scripts/lib/opencode-custody-artifact.ts'));
+  const bun = await pin(process.env.OPENCODE_V2_EMBEDDED_BUN!);
+  assert.equal(bun.sha256, process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256);
+  let nativeDirectory = join(runtimeRoot, 'native');
+  let kind: 'PUBLISHED_RUNTIME_ASSET' | 'EXACT_RELEASE_SOURCE_BUILD' = 'PUBLISHED_RUNTIME_ASSET';
+  let compiler: string | undefined;
+  let absent = false, selected = runtimeRoot;
+  const parts = ['native', 'opencode-custody', 'linux-x64', 'custodian'];
+  for (const [index, part] of parts.entries()) {
+    selected = join(selected, part);
+    try {
+      const metadata = await lstat(selected);
+      assert.equal(metadata.isSymbolicLink(), false, 'packaged custody path cannot redirect');
+      assert.ok(index === parts.length - 1 ? metadata.isFile() : metadata.isDirectory());
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      absent = true; break;
+    }
+  }
+  if (absent) {
+    const sidecar = join(runtimeRoot, 'native/opencode-custody/linux-x64/custodian.json');
+    try {
+      await lstat(sidecar);
+      assert.fail('incomplete packaged custody artifact cannot select a source-build fallback');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+    // Only absent packaged custody selects the unchanged exact release-source build.
+    kind = 'EXACT_RELEASE_SOURCE_BUILD';
+    execFileSync(bun.path, ['--no-env-file', '--no-install', 'scripts/stage-opencode-custody.mts'],
+      { cwd: sourceDirectory, env: { PATH: '/usr/bin:/bin' }, timeout: 60_000 });
+    nativeDirectory = join(sourceDirectory, 'dist/native');
+    compiler = execFileSync('/usr/bin/cc', ['--version'],
+      { encoding: 'utf8', timeout: 5000 }).split('\n')[0];
+    assert.ok(compiler && compiler.length <= 512);
+  }
+  // A present invalid artifact always refuses; validation errors never trigger fallback.
+  const validated = JSON.parse(execFileSync(bun.path, ['--no-env-file', '--no-install', '-e',
+    "import { verifyLinuxCustodyArtifact } from './scripts/lib/opencode-custody-artifact.js'; " +
+    'console.log(JSON.stringify(verifyLinuxCustodyArtifact(' + JSON.stringify(nativeDirectory) +
+    ",'linux-x64'," + JSON.stringify(source.path) + ')))'],
+  { cwd: sourceDirectory, env: { PATH: '/usr/bin:/bin' }, encoding: 'utf8', timeout: 5000 })) as Record<string, unknown>;
+  const helper = await pin(join(nativeDirectory, 'opencode-custody/linux-x64/custodian'));
+  assert.equal(helper.path, join(nativeDirectory, 'opencode-custody/linux-x64/custodian'));
+  const manifestPin = await pin(helper.path + '.json');
+  assert.equal(manifestPin.path, helper.path + '.json');
+  assert.ok((await lstat(manifestPin.path)).size <= 16 * 1024);
+  const manifest = await readJson(manifestPin.path);
+  assert.equal(validated.schemaVersion, 1); assert.equal(validated.platform, 'linux'); assert.equal(validated.arch, 'x64');
+  assert.equal(validated.sha256, helper.sha256); assert.equal(validated.sourceSha256, source.sha256);
+  for (const field of ['schemaVersion', 'platform', 'arch', 'size', 'sha256', 'sourceSha256'])
+    assert.equal(manifest[field], validated[field]);
+  for (const measured of [runtime, node, electron, source, buildScript, validator, bun, helper, manifestPin])
+    assert.deepEqual(await pin(measured.path), { path: measured.path, sha256: measured.sha256 });
+  for (const file of files) assert.deepEqual(await pin(join(root, file.path)),
+    { path: join(root, file.path), sha256: file.sha256 });
+  verifySource();
+  return { kind: 'TEST_DONOR_4A_RUNTIME_160_INPUTS', root, commit: donorCommit, tree: donorTree,
+    packageManager, files, node, electron,
+    runtime: { ...runtime, version: '0.0.160', cliVersion: '2.777.777', archiveSha256, sourceCommit },
+    custody: { ...helper, kind, sourceDirectory, sourceCommit, sourceTree, manifest,
+      manifestSha256: manifestPin.sha256, sourceSha256: source.sha256,
+      buildScriptSha256: buildScript.sha256, validatorSha256: validator.sha256,
+      ...(compiler === undefined ? {} : { compiler }), publishedRuntimeComplete: false } };
+}
+
 const packages = await realpath(process.env.OPENCODE_V1_V2_TEST_PACKAGES!);
 const inputsReceipt = process.env.OPENCODE_V1_V2_INPUTS_RECEIPT!;
 assert.ok(inputsReceipt && isAbsolute(inputsReceipt));
@@ -221,6 +363,7 @@ try {
         publishedRuntimeComplete: false };
       evidence.corepack = { version: '0.36.0', ...corepack };
       evidence.packageLock = await pin(join(packages, 'pnpm-lock.yaml'));
+      evidence.donor = await captureDonorInputs();
       assertNativeV1Source(repo, sourceHead);
       await appendFile(process.env.GITHUB_ENV!, Object.entries(values).map(([key, value]) => `${key}=${value}\n`).join(''));
     }
