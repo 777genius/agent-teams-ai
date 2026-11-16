@@ -29,6 +29,9 @@ inline void observeBreakpoint(const owned_service::Scope& child,const EXCEPTION_
     row[5]=event.ExceptionRecord.ExceptionCode; row[6]=event.dwFirstChance; row[7]=accepted?1:0;
   }
   ++breakpointCount;
+  DWORD written=0;
+  WriteFile(breakpointOutput,row,static_cast<DWORD>(sizeof(row)),&written,nullptr);
+  // Best effort before the original continuation; partial output remains unqualified.
 }
 inline void configureBreakpointObservations() {
   wchar_t expected[2]{};
@@ -39,12 +42,6 @@ inline void configureBreakpointObservations() {
   if(breakpointOutput==INVALID_HANDLE_VALUE||GetFileType(breakpointOutput)!=FILE_TYPE_DISK)
     throw DWORD{ERROR_INVALID_HANDLE};
   scopes.setTestBreakpointObserver(observeBreakpoint);
-}
-inline void flushBreakpointObservations() noexcept {
-  if(!breakpointOutput||!breakpointCount) return;
-  DWORD written=0;
-  WriteFile(breakpointOutput,breakpointRows,static_cast<DWORD>(breakpointCount*sizeof(breakpointRows[0])),&written,nullptr);
-  // Missing/short output is an unqualified TEST observation, never an altered debug decision.
 }
 inline void checkAdmissionDeadline() {
   if(GetTickCount64()>=admissionDeadline) throw DWORD{WAIT_TIMEOUT};
@@ -150,7 +147,6 @@ inline bool run(DWORD rootPid,HANDLE root,HANDLE outer,std::unique_lock<std::tim
   }
   scopes.setTestAdmissionBarriers(admissionBarrier,admittedBarrier);
   const bool result=owned_service::runDebugLoop(rootPid,root,outer,stateLock,scopes,failure);
-  flushBreakpointObservations();
   if(result&&!admissionPath.empty()&&!admissionCompleted) {
     failure(Stage::Registry,ERROR_INVALID_DATA); return false;
   }
