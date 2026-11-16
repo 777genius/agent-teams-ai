@@ -1022,17 +1022,24 @@ describe('TeamTaskStallPolicy', () => {
             to: 'review',
             actor: 'bob',
           },
-          {
-            id: 'review-terminal-old',
-            type: terminalType,
-            timestamp: '2026-11-16T10:02:00.000Z',
-            from: 'review',
-            to: terminalType === 'review_completed' ? 'reviewed' : 'approved',
-            ...(terminalType === 'review_completed'
-              ? { reviewRequestId: 'review-request-old' }
-              : {}),
-            actor: terminalType === 'review_completed' ? 'bob' : 'user',
-          },
+          terminalType === 'review_completed'
+            ? {
+                id: 'review-terminal-old',
+                type: 'review_completed',
+                timestamp: '2026-11-16T10:02:00.000Z',
+                from: 'review',
+                to: 'reviewed',
+                reviewRequestId: 'review-request-old',
+                actor: 'bob',
+              }
+            : {
+                id: 'review-terminal-old',
+                type: 'human_approved',
+                timestamp: '2026-11-16T10:02:00.000Z',
+                from: 'review',
+                to: 'approved',
+                actor: 'user',
+              },
           {
             id: 'review-request-new',
             type: 'review_requested',
