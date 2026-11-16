@@ -1,0 +1,160 @@
+{
+  "kind": "PLAN63_ACTUAL_SOURCE_R2",
+  "decision": "ACCEPT_SOURCE_ONLY",
+  "reviewer": "/root/frontend_gaps",
+  "selectedPlanCommit": "3ac3619a1e67570e5eb211898f84e0b4e67a3c48",
+  "selectedPlanGitBlob": "aef084b3deb99f3d010db3a6d7bc1c452c77499d",
+  "baseSourceHead": "946488197cf45a9012e84c7a45b402c4eef17a90",
+  "packet": "/workspace/scratch/20ba97c23d57/cdp-pin-proposal/source",
+  "manifestSha256": "13a91ba91f41086a0e35f8ee693f0a31183ef181dcfff20cdb9fe18c4ea497d4",
+  "patchSha256": "f6d7856e09394f97b04017de8fb40e3ef50381c489bcff2964930e713cd95ac2",
+  "files": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "beforeGitBlob": "a41bff15e351d829d9cbb0197a7026ad09d6dc18",
+      "beforeSha256": "e649994d2311bc5fdc308c24167593d0c387ce4fef3a170f04b8e20c9402ffe1",
+      "beforeBytes": 22320,
+      "beforeLines": 343,
+      "afterGitBlob": "fc47d6a0a2c38b33e8a5a6439dbddc9ee240ce10",
+      "afterSha256": "aa3f5a3d846570be1066db23b657fda483216dcef15c1581903d007b6540e34f",
+      "afterBytes": 22366,
+      "afterLines": 344,
+      "addedLines": 1,
+      "removedLines": 0
+    }
+  ],
+  "arrays": [
+    {
+      "name": "desktopProofProcessSources",
+      "before": 27,
+      "after": 27
+    },
+    {
+      "name": "desktopProofSupplementarySources",
+      "before": 255,
+      "after": 256
+    },
+    {
+      "name": "desktopProofWindowsRetrySources",
+      "before": 46,
+      "after": 46
+    }
+  ],
+  "checks": [
+    {
+      "check": "Exact manifest binding",
+      "passed": true
+    },
+    {
+      "check": "Exact patch binding",
+      "passed": true
+    },
+    {
+      "check": "One source leaf",
+      "passed": true
+    },
+    {
+      "check": "before Git blob",
+      "passed": true
+    },
+    {
+      "check": "before SHA256",
+      "passed": true
+    },
+    {
+      "check": "before bytes",
+      "passed": true
+    },
+    {
+      "check": "before line count",
+      "passed": true
+    },
+    {
+      "check": "after Git blob",
+      "passed": true
+    },
+    {
+      "check": "after SHA256",
+      "passed": true
+    },
+    {
+      "check": "after bytes",
+      "passed": true
+    },
+    {
+      "check": "after line count",
+      "passed": true
+    },
+    {
+      "check": "Literal absent before",
+      "passed": true
+    },
+    {
+      "check": "Exactly one new literal",
+      "passed": true
+    },
+    {
+      "check": "Whole-file inverse is byte exact",
+      "passed": true
+    },
+    {
+      "check": "Patch is exactly the complete before/after diff",
+      "passed": true
+    },
+    {
+      "check": "desktopProofProcessSources expected counts",
+      "passed": true
+    },
+    {
+      "check": "desktopProofProcessSources byte exact unchanged",
+      "passed": true
+    },
+    {
+      "check": "desktopProofSupplementarySources expected counts",
+      "passed": true
+    },
+    {
+      "check": "desktopProofSupplementarySources old full ordered prefix preserved",
+      "passed": true
+    },
+    {
+      "check": "desktopProofSupplementarySources new final entry",
+      "passed": true
+    },
+    {
+      "check": "desktopProofWindowsRetrySources expected counts",
+      "passed": true
+    },
+    {
+      "check": "desktopProofWindowsRetrySources byte exact unchanged",
+      "passed": true
+    },
+    {
+      "check": "Unchanged official CDP bytes bound",
+      "passed": true
+    },
+    {
+      "check": "Unchanged failure projector bound",
+      "passed": true
+    },
+    {
+      "check": "Selected revision2 exact",
+      "passed": true
+    },
+    {
+      "check": "Prior reader review exact",
+      "passed": true
+    }
+  ],
+  "checkCount": 26,
+  "inheritedReaderReview": {
+    "path": "frontend-proposal/plan63-prospective-r2/prospective-r2.json",
+    "sha256": "a55b77390e299866355b636d0e93b12418ea840612889bf653b3ea64a3aca8cb",
+    "scope": "Shared ordinary Desktop, packaged/relaunch, same-Main Windows and V2 management source freezes and current receipt validators derive the ordered source roster; no fixed 1777-entry acceptance contract was found. The separate failure-frame allowlist continues to exclude scripts/e2e/."
+  },
+  "limits": [
+    "Only the one literal common source pin changes. The CDP client, budgets, awaiting, actions, diagnostics, failure projector and workflow are unchanged.",
+    "No source failure-cause or runtime PASS is claimed. Original PNG remains INCOMPLETE; all original required CI gates remain.",
+    "This review performs only inert text/hash comparisons and source reading, no project/provider/compiler/test/GUI/CI execution or remote mutation."
+  ]
+}
