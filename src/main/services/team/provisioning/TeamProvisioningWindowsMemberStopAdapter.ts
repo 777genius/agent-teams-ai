@@ -1,6 +1,6 @@
-import type { ChildProcess } from 'node:child_process';
-
 import { isOwnedWindowsTeamRuntimeWrapperProcess } from './TeamProvisioningWindowsRuntimeLauncher';
+
+import type { ChildProcess } from 'node:child_process';
 
 /** Native Windows process-stop adapter wired by the provisioning composition root. */
 const WINDOWS_ORIGINAL_MEMBER_EXIT_TIMEOUT_MS = 15_000;
@@ -82,8 +82,10 @@ async function stopWindowsMemberTreeThenHandle(
   if (treeError && handleError) {
     throw new AggregateError([treeError, handleError], 'Windows teammate stop unconfirmed');
   }
-  if (treeError) throw treeError;
-  if (handleError) throw handleError;
+  if (treeError instanceof Error) throw treeError;
+  if (treeError) throw new Error('Windows teammate custody check failed', { cause: treeError });
+  if (handleError instanceof Error) throw handleError;
+  if (handleError) throw new Error('Windows teammate handle stop failed', { cause: handleError });
 }
 
 /** Independent stop attempts: one uncooperative member must not spare another. */

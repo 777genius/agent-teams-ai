@@ -238,11 +238,9 @@ function extractArchive(archivePath, extractDir, archiveKind) {
 
   if (archiveKind === 'zip') {
     if (process.platform === 'win32') {
-      runOrThrow('powershell', [
-        '-NoProfile',
-        '-Command',
-        `Expand-Archive -LiteralPath '${archivePath.replace(/'/g, "''")}' -DestinationPath '${extractDir.replace(/'/g, "''")}' -Force`,
-      ]);
+      // Windows ships tar.exe with ZIP support. Unlike Expand-Archive, this
+      // avoids PowerShell Archive module / .NET overload incompatibilities.
+      runOrThrow('tar', ['-xf', archivePath, '-C', extractDir]);
       return;
     }
 

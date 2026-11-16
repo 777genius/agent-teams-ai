@@ -930,7 +930,7 @@ describe('TeamInboxWriter', () => {
   });
 
   it('returns the appended identity after a transient duplicate-merge retry', async () => {
-    await writer.sendMessage('my-team', {
+    const original = await writer.sendMessage('my-team', {
       member: 'user', from: 'alice', to: 'user', text: 'Same reply',
       source: 'runtime_delivery', relayOfMessageId: 'inbound-race',
     });
@@ -946,12 +946,13 @@ describe('TeamInboxWriter', () => {
       source: 'runtime_delivery', relayOfMessageId: 'inbound-race',
       taskRefs: [{ taskId: 'task-2', displayId: 'efgh5678', teamName: 'my-team' }],
     });
-    expect(result).toMatchObject({ deliveredToInbox: true, messageId: 'msg-2' });
+    expect(result.deliveredToInbox).toBe(true);
+    expect(result.messageId).not.toBe(original.messageId);
     expect(result.deduplicated).toBeUndefined();
     const persisted = JSON.parse(hoisted.files.get('/mock/teams/my-team/inboxes/user.json') ??
       '[]') as { messageId: string }[];
     expect(persisted).toHaveLength(1);
-    expect(persisted[0]?.messageId).toBe('msg-2');
+    expect(persisted[0]?.messageId).toBe(result.messageId);
   });
 
   it('merges taskRefs into an exact runtime delivery reply row', async () => {

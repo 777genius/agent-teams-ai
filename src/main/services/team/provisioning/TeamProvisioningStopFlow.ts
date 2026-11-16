@@ -1,7 +1,3 @@
-import type { ChildProcess } from 'node:child_process';
-
-import type { TeamProvisioningProgress } from '@shared/types';
-
 import {
   type AnthropicApiKeyHelperRunOwner,
   cleanupRunOwnedAnthropicApiKeyHelper,
@@ -10,6 +6,9 @@ import {
   cancelRunLeadRelayCapture,
   type LeadRelayCaptureOwner,
 } from './TeamProvisioningLeadRelayCancellation';
+
+import type { TeamProvisioningProgress } from '@shared/types';
+import type { ChildProcess } from 'node:child_process';
 
 interface StopLogger {
   info(message: string): void;

@@ -1,4 +1,3 @@
-import type { ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -13,14 +12,15 @@ import {
   stopTeamFlow,
   type TeamProvisioningStopTeamPorts,
 } from '../TeamProvisioningStopFlow';
-import { stopOriginalWindowsDirectMembers } from '../TeamProvisioningWindowsMemberStopAdapter';
 import {
   createTeamProvisioningTransientRunStatePorts,
   TeamProvisioningTransientRunState,
 } from '../TeamProvisioningTransientRunState';
+import { stopOriginalWindowsDirectMembers } from '../TeamProvisioningWindowsMemberStopAdapter';
 
 import type { AnthropicTeamApiKeyHelperMaterial } from '../../../runtime/anthropicTeamApiKeyHelper';
 import type { TeamProvisioningProgress } from '@shared/types';
+import type { ChildProcess } from 'node:child_process';
 
 interface StopFlowRun {
   runId: string;
