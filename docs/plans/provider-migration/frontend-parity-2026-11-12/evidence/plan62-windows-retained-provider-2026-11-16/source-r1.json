@@ -1,0 +1,457 @@
+{
+  "kind": "PLAN62_ACTUAL_SOURCE_R1",
+  "decision": "READY_FOR_INDEPENDENT_SOURCE_R2",
+  "baseCommit": "5310b4a7b7b888c1715ef904d009b6b5cac8a087",
+  "planCommit": "5310b4a7b7b888c1715ef904d009b6b5cac8a087",
+  "planSha256": "767505513a51a092d8dca560c65cf0aa9acd019c63b2c07b475256cc0fb338ae",
+  "manifestSha256": "34bb4252554663b628fa65268b12103d21f12bed37f62e5be60b90dc34f2e621",
+  "patchSha256": "6e8922682c76eda750b91c0240d8c4f51f9c6d8bf9c78936ca36c9986bf5cba7",
+  "inverseProofSha256": "018b7c4c591a4f8ddcd78310841a2758663c6bf640587e327d93b4eba3516405",
+  "method": "Inert byte/hash/hunk and source inspection only. Function regions end at their closing brace; adjacent file separators are not function bytes. Source bodies remain frozen.",
+  "checks": [
+    {
+      "name": "frozen-manifest",
+      "passed": true
+    },
+    {
+      "name": "frozen-patch",
+      "passed": true
+    },
+    {
+      "name": "eight-full-forward-inverse",
+      "passed": true
+    },
+    {
+      "name": "postimage:tools/owned-process-broker/nativeVendorInputs.ts",
+      "passed": true
+    },
+    {
+      "name": "immutable-preimage:tools/owned-process-broker/nativeVendorInputs.ts",
+      "passed": true
+    },
+    {
+      "name": "postimage:tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "passed": true
+    },
+    {
+      "name": "immutable-preimage:tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "passed": true
+    },
+    {
+      "name": "postimage:tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+      "passed": true
+    },
+    {
+      "name": "immutable-preimage:tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+      "passed": true
+    },
+    {
+      "name": "postimage:packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "passed": true
+    },
+    {
+      "name": "immutable-preimage:packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "passed": true
+    },
+    {
+      "name": "postimage:packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "passed": true
+    },
+    {
+      "name": "immutable-preimage:packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "passed": true
+    },
+    {
+      "name": "postimage:.github/workflows/sentry-owned-process-native.yml",
+      "passed": true
+    },
+    {
+      "name": "immutable-preimage:.github/workflows/sentry-owned-process-native.yml",
+      "passed": true
+    },
+    {
+      "name": "postimage:tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "name": "immutable-preimage:tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "name": "postimage:tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+      "passed": true
+    },
+    {
+      "name": "closed-eight-paths",
+      "passed": true
+    },
+    {
+      "name": "natural-max794",
+      "passed": true
+    },
+    {
+      "name": "published-plan",
+      "passed": true
+    },
+    {
+      "name": "corrected-donor-equality:tools/owned-process-broker/nativeVendorInputs.ts",
+      "passed": true
+    },
+    {
+      "name": "corrected-donor-equality:tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+      "passed": true
+    },
+    {
+      "name": "corrected-donor-equality:packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "passed": true
+    },
+    {
+      "name": "corrected-donor-equality:.github/workflows/sentry-owned-process-native.yml",
+      "passed": true
+    },
+    {
+      "name": "corrected-donor-equality:tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+      "passed": true
+    },
+    {
+      "name": "Claude-downloader-function-through-closing-brace",
+      "passed": true
+    },
+    {
+      "name": "current-Gate-entire-RPC-cutoff-diagnostic-rethrow",
+      "passed": true
+    },
+    {
+      "name": "Claude-ordinary-native-turn-and-terminal-cutoff",
+      "passed": true
+    },
+    {
+      "name": "original-profile-before-optional-configuration",
+      "passed": true
+    },
+    {
+      "name": "Host-timeout-values-identical",
+      "passed": true
+    },
+    {
+      "name": "one-opening-clock-after-client-start",
+      "passed": true
+    },
+    {
+      "name": "attempt-before-dispatch-witness-before-return",
+      "passed": true
+    },
+    {
+      "name": "Claude-process-model-options",
+      "passed": true
+    },
+    {
+      "name": "Scenario-request-minus-provider-only-remaining-callback",
+      "passed": true
+    },
+    {
+      "name": "original-cold-successor-and-scoped-Stop",
+      "passed": true
+    },
+    {
+      "name": "old-Claude-notification-body-preserved",
+      "passed": true,
+      "detail": "Indentation changes only inside new explicit !providerFixture arm; old loop and assertions remain."
+    },
+    {
+      "name": "original35s-business-clock",
+      "passed": true
+    },
+    {
+      "name": "native-response-encoder-terminal-close:packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "passed": true
+    },
+    {
+      "name": "original-bounds:packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "passed": true
+    },
+    {
+      "name": "exclusive-option-and-explicit-terminal:packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "passed": true
+    },
+    {
+      "name": "native-response-encoder-terminal-close:packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "passed": true
+    },
+    {
+      "name": "original-bounds:packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "passed": true
+    },
+    {
+      "name": "exclusive-option-and-explicit-terminal:packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "passed": true
+    },
+    {
+      "name": "configured-V1-exact-fragment-1",
+      "passed": true
+    },
+    {
+      "name": "configured-V1-exact-fragment-2",
+      "passed": true
+    },
+    {
+      "name": "configured-V1-exact-fragment-3",
+      "passed": true
+    },
+    {
+      "name": "configured-V1-exact-fragment-4",
+      "passed": true
+    },
+    {
+      "name": "configured-V1-exact-fragment-5",
+      "passed": true
+    },
+    {
+      "name": "configured-V1-exact-fragment-6",
+      "passed": true
+    },
+    {
+      "name": "original-V1-probe-body-minus-selected-retained-guards",
+      "passed": true
+    },
+    {
+      "name": "only-one-integration-exclusion",
+      "passed": true
+    },
+    {
+      "name": "retained-host-config-byte-unchanged",
+      "passed": true
+    },
+    {
+      "name": "entire-original-workflow-minus-one25line-block",
+      "passed": true
+    },
+    {
+      "name": "one-new-step-two-closed-selectors",
+      "passed": true
+    },
+    {
+      "name": "helper-no-new-HTTP-or-native-spawn",
+      "passed": true
+    },
+    {
+      "name": "standalone-receipt-zero-initial",
+      "passed": true
+    },
+    {
+      "name": "exact-root-stage-counts",
+      "passed": true
+    },
+    {
+      "name": "current-c930-archive-unchanged",
+      "passed": true
+    }
+  ],
+  "passed": 59,
+  "total": 59,
+  "unchangedRegions": [
+    {
+      "name": "Claude-downloader-function-through-closing-brace",
+      "bytes": 2616,
+      "sha256": "544117d71e5845c01ba2780ddf610da22e582c2c5331286b2240e0c1c4b3e867"
+    },
+    {
+      "name": "current-Gate-entire-RPC-cutoff-diagnostic-rethrow",
+      "bytes": 1574,
+      "sha256": "6b53a86ef3eff79fb1e6d0941aba56cdb6ac6644fbc2d26a58cf4c6824f37a2a"
+    },
+    {
+      "name": "Claude-ordinary-native-turn-and-terminal-cutoff",
+      "bytes": 2693,
+      "sha256": "ec94888a64571fbe32cd11bc5b13792b5ac25431f3c401a0cae4851613310125"
+    },
+    {
+      "name": "original-profile-before-optional-configuration",
+      "bytes": 4418,
+      "sha256": "93ccca7efe12b3a2b847b3cb29b19b43e6d969bc617e2954123b200189bb15f0"
+    },
+    {
+      "name": "Claude-process-model-options",
+      "bytes": 953,
+      "sha256": "14769329773884ca449a985ce92314f4593b7be86da767873bc9f4fb70ac2563"
+    },
+    {
+      "name": "Scenario-request-minus-provider-only-remaining-callback",
+      "bytes": 791,
+      "sha256": "f1722dcdec7adc6b338bb25af37dad217a73685b8883c2c9b350643a7efb7068"
+    },
+    {
+      "name": "original-cold-successor-and-scoped-Stop",
+      "bytes": 2123,
+      "sha256": "83bc27baf6e8be40dd4baa09c52d614d924529b43552776c9628057f42cbe698"
+    },
+    {
+      "name": "native-response-encoder-terminal-close:packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "bytes": 4205,
+      "sha256": "d49872e725564995c38a15fbc6f11fa676f8aefd379276199f864dc43b1d2ad1"
+    },
+    {
+      "name": "native-response-encoder-terminal-close:packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "bytes": 3641,
+      "sha256": "4047b84cd08ff4fa38b0f1991c17511919310b107f154063bbe7a3c625399c96"
+    },
+    {
+      "name": "original-V1-probe-body-minus-selected-retained-guards",
+      "bytes": 1860,
+      "sha256": "c3adb389a1b3db98899a0a6ff6d99c0c8d6d853ebf679aeb462de7dcd80c92e7"
+    },
+    {
+      "name": "entire-original-workflow-minus-one25line-block",
+      "bytes": 39878,
+      "sha256": "2d84faae57ad758575935dc760df6561d219f16ee8c0bd615006ca3d88837357"
+    }
+  ],
+  "files": [
+    {
+      "path": "tools/owned-process-broker/nativeVendorInputs.ts",
+      "newFile": false,
+      "beforeGitBlob": "9e6a4756d79defb424cb18967089afeb221d077d",
+      "beforeSha256": "b9e80eec40a2d74dfc5b1f5fa0c80e7b1f487e5362c1ab03b4926b1f77e2680f",
+      "beforeBytes": 5428,
+      "beforeLines": 94,
+      "afterGitBlob": "c46fe3a59d8676cbc921171f5683da03c0247f36",
+      "afterSha256": "fe74eda0b65b286e862e7b72362117616174dd0f19d3da682a0cac541fe85a91",
+      "afterBytes": 11979,
+      "afterLines": 201,
+      "addedLines": 112,
+      "removedLines": 5,
+      "equalsHistoricalCorrectedDonor": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "newFile": false,
+      "beforeGitBlob": "d7a56276a6baa63ee65a357a98fc52c7cfe03bdd",
+      "beforeSha256": "72eb24e9aca12f4bf283625a311cd60ce58c9c5b5c2e7beeaecc3a1b2185f8cc",
+      "beforeBytes": 25732,
+      "beforeLines": 614,
+      "afterGitBlob": "8cd7d429d668d533cd448bc14ce556c7adf5073f",
+      "afterSha256": "3913d14da42b0848763ee89ab99030a57803ad8797ecb42a7cd8200c8dda4429",
+      "afterBytes": 27977,
+      "afterLines": 642,
+      "addedLines": 51,
+      "removedLines": 23,
+      "equalsHistoricalCorrectedDonor": false
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+      "newFile": false,
+      "beforeGitBlob": "f7c6d8f6a637f55b4cd1a142add89443207efc40",
+      "beforeSha256": "e353f4db836026a95633d36c581c3ad035ce8f6d5638ef867a4771c24354ca83",
+      "beforeBytes": 35180,
+      "beforeLines": 524,
+      "afterGitBlob": "fce5ce7418b8ff4581fcadf0fc47e6118917af49",
+      "afterSha256": "865c5baf02f113b4e46a3b12b812bd970bac3295678f05e1e199c5ce27436640",
+      "afterBytes": 36616,
+      "afterLines": 541,
+      "addedLines": 30,
+      "removedLines": 13,
+      "equalsHistoricalCorrectedDonor": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "newFile": false,
+      "beforeGitBlob": "7f9ea9b1ac8804ece51735e23f169ea4db86f97e",
+      "beforeSha256": "3d680cffe94fa083bbe6cb034f4f2384b757c5be2e4bc88206651b0cb55d31d7",
+      "beforeBytes": 29544,
+      "beforeLines": 715,
+      "afterGitBlob": "02c6f7cff1655272888047a637ea9286585688a0",
+      "afterSha256": "8b81665d2633d639b6450aba0a2c57a68a996e2ec36351a977bccace8b9cb708",
+      "afterBytes": 32330,
+      "afterLines": 769,
+      "addedLines": 56,
+      "removedLines": 2,
+      "equalsHistoricalCorrectedDonor": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "newFile": false,
+      "beforeGitBlob": "ff0aeba42e3a4e845428146969360dff91c25de8",
+      "beforeSha256": "f25659fe4c89e30072e9c2bc923fcdf6f1a3dd2efdca81387659e485170c74c3",
+      "beforeBytes": 38584,
+      "beforeLines": 753,
+      "afterGitBlob": "3953930cdb3aa2a1879fc65cc3d38586829ffdf0",
+      "afterSha256": "23acd95539e17610a6e2df3862f935f01790a92c7390f3e0f1c0ddbf46d6a1a2",
+      "afterBytes": 40896,
+      "afterLines": 794,
+      "addedLines": 44,
+      "removedLines": 3,
+      "equalsHistoricalCorrectedDonor": false
+    },
+    {
+      "path": ".github/workflows/sentry-owned-process-native.yml",
+      "newFile": false,
+      "beforeGitBlob": "1188fa5b89d59b739d927082d1b6954a57181819",
+      "beforeSha256": "2d84faae57ad758575935dc760df6561d219f16ee8c0bd615006ca3d88837357",
+      "beforeBytes": 39878,
+      "beforeLines": 495,
+      "afterGitBlob": "ea58acfd0f9bc17578376ff2863b030b5f4bf3dd",
+      "afterSha256": "c8d92192f66bcf30cd2991c75f201aacc5fabc482fec9d116525b01543117190",
+      "afterBytes": 46332,
+      "afterLines": 520,
+      "addedLines": 25,
+      "removedLines": 0,
+      "equalsHistoricalCorrectedDonor": true
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "newFile": false,
+      "beforeGitBlob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+      "beforeSha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+      "beforeBytes": 557,
+      "beforeLines": 6,
+      "afterGitBlob": "2d0a94f85c2d23232f9ce1a7375e7765f552ebb9",
+      "afterSha256": "d503beb57a0e2e41d81c89a73349acbecd1f7e1c958b3d732db4500bd532fb21",
+      "afterBytes": 593,
+      "afterLines": 6,
+      "addedLines": 1,
+      "removedLines": 1,
+      "equalsHistoricalCorrectedDonor": false
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+      "newFile": true,
+      "beforeGitBlob": null,
+      "beforeSha256": null,
+      "beforeBytes": 0,
+      "beforeLines": 0,
+      "afterGitBlob": "09971225cc43125424e72bc6ffcf267d52d5d99a",
+      "afterSha256": "87ca146d9835de136c88439f7721900c2a78fcba610b1f9ec16b9ae583a91435",
+      "afterBytes": 38878,
+      "afterLines": 531,
+      "addedLines": 531,
+      "removedLines": 0,
+      "equalsHistoricalCorrectedDonor": true
+    }
+  ],
+  "sourceReview": [
+    "Full selected diffs and corrected helper reviewed. Five exact corrected0099 postimages are source reuse, not execution qualification.",
+    "Current Gate full RPC/failure diagnostic/rethrow, old Claude ordinary native-turn/terminal-cutoff, profile core and timeout fields preserved.",
+    "V1 configured preparation option/construction/request/return port and shared probe responder remain exact. Old full probe body retained under the selected additional retained-mode guards.",
+    "Both native response encoders/terminal writers/close bodies remain byte-identical; no synthetic MCP result or bypassed native decoder.",
+    "Closed ledger counts every attempt before original dispatch and holds each prepared suspended HANDLE witness before return. Original service Stop/drain/release and cold zero-allocation/input/capture assertions remain.",
+    "Entire Sentry workflow is byte-identical after removing one 25-line block; old Claude prerequisites, Draft gate, matrix, permissions, budgets and uploads unchanged.",
+    "Original callback-shaped remaining budgets, endpoint deadline timer and physical cleanup assertions preserved. No new independent budget/cache/ignored refusal/native protocol/production API.",
+    "No executable result claimed. Existing compiler/protocol gates and authorized original exact-head Windows receipts remain required."
+  ],
+  "execution": {
+    "repoCodeExecuted": false,
+    "compilerExecuted": false,
+    "testsExecuted": false,
+    "providersExecuted": false,
+    "nativeExecuted": false,
+    "ciPolledOrMutated": false,
+    "remoteOrGitMutations": false,
+    "onlyInertLocalSourceEditsAndDataAnalysis": true
+  },
+  "remaining": [
+    "Installer independent full actual-source R2",
+    "Root exact parent/tree lease and publication",
+    "Original compiler/protocol gates",
+    "Authorized original Windows x64/ARM64 native receipts; no source-only parity PASS"
+  ]
+}

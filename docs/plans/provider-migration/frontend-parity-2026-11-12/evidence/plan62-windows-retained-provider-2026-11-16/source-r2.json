@@ -1,0 +1,564 @@
+{
+  "kind": "PLAN62_INDEPENDENT_ACTUAL_SOURCE_R2",
+  "decision": "ACCEPT_SOURCE_ONLY",
+  "reviewer": "installer_review",
+  "selectedPlan": {
+    "commit": "5310b4a7b7b888c1715ef904d009b6b5cac8a087",
+    "gitBlob": "74c8b4dadac0d444a2649a7dd165740af064eae8",
+    "sha256": "767505513a51a092d8dca560c65cf0aa9acd019c63b2c07b475256cc0fb338ae",
+    "independentOfficialReadback": "installer-review/published-plan.md"
+  },
+  "preparedParent": "5310b4a7b7b888c1715ef904d009b6b5cac8a087",
+  "immutableReadHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+  "semanticDonor": "0099a7636013e78c3b35e1e5c3870b12ef81559d",
+  "frozenManifest": {
+    "path": "source/manifest.json",
+    "sha256": "34bb4252554663b628fa65268b12103d21f12bed37f62e5be60b90dc34f2e621",
+    "bytes": 5807
+  },
+  "frozenPatch": {
+    "path": "source/source.patch",
+    "sha256": "6e8922682c76eda750b91c0240d8c4f51f9c6d8bf9c78936ca36c9986bf5cba7",
+    "bytes": 90449,
+    "added": 850,
+    "removed": 47,
+    "hunks": 45
+  },
+  "files": [
+    {
+      "path": "tools/owned-process-broker/nativeVendorInputs.ts",
+      "newFile": false,
+      "beforeGitBlob": "9e6a4756d79defb424cb18967089afeb221d077d",
+      "afterGitBlob": "c46fe3a59d8676cbc921171f5683da03c0247f36",
+      "afterSha256": "fe74eda0b65b286e862e7b72362117616174dd0f19d3da682a0cac541fe85a91",
+      "afterBytes": 11979,
+      "afterLines": 201
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "newFile": false,
+      "beforeGitBlob": "d7a56276a6baa63ee65a357a98fc52c7cfe03bdd",
+      "afterGitBlob": "8cd7d429d668d533cd448bc14ce556c7adf5073f",
+      "afterSha256": "3913d14da42b0848763ee89ab99030a57803ad8797ecb42a7cd8200c8dda4429",
+      "afterBytes": 27977,
+      "afterLines": 642
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+      "newFile": false,
+      "beforeGitBlob": "f7c6d8f6a637f55b4cd1a142add89443207efc40",
+      "afterGitBlob": "fce5ce7418b8ff4581fcadf0fc47e6118917af49",
+      "afterSha256": "865c5baf02f113b4e46a3b12b812bd970bac3295678f05e1e199c5ce27436640",
+      "afterBytes": 36616,
+      "afterLines": 541
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "newFile": false,
+      "beforeGitBlob": "7f9ea9b1ac8804ece51735e23f169ea4db86f97e",
+      "afterGitBlob": "02c6f7cff1655272888047a637ea9286585688a0",
+      "afterSha256": "8b81665d2633d639b6450aba0a2c57a68a996e2ec36351a977bccace8b9cb708",
+      "afterBytes": 32330,
+      "afterLines": 769
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "newFile": false,
+      "beforeGitBlob": "ff0aeba42e3a4e845428146969360dff91c25de8",
+      "afterGitBlob": "3953930cdb3aa2a1879fc65cc3d38586829ffdf0",
+      "afterSha256": "23acd95539e17610a6e2df3862f935f01790a92c7390f3e0f1c0ddbf46d6a1a2",
+      "afterBytes": 40896,
+      "afterLines": 794
+    },
+    {
+      "path": ".github/workflows/sentry-owned-process-native.yml",
+      "newFile": false,
+      "beforeGitBlob": "1188fa5b89d59b739d927082d1b6954a57181819",
+      "afterGitBlob": "ea58acfd0f9bc17578376ff2863b030b5f4bf3dd",
+      "afterSha256": "c8d92192f66bcf30cd2991c75f201aacc5fabc482fec9d116525b01543117190",
+      "afterBytes": 46332,
+      "afterLines": 520
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "newFile": false,
+      "beforeGitBlob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+      "afterGitBlob": "2d0a94f85c2d23232f9ce1a7375e7765f552ebb9",
+      "afterSha256": "d503beb57a0e2e41d81c89a73349acbecd1f7e1c958b3d732db4500bd532fb21",
+      "afterBytes": 593,
+      "afterLines": 6
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+      "newFile": true,
+      "beforeGitBlob": null,
+      "afterGitBlob": "09971225cc43125424e72bc6ffcf267d52d5d99a",
+      "afterSha256": "87ca146d9835de136c88439f7721900c2a78fcba610b1f9ec16b9ae583a91435",
+      "afterBytes": 38878,
+      "afterLines": 531
+    }
+  ],
+  "inertChecks": {
+    "passed": 93,
+    "total": 93,
+    "checks": [
+      {
+        "name": "frozen-manifest",
+        "passed": true
+      },
+      {
+        "name": "frozen-patch",
+        "passed": true
+      },
+      {
+        "name": "independent-official-selected-plan",
+        "passed": true
+      },
+      {
+        "name": "selected-parent",
+        "passed": true
+      },
+      {
+        "name": "eight-selected-files",
+        "passed": true
+      },
+      {
+        "name": "after-tree-exact",
+        "passed": true
+      },
+      {
+        "name": "before-tree-exact",
+        "passed": true
+      },
+      {
+        "name": "after-bytes:tools/owned-process-broker/nativeVendorInputs.ts",
+        "passed": true
+      },
+      {
+        "name": "before-bytes:tools/owned-process-broker/nativeVendorInputs.ts",
+        "passed": true
+      },
+      {
+        "name": "donor-relation:tools/owned-process-broker/nativeVendorInputs.ts",
+        "passed": true
+      },
+      {
+        "name": "natural-line-cap:tools/owned-process-broker/nativeVendorInputs.ts",
+        "passed": true
+      },
+      {
+        "name": "after-bytes:tools/owned-process-broker/nativeRetainedHostGate.ts",
+        "passed": true
+      },
+      {
+        "name": "before-bytes:tools/owned-process-broker/nativeRetainedHostGate.ts",
+        "passed": true
+      },
+      {
+        "name": "donor-relation:tools/owned-process-broker/nativeRetainedHostGate.ts",
+        "passed": true
+      },
+      {
+        "name": "natural-line-cap:tools/owned-process-broker/nativeRetainedHostGate.ts",
+        "passed": true
+      },
+      {
+        "name": "after-bytes:tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+        "passed": true
+      },
+      {
+        "name": "before-bytes:tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+        "passed": true
+      },
+      {
+        "name": "donor-relation:tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+        "passed": true
+      },
+      {
+        "name": "natural-line-cap:tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+        "passed": true
+      },
+      {
+        "name": "after-bytes:packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+        "passed": true
+      },
+      {
+        "name": "before-bytes:packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+        "passed": true
+      },
+      {
+        "name": "donor-relation:packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+        "passed": true
+      },
+      {
+        "name": "natural-line-cap:packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+        "passed": true
+      },
+      {
+        "name": "after-bytes:packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+        "passed": true
+      },
+      {
+        "name": "before-bytes:packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+        "passed": true
+      },
+      {
+        "name": "donor-relation:packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+        "passed": true
+      },
+      {
+        "name": "natural-line-cap:packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+        "passed": true
+      },
+      {
+        "name": "after-bytes:.github/workflows/sentry-owned-process-native.yml",
+        "passed": true
+      },
+      {
+        "name": "before-bytes:.github/workflows/sentry-owned-process-native.yml",
+        "passed": true
+      },
+      {
+        "name": "donor-relation:.github/workflows/sentry-owned-process-native.yml",
+        "passed": true
+      },
+      {
+        "name": "natural-line-cap:.github/workflows/sentry-owned-process-native.yml",
+        "passed": true
+      },
+      {
+        "name": "after-bytes:tools/owned-process-broker/tsconfig.json",
+        "passed": true
+      },
+      {
+        "name": "before-bytes:tools/owned-process-broker/tsconfig.json",
+        "passed": true
+      },
+      {
+        "name": "donor-relation:tools/owned-process-broker/tsconfig.json",
+        "passed": true
+      },
+      {
+        "name": "natural-line-cap:tools/owned-process-broker/tsconfig.json",
+        "passed": true
+      },
+      {
+        "name": "after-bytes:tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+        "passed": true
+      },
+      {
+        "name": "donor-relation:tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+        "passed": true
+      },
+      {
+        "name": "natural-line-cap:tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+        "passed": true
+      },
+      {
+        "name": "patch-exact-paths",
+        "passed": true
+      },
+      {
+        "name": "forward-full-file:tools/owned-process-broker/nativeVendorInputs.ts",
+        "passed": true
+      },
+      {
+        "name": "inverse-full-file:tools/owned-process-broker/nativeVendorInputs.ts",
+        "passed": true
+      },
+      {
+        "name": "forward-full-file:tools/owned-process-broker/nativeRetainedHostGate.ts",
+        "passed": true
+      },
+      {
+        "name": "inverse-full-file:tools/owned-process-broker/nativeRetainedHostGate.ts",
+        "passed": true
+      },
+      {
+        "name": "forward-full-file:tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+        "passed": true
+      },
+      {
+        "name": "inverse-full-file:tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+        "passed": true
+      },
+      {
+        "name": "forward-full-file:packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+        "passed": true
+      },
+      {
+        "name": "inverse-full-file:packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+        "passed": true
+      },
+      {
+        "name": "forward-full-file:packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+        "passed": true
+      },
+      {
+        "name": "inverse-full-file:packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+        "passed": true
+      },
+      {
+        "name": "forward-full-file:.github/workflows/sentry-owned-process-native.yml",
+        "passed": true
+      },
+      {
+        "name": "inverse-full-file:.github/workflows/sentry-owned-process-native.yml",
+        "passed": true
+      },
+      {
+        "name": "forward-full-file:tools/owned-process-broker/tsconfig.json",
+        "passed": true
+      },
+      {
+        "name": "inverse-full-file:tools/owned-process-broker/tsconfig.json",
+        "passed": true
+      },
+      {
+        "name": "forward-full-file:tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+        "passed": true
+      },
+      {
+        "name": "inverse-full-file:tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+        "passed": true
+      },
+      {
+        "name": "patch-size-and-counts",
+        "passed": true
+      },
+      {
+        "name": "current-rpc-whole-body-byte-preserved",
+        "passed": true
+      },
+      {
+        "name": "current-terminal-and-old-graceful-crash-byte-preserved",
+        "passed": true
+      },
+      {
+        "name": "original-host-timeout-fields-byte-preserved",
+        "passed": true
+      },
+      {
+        "name": "configured-before-source-and-capture",
+        "passed": true
+      },
+      {
+        "name": "one-provider-opening-clock",
+        "passed": true
+      },
+      {
+        "name": "ordinary-physical-owner-order",
+        "passed": true
+      },
+      {
+        "name": "workflow-original-fullbytes-after-removing-one-step",
+        "passed": true
+      },
+      {
+        "name": "workflow-two-sequential-cases",
+        "passed": true
+      },
+      {
+        "name": "workflow-after-all-Claude-validators",
+        "passed": true
+      },
+      {
+        "name": "workflow-role-order-and-census-ordinals",
+        "passed": true
+      },
+      {
+        "name": "workflow-immutable-uniqueness-and-cleanup",
+        "passed": true
+      },
+      {
+        "name": "workflow-native-scopes-not-overclaimed",
+        "passed": true
+      },
+      {
+        "name": "Claude-vendor-entire-body-preserved",
+        "passed": true
+      },
+      {
+        "name": "exact-four-new-archive-pins",
+        "passed": true
+      },
+      {
+        "name": "new-input-ceilings-and-no-archive-path-output",
+        "passed": true
+      },
+      {
+        "name": "low-level-config-only-one-new-exclusion",
+        "passed": true
+      },
+      {
+        "name": "retained-host-compiler-boundary-not-edited",
+        "passed": true
+      },
+      {
+        "name": "current-V1-configured-shared-reply-survives",
+        "passed": true
+      },
+      {
+        "name": "current-V1-no-inline-SSE-rollback",
+        "passed": true
+      },
+      {
+        "name": "both-models-retained-options-exclusive",
+        "passed": true
+      },
+      {
+        "name": "both-models-explicit-undefined-terminal",
+        "passed": true
+      },
+      {
+        "name": "both-models-existing-HTTP-budget-retained",
+        "passed": true
+      },
+      {
+        "name": "public-c930-codex-entry",
+        "passed": true
+      },
+      {
+        "name": "Codex-empty-catalog-not-native-evidence",
+        "passed": true
+      },
+      {
+        "name": "V1-initial-admission-before-hash",
+        "passed": true
+      },
+      {
+        "name": "V1-standalone-private-receipt-completion",
+        "passed": true
+      },
+      {
+        "name": "V1-private-receipt-bounded-identity-read",
+        "passed": true
+      },
+      {
+        "name": "V1-raw-management-one-start-and-read-only",
+        "passed": true
+      },
+      {
+        "name": "full-immutable-launch-role-check",
+        "passed": true
+      },
+      {
+        "name": "independent-witness-before-resume",
+        "passed": true
+      },
+      {
+        "name": "strict-root-release-chain",
+        "passed": true
+      },
+      {
+        "name": "cold-successor-no-operations",
+        "passed": true
+      },
+      {
+        "name": "four-POST-closed-model-contract",
+        "passed": true
+      },
+      {
+        "name": "actual-business-and-stops-original-bounds",
+        "passed": true
+      },
+      {
+        "name": "Claude-notification-assertions-still-exact",
+        "passed": true
+      },
+      {
+        "name": "both-scoped-Stop-original-tuple-and-unknown-signal",
+        "passed": true
+      },
+      {
+        "name": "caps-no-increase",
+        "passed": true
+      }
+    ]
+  },
+  "completePatchReplay": [
+    {
+      "path": "tools/owned-process-broker/nativeVendorInputs.ts",
+      "hunks": 2,
+      "forwardExact": true,
+      "inverseExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "hunks": 12,
+      "forwardExact": true,
+      "inverseExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+      "hunks": 11,
+      "forwardExact": true,
+      "inverseExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "hunks": 7,
+      "forwardExact": true,
+      "inverseExact": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "hunks": 10,
+      "forwardExact": true,
+      "inverseExact": true
+    },
+    {
+      "path": ".github/workflows/sentry-owned-process-native.yml",
+      "hunks": 1,
+      "forwardExact": true,
+      "inverseExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "hunks": 1,
+      "forwardExact": true,
+      "inverseExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+      "hunks": 1,
+      "forwardExact": true,
+      "inverseExact": true
+    }
+  ],
+  "sourceFindings": [
+    {
+      "area": "scope and current-source preservation",
+      "finding": "Exactly seven existing TEST/build/workflow files plus one new TEST helper. Five postimages are byte-identical to the corrected semantic donor; current Gate cutoff, current V1 configured preparation/shared reply, and current low-level exclusions are retained in the three adapted files. No production, package, provider pin, SPI, lock, public API or activation mutation."
+    },
+    {
+      "area": "provider recipes and authority",
+      "finding": "Configuration occurs before profile serialization/hash and physical Main owner capture. Real public provider construction consumes selected immutable recipes. Every original native capability is recorded and every committed launch is checked against full executable/cwd/argv/environment. The member capability is selected by decoded role, not latest PID. Independent original HANDLE witnesses are captured while prepared roots remain suspended."
+    },
+    {
+      "area": "metadata, census and standalone probe",
+      "finding": "Codex metadata has no inference and its original root is confirmed released before Open; four opening census roots plus one presubmit census are checked. V1 admits one raw ordinary management probe, bounded same-ID reads, full private receipt/selection/resource join and physical root/endpoint release, then zero initial model probes. Current ordinary configured-launch preparation and shared model responder are preserved."
+    },
+    {
+      "area": "finite native business and cold Host",
+      "finding": "Exactly one source-dispatched original bootstrap reaches four linked native requests: shell, primary registration, neighbor registration and explicit terminal. Actual previous outputs and immutable registration tuples are verified. Both original public scoped Stops retain bounded deadlines, settlement and original HANDLE checks, neighbor/member survival, one same-Main Host replacement, and zero successor provider/capture/input operations. Existing Claude notification behavior remains unchanged; Codex/V1 expressly claim zero SDK task notification qualification."
+    },
+    {
+      "area": "deadline and cleanup",
+      "finding": "Current Gate entire RPC body and old full-terminal/graceful/crash branch remain byte-identical. New opening stages share one original 45-second deadline; business uses one 35-second deadline; warm and cold scoped Stop retain 10 seconds. Existing outer controller/job and transport budgets are unchanged. All short roots require confirmed stop/drain/release and absence; member absence requires original Main cleanup. Any original failure or cleanup error leaves INCOMPLETE."
+    },
+    {
+      "area": "workflow proof",
+      "finding": "One additional sequential step runs Codex then V1 only after all original Claude gates under existing Draft/authorization conditions. Removing this step recovers the entire original workflow byte-for-byte. Exact immutable source/version/platform/Node, full root role order and census ordinals, unique capabilities/generations/identity tuples, original cleanup and scoped receipt assertions are required. Existing artifact retention already encloses new selections/logs/receipts."
+    }
+  ],
+  "blockingFindings": [],
+  "qualificationLimits": [
+    "This is an inert source review, not TypeScript/compiler/test/native/E2E execution or runtime acceptance.",
+    "Historical donor bytes are semantic input only. No result from a donor or prior app head is transferred to this candidate.",
+    "Both original authorized Windows architectures, canonical strict builds and all original prerequisite gates remain required for W01 acceptance. Current Draft gates and genuine-provider execution prohibition are unchanged.",
+    "No W05/W07 owner-installation loss, Desktop same-Main Retry, SDK cold conversation, V2, activation or release qualification is asserted.",
+    "The local reviewed packet contains no provider archive/pin change; production c930 and SPI remain the selected existing inputs. Root retains final live-parent/preimage/publication checks."
+  ],
+  "execution": "Only immutable source/plan reads and inert Python byte/hash/diff/string analysis. No project code, compiler, test, generated validator, provider, native child, GUI, CI, Git or remote mutation executed."
+}
