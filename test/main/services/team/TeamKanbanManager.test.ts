@@ -72,6 +72,7 @@ describe('TeamKanbanManager', () => {
       teamName: 'my-team',
       reviewers: [],
       tasks: {},
+      humanOnlyApproval: false,
     });
   });
 
@@ -82,7 +83,31 @@ describe('TeamKanbanManager', () => {
       teamName: 'my-team',
       reviewers: [],
       tasks: {},
+      humanOnlyApproval: false,
     });
+  });
+
+  it('preserves opt-in approval policy through legacy board writes and strict reads', async () => {
+    hoisted.files.set(statePath, JSON.stringify({
+      teamName: 'my-team',
+      reviewers: [],
+      tasks: {},
+      humanOnlyApproval: true,
+    }));
+
+    expect(await manager.getState('my-team', { strict: true })).toMatchObject({
+      humanOnlyApproval: true,
+    });
+    await manager.updateTask('my-team', '1', { op: 'set_column', column: 'review' });
+    await manager.updateColumnOrder('my-team', 'review', ['1']);
+    const disk = JSON.parse(hoisted.files.get(statePath) ?? '{}');
+    expect(disk.humanOnlyApproval).toBe(true);
+    expect(disk.columnOrder.review).toEqual(['1']);
+
+    hoisted.files.set(statePath, JSON.stringify({
+      teamName: 'my-team', reviewers: [], tasks: {}, humanOnlyApproval: 'true',
+    }));
+    await expect(manager.getState('my-team', { strict: true })).rejects.toThrow('corrupt');
   });
 
   it('writes review state with movedAt on set_column', async () => {
