@@ -215,3 +215,11 @@ The one original combined RED invocation, session 64038, returned observed super
 Root f11522d6 / 279c4943 and independent Guard 4cd9b4bc account for all 81 phase files, complete fresh before/after inputs, 17 captured launches, original clocks and empty captured/output cleanup. The package is not accepted; no primary result transfers and no producer postimage is authorized.
 
 Recommendations e5594f50 describe a possible new, narrowly reviewed control scope with corrected literal names and historical materialization provenance. This checkpoint selects no replacement scope. Complete publication readbacks still precede that selection. No real Claude/Codex, CI action, frozen-PR mutation, incoming adoption or E2E completion is claimed. Broader runtime/platform, integration and canonical typing/build gates remain OPEN.
+
+## Exact corrected-title R1 accepted; descendant controls pending
+
+Prospective R1 v2 2fbac18b is accepted by Guard097d04fa, bindingc1c1ace0 and semanticca250c5c. It corrects six expected renderer display names while freezing both whole139/85 test bodies, all other names and semantic parser functions. Original outer2 remains REFUSED/SPENT.
+
+No new test materialization is allowed. Historical f542/906d/f7 evidence retains original identities and false/null runtime fields; the new RED must freshly read the complete current six-overlay source and full runtime inputs. All deadlines, cleanup, currentness, census and no-replay requirements remain. No descendant runner/binding or producer postimage has been authored and no new primary has run. Complete actual publication readbacks precede control authorship; controlR2/publication/readbacks precede execution; accepted new RED/publication/readbacks precede producer fixes.
+
+D diagnostic source review5ffc7e19 is complete without runtime/adoption qualification. Canonical MCP dependency/shim/peer closure remains incomplete; root tsc routes to7.0.2 while module TypeScript5.9.3 exists. Platform/GUI/integration/canonical build and whole E2E remainOPEN.

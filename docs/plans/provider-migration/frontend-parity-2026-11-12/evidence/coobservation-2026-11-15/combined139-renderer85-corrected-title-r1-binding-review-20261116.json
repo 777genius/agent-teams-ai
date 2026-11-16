@@ -1,0 +1,1465 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-full-review-corrected-title-prospective-r1-v2",
+  "reviewer": "/root/combined_binding_review",
+  "at": "2026-11-16T23:02:38.014Z",
+  "verdict": "ACCEPTED exact prospective R1 v2 scope; no runtime execution or producer authorship gate is opened by this review",
+  "subject": {
+    "bytes": 99012,
+    "sha256": "0efc555482f0088cb2d45a8efd07039ccfcf089b67d5cca7f46ff30cbe71378c",
+    "gitBlob": "2fbac18b3ce8f6703b1e328b266e25954f45ddb8"
+  },
+  "repository": "777genius/agent-teams-ai",
+  "exactAuthorship": {
+    "preparedAtUtc": "2026-11-16T22:59:31.249Z",
+    "preparedFromCommit": "80ab67811c66d03b885bb72745cc91484078f6ac",
+    "preparedFromTree": "c1a552c663e1166a3d6ae285529c2d3f2328859a",
+    "refusalActualGateClosedAtUtc": "2026-11-16T22:51:50.189Z",
+    "qualification": "These are the explicit retained provenance timestamps, joined to the already fully accepted actual refusal publication and both actual readback identities. No fresh filesystem or wall-clock authorship inspection is claimed."
+  },
+  "completeReadbacks": [
+    {
+      "label": "hash",
+      "identity": {
+        "bytes": 3982,
+        "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7",
+        "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8"
+      },
+      "method": "Fresh complete Git blob UTF-8 read; independently verified byte length, SHA-256 and Git-framed SHA-1."
+    },
+    {
+      "label": "original",
+      "identity": {
+        "bytes": 77830,
+        "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+        "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+      },
+      "method": "Fresh complete Git blob UTF-8 read; independently verified byte length, SHA-256 and Git-framed SHA-1."
+    },
+    {
+      "label": "v1",
+      "identity": {
+        "bytes": 97829,
+        "sha256": "b79c6532d7f00464ff24e598dce14483dd01e50167966c2e1be97f78ffbebd33",
+        "gitBlob": "9d7f9b09fd94e33e5b24b4206496e600e08cfb31"
+      },
+      "method": "Fresh complete Git blob UTF-8 read; independently verified byte length, SHA-256 and Git-framed SHA-1."
+    },
+    {
+      "label": "next",
+      "identity": {
+        "bytes": 99012,
+        "sha256": "0efc555482f0088cb2d45a8efd07039ccfcf089b67d5cca7f46ff30cbe71378c",
+        "gitBlob": "2fbac18b3ce8f6703b1e328b266e25954f45ddb8"
+      },
+      "method": "Fresh complete Git blob UTF-8 read; independently verified byte length, SHA-256 and Git-framed SHA-1."
+    },
+    {
+      "label": "advice",
+      "identity": {
+        "bytes": 21134,
+        "sha256": "f745a8fa1ed54b995c7d379ab89d7e9030326e1fd049fdbab8bc925bb79a4572",
+        "gitBlob": "e5594f50d0894404c42b2bf631b75973e87869eb"
+      },
+      "method": "Fresh complete Git blob UTF-8 read; independently verified byte length, SHA-256 and Git-framed SHA-1."
+    },
+    {
+      "label": "diagnosis",
+      "identity": {
+        "bytes": 127784,
+        "sha256": "7deff97792b556dea4da2ed2e1c10fc158445d51e4343171f2e813ff242b6196",
+        "gitBlob": "b80e069b705d41405733ff4fd40caa3ad2a753e6"
+      },
+      "method": "Fresh complete Git blob UTF-8 read; independently verified byte length, SHA-256 and Git-framed SHA-1."
+    },
+    {
+      "label": "materializationPacket",
+      "identity": {
+        "bytes": 195085,
+        "sha256": "eaedc299cc59cab8b9291c1b253dc7ea2ac9233e51172715bf10a5892a080cf6",
+        "gitBlob": "bc87216a3f4cee41f3bfa97cca4a3cdfb8a85fd3"
+      },
+      "method": "Fresh complete Git blob UTF-8 read; independently verified byte length, SHA-256 and Git-framed SHA-1."
+    }
+  ],
+  "embeddedCompleteReadback": {
+    "container": {
+      "bytes": 195085,
+      "sha256": "eaedc299cc59cab8b9291c1b253dc7ea2ac9233e51172715bf10a5892a080cf6",
+      "gitBlob": "bc87216a3f4cee41f3bfa97cca4a3cdfb8a85fd3"
+    },
+    "member": "literalFiles[name=phase-receipt.json].body",
+    "identity": {
+      "bytes": 92391,
+      "sha256": "3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d",
+      "gitBlob": "f542dde38b84f533e5658aeafe5a06642c1dcca9"
+    },
+    "method": "Complete original 92,391-byte receipt literal extracted from the fully fetched/rehashed historical packet and independently rehashed. This is not a standalone Git-blob claim."
+  },
+  "method": {
+    "fullComparison": "Parsed both complete immutable R1 bodies and compared every object member recursively, treating full arrays as explicit comparison groups. All unchanged subtrees remain literal JSON-value equal to the previously reviewed original contract. Every changed group was read in full; originalNames and command-vector differences were additionally compared at every ordinal/argument.",
+    "priorImmutableEvidence": "The prior complete actual publication, source, control and retained-evidence reviews are reused only as immutable provenance with exact identities. Current expected source-after499fe and the historical control906d/f7c identities are not relabeled as new current runtime observations.",
+    "pureDataOnly": "Read-only Git/evidence work and pure UTF-8/hash/JSON comparison. No shell, package/native/provider evaluation, physical source inspection, CI/ref operations, source/test/control authorship, staging or runtime occurred.",
+    "currentRuntimeQualification": "R1 v2 explicitly requires every current runtime input to be freshly read before and after its separately gated future package. This review grants no inspected/preserved claim for future execution."
+  },
+  "originalContract": {
+    "bytes": 77830,
+    "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+    "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+  },
+  "recommendations": {
+    "bytes": 21134,
+    "sha256": "f745a8fa1ed54b995c7d379ab89d7e9030326e1fd049fdbab8bc925bb79a4572",
+    "gitBlob": "e5594f50d0894404c42b2bf631b75973e87869eb"
+  },
+  "originalToV2ChangedGroups": [
+    {
+      "path": "kind",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 50,
+      "afterJsonCharacters": 66
+    },
+    {
+      "path": "preparedAtUtc",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 26,
+      "afterJsonCharacters": 26
+    },
+    {
+      "path": "preparedFromCommit",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 42,
+      "afterJsonCharacters": 42
+    },
+    {
+      "path": "preparedFromTree",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 42,
+      "afterJsonCharacters": 42
+    },
+    {
+      "path": "supersedes.unpublishedNodeOnlyR1",
+      "beforeType": "object",
+      "afterType": "undefined",
+      "beforeJsonCharacters": 144,
+      "afterJsonCharacters": 0
+    },
+    {
+      "path": "supersedes.previousProposalPublished",
+      "beforeType": "boolean",
+      "afterType": "undefined",
+      "beforeJsonCharacters": 5,
+      "afterJsonCharacters": 0
+    },
+    {
+      "path": "supersedes.reason",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 243,
+      "afterJsonCharacters": 362
+    },
+    {
+      "path": "supersedes.originalSelectedR1",
+      "beforeType": "undefined",
+      "afterType": "object",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 144
+    },
+    {
+      "path": "supersedes.originalR1Publication",
+      "beforeType": "undefined",
+      "afterType": "string",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 42
+    },
+    {
+      "path": "supersedes.originalRunner",
+      "beforeType": "undefined",
+      "afterType": "object",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 144
+    },
+    {
+      "path": "supersedes.originalBinding",
+      "beforeType": "undefined",
+      "afterType": "object",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 146
+    },
+    {
+      "path": "supersedes.originalRefusedAttempt",
+      "beforeType": "undefined",
+      "afterType": "object",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 452
+    },
+    {
+      "path": "supersedes.oldHistoricalSupersedes",
+      "beforeType": "undefined",
+      "afterType": "object",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 457
+    },
+    {
+      "path": "prerequisites.actualPublicationGate",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 584,
+      "afterJsonCharacters": 646
+    },
+    {
+      "path": "prerequisites.refusedOriginalPublication",
+      "beforeType": "undefined",
+      "afterType": "object",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 1084
+    },
+    {
+      "path": "problem.controlPrediction",
+      "beforeType": "undefined",
+      "afterType": "string",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 427
+    },
+    {
+      "path": "problem.refusedOutcomeIsNotProducerEvidence",
+      "beforeType": "undefined",
+      "afterType": "string",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 151
+    },
+    {
+      "path": "preservedBaseline.rendererWholeTest.orderedNamesSha256",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 66,
+      "afterJsonCharacters": 66
+    },
+    {
+      "path": "sourceScope",
+      "beforeType": "array",
+      "afterType": "array",
+      "beforeJsonCharacters": 4086,
+      "afterJsonCharacters": 4899
+    },
+    {
+      "path": "nodeTestFirst.selection",
+      "beforeType": "undefined",
+      "afterType": "string",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 150
+    },
+    {
+      "path": "rendererTestFirst.originalNames",
+      "beforeType": "array",
+      "afterType": "array",
+      "beforeJsonCharacters": 5922,
+      "afterJsonCharacters": 5942
+    },
+    {
+      "path": "rendererTestFirst.originalOrderedNamesSha256",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 66,
+      "afterJsonCharacters": 66
+    },
+    {
+      "path": "rendererTestFirst.selection",
+      "beforeType": "undefined",
+      "afterType": "string",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 207
+    },
+    {
+      "path": "execution.outputRoot",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 35,
+      "afterJsonCharacters": 45
+    },
+    {
+      "path": "execution.controlRoot",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 35,
+      "afterJsonCharacters": 45
+    },
+    {
+      "path": "execution.outputRootCreation",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 276,
+      "afterJsonCharacters": 393
+    },
+    {
+      "path": "execution.materialization.stages",
+      "beforeType": "array",
+      "afterType": "array",
+      "beforeJsonCharacters": 1012,
+      "afterJsonCharacters": 491
+    },
+    {
+      "path": "execution.materialization.checks",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 546,
+      "afterJsonCharacters": 490
+    },
+    {
+      "path": "execution.materialization.exactTempPaths.materializeTests",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 57,
+      "afterJsonCharacters": 67
+    },
+    {
+      "path": "execution.materialization.exactTempPaths.materializeProducers",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 61,
+      "afterJsonCharacters": 71
+    },
+    {
+      "path": "execution.materialization.tempScope",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 230,
+      "afterJsonCharacters": 185
+    },
+    {
+      "path": "execution.materialization.historicalTestStage",
+      "beforeType": "undefined",
+      "afterType": "object",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 520
+    },
+    {
+      "path": "execution.materialization.historicalTestStageQualification",
+      "beforeType": "undefined",
+      "afterType": "string",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 120
+    },
+    {
+      "path": "execution.materialization.reservedInactiveMaterializeTestsPath",
+      "beforeType": "undefined",
+      "afterType": "boolean",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 4
+    },
+    {
+      "path": "execution.attempts.materializeTests",
+      "beforeType": "number",
+      "afterType": "number",
+      "beforeJsonCharacters": 1,
+      "afterJsonCharacters": 1
+    },
+    {
+      "path": "execution.commandVectors.rendererRed",
+      "beforeType": "array",
+      "afterType": "array",
+      "beforeJsonCharacters": 1114,
+      "afterJsonCharacters": 1124
+    },
+    {
+      "path": "execution.commandVectors.rendererGreen",
+      "beforeType": "array",
+      "afterType": "array",
+      "beforeJsonCharacters": 1116,
+      "afterJsonCharacters": 1126
+    },
+    {
+      "path": "execution.prospectiveSelection",
+      "beforeType": "undefined",
+      "afterType": "string",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 358
+    },
+    {
+      "path": "execution.newRedStartsWith",
+      "beforeType": "undefined",
+      "afterType": "string",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 275
+    },
+    {
+      "path": "execution.noTestMaterialization",
+      "beforeType": "undefined",
+      "afterType": "string",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 184
+    },
+    {
+      "path": "runnerScope.inheritance",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 272,
+      "afterJsonCharacters": 319
+    },
+    {
+      "path": "runnerScope.allowedDeltas",
+      "beforeType": "array",
+      "afterType": "array",
+      "beforeJsonCharacters": 2053,
+      "afterJsonCharacters": 1355
+    },
+    {
+      "path": "runnerScope.notAllowed",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 290,
+      "afterJsonCharacters": 508
+    },
+    {
+      "path": "runnerScope.baselineExactCombined",
+      "beforeType": "undefined",
+      "afterType": "object",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 144
+    },
+    {
+      "path": "runnerScope.historicalAllowedDeltas",
+      "beforeType": "undefined",
+      "afterType": "array",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 2053
+    },
+    {
+      "path": "rendererRuntime.environment.inheritedFixedAssignments.TMPDIR",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 43,
+      "afterJsonCharacters": 53
+    },
+    {
+      "path": "rendererRuntime.environment.childTempProposal.red",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 43,
+      "afterJsonCharacters": 53
+    },
+    {
+      "path": "rendererRuntime.environment.childTempProposal.green",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 45,
+      "afterJsonCharacters": 55
+    },
+    {
+      "path": "rendererRuntime.outputOwnershipAndCleanup.proposalOnly.outputRoot",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 35,
+      "afterJsonCharacters": 45
+    },
+    {
+      "path": "rendererRuntime.outputOwnershipAndCleanup.proposalOnly.controlRoot",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 35,
+      "afterJsonCharacters": 45
+    },
+    {
+      "path": "rendererRuntime.selectedTempPaths.materializeTests",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 57,
+      "afterJsonCharacters": 67
+    },
+    {
+      "path": "rendererRuntime.selectedTempPaths.red",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 43,
+      "afterJsonCharacters": 53
+    },
+    {
+      "path": "rendererRuntime.selectedTempPaths.materializeProducers",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 61,
+      "afterJsonCharacters": 71
+    },
+    {
+      "path": "rendererRuntime.selectedTempPaths.green",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 45,
+      "afterJsonCharacters": 55
+    },
+    {
+      "path": "rendererRuntime.selectedTempPaths.validation",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 50,
+      "afterJsonCharacters": 60
+    },
+    {
+      "path": "acceptance.producerAuthorshipGate",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 185,
+      "afterJsonCharacters": 210
+    },
+    {
+      "path": "scopeNotice",
+      "beforeType": "string",
+      "afterType": "string",
+      "beforeJsonCharacters": 244,
+      "afterJsonCharacters": 406
+    },
+    {
+      "path": "draftAmendments",
+      "beforeType": "array",
+      "afterType": "array",
+      "beforeJsonCharacters": 948,
+      "afterJsonCharacters": 873
+    },
+    {
+      "path": "controlCorrectionBasis",
+      "beforeType": "undefined",
+      "afterType": "object",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 494
+    },
+    {
+      "path": "nineBoundSourceRowsScope",
+      "beforeType": "undefined",
+      "afterType": "string",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 209
+    },
+    {
+      "path": "currentNineSourceRows",
+      "beforeType": "undefined",
+      "afterType": "array",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 2118
+    },
+    {
+      "path": "currentSourceVectorIdentity",
+      "beforeType": "undefined",
+      "afterType": "object",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 143
+    },
+    {
+      "path": "currentTestIdentities",
+      "beforeType": "undefined",
+      "afterType": "object",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 311
+    },
+    {
+      "path": "currentSource",
+      "beforeType": "undefined",
+      "afterType": "object",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 403
+    },
+    {
+      "path": "historicalTestMaterialization",
+      "beforeType": "undefined",
+      "afterType": "object",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 4192
+    },
+    {
+      "path": "historicalOriginalDraftAmendments",
+      "beforeType": "undefined",
+      "afterType": "array",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 948
+    },
+    {
+      "path": "existingTestsAlreadyPublishedAndMaterialized",
+      "beforeType": "undefined",
+      "afterType": "boolean",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 4
+    },
+    {
+      "path": "currentRuntimeExecuted",
+      "beforeType": "undefined",
+      "afterType": "boolean",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 5
+    },
+    {
+      "path": "producerAuthorshipGateOpen",
+      "beforeType": "undefined",
+      "afterType": "boolean",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 5
+    },
+    {
+      "path": "exactSixTitleCorrections",
+      "beforeType": "undefined",
+      "afterType": "array",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 1403
+    },
+    {
+      "path": "original80NameSerialization",
+      "beforeType": "undefined",
+      "afterType": "string",
+      "beforeJsonCharacters": 0,
+      "afterJsonCharacters": 122
+    }
+  ],
+  "v1IssueAndResolution": {
+    "priorDraft": {
+      "bytes": 97829,
+      "sha256": "b79c6532d7f00464ff24e598dce14483dd01e50167966c2e1be97f78ffbebd33",
+      "gitBlob": "9d7f9b09fd94e33e5b24b4206496e600e08cfb31"
+    },
+    "issue": "The active frozen-test preimage blobs were current139/85 bodies while their active preimageCases still said historical133/80.",
+    "resolved": true,
+    "exactChanges": [
+      {
+        "path": "preparedAtUtc",
+        "before": "2026-11-16T22:56:13.791Z",
+        "after": "2026-11-16T22:59:31.249Z"
+      },
+      {
+        "path": "sourceScope.3.preimageCases",
+        "before": 133,
+        "after": 139
+      },
+      {
+        "path": "sourceScope.3.historicalPreimageCases",
+        "after": 133
+      },
+      {
+        "path": "sourceScope.4.preimageCases",
+        "before": 80,
+        "after": 85
+      },
+      {
+        "path": "sourceScope.4.historicalPreimageCases",
+        "after": 80
+      },
+      {
+        "path": "draftAmendments",
+        "before": [],
+        "after": [
+          {
+            "priorDraft": {
+              "bytes": 97829,
+              "sha256": "b79c6532d7f00464ff24e598dce14483dd01e50167966c2e1be97f78ffbebd33",
+              "gitBlob": "9d7f9b09fd94e33e5b24b4206496e600e08cfb31"
+            },
+            "at": "2026-11-16T22:59:31.249Z",
+            "reason": "Two independent reviews found that active frozen-test preimage identities had been updated to existing139/85 bodies while preimageCases still described historical133/80 bodies. Correct the active data and retain explicit historical counts.",
+            "changes": [
+              {
+                "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+                "priorActivePreimageCases": 133,
+                "currentActivePreimageCases": 139,
+                "historicalPreimageCases": 133
+              },
+              {
+                "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+                "priorActivePreimageCases": 80,
+                "currentActivePreimageCases": 85,
+                "historicalPreimageCases": 80
+              }
+            ],
+            "sourceOrControlPostimagesAuthored": false,
+            "runtimeExecuted": false
+          }
+        ]
+      }
+    ],
+    "noOtherV1ToV2Changes": true,
+    "activeTestCounts": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "currentIdentity": {
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        "currentPreimageCases": 139,
+        "historicalIdentity": {
+          "bytes": 155423,
+          "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+          "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+        },
+        "historicalPreimageCases": 133,
+        "materializeAgain": false
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "currentIdentity": {
+          "bytes": 187890,
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+        },
+        "currentPreimageCases": 85,
+        "historicalIdentity": {
+          "bytes": 180091,
+          "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+          "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978"
+        },
+        "historicalPreimageCases": 80,
+        "materializeAgain": false
+      }
+    ]
+  },
+  "semanticCorrection": {
+    "sixExactCorrections": [
+      {
+        "ordinal": 1,
+        "prior": "refreshes shared provider metadata after filtered connect (null, full=false)",
+        "corrected": "refreshes shared provider metadata after filtered 'connect' (null, full=false)"
+      },
+      {
+        "ordinal": 2,
+        "prior": "refreshes shared provider metadata after filtered connect (/tmp/TEST-connected-provider-cache, full=false)",
+        "corrected": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=false)"
+      },
+      {
+        "ordinal": 3,
+        "prior": "refreshes shared provider metadata after filtered connect (/tmp/TEST-connected-provider-cache, full=true)",
+        "corrected": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=true)"
+      },
+      {
+        "ordinal": 4,
+        "prior": "refreshes shared provider metadata after filtered forget (null, full=false)",
+        "corrected": "refreshes shared provider metadata after filtered 'forget' (null, full=false)"
+      },
+      {
+        "ordinal": 5,
+        "prior": "refreshes shared provider metadata after filtered forget (/tmp/TEST-connected-provider-cache, full=false)",
+        "corrected": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=false)"
+      },
+      {
+        "ordinal": 6,
+        "prior": "refreshes shared provider metadata after filtered forget (/tmp/TEST-connected-provider-cache, full=true)",
+        "corrected": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=true)"
+      }
+    ],
+    "old80NamesCodec": "UTF-8 compact JSON.stringify(originalNames) plus one LF, identical codec to original R1; only six literal values differ.",
+    "old80NamesDerivedIdentity": {
+      "bytes": 5943,
+      "sha256": "44190c52c6792220519c4468b9c936671015276dcee08883a1cac966f27ff9f9",
+      "gitBlob": "f08cd3d9213cda89b8f03ea5b6a9f20289cf84df"
+    },
+    "mirroredOld80Hash": "44190c52c6792220519c4468b9c936671015276dcee08883a1cac966f27ff9f9",
+    "complete85DerivedIdentity": {
+      "bytes": 6292,
+      "sha256": "66e1508f9a02882291b6233a03af58ff4713aca256351f1758f91e7b5855a787",
+      "gitBlob": "92bb24568c9a463b494fa5f88ddef3a662d284cb"
+    },
+    "complete85Codec": "UTF-8 compact JSON without LF, as the retained diagnosis array identity; derived embedded value, not a standalone retained blob.",
+    "strictness": "All remaining79 renderer names, the unchanged139 Node contract, exact order/multiplicity/status/fullName/ancestor/raw diagnostics and the three failure ordinals/sites are preserved. Both semantic parser function bodies must remain byte-identical to906d; no quote normalization, alternate-name acceptance, skips, counts-only admission, or test edits."
+  },
+  "sourceAndTests": {
+    "currentSourceReference": {
+      "identity": {
+        "bytes": 2478745,
+        "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+        "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+      },
+      "sourceRows": 8798,
+      "physicalOverlays": 6,
+      "workflowLeaves": 42,
+      "fullC5IndexLeaves": 11567,
+      "qualification": "Historical exact source-after reference only; fresh complete current source/runtime inputs remain required before and after the new package."
+    },
+    "currentCanonicalVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "vectorCodec": "Recursively sorted JSON object keys, compact separators, UTF-8, no LF; exactly2118 bytes yielding f6446bdc.",
+    "completeNineRowJoins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "current": {
+          "bytes": 24759,
+          "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+          "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+          "mode": "100644"
+        },
+        "historical": {
+          "bytes": 24759,
+          "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+          "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+        },
+        "unchanged": true,
+        "verified": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "current": {
+          "bytes": 45707,
+          "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+          "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+          "mode": "100644"
+        },
+        "historical": {
+          "bytes": 45707,
+          "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+          "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+        },
+        "unchanged": true,
+        "verified": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "current": {
+          "bytes": 36260,
+          "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+          "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+          "mode": "100644"
+        },
+        "historical": {
+          "bytes": 36260,
+          "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+          "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd"
+        },
+        "unchanged": true,
+        "verified": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "current": {
+          "bytes": 8457,
+          "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+          "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+          "mode": "100644"
+        },
+        "historical": {
+          "bytes": 8457,
+          "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+          "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f"
+        },
+        "unchanged": true,
+        "verified": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "current": {
+          "bytes": 32845,
+          "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+          "gitBlob": "d65706646743798f2646421105f2f6a75819f143",
+          "mode": "100644"
+        },
+        "historical": {
+          "bytes": 32845,
+          "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+          "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+        },
+        "unchanged": true,
+        "verified": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "current": {
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee",
+          "mode": "100644"
+        },
+        "historical": {
+          "bytes": 155423,
+          "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+          "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+        },
+        "unchanged": false,
+        "verified": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "current": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+          "mode": "100644"
+        },
+        "historical": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        "unchanged": true,
+        "verified": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "current": {
+          "bytes": 74351,
+          "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+          "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+          "mode": "100644"
+        },
+        "historical": {
+          "bytes": 74351,
+          "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+          "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b"
+        },
+        "unchanged": true,
+        "verified": true
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "current": {
+          "bytes": 187890,
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3",
+          "mode": "100644"
+        },
+        "historical": {
+          "bytes": 180091,
+          "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+          "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978"
+        },
+        "unchanged": false,
+        "verified": true
+      }
+    ],
+    "historicalNineRowsPreserved": true,
+    "historicalTransition": "Original nine rows remain explicitly historical materialization preimages. Their five-to-six physical overlay transition is not a current starting state or restoration target.",
+    "activeStartingState": "The same four fixed producer postimages plus two immutable whole test postimages are the six physical overlays; the other three producer rows stay exact preimages. No source write between the two primaries.",
+    "producerScope": "The original P11 deadline-local body, Review readiness-argument list, and hook !silent guard removal limits are byte-value unchanged. Their three postimages remain prohibited before accepted new RED and its publication/readbacks.",
+    "activeTestMaterializations": 0,
+    "requiredRunnerRejection": "Descendant runner must explicitly reject action=materialize with phase=red before output/source activity. A reserved map entry for schema compatibility grants no execution authority."
+  },
+  "historicalMaterializationAdmission": {
+    "fullContract": {
+      "receiptPath": "/tmp/c714-combined139-85-evidence/materialize-tests/phase-receipt.json",
+      "receipt": {
+        "bytes": 92391,
+        "sha256": "3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d",
+        "gitBlob": "f542dde38b84f533e5658aeafe5a06642c1dcca9"
+      },
+      "originalRunner": {
+        "path": "/tmp/c714-combined139-85-controls/combined-runner.py",
+        "identity": {
+          "bytes": 89953,
+          "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+          "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+        }
+      },
+      "originalBinding": {
+        "path": "/tmp/c714-combined139-85-controls/red-binding.json",
+        "identity": {
+          "bytes": 4898503,
+          "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+          "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+        }
+      },
+      "originalR1": {
+        "publication": "cf6547aa79cc903a5833fa950a2de3178194c429",
+        "identity": {
+          "bytes": 77830,
+          "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+          "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+        }
+      },
+      "originalPublishedSubject": {
+        "commit": "935e057f85d31a316706b6942310695719503fc1",
+        "tree": "f74fa718137b5c518989f7efcb1c937019a24e3a",
+        "qualification": "Exact published two whole test postimages and unchanged seven producer rows; no current combined runtime qualification."
+      },
+      "originalTestIdentities": {
+        "node": {
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        "renderer": {
+          "bytes": 187890,
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+        }
+      },
+      "originalSourceVectorIdentity": {
+        "bytes": 2118,
+        "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+        "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+      },
+      "sourceBefore": {
+        "bytes": 2478650,
+        "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+        "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+      },
+      "sourceAfter": {
+        "bytes": 2478745,
+        "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+        "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+      },
+      "writtenPaths": [
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+      ],
+      "acceptedPublication": {
+        "commit": "179e719480965da06faa6a1119196bcf8c28667a",
+        "tree": "4e384efa3d86f9fee5c67797e5c1e1b0cb1acbd6",
+        "root": {
+          "bytes": 68230,
+          "sha256": "8cd9f33fc3afeba9e1b9843620022272a850aef36a740a87e3147b9df89c3737",
+          "gitBlob": "1a90d32206b2b31ae3e3dba8e2edde55349851c7"
+        },
+        "independent": {
+          "bytes": 115641,
+          "sha256": "fcfa1571b7ea385fea409dcbe5d5adfe2e9b8b60309a6b331c439feb26704790",
+          "gitBlob": "374fc9db427cb6bcd3380190e836717fa661fe3f"
+        }
+      },
+      "observedOuter": {
+        "bytes": 5899,
+        "sha256": "c571e8e779b4e66b027365ae68581516b2dfd942cffbe3366f86c679799338a7",
+        "gitBlob": "17635bb8aed9be764c00b17e4a7af1d2b66e3dd3"
+      },
+      "observedSupervisorExit": 0,
+      "packet": {
+        "bytes": 195085,
+        "sha256": "eaedc299cc59cab8b9291c1b253dc7ea2ac9233e51172715bf10a5892a080cf6",
+        "gitBlob": "bc87216a3f4cee41f3bfa97cca4a3cdfb8a85fd3"
+      },
+      "admission": "Read the full unchanged original receipt at its original path plus exact original runner/binding bodies. Check all three identities and original R1/subject/test/vector facts; add all three original files to new before/after control census. Validate original success, writtenPaths, source-before/source-after, metadata-only false/null fields, interruptions/errors and every original cleanup predicate, with accepted publication/actual outer0 review chain. Never copy, relabel or edit any receipt; compare old receipt binding to its original binding, not the new binding.",
+      "freshCurrentBoundary": "Before any new primary, the existing complete input_snapshot freshly admits all8798 rows against the current six-overlay vector, plus every dependency/compiled/provider/tool/config/env/cache control. Full fresh postflight stays mandatory. Historical materialization supplies no current runtime-input or primary result.",
+      "greenUnchanged": "GREEN still requires this new scope's actual materialize-producers receipt under the current binding identity and all existing predicates. Historical provenance is RED-only; it cannot replace producer materialization or accepted new RED/GREEN gates."
+    },
+    "fullyReadReceiptFacts": {
+      "identity": {
+        "bytes": 92391,
+        "sha256": "3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d",
+        "gitBlob": "f542dde38b84f533e5658aeafe5a06642c1dcca9"
+      },
+      "action": "materialize",
+      "phase": "red",
+      "attempt": 1,
+      "publishedR1": "cf6547aa79cc903a5833fa950a2de3178194c429",
+      "publishedSubject": {
+        "commit": "935e057f85d31a316706b6942310695719503fc1",
+        "tree": "f74fa718137b5c518989f7efcb1c937019a24e3a",
+        "qualification": "Exact published two whole test postimages and unchanged seven producer rows; no current combined runtime qualification."
+      },
+      "runnerIdentity": {
+        "bytes": 89953,
+        "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+        "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+      },
+      "bindingIdentity": {
+        "bytes": 4898503,
+        "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+        "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+      },
+      "testIdentities": {
+        "node": {
+          "bytes": 164965,
+          "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+          "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+        },
+        "renderer": {
+          "bytes": 187890,
+          "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+          "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+        }
+      },
+      "sourceVectorIdentity": {
+        "bytes": 2118,
+        "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+        "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+      },
+      "sourceBefore": {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-before-source.json",
+        "bytes": 2478650,
+        "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+        "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+      },
+      "sourceAfter": {
+        "path": "/tmp/c714-combined139-85-evidence/materialize-tests/materialize-tests-after-source.json",
+        "bytes": 2478745,
+        "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+        "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+      },
+      "writtenPaths": [
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+      ],
+      "fullRuntimeInputsRequested": false,
+      "fullRuntimeInputsInspected": false,
+      "fullRuntimeInputsPreserved": null,
+      "inputsPreserved": null,
+      "sourceAndSupervisorMetadataPreserved": true,
+      "scopeCompleted": true,
+      "commandCompletedNormally": false,
+      "exitCode": null,
+      "exitSignal": null,
+      "timedOut": false,
+      "primaryInvocations": 0,
+      "interruptions": [],
+      "cleanup": {
+        "unknownPrimaryLaunches": [],
+        "capturedSessionMembersAfter": [],
+        "newTestTempsRemaining": [],
+        "taskTmpEntriesAfter": [],
+        "viteTempAbsent": true,
+        "nodeDebtGatePassed": null,
+        "scope": "Captured primary sessions/groups and exact owned phase outputs; metadata sessions checked individually. No universal escaped-child/native custody claim."
+      }
+    },
+    "interpretation": "Keep the complete historical success/subject/test/source-vector/written-path/error/interruption/cleanup predicates against the original906d/f7c/d52 identities and actual outer0 accepted publication chain. Source-only success does not mean commandCompletedNormally=true: that historical field remains false, with fullRuntimeInputsInspected=false and preserved/null. Add the exact original receipt/runner/binding files to full new before/after controls. No copy, relabel, receipt edit, or rematerialization.",
+    "freshBoundary": "Require the complete existing input_snapshot to admit the current six-overlay8798-source vector and every runtime input afresh before any new primary, then full fresh postflight. The old source-after and dependency equality are expectations, not observations reusable as currentness.",
+    "greenBoundary": "Historical carry-forward applies only to RED. GREEN still requires the new scope's actual producer-materialization receipt under its current binding and all inherited predicates."
+  },
+  "executionAndPreservation": {
+    "attempts": {
+      "materializeTests": 0,
+      "redPackage": 1,
+      "materializeProducers": 1,
+      "greenPackage": 1,
+      "validationPackage": 1
+    },
+    "outputRoot": "/tmp/c714-combined139-85-corrected-evidence",
+    "controlRoot": "/tmp/c714-combined139-85-corrected-controls",
+    "originalRootsAppearOnlyAsHistoricalInputs": [
+      "historicalTestMaterialization.receiptPath",
+      "historicalTestMaterialization.originalRunner.path",
+      "historicalTestMaterialization.originalBinding.path"
+    ],
+    "noReplayLiteral": "One selected attempt per RED or GREEN package. Failed preflight, unexpected result, interruption, unknown launch, incomplete output/cleanup/postflight or missing outer observation spends the attempt. No rerun, partial resume, acceptance by aggregate count, hidden retry or auto-rescue is allowed.",
+    "oneNewProspectiveContract": "A new explicit corrected control contract prospectively selects one complete RED after its own gates. Original attempt64038 remains outer2/REFUSED/SPENT forever; new roots alone do not renew its attempt, and its old Node/renderer results never populate new acceptedCombinedRed.",
+    "commands": "Node and all four validation argument vectors are exactly unchanged. Each renderer vector differs only at index17 in its root-dependent JSON output path. Entire rendererRuntime becomes exactly original after reversing the two new root prefixes; tools/static/native/environment/output/cleanup contracts otherwise remain equal.",
+    "inputBoundary": "Exactly one complete fresh before and one complete fresh after per RED/GREEN package: all8798 source rows and their full HEAD/tree/index/workflow controls; all122773 dependency rows with full byte/link/mode identity; all1454 compiled rows;253D+12SPI provider members and original archive inputs; exact tools/pnpm/config/environment/control bodies; original seven bootstrap cache files. Retain complete actual manifests and compare entire identities, not counts or stat caches. No ignored dependency paths or blanket temp exclusion.",
+    "clocks": "180 seconds per primary, starting before spawn/start/raw work as in the admitted supervisor; include ordinary exit, output drain/finalization and required captured cleanup without resetting the deadline. Preserve metadata30-second caps and original signal refusal behavior. Do not claim a single180-second total package or increase any Vitest test timeout.",
+    "preservedGates": "Original G1-G4, source/tree/index/workflow census, all122773 dependency and1454 compiled rows,253D/12SPI archive/install members,8 inputFiles,33 complete inherited review bodies, tools/config/pnpm/raw+effective environment and7 bootstrap cache files remain mandatory. No current stat/hash caching, omitted path, failed-future swallowing, reduced postflight, clock reset, or result borrowing.",
+    "nodeDebt": "Node's captured session must be empty and owned TMPDIR must contain no surviving entry before renderer admission. Retaining/erasing debt cannot rescue a refused attempt. Native metadata remains the same bounded builtin-only step after accepted Node.",
+    "activeRunnerDelta": [
+      "Rebind corrected R1/blob/publication identities, exact new control/output/TMP roots, owner metadata and root-dependent output arguments only. Preserve pinned tools, all8 inputFiles, source/test/provider/package/config/environment/static/native pins and other command arguments.",
+      "Correct six renderer display-name literals in new R1/binding and derived ordered-name identities only. Keep Node139, remaining79 renderer names, status/failure-site/fullName/ancestor/raw-error checks exact. node_semantics and renderer_semantics function bodies remain byte-identical to906d.",
+      "Reject RED materialization before output/source activity. Adapt only the RED materialization gate to the precise historical contract above. Keep all original common success/error/source/test/vector/written-path/cleanup predicates, checked against original control identities for RED; add exact old runner/binding/receipt to full before/after controls. GREEN keeps current-binding producer-materialization admission.",
+      "Add only immutable R1/publication/readback/diagnosis and historical-materialization review bodies/identities needed for the truthful binding. Preserve all33 inherited review bodies byte-for-byte as history; supersede only wrong first-six display-name predictions. acceptedCombinedRed/Green stay null and producer flagsfalse until their separate required gates."
+    ],
+    "activePrecedence": "Start from exact906d8b49. Preserve its G1–G4, full readers, capture/absolute clocks/signal/unknown-launch/cleanup, Node and renderer semantic function bodies, native metadata program and GREEN/validation admission. Historical broad allowedDeltas are provenance only; the narrower active list controls this descendant."
+  },
+  "requiredGateSequence": [
+    "Original refused outcome and both full actual readbacks remain closed and immutable; v2 records that prior gate.",
+    "Two complete independent reviews of this exact R1, then immediate-push docs publication and complete root+independent actual readbacks before new control authorship.",
+    "Root authors only the minimal exact descendant runner/full binding. Complete independent R2 checks all data joins, full bodies, narrow code delta, unchanged semantic/native/environment/lifecycle paths, and original historical receipt checks.",
+    "Publish and immediately push the exact reviewed controls; complete both actual readbacks; stage only exact new controls into absent exclusive roots. No test materialization or source write.",
+    "Run at most one new full RED: fresh complete preflight, Node139, exact semantic/capture/session/TMP gate, unchanged fresh native metadata, renderer85, complete owned-output cleanup, full fresh postflight, final signal cutoff and separately observed supervisor outer0.",
+    "Independently accept the complete actual new package, publish/immediately push and close both actual readbacks. Only that accepted new RED opens three-producer authorship.",
+    "Exact producer R2/publication/readbacks precede source-only producer materialization; its accepted actual outer0 evidence precedes GREEN under the current binding. Accepted full GREEN precedes the unchanged four-command validation. Any unexpected/unknown/incomplete package remains spent."
+  ],
+  "alreadyAcceptedActualProofs": {
+    "refusedRoot": {
+      "gitBlob": "9855604ffea7ef83a09ff72af0ee37efc5de4e9c",
+      "bytes": 637745,
+      "sha256": "eee92688c33d0e13f1ec52248aa3e9b28bbdc3fec380b986109423f7bdb0921e"
+    },
+    "refusedIndependent": {
+      "gitBlob": "6b01764af5385a487e2632bde0e8592584c8515c",
+      "bytes": 203042,
+      "sha256": "4ddc471061fa4231fbca397c1a7ab9310a84df51069701d44b5591e98d4e6f27"
+    },
+    "materializationRoot": {
+      "gitBlob": "1a90d32206b2b31ae3e3dba8e2edde55349851c7",
+      "bytes": 68230,
+      "sha256": "8cd9f33fc3afeba9e1b9843620022272a850aef36a740a87e3147b9df89c3737"
+    },
+    "materializationIndependent": {
+      "gitBlob": "374fc9db427cb6bcd3380190e836717fa661fe3f",
+      "bytes": 115641,
+      "sha256": "fcfa1571b7ea385fea409dcbe5d5adfe2e9b8b60309a6b331c439feb26704790"
+    }
+  },
+  "checks": [
+    {
+      "name": "R1 authored after original refusal publication gate closure",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Prepared from accepted refusal commit and tree",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Original R1 full body identity matches superseded pin",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Original historical supersedes preserved",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Original historical draft amendments preserved",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Original source preimage rows retained literally as history",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "All three prospective producer source rows unchanged",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Same current whole test identities in all current scopes",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "No current test write or rematerialization selected",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Exactly one RED/GREEN/validation package and one producer materialization",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Original noReplay literal exactly unchanged",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Current six title corrections exact retained source-derived advice",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Current complete original80 title vector equals retained actual diagnosis",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Only first six original80 predictions changed",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Compact JSON plus LF original80 hash matches both active mirrors",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Canonical compact source vector identity exactly derived",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Historical source vector equals current vector identity",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Original runner and binding identities remain old scope",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Historical receipt full literal hash matches R1 pin",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Historical receipt original R1 and exact test publication joined",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Historical receipt truth remains materialize/red and metadata-only",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Current expected whole suite counts and outcomes unchanged",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Complete package source/dependency/provider/cache boundaries unchanged",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Primary and metadata clocks unchanged",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Node temporary debt gate and command advancement unchanged",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Node and validation command vectors byte-value identical",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Only renderer output JSON path arguments changed",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Semantic acceptance and coverage rules unchanged",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "No prospective runtime or producer postimages already claimed",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Original refusal retains outer2/SPENT and no transfer",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "All external scope/platform/CI/real-provider restrictions unchanged",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Complete future producer stage gate retains independent new RED and R2",
+      "passed": true,
+      "provenance": "Verified against complete v1; retained in exact v2, whose six differences are separately verified."
+    },
+    {
+      "name": "Exact v2 immutable body identity",
+      "passed": true
+    },
+    {
+      "name": "Only declared six v1-to-v2 difference paths",
+      "passed": true
+    },
+    {
+      "name": "v2 active frozen-test counts match current 139/85 bodies",
+      "passed": true
+    },
+    {
+      "name": "v2 historical test counts retained explicitly",
+      "passed": true
+    },
+    {
+      "name": "v2 amendment preserves exact original draft and no authored source/control/runtime",
+      "passed": true
+    },
+    {
+      "name": "Both authored versions occur after declared closed actual publication gate",
+      "passed": true
+    },
+    {
+      "name": "Entire renderer runtime differs only in exact selected root prefixes",
+      "passed": true
+    },
+    {
+      "name": "Node entire contract unchanged except historical selection notice",
+      "passed": true
+    },
+    {
+      "name": "Renderer new five names, failure oracles and all contracts except corrected original-name data unchanged",
+      "passed": true
+    },
+    {
+      "name": "Actual all85 title order equals corrected original80 plus unchanged five names",
+      "passed": true
+    },
+    {
+      "name": "All nine source rows exact and only two historical test identities advance",
+      "passed": true
+    },
+    {
+      "name": "Historical source-before/source-after identities exact full receipt joins",
+      "passed": true
+    },
+    {
+      "name": "Historical source-only success and empty cleanup remain distinct from behavioral completion",
+      "passed": true
+    },
+    {
+      "name": "Old root literals appear only in the three historical materialization input paths",
+      "passed": true
+    },
+    {
+      "name": "Active materialization writes only the same three producers",
+      "passed": true
+    },
+    {
+      "name": "Future producer materialization retains UNINSPECTED metadata-only qualification",
+      "passed": true
+    },
+    {
+      "name": "Historical materialization is explicitly RED-only and GREEN retains current binding",
+      "passed": true
+    },
+    {
+      "name": "Exact inactive RED materialization rejection is mandatory before output/source activity",
+      "passed": true
+    },
+    {
+      "name": "Historical broad runner deltas retained as history",
+      "passed": true
+    },
+    {
+      "name": "Semantic function bodies remain exact baseline906d",
+      "passed": true
+    },
+    {
+      "name": "Original eight inputs and 33 full review bodies explicitly preserved",
+      "passed": true
+    },
+    {
+      "name": "Exact already accepted full actual proof identity: refusedRoot",
+      "passed": true
+    },
+    {
+      "name": "Exact already accepted full actual proof identity: refusedIndependent",
+      "passed": true
+    },
+    {
+      "name": "Exact already accepted full actual proof identity: materializationRoot",
+      "passed": true
+    },
+    {
+      "name": "Exact already accepted full actual proof identity: materializationIndependent",
+      "passed": true
+    }
+  ],
+  "checkCount": 57,
+  "failedChecks": [],
+  "disposition": {
+    "accepted": true,
+    "blockingIssues": [],
+    "v1CountIssueResolved": true,
+    "acceptanceSubject": "Only exact R1 v2 2fbac18b3ce8f6703b1e328b266e25954f45ddb8",
+    "newRunnerOrBindingReviewed": false,
+    "currentRuntimeExecuted": false,
+    "acceptedCombinedRed": null,
+    "producerAuthorshipGateOpened": false,
+    "newPostimagesAuthored": false,
+    "originalAttemptReclassified": false,
+    "primaryResultTransferAuthorized": false,
+    "wholeE2EQualified": false,
+    "futureR2MustVerify": "The exact authored descendant implementation remains unreviewed. R1 acceptance cannot stand in for its required full R2, publication/readback, staging, or actual runtime gates."
+  },
+  "unchangedOpenWork": [
+    "Windows Process15s",
+    "Windows Packaged10s",
+    "strictDarwinP09",
+    "laterP11/genuineM16",
+    "new-head reconciliation",
+    "canonical typecheck/build",
+    "actual fresh GUI/platform acceptance",
+    "whole E2E completion"
+  ]
+}

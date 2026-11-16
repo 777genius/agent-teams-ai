@@ -1,0 +1,733 @@
+{
+  "schemaVersion": 1,
+  "kind": "short-readonly-canonical-typing-build-prerequisite-followup",
+  "reviewer": "/root/combined_guard_review",
+  "exactPriorReport": {
+    "bytes": 263003,
+    "sha256": "bd5c643af2008546a081eae8f00eb6f0ba2dcaaabe8de68a1c3a169aa7d85f57",
+    "gitBlob": "37e5cf0c63700b4a33d91e8c929fd9c6f551e8ff"
+  },
+  "completeDependencyInventory": {
+    "bytes": 39168001,
+    "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+    "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+  },
+  "currentSource": {
+    "bytes": 2478745,
+    "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+    "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+  },
+  "existingFullReconstructionProof": {
+    "bytes": 7124,
+    "sha256": "f0eb74dad52bee46558440be43df46ef0e7f399a89db8d96b5ce99b1fdaa29b9",
+    "gitBlob": "f64c0246f31578ceecb7fb0bd5df830b2f7fc547"
+  },
+  "qualification": "Data-only follow-up. No new scope, code, control, install, runtime, filesystem, ref or CI action. The verified39MB immutable dependency body was reused without rehashing; all122773 cached rows were searched completely.",
+  "findings": [
+    "The previous report's MCP closure gap remains. TypeScript5.9.3 package payload is already present under node_modules/.pnpm/typescript@5.9.3/node_modules/typescript:132 rows, including the compiler entry,6.2MB compiler implementation and declarations. Root node_modules/typescript points to this payload.",
+    "There are zero mcp-server/node_modules rows. Thus all MCP importer links and its compiler/bundler shims are absent from the admitted complete inventory, even where compatible package payloads are cached elsewhere.",
+    "No fastmcp package payload and no tsup package payload or .bin/tsup shim occur anywhere in the admitted dependency inventory. Four Knip tsup-plugin source files are unrelated and cannot satisfy this closure.",
+    "The only installed Vitest3.2.6 package variant has jiti1.21.7 in its peer suffix. The MCP lock importer selects a Vitest3.2.6 variant with jiti2.7.0. Both jiti payload versions are cached, but cached direct versions alone do not prove MCP's exact peer-resolved links.",
+    "All55 complete embedded source bodies in the previous report were independently rehashed and match current fresh source499fe row identities. Its package script/config route analysis remains source-applicable despite its historical whole97 evidence scope; none of its historical runtime outcomes transfers.",
+    "Root .bin/tsc is present as a2383-byte regular shim. Its full body was not available as a standalone Git blob in this follow-up. A404 from the Git object read is not filesystem absence and does not establish which compiler the bare MCP tsc script would resolve."
+  ],
+  "census": {
+    "mcpWorkspaceRows": 0,
+    "fastmcpPackageRows": 0,
+    "tsupPackageRows": 0,
+    "tsupShimRows": 0,
+    "typescript593Rows": 132
+  },
+  "presentTypeScript593": {
+    "rows": 132,
+    "totalRecordedRegularBytes": 23625066,
+    "keyPins": [
+      {
+        "path": "node_modules/.bin/tsc",
+        "mode": "100755",
+        "bytes": 2383,
+        "sha256": "5a8ab397de7506efd90fb064791823cd08b86763adaa64bd090b78b8d04cb397",
+        "gitBlob": "2571ad2e5d572b1d7a848feab916b9d82090f905"
+      },
+      {
+        "path": "node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/bin/tsc",
+        "mode": "100755",
+        "bytes": 45,
+        "sha256": "8d5fa5bd883fec0979fc2004f1fe1d99aef40570155d550eadc0b03b55513bf0",
+        "gitBlob": "19c62bf7a0004aab7bd188aae51ff2564fdfc18d"
+      },
+      {
+        "path": "node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/lib/_tsc.js",
+        "mode": "100644",
+        "bytes": 6213092,
+        "sha256": "e8f349eabd48486bdb2bf9dc1a00c89d58297270c54b745838879e2859194419",
+        "gitBlob": "612a1f7eed0fc030660b769480455aabe77b82c2"
+      },
+      {
+        "path": "node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/lib/lib.d.ts",
+        "mode": "100644",
+        "bytes": 992,
+        "sha256": "a7297ff837fcdf174a9524925966429eb8e5feecc2cc55cc06574e6b092c1eaa",
+        "gitBlob": "b6bb44b2cafffb25fbe958e9082d7df9738d4741"
+      },
+      {
+        "path": "node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/lib/tsc.js",
+        "mode": "100644",
+        "bytes": 267,
+        "sha256": "2cffde0b8c6760dfb0b5b0382bbb7e00ba6a8b2d981b9205b256a700a481d983",
+        "gitBlob": "72e3416e302681c23d595a71f75b5eb3e075673d"
+      },
+      {
+        "path": "node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/lib/typescript.js",
+        "mode": "100644",
+        "bytes": 9112572,
+        "sha256": "3ae902c92cc44dace175c0e69e13a4b0899f6983c6121d76b9ab8dd5795e7675",
+        "gitBlob": "0554fc3fc707ce3edbc3c4f8f4d77f8aa3def7ba"
+      },
+      {
+        "path": "node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/package.json",
+        "mode": "100644",
+        "bytes": 3620,
+        "sha256": "822ef7ca6452205657b6288b066481ecf508bfbf43455d715cf7d3ec457561e6",
+        "gitBlob": "cccb75de5b204bdd6f084eda262c2e3835a163a3"
+      },
+      {
+        "path": "node_modules/@typescript/native",
+        "mode": "120000",
+        "bytes": 49,
+        "sha256": "274eb299c04be400c63956c16cffd4da2e4e16eff96591bb540a9ef95b7a5bb9",
+        "gitBlob": "39fedc0fee5a8d18ca33d4510d9ee9a7e436170d",
+        "target": "../.pnpm/typescript@7.0.2/node_modules/typescript"
+      },
+      {
+        "path": "node_modules/typescript",
+        "mode": "120000",
+        "bytes": 46,
+        "sha256": "208c73a8d408de3ed46f7c853759a55050aaa81c285ebcd8f6919f35d83948c7",
+        "gitBlob": "e5bbb7fa883d689b6e17c3aa609501c86de99374",
+        "target": ".pnpm/typescript@5.9.3/node_modules/typescript"
+      }
+    ]
+  },
+  "currentSourcePatchAndBundlerPins": [
+    {
+      "path": "mcp-server/tsup.config.ts",
+      "mode": "100644",
+      "bytes": 1491,
+      "sha256": "691c8486f95f360f0ac8985ad42ba17e81100cac6989317bfb75981552833321",
+      "gitBlob": "c7de6f562687ef92f3fcdaf12eb8493864d14f37"
+    },
+    {
+      "path": "patches/fastmcp@3.35.0.patch",
+      "mode": "100644",
+      "bytes": 4146,
+      "sha256": "d75d6f9f9057373a9e00809a3a4a637023626e29e47d5a03c1f299b977455809",
+      "gitBlob": "2fe1b89e8da8a0cda2d105321329f1ae82ab1560"
+    }
+  ],
+  "declaredMcpImporter": {
+    "startLine": 790,
+    "endLine": 817,
+    "text": "  mcp-server:\n    dependencies:\n      agent-teams-controller:\n        specifier: workspace:*\n        version: link:../agent-teams-controller\n      fastmcp:\n        specifier: ^3.35.0\n        version: 3.35.0(patch_hash=d75d6f9f9057373a9e00809a3a4a637023626e29e47d5a03c1f299b977455809)(supports-color@10.2.2)\n      zod:\n        specifier: 4.6.7\n        version: 4.6.7\n    devDependencies:\n      '@types/node':\n        specifier: ^24.12.4\n        version: 24.12.4\n      tsup:\n        specifier: ^8.5.1\n        version: 8.5.1(@swc/core@1.15.33)(jiti@2.7.0)(postcss@8.5.28)(supports-color@10.2.2)(tsx@4.23.15)(typescript@5.9.3)(yaml@2.9.0)\n      tsx:\n        specifier: ^4.23.15\n        version: 4.23.15\n      typescript:\n        specifier: ^5.8.2\n        version: 5.9.3\n      vitest:\n        specifier: ^3.2.5\n        version: 3.2.6(@types/debug@4.1.12)(@types/node@24.12.4)(happy-dom@21.0.4)(jiti@2.7.0)(sass@1.98.0)(supports-color@10.2.2)(terser@5.46.0)(tsx@4.23.15)(yaml@2.9.0)\n\n"
+  },
+  "exactLockIdentity": {
+    "path": "pnpm-lock.yaml",
+    "bytes": 956788,
+    "sha256": "055c24af3466eaf5c48bb2c214f77187ebde76a60c1ad4849d551b5699464841",
+    "gitBlob": "9d2ce04a1bbf743e49403d2520873134b08b68de"
+  },
+  "missingImporterPaths": [
+    "mcp-server/node_modules/agent-teams-controller",
+    "mcp-server/node_modules/fastmcp",
+    "mcp-server/node_modules/zod",
+    "mcp-server/node_modules/@types/node",
+    "mcp-server/node_modules/tsup",
+    "mcp-server/node_modules/tsx",
+    "mcp-server/node_modules/typescript",
+    "mcp-server/node_modules/vitest",
+    "mcp-server/node_modules/.bin/tsc",
+    "mcp-server/node_modules/.bin/tsup"
+  ],
+  "observedPackageVariantRoots": [
+    {
+      "requested": "fastmcp@3.35.0",
+      "roots": []
+    },
+    {
+      "requested": "tsup@8.5.1",
+      "roots": []
+    },
+    {
+      "requested": "typescript@5.9.3",
+      "roots": [
+        "typescript@5.9.3"
+      ]
+    },
+    {
+      "requested": "tsx@4.23.15",
+      "roots": [
+        "tsx@4.23.15"
+      ]
+    },
+    {
+      "requested": "vitest@3.2.6",
+      "roots": [
+        "vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1"
+      ]
+    },
+    {
+      "requested": "jiti@2.7.0",
+      "roots": [
+        "jiti@2.7.0"
+      ]
+    },
+    {
+      "requested": "jiti@1.21.7",
+      "roots": [
+        "jiti@1.21.7"
+      ]
+    },
+    {
+      "requested": "zod@4.6.7",
+      "roots": [
+        "zod@4.6.7"
+      ]
+    },
+    {
+      "requested": "@types+node@24.12.4",
+      "roots": [
+        "@types+node@24.12.4"
+      ]
+    },
+    {
+      "requested": "@swc+core@1.15.33",
+      "roots": [
+        "@swc+core@1.15.33"
+      ]
+    },
+    {
+      "requested": "postcss@8.5.28",
+      "roots": [
+        "postcss@8.5.28"
+      ]
+    }
+  ],
+  "smallestRemainingEvidenceForLaterScope": {
+    "canonicalPlainTypecheck": [
+      "Exact later source and input boundary plus allowed ledger/Host dist write/rebind contract and separate budgets for canonical pretypecheck lifecycle. Existing route is two emitting builds followed by eight noEmit compiler invocations.",
+      "The current available compiler/package inventories do not establish that the realized whole root TypeScript module graph resolves successfully. No direct compiler bypass, --ignore-scripts substitution or result is selected here."
+    ],
+    "canonicalWorkspaceTypecheck": [
+      "Frozen MCP lock closure derived from the exact lockfile and patch declarations: identify missing fastmcp3.35.0 patched payload and its transitive graph, then compare every required row/peer relationship with current admitted cached rows. Existing cached TypeScript5.9.3 need not be assumed absent or downloaded anew.",
+      "Exact MCP importer links and .bin shim bodies/targets, especially bare tsc resolution to intended TypeScript5.9.3, and the MCP test typecheck dependency/peer layout. An existing root shim hash alone cannot certify the chosen compiler route.",
+      "A fresh complete resulting dependency boundary and source/config attribution if any later separately selected preparation changes the layout. Merely fabricating selected links or relaxing frozen/peer checks is not selected."
+    ],
+    "canonicalBuild": [
+      "Everything needed for the MCP tsup8.5.1 peer-resolved payload and transitive closure, its exact .bin shim and the source-pinned tsup config. Many peer payloads are already cached; exact graph/links remain to be proven.",
+      "The previous report's build-specific evidence gaps remain: native cc/reuse artifact decision, pricing request/tracked-data-write policy, plugin/env and optional Sentry upload scope, external SDK-root absence or inventory, and complete owned output/cache contracts.",
+      "Exact existing lifecycle and effect budgets. Canonical build:workspace repeats controller/MCP builds; no route rewrite or command selection is made."
+    ],
+    "narrowestNewDataReadForCompilerRouting": "Retain the full already present root .bin/tsc shim and the eventual MCP .bin/tsc/.bin/tsup shim bodies together with resolved package links. The package inventory proves available bytes; the full shim text proves the route."
+  },
+  "sourceIdentityJoins": [
+    {
+      "path": ".npmrc",
+      "identity": {
+        "bytes": 19,
+        "sha256": "7151cf397def0c2cb0ab65643701d27d335a72c90f775675b5f826bc7005818a",
+        "gitBlob": "b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "agent-teams-controller/package.json",
+      "identity": {
+        "bytes": 526,
+        "sha256": "7da9c6dae6931016efbdd571ed858529851268a5b965d955a9d4c76ed1395a2e",
+        "gitBlob": "293fb7e08df5e9cc00663e0e5454dfde6ecfb103"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "agent-teams-controller/scripts/build.mjs",
+      "identity": {
+        "bytes": 990,
+        "sha256": "a7afb7428749efcd15c45acf9b4da03ce4d529ff663b57af876a55b373b97399",
+        "gitBlob": "bf2ce41041a9aee92261319e86cf802d82004739"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "electron.vite.config.ts",
+      "identity": {
+        "bytes": 13238,
+        "sha256": "a0b6a4ee707718251fad2efc26526e0f942e7278aa922cb4bcc2e328c4076bf7",
+        "gitBlob": "9045260aab02891055e324607b83e1bb39c7110a"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "mcp-server/deploymentManifest.ts",
+      "identity": {
+        "bytes": 406,
+        "sha256": "e13f19ccfa03a18f47e337cad58e2e45c46f7eae3d683361c3cb38ed8b76e6b6",
+        "gitBlob": "be15c31affd045a103b2153c06757893faeae44a"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "mcp-server/package.json",
+      "identity": {
+        "bytes": 1279,
+        "sha256": "b6b245a0062d111cee110ec7222ce00c3730e03a70cf99a29b92bfda245efa5f",
+        "gitBlob": "febb21f74d77d21e157039f76380cfd5795d359c"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "mcp-server/src/index.ts",
+      "identity": {
+        "bytes": 7322,
+        "sha256": "bd2678704a248e05b0e787ed836814bffdcde3e8f78e80f4e381cdfd709ece37",
+        "gitBlob": "516d24de6ae45c8c56ef1747186b9d8efd4b8fc7"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "mcp-server/tsconfig.json",
+      "identity": {
+        "bytes": 514,
+        "sha256": "5b8733555d297f0d9d9cd355e3b441ce71ca07ec58d1fd40ccc1d3c457c05d62",
+        "gitBlob": "2bd3eb89a37f0eb93bf33c6eb0b4fe175699f2e6"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "mcp-server/tsconfig.test.json",
+      "identity": {
+        "bytes": 228,
+        "sha256": "ba7cf597165fc9840aec168043e11431c534ef8aec3de53256ae2f843aaf596b",
+        "gitBlob": "4f6ab56b6dba7bf95078f4a1ae57e1f36ea473ac"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "mcp-server/tsup.config.ts",
+      "identity": {
+        "bytes": 1491,
+        "sha256": "691c8486f95f360f0ac8985ad42ba17e81100cac6989317bfb75981552833321",
+        "gitBlob": "c7de6f562687ef92f3fcdaf12eb8493864d14f37"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "package.json",
+      "identity": {
+        "bytes": 26839,
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "packages/agent-graph/package.json",
+      "identity": {
+        "bytes": 566,
+        "sha256": "5d276fb29583ee73e8df94acf90256efa1668b0cf8a8ca2a6bacf787c7bd4be9",
+        "gitBlob": "6bdadcaeaca082675c8ef6ff7746acbdf79fdb0f"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "packages/agent-graph/tsconfig.json",
+      "identity": {
+        "bytes": 411,
+        "sha256": "791eb282c2da0cfeba49197018f841a16c7667d689efa55bf9d63558a89ccbda",
+        "gitBlob": "4196ea0e4ce8fa51b94c6b81d497944b631291ba"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "identity": {
+        "bytes": 12355,
+        "sha256": "4e567d64af0c5a0d85e155e90fd4eec9a6ca720e89edfe9923d7e4cc9a1b4f81",
+        "gitBlob": "42093f5cb1be431e383a2bbf97223a2bd8d54b49"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "identity": {
+        "bytes": 456,
+        "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab",
+        "gitBlob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.test.json",
+      "identity": {
+        "bytes": 174,
+        "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356",
+        "gitBlob": "65edbd94041b7d9a986480badd6802b1dd0a8837"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "packages/task-change-ledger/package.json",
+      "identity": {
+        "bytes": 2714,
+        "sha256": "a0db21117b905b414e825862d8bc93cfe9280975c8b91e1afa6cca2e1570a132",
+        "gitBlob": "0fac5843889e1b28d53712f353bce1b0bae855a4"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "packages/task-change-ledger/tsconfig.json",
+      "identity": {
+        "bytes": 378,
+        "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c",
+        "gitBlob": "ff7683dc99c69dbf8c884ba138382468c9c86314"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "packages/task-change-ledger/tsconfig.test.json",
+      "identity": {
+        "bytes": 174,
+        "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356",
+        "gitBlob": "65edbd94041b7d9a986480badd6802b1dd0a8837"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "identity": {
+        "bytes": 6946,
+        "sha256": "581c6a5ada272bf4fd370efccf5398c63a3abd32782cf82021cfa11d94a0e1a5",
+        "gitBlob": "a049a862742a85ba77faafea329fc221b3e500e4"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "postcss.config.cjs",
+      "identity": {
+        "bytes": 80,
+        "sha256": "b9357981319940ed660b848c7a15ea479915885b7cbe60d6951b5d5cef5b509d",
+        "gitBlob": "85f717cc09ecb1153d6a4c0962284e09e4b8d6a9"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/build/buildLinuxNodeExec.mjs",
+      "identity": {
+        "bytes": 4125,
+        "sha256": "fc7e6f68bd899b1109df035d0c903d0df50d9613b5a6c7f1543b763727d8b927",
+        "gitBlob": "f0ed24053ad252e8e348090c535b0818100a5a80"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/build/sentryArtifactInventory.ts",
+      "identity": {
+        "bytes": 12276,
+        "sha256": "c5aea2947c579d293bc7706497e31c0076a05de12665c751b890e90bc5677559",
+        "gitBlob": "0a2d4ba483cbe6f7d4fd0c41f4da8982f5b5dc7c"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/build/sentryBuildIdentity.ts",
+      "identity": {
+        "bytes": 1652,
+        "sha256": "e4ae3ce42f9db363f72caa56f0cea778dc19138c891de2b464bc5b5f49eddedd",
+        "gitBlob": "226ef0bd09ef18e79fb2f7aaa6c36f6fa3c2bdd1"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/ci/enforce-pnpm-install.mjs",
+      "identity": {
+        "bytes": 312,
+        "sha256": "79b147e33807a5d236bda58f6fd4c401c54015b09684e66b054497d08a4f9bed",
+        "gitBlob": "fb33357b9d8b38c2d133593791153aa2fe0bdcf0"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/ci/verify-radix-presence-patch.mjs",
+      "identity": {
+        "bytes": 5400,
+        "sha256": "5a48107033a016b49ff7b143450a5acac430d9c4c58275af7b616beaffa98453",
+        "gitBlob": "6f69e22edf6809288cb1044855e644b0435402ae"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/ci/verify-radix-renderer-bundle.mjs",
+      "identity": {
+        "bytes": 3194,
+        "sha256": "70e241acca751b5dbdcbe9e86c0f0f204dfd60d00290688b6b51907afe602dc0",
+        "gitBlob": "528146d11c0844324972131e3dd60683ec3bb785"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/fetch-pricing-data.ts",
+      "identity": {
+        "bytes": 4570,
+        "sha256": "4a7afc9952ef1b541716c4604d5cb6c5c2b4bc6c2bbf43b77aa43e9ed4204464",
+        "gitBlob": "9c5a0f79fe4765c537acf34a689339d06ddcae5f"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/local-checks/tsconfig.native-tooling.json",
+      "identity": {
+        "bytes": 343,
+        "sha256": "8143da33504a9a0082255810c464ab52c0094db31612cf472c3020149a755d6c",
+        "gitBlob": "3ec6d037c9b4a2d869f1bb78112fefe7bc57461e"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/postinstall-electron.cjs",
+      "identity": {
+        "bytes": 1841,
+        "sha256": "28e967a5ebc00448d1c79ef388344e822ba893a6ec6fdc4e78cfdbaab7411dae",
+        "gitBlob": "71d2e9fc938c082bac2b6f5f0d66b6cc4eb9e78b"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/tsconfig/e2e-base.json",
+      "identity": {
+        "bytes": 158,
+        "sha256": "c5fdb87700636ae4a80582da90cf885d1e7930844d1be27c4cde12564916e5a2",
+        "gitBlob": "1505ea186848fed8d2eadc783933a0581c384a74"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/tsconfig/README.md",
+      "identity": {
+        "bytes": 1119,
+        "sha256": "ddc619fc45ceb40796cde00a696479b2f522ee150a9c40a3ed8369d6d73c8d67",
+        "gitBlob": "7f2081e06c9be28a4188a9721fce80d27196ed3e"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/tsconfig/tsconfig.desktop-e2e.json",
+      "identity": {
+        "bytes": 1932,
+        "sha256": "b3f227e29ff6787249b63d434ea05a9d10e0a6d72c774211f0162019f37d883d",
+        "gitBlob": "eba40e80b32c93bcec2d5c624e74e33ea84bc4d1"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/tsconfig/tsconfig.packaged-ci.json",
+      "identity": {
+        "bytes": 328,
+        "sha256": "c593c949f08ca8b7ef10e87b8c2b92e2ee8d2c66d163e72848441e50f8106a1b",
+        "gitBlob": "79b223201376a533d325ed93b98a19d798f8d043"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/tsconfig/tsconfig.release-tooling.json",
+      "identity": {
+        "bytes": 1562,
+        "sha256": "53977a7dbc9cb39f2e0285de4a90f874db525227b0968c2446bb96bda6764a5a",
+        "gitBlob": "ae0446dd70a2d7f81b95fc1cfdde387a01485a2b"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/tsconfig/tsconfig.sentry-e2e.json",
+      "identity": {
+        "bytes": 299,
+        "sha256": "7af319b3e444fa4684119a2feabfd3579b11e312c2559ce0e8d10691a3aa7f90",
+        "gitBlob": "37ae2cb93a5d82f7fda8e576311b4906ec7f057b"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/tsconfig/tsconfig.sentry-history-retrieval-gate.json",
+      "identity": {
+        "bytes": 411,
+        "sha256": "29522c3597ce12d33521a663e276a06ece762e62db90a94dab44c9b9cdec268b",
+        "gitBlob": "a43a7e95960d9fbaa8db3ccffd1d99f9e22a44a5"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/tsconfig/tsconfig.sentry-sdk-e2e.json",
+      "identity": {
+        "bytes": 560,
+        "sha256": "05b45fa4989a8fdd3a3f66f1ff3b3c74dbed3370e112e57683ec202ece2bd204",
+        "gitBlob": "8eca24261ffe5dc1e7e71df7adf38d7742aac0c2"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/tsconfig/tsconfig.sentry-sdk-preload.json",
+      "identity": {
+        "bytes": 133,
+        "sha256": "1db1445b7c35b01bbc2cd983f6a44c999fb7b65b8cb51f572dd4ae675be21f51",
+        "gitBlob": "f387d3c1c197feeb7ecf8de352d10d8b1013685b"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/tsconfig/tsconfig.sentry-sdk-renderer.json",
+      "identity": {
+        "bytes": 134,
+        "sha256": "7cb2d53b356116c1b1913e2c6bb4af0daeb3b0da6f504ca9dbcbe75bdf7e957f",
+        "gitBlob": "d56b6bb70f7f118e69862c1dbc1995de3a714cd2"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "scripts/tsconfig/tsconfig.updater-e2e.json",
+      "identity": {
+        "bytes": 459,
+        "sha256": "dc6e75b3997fb72f9d605d2b0071797b0ff120b8c2bf3d0e22b7ad46f898d34b",
+        "gitBlob": "fd0dbf4ffcc3a899a5a16169f1ead0cdf101e35c"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "src/main/services/team/WorkspaceMcpBundle.ts",
+      "identity": {
+        "bytes": 5322,
+        "sha256": "983bd354cf982ed251758fef11cab9b034260789bbe5c50028a64f7164c97707",
+        "gitBlob": "f188b66f766eb9f038c130e7bc7f98caba94c205"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "src/main/utils/inheritedHarnessEnv.ts",
+      "identity": {
+        "bytes": 1030,
+        "sha256": "eec265b7ee8d00cc377d91e6c50755a48ed6cef3d5c31f1b06fb4e84f3af714c",
+        "gitBlob": "becac1afdaa7d633bc392bcdae28b6d4ad697cc9"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "src/main/utils/linuxNodeExecArtifact.ts",
+      "identity": {
+        "bytes": 6181,
+        "sha256": "5f83c0db30747a7cc762ea5b40634b315029088f68dcdeaf6274591e1c1462c1",
+        "gitBlob": "f7d2ac8cb75afdd5649facc4f5b6ad605236ae4c"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "src/shared/utils/posthogBuildPolicy.ts",
+      "identity": {
+        "bytes": 789,
+        "sha256": "ec3c2c5a2122249df3d7af26f0c1aa02725788394919644de6bf9199c8c112d7",
+        "gitBlob": "55051ee2e9cbb25ff9b1aace16e7c2b2dcc3db05"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "src/shared/utils/sentryArtifactInventory.ts",
+      "identity": {
+        "bytes": 5197,
+        "sha256": "302a183e74e972a1c98bcab0986e08d17d1dd0310660e4117986da7934f74780",
+        "gitBlob": "67ccda15bb39fca514a8bb3dbf76d5251429796c"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "src/shared/utils/sentryBuildPolicy.ts",
+      "identity": {
+        "bytes": 963,
+        "sha256": "c7feaebdc971931da522639b99b70e5cc4f1947d083d2c4fb28b033d52a54afd",
+        "gitBlob": "d23a09b4d4c6c6241cd3d31864919c73e02277fa"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "tailwind.config.js",
+      "identity": {
+        "bytes": 2941,
+        "sha256": "d779385dd828be2017124d59b82372f5e591ac0f9ceb8b0e33c7c8044a9207c7",
+        "gitBlob": "a52ebb338468d8fcef92837aa27aebd48c7206d7"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "test/features/agent-backend/tsconfig.json",
+      "identity": {
+        "bytes": 379,
+        "sha256": "4b6372a0f31b366a07f02aa7e70d106dcc98d3cacdbad9c57bb4856a88b74f79",
+        "gitBlob": "de2814ddc27524ac335f9f6c174aace1c7b1387c"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "tools/linux-node-exec/close-fds-exec.c",
+      "identity": {
+        "bytes": 1932,
+        "sha256": "4a6e27406a7c1125cadcef66fc54cf10160b82d920a9b7d516f01ca467426dd3",
+        "gitBlob": "34eb3d68815cd4a2c79fbb972934332d79c449b6"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "identity": {
+        "bytes": 557,
+        "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+        "gitBlob": "4936675ad8af5a71d8c001a414836e90250a5daf"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+      "identity": {
+        "bytes": 393,
+        "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+        "gitBlob": "905f1a1489f3b37d651a9984169b0321c9915a15"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "tsconfig.json",
+      "identity": {
+        "bytes": 1235,
+        "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a",
+        "gitBlob": "568952f5025a88c16b0568c7279d8e85a4288b43"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "identity": {
+        "bytes": 646,
+        "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306",
+        "gitBlob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39"
+      },
+      "currentSourceIdentical": true
+    },
+    {
+      "path": "tsconfig.node.json",
+      "identity": {
+        "bytes": 824,
+        "sha256": "b2dc91e021bf19673321d5e5f0e6ab6793e658e28d0ea83f52f0f912b71d2bfa",
+        "gitBlob": "c94c942012bef62695dc3b22b1a2b7229d047f59"
+      },
+      "currentSourceIdentical": true
+    }
+  ],
+  "noNewQualification": true,
+  "noExecutionSelected": true,
+  "noDependencyMutationAuthorized": true,
+  "preservedOriginalCombinedRedStatus": "REFUSED / SPENT; this unrelated prerequisite follow-up does not alter that status."
+}

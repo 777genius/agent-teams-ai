@@ -1,0 +1,288 @@
+{
+  "kind": "root-static-review-corrected-title-r1-v2",
+  "at": "2026-11-16T23:00:20.895Z",
+  "reviewer": "root",
+  "subject": {
+    "bytes": 99012,
+    "sha256": "0efc555482f0088cb2d45a8efd07039ccfcf089b67d5cca7f46ff30cbe71378c",
+    "gitBlob": "2fbac18b3ce8f6703b1e328b266e25954f45ddb8"
+  },
+  "base": {
+    "bytes": 77830,
+    "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+    "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+  },
+  "priorDraft": {
+    "bytes": 97829,
+    "sha256": "b79c6532d7f00464ff24e598dce14483dd01e50167966c2e1be97f78ffbebd33",
+    "gitBlob": "9d7f9b09fd94e33e5b24b4206496e600e08cfb31"
+  },
+  "publicationGate": {
+    "kind": "refused-combined-red-actual-publication-gate-closed",
+    "at": "2026-11-16T22:51:50.189Z",
+    "commit": "80ab67811c66d03b885bb72745cc91484078f6ac",
+    "tree": "c1a552c663e1166a3d6ae285529c2d3f2328859a",
+    "root": {
+      "bytes": 637745,
+      "sha256": "eee92688c33d0e13f1ec52248aa3e9b28bbdc3fec380b986109423f7bdb0921e",
+      "gitBlob": "9855604ffea7ef83a09ff72af0ee37efc5de4e9c"
+    },
+    "independent": {
+      "bytes": 203042,
+      "sha256": "4ddc471061fa4231fbca397c1a7ab9310a84df51069701d44b5591e98d4e6f27",
+      "gitBlob": "6b01764af5385a487e2632bde0e8592584c8515c"
+    },
+    "rootFullReadIndependent": true,
+    "originalAttempt": "REFUSED/SPENT",
+    "observedOriginalOuter": 2,
+    "acceptedCombinedRed": null,
+    "producerGateOpen": false,
+    "allowsOnlyNextProspectiveR1Authorship": true
+  },
+  "verdict": "READY_FOR_INDEPENDENT_R1_REVIEW; no control or source authoring admission before accepted publication/readback",
+  "checks": [
+    {
+      "name": "R1 authored after full actual refusal publication gate",
+      "pass": true
+    },
+    {
+      "name": "Original refusal immutable and nontransferable",
+      "pass": true
+    },
+    {
+      "name": "Unchanged execution contract noReplay",
+      "pass": true
+    },
+    {
+      "name": "Unchanged execution contract clocks",
+      "pass": true
+    },
+    {
+      "name": "Unchanged execution contract advance",
+      "pass": true
+    },
+    {
+      "name": "Unchanged execution contract expected",
+      "pass": true
+    },
+    {
+      "name": "Unchanged execution contract packageBoundary",
+      "pass": true
+    },
+    {
+      "name": "Unchanged execution contract packageScopedPreservation",
+      "pass": true
+    },
+    {
+      "name": "Unchanged execution contract freshReads",
+      "pass": true
+    },
+    {
+      "name": "Unchanged execution contract failedPreflight",
+      "pass": true
+    },
+    {
+      "name": "Unchanged execution contract validation",
+      "pass": true
+    },
+    {
+      "name": "Unchanged execution contract preservationLimits",
+      "pass": true
+    },
+    {
+      "name": "Unchanged execution contract nodeTemporaryDebtGate",
+      "pass": true
+    },
+    {
+      "name": "Unchanged acceptance perPrimary",
+      "pass": true
+    },
+    {
+      "name": "Unchanged acceptance nodeSemantics",
+      "pass": true
+    },
+    {
+      "name": "Unchanged acceptance rendererSemantics",
+      "pass": true
+    },
+    {
+      "name": "Unchanged acceptance package",
+      "pass": true
+    },
+    {
+      "name": "Unchanged acceptance oldCoverage",
+      "pass": true
+    },
+    {
+      "name": "All original boundaries unchanged",
+      "pass": true
+    },
+    {
+      "name": "Exact historical9 rows retained",
+      "pass": true
+    },
+    {
+      "name": "Exact current9 rows and source vector",
+      "pass": true
+    },
+    {
+      "name": "Both whole test identities unchanged",
+      "pass": true
+    },
+    {
+      "name": "Three producer scopes unchanged",
+      "pass": true
+    },
+    {
+      "name": "Frozen active test counts139/85",
+      "pass": true
+    },
+    {
+      "name": "Explicit historical test counts133/80",
+      "pass": true
+    },
+    {
+      "name": "Exactly six renderer corrections",
+      "pass": true
+    },
+    {
+      "name": "All85 exact source-derived diagnosed literals",
+      "pass": true
+    },
+    {
+      "name": "Other79 names exact",
+      "pass": true
+    },
+    {
+      "name": "Original80 compactJSON+LF derived hash",
+      "pass": true
+    },
+    {
+      "name": "Node selected six fixture names unchanged",
+      "pass": true
+    },
+    {
+      "name": "Both semantic parser bodies frozen by scope",
+      "pass": true
+    },
+    {
+      "name": "No new test materialization",
+      "pass": true
+    },
+    {
+      "name": "One remaining phase attempt each",
+      "pass": true
+    },
+    {
+      "name": "Original clocks and reader invariants preserved",
+      "pass": true
+    },
+    {
+      "name": "Full original receipt exact",
+      "pass": true
+    },
+    {
+      "name": "Original materialized subject/test/vector exact",
+      "pass": true
+    },
+    {
+      "name": "Original materialization honest metadata scope",
+      "pass": true
+    },
+    {
+      "name": "Historical source transition fixed",
+      "pass": true
+    },
+    {
+      "name": "No source or control postimage authoring by R1",
+      "pass": true
+    },
+    {
+      "name": "v2 only count repair and metadata",
+      "pass": true
+    }
+  ],
+  "checkCount": 40,
+  "exactSixCorrections": [
+    {
+      "ordinal": 1,
+      "before": "refreshes shared provider metadata after filtered connect (null, full=false)",
+      "after": "refreshes shared provider metadata after filtered 'connect' (null, full=false)"
+    },
+    {
+      "ordinal": 2,
+      "before": "refreshes shared provider metadata after filtered connect (/tmp/TEST-connected-provider-cache, full=false)",
+      "after": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=false)"
+    },
+    {
+      "ordinal": 3,
+      "before": "refreshes shared provider metadata after filtered connect (/tmp/TEST-connected-provider-cache, full=true)",
+      "after": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=true)"
+    },
+    {
+      "ordinal": 4,
+      "before": "refreshes shared provider metadata after filtered forget (null, full=false)",
+      "after": "refreshes shared provider metadata after filtered 'forget' (null, full=false)"
+    },
+    {
+      "ordinal": 5,
+      "before": "refreshes shared provider metadata after filtered forget (/tmp/TEST-connected-provider-cache, full=false)",
+      "after": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=false)"
+    },
+    {
+      "ordinal": 6,
+      "before": "refreshes shared provider metadata after filtered forget (/tmp/TEST-connected-provider-cache, full=true)",
+      "after": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=true)"
+    }
+  ],
+  "orderedOriginal80Sha256": "44190c52c6792220519c4468b9c936671015276dcee08883a1cac966f27ff9f9",
+  "currentTests": {
+    "node": {
+      "bytes": 164965,
+      "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+      "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+    },
+    "renderer": {
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+    }
+  },
+  "currentSourceVector": {
+    "bytes": 2118,
+    "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+    "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+  },
+  "activeCases": {
+    "node139": true,
+    "renderer85": true
+  },
+  "v1Correction": [
+    {
+      "priorDraft": {
+        "bytes": 97829,
+        "sha256": "b79c6532d7f00464ff24e598dce14483dd01e50167966c2e1be97f78ffbebd33",
+        "gitBlob": "9d7f9b09fd94e33e5b24b4206496e600e08cfb31"
+      },
+      "at": "2026-11-16T22:59:31.249Z",
+      "reason": "Two independent reviews found that active frozen-test preimage identities had been updated to existing139/85 bodies while preimageCases still described historical133/80 bodies. Correct the active data and retain explicit historical counts.",
+      "changes": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "priorActivePreimageCases": 133,
+          "currentActivePreimageCases": 139,
+          "historicalPreimageCases": 133
+        },
+        {
+          "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+          "priorActivePreimageCases": 80,
+          "currentActivePreimageCases": 85,
+          "historicalPreimageCases": 80
+        }
+      ],
+      "sourceOrControlPostimagesAuthored": false,
+      "runtimeExecuted": false
+    }
+  ],
+  "qualification": "Data/contract review only. No target runtime, no staged controls, no new test or producer. Independent exact R1 reviews and actual publication/readback remain mandatory."
+}

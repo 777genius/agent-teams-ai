@@ -1,0 +1,31 @@
+{
+  "kind": "read-only-current-root-tsc-shim-evidence",
+  "at": "2026-11-16T22:50:54.824618+00:00",
+  "path": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.bin/tsc",
+  "identity": {
+    "bytes": 2383,
+    "sha256": "5a8ab397de7506efd90fb064791823cd08b86763adaa64bd090b78b8d04cb397",
+    "gitBlob": "2571ad2e5d572b1d7a848feab916b9d82090f905"
+  },
+  "admittedRow": {
+    "path": "node_modules/.bin/tsc",
+    "mode": "100755",
+    "bytes": 2383,
+    "sha256": "5a8ab397de7506efd90fb064791823cd08b86763adaa64bd090b78b8d04cb397",
+    "gitBlob": "2571ad2e5d572b1d7a848feab916b9d82090f905"
+  },
+  "body": "#!/bin/sh\n# Resolve $0 through symlinks so basedir is the shim's real directory.\n# Cap hops at the kernel's ELOOP limit so a cycle cannot hang the shim.\nlink=\"$0\"\nhops=0\nwhile [ -L \"$link\" ] && [ \"$hops\" -lt 40 ]; do\n  hops=$((hops+1))\n  target=$(readlink \"$link\")\n  case \"$target\" in\n    /*) link=\"$target\" ;;\n    *)  link=\"$(dirname \"$link\")/$target\" ;;\n  esac\ndone\nbasedir=$(dirname \"$(echo \"$link\" | sed -e 's,\\\\,/,g')\")\nbasedir_win=\"$basedir\"\nexe=\"\"\nmsys=\"\"\n\ncase `uname -a` in\n  *CYGWIN*|*MINGW*|*MSYS*)\n    if command -v cygpath > /dev/null 2>&1; then\n      basedir_win=`cygpath -w \"$basedir\"`\n    fi\n    exe=\".exe\"\n    msys=\"true\"\n  ;;\n  *WSL2*)\n    if command -v wslpath > /dev/null 2>&1; then\n      basedir_win=\"$(wslpath -w \"$basedir\" 2> /dev/null)\"\n      if [ $? -ne 0 ] || [ -z \"$basedir_win\" ]; then\n        basedir_win=\"$basedir\"\n      else\n        exe=\".exe\"\n      fi\n    fi\n  ;;\nesac\n\nif [ -z \"$NODE_PATH\" ]; then\n  export NODE_PATH=\"/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/node_modules:/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/typescript@7.0.2/node_modules:/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/node_modules\"\nelse\n  export NODE_PATH=\"/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/node_modules:/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/typescript@7.0.2/node_modules:/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/node_modules:$NODE_PATH\"\nfi\nif [ -n \"$exe\" ] && [ -x \"$basedir/node.exe\" ]; then\n  exec \"$basedir/node.exe\"  \"$basedir_win/../.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc\" \"$@\"\nelif [ -x \"$basedir/node\" ]; then\n  exec \"$basedir/node\"  \"$basedir/../.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc\" \"$@\"\nelif command -v node >/dev/null 2>&1; then\n  exec node  \"$basedir/../.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc\" \"$@\"\nelif [ -n \"$exe\" ] && command -v node.exe >/dev/null 2>&1; then\n  exec node.exe  \"$basedir_win/../.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc\" \"$@\"\nelse\n  exec node  \"$basedir/../.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc\" \"$@\"\nfi\n# cmd-shim-target=/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/bin/tsc\n",
+  "typescriptImporter": {
+    "path": "/workspace/scratch/c714-fresh-20261116/source/node_modules/typescript",
+    "target": ".pnpm/typescript@5.9.3/node_modules/typescript",
+    "resolved": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/typescript@5.9.3/node_modules/typescript",
+    "manifestIdentity": {
+      "bytes": 3620,
+      "sha256": "822ef7ca6452205657b6288b066481ecf508bfbf43455d715cf7d3ec457561e6",
+      "gitBlob": "cccb75de5b204bdd6f084eda262c2e3835a163a3"
+    },
+    "version": "5.9.3"
+  },
+  "scope": "Data read only; no shell shim, compiler or project code evaluated. This proves current root shim text and TypeScript importer, not successful MCP resolution or canonical typecheck.",
+  "selectedRuntime": false
+}
