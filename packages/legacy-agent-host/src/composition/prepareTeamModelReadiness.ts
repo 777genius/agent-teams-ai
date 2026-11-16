@@ -221,7 +221,7 @@ export function capturePreparedModelReference(options: {
 }
 
 function readPreparedModelReference(options: Parameters<typeof capturePreparedModelReference>[0],
-  memberInspection = false): ModelReadinessReference {
+  memberInspection = false, accountTiming?: () => () => void): ModelReadinessReference {
   const original = options.management.probes.readRetainedProbe(options.commandId, options.context);
   const candidate = { ...teamModelProbeProfile(options.profile),
     profileId: original.profileId, configRevision: original.configRevision };
@@ -234,10 +234,14 @@ function readPreparedModelReference(options: Parameters<typeof capturePreparedMo
       (original.purpose === undefined && original.readinessScope?.kind !== 'native') ||
       modelReadinessMechanismDigest(candidate) !== original.readinessScope?.mechanismDigest) held();
   return options.management.probes.captureReadinessReference(options.commandId, options.context, saved => {
-    const inspected = saved.readiness || saved.readinessScope?.accountDigest !== undefined || saved.nativeFileKeyWitness !== undefined
-      ? captureOpenCodeProbeAccountInspection(candidate, saved, options.isCurrent, saved,
-        saved.localModelReadinessOrigin, memberInspection ? () => options.management.readinessTarget(candidate) : undefined)
-      : undefined;
+    let inspected: ReturnType<typeof captureOpenCodeProbeAccountInspection> = undefined;
+    if (saved.readiness || saved.readinessScope?.accountDigest !== undefined || saved.nativeFileKeyWitness !== undefined) {
+      const endAccount = accountTiming?.();
+      try {
+        inspected = captureOpenCodeProbeAccountInspection(candidate, saved, options.isCurrent, saved,
+          saved.localModelReadinessOrigin, memberInspection ? () => options.management.readinessTarget(candidate) : undefined);
+      } finally { endAccount?.(); }
+    }
     if (inspected?.memberReference) {
       options.observeAccount?.(inspected.account);
       return inspected.memberReference;
@@ -345,6 +349,8 @@ export function inspectMemberModelReadiness(options: {
     let phase = 'initial-authority', reason: 'held' | 'threw' = 'threw';
     let cutoff: number | null = null, observedAt: number | null = null;
     let started: number | undefined, failed = false;
+    let accountStarted: number | undefined, accountMs: number | undefined, accountAuthorityMs: number | undefined;
+    let beginAccount: (() => () => void) | undefined;
     let boundary: ((next?: 'readConsumer' | 'reference' | 'finalAuthority', ended?: number) => void) | undefined;
     try {
       if (readinessRefusal.hasSubscribers && !refusalObserved) {
@@ -352,7 +358,8 @@ export function inspectMemberModelReadiness(options: {
         if (currentCalls.count < 4096) {
           currentCalls.count++; started = performance.now();
           const totals = regions ??= { initialAuthorityCount: 0, initialAuthorityMs: 0, readConsumerCount: 0, readConsumerMs: 0,
-            referenceCount: 0, referenceMs: 0, finalAuthorityCount: 0, finalAuthorityMs: 0 };
+            referenceCount: 0, referenceMs: 0, finalAuthorityCount: 0, finalAuthorityMs: 0,
+            referenceAccountCount: 0, referenceAccountMs: 0, referenceAccountAuthorityCount: 0, referenceAccountAuthorityMs: 0 };
           let region: string | undefined = 'initialAuthority', entered = started;
           boundary = (next, ended) => {
             try {
@@ -365,6 +372,14 @@ export function inspectMemberModelReadiness(options: {
               }
               region = next; entered = now;
             } catch { region = undefined; currentCalls.truncated = true; }
+          };
+          beginAccount = () => {
+            try { accountStarted = performance.now(); } catch { currentCalls.truncated = true; }
+            return () => {
+              try { if (accountStarted !== undefined) accountMs = performance.now() - accountStarted; }
+              catch { currentCalls.truncated = true; }
+              finally { accountStarted = undefined; }
+            };
           };
         }
         else currentCalls.truncated = true;
@@ -395,7 +410,21 @@ export function inspectMemberModelReadiness(options: {
         commandId: current.reference.commandId, context: current.reference.context,
         ...(current.reference.purpose === 'ordinary' ? { kind: 'native' as const } : {}),
         observeAccount: value => { if (value) observedAccount.value = value; else delete observedAccount.value; },
-        isCurrent: () => { try { options.assertCurrent(); return true; } catch { return false; } } }, true);
+        isCurrent: () => {
+          let authorityStarted: number | undefined;
+          try { if (accountStarted !== undefined) authorityStarted = performance.now(); }
+          catch { currentCalls.truncated = true; }
+          try { options.assertCurrent(); return true; } catch { return false; }
+          finally {
+            try {
+              if (authorityStarted !== undefined) {
+                const elapsed = performance.now() - authorityStarted;
+                if (!Number.isFinite(elapsed) || elapsed < 0) currentCalls.truncated = true;
+                else accountAuthorityMs = (accountAuthorityMs ?? 0) + elapsed;
+              }
+            } catch { currentCalls.truncated = true; }
+          }
+        } }, true, beginAccount);
       boundary?.();
       phase = 'equality';
       if (runtimeDigest(observed) !== runtimeDigest(current.reference)) { reason = 'held'; held(); }
@@ -410,6 +439,17 @@ export function inspectMemberModelReadiness(options: {
         if (!Number.isSafeInteger(elapsed) || elapsed < 0 || !Number.isSafeInteger(currentCalls.totalMs + elapsed))
           currentCalls.truncated = true;
         else { currentCalls.totalMs += elapsed; currentCalls.maxMs = Math.max(currentCalls.maxMs, elapsed); currentCalls.lastMs = elapsed; }
+        // Nested callbacks accumulate raw durations; each region counts and rounds once per outer call.
+        for (const [name, raw] of [['referenceAccount', accountMs], ['referenceAccountAuthority', accountAuthorityMs]] as const) {
+          if (raw === undefined) continue;
+          const milliseconds = Math.round(raw), total = regions![name + 'Ms']! + milliseconds;
+          if (!Number.isFinite(raw) || raw < 0 || !Number.isSafeInteger(milliseconds) || !Number.isSafeInteger(total))
+            currentCalls.truncated = true;
+          else {
+            regions![name + 'Count'] = regions![name + 'Count']! + 1;
+            regions![name + 'Ms'] = total;
+          }
+        }
       } catch { currentCalls.truncated = true; }
       if (failed && !refusalObserved) {
         refusalObserved = true;

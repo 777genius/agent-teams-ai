@@ -1563,7 +1563,8 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
       runtime: { read: () => ({ attached: false, nativeReady: false }),
         open: async () => { businessOpens++; throw Error('TEST no business allocation during readiness inspection'); } } });
     let active = true, targetReads = 0, changed = false;
-    let diagnosticNow = 0, performanceReads = 0, authorityCalls = 0;
+    let diagnosticNow = 0, performanceReads = 0, authorityCalls = 0, authorityCost = 11;
+    let failDiagnosticClock = false, diagnosticReadsAfterUnsubscribe = 0;
     const manager = { ...management, readinessTarget: (selected: ProviderManagementProfile) => {
       targetReads++;
       if (change === 'unchanged') diagnosticNow += 23;
@@ -1580,7 +1581,7 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
     if (change === 'unchanged') diagnostic.subscribe(observe);
     const inspection = { management: manager, launch, entry, hostIncarnation: 'TEST-retained-host',
       assertCurrent() {
-        if (change === 'unchanged') { diagnosticNow += 11; authorityCalls++; }
+        if (change === 'unchanged') { diagnosticNow += authorityCost; authorityCalls++; }
         if (!active) throw Error('TEST original member owner revoked');
       } };
     const read = (): ReturnType<TeamLaunchOwner['readModelReadiness']> => launch.readModelReadiness({ binding, configRevision: member.configRevision,
@@ -1591,7 +1592,9 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
         diagnosticNow += 7; return originalRead.call(launch, selected);
       }) : undefined;
     const measuredClock = change === 'unchanged' ? t.mock.method(performance, 'now', () => {
-      performanceReads++; return diagnosticNow;
+      performanceReads++;
+      if (failDiagnosticClock) { failDiagnosticClock = false; throw Error('TEST observational clock failure'); }
+      return diagnosticNow;
     }) : undefined;
     try {
       attachMemberModelReadiness({ launch, entry, reference: selectedReference,
@@ -1643,15 +1646,52 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
         assert.ok([timing.totalMs, timing.maxMs, timing.lastMs].every(value => Number.isSafeInteger(value) && value! >= 0));
         assert.ok(timing.totalMs >= timing.maxMs && timing.maxMs >= timing.lastMs!);
         assert.equal(targetReads, 2);
+        assert.equal(successfulAuthorityCalls, 38, 'two original inspections retain every authority callback');
         assert.deepEqual(timing.regions, { initialAuthorityCount: 3, initialAuthorityMs: 33,
           readConsumerCount: 2, readConsumerMs: 14,
           referenceCount: 2, referenceMs: 11 * (successfulAuthorityCalls - 4) + 2 * 23,
-          finalAuthorityCount: 2, finalAuthorityMs: 22 });
+          finalAuthorityCount: 2, finalAuthorityMs: 22,
+          referenceAccountCount: 2, referenceAccountMs: 11 * (successfulAuthorityCalls - 6) + 2 * 23,
+          referenceAccountAuthorityCount: 2, referenceAccountAuthorityMs: 11 * (successfulAuthorityCalls - 6) });
         assert.equal(timing.totalMs, 11 * (successfulAuthorityCalls + 1) + 2 * 7 + 2 * 23);
         assert.equal(timing.lastMs, 11, 'the first timed partial throw retains its elapsed region');
-        assert.equal(performanceReads, 16, 'two seven-clock calls and the first two-clock refusal; no replay after first latch');
+        assert.equal(performanceReads, 20 + 2 * (successfulAuthorityCalls - 6),
+          'original clocks plus account intervals and nested authority; no replay after first latch');
         diagnostic.unsubscribe(observe);
         assert.deepEqual(read(), pending, 'observation and the unchanged error never consume readiness');
+        for (const clockFailure of [false, true]) {
+          const partial: unknown[] = [], capturePartial = (value: unknown) => { partial.push(value); };
+          const originalTarget = manager.readinessTarget, targetFailure = Error('TEST exact account target refusal');
+          const previousAuthorityCalls = authorityCalls, previousClockReads = performanceReads;
+          authorityCost = 11.4;
+          manager.readinessTarget = () => {
+            targetReads++; diagnosticNow += 23; failDiagnosticClock = clockFailure;
+            throw targetFailure;
+          };
+          diagnostic.subscribe(capturePartial);
+          try {
+            assert.throws(() => inspectMemberModelReadiness(inspection), error => error === targetFailure);
+            assert.equal(partial.length, 2, 'the original reference refusal and its containing consumer are observed once');
+            const consumer = partial.find(value => (value as Record<string, unknown>).kind === 'consumer') as Record<string, unknown>;
+            assert.equal(consumer.phase, 'reference'); assert.equal(consumer.reason, 'threw');
+            const nested = consumer.currentCalls as { count: number; truncated: boolean; regions: Record<string, number> };
+            assert.equal(nested.count, 1); assert.equal(nested.truncated, clockFailure);
+            const callbacks = authorityCalls - previousAuthorityCalls;
+            assert.equal(callbacks, 15, 'the original target throws before the three closing authority callbacks');
+            assert.equal(nested.regions.referenceAccountAuthorityCount, 1);
+            assert.equal(nested.regions.referenceAccountAuthorityMs, Math.round(authorityCost * (callbacks - 2)),
+              'sum fractional nested intervals before the single outer-call rounding');
+            if (!clockFailure) {
+              assert.equal(nested.regions.referenceAccountCount, 1);
+              assert.equal(nested.regions.referenceAccountMs, Math.round(authorityCost * (callbacks - 2) + 23));
+            }
+            assert.equal(performanceReads - previousClockReads, 7 + 2 * (callbacks - 2));
+            assert.deepEqual(read(), pending, 'partial timing and a failed observer do not consume readiness');
+          } finally {
+            diagnostic.unsubscribe(capturePartial); manager.readinessTarget = originalTarget; authorityCost = 11;
+          }
+        }
+        diagnosticReadsAfterUnsubscribe = performanceReads;
       }
       if (change === 'shadowed-native') {
         mkdirSync(shadowDirectory, { mode: 0o700 });
@@ -1687,8 +1727,8 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
       assert.equal(runs, 1); assert.equal(closes, 1);
       assert.equal(allocations, 0); assert.equal(businessOpens, 0);
       if (change === 'unchanged') {
-        assert.equal(performanceReads, 16, 'fresh original consumption checks add no diagnostic clocks without a subscriber');
-        assert.equal(targetReads, 5, 'the original three consumption checks still inspect the target freshly');
+        assert.equal(performanceReads, diagnosticReadsAfterUnsubscribe, 'fresh original consumption checks add no diagnostic clocks without a subscriber');
+        assert.equal(targetReads, 7, 'the two partial checks and original three consumption checks inspect the target freshly');
       }
     } finally {
       measuredRead?.mock.restore();
