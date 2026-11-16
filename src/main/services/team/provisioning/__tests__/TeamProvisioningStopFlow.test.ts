@@ -10,10 +10,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { TeamTaskActivityIntervalService } from '../../TeamTaskActivityIntervalService';
 import {
   stopAllTeamsFlow,
-  stopOriginalWindowsDirectMembers,
   stopTeamFlow,
   type TeamProvisioningStopTeamPorts,
 } from '../TeamProvisioningStopFlow';
+import { stopOriginalWindowsDirectMembers } from '../TeamProvisioningWindowsMemberStopAdapter';
 import {
   createTeamProvisioningTransientRunStatePorts,
   TeamProvisioningTransientRunState,
@@ -126,6 +126,7 @@ function makePorts(
         child.killed = true;
       }
     }),
+    stopOriginalWindowsDirectMembers: vi.fn(async () => undefined),
     updateProgress: vi.fn((run: StopFlowRun, state, message) => {
       const next = { ...progress(run.runId, run.teamName), state, message };
       return next;
@@ -247,6 +248,7 @@ describe('team provisioning stop flow', () => {
       const stopping = stopTeamFlow(run.teamName, ports);
       await vi.waitFor(() => expect(ports.killTeamProcessAndWait).toHaveBeenCalled());
       expect(ports.stopPersistentTeamMembers).not.toHaveBeenCalled();
+      expect(ports.stopOriginalWindowsDirectMembers).toHaveBeenCalledWith(run.directMemberProcesses);
       releaseLead();
       await stopping;
       expect(ports.stopPersistentTeamMembers).toHaveBeenCalledExactlyOnceWith(run.teamName);
