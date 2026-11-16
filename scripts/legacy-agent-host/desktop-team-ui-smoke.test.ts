@@ -2643,3 +2643,47 @@ test('finite V2 P11 Linux projection keeps exact kernel identity and refuses cha
   for (const variant of ['ready', 'no-host', 'changed-birth', 'foreign-executable', 'foreign-wrapper', 'wrong-parent'] as const)
     await exercise(variant);
 });
+
+async function finiteMembershipTerminalCompletion() {
+  const source = (await readFile(new URL('./desktop-backend-smoke.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = '    assertDesktopProofCompleted(evidence, {', end = "  if (mode === 'task-board-cross-team-ui') {";
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original terminal completion boundary');
+  const actual = source.slice(source.indexOf(begin), source.indexOf(end));
+  const invoke = Function('assert', 'options', `'use strict';
+    const { evidence, finiteMembership, primaryError, finalError } = options;
+    const packed = false, emulatedOnly = false, controlledProcessMode = false;
+    const mode = 'native-mixed-create-launch-ui', scheduleUiMode = false, capturedMcpUiMode = false;
+    const cleanupFailure = undefined, remaining = [];
+    let originalCompletions = 0;
+    const assertDesktopProofCompleted = () => {
+      originalCompletions++;
+      if (finalError) throw finalError;
+    };
+    try { if (primaryError) throw primaryError; }
+    catch (error) { throw error; }
+    finally {
+      ${actual}
+    return originalCompletions;
+  `);
+  return (options: { evidence: { status: string }; finiteMembership: boolean; primaryError?: Error; finalError?: Error }) =>
+    invoke(assert, options) as number;
+}
+
+test('finite V2 terminal completion retains the original scenario Error after successful original final assertions', async () => {
+  const complete = await finiteMembershipTerminalCompletion();
+  const original = new Error('original finite membership scenario failure');
+  assert.throws(() => complete({ evidence: { status: 'INCOMPLETE' }, finiteMembership: true, primaryError: original }),
+    error => error === original);
+});
+
+test('finite V2 terminal completion retains original finally precedence and refuses incomplete successful work', async () => {
+  const complete = await finiteMembershipTerminalCompletion();
+  const original = new Error('original body failure'), finalError = new Error('original final assertion failure');
+  assert.throws(() => complete({ evidence: { status: 'INCOMPLETE' }, finiteMembership: true, primaryError: original, finalError }),
+    error => error === finalError);
+  assert.throws(() => complete({ evidence: { status: 'INCOMPLETE' }, finiteMembership: true }), {
+    name: 'AssertionError', message: /original finite-peer V2 membership and cleanup must both pass/u,
+  });
+  assert.equal(complete({ evidence: { status: 'PASS' }, finiteMembership: true }), 1);
+  assert.equal(complete({ evidence: { status: 'INCOMPLETE' }, finiteMembership: false }), 1);
+});

@@ -775,8 +775,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
     console.log(JSON.stringify(projectDesktopProofReceiptSummary(evidence, { receiptPath, mode, mixedMode })));
     assertDesktopProofCompleted(evidence, { packed: Boolean(packed), emulatedOnly, controlledProcessMode,
       mode, scheduleUiMode, capturedMcpUiMode, cleanupFailure, remaining });
-    if (finiteMembership) assert.equal(evidence.status, 'PASS', 'original finite-peer V2 membership and cleanup must both pass');
   }
+  if (finiteMembership) assert.equal(evidence.status, 'PASS', 'original finite-peer V2 membership and cleanup must both pass');
   if (mode === 'task-board-cross-team-ui') {
     assert.equal(evidence.status, 'PASS', 'original Taskboard proof and cleanup must finish before owner continuation');
     return { fixture, repo, invocation, cdpLibrary, evidence, receiptPath, frozenSources: desktopProofSources, selectedSourceHashes };
