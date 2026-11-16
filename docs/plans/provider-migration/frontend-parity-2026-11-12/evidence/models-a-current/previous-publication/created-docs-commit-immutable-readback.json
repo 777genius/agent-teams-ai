@@ -1,0 +1,22 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "content": "{\"sha\":\"e055dda7e259b432bce5027ef33df1fb395d2d68\",\"node_id\":\"C_kwDORVTEtNoAKGUwNTVkZGE3ZTI1OWI0MzJiY2U1MDI3ZWYzM2RmMWZiMzk1ZDJkNjg\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/e055dda7e259b432bce5027ef33df1fb395d2d68\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/e055dda7e259b432bce5027ef33df1fb395d2d68\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T09:06:47Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T09:06:47Z\"},\"tree\":{\"sha\":\"2e6771ecfef81a7a2159dee6f895273c3bda7aac\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/2e6771ecfef81a7a2159dee6f895273c3bda7aac\"},\"message\":\"docs(migration): reconcile current P11 A and reviewed UI followups\\n\\nPreserve the complete followup Plan, all incoming P11 A documentation, original evidence and independent reviews. Publish the exact reviewed four-source composition and ordered history route before applying code; retain original failure, cleanup and phase boundaries.\",\"parents\":[{\"sha\":\"c76371db7b1be4bd2381607b1a8bab71ae2a43fc\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/c76371db7b1be4bd2381607b1a8bab71ae2a43fc\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/c76371db7b1be4bd2381607b1a8bab71ae2a43fc\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+    "title": "e055dda7e259b432bce5027ef33df1fb395d2d68",
+    "modified_date": null,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/e055dda7e259b432bce5027ef33df1fb395d2d68",
+    "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/e055dda7e259b432bce5027ef33df1fb395d2d68",
+    "display_title": "e055dda7e259b432bce5027ef33df1fb395d2d68",
+    "structuredContent": {
+      "title": "e055dda7e259b432bce5027ef33df1fb395d2d68",
+      "content": "{\"sha\":\"e055dda7e259b432bce5027ef33df1fb395d2d68\",\"node_id\":\"C_kwDORVTEtNoAKGUwNTVkZGE3ZTI1OWI0MzJiY2U1MDI3ZWYzM2RmMWZiMzk1ZDJkNjg\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/e055dda7e259b432bce5027ef33df1fb395d2d68\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/e055dda7e259b432bce5027ef33df1fb395d2d68\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T09:06:47Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T09:06:47Z\"},\"tree\":{\"sha\":\"2e6771ecfef81a7a2159dee6f895273c3bda7aac\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/2e6771ecfef81a7a2159dee6f895273c3bda7aac\"},\"message\":\"docs(migration): reconcile current P11 A and reviewed UI followups\\n\\nPreserve the complete followup Plan, all incoming P11 A documentation, original evidence and independent reviews. Publish the exact reviewed four-source composition and ordered history route before applying code; retain original failure, cleanup and phase boundaries.\",\"parents\":[{\"sha\":\"c76371db7b1be4bd2381607b1a8bab71ae2a43fc\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/c76371db7b1be4bd2381607b1a8bab71ae2a43fc\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/c76371db7b1be4bd2381607b1a8bab71ae2a43fc\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+      "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/e055dda7e259b432bce5027ef33df1fb395d2d68"
+    }
+  },
+  "isError": false
+}

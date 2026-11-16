@@ -1,0 +1,131 @@
+{
+  "kind": "inert Models Phase A whole-test composition after prospective copy correction",
+  "createdAtUTC": "2026-11-16T08:25:25.172627+00:00",
+  "status": "NOT SELECTED, APPLIED OR EXECUTED; no project command, source or ref change",
+  "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+  "actualImmutableReferenceSource": "57885c055a18b27c180c304762643eac632513ad",
+  "actualImmutableReferenceTest": {
+    "bytes": 180091,
+    "lines": 5678,
+    "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+    "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+  },
+  "prospectiveRequiredCopyPreimage": {
+    "path": "credential-failure-copy-r1-v2/candidate/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+    "bytes": 180058,
+    "lines": 5678,
+    "blob": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+    "sha256": "70597b6bb603515e31ec1239eb6543cc9f1fb18beb20ac20c6a357ee03f748ed"
+  },
+  "oldPhaseACandidate": {
+    "path": "phase-a-composition-e1d/models-test-v2.ts.txt",
+    "bytes": 188106,
+    "lines": 5843,
+    "blob": "370e1b067c732c2a59c68a10cdf857f31707386b",
+    "sha256": "6d80fc146e310ca01faf74af88d180777d6896c5e976f84a940ac2980845d562"
+  },
+  "unchangedRegressionInsertion": {
+    "path": "models-phase-a-after-copy-preview/unchanged-models-regression-suffix.ts.txt",
+    "bytes": 8015,
+    "lines": 165,
+    "blob": "5cf463580d32959d99d7cf7ca8e6aa15c3122e38",
+    "sha256": "46c4a62dd5368244a47f3c5157d0356c074f03e13c22e28bd7c281d8022eaf2b"
+  },
+  "candidate": {
+    "path": "models-phase-a-after-copy-preview/models-test-after-copy-and-phase-a.ts.txt",
+    "bytes": 188073,
+    "lines": 5843,
+    "blob": "48bf7f181ae6836a9003ebe687abab0a0ae2db20",
+    "sha256": "d52e9af5bef20bd8fa99f10ddfb25b2287b9d643ecaf3f448c43dd6cc75fd8ee"
+  },
+  "patch": {
+    "path": "models-phase-a-after-copy-preview/candidate.patch",
+    "bytes": 8468,
+    "lines": 172,
+    "blob": "38345b99b1776fe844b02d6a310fc536f7079053",
+    "sha256": "163f2f58dc776291e4d7fb18361aa0707b42592f689117cc1f65eb3156401d68"
+  },
+  "reversePatch": {
+    "path": "models-phase-a-after-copy-preview/reverse.patch",
+    "bytes": 8468,
+    "lines": 172,
+    "blob": "21ea371b66e9f70d31fc08de990b9873e65eb0ce",
+    "sha256": "bf9f5899aaeb4c63b526a532101b4290e1344efbc5a88d9801ed3b02d6f4c48c"
+  },
+  "deltaFromProspectiveCopy": {
+    "addedLines": 165,
+    "removedLines": 0
+  },
+  "composition": {
+    "method": "Insert the exact old8,015-byte/165-line regression block immediately before the final four-byte describe terminator; retain that original terminator. This is not a raw append after the full file.",
+    "allProspectiveCopyBytesAndRelativeOrderPreserved": true,
+    "copyExpectedLiteralPreservedExactly": true,
+    "old80CaseBodiesPreservedFromSelectedCopyAfterimage": true,
+    "tenProposedCasesAndHelpersExactOld370eBytes": true,
+    "correctedExpectMessagePlacementPreserved": true,
+    "removeInsertionReconstructsExact67e5": true,
+    "restoreSingle33ByteCopyPhraseReconstructsExact370e": true
+  },
+  "unchangedProductionHook": {
+    "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+    "bytes": 74351,
+    "lines": 2068,
+    "blob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+    "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575"
+  },
+  "outcomePredictionsOnly": {
+    "originalCases": 80,
+    "addedProposedCases": 10,
+    "completeFileCases": 90,
+    "semanticFailuresOnUnchanged1176Hook": 6,
+    "newPassingControls": 4,
+    "allPassAfterSeparatelySelectedBOnlyIfActualVerified": 90,
+    "actualPhaseAResult": null,
+    "actualPhaseBResult": null
+  },
+  "authorityLimits": [
+    "Root requested an inert composition only. This does not select Phase A, its hook correction, any P11 source, or any workflow change.",
+    "The required67e5 copy-test body and matching1738 formatter are prospective at freeze. Require exact actual published-source readback and a fresh binding before any later selection/application.",
+    "Old370e whole-file candidate would restore the superseded saved/not-kept expectation and must not replace the selected copy afterimage.",
+    "Original CI-only complete containing frontend shard/file and current-source Team/static prerequisites remain unchanged; no local test/compiler/lint/install/bootstrap or alternative invocation.",
+    "Six predicted failures are loading true-versus-false outcomes after actual hook/currentness assertions; no source or historical Desktop cause is inferred from prediction.",
+    "Every frozen v1/v2 and phase-a-composition-e1d file remains unchanged."
+  ],
+  "references": [
+    {
+      "path": "phase-a-composition-e1d/R1-phase-a-composition.md",
+      "bytes": 8976,
+      "lines": 38,
+      "blob": "689d937e205582b7c0975fa193401a9627df9352",
+      "sha256": "7958fbac6f00fcb10ccb47ac102da1ec6840ae71539d428a12f35620fc12306c"
+    },
+    {
+      "path": "phase-a-composition-e1d/phase-a-metadata.json",
+      "bytes": 14412,
+      "lines": 338,
+      "blob": "b39eaae1967df654537bf9340c8098958e5dd290",
+      "sha256": "01bf4c260b4f12d7a0efa00d86e5489127338b5d69fc491acbf0e64668a92eb0"
+    },
+    {
+      "path": "credential-failure-copy-r1-v2/R1-appendix.md",
+      "bytes": 8590,
+      "lines": 49,
+      "blob": "0c2c2866685ef1270fe4052dbdb89be00ae6d3a5",
+      "sha256": "d68d1ca4269b68d5e9012a9312306a12b560ff6e9c456267123b9c4357f93647"
+    },
+    {
+      "path": "credential-failure-copy-r1-v2/candidate-metadata.json",
+      "bytes": 3315,
+      "lines": 85,
+      "blob": "1771f114d49cfffbe29661529010d5b76c861f68",
+      "sha256": "bddd36356d925def05966c97eaac5fdcaf1f1ceabc7f633fcdc31d85edf04de1"
+    },
+    {
+      "path": "credential-failure-copy-r1-v2/independent-source-r1-review.json",
+      "bytes": 16030,
+      "lines": 363,
+      "blob": "9a06f1b6a41c03ae82da98a26e7b2d5b42eaab33",
+      "sha256": "7e385a95d35464346776adfedcfa8903d4d71a16bcef9b55625ea74efb3eb49c"
+    }
+  ]
+}

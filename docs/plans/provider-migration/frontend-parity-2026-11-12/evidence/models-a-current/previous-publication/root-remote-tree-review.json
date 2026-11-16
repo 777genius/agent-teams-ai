@@ -1,0 +1,40 @@
+{
+  "kind": "Root full official immutable tree verification",
+  "atUTC": "2026-11-16T09:05:57.762058+00:00",
+  "manifest": {
+    "bytes": 719944,
+    "blob": "22a1d162ad1631e97d9ab90f53186ca267553713",
+    "sha256": "a59ea3cb26e1db2e21313154da4409be9f2a86cede010b523a86c25b0d7dc799"
+  },
+  "verdict": "PASS exact complete official trees; no commit or ref mutation inferred",
+  "trees": [
+    {
+      "kind": "docs",
+      "tree": "2e6771ecfef81a7a2159dee6f895273c3bda7aac",
+      "rawResponse": {
+        "bytes": 8238026,
+        "blob": "a4b5d758098f25cb1f505f549cf608296bed9922",
+        "sha256": "44514c73bc67dd1c0f62fe814523a3763b4bb896b15edce33e74cc057087f655"
+      },
+      "truncated": false,
+      "leaves": 11531,
+      "directoriesIncludingRoot": 1743,
+      "allModeTypeShaEqual": true,
+      "allPayloadAndSourceSizesEqual": true
+    },
+    {
+      "kind": "source",
+      "tree": "1c006663973e6fce5791ac10c5d01cc5c5d8ae28",
+      "rawResponse": {
+        "bytes": 8238026,
+        "blob": "0490d98e806873aabb71406ae541e406cb982fa5",
+        "sha256": "baf37e108854c9b352c943a2a45524adb4751b21cea0d4d0f005eeaa2a7ec2d0"
+      },
+      "truncated": false,
+      "leaves": 11531,
+      "directoriesIncludingRoot": 1743,
+      "allModeTypeShaEqual": true,
+      "allPayloadAndSourceSizesEqual": true
+    }
+  ]
+}

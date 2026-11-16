@@ -1,0 +1,664 @@
+{
+  "kind": "INDEPENDENT_CURRENT_BFC_MODELS_TEST_ONLY_PHASE_A_SOURCE_AND_R1_REVIEW",
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUTC": "2026-11-16T09:22:40.271689+00:00",
+  "result": "APPROVE",
+  "approvalScope": "Exact current Models test-only A source/R1 and its bounded docs-first publication route; not source application, primary advancement, candidate execution, Models B or P11 B/C.",
+  "R1": {
+    "path": "models-phase-a-current-bfc/R1-current-models-test-only.md",
+    "bytes": 12000,
+    "blob": "c5decc6d0707c011a16d9d1082178f087b0f4f8f",
+    "sha256": "ff9fb7826b8caa97702c45dd46ad015a9119cb36629aa365f548cd20af22a905"
+  },
+  "metadata": {
+    "path": "models-phase-a-current-bfc/candidate-metadata.json",
+    "bytes": 17296,
+    "blob": "10cf429d28371468607073961c95343422987d68",
+    "sha256": "16b4e919cbc1214ee8355cfc970631d0a3ea4ac41305530caf65610aa34ef5da"
+  },
+  "independentProof": {
+    "path": "models-phase-a-current-bfc/independent-current-byte-source-proof.json",
+    "bytes": 28753,
+    "blob": "b8e1f2f3a50573f7092af90e9cfab845b889f189",
+    "sha256": "166712c94c2ca3b2b1e07e1b82bd84361b7533178f0b67efc34cc21a672c3fe3"
+  },
+  "base": "bfc1ceca293f2291a0deb1129fdbe6e94c7f8999",
+  "baseTree": "1c006663973e6fce5791ac10c5d01cc5c5d8ae28",
+  "orderedBaseParents": [
+    "e055dda7e259b432bce5027ef33df1fb395d2d68",
+    "72e6ec04444969d343d73834c70bc4e261100fc9"
+  ],
+  "primaryAtPreparation": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "refFreshnessLimit": "These immutable source identities and the proposal preparation snapshot are reviewed. Root must independently recheck actual refs/PR/base/useful-original inventory immediately before publication or advancement; this review performs no API poll.",
+  "actualPublishedBaseReview": {
+    "path": "e3-preinput-copy-independent-actual-source-readback.json",
+    "bytes": 383357,
+    "lines": 7588,
+    "blob": "72a9f79af9e6fc964911151a4cd7731e0c388636",
+    "sha256": "ca8c22519298b9f613bb5b38fe0e74f0c58d1c25b0f9de03b80569f58a4001d7"
+  },
+  "selectedOnePath": {
+    "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+    "mode": "100644",
+    "preimage": {
+      "bytes": 180058,
+      "lines": 5678,
+      "blob": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+      "sha256": "70597b6bb603515e31ec1239eb6543cc9f1fb18beb20ac20c6a357ee03f748ed"
+    },
+    "afterimage": {
+      "bytes": 188073,
+      "lines": 5843,
+      "blob": "48bf7f181ae6836a9003ebe687abab0a0ae2db20",
+      "sha256": "d52e9af5bef20bd8fa99f10ddfb25b2287b9d643ecaf3f448c43dd6cc75fd8ee"
+    },
+    "addedLines": 165,
+    "removedLines": 0,
+    "addedBytes": 8015,
+    "caseExpansion": 10
+  },
+  "losslessComposition": {
+    "entireCurrentGitPreimageExact": true,
+    "oneHunkForwardExact": true,
+    "oneHunkReverseExact": true,
+    "singleInsertionBeforeOriginalFinalTerminator": true,
+    "allOldCaseBodiesAndRelativeBytesPreserved": true,
+    "afterCopyPreviewWholeBytesExact": true,
+    "restoringOnly33ByteOldCopyPhraseReconstructs370e": true,
+    "historicalCorrected370e": {
+      "path": "phase-a-composition-8a/models-test-v2.ts.txt",
+      "bytes": 188106,
+      "lines": 5843,
+      "blob": "370e1b067c732c2a59c68a10cdf857f31707386b",
+      "sha256": "6d80fc146e310ca01faf74af88d180777d6896c5e976f84a940ac2980845d562"
+    },
+    "copyDeltaOnly": {
+      "historical": "      'OpenRouter rejected this API key. The new credential was not kept. Copy the key from the correct account or subscription plan, then try again.'\n",
+      "retained": "      'OpenRouter rejected this API key. Copy the key from the correct account or subscription plan, then try again.'\n"
+    }
+  },
+  "forwardPatch": {
+    "path": "models-phase-a-current-bfc/candidate.patch",
+    "bytes": 8468,
+    "lines": 172,
+    "blob": "38345b99b1776fe844b02d6a310fc536f7079053",
+    "sha256": "163f2f58dc776291e4d7fb18361aa0707b42592f689117cc1f65eb3156401d68"
+  },
+  "reversePatch": {
+    "path": "models-phase-a-current-bfc/reverse.patch",
+    "bytes": 8468,
+    "lines": 172,
+    "blob": "6cd2bca1f67e9ec28bf494e6a3268a4a7c1b699e",
+    "sha256": "217dc55004c92192fb5b07591c0b6210e65c8c5f894138a4fa1daf40fe971e6d"
+  },
+  "fullSourceProjection": {
+    "currentLeaves": 8798,
+    "unchangedLeaves": 8797,
+    "changedPaths": [
+      "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+    ],
+    "baseMap": "3aac1b178739ba20b80ca23dde15867dc630b8862733a8d02b5829564c0d5ae2",
+    "projectedMap": "2b7c2c128f6169308531d2bd4797089b8bcac107c78a01e5579d0d9791e954b3",
+    "fullBaseTreeLeaves": 11531,
+    "allOtherFullTreeLeavesUnchanged": 11530,
+    "maxBasePath": 216
+  },
+  "currentUnchangedCriticalInputs": [
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "blob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+      "meaning": "Unfixed actual hook remains the required A baseline; conditional c2faa hook is excluded."
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "blob": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+      "meaning": "Published copy correction retained; one corrected existing expectation remains in the complete new test."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "blob": "1b0ad5b15b056857817858d1e85f6dfe81f6e782",
+      "meaning": "Entire current geometry plus complete incoming4264-byte/62-line P11 A retained."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+      "meaning": "Published geometry helper unchanged."
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "meaning": "P11 driver still original; no B or C selected."
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/RuntimeProviderConnectErrorPresentation.test.ts",
+      "blob": "fa761c43af6d414b0f2be0338869891dc059f640",
+      "meaning": "No revived extra copy-test cases or separate copy RED route."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "meaning": "Privacy helper preserved independently of Models loading work."
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "blob": "ce5c3a7511009501ca057f01957008a8ce3ef67b",
+      "meaning": "All current24 stderr cases and incoming pre-stream assertion unchanged."
+    }
+  ],
+  "freshSourceAuthority": {
+    "declaredPins": [
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "mode": "100644",
+        "bytes": 101741,
+        "lines": 1312,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": ".node-version",
+        "mode": "100644",
+        "bytes": 8,
+        "lines": 1,
+        "blob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+        "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "eslint.config.js",
+        "mode": "100644",
+        "bytes": 37840,
+        "lines": 1166,
+        "blob": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+        "sha256": "d9f0cf7c33672b9304fc524bbc028e07939bcab4583bb1e7c94b99fd773eb597",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "eslint.fast.config.js",
+        "mode": "100644",
+        "bytes": 7268,
+        "lines": 258,
+        "blob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+        "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "eslint.feature-overrides.mts",
+        "mode": "100644",
+        "bytes": 657,
+        "lines": 19,
+        "blob": "9c6450d54b87ce33f7d799f900226c316e367937",
+        "sha256": "a90a4b08c1d5f56021c50fe5f5ababa70c3de0732acec173624da51254dc883e",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+        "mode": "100644",
+        "bytes": 8310,
+        "lines": 172,
+        "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+        "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+        "mode": "100644",
+        "bytes": 16208,
+        "lines": 278,
+        "blob": "ce5c3a7511009501ca057f01957008a8ce3ef67b",
+        "sha256": "e52a7a6ec9af567c1ff9b8e5c82136d538b3ccffbb0803cdf1c5c9db909b2ae5",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "mode": "100644",
+        "bytes": 956788,
+        "lines": 26665,
+        "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+        "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "pnpm-workspace.yaml",
+        "mode": "100644",
+        "bytes": 6946,
+        "lines": 169,
+        "blob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+        "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "scripts/ci/check-source-file-size.mjs",
+        "mode": "100644",
+        "bytes": 8145,
+        "lines": 231,
+        "blob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+        "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "scripts/ci/source-file-size-baseline.json",
+        "mode": "100644",
+        "bytes": 9635,
+        "lines": 146,
+        "blob": "e827bccf455235b1ff7871e7b93450cdaa53eb54",
+        "sha256": "82080bdf23e0fae3ea087e8aea8c3622fa63a734fa9874e7d07e9d568087f072",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45707,
+        "lines": 570,
+        "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 123149,
+        "lines": 2072,
+        "blob": "1b0ad5b15b056857817858d1e85f6dfe81f6e782",
+        "sha256": "c73b55cbd07ef632b174609e99e05e536d584b8dae9c124c2fc1a14e1c76c4da",
+        "samePrimaryAtPreparation": false
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28094,
+        "lines": 506,
+        "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+        "sha256": "67a1e7413eff11ddc087f35a64cd3c8b242c061988b2fbd661497a9f6b5dfd11",
+        "samePrimaryAtPreparation": false
+      },
+      {
+        "path": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient.ts",
+        "mode": "100644",
+        "bytes": 23900,
+        "lines": 580,
+        "blob": "6849549eacb871ea1342a37f4cecd27ed7795c32",
+        "sha256": "fe9b1bdc4e4dfb4eba417e1bb4a3b29987cbd1ccfdbf9766582e2d49a7a53568",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderConnectionTelemetry.ts",
+        "mode": "100644",
+        "bytes": 2114,
+        "lines": 61,
+        "blob": "c6cbbb42e62b4c7b762e0a09fb9ade4c01f42964",
+        "sha256": "1fde6ed2109d906c54bb0a48be47082a167f601a1752ef8bcad54e9b67b48875",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+        "mode": "100644",
+        "bytes": 6382,
+        "lines": 161,
+        "blob": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+        "sha256": "47c561887a1ea9a499f131a073c805be07a9a17343c1115b32ec173dcdf894c9",
+        "samePrimaryAtPreparation": false
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74351,
+        "lines": 2068,
+        "blob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderProjectContext.ts",
+        "mode": "100644",
+        "bytes": 1300,
+        "lines": 35,
+        "blob": "33744a0abc543ab39e13d0b5a784de719e40ec58",
+        "sha256": "94e4ebc5b9e343b12ebc40f5251bab30372d9668aab295a57930653b20b6730f",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+        "mode": "100644",
+        "bytes": 97366,
+        "lines": 2584,
+        "blob": "176344903eaee49ced9607a29f28a3c556e59f6e",
+        "sha256": "11871dd43b1c704230c83e722577ba4cdd4f4fd6c2eebce89cab02457b52b81a",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+        "mode": "100644",
+        "bytes": 8707,
+        "lines": 264,
+        "blob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+        "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/RuntimeProviderConnectErrorPresentation.test.ts",
+        "mode": "100644",
+        "bytes": 720,
+        "lines": 15,
+        "blob": "fa761c43af6d414b0f2be0338869891dc059f640",
+        "sha256": "7591962fa6f0b58294543c674ab2fd6a590b406159a9cb8ed7b8b7e8f6be9440",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "bytes": 180058,
+        "lines": 5678,
+        "blob": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+        "sha256": "70597b6bb603515e31ec1239eb6543cc9f1fb18beb20ac20c6a357ee03f748ed",
+        "samePrimaryAtPreparation": false
+      },
+      {
+        "path": "tsconfig.json",
+        "mode": "100644",
+        "bytes": 1235,
+        "lines": 40,
+        "blob": "568952f5025a88c16b0568c7279d8e85a4288b43",
+        "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "tsconfig.legacy-agent-host-scripts.json",
+        "mode": "100644",
+        "bytes": 646,
+        "lines": 20,
+        "blob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+        "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306",
+        "samePrimaryAtPreparation": true
+      },
+      {
+        "path": "vitest.config.ts",
+        "mode": "100644",
+        "bytes": 1187,
+        "lines": 34,
+        "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+        "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+        "samePrimaryAtPreparation": true
+      }
+    ],
+    "additionalReadOnlySupportingPins": [
+      {
+        "path": "test/setup.ts",
+        "mode": "100644",
+        "bytes": 5297,
+        "lines": 168,
+        "blob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c",
+        "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b"
+      },
+      {
+        "path": "package.json",
+        "mode": "100644",
+        "bytes": 26839,
+        "lines": 580,
+        "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/runtimeProviderDirectoryCache.ts",
+        "mode": "100644",
+        "bytes": 19250,
+        "lines": 518,
+        "blob": "882551fd4069aa2c6d2998ddaf4b7981d8d88a2f",
+        "sha256": "d6103abe730314077d2d4866c629dd7a64edb50c9cd1d17a4399f330ef49b55e"
+      },
+      {
+        "path": "src/features/runtime-provider-management/contracts/index.ts",
+        "mode": "100644",
+        "bytes": 534,
+        "lines": 16,
+        "blob": "a20faaa7988e534e9dba3d8406cb81292e34addc",
+        "sha256": "d007318fedd1d6dda113928a6551a01abeccfafd1c83cd429a2d1392833e99c0"
+      },
+      {
+        "path": "src/features/runtime-provider-management/contracts/types.ts",
+        "mode": "100644",
+        "bytes": 23745,
+        "lines": 795,
+        "blob": "5cb5e5f3726395cf0cda9a6e6996e47f6e34de58",
+        "sha256": "e873d838b26f31adc115bf8b4220a48a3f14f131262d001cc8e098ee4a42c31a"
+      }
+    ],
+    "scope": "Fresh immutable source bodies and named venue/declaration bindings, not a new installed-dependency closure or compiler run."
+  },
+  "sourceCounterexample": {
+    "actualHook": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+    "locations": [
+      "451-519 refresh with request/context token",
+      "966-976 public refreshDirectory",
+      "663-721 context/enable effect"
+    ],
+    "sequence": [
+      "Ordinary refresh A increments viewLoadRequestSeq and admits loading at463-465.",
+      "The actual public refreshDirectory invokes refresh({silent:true}) because A set viewRequestedRef. B increments the same view request sequence and supersedes A, while silent B does not admit its own loading.",
+      "Both original responses are manually settled in either order through mocked Electron responses. Stale A correctly returns false and cannot publish view/error or clear B-owned state.",
+      "Current B can publish its current view/error, but finally508 incorrectly conditions the loading release on !silent in addition to requestIsCurrent. A is stale, B is silent, and loading remains true after both settle."
+    ],
+    "historicalUIBoundaries": "Old N/E2 spinner and timeout receipts did not retain these request identities/currentness/settlements. This is an independently reachable source counterexample; no actual Management failure cause is proved.",
+    "futureHookChangeExcluded": "Only a later independently selected B may remove !silent at the existing guarded finally. The current/context predicate, silent admission behavior and all other hook bytes must remain; actual semantic RED review is prerequisite."
+  },
+  "actualHookTestSeam": {
+    "importsActualHook": true,
+    "harness": "Existing ConfigurableHarness, tracked React roots, React act, original cache reset/teardown",
+    "mockBoundary": "Existing Electron loadView and loadProviderDirectory only; explicit finite promises and original public refresh/refreshDirectory actions.",
+    "noCopiedAlgorithmOrPrivateRefMutation": true,
+    "noProjectProviderNativeExecution": true,
+    "noAddedSleepsClockReplacementOrTimeout": true,
+    "failedCasePromisesSettledBeforeDecisiveAssertion": true,
+    "allExistingAssertionOrderPreserved": true,
+    "teardown": "Existing afterEach unmounts all tracked roots, removes Electron API/DOM, resets directory cache and unstubs globals. The explicit unmount control removes its already-unmounted root from that set.",
+    "unmountAuthority": "useRuntimeProviderProjectContext increments generation on unmount and context change; assertions observe no later rendered publication and do not claim exhaustive internal setter instrumentation."
+  },
+  "tenFiniteCases": [
+    {
+      "case": "silent supersession/regular-first/view",
+      "predictionOnUnchanged1176": "semantic rejection at candidate line5765: current silent completion sample is loading:true, expected false",
+      "actualResult": null,
+      "assertionsBeforeDecisiveFailure": [
+        "two exact same-project loadView calls",
+        "one additional ordinary directory read",
+        "both held original view promises settled",
+        "stale regular result false",
+        "correct current view or error",
+        "no extra view read",
+        "stale regular completion retained loading:true"
+      ],
+      "assertionAfterFailureUnexecuted": "candidate line5766 final state.loading false"
+    },
+    {
+      "case": "silent supersession/silent-first/view",
+      "predictionOnUnchanged1176": "semantic rejection at candidate line5765: current silent completion sample is loading:true, expected false",
+      "actualResult": null,
+      "assertionsBeforeDecisiveFailure": [
+        "two exact same-project loadView calls",
+        "one additional ordinary directory read",
+        "both held original view promises settled",
+        "stale regular result false",
+        "correct current view or error",
+        "no extra view read"
+      ],
+      "assertionAfterFailureUnexecuted": "candidate line5766 final state.loading false"
+    },
+    {
+      "case": "silent supersession/regular-first/response-error",
+      "predictionOnUnchanged1176": "semantic rejection at candidate line5765: current silent completion sample is loading:true, expected false",
+      "actualResult": null,
+      "assertionsBeforeDecisiveFailure": [
+        "two exact same-project loadView calls",
+        "one additional ordinary directory read",
+        "both held original view promises settled",
+        "stale regular result false",
+        "correct current view or error",
+        "no extra view read",
+        "stale regular completion retained loading:true"
+      ],
+      "assertionAfterFailureUnexecuted": "candidate line5766 final state.loading false"
+    },
+    {
+      "case": "silent supersession/silent-first/response-error",
+      "predictionOnUnchanged1176": "semantic rejection at candidate line5765: current silent completion sample is loading:true, expected false",
+      "actualResult": null,
+      "assertionsBeforeDecisiveFailure": [
+        "two exact same-project loadView calls",
+        "one additional ordinary directory read",
+        "both held original view promises settled",
+        "stale regular result false",
+        "correct current view or error",
+        "no extra view read"
+      ],
+      "assertionAfterFailureUnexecuted": "candidate line5766 final state.loading false"
+    },
+    {
+      "case": "silent supersession/regular-first/rejection",
+      "predictionOnUnchanged1176": "semantic rejection at candidate line5765: current silent completion sample is loading:true, expected false",
+      "actualResult": null,
+      "assertionsBeforeDecisiveFailure": [
+        "two exact same-project loadView calls",
+        "one additional ordinary directory read",
+        "both held original view promises settled",
+        "stale regular result false",
+        "correct current view or error",
+        "no extra view read",
+        "stale regular completion retained loading:true"
+      ],
+      "assertionAfterFailureUnexecuted": "candidate line5766 final state.loading false"
+    },
+    {
+      "case": "silent supersession/silent-first/rejection",
+      "predictionOnUnchanged1176": "semantic rejection at candidate line5765: current silent completion sample is loading:true, expected false",
+      "actualResult": null,
+      "assertionsBeforeDecisiveFailure": [
+        "two exact same-project loadView calls",
+        "one additional ordinary directory read",
+        "both held original view promises settled",
+        "stale regular result false",
+        "correct current view or error",
+        "no extra view read"
+      ],
+      "assertionAfterFailureUnexecuted": "candidate line5766 final state.loading false"
+    },
+    {
+      "case": "new project/regular-first",
+      "predictionOnUnchanged1176": "passing control; both old completions remain stale and cannot clear the new third request loading",
+      "actualResult": null
+    },
+    {
+      "case": "new project/silent-first",
+      "predictionOnUnchanged1176": "passing control; both old completions remain stale and cannot clear the new third request loading",
+      "actualResult": null
+    },
+    {
+      "case": "unmount",
+      "predictionOnUnchanged1176": "passing control; last rendered state identity unchanged after both late completions",
+      "limit": "observes published rendered state, not all possible internal React setters",
+      "actualResult": null
+    },
+    {
+      "case": "idle silent refresh",
+      "predictionOnUnchanged1176": "passing control; previously settled regular request leaves loading false and a silent request never admits loading",
+      "actualResult": null
+    }
+  ],
+  "counts": {
+    "historicalOldSourceCases": 80,
+    "newCases": 10,
+    "totalCandidateCases": 90,
+    "predictionOnlyPass": 84,
+    "predictionOnlySemanticFailures": 6,
+    "actualCandidateResult": null,
+    "futureBResult": null
+  },
+  "historicalBaseline": {
+    "reference": {
+      "path": "ci-57885c/frontend-all-shards/independent-all-frontend-review.json",
+      "bytes": 125825,
+      "lines": 3184,
+      "blob": "14e560f34ce1118e612d67be10ee76d5ae071b1f",
+      "sha256": "e73600f94d713b3b8b965c31db622ad9f90f1e8ad5569120345318ca836224e3"
+    },
+    "source": "57885c055a18b27c180c304762643eac632513ad",
+    "testBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+    "allOriginal80Passed": true,
+    "scope": "Exact old source with old formatter only. Current67e50 differs by one existing expectation to match published1738. The full inverse proves preservation; it does not supply80 executed current-case results."
+  },
+  "matcherAndTypeBoundary": {
+    "declaration": {
+      "path": "phase-a-composition-8a/vitest-expect-3.2.6-index.d.ts.txt",
+      "bytes": 27831,
+      "lines": 808,
+      "blob": "4f93e899783b1d411aa0fd0ca4f5b040bc729fba",
+      "sha256": "120a80aa556732f684db3ed61aeff1d6671e1655bd6cba0aa88b22b88ac9a6b1"
+    },
+    "expectSignature": "<T>(actual:T,message?:string):Assertion<T>",
+    "toBeSignature": "<E>(expected:E)=>void",
+    "correctedExpectMessagesAtCandidateLines": [
+      5760,
+      5793
+    ],
+    "old817feInvalidArityNotRestored": true,
+    "historicalV1Correction": {
+      "path": "models-loading-owner-r1/independent-v1-static-correction.json",
+      "bytes": 3690,
+      "blob": "cb61e758d7e89022a920949a9e67741de8af2bf9",
+      "sha256": "bc665cc21b2592c0795adf2144b42ab579b75bf6983cfb11a08db4e830aa710f"
+    },
+    "typeOrCompilerPassClaim": false
+  },
+  "venue": {
+    "workflow": ".github/workflows/host-emulated-acceptance.yml",
+    "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+    "job": "offline-frontend-tests",
+    "workflowLines": "1234-1297",
+    "completeOriginalCommand": "pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\"",
+    "unchangedTeeAndAlwaysArtifact": true,
+    "fourShards": true,
+    "failFast": false,
+    "jobTimeoutMinutes": 45,
+    "defaultPerTestTimeoutMs": 15000,
+    "allIndividualPerTestOverridesUnchanged": true,
+    "environment": "happy-dom",
+    "setup": "test/setup.ts",
+    "candidateIncludedAndNotExcluded": true,
+    "noNeedsOnDesktopOrP11Prerequisite": true,
+    "futureContainingShardMustComeFromActualResult": true,
+    "runtime": "Original workspace Node pin26.12.1 remains separate from captured Host Node24.21; actual future log must bind the executing runtime.",
+    "compilerVsTypedLint": "Original package compiler alias7.0.2 and TypeScript5.9.3 used by typed lint remain distinct; no new local pass is asserted."
+  },
+  "phaseAndPublicationOrder": [
+    "Freeze this exact current source/R1 and independent R2. Preserve the entire current2118839-byte Plan prefix and all existing docs; publish append-only documentation authority with expected-parent ordinary push and complete root/independent actual readback.",
+    "Only after that documentation readback may a sole-parent test-only child change exactly67e50 to48bf. Full source/unchanged-leaf actual readback remains required. This report does not create or apply either child.",
+    "An existing-followup publication is distinct from primary advancement. Preserve original72e full-eight-file P11 A semantic RED and its independent review; do not replace or cancel its venue to accelerate Models. Root must retain useful originals and fresh leases before any later ordinary primary fast-forward. Queued jobs alone do not introduce an all-terminal barrier.",
+    "Models A obtains its own actual complete containing frontend shard/file on the exact candidate and unchanged1176. Require six intended loading assertion failures, four new controls and all80 retained cases with their real results; inspect every unrelated failure/skip/cancellation and raw/source/build/runtime join.",
+    "Import/type/setup/build/timeout failure, static reasoning, old80 PASS or the Node full8/full10 Team commands cannot substitute for Models semantic RED. Assertions after the failed loading expectation remain unexecuted.",
+    "Models B remains unselected until that actual semantic RED has independent R2 and a fresh B source/R1. P11 B/C remain unselected and governed by their separate actual RED/GREEN prerequisites. Any future combined selection requires a new explicit current composition and preserves all live cases.",
+    "After a separately selected B, use the same complete original containing file/shard, all four resulting-source frontend outcomes and the original required helper/Team/types/typed-lint/UI gates; no filter, new workflow, manual dispatch or local fallback is authorized."
+  ],
+  "policyAndCaps": {
+    "all8797OtherNonDocLeavesUnchanged": true,
+    "allOldDocsUnchangedInPureSourceProjection": true,
+    "sourceSizeDefault800": true,
+    "legacyExceptions141": true,
+    "hook2068ExceptionUnchanged": true,
+    "existingTestExclusionUnchanged": true,
+    "TeamSliceRatchetUnchanged": true,
+    "shortened40PathsPreserved": true,
+    "maxRepositoryPath216": true,
+    "Stage1OpenDraftPreserved": true,
+    "noReadyMainReleaseDefaultHostOrStage2": true
+  },
+  "limits": [
+    "Approval is exact prospective source/R1 review, not an actual RED/GREEN or whole-source acceptance.",
+    "Fresh source/ref guards may require reconciliation; current source is bfc and primary72e only as the proposal snapshot, not a live API assertion from this reader.",
+    "Current geometry/copy/P11 A/Models A are not qualified by historical578 Team or frontend evidence. E3 Windows failure R2 is separate and contributes no Models gate.",
+    "No production hook, workflow/config, dependency, new private source census, native authority, business input, timeout/currentness/custody/replay/cleanup exception or cap change is selected.",
+    "No local project test/compiler/lint/install/bootstrap, real Claude/Codex including version/discovery, manual Actions dispatch/rerun/cancel, API poll, source or ref mutation was performed or authorized by this review.",
+    "No overall migration, Desktop/native/packaged/P08/P09/directI386/full-policy/M16 acceptance or GOAL_COMPLETE claim follows."
+  ],
+  "findings": [],
+  "conclusion": "No correction requested. APPROVE the exact current one-file Models A candidate and R1, with the phase/publication/evidence boundaries above."
+}

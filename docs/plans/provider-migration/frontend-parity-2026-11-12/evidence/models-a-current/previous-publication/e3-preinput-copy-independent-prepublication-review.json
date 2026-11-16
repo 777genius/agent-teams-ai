@@ -1,0 +1,585 @@
+{
+  "kind": "Independent complete prepublication R2: current E3 history-preserving geometry/copy union with incoming P11 A",
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUTC": "2026-11-16T09:00:37.295692+00:00",
+  "result": "APPROVE exact frozen documentation package and four-source projection, subject to the separately required fresh leases, immutable remote-tree review and actual published readbacks",
+  "requiredCorrections": [],
+  "manifest": {
+    "path": "e3-preinput-copy-publication/upload-manifest.json",
+    "bytes": 719944,
+    "blob": "22a1d162ad1631e97d9ab90f53186ca267553713",
+    "sha256": "a59ea3cb26e1db2e21313154da4409be9f2a86cede010b523a86c25b0d7dc799"
+  },
+  "independentCompleteByteTreeProof": {
+    "path": "e3-preinput-copy-independent-byte-tree-proof.json",
+    "bytes": 510902,
+    "blob": "1bf383fa92476593cca5f63612329b742bef5dbb",
+    "sha256": "bfa89897e53498c7acd6111b8e3c9739c68efd814cf7276372fe84fd798a37f1"
+  },
+  "independentReader": {
+    "path": "e3-preinput-copy-independent-reader.py",
+    "bytes": 20271,
+    "blob": "f4279860ee67de26faf961be4f59c3396780f57f",
+    "sha256": "0e27a94de4651a991e78dc4c84ec1ada2ab860e827f8a85759e6740218d9caed"
+  },
+  "rootOrderedR1": {
+    "path": "e3-preinput-copy-publication/R1-root-ordered-selection.md",
+    "bytes": 11406,
+    "blob": "7b1268932dcf649b7bdaf766f9ea6a027e91cbb0",
+    "sha256": "f0d19a3a84d56abf84b550898fb645372f9caf9b94361271cc3e21391a666c72"
+  },
+  "currentCompositionR1": {
+    "path": "preinput-copy-after-p11-r1/R1-current-composition.md",
+    "bytes": 11383,
+    "blob": "40076f4e3c998770d21716afa78d860237b37bab",
+    "sha256": "086ad6daa80e75772d52c93780356ca615d79b12475905b4033c5dba0af3c7bc"
+  },
+  "exactProposedTrees": {
+    "documentation": "2e6771ecfef81a7a2159dee6f895273c3bda7aac",
+    "sourceProjection": "1c006663973e6fce5791ac10c5d01cc5c5d8ae28",
+    "leaves": 11531,
+    "unchangedBaseLeaves": 11268,
+    "documentationDirectoriesIncludingRoot": 1743,
+    "sourceDirectoriesIncludingRoot": 1743,
+    "allDirectoriesRehashed": true,
+    "fullFrozenMapEqualsIndependentProjection": true,
+    "noDeletes": true,
+    "nonDocumentationLeaves": 8798,
+    "baseAndDocsNonDocMap": "0aaf4203eeb6a9a0717139f5bfc843a238c26952ccee52572fda1c9c9e8067e2",
+    "incomingNonDocMap": "2f1c50940429fd4cc9509ebf9c0c7de77c49560d9999aca848595350310db470",
+    "sourceProjectionNonDocMap": "3aac1b178739ba20b80ca23dde15867dc630b8862733a8d02b5829564c0d5ae2",
+    "sourceOther8794ExactIncoming": true,
+    "allSourceProjectionDocsExactDocumentationParent": true
+  },
+  "actualGitHistory": {
+    "followup": {
+      "head": "c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+      "tree": "c70232e34d2759ce287e2f224073205dcf9c18db",
+      "parents": [
+        "174e27e0178025f88608650347900daac49dcc58",
+        "57885c055a18b27c180c304762643eac632513ad"
+      ],
+      "object": {
+        "bytes": 599,
+        "sha256": "e308412280b22c1bb88b536cfcb8dfa3d0e5a5f29b4769dbb751598136965d40"
+      }
+    },
+    "incomingSource": {
+      "head": "72e6ec04444969d343d73834c70bc4e261100fc9",
+      "tree": "de80fbfbffb3fe4daabf6cc9be258cc8df534524",
+      "parents": [
+        "098a2a6788fcf4477e348ca669628e35f68517a9"
+      ],
+      "object": {
+        "bytes": 295,
+        "sha256": "3268b62e0a37a14ae1f98b57e0914d3ef493c365467fcb6c94eea408a79e03bc"
+      }
+    },
+    "incomingDocumentation": {
+      "head": "098a2a6788fcf4477e348ca669628e35f68517a9",
+      "tree": "185b837963f2e14bd03e1274acbfac7f7faeb320",
+      "parents": [
+        "57885c055a18b27c180c304762643eac632513ad"
+      ],
+      "object": {
+        "bytes": 282,
+        "sha256": "bd57f14394dd396ba22b09c13a94a15066db0419afc1679c4669875e354895b5"
+      }
+    },
+    "incomingCommonAncestor": {
+      "head": "57885c055a18b27c180c304762643eac632513ad",
+      "tree": "b1685b4993306f9cd509d832b72f2cd6f0418943",
+      "parents": [
+        "f3948bee8f5e14b0e7332bd266fd197b44228d32"
+      ],
+      "object": {
+        "bytes": 549,
+        "sha256": "4aa30376c2815d00a8d77e945088d7fded5da6baa894e36873eb88dc3b8fff78"
+      }
+    },
+    "prospectiveDocumentationParents": [
+      "c76371db7b1be4bd2381607b1a8bab71ae2a43fc"
+    ],
+    "prospectiveSourceParents": [
+      "EXACT_VERIFIED_DOCUMENTATION_CHILD",
+      "72e6ec04444969d343d73834c70bc4e261100fc9"
+    ],
+    "originalPrimaryAlreadyContainsA": true,
+    "oldGeometryRouteStatus": "The former010a/948a trees and108-payload preparation remain immutable uncommitted history. Their stale8694096 whole test would discard current P11 A and is not the current complete source selection.",
+    "historyPreserved": "The ordinary documentation child first preserves all263 exact documents and all actualc763 source. Only after its actual independent readback may the source merge preserve incoming72e via its second parent and apply the four complete afterimages. Incoming098a and578 ancestry remain intact."
+  },
+  "completePayloadAndRecovery": {
+    "selectedFiles": 263,
+    "payloadBytes": 43771890,
+    "currentReferences": 281,
+    "inheritedReferences": 122,
+    "all403OriginalAndDestinationIdentitiesExact": true,
+    "priorUncommittedNonPlanFilesExact": 107,
+    "incomingPublishedDocumentsExact": 14,
+    "uniqueZipArchives": 18,
+    "allCRCVerifiedRecoverableMembers": 180,
+    "losslessFullOriginalTreeResponses": [
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e3-preinput-copy/prior-cut/remote-docs-tree-response.json.gz",
+        "compressed": {
+          "bytes": 1150177,
+          "blob": "9cb6d5e959c8f59aa6d56690e25e7dde8ecde593",
+          "sha256": "1813bffb83c643b1bbb805bb479b58d69d7781071df1e0eded4f241ee4a2a0c5"
+        },
+        "fullDecodedOriginal": {
+          "bytes": 8103786,
+          "blob": "01ee72180a97925f7b9f62418d328e5e313823d4",
+          "sha256": "0cd4b3eaafa7a0c0cb87e6348f3c97d156be606ede4b29474cc4cc05cbb92ddc"
+        },
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/geometry-copy-publication/remote-docs-tree-response.json",
+        "exact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e3-preinput-copy/prior-cut/remote-source-tree-response.json.gz",
+        "compressed": {
+          "bytes": 1150176,
+          "blob": "84747a13a6effff5d5451266c828100eea640aa4",
+          "sha256": "ddf8fc4c4574b71d1be5559f64625dff7a13e2fb0ee819e9f3881d55440f44d1"
+        },
+        "fullDecodedOriginal": {
+          "bytes": 8103786,
+          "blob": "5026bb65d5f8952eb10ae85a4d31f0338b93bd10",
+          "sha256": "a9b77037a4f9ae38a1285b37878436baea2128310b68416879d9450dc4fd4577"
+        },
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/geometry-copy-publication/remote-source-tree-response.json",
+        "exact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/remote-docs-tree-response.json.gz",
+        "compressed": {
+          "bytes": 1139896,
+          "blob": "703103805a0731ed3d869d73eb2f3cc4a8f84052",
+          "sha256": "18983146c41ba3daefb60c21a7603ff675d0d7d50beefd3e754c355a7e10102c"
+        },
+        "fullDecodedOriginal": {
+          "bytes": 8019555,
+          "blob": "8cbbad9832a9c70d2c20b44860e130217cdffc27",
+          "sha256": "f17ba9837a4e86477b45bdd3ba1137adfca41e27a812c815193692da4c0e51e5"
+        },
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/remote-docs-tree-response.json",
+        "exact": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/previous-publication/remote-source-tree-response.json.gz",
+        "compressed": {
+          "bytes": 1139883,
+          "blob": "994cebc24190d41718000a792922b720785b8e25",
+          "sha256": "282870d9ddada2d637f247671065432803c5c8c7df854d3dea74eecdaf7a2137"
+        },
+        "fullDecodedOriginal": {
+          "bytes": 8019557,
+          "blob": "d6e7ec6280748bc8af4d9a4787e58a1733d852d2",
+          "sha256": "9ff34eebcdea92ea092f5c04aff8e641d6a80fc7f6a04fea4a77a12db38aef97"
+        },
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/e2-reconciliation-publication/remote-source-tree-response.json",
+        "exact": true
+      }
+    ],
+    "allFrozenExpectedLeafAndDirectoryMapsMatchedIndependentMerkle": true,
+    "preservedHistoricalMoves": 40,
+    "oldDeepPathsAbsent": true,
+    "maximumRelativePathCharacters": 216,
+    "originalMappings": "Every reference resolves to full staged or inherited immutable Git bytes; each originalPath matches its full original or its explicitly declared lossless gzip decoding. Byte-identical reuses retain explicit group mappings. No archive member was substituted with a summary.",
+    "noTransitiveOverclaim": "The incoming source-binding still names two historical external scratch records not included among its14 payloads. The exact independent history report and final R1 disclose that limit. Fresh Git, original complete Team raw, official terminal/source binding and the separately retained independent Team review supply the stated baseline; this is not a claim to recover every transitive scratch reference.",
+    "preparationHistory": "The publisher was not rerun by this reviewer. The root reports a first prefreeze relative-path failure and byte-identical reuse on its successful preparation. Approval rests on the complete final immutable inputs and independently reconstructed bytes/trees, not on a claimed writer execution result."
+  },
+  "PlanPreservationAndOrder": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "actualBase": {
+      "bytes": 2038188,
+      "blob": "d5cc38cc212f9757e841decd86db35fd322e358b",
+      "sha256": "e4f671d3dcf12d23564cf2c5317a2cb702638eb3c68ad803c3b52e94feec6687"
+    },
+    "historicalUncommittedPrefix": {
+      "bytes": 2083245,
+      "blob": "c062e0a00ad2b1c0d2c55721ab7a80c2e7b79d68",
+      "sha256": "e48600cc383500bdfe8aeaf1740cb3f1c8ba78cfc9f21c26b465334956bc7a26"
+    },
+    "fullCandidate": {
+      "bytes": 2118839,
+      "blob": "a21bba9cd9eb05339a2e17e4f4755b30eb6e2087",
+      "sha256": "4e27b366e7e11d8b83e5175825b10ae772ca9c7b2521e21517eee787b37007b8"
+    },
+    "historicalThreeSegments": [
+      {
+        "label": "Original approved geometry R1 retained verbatim with historical examined-base boundary",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/R1-appendix.md",
+        "bytes": 20857,
+        "blob": "9bb3777ca076dea9dd60f76d9759dc1815e0dde0",
+        "sha256": "7d07956cc3f0d6929c2d3fd5907d121254c073294dfcae4573e37763b4b4510d",
+        "separatorOffset": 2038188,
+        "contentOffset": 2038190
+      },
+      {
+        "label": "Selected credential-copy v2 R1; supersedes inert v1 sequence",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/R1-appendix.md",
+        "bytes": 8590,
+        "blob": "0c2c2866685ef1270fe4052dbdb89be00ae6d3a5",
+        "sha256": "d68d1ca4269b68d5e9012a9312306a12b560ff6e9c456267123b9c4357f93647",
+        "separatorOffset": 2059047,
+        "contentOffset": 2059049
+      },
+      {
+        "label": "Root actual-c763 combined selection governs last",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/selection/R1-root-combined-cut.md",
+        "bytes": 15604,
+        "blob": "4e41f881a1ba86ccd2aebc637aba7638c0081353",
+        "sha256": "6ddcb569a49f97ee8777f529dbb843b25242f25d91875da04c3d54508b38c77b",
+        "separatorOffset": 2067639,
+        "contentOffset": 2067641
+      }
+    ],
+    "currentThreeSegments": [
+      {
+        "label": "Exact incoming canonical suffix",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e3-preinput-copy/incoming/incoming-plan-suffix.md",
+        "bytes": 12799,
+        "blob": "5af5c105b0e95576ef89d3d7487815322ce2fd9a",
+        "sha256": "3f70c79d12e5851be2c044209ecdfd4dc743e4d05cae68388c373a8d5cd685d9",
+        "separatorOffset": 2083245,
+        "contentOffset": 2083247
+      },
+      {
+        "label": "Current four-source preserved-P11 R1",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e3-preinput-copy/composition/R1-current-composition.md",
+        "bytes": 11383,
+        "blob": "40076f4e3c998770d21716afa78d860237b37bab",
+        "sha256": "086ad6daa80e75772d52c93780356ca615d79b12475905b4033c5dba0af3c7bc",
+        "separatorOffset": 2096046,
+        "contentOffset": 2096048
+      },
+      {
+        "label": "Root final ordering governs last",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e3-preinput-copy/selection/R1-root-ordered-selection.md",
+        "bytes": 11406,
+        "blob": "7b1268932dcf649b7bdaf766f9ea6a027e91cbb0",
+        "sha256": "f0d19a3a84d56abf84b550898fb645372f9caf9b94361271cc3e21391a666c72",
+        "separatorOffset": 2107431,
+        "contentOffset": 2107433
+      }
+    ],
+    "incomingFullPlan": {
+      "bytes": 1915226,
+      "blob": "bfcd6cbbb7ec293a568a61079bc60ed572979430",
+      "sha256": "406271bf95c71863fa6e488b4f447f7a4e5c659a15d92db263a003292a51ee4b"
+    },
+    "incomingOldPrefix": {
+      "bytes": 1902427,
+      "blob": "49587b36ed3bebbd9a766215ba0e00842db1b5a1",
+      "sha256": "fdb0d07f9850ffe364a13c6cc06c705a2314abe7c7e1d4857c1acbd9e3123bf6"
+    },
+    "incomingSuffixExact": true,
+    "sixBlocksAndAllSeparatorsExact": true,
+    "rootOrderedSelectionLast": true,
+    "interpretation": "The actual2038188-byte c763 Plan is unchanged. The entire2083245-byte old uncommitted Plan including its three historical R1 blocks is an exact prefix. Three further exact blocks follow with two LF separators: incoming12799-byte suffix, current11383-byte composition R1, final11406-byte root ordering R1. Full candidate is2118839 bytes/a21bba9c. The last R1 explicitly governs stale earlier source, parent and unselected-A statements without editing any historical text.",
+    "incomingFullPlanLimit": "The whole incoming1915226-byte Plan remains in preserved Git ancestry. The current canonical union retains the exact incoming suffix and the already reconciled earlier material; it does not claim the whole incoming Plan is a contiguous canonical prefix.",
+    "currentLastRootNoBroaderSelection": true
+  },
+  "fourSourceSelection": {
+    "paths": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "incoming": {
+          "bytes": 27188,
+          "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+          "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+        },
+        "followup": {
+          "bytes": 27188,
+          "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+          "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+        },
+        "candidate": {
+          "bytes": 28094,
+          "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+          "sha256": "67a1e7413eff11ddc087f35a64cd3c8b242c061988b2fbd661497a9f6b5dfd11"
+        },
+        "addedFromIncoming": 30,
+        "removedFromIncoming": 13
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "incoming": {
+          "bytes": 115936,
+          "blob": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+          "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076"
+        },
+        "followup": {
+          "bytes": 111672,
+          "blob": "95b983dc9b53c9f74a4a551bf59bdae6acc91c6e",
+          "sha256": "4ad72685cdeac7662124e408cfcf79871cbb7b873bc181cac4ee33ecfdf7d445"
+        },
+        "candidate": {
+          "bytes": 123149,
+          "blob": "1b0ad5b15b056857817858d1e85f6dfe81f6e782",
+          "sha256": "c73b55cbd07ef632b174609e99e05e536d584b8dae9c124c2fc1a14e1c76c4da"
+        },
+        "addedFromIncoming": 118,
+        "removedFromIncoming": 4
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+        "incoming": {
+          "bytes": 6481,
+          "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+          "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+        },
+        "followup": {
+          "bytes": 6481,
+          "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+          "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+        },
+        "candidate": {
+          "bytes": 6382,
+          "blob": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+          "sha256": "47c561887a1ea9a499f131a073c805be07a9a17343c1115b32ec173dcdf894c9"
+        },
+        "addedFromIncoming": 3,
+        "removedFromIncoming": 3
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "incoming": {
+          "bytes": 180091,
+          "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+          "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+        },
+        "followup": {
+          "bytes": 180091,
+          "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+          "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+        },
+        "candidate": {
+          "bytes": 180058,
+          "blob": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+          "sha256": "70597b6bb603515e31ec1239eb6543cc9f1fb18beb20ac20c6a357ee03f748ed"
+        },
+        "addedFromIncoming": 1,
+        "removedFromIncoming": 1
+      }
+    ],
+    "freshInputs": 49,
+    "sourceR2": {
+      "path": "preinput-copy-after-p11-r1/independent-current-composition-review.json",
+      "bytes": 31061,
+      "blob": "d602af92f592135ca37afc6d469697c7286683e8",
+      "sha256": "fec770eba0fd50139f8317823b4534019a1f5fae2ec3f55c8b6360e9ffff0b3e"
+    },
+    "strictBothParentRelativePatchProofs": [
+      {
+        "file": {
+          "path": "preinput-copy-after-p11-r1/candidate-relative-incoming.patch",
+          "bytes": 14568,
+          "blob": "61ebd379a1038705e2b48487338c0424bc00f760",
+          "sha256": "8067e3aae9067c0ae59e7b7fa6b46a602c5cc9c20445854c3b006ab639067338"
+        },
+        "base": "72e6ec04444969d343d73834c70bc4e261100fc9",
+        "added": 152,
+        "removed": 21,
+        "strictForwardAndReverseFullBytes": true
+      },
+      {
+        "file": {
+          "path": "preinput-copy-after-p11-r1/candidate-relative-followup.patch",
+          "bytes": 18874,
+          "blob": "a217b0a40a6e63744fda456d06577849db4d5027",
+          "sha256": "423dd3c43e9289757502c4d9f7e450104216e593bd2b9f3736df4c97e818d069"
+        },
+        "base": "c76371db7b1be4bd2381607b1a8bab71ae2a43fc",
+        "added": 214,
+        "removed": 21,
+        "strictForwardAndReverseFullBytes": true
+      }
+    ],
+    "relativeIncomingDelta": {
+      "added": 152,
+      "removed": 21
+    },
+    "relativeFollowupDelta": {
+      "added": 214,
+      "removed": 21
+    },
+    "otherIncomingNonDocumentationLeavesExact": 8794,
+    "allDocumentationLeavesExactToNewDocumentationParent": true,
+    "P11": {
+      "suffix": {
+        "path": "geometry-composition-c763/p11-regression-suffix.ts.txt",
+        "bytes": 4264,
+        "blob": "08699c4890b2ef83bcbda53094c450c6a9c3b366",
+        "sha256": "a299b6ec1497dc542f675fd7868a430d8e9d4d0503199c9ff0343a7187b5312d"
+      },
+      "incomingFull": {
+        "bytes": 115936,
+        "blob": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+        "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076"
+      },
+      "completeGeometryPrefix": {
+        "bytes": 118885,
+        "blob": "8694096d0aafcd7130589d97f12ad5a4fd65a616",
+        "sha256": "9411c8171255880a187382e5ceef1c44e74172fe4c9eb6c357b3654388cceb70"
+      },
+      "selectedCombined": {
+        "bytes": 123149,
+        "blob": "1b0ad5b15b056857817858d1e85f6dfe81f6e782",
+        "sha256": "c73b55cbd07ef632b174609e99e05e536d584b8dae9c124c2fc1a14e1c76c4da"
+      },
+      "wholeIncomingAExactOncePreserved": true,
+      "BSelected": false,
+      "CSelected": false,
+      "ModelsABSelected": false
+    },
+    "currentDriverAndProductionModelsHookAndFormatterTestUnchanged": true,
+    "noExtraWorkflowDependencyRosterBudgetOrNativeLeaf": true,
+    "independence": "The earlier geometry design and frontend aggregate were authored by this reviewer. Their semantic independent R2 authority is Native6d69 and Native14e560 respectively; Native d602 supplies the fresh compound-source review. This report independently verifies exact current composition, whole patches/inverses, all bodies, historical preservation, trees and phase/publication scope; it does not relabel self-authorship as independent semantic review."
+  },
+  "sourceSemanticsAndLimits": [
+    "Current1b0ad is the full approved8694096 geometry test followed by the unchanged4264-byte/62-line08699 P11 suffix. Removing that suffix recovers the whole geometry candidate; reversing only the geometry changes recovers actual incoming3c254. Every incoming passive-recorder and P11 assertion is preserved.",
+    "Geometry preserves two initial logical observations, one hover, the common16 subsequent logical observations, at most15 outer100ms sleeps and at most5 direct final reads. Reset requires two newly charged equal samples before each fresh owner-qualified final read; there is no counter replenishment, coordinate tolerance or post-input replay. Exact availability/tag/final point and fresh pre-press authority remain mandatory. This deliberately changes the old immediate same-tag coordinate-mismatch refusal only before input, under the separately approved R1.",
+    "The logical observation allowance is not an absolute1.5-second deadline or an OS syscall bound. Additional owner checks and their ps/lsof/birth costs are the explicit bounded amendment. Existing nested waitRead/transport/outer limits remain; no atomic immutability of the target after the final observation is promised.",
+    "Copy keeps exactly1738/67e5: remove three33-byte generic not-kept sentences and one existing expectation. The qualified Main saved-but-verification-failed diagnostic, predicates, APIs, credential state/storage/currentness and all other source bytes remain. The former extra formatter test and dedicated copy RED proposal are unselected.",
+    "The original93 fast-lint list omits the helper itself; no helper-lint PASS is implied. Copy paths remain outside1757/1769 native artifact censuses. Fresh Git and future original frontend/types/typed-features results are separate requirements; no census was broadened.",
+    "Vitest15000ms is the default, with every existing individual override preserved. Runner Node26.12.1, captured Host Node24.21.0, compiler7.0.2 and parser5.9.3 scopes remain distinct. No cap,141-exception allowance or TeamSlice ratchet change is selected."
+  ],
+  "phaseOrder": {
+    "incomingA": "Already applied only on primary72e; all four cases are retained in the selected source union. The original whole eight-file Node command remains the first natural execution route.123=119+4 with three expected rejections is a static prediction, not an actual RED.",
+    "B": "Unselected. Requires the original full-command semantic A RED with source/toolchain/raw binding and independent actual R2, then a fresh exact one-driver selection preserving all current geometry+A bytes. Setup, syntax/import/marker/compiler/timeout failures, skips or cancellation do not qualify. Statements after failed expected-rejection assertions are not PASS.",
+    "C": "Unselected until complete original B GREEN and required downstream gates plus its own fresh composition. Stale C whole files must not erase current geometry or A.",
+    "Models": "A/B unselected. The48bf after-copy preview is prospective only; the actual eight-boolean Settings DOM timeout proves no request/currentness/loading race. No Models production hook is changed.",
+    "copy": "No additional test or dedicated copy RED phase is selected.",
+    "geometry": "No manufactured mirror-loop RED route or alternate CI venue. The existing full helper command and every original case remain, with actual resulting counts to be measured.",
+    "originalCIOnly": "Natural original CI only: whole8 helper command, whole10 Team contracts, original4frontend shards, full workspace and dedicated backend compiler and original typed scopes. No local tests/compiler/lint/install/bootstrap/manual dispatch/cancel/rerun/native/provider work.",
+    "usefulOriginals": "Primary advancement is a later ordinary fast-forward after fresh guards and preservation of useful already-started current originals. Queued rows alone do not create an all-terminal barrier; no cancellation, replay, manual dispatch, Ready or alternate local venue is authorized."
+  },
+  "evidenceReviewScopes": {
+    "independentAuthorities": [
+      {
+        "scope": "current source composition",
+        "report": {
+          "path": "preinput-copy-after-p11-r1/independent-current-composition-review.json",
+          "bytes": 31061,
+          "blob": "d602af92f592135ca37afc6d469697c7286683e8",
+          "sha256": "fec770eba0fd50139f8317823b4534019a1f5fae2ec3f55c8b6360e9ffff0b3e"
+        },
+        "publishedCandidatePaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e3-preinput-copy/composition/independent-current-composition-review.json"
+        ]
+      },
+      {
+        "scope": "original geometry semantics",
+        "report": {
+          "path": "click-preinput-stabilization-r1/independent-source-r1-review.json",
+          "bytes": 13132,
+          "blob": "6d69b6f30c2aca45254275fc1c380a38426a8ae5",
+          "sha256": "d7b07e1a76b1d03405feba1df12902321e669f5448028e9850fafd25a9ce68ae"
+        },
+        "publishedCandidatePaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/geometry/independent-source-r1-review.json"
+        ]
+      },
+      {
+        "scope": "copy v2 semantics",
+        "report": {
+          "path": "credential-failure-copy-r1-v2/independent-source-r1-review.json",
+          "bytes": 16030,
+          "blob": "9a06f1b6a41c03ae82da98a26e7b2d5b42eaab33",
+          "sha256": "7e385a95d35464346776adfedcfa8903d4d71a16bcef9b55625ea74efb3eb49c"
+        },
+        "publishedCandidatePaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/preinput-copy/credential-v2/independent-source-r1-review.json"
+        ]
+      },
+      {
+        "scope": "incoming P11 source/order",
+        "report": {
+          "path": "external-primary-0833/independent-incoming-p11-phase-a-source-review.json",
+          "bytes": 19635,
+          "blob": "13c89fcd420f1ddbbccb13fc44c141520fe51d63",
+          "sha256": "29a4d6231aac527f28431d7a44b290d4d2dfe3815c41ab00ba6ac5a362b99f89"
+        },
+        "publishedCandidatePaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e3-preinput-copy/incoming/independent-incoming-p11-phase-a-source-review.json"
+        ]
+      },
+      {
+        "scope": "incoming history/raw baseline",
+        "report": {
+          "path": "external-primary-0833/independent-incoming-history-review.json",
+          "bytes": 16365,
+          "blob": "bf25ab951c07fe60e068e3305f97fa5cb87bf9df",
+          "sha256": "51a7edb1cc2ac9b360afb8db18183778b18f95a173db6438170203dbd15ebb74"
+        },
+        "publishedCandidatePaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e3-preinput-copy/incoming/independent-incoming-history-review.json"
+        ]
+      },
+      {
+        "scope": "E2 complete Team",
+        "report": {
+          "path": "ci-57885c/team/independent-team-complete-review.json",
+          "bytes": 75096,
+          "blob": "964204f443a3730cdeadade177d18093234ae2be",
+          "sha256": "2c68f6f08f5765e7701b6061bc9c3132c11ed98d7510437c52e7a57bec5f43cd"
+        },
+        "publishedCandidatePaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e3-preinput-copy/e2-team/independent-team-complete-review.json"
+        ]
+      },
+      {
+        "scope": "E2 all-four frontend",
+        "report": {
+          "path": "ci-57885c/frontend-all-shards/independent-all-frontend-review.json",
+          "bytes": 125825,
+          "blob": "14e560f34ce1118e612d67be10ee76d5ae071b1f",
+          "sha256": "e73600f94d713b3b8b965c31db622ad9f90f1e8ad5569120345318ca836224e3"
+        },
+        "publishedCandidatePaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e3-preinput-copy/e2-frontend/independent-all-frontend-review.json"
+        ]
+      },
+      {
+        "scope": "E2 Windows x64 v2 original failure",
+        "report": {
+          "path": "ci-57885c/native/process-windows-x64/independent-original-review.json",
+          "bytes": 76152,
+          "blob": "726bbfd47075ff12ee8c939bd5905000c97ce226",
+          "sha256": "5759dc9607fdecee20c0bd44d7b15af7a613f16df2995a29ec4983f60e4edea0"
+        },
+        "publishedCandidatePaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e3-preinput-copy/e2-native-correction/independent-original-review.json"
+        ]
+      },
+      {
+        "scope": "E2 Management original failure",
+        "report": {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-57885c/v2-management/independent-v2-management-review.json",
+          "bytes": 89931,
+          "blob": "0a39dfd044e2929407db29cf41a7ddd653192380",
+          "sha256": "3d649a742fb875d3533d369b05b4d49331f79015798efcee9d9839134c9658e3"
+        },
+        "publishedCandidatePaths": [
+          "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/e3-preinput-copy/e2-management/independent-v2-management-review.json"
+        ]
+      }
+    ],
+    "E2Baseline": "All E2 original outcomes remain on578. The complete Team evidence is119 helper+7 installer+179 Team including24 stderr and original workspace/backend/typed scopes. Incoming narrower baseline does not itself claim the full UI artifact audit; Native964204 is a separately retained broader original review.",
+    "E2Frontend": "Four original shards25832 PASS/38 SKIP/0 FAIL,2162 files and Models80 baseline remain original578 evidence. Native14e560 independently reviewed the authored aggregate; no result transfers to incomingA or current geometry/copy.",
+    "E2Management": "The original first Models DOM timeout and two credential intents remain bounded independent0a39df failure evidence. No causal race or repair is established by its eight DOM booleans.",
+    "E2Native": "Nine frozen native author packets are retained. Eight remain author-only in this cut. Only Windows x64 Process has the separately scoped full independent726bbfd4 review. Native or source success from other sources is not substituted.",
+    "x64FieldCorrection": "V1 811309 remains byte-exact; v2 be980dca changes only originalNativeNodeAndElectron and reconstructs both original native summaries. The correction record and full independent6b699250 proof are retained. First OpenCode refusal and root-null slot2 incomplete custody remain unchanged; whole Process remains FAILURE.",
+    "terminalBoundaries": "Cancelled/no-executed-step and other original terminal snapshots remain source/time bounded. No cause of GitHub cancellation, candidate execution, missing screenshot, unretained witness or overall current qualification is inferred."
+  },
+  "nextRequiredPublicationGates": [
+    "Fresh official followupc763 and primary/PR72e open Draft/base def734 leases must still hold; any drift requires ordinary inspection/reconciliation.",
+    "Create and independently verify both complete immutable remote recursive trees against the approved maps and rehashed directory trees before a commit.",
+    "Publish the documentation-only sole-child ofc763 with immediate expected-parent force:false push, retaining raw mutation responses. After fetch, complete root and independent actual commit/full263-body403-reference18-archive/Plan/full-tree readbacks.",
+    "Only then publish the source merge with ordered parents[that actual independently verified documentation child,72e], the exact four afterimages and all other preserved leaves. Perform independent actual source/documentation/tree readback.",
+    "A later primary advance needs its own fresh currentness/useful-cohort decision; this prospective approval is not an actual commit/ref readback or an execution result."
+  ],
+  "unclosedGoalBoundaries": "All original Desktop/Creation/native/packaged and current-source acceptance, P08, strict P09 writer/consumed-image/script, Windows readiness/custody, direct-root I386/full policy and genuine M16 obligations remain. No complete-goal, release, main merge, default Host, Stage2 or external-message authorization is introduced.",
+  "actionsPerformed": "Read frozen files and immutable Git; hash/decompress/CRC-check originals; reconstruct whole trees and apply/reverse text patches only in memory; write exclusive independent scratch reports. No project execution, source/ref mutation, CI/API action, writer rerun or frozen-artifact overwrite."
+}

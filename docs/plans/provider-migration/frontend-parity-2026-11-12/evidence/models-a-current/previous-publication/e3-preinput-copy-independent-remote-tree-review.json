@@ -1,0 +1,70 @@
+{
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUTC": "2026-11-16T09:06:08.883443+00:00",
+  "originalInputs": {
+    "manifest": {
+      "path": "e3-preinput-copy-publication/upload-manifest.json",
+      "bytes": 719944,
+      "blob": "22a1d162ad1631e97d9ab90f53186ca267553713",
+      "sha256": "a59ea3cb26e1db2e21313154da4409be9f2a86cede010b523a86c25b0d7dc799"
+    },
+    "prepublicationReview": {
+      "path": "e3-preinput-copy-independent-prepublication-review.json",
+      "bytes": 33428,
+      "blob": "b5103a5986405aabf37268cc22c9aff6c658540e",
+      "sha256": "808464e3c83df6c65aa710842c2f5a5d88d481632bfe3a68b4fb6ed0e4992f59"
+    },
+    "prepublicationProof": {
+      "path": "e3-preinput-copy-independent-byte-tree-proof.json",
+      "bytes": 510902,
+      "blob": "1bf383fa92476593cca5f63612329b742bef5dbb",
+      "sha256": "bfa89897e53498c7acd6111b8e3c9739c68efd814cf7276372fe84fd798a37f1"
+    }
+  },
+  "projectExecution": false,
+  "sourceOrRefMutation": false,
+  "APIOrCIPoll": false,
+  "kind": "Independent complete retained official immutable E3 remote-tree R2",
+  "result": "APPROVE",
+  "independentRemoteReadbackExact": true,
+  "trees": [
+    {
+      "response": {
+        "path": "e3-preinput-copy-publication/remote-docs-tree-response.json",
+        "bytes": 8238026,
+        "blob": "a4b5d758098f25cb1f505f549cf608296bed9922",
+        "sha256": "44514c73bc67dd1c0f62fe814523a3763b4bb896b15edce33e74cc057087f655"
+      },
+      "tree": "2e6771ecfef81a7a2159dee6f895273c3bda7aac",
+      "entries": 13273,
+      "leaves": 11531,
+      "directoryObjectsIncludingRoot": 1743,
+      "truncated": false,
+      "allModesTypesBlobSizesAndIdentitiesExact": true,
+      "allDirectoryHashesReconstructed": true
+    },
+    {
+      "response": {
+        "path": "e3-preinput-copy-publication/remote-source-tree-response.json",
+        "bytes": 8238026,
+        "blob": "0490d98e806873aabb71406ae541e406cb982fa5",
+        "sha256": "baf37e108854c9b352c943a2a45524adb4751b21cea0d4d0f005eeaa2a7ec2d0"
+      },
+      "tree": "1c006663973e6fce5791ac10c5d01cc5c5d8ae28",
+      "entries": 13273,
+      "leaves": 11531,
+      "directoryObjectsIncludingRoot": 1743,
+      "truncated": false,
+      "allModesTypesBlobSizesAndIdentitiesExact": true,
+      "allDirectoryHashesReconstructed": true
+    }
+  ],
+  "sourceOnlyFourPaths": [
+    "scripts/legacy-agent-host/desktop-ui-controls.ts",
+    "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+    "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+  ],
+  "completePlanAndBodiesPriorBound": true,
+  "noCommitOrPublicationClaim": true
+}

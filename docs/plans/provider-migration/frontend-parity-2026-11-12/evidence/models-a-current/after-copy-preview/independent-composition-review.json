@@ -1,0 +1,379 @@
+{
+  "kind": "Independent inert Models after-copy composition review",
+  "reviewedAtUTC": "2026-11-16T08:35:30.098111+00:00",
+  "reviewer": "/root/native_failures",
+  "compositionAuthor": "/root/ui_failures",
+  "verdict": "APPROVE exact inert composition; not Phase A selection, application or execution",
+  "independenceScope": "This review independently checks the new UI-authored composition and its current source bindings. The reviewer authored the earlier Models design; this does not relabel that design as a new independently authored semantic R2. Prior root/Scope/UI reviews and the explicit v1 matcher correction remain separate.",
+  "metadata": {
+    "path": "models-phase-a-after-copy-preview/composition-metadata.json",
+    "bytes": 6045,
+    "lines": 131,
+    "blob": "37d788f8b0a175df11251cc3e75317fe1794cb01",
+    "sha256": "55b2c734f5bf2b405685304306d3e4c73740071bc0a48882cdd26f1a06e60b75"
+  },
+  "note": {
+    "path": "models-phase-a-after-copy-preview/composition-note.md",
+    "bytes": 1997,
+    "lines": 9,
+    "blob": "dc30b0a9d2a3b185ee2078c97d2da10aee8a3124",
+    "sha256": "a9faedd3896ca35202aa1e735fea743380d12144aadf4d62fc034d0e96ebe075"
+  },
+  "selectedPreviewReferences": {
+    "prospectiveRequiredCopyPreimage": {
+      "path": "credential-failure-copy-r1-v2/candidate/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 180058,
+      "lines": 5678,
+      "blob": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+      "sha256": "70597b6bb603515e31ec1239eb6543cc9f1fb18beb20ac20c6a357ee03f748ed"
+    },
+    "oldPhaseACandidate": {
+      "path": "phase-a-composition-e1d/models-test-v2.ts.txt",
+      "bytes": 188106,
+      "lines": 5843,
+      "blob": "370e1b067c732c2a59c68a10cdf857f31707386b",
+      "sha256": "6d80fc146e310ca01faf74af88d180777d6896c5e976f84a940ac2980845d562"
+    },
+    "unchangedRegressionInsertion": {
+      "path": "models-phase-a-after-copy-preview/unchanged-models-regression-suffix.ts.txt",
+      "bytes": 8015,
+      "lines": 165,
+      "blob": "5cf463580d32959d99d7cf7ca8e6aa15c3122e38",
+      "sha256": "46c4a62dd5368244a47f3c5157d0356c074f03e13c22e28bd7c281d8022eaf2b"
+    },
+    "candidate": {
+      "path": "models-phase-a-after-copy-preview/models-test-after-copy-and-phase-a.ts.txt",
+      "bytes": 188073,
+      "lines": 5843,
+      "blob": "48bf7f181ae6836a9003ebe687abab0a0ae2db20",
+      "sha256": "d52e9af5bef20bd8fa99f10ddfb25b2287b9d643ecaf3f448c43dd6cc75fd8ee"
+    },
+    "patch": {
+      "path": "models-phase-a-after-copy-preview/candidate.patch",
+      "bytes": 8468,
+      "lines": 172,
+      "blob": "38345b99b1776fe844b02d6a310fc536f7079053",
+      "sha256": "163f2f58dc776291e4d7fb18361aa0707b42592f689117cc1f65eb3156401d68"
+    },
+    "reversePatch": {
+      "path": "models-phase-a-after-copy-preview/reverse.patch",
+      "bytes": 8468,
+      "lines": 172,
+      "blob": "21ea371b66e9f70d31fc08de990b9873e65eb0ce",
+      "sha256": "bf9f5899aaeb4c63b526a532101b4290e1344efbc5a88d9801ed3b02d6f4c48c"
+    }
+  },
+  "preservedReferenceRecords": [
+    {
+      "path": "phase-a-composition-e1d/R1-phase-a-composition.md",
+      "bytes": 8976,
+      "lines": 38,
+      "blob": "689d937e205582b7c0975fa193401a9627df9352",
+      "sha256": "7958fbac6f00fcb10ccb47ac102da1ec6840ae71539d428a12f35620fc12306c"
+    },
+    {
+      "path": "phase-a-composition-e1d/phase-a-metadata.json",
+      "bytes": 14412,
+      "lines": 338,
+      "blob": "b39eaae1967df654537bf9340c8098958e5dd290",
+      "sha256": "01bf4c260b4f12d7a0efa00d86e5489127338b5d69fc491acbf0e64668a92eb0"
+    },
+    {
+      "path": "credential-failure-copy-r1-v2/R1-appendix.md",
+      "bytes": 8590,
+      "lines": 49,
+      "blob": "0c2c2866685ef1270fe4052dbdb89be00ae6d3a5",
+      "sha256": "d68d1ca4269b68d5e9012a9312306a12b560ff6e9c456267123b9c4357f93647"
+    },
+    {
+      "path": "credential-failure-copy-r1-v2/candidate-metadata.json",
+      "bytes": 3315,
+      "lines": 85,
+      "blob": "1771f114d49cfffbe29661529010d5b76c861f68",
+      "sha256": "bddd36356d925def05966c97eaac5fdcaf1f1ceabc7f633fcdc31d85edf04de1"
+    },
+    {
+      "path": "credential-failure-copy-r1-v2/independent-source-r1-review.json",
+      "bytes": 16030,
+      "lines": 363,
+      "blob": "9a06f1b6a41c03ae82da98a26e7b2d5b42eaab33",
+      "sha256": "7e385a95d35464346776adfedcfa8903d4d71a16bcef9b55625ea74efb3eb49c"
+    }
+  ],
+  "immutableReference": {
+    "source": "57885c055a18b27c180c304762643eac632513ad",
+    "test": {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "bytes": 180091,
+      "lines": 5678,
+      "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+    },
+    "hook": {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "bytes": 74351,
+      "lines": 2068,
+      "blob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+      "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575"
+    },
+    "formatter": {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "bytes": 6481,
+      "lines": 161,
+      "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+      "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+    },
+    "current578DoesNotContainCopyOrRegression": true
+  },
+  "compositionProof": {
+    "exactProspectivePreimage": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+    "candidate": "48bf7f181ae6836a9003ebe687abab0a0ae2db20",
+    "insertedBytes": 8015,
+    "insertedLines": 165,
+    "addedLines": 165,
+    "removedLines": 0,
+    "preservedFinalDescribeTerminatorHex": "7d293b0a",
+    "insertionOffset": 180054,
+    "originalDescribeTerminatorRemainsLast": true,
+    "outsideDescribeAppend": false,
+    "allOriginalCopyAfterimageBytesAndRelativeOrderPreserved": true,
+    "strictForwardPatchExact": true,
+    "strictReversePatchExact": true,
+    "removeInsertionRestoresWhole67e5": true,
+    "restoreSingle33ByteCopyPhraseRestoresWhole370e": true,
+    "noOtherExistingAssertionOrImportChange": true
+  },
+  "baseline": {
+    "independentActualReport": {
+      "path": "ci-57885c/frontend-all-shards/independent-all-frontend-review.json",
+      "bytes": 125825,
+      "lines": 3184,
+      "blob": "14e560f34ce1118e612d67be10ee76d5ae071b1f",
+      "sha256": "e73600f94d713b3b8b965c31db622ad9f90f1e8ad5569120345318ca836224e3"
+    },
+    "source": "57885c055a18b27c180c304762643eac632513ad",
+    "file": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+    "actualOriginalCases": 80,
+    "all80PassOnOld6c311Only": true,
+    "notCandidateExecution": true,
+    "fullOriginalNames": [
+      "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'connect' (null, full=false)",
+      "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=false)",
+      "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=true)",
+      "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'forget' (null, full=false)",
+      "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=false)",
+      "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=true)",
+      "useRuntimeProviderManagement skips unsupported shared directory reads after connect without a refresh warning",
+      "useRuntimeProviderManagement skips unsupported shared directory reads after forget without a refresh warning",
+      "useRuntimeProviderManagement cancels all active probe attempts when startConnect closes the picker",
+      "useRuntimeProviderManagement cancels all active probe attempts when startReconnect closes the picker",
+      "useRuntimeProviderManagement cancels all active probe attempts when closeModelPicker closes the picker",
+      "useRuntimeProviderManagement cancels all active probe attempts when switchProvider closes the picker",
+      "useRuntimeProviderManagement stops only one probe and ignores its late response after immediate restart",
+      "useRuntimeProviderManagement keeps the probe running when stop is rejected",
+      "useRuntimeProviderManagement uses a clicked model as the app default for new teams without a global success banner",
+      "useRuntimeProviderManagement opens only the public GitHub device-login URL from OAuth progress",
+      "useRuntimeProviderManagement passes projectPath to the runtime provider management API",
+      "useRuntimeProviderManagement defers the full managed view until explicitly requested",
+      "useRuntimeProviderManagement opens a deep-linked provider setup after the directory row is ready",
+      "useRuntimeProviderManagement reloads a requested Models view when native runtime identity settles",
+      "useRuntimeProviderManagement reopens a pending deep-linked Connect when native runtime identity settles",
+      "useRuntimeProviderManagement hydrates the full provider directory without a catalog refresh",
+      "useRuntimeProviderManagement keeps summary providers when the full catalog comes back empty",
+      "useRuntimeProviderManagement paints same-scope curated cache while summary IPC is pending and retains errors",
+      "useRuntimeProviderManagement never emits a previous-project provider in the transition render",
+      "useRuntimeProviderManagement does not project cached summary credentials into another project or global scope",
+      "useRuntimeProviderManagement recovers directory support when a newer OpenCode runtime replaces an unsupported one",
+      "useRuntimeProviderManagement ignores a pre-mutation directory response without changing the project",
+      "useRuntimeProviderManagement masks cached rows and ignores pending responses when the OpenCode binary changes",
+      "useRuntimeProviderManagement reopens a cached full catalog without flashing the 16-provider summary",
+      "useRuntimeProviderManagement does not replace the cached full catalog with search results",
+      "useRuntimeProviderManagement reuses setup while preserving the connected auth method for reconnect",
+      "useRuntimeProviderManagement keeps provider search local until full-catalog search is explicitly requested",
+      "useRuntimeProviderManagement clears structured errors and stale provider state when disabled",
+      "useRuntimeProviderManagement ignores pending directory and setup-form responses after being disabled",
+      "useRuntimeProviderManagement ignores stale provider views after project context changes",
+      "useRuntimeProviderManagement reissues a requested view after temporary project-context hydration",
+      "useRuntimeProviderManagement restarts provider directory loading when project context changes while loading",
+      "useRuntimeProviderManagement drops stale model probe results after project context changes",
+      "useRuntimeProviderManagement drops stale set-default responses after project context changes",
+      "useRuntimeProviderManagement clears pending provider save state after project context changes",
+      "useRuntimeProviderManagement refreshes view and catalog after forgetting managed auth while local auth remains",
+      "useRuntimeProviderManagement refreshes the view and catalog after a confirmed connection",
+      "useRuntimeProviderManagement keeps provider data visible during catalog refresh",
+      "useRuntimeProviderManagement lazy-loads provider directory and ignores stale search responses",
+      "useRuntimeProviderManagement keeps the API key draft when provider connect fails",
+      "useRuntimeProviderManagement explains Copilot model access separately from GitHub authentication",
+      "useRuntimeProviderManagement keeps setup form diagnostics available when submit is attempted after form load failure",
+      "useRuntimeProviderManagement submits a supported setup form without a secret as a null API key",
+      "useRuntimeProviderManagement keeps OpenCode API connect pending beyond the old UI deadline: late-success",
+      "useRuntimeProviderManagement keeps OpenCode API connect pending beyond the old UI deadline: timeout",
+      "useRuntimeProviderManagement keeps setup open when the backend does not confirm a connected provider",
+      "useRuntimeProviderManagement keeps the actual API credential hint when xAI refresh fails after connect",
+      "useRuntimeProviderManagement refreshes provider status after a cancelled OAuth child settles",
+      "useRuntimeProviderManagement preserves the full slow model-picker allowance: complete",
+      "useRuntimeProviderManagement preserves the full slow model-picker allowance: timeout",
+      "useRuntimeProviderManagement clears model loading when switching from model picker to setup form",
+      "useRuntimeProviderManagement debounces provider model search and groups superseded picker requests",
+      "useRuntimeProviderManagement keeps Test results across a debounced catalog search reload",
+      "useRuntimeProviderManagement appends paged provider models without duplicates",
+      "useRuntimeProviderManagement tracks concurrent model probes independently",
+      "useRuntimeProviderManagement drops stale model probe results after leaving the model picker",
+      "useRuntimeProviderManagement refreshes global provider status after a current model test (ok=true)",
+      "useRuntimeProviderManagement refreshes global provider status after a current model test (ok=false)",
+      "useRuntimeProviderManagement records an empty model test response as a row failure and refreshes provider status",
+      "useRuntimeProviderManagement preserves successful model verification when its global status refresh rejects",
+      "useRuntimeProviderManagement does not refresh global status from a model test after project change",
+      "useRuntimeProviderManagement does not refresh global status from a model test after unmount",
+      "useRuntimeProviderManagement keeps failed model probes scoped to the model result instead of a global success banner",
+      "useRuntimeProviderManagement keeps structured runtime endpoint diagnostics on the model result",
+      "useRuntimeProviderManagement keeps the model-test UI watchdog outside the runtime probe transport budget",
+      "useRuntimeProviderManagement promotes structured model probe failures to the global diagnostics alert state",
+      "useRuntimeProviderManagement keeps successful model probes scoped to the model card instead of a global success banner",
+      "useRuntimeProviderManagement saves a default without probing or fabricating verified model state",
+      "useRuntimeProviderManagement keeps the effective project default selected when an all-projects default is shadowed",
+      "useRuntimeProviderManagement preserves project-scoped access evidence after a neutral all-projects probe",
+      "useRuntimeProviderManagement does not clear a project override before the bundled runtime supports scoped defaults",
+      "useRuntimeProviderManagement clears a valid project override with a compatible bundled runtime",
+      "useRuntimeProviderManagement keeps the clear-project watchdog beyond the 300-second main-process timeout",
+      "useRuntimeProviderManagement does not clear project B while its view is still refreshing after switching from A"
+    ]
+  },
+  "proposedCases": [
+    {
+      "case": "silent supersession/regular-first/view",
+      "predictedCurrent1176": "semantic failure at loading false assertion after both original held requests settle",
+      "actualResult": null
+    },
+    {
+      "case": "silent supersession/silent-first/view",
+      "predictedCurrent1176": "semantic failure at loading false assertion after both original held requests settle",
+      "actualResult": null
+    },
+    {
+      "case": "silent supersession/regular-first/response-error",
+      "predictedCurrent1176": "semantic failure at loading false assertion after both original held requests settle",
+      "actualResult": null
+    },
+    {
+      "case": "silent supersession/silent-first/response-error",
+      "predictedCurrent1176": "semantic failure at loading false assertion after both original held requests settle",
+      "actualResult": null
+    },
+    {
+      "case": "silent supersession/regular-first/rejection",
+      "predictedCurrent1176": "semantic failure at loading false assertion after both original held requests settle",
+      "actualResult": null
+    },
+    {
+      "case": "silent supersession/silent-first/rejection",
+      "predictedCurrent1176": "semantic failure at loading false assertion after both original held requests settle",
+      "actualResult": null
+    },
+    {
+      "case": "project change/regular-first",
+      "predictedCurrent1176": "passing control",
+      "actualResult": null
+    },
+    {
+      "case": "project change/silent-first",
+      "predictedCurrent1176": "passing control",
+      "actualResult": null
+    },
+    {
+      "case": "unmount",
+      "predictedCurrent1176": "passing control",
+      "actualResult": null
+    },
+    {
+      "case": "idle silent refresh",
+      "predictedCurrent1176": "passing control",
+      "actualResult": null
+    }
+  ],
+  "countsPredictionsOnly": {
+    "original": 80,
+    "additional": 10,
+    "completeFile": 90,
+    "onUnchangedHookExpectedPass": 84,
+    "onUnchangedHookExpectedSemanticFailure": 6,
+    "afterSeparatelySelectedBExpectedPass": 90,
+    "actualA": null,
+    "actualB": null
+  },
+  "caseSemantics": {
+    "actualHookMounted": true,
+    "existingReactRootAndConfigurableHarness": true,
+    "externalBoundaryOnly": "Finite existing Electron loadView/loadProviderDirectory response mocks; held promises are settled manually. No copied hook/currentness algorithm, OS/provider action, real delay or global clock replacement.",
+    "publicSilentRoute": "actions.refreshDirectory invokes the existing refresh({silent:true}) because the preceding regular request sets viewRequestedRef.",
+    "bothOrdersAndThreeOutcomes": true,
+    "staleRegularResultRejectedBeforeLoadingAssertion": true,
+    "viewErrorAndNoExtraReadAssertionsPreserved": true,
+    "projectControlsPreserveNewContextLoading": true,
+    "unmountControlChecksNoLatePublishedState": true,
+    "idleSilentControlPreservesNoLoadingFlash": true,
+    "failedAssertionSuffixNotClaimedPassed": true
+  },
+  "matcherDeclarations": [
+    {
+      "path": "agent-teams-e2e/node_modules/.pnpm/@vitest+expect@3.2.6/node_modules/@vitest/expect/package.json",
+      "bytes": 1118,
+      "lines": 46,
+      "blob": "2cd702d22d01b20893c788b499ff61a09cc3f179",
+      "sha256": "e63876b0585c03f63418a15e1d02b376c7ee8c1b1e63edce08211c7a1e6a1836"
+    },
+    {
+      "path": "agent-teams-e2e/node_modules/.pnpm/@vitest+expect@3.2.6/node_modules/@vitest/expect/dist/index.d.ts",
+      "bytes": 27831,
+      "lines": 808,
+      "blob": "4f93e899783b1d411aa0fd0ca4f5b040bc729fba",
+      "sha256": "120a80aa556732f684db3ed61aeff1d6671e1655bd6cba0aa88b22b88ac9a6b1"
+    }
+  ],
+  "matcherReview": {
+    "messageOnExpect": true,
+    "toBeOneArgument": true,
+    "v1InvalidMatcherArityNotRestored": true,
+    "noCompilerExecutionOrTypePassClaim": true
+  },
+  "copyScope": {
+    "requiredFormatter": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+    "requiredExistingTest": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+    "formatterTestUnchanged": "fa761",
+    "newCopyTests": 0,
+    "intentionalCopyRedPhase": false,
+    "old370eWholeFileMustNotOverwriteCopy": true
+  },
+  "sourceAndVenueLimits": {
+    "hook1176Untouched": true,
+    "P11PathsUnchanged": true,
+    "workflowUnchanged": true,
+    "sourceRosterUnchanged": true,
+    "deadlinesAndGuardsUnchanged": true,
+    "existingOriginalFrontendWholeContainingShardOnly": true,
+    "originalTeamStaticPrerequisitesSeparate": true,
+    "localProjectCommandsAllowed": false,
+    "manualCIAllowed": false,
+    "newTestFilterOrSideVenue": false
+  },
+  "currentnessDisposition": {
+    "freezeReference578": true,
+    "required67e5WasProspectiveAtFreeze": true,
+    "matching1738And67e5MustFirstBeActuallyPublishedAndRebound": true,
+    "rootReportedNewPrimary72e6ec04444969d343d73834c70bc4e261100fc9At083143": "Not inspected or rebound by this review; this new drift reinforces the existing fresh-binding gate and does not invalidate the in-memory byte composition.",
+    "fourFixPublicationAtReview": "Root reported the precommit guard caught external drift; no actual four-fix publication is inferred.",
+    "freshRootSelectionStillRequired": true
+  },
+  "historicalManagementCause": "UNPROVEN. Existing N/E2 eight DOM fields and spinner do not observe these private held-promise overlap/currentness states.",
+  "actions": {
+    "projectExecution": false,
+    "sourceApplication": false,
+    "refMutation": false,
+    "ciMutation": false,
+    "phaseASelected": false,
+    "phaseBSelected": false,
+    "newRegressionExecution": false,
+    "frozenInputsModified": false
+  },
+  "conclusion": "No composition or wording correction required. Preserve original candidate/R1 versions and require fresh resulting-source binding/selection and original actual semantic RED before B; all candidate results remain predictions."
+}
