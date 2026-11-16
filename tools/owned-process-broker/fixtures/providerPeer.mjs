@@ -1,12 +1,8 @@
 /** TEST protocol peer only. The real Host/D and native Job own every child in this fixture. */
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
-import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { appendFileSync, readFileSync, realpathSync } from 'node:fs';
-import { createServer } from 'node:http';
-import { createRequire } from 'node:module';
-import { createInterface } from 'node:readline';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL, URL } from 'node:url';
 if (process.env.TEST_EMULATED_DESKTOP_PROVIDER !== undefined) {
@@ -19,6 +15,10 @@ if (process.env.TEST_EMULATED_DESKTOP_PROVIDER !== undefined) {
   assert.equal(createHash('sha256').update(readFileSync(path)).digest('hex'), process.env.TEST_PEER_HELPER_SHA256);
   await import(helper.href);
 } else {
+const { spawn } = await import('node:child_process');
+const { createServer } = await import('node:http');
+const { createRequire } = await import('node:module');
+const { createInterface } = await import('node:readline');
 assert.equal(process.env.TEST_EMULATED_WINDOWS_PROVIDER, '1');
 const hostRequire = createRequire(new URL('../../../packages/legacy-agent-host/package.json', import.meta.url));
 const { Client } = await import(pathToFileURL(hostRequire.resolve('@modelcontextprotocol/sdk/client/index.js')).href);

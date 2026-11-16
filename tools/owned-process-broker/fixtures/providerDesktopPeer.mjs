@@ -3,10 +3,7 @@ import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 import { createHash } from 'node:crypto';
 import { appendFileSync, existsSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
-import { createServer } from 'node:http';
 import { basename, dirname, join } from 'node:path';
-import { createRequire } from 'node:module';
-import { createInterface } from 'node:readline';
 import process from 'node:process';
 import { setTimeout } from 'node:timers';
 import { fileURLToPath, pathToFileURL, URL } from 'node:url';
@@ -95,6 +92,9 @@ if (provider === 'codex' && argv[0] === 'mcp') {
   await new Promise((resolve, reject) => process.stdout.write('[]\n', error => error ? reject(error) : resolve()));
   process.exit(0);
 }
+const { createServer } = await import('node:http');
+const { createRequire } = await import('node:module');
+const { createInterface } = await import('node:readline');
 const config = provider === 'opencode' ? record(JSON.parse(process.env.OPENCODE_CONFIG_CONTENT)) : undefined;
 if (provider === 'codex') {
 let appServer = 0;
