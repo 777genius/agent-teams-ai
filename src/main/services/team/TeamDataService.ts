@@ -813,7 +813,7 @@ export class TeamDataService {
   private resolveTaskReviewState(
     task: Pick<TeamTask, 'reviewState' | 'historyEvents' | 'status'>,
     kanbanTaskState?: KanbanState['tasks'][string]
-  ): 'none' | 'review' | 'needsFix' | 'approved' {
+  ): 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved' {
     const kanbanColumn = kanbanTaskState?.column;
     const kanbanWorkflowColumn = kanbanColumn
       ? getTeamTaskWorkflowColumn({
@@ -884,7 +884,7 @@ export class TeamDataService {
   private resolveTaskKanbanColumn(
     task: Pick<TeamTask, 'status'>,
     kanbanTaskState?: KanbanState['tasks'][string],
-    reviewState: 'none' | 'review' | 'needsFix' | 'approved' = 'none'
+    reviewState: 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved' = 'none'
   ): 'review' | 'approved' | undefined {
     return getTeamTaskWorkflowColumn({
       status: task.status,
@@ -901,7 +901,7 @@ export class TeamDataService {
   private resolveReviewerFromHistory(
     task: TeamTask,
     kanbanTaskState?: KanbanState['tasks'][string],
-    reviewState: 'none' | 'review' | 'needsFix' | 'approved' = this.resolveTaskReviewState(
+    reviewState: 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved' = this.resolveTaskReviewState(
       task,
       kanbanTaskState
     )
@@ -919,7 +919,9 @@ export class TeamDataService {
         if (event.type === 'review_requested' && event.reviewer) {
           return event.reviewer;
         }
-        if (event.type === 'review_approved' || event.type === 'review_changes_requested') {
+        if (event.type === 'review_approved' ||
+          event.type === 'review_completed' ||
+          event.type === 'review_changes_requested') {
           break;
         }
         if (

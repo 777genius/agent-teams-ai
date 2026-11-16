@@ -130,7 +130,7 @@ export interface TeamSummary {
 }
 
 export type TeamTaskStatus = 'pending' | 'in_progress' | 'completed' | 'deleted';
-export type TeamReviewState = 'none' | 'review' | 'needsFix' | 'approved';
+export type TeamReviewState = 'none' | 'review' | 'needsFix' | 'reviewed' | 'approved';
 
 export interface TaskWorkInterval {
   /** ISO timestamp when task entered in_progress */
@@ -197,6 +197,14 @@ export interface TaskReviewApprovedEvent extends TaskHistoryEventBase {
   note?: string;
 }
 
+export interface TaskReviewCompletedEvent extends TaskHistoryEventBase {
+  type: 'review_completed';
+  from: 'review';
+  to: 'reviewed';
+  reviewRequestId: string;
+  note?: string;
+}
+
 export interface TaskReviewStartedEvent extends TaskHistoryEventBase {
   type: 'review_started';
   from: TeamReviewState;
@@ -210,6 +218,7 @@ export type TaskHistoryEvent =
   | TaskReviewRequestedEvent
   | TaskReviewChangesRequestedEvent
   | TaskReviewApprovedEvent
+  | TaskReviewCompletedEvent
   | TaskReviewStartedEvent;
 
 export type TaskCommentType = 'regular' | 'review_request' | 'review_approved';

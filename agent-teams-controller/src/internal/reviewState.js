@@ -1,9 +1,10 @@
-const REVIEW_STATES = new Set(['none', 'review', 'needsFix', 'approved']);
+const REVIEW_STATES = new Set(['none', 'review', 'needsFix', 'reviewed', 'approved']);
 const REVIEW_COLUMNS = new Set(['review', 'approved']);
 const REVIEW_LIFECYCLE_EVENTS = new Set([
   'review_requested',
   'review_changes_requested',
   'review_approved',
+  'review_completed',
   'review_started',
 ]);
 const REVIEW_RESET_STATUSES = new Set(['in_progress', 'deleted']);
@@ -101,7 +102,7 @@ function getEffectiveReviewState(task, kanbanEntry) {
     }
 
     if (status === 'completed') {
-      return normalized === 'review' || normalized === 'approved'
+      return normalized === 'review' || normalized === 'reviewed' || normalized === 'approved'
         ? { state: normalized, source }
         : { state: 'none', source: `${source}_completed_reset` };
     }
