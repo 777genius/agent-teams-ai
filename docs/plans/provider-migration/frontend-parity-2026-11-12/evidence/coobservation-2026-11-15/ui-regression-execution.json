@@ -353,5 +353,88 @@
   "exceptions": 141,
   "productionSourceCount": 5020,
   "producerPostimagesAuthored": false,
-  "commandsExecuted": 0
+  "commandsExecuted": 0,
+  "inputRecoveryBeforeFirstRed": {
+    "kind": "prospective-explicit-prerequisite-restoration-no-new-test-allowance",
+    "sourceTestCommit": "218d95e3cabae4ccf5cf41d7217dde1fe14a078e",
+    "sourceTestTree": "4e9d17ec704bf5e1f13db40e5642e33c84bcbb59",
+    "publishedR1": "1929d64351d2356ceb05e907401cfae06b19fcb5",
+    "unchangedRunner": "41060e08824dcefab62500097da2289b98a732d3",
+    "unchangedExecutionBinding": "4d9b3be8ad6ff4ad63498bd9ce67b1ac4ff1d2fe",
+    "observedPreflight": {
+      "argv": [
+        "python",
+        "/workspace/scratch/c714f5bce554/ui_regression_gate.py",
+        "/workspace/scratch/c714f5bce554/ui-regression-red-binding.json",
+        "64f8f76225ff896099ce02ba208fcc2b8c6b579b09c963a1254b9ed8f1350ba8",
+        "materialize",
+        "red"
+      ],
+      "cwd": "/workspace/scratch/c714f5bce554",
+      "toolChunk": "f9c37e",
+      "toolExit": 1,
+      "returnedToolTraceback": "Traceback (most recent call last):\n  File \"/workspace/scratch/c714f5bce554/ui_regression_gate.py\", line 206, in <module>\n    before = snapshot(cfg['beforeSourceOverlay'])\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/scratch/c714f5bce554/ui_regression_gate.py\", line 177, in snapshot\n    return {'at': utc(), 'source': source_snapshot(overlays), 'dependencies': dependency_snapshot(),\n                                                                              ^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/scratch/c714f5bce554/ui_regression_gate.py\", line 149, in dependency_snapshot\n    runtime = identity(pathlib.Path(NODE).read_bytes())\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py\", line 1019, in read_bytes\n    with self.open(mode='rb') as f:\n         ^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/pathlib.py\", line 1013, in open\n    return io.open(self, mode, buffering, encoding, errors, newline)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node'\n",
+      "actualGitStatusAfter": "",
+      "evidenceDirectoryEntriesAfter": [],
+      "sourceWrites": 0,
+      "productTestAttempts": 0,
+      "qualification": "Failed runtime prerequisite before all source writes and command attempt/Popen; not semantic RED and not a reset of any prior gate."
+    },
+    "sourceInspections": [
+      {
+        "chunk_id": "a23d9e",
+        "wall_time_seconds": 2.571094478,
+        "exit_code": 0,
+        "original_token_count": 144,
+        "output": "{\"name\": \"SHASUMS256.txt\", \"mode\": \"0o100644\", \"bytes\": 3171, \"symlink\": null, \"exists\": true}\n{\"name\": \"node-v24.21.0-linux-x64.tar.xz\", \"mode\": \"0o100644\", \"bytes\": 31890184, \"symlink\": null, \"exists\": true}\n{\"archive\": \"/workspace/scratch/82d3f9ba6b85/toolchain/node-v24.21.0-linux-x64.tar.xz\", \"bytes\": 31890184, \"sha256\": \"fd8e59d5a511510f6a298afb548f18c7d2b1be404d8b4a27d94fbe49f56cb2d6\"}\n{\"member\": \"node-v24.21.0-linux-x64/bin/node\", \"regular\": true, \"mode\": \"0o755\", \"bytes\": 126595440, \"sha256\": \"7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c\"}\n"
+      },
+      {
+        "chunk_id": "6ecd40",
+        "wall_time_seconds": 0.284123274,
+        "exit_code": 0,
+        "original_token_count": 62,
+        "output": "{\"path\": \"/workspace/scratch/5c17297e690d/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node\", \"exists\": true, \"symlink\": false, \"bytes\": 126595440, \"sha256\": \"7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c\"}\n"
+      }
+    ],
+    "restoration": {
+      "scriptBlob": "67ed653bd29a56b98db710e861b7391266807260",
+      "scriptContent": "import hashlib\nimport io\nimport json\nimport os\nimport pathlib\nimport stat\nimport subprocess\nimport tarfile\n\nROOT = pathlib.Path('/workspace/scratch/82d3f9ba6b85/toolchain')\nARCHIVE = ROOT / 'node-v24.21.0-linux-x64.tar.xz'\nTARGET = ROOT / 'node24/bin/node'\nMEMBER = 'node-v24.21.0-linux-x64/bin/node'\nARCHIVE_SHA = 'fd8e59d5a511510f6a298afb548f18c7d2b1be404d8b4a27d94fbe49f56cb2d6'\nNODE_SHA = '7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c'\nREPO = pathlib.Path('/workspace/scratch/c714f5bce554/agent-teams-reconciled-local')\nOUT = pathlib.Path('/workspace/scratch/c714f5bce554/ui-node-restoration-receipt.json')\n\n\ndef git(*args):\n    return subprocess.check_output(['git', *args], cwd=REPO).decode().strip()\n\n\ndef untouched_source():\n    assert git('rev-parse', 'HEAD') == '47d9f29602bae778f20ae8cc133ca332e458e59a'\n    assert git('status', '--porcelain') == ''\n    assert list(pathlib.Path('/workspace/scratch/c714f5bce554/ui-regression-evidence').iterdir()) == []\n    return {'actualLocalHead': git('rev-parse', 'HEAD'), 'gitStatus': '', 'attemptFiles': [], 'sourceOverlayWritten': False}\n\n\ndef file_row(path):\n    info = path.lstat()\n    assert stat.S_ISREG(info.st_mode) and not path.is_symlink()\n    return {'path': str(path), 'bytes': info.st_size, 'mode': oct(stat.S_IMODE(info.st_mode)),\n            'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}\n\n\nassert not OUT.exists(), 'single documented restoration receipt'\nbefore = untouched_source()\nassert not os.path.lexists(TARGET), 'never overwrite a concurrently appearing target'\nfor ancestor in [pathlib.Path('/workspace'), pathlib.Path('/workspace/scratch'), ROOT.parent, ROOT]:\n    assert ancestor.is_dir() and not ancestor.is_symlink(), str(ancestor)\nassert ARCHIVE.is_file() and not ARCHIVE.is_symlink()\narchive = ARCHIVE.read_bytes()\nassert len(archive) == 31890184 and hashlib.sha256(archive).hexdigest() == ARCHIVE_SHA\nwith tarfile.open(fileobj=io.BytesIO(archive), mode='r:xz') as handle:\n    member = handle.getmember(MEMBER)\n    assert member.isfile() and not member.issym() and not member.islnk()\n    assert member.size == 126595440 and member.mode == 0o755\n    payload = handle.extractfile(member).read()\nassert len(payload) == 126595440 and hashlib.sha256(payload).hexdigest() == NODE_SHA\ncreated = []\nfor directory in [ROOT / 'node24', ROOT / 'node24/bin']:\n    if os.path.lexists(directory):\n        assert directory.is_dir() and not directory.is_symlink(), str(directory)\n    else:\n        directory.mkdir(mode=0o755)\n        created.append(str(directory))\nstaging = TARGET.parent / '.node-c714-recovery-218d95.tmp'\nassert not os.path.lexists(TARGET) and not os.path.lexists(staging)\nfd = os.open(staging, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o755)\ntry:\n    os.fchmod(fd, 0o755)\n    with os.fdopen(fd, 'wb') as output:\n        output.write(payload)\n        output.flush()\n        os.fsync(output.fileno())\n    staged = file_row(staging)\n    assert staged['bytes'] == 126595440 and staged['sha256'] == NODE_SHA and staged['mode'] == '0o755'\n    os.link(staging, TARGET, follow_symlinks=False)\nfinally:\n    staging.unlink()\nafter = file_row(TARGET)\nassert after['bytes'] == 126595440 and after['sha256'] == NODE_SHA and after['mode'] == '0o755'\nreceipt = {'kind': 'one-original-runtime-file-byte-restoration-before-first-red',\n           'source': {'archive': str(ARCHIVE), 'bytes': len(archive), 'sha256': ARCHIVE_SHA,\n                      'member': MEMBER, 'memberBytes': len(payload), 'memberSha256': NODE_SHA, 'memberMode': '0o755'},\n           'destinationWasAbsent': True, 'createdDirectories': created, 'temporarySiblingRemoved': not staging.exists(),\n           'before': before, 'after': after, 'sourceStateAfter': untouched_source(),\n           'nodeOrProviderInvocations': [], 'readOnlyGitQueries': ['rev-parse HEAD', 'status --porcelain'],\n           'versionCalls': 0, 'downloads': 0, 'builds': 0, 'installs': 0,\n           'productTestAttempts': 0, 'note': 'Exact prior pinned bytes at the same required path; no alternative runtime or test-budget reset.'}\nwith OUT.open('x') as handle:\n    handle.write(json.dumps(receipt, indent=2) + '\\n')\nprint(json.dumps(receipt))\n",
+      "sourceArchive": "/workspace/scratch/82d3f9ba6b85/toolchain/node-v24.21.0-linux-x64.tar.xz",
+      "archiveBytes": 31890184,
+      "archiveSha256": "fd8e59d5a511510f6a298afb548f18c7d2b1be404d8b4a27d94fbe49f56cb2d6",
+      "member": "node-v24.21.0-linux-x64/bin/node",
+      "target": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+      "bytes": 126595440,
+      "sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "mode": "0755",
+      "createdParents": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24",
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin"
+      ],
+      "noOverwrite": true,
+      "onlyOneArchiveMember": true,
+      "noWholeArchiveExtraction": true,
+      "noNodeProviderOrProductInvocation": true,
+      "declaredMetadataExecutions": "Python performs byte inspection/copy; read-only git rev-parse HEAD and status --porcelain validate untouched source."
+    },
+    "order": [
+      "Independent full exact proposal/script review; publish documentation-only child with immediate push and complete published readback",
+      "Root performs the single exact-byte prerequisite restoration at the original path, preserves receipt and unchanged clean47d9/no-attempt facts",
+      "Repeat unchanged runner materialize preflight with unchanged binding; only if all8798/1504/265/runtime/tooling checks pass may the one original still-unused RED run occur",
+      "Actual complete RED evidence and independent semantic acceptance remain mandatory before producer authorship"
+    ],
+    "testAllowanceUnchanged": {
+      "redMaxAttempts": 1,
+      "redUsed": 0,
+      "greenMaxAttempts": 1,
+      "greenUsed": 0
+    },
+    "prohibited": [
+      "alternate runtime/path or bytes",
+      "downloads, package installation, builds or version invocation",
+      "source/test/runner change",
+      "any extra product-test attempt",
+      "retrospective PASS for failed preflight"
+    ]
+  }
 }
