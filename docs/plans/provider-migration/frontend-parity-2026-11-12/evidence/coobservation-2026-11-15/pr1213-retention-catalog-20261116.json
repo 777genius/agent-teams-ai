@@ -982,6 +982,75 @@
     }
   },
   "currentCrossCloseStage": {
+    "stage": "exact-RED-controls-R2-published-actual-readback-and-runtime-pending",
+    "runner": {
+      "bytes": 48838,
+      "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+      "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+    },
+    "binding": {
+      "bytes": 840295,
+      "sha256": "d8fd4d1e33f666f64a7e8512a63a92aedd27bf105fc248eaa13494599e468fc2",
+      "gitBlob": "cb12381b46948c807d443fc41581a9a48d18e051"
+    },
+    "independentR2": {
+      "runnerGuard": {
+        "bytes": 85343,
+        "sha256": "68b71ed76d405006a4b125750e00902848a5713c3198655518208b2a89919c03",
+        "gitBlob": "d0c875cc0d5a9fd4c25f246e90137bc1babd0ee9"
+      },
+      "bindingGuard": {
+        "bytes": 22539,
+        "sha256": "c05935baf86694bbf89d4652fcd570745cc011b48560589732843a285e908ba8",
+        "gitBlob": "1bc41522c3af0b9301a847a765a68be0adcf17db"
+      },
+      "bindingParity": {
+        "bytes": 119166,
+        "sha256": "6aa08dbfbfdb6ee38a71e995ed7d2285974acd11796f9a31deb8649f9b988194",
+        "gitBlob": "3f75fb4e2740c7ba0af81b3b60870bcbc3cb98e9"
+      }
+    },
+    "publishedTest": {
+      "commit": "c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+      "tree": "31554d5e9f57d07c4dff4514f494126633a3d934",
+      "test": {
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      "independentActualReadback": {
+        "bytes": 56894,
+        "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+        "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+      }
+    },
+    "outcome": {
+      "bytes": 9619,
+      "sha256": "bd75eeea3bfd99ac0916a6c621ecf718d22eb82421d8a1cdcf48d2cef1630975",
+      "gitBlob": "0c218630d93afb5e2e48ce111ab870a5bd896d00",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-red-controls-reviewed-outcome-20261116.json"
+    },
+    "actualNewExecutions": 0,
+    "producerAuthored": false,
+    "attemptsRemaining": {
+      "materializeTest": 1,
+      "red": 1,
+      "materializeProducer": 1,
+      "green": 1,
+      "validationPackage": 1
+    },
+    "canonicalTypingBuildAssessment": {
+      "bytes": 263003,
+      "sha256": "bd5c643af2008546a081eae8f00eb6f0ba2dcaaabe8de68a1c3a169aa7d85f57",
+      "gitBlob": "37e5cf0c63700b4a33d91e8c929fd9c6f551e8ff"
+    },
+    "windowsCleanupInterpretationCorrection": {
+      "bytes": 1014,
+      "sha256": "6b2aa0fb3b6dc589a45c66d4e1448617e183359c0021277234b0ccb993859bf2",
+      "gitBlob": "74320612a117ff935bb9dbcb046c6b03facb1161"
+    }
+  },
+  "priorCrossCloseStageAtTestPublication": {
     "stage": "test-only-R2-published-runtime-pending",
     "outcome": {
       "bytes": 4332,

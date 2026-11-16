@@ -1,0 +1,1338 @@
+{
+  "schemaVersion": 1,
+  "kind": "cross-close-final-red-binding-independent-source-composition-r2",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/parity_audit",
+  "reviewedAtUTC": "2026-11-16 16:49:11 UTC",
+  "accepted": true,
+  "verdict": "ACCEPTED_FOR_PUBLICATION_ONLY",
+  "parentNotifiedBeforeBareRetention": true,
+  "subjects": {
+    "runner": {
+      "bytes": 48838,
+      "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+      "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+    },
+    "redBinding": {
+      "bytes": 840295,
+      "sha256": "d8fd4d1e33f666f64a7e8512a63a92aedd27bf105fc248eaa13494599e468fc2",
+      "gitBlob": "cb12381b46948c807d443fc41581a9a48d18e051"
+    }
+  },
+  "method": {
+    "completeRunnerBodyRead": true,
+    "completeBindingBodyRead": true,
+    "originalEightInputReconstruction": "The exact original eight input-file records were compared with the independently accepted whole97 GREEN binding21878. Their already closed full reconstruction is reused by whole-body identity; no fresh runtime input preservation is asserted.",
+    "fullEmbeddedBodies": "All seven complete embedded review strings and the complete approved8abe R1 were independently rehashed with byte length/SHA-256/Git blob SHA and byte-compared with the corresponding previously accepted or actually published complete bodies.",
+    "source": "Reconstructed every one of the8,798 non-document source rows from the original C5 source census and each exact overlay. Before matches every row of the prior actual67a result; after matches every actual published c0ead non-document leaf by path/mode/Git SHA/size.",
+    "publication": "The existing independent actual c0ead readback6f8d is embedded byte-exact. All ten declared complete published body identities and the full11,690-leaf source joins were checked against that actual readback and retained actual Git bodies.",
+    "targetExecution": false,
+    "shellOrNodeOrTargetVmExecution": false,
+    "newRuntimeInputInspection": false
+  },
+  "authority": {
+    "approvedCrossR1": {
+      "commit": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+      "identity": {
+        "bytes": 23142,
+        "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+        "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+      },
+      "fullBodyExactAcceptedR1": true
+    },
+    "recoveryR1": "7e6f32741ccdb470e7688cec9de9481fd05827a1",
+    "transportAmendment": "0042eec33e3bcf145de25db96f5fc7c5b026a1fe",
+    "publishedTestSubject": {
+      "commit": "c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+      "tree": "31554d5e9f57d07c4dff4514f494126633a3d934",
+      "qualification": "Exact published test-only0aec append preserving97 prior cases; Cross helper/driver preimages unchanged. Local C5 index plus fixed ed57/cf93 and selected test overlay; remote documentation is not claimed locally materialized."
+    },
+    "actualPublicationReadback": {
+      "accepted": true,
+      "reviewer": "/root/parity_audit",
+      "commit": "c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+      "tree": "31554d5e9f57d07c4dff4514f494126633a3d934",
+      "parent": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+      "leaves": 11690,
+      "changedBodies": 10,
+      "changedBytes": 2923536,
+      "sourceChanges": 1,
+      "otherNonDocUnchanged": 8797,
+      "workflowLeavesUnchanged": 42,
+      "completeAcceptance": true,
+      "review": {
+        "bytes": 56894,
+        "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+        "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+      }
+    },
+    "existingWhole97InputBinding": {
+      "gitBlob": "21878f51fd1b7bfca5bab18ff71c7c1beca5aaef",
+      "eightInputRecordsExactlyRetained": true
+    },
+    "actualLocalBase": {
+      "commit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+      "tree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+      "indexRemainsC5": true,
+      "docsOfRemoteSubjectNotClaimedLocallyMaterialized": true
+    }
+  },
+  "fullEmbeddedReviewLedger": [
+    {
+      "role": "freshBootstrapGuardActualReview",
+      "identity": {
+        "bytes": 32514,
+        "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+        "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075"
+      },
+      "actual": {
+        "bytes": 32514,
+        "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+        "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075"
+      },
+      "identityExact": true,
+      "originalAvailable": true,
+      "byteStringEqual": true,
+      "method": "accepted original GREEN binding full embedded body"
+    },
+    {
+      "role": "freshSdkIndependentReview",
+      "identity": {
+        "bytes": 84719,
+        "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+        "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6"
+      },
+      "actual": {
+        "bytes": 84719,
+        "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+        "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6"
+      },
+      "identityExact": true,
+      "originalAvailable": true,
+      "byteStringEqual": true,
+      "method": "accepted original GREEN binding full embedded body"
+    },
+    {
+      "role": "freshMcpIndependentReview",
+      "identity": {
+        "bytes": 155439,
+        "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+        "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239"
+      },
+      "actual": {
+        "bytes": 155439,
+        "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+        "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239"
+      },
+      "identityExact": true,
+      "originalAvailable": true,
+      "byteStringEqual": true,
+      "method": "accepted original GREEN binding full embedded body"
+    },
+    {
+      "role": "crossR1ActualPublicationReadback",
+      "identity": {
+        "bytes": 24775,
+        "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+        "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+      },
+      "actual": {
+        "bytes": 24775,
+        "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+        "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+      },
+      "identityExact": true,
+      "originalAvailable": true,
+      "byteStringEqual": true,
+      "method": "fresh complete actual c0ead published body"
+    },
+    {
+      "role": "crossTestGuardR2",
+      "identity": {
+        "bytes": 35700,
+        "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+        "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+      },
+      "actual": {
+        "bytes": 35700,
+        "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+        "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+      },
+      "identityExact": true,
+      "originalAvailable": true,
+      "byteStringEqual": true,
+      "method": "fresh complete actual c0ead published body"
+    },
+    {
+      "role": "crossTestParityR2",
+      "identity": {
+        "bytes": 98112,
+        "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+        "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+      },
+      "actual": {
+        "bytes": 98112,
+        "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+        "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+      },
+      "identityExact": true,
+      "originalAvailable": true,
+      "byteStringEqual": true,
+      "method": "independently authored and fully read-back TEST R2"
+    },
+    {
+      "role": "crossTestActualPublicationReadback",
+      "identity": {
+        "bytes": 56894,
+        "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+        "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+      },
+      "actual": {
+        "bytes": 56894,
+        "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+        "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+      },
+      "identityExact": true,
+      "originalAvailable": true,
+      "byteStringEqual": true,
+      "method": "independently authored and fully read-back publication review"
+    }
+  ],
+  "fullR1Join": {
+    "declared": {
+      "bytes": 23142,
+      "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+      "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+    },
+    "recomputed": {
+      "bytes": 23142,
+      "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+      "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+    },
+    "sameEntireApprovedBody": true
+  },
+  "unchangedEightInputs": {
+    "setupBinding": {
+      "path": "/tmp/c714-fresh-bootstrap-review/binding.json",
+      "bytes": 2790411,
+      "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+      "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+    },
+    "sourceFull": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/source-restore-source-after.json",
+      "bytes": 3451167,
+      "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+      "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+    },
+    "sourceNonDoc": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-source-after.json",
+      "bytes": 2478318,
+      "sha256": "59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751",
+      "gitBlob": "51bf0d0962e07fcc7843fcd65c3202ec9133a607"
+    },
+    "dependencies": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json",
+      "bytes": 39168001,
+      "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+      "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+    },
+    "compiled": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-compiled-after.json",
+      "bytes": 400300,
+      "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+      "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+    },
+    "pnpm": {
+      "path": "/workspace/scratch/c714-fresh-20261116/evidence/pnpm-inventory.json",
+      "bytes": 253936,
+      "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+      "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c"
+    },
+    "currentBoundary": {
+      "path": "/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json",
+      "bytes": 3654,
+      "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+      "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+    },
+    "providers": {
+      "path": "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json",
+      "bytes": 789090,
+      "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+      "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+    }
+  },
+  "importAdmission": {
+    "originalFullBootstrapSdkMcpReviewsExactlyRetained": true,
+    "firstThreeFullReviewStringsEqualAccepted21878": true,
+    "crossAppendAdmission": {
+      "accepted": true,
+      "test": {
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      "guard": {
+        "bytes": 35700,
+        "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+        "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+      },
+      "parity": {
+        "bytes": 98112,
+        "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+        "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+      },
+      "whole133": true,
+      "completeOldPrefixExact": true,
+      "newProviderNativeOrExternalImportPaths": 0,
+      "newChildExecutionSites": 0,
+      "readOnlyBrowserFixtureImports": [
+        "/store/slices/teamSlice.ts",
+        "/store/team/taskDetailReadAuthority.ts"
+      ],
+      "qualification": "Extends the retained whole97 static import admission only with the reviewed finite36-case append. No dependency/compiled/provider/incoming-head source changed."
+    },
+    "noNewExternalProviderOrNativeModuleSelected": true,
+    "twoReadonlyBrowserFixtureImports": "The exact two literal existing renderer facade source imports from the accepted0aec TEST review remain unchanged.",
+    "originalSixFiniteChildCalls": "The preserved oldcases use process.execPath and the explicit finite TEST_ONLY_VALUE-only child environments. AGENT_BACKEND_TEST_NODE is not their selector.",
+    "qualification": "The prior SDK/MCPreview retains its actual eager initialization qualifications, including the SDK OS metadata read/process-local environment mutation and conditional Hono global.crypto fallback. No provider authentication, CLI invocation, native launch or live-model qualification follows from static import admission."
+  },
+  "sourceComposition": {
+    "originalTreeLeaves": 11567,
+    "actualPublishedTreeLeaves": 11690,
+    "allNonDocRows": 8798,
+    "preimageSourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36207,
+        "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+        "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 6433,
+        "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+        "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 136700,
+        "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+        "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      }
+    ],
+    "selectedSourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36207,
+        "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+        "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 6433,
+        "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+        "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      }
+    ],
+    "beforeOverlay": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      }
+    ],
+    "afterOverlay": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      }
+    ],
+    "selectedMaterializePaths": [
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+    ],
+    "completeRowProof": {
+      "beforeCount": 8798,
+      "afterCount": 8798,
+      "changed": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "mode": "100644",
+          "bytes": 155423,
+          "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+          "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+        }
+      ],
+      "unchangedCount": 8797,
+      "beforePins": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "equal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "equal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "equal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "equal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "equal": true
+        }
+      ],
+      "afterPins": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "equal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "equal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "equal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "equal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "equal": true
+        }
+      ],
+      "publishedNonDocCount": 8798,
+      "completeAfterMatchesPublished": true,
+      "publicationDiffs": [],
+      "workflowCount": 42,
+      "workflowsIdentical": true,
+      "beforeRowsEqualPreviousActualSource": true
+    },
+    "wholeContents": {
+      "controlsBeforeAndAfterExactAcceptedEd57": true,
+      "selectionBeforeAndAfterExactAcceptedCf93": true,
+      "wholePublishedTestExact0aec": true,
+      "allFiveEmbeddedOverlayInstancesRehashed": true,
+      "oldEfd136700BytePrefixExact": true,
+      "newSuffix": {
+        "bytes": 18723,
+        "sha256": "6ec52af0d302c23841ff811436c0fb774379b2b6d639e2f476de5b4c71b13546",
+        "gitBlob": "59ab4f281b044c45db8d1a53de064c0a14b3e2dd"
+      }
+    },
+    "protectedProducers": "The existing3703 helper and3f1 driver are unchanged. This RED binding contains no future helper or driver postimage.",
+    "sourceLimit": "Current helper90lines and driver798lines are retained; future conditional runner checks cap helper200/driver800 but this review does not select a future producer."
+  },
+  "actualPublishedTenBodies": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "exactActualPublishedBody": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-r1-independent-publication-readback-20261116.json",
+      "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34",
+      "bytes": 24775,
+      "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+      "exactActualPublishedBody": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-guard-r2-20261116.json",
+      "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7",
+      "bytes": 35700,
+      "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+      "exactActualPublishedBody": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-parity-r2-20261116.json",
+      "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884",
+      "bytes": 98112,
+      "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+      "exactActualPublishedBody": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-append-v1-unselected-20261116.txt",
+      "gitBlob": "89231746806bda01275c2e644c6f4c1a2b5f4093",
+      "bytes": 17740,
+      "sha256": "df5dce2e9f5bee54544f9412aae258224a43c9791cc57d3acabaa6919da26cf4",
+      "exactActualPublishedBody": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-reviewed-outcome-20261116.json",
+      "gitBlob": "d96c2ab50639168cca3f7673ef219c3f1a16b701",
+      "bytes": 4332,
+      "sha256": "f004dad9be5904649c25c78d890e621e609d399f1c827a4d5c88566639deb853",
+      "exactActualPublishedBody": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "gitBlob": "e242e3062cb5af2619ac08651f726223c9791be4",
+      "bytes": 2509658,
+      "sha256": "b12a7d687314793d2b7c35c2dad1013a141b1a535106d39214435283c6cf0c4e",
+      "exactActualPublishedBody": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "gitBlob": "2e70b0164e85d725da97fa910e71328ac986706b",
+      "bytes": 27620,
+      "sha256": "c25887a6dd485a19a36878f6473ad513feb451128e6497b95695171c4f90fc36",
+      "exactActualPublishedBody": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "gitBlob": "9806e132c92d759d559a33bbb4ad03747bcdfed6",
+      "bytes": 44509,
+      "sha256": "4dfb8e423e46ae65b523c515f3a94bf5c812e452024dfa72d1e340c750ff59b2",
+      "exactActualPublishedBody": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-publication-manifest-20261116.json",
+      "gitBlob": "8fba4d378af128310b65bfbd4012b85a7a6628c4",
+      "bytes": 5667,
+      "sha256": "f463c878f250cbc1af7357dfa8d8c36c3b014d157a38a949908b8ed3cf10e475",
+      "exactActualPublishedBody": true
+    }
+  ],
+  "actualPublishedTenBodiesTotalBytes": 2923536,
+  "commandAndEnvironment": {
+    "phase": "red",
+    "selectedAction": "one metadata-only materialize-red action, then one whole133 RED at exact published test-first source",
+    "commands": {
+      "red": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "green": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "lint": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "lint:fast:files",
+        "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "source-size": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "guard:source-file-size"
+      ],
+      "diff-check": [
+        "/usr/local/bin/git",
+        "diff",
+        "--check",
+        "--",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ]
+    },
+    "timing": {
+      "commandSeconds": 180,
+      "placement": "After full preflight and initial receipt save; before command start record/raw/Popen. Child gets the remainder of that same absolute clock. No reset after spawn.",
+      "postflight": "Input hashing is outside the original command deadline. Separate preflight/command/postflight/whole-invocation timings are mandatory; whole invocation is not claimed under180s.",
+      "gitMetadata": "Read-only metadata calls retain captured-process supervision and a30-second per-read refusal cap; these do not grant behavioral retries."
+    },
+    "environment": {
+      "inheritSameAdmittedTransportPerInvocation": true,
+      "homeAndCodexHomePreserved": true,
+      "cache": "Strip NODE_COMPILE_CACHE/NODE_COMPILE_CACHE_PORTABLE and force NODE_DISABLE_COMPILE_CACHE=1. Preserve and rehash seven bootstrap residue files.",
+      "testTmp": "/tmp/c714-cross-close-evidence/test-tmp",
+      "nodeChildSeam": "The six existing test-created children use process.execPath with explicit TEST_ONLY_VALUE-only env. AGENT_BACKEND_TEST_NODE remains bound to the same Node but is not the selector used by those six calls."
+    },
+    "behavioralAttempts": {
+      "materializeTest": 1,
+      "red": 1,
+      "materializeProducer": 0,
+      "green": 0,
+      "validationPackage": 0,
+      "previousCrossWholeFileExecutions": 0
+    },
+    "fixedRunnerAndBindingLocalPaths": {
+      "runner": "/tmp/c714-cross-close-review/runner.py",
+      "binding": "/tmp/c714-cross-close-review/binding-red.json"
+    },
+    "commandSourceEquality": "Runner lines602–609 reconstruct the same pinned Node/pnpm/Git vectors and assert exact binding equality; phase admission at533 allows only red for this exact binding.",
+    "absenceOfRuntimeExpansion": "No install/build/typecheck/provider/native/GUI/CI command is selected. Future green and validation-package branches cannot be admitted by phase red.",
+    "unchangedExecutionInputs": "All eight control files are length/SHA/Git verified before setup; their runtime directories are later examined according to the selected source-only materialization or full RED mode.",
+    "environmentSemantics": "The approved transport keys and fixed values, pinned shell/toolchain, HOME/CODEX_HOME preservation, absence checks and package-manager controls remain bound through the original complete setup/amendment bodies. One original transport environment is captured for the invocation. NODE_COMPILE_CACHE and NODE_COMPILE_CACHE_PORTABLE are stripped; NODE_DISABLE_COMPILE_CACHE=1 and task TMPDIR are explicit. No new host route or credential is introduced."
+  },
+  "selectedPhaseReview": {
+    "metadataMaterialization": {
+      "scope": "source-and-supervisor-metadata-only",
+      "fullRuntimeInputsInspected": false,
+      "fullRuntimeInputsPreserved": null,
+      "dependencies": "UNINSPECTED",
+      "compiled": "UNINSPECTED",
+      "providerArchivesAndInstalledMembers": "UNINSPECTED",
+      "bootstrapNodeCache": "UNINSPECTED",
+      "required": "Complete actual source/control/tool/config and captured metadata/session lifecycle before/after plus independent observed outer0. Source preservation is stated separately with exactly authorized written paths. This is not a behavioral or all-input result."
+    },
+    "selectedWrite": "Only desktop-team-ui-smoke.test.ts is written. Both previous conversation producer overlays must already match exactly. The complete source/index/HEAD/workflow/tool/control/environment and captured metadata/session evidence is required before and after.",
+    "metadataLimit": "Actual dependency directories, compiled outputs, installed provider members/archive contents and bootstrap cache are explicitly UNINSPECTED in materialization. The bound inventory control-file identities are still verified; that is not a fresh runtime-content preservation claim.",
+    "redAdmission": "The selected RED requires the exact successful metadata materialization receipt, matching binding/subject/written path, clean captured metadata/session/temp state and separate observed outer0. It then runs full current runtime-source/dependency/compiled/provider/toolchain/cache/config preflight before its one primary.",
+    "spentAttempt": "Exclusive materialize-red and red attempt markers prohibit replay/resume. A failed full RED preflight spends that invocation and leaves the primary UNREACHED.",
+    "redCommand": "One existing whole-file Node --test command, unchanged133 test source, one original180second primary clock. Full pre/post hashing is separately timed outside that clock.",
+    "semanticAdmission": "Inner RED exit1 by itself is insufficient. Complete raw names/order/failure sites and every unreached subcase must match the independently reviewed semantic ledger; all97 oldcases must pass. Setup/import/extraction/missing-export errors, timeout, kill, cancellation, skip/todo or unrelated failures cannot qualify.",
+    "externalSupervisor": "The receipt has an explicit managed-signal blocked-mask cutoff. Root must independently observe actual outer supervisor exit0 before continuing; receipt success alone is not an exit-after-cutoff guarantee.",
+    "laterProducer": "No producer authorship before independent actual full semantic RED and full runtime-input/lifetime/outer0 acceptance.",
+    "futureCapabilities": "Generic green and three-child validation-package code exists in the reviewed runner, but this exact red binding selects neither, contains no acceptedSemanticRed result and no future helper/driver postimages. A later concrete reviewed/published binding is required.",
+    "futureValidation": "Only if separately selected after actualGREEN acceptance: same captured validation environment, three distinct original180second primary clocks/records/raws, prior successful/finalized/raw-hash/session/signal gate, later children terminalUNREACHED on refusal, no partial resume. No future execution qualification is claimed here."
+  },
+  "semanticCensus": {
+    "wholeRuntimeCases": 133,
+    "oldRuntimeCases": 97,
+    "addedRuntimeCases": 36,
+    "addedReadiness": 28,
+    "addedDriver": 8,
+    "targetVariants": 13,
+    "oldSourceExactPrefix": true,
+    "wholeTest": {
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    },
+    "staticPrediction": {
+      "pass": 118,
+      "semanticFail": 15,
+      "failureOrdinals": [
+        98,
+        99,
+        100,
+        101,
+        104,
+        105,
+        106,
+        107,
+        114,
+        115,
+        116,
+        126,
+        127,
+        128,
+        131
+      ],
+      "observed": false,
+      "targetVariantsExpectedReached": 8,
+      "targetVariantsExpectedUnreached": 5
+    },
+    "requiredActualRed": "All97 old cases PASS and all133 names/order fully retained. Only15 independently predicted semantic failures may fail; no missing import/export/extraction/setup, timeout, kill, skip/cancel/todo. Full raw, every failure site and unreached subcase, full current input/lifetime receipts and independently observed outer0 require independent acceptance before any producer authorship."
+  },
+  "exactExpectedLedgerSource": {
+    "review": {
+      "bytes": 98112,
+      "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+      "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+    },
+    "completeCaseCount": 133,
+    "staticCensus": {
+      "cases": 133,
+      "old": 97,
+      "newReadiness": 28,
+      "newDriver": 8,
+      "expectedPass": 118,
+      "expectedFail": 15,
+      "failureOrdinals": [
+        98,
+        99,
+        100,
+        101,
+        104,
+        105,
+        106,
+        107,
+        114,
+        115,
+        116,
+        126,
+        127,
+        128,
+        131
+      ],
+      "actualExecutionPerformed": false,
+      "targetVariants": {
+        "registeredCases": 4,
+        "variants": 13,
+        "baselineReached": 8,
+        "baselineUnreached": 5
+      }
+    },
+    "predictedFailureSites": [
+      {
+        "ordinal": 98,
+        "name": "original Cross Close target admits the ready cleared Task when canResolveClarification is false",
+        "testAssertion": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "line": 2421
+        },
+        "producerSite": {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+          "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+        },
+        "basis": "Current fourth-argument unknown stage falls through to the default expression and returns an owner object, not the required Close point.",
+        "downstream": "canResolveClarification/events/import-list assertions are after the first coordinate assertion."
+      },
+      {
+        "ordinal": 99,
+        "name": "original Cross Close target refuses retained user clarification",
+        "testAssertion": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "line": 2458
+        },
+        "producerSite": {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+          "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+        },
+        "basis": "Current unknown-stage/default expression does not require needsClarification to be absent; returns the original owner.",
+        "downstream": "The no-event assertion follows the expected-null assertion."
+      },
+      {
+        "ordinal": 100,
+        "name": "original Cross Close target refuses retained external clarification",
+        "testAssertion": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "line": 2458
+        },
+        "producerSite": {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+          "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+        },
+        "basis": "Current unknown-stage/default expression does not require needsClarification to be absent; returns the original owner.",
+        "downstream": "The no-event assertion follows the expected-null assertion."
+      },
+      {
+        "ordinal": 101,
+        "name": "original Cross Close target refuses null clarification",
+        "testAssertion": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "line": 2458
+        },
+        "producerSite": {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+          "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+        },
+        "basis": "Current unknown-stage/default expression does not require needsClarification to be undefined; returns the original owner.",
+        "downstream": "The no-event assertion follows the expected-null assertion."
+      },
+      {
+        "ordinal": 104,
+        "name": "original Cross Close target refuses current detail error",
+        "testAssertion": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "line": 2458
+        },
+        "producerSite": {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+          "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+        },
+        "basis": "Current default expression does not reject the detail.error field.",
+        "downstream": "The no-event assertion follows the expected-null assertion."
+      },
+      {
+        "ordinal": 105,
+        "name": "original Cross Close target refuses current deletionIntent",
+        "testAssertion": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "line": 2458
+        },
+        "producerSite": {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+          "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+        },
+        "basis": "Current default expression does not reject detail.deletionIntent.",
+        "downstream": "The no-event assertion follows the expected-null assertion."
+      },
+      {
+        "ordinal": 106,
+        "name": "original Cross Close target refuses full Task deletedAt",
+        "testAssertion": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "line": 2458
+        },
+        "producerSite": {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+          "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+        },
+        "basis": "Current default expression does not reject detail.full.deletedAt.",
+        "downstream": "The no-event assertion follows the expected-null assertion."
+      },
+      {
+        "ordinal": 107,
+        "name": "original Cross Close target refuses full Task deleted status",
+        "testAssertion": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "line": 2458
+        },
+        "producerSite": {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+          "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+        },
+        "basis": "Current default expression does not reject deleted status.",
+        "downstream": "The no-event assertion follows the expected-null assertion."
+      },
+      {
+        "ordinal": 114,
+        "name": "original Cross Close target refuses missing stored session",
+        "testAssertion": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "line": 2458
+        },
+        "producerSite": {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+          "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+        },
+        "basis": "Current default expression does not join the stored taskDetailSessionById row.",
+        "downstream": "The no-event assertion follows the expected-null assertion."
+      },
+      {
+        "ordinal": 115,
+        "name": "original Cross Close target refuses different stored session owner surface",
+        "testAssertion": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "line": 2458
+        },
+        "producerSite": {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+          "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+        },
+        "basis": "Current default expression does not join the stored session owner surface.",
+        "downstream": "The no-event assertion follows the expected-null assertion."
+      },
+      {
+        "ordinal": 116,
+        "name": "original Cross Close target refuses changed stored owner revision",
+        "testAssertion": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "line": 2458
+        },
+        "producerSite": {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+          "returned": "current owner/default-stage value rather than cleared-stage refusal or Close point"
+        },
+        "basis": "Current default expression does not join the stored session owner revision.",
+        "downstream": "The no-event assertion follows the expected-null assertion."
+      },
+      {
+        "ordinal": 126,
+        "name": "actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates",
+        "testAssertion": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "line": 2474
+        },
+        "producerSite": {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "blob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+          "line": 326,
+          "assertion": "Original UI target moved after ownership check"
+        },
+        "basis": "The generic Close ignores readiness and hovers at167.125, then check6 changes geometry to171.125 before the unchanged final exact-position assertion.",
+        "downstream": "Direct-hit first subcase fails at the original moved-target assertion; descendant-hit second subcase and post-click count assertions are not reached."
+      },
+      {
+        "ordinal": 127,
+        "name": "actual original Cross Close retains the first-read deadline while renderer readiness is pending",
+        "testAssertion": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "line": 2492
+        },
+        "producerSite": {
+          "kind": "Missing expected rejection after the original generic Close completes"
+        },
+        "basis": "The generic Close ignores detail.refreshPending and completes one pair; assert.rejects reports missing expected rejection.",
+        "downstream": "No-input/300-read assertions are not reached."
+      },
+      {
+        "ordinal": 128,
+        "name": "actual original Cross Close cannot use a foreign dialog or an absent ineligible own control",
+        "testAssertion": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "line": 2502
+        },
+        "producerSite": {
+          "kind": "Missing expected rejection after the original generic Close completes"
+        },
+        "basis": "The generic global Close selects the only foreign-dialog button and completes a pair.",
+        "downstream": "The first foreign-only subcase fails expected rejection; absent own, wrong text, zero width and zero height subcases remain unreached."
+      },
+      {
+        "ordinal": 131,
+        "name": "actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates",
+        "testAssertion": {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "line": 2530
+        },
+        "producerSite": {
+          "kind": "Missing expected rejection after the original generic Close completes"
+        },
+        "basis": "The generic Close ignores final same-Task refreshPending revocation and completes a pair.",
+        "downstream": "The expected rejection fails before no-press/count assertions."
+      }
+    ],
+    "targetVariantReachability": [
+      {
+        "registration": 126,
+        "sequence": 1,
+        "name": "positive direct center hit",
+        "facts": {
+          "descendantHit": false
+        },
+        "baseline": "REACHED; semantic failure at original final geometry assertion",
+        "greenRequired": "one hover and one press/release pair at1121,171.125"
+      },
+      {
+        "registration": 126,
+        "sequence": 2,
+        "name": "positive contained descendant hit",
+        "facts": {
+          "descendantHit": true
+        },
+        "baseline": "UNREACHED after first positive subcase failure",
+        "greenRequired": "same one-pair admission through contains(hit)"
+      },
+      {
+        "registration": 128,
+        "sequence": 1,
+        "name": "foreign dialog only",
+        "facts": {
+          "count": 0,
+          "foreignClose": true
+        },
+        "baseline": "REACHED; original global target clicks foreign Close and fails expected rejection",
+        "greenRequired": "no input;300reads/300waits/30000ms"
+      },
+      {
+        "registration": 128,
+        "sequence": 2,
+        "name": "own Close absent",
+        "facts": {
+          "count": 0
+        },
+        "baseline": "UNREACHED after first foreign subcase failure",
+        "greenRequired": "no input;300reads/300waits/30000ms"
+      },
+      {
+        "registration": 128,
+        "sequence": 3,
+        "name": "own Close text not exact",
+        "facts": {
+          "text": "Close another task"
+        },
+        "baseline": "UNREACHED after first foreign subcase failure",
+        "greenRequired": "no input;300reads/300waits/30000ms"
+      },
+      {
+        "registration": 128,
+        "sequence": 4,
+        "name": "own Close zero width",
+        "facts": {
+          "width": 0
+        },
+        "baseline": "UNREACHED after first foreign subcase failure",
+        "greenRequired": "no input;300reads/300waits/30000ms"
+      },
+      {
+        "registration": 128,
+        "sequence": 5,
+        "name": "own Close zero height",
+        "facts": {
+          "height": 0
+        },
+        "baseline": "UNREACHED after first foreign subcase failure",
+        "greenRequired": "no input;300reads/300waits/30000ms"
+      },
+      {
+        "registration": 129,
+        "sequence": 1,
+        "name": "two eligible exact-text controls",
+        "facts": {
+          "count": 2
+        },
+        "baseline": "REACHED; preservation PASS",
+        "greenRequired": "singleton refusal before disabled/hit narrowing"
+      },
+      {
+        "registration": 129,
+        "sequence": 2,
+        "name": "two controls with only one enabled",
+        "facts": {
+          "count": 2,
+          "secondDisabled": true
+        },
+        "baseline": "REACHED; preservation PASS",
+        "greenRequired": "same cardinality-first refusal"
+      },
+      {
+        "registration": 129,
+        "sequence": 3,
+        "name": "two controls with only one center-hit candidate",
+        "facts": {
+          "count": 2,
+          "descendantHit": true
+        },
+        "baseline": "REACHED; preservation PASS",
+        "greenRequired": "same cardinality-first refusal;duplicate does not contain descendant"
+      },
+      {
+        "registration": 130,
+        "sequence": 1,
+        "name": "native disabled own Close",
+        "facts": {
+          "disabled": true
+        },
+        "baseline": "REACHED; preservation PASS",
+        "greenRequired": "no input;300reads/300waits/30000ms"
+      },
+      {
+        "registration": 130,
+        "sequence": 2,
+        "name": "covered center",
+        "facts": {
+          "covered": true
+        },
+        "baseline": "REACHED; preservation PASS",
+        "greenRequired": "no input;300reads/300waits/30000ms"
+      },
+      {
+        "registration": 130,
+        "sequence": 3,
+        "name": "absent center hit",
+        "facts": {
+          "noHit": true
+        },
+        "baseline": "REACHED; preservation PASS",
+        "greenRequired": "no input;300reads/300waits/30000ms"
+      }
+    ],
+    "observed": false
+  },
+  "runnerEvidence": {
+    "fullRunnerIdentity": {
+      "bytes": 48838,
+      "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+      "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+    },
+    "fullRunnerBody": "import datetime\nimport hashlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport signal\nimport stat\nimport subprocess\nimport sys\nimport tarfile\nimport tempfile\nimport time\nimport urllib.parse\n\nROOT = pathlib.Path('/workspace/scratch/c714-fresh-20261116')\nREPO = ROOT / 'source'\nOUT = pathlib.Path('/tmp/c714-cross-close-evidence')\nTASK_TMP = OUT / 'test-tmp'\nSOURCE_COMMIT = 'c5ff4fc283e58d486c58147b4dfb00144ca10d34'\nSOURCE_TREE = '3239e6e6c8182f3d8e45ee671efc9108500b5137'\nR1 = 'a4f5c2d2a05edd636ea0ff461c00615a2ff60d86'\nR1_BLOB = '8abe2a1437489d5c0223d532535d6c520fd70184'\nWORKSPACES = ['', 'agent-teams-controller', 'mcp-server', 'landing',\n              'packages/agent-graph', 'packages/legacy-agent-host', 'packages/task-change-ledger']\nBASE_PATHS = ['scripts/legacy-agent-host/desktop-ui-controls.ts',\n              'scripts/legacy-agent-host/desktop-emulated-selection-ui.ts']\nPATHS = ['scripts/legacy-agent-host/desktop-task-comment-input-target.ts',\n         'scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts',\n         'scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts']\nOVERLAY_PATHS = [*BASE_PATHS, *PATHS]\nTEST_IDENTITY = {'bytes': 155423, 'sha256': 'b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409',\n                 'gitBlob': '0aec698e88cc3af8d12c48f6d93b038efcc84900'}\nINPUT_PATHS = {\n    'setupBinding': pathlib.Path('/tmp/c714-fresh-bootstrap-review/binding.json'),\n    'sourceFull': ROOT / 'evidence/source-restore-source-after.json',\n    'sourceNonDoc': ROOT / 'evidence/host-build-source-after.json',\n    'dependencies': ROOT / 'evidence/host-build-dependencies-after.json',\n    'compiled': ROOT / 'evidence/host-build-compiled-after.json',\n    'pnpm': ROOT / 'evidence/pnpm-inventory.json',\n    'currentBoundary': pathlib.Path('/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json'),\n    'providers': pathlib.Path('/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json'),\n}\n\n\ndef identity(data):\n    return {'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest(),\n            'gitBlob': hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\\0' + data).hexdigest()}\n\ndef canonical(value):\n    return json.dumps(value, sort_keys=True, separators=(',', ':')).encode()\n\ndef utc():\n    return datetime.datetime.now(datetime.timezone.utc).isoformat()\n\ndef write_new(name, value):\n    data = (json.dumps(value, indent=2) + '\\n').encode()\n    path = OUT / name\n    with path.open('xb') as handle:\n        handle.write(data)\n    return {'path': str(path), **identity(data)}\n\ndef process_rows():\n    rows = []\n    for item in pathlib.Path('/proc').iterdir():\n        if not item.name.isdigit():\n            continue\n        try:\n            raw = (item / 'stat').read_text()\n            close = raw.rfind(')')\n            tail = raw[close + 2:].split()\n            rows.append({'pid': int(item.name), 'name': raw[raw.index('(') + 1:close],\n                         'state': tail[0], 'ppid': int(tail[1]), 'pgid': int(tail[2]),\n                         'session': int(tail[3]), 'startTicks': int(tail[19])})\n        except FileNotFoundError:\n            continue\n    return sorted(rows, key=lambda row: row['pid'])\n\ndef package_values(environment):\n    return {key: value for key, value in environment.items()\n            if key.lower().startswith(('npm_config_', 'pnpm_config_'))}\n\ndef transport_values(environment):\n    return {key: value for key, value in environment.items()\n            if key.lower() in ['http_proxy', 'https_proxy', 'all_proxy', 'no_proxy', 'proxy']}\n\ndef admit_environment(original):\n    package = package_values(original)\n    network = transport_values(original)\n    admission = amendment['admission']\n    assert set(package) == set(admission['exactPackageConfigKeys']), 'package config key drift'\n    assert set(network) == set(admission['exactOrdinaryProxyKeys']), 'network key drift'\n    assert not any(key.upper().startswith('PNPM_') for key in original), 'unreviewed PNPM environment'\n    normalized = {}\n    for key, value in {**package, **network}.items():\n        lower = key.lower()\n        assert lower not in normalized or normalized[lower] == value, 'case alias conflict'\n        normalized[lower] = value\n    for pin in admission['fixedNormalizedPackageValues']:\n        data = normalized[pin['key']].encode()\n        assert len(data) == pin['bytes'] and hashlib.sha256(data).hexdigest() == pin['sha256']\n    for name in ['httpProxyGroup', 'allProxyGroup']:\n        group = admission[name]\n        values = [normalized[key] for key in group['normalizedKeys']]\n        assert len(set(values)) == 1, 'proxy group conflict'\n        value = values[0]\n        parsed = urllib.parse.urlsplit(value)\n        assert parsed.scheme == group['scheme'] and parsed.hostname == group['hostname']\n        assert parsed.username is None and parsed.password is None\n        assert parsed.path == parsed.query == parsed.fragment == ''\n        assert parsed.port is not None and group['port']['min'] <= parsed.port <= group['port']['max']\n        assert value == group['scheme'] + '://127.0.0.1:' + str(parsed.port), 'noncanonical proxy'\n    assert normalized['no_proxy'] == normalized['npm_config_noproxy']\n    selected = {**package, **network}\n    result = original.copy()\n    for key in list(result):\n        if key.lower().startswith(('npm_config_', 'pnpm_config_')):\n            del result[key]\n        elif key in r1['environment']['unset'] + r1['environment']['additionalUnset']:\n            del result[key]\n        elif any(key.startswith(prefix) for prefix in r1['environment']['unsetPrefixes']):\n            del result[key]\n    for key in r1['environment']['inheritedPackageConfigKeys']:\n        result[key] = normalized[key]\n    result.update(r1['environment']['assignments'])\n    return result, selected\n\ndef environment_check():\n    current = {**package_values(os.environ), **transport_values(os.environ)}\n    assert current == captured_transport, 'captured environment changed'\n    assert os.environ.get('HOME') == '/home/agent' and env.get('HOME') == '/home/agent'\n    assert env.get('CODEX_HOME') == original_environment.get('CODEX_HOME')\n    assert env.get('XDG_CONFIG_HOME') == str(ROOT / 'config')\n    assert all(not (pathlib.Path(path).exists() or pathlib.Path(path).is_symlink())\n               for path in absent_configs), 'new user/global config'\n    for name in ['config.yaml', 'auth.ini', 'pnpmfile.cjs', 'pnpmfile.mjs', '.pnpmfile.cjs']:\n        assert not (ROOT / 'config' / 'pnpm' / name).exists(), 'new task pnpm config'\n    assert pathlib.Path(normalized_prefix) / 'etc/npmrc' == pathlib.Path(absent_configs[-1])\n    return {'capturedTransportCanonicalSha256': hashlib.sha256(canonical(captured_transport)).hexdigest(),\n            'values': [{'key': key, 'bytes': len(value.encode()),\n                        'sha256': hashlib.sha256(value.encode()).hexdigest()}\n                       for key, value in sorted(captured_transport.items())],\n            'explicitAssignments': {key: env.get(key) for key in [*r1['environment']['assignments'],\n                                    'AGENT_BACKEND_TEST_NODE', 'NODE_DISABLE_COMPILE_CACHE']},\n            'homePreserved': True, 'codexHomePreserved': True, 'absentConfigs': absent_configs}\n\ndef tooling():\n    rows = []\n    for name in ['node', 'git', 'python', 'scriptShell']:\n        pin = r1['tools'][name]\n        path = pathlib.Path(pin['path'])\n        value = identity(path.read_bytes())\n        assert value['bytes'] == pin['bytes'] and value['sha256'] == pin['sha256'], name\n        if pin.get('realPath'):\n            assert str(path.resolve()) == pin['realPath'], name + ' resolved path'\n        rows.append({'tool': name, 'path': str(path), 'realPath': str(path.resolve()), **value})\n    assert str(pathlib.Path(sys.executable).resolve()) == r1['tools']['python']['realPath']\n    assert shutil.which('node', path=env['PATH']) == r1['tools']['node']['path']\n    return rows\n\ndef file_row(path, relative):\n    info = path.lstat()\n    if stat.S_ISLNK(info.st_mode):\n        data, mode = os.readlink(path).encode(), '120000'\n    else:\n        assert stat.S_ISREG(info.st_mode), 'special file: ' + relative\n        data = path.read_bytes()\n        mode = '100755' if info.st_mode & stat.S_IXUSR else '100644'\n    return {'path': relative, 'mode': mode, **identity(data)}\n\ndef directory_manifest(roots):\n    rows = []\n    for base in roots:\n        if not base.exists():\n            continue\n        assert base.is_dir() and not base.is_symlink(), 'unexpected root link: ' + str(base)\n        for folder, directories, files in os.walk(base, followlinks=False):\n            for name in sorted(directories + files):\n                path = pathlib.Path(folder) / name\n                info = path.lstat()\n                if stat.S_ISDIR(info.st_mode):\n                    continue\n                relative = path.relative_to(REPO).as_posix()\n                row = file_row(path, relative)\n                if stat.S_ISLNK(info.st_mode):\n                    assert path.resolve().is_relative_to(REPO), 'dependency link escapes source'\n                    row['target'] = os.readlink(path)\n                rows.append(row)\n    return sorted(rows, key=lambda row: row['path'])\n\ndef dependencies():\n    return directory_manifest([REPO / relative / 'node_modules' for relative in WORKSPACES])\n\ndef compiled():\n    return directory_manifest([REPO / 'packages/legacy-agent-host/dist',\n                               REPO / 'packages/task-change-ledger/dist'])\n\ndef toolchain_inventory():\n    rows = []\n    for folder, directories, files in os.walk(ROOT / 'toolchain', followlinks=False):\n        for name in sorted(directories + files):\n            path = pathlib.Path(folder) / name\n            if stat.S_ISDIR(path.lstat().st_mode):\n                continue\n            rows.append(file_row(path, path.relative_to(ROOT / 'toolchain').as_posix()))\n    return sorted(rows, key=lambda row: row['path'])\n\ndef verify_pnpm():\n    assert sorted(path.name for path in (ROOT / 'bin').iterdir()) == ([] if pnpm_inventory is None else ['pnpm'])\n    for relative in WORKSPACES:\n        for name in ['node', 'pnpm']:\n            shadow = REPO / relative / 'node_modules/.bin' / name\n            assert not (shadow.exists() or shadow.is_symlink()), 'unreviewed package-script tool shadow'\n    if pnpm_inventory is None:\n        return toolchain_inventory()\n    expected = [*pnpm_inventory['members'],\n                {'path': 'pnpm-11.22.0.tgz', 'mode': '100644',\n                 **{key: pnpm_inventory['archive'][key] for key in ['bytes', 'sha256', 'gitBlob']}}]\n    actual = toolchain_inventory()\n    assert actual == sorted(expected, key=lambda row: row['path']), 'complete staged pnpm inventory changed'\n    assert pathlib.Path(r1['tools']['pnpm']['launcher']).is_symlink()\n    assert os.readlink(r1['tools']['pnpm']['launcher']) == r1['tools']['pnpm']['executable']\n    assert pathlib.Path(r1['tools']['pnpm']['launcher']).resolve() == pathlib.Path(r1['tools']['pnpm']['executable'])\n    return actual\n\ndef group_members(pid):\n    return [row for row in process_rows() if row['session'] == pid or row['pgid'] == pid]\n\ndef interrupt(signum, _frame):\n    phase_signals.append(signum)\n    if cleaning or finalizing or launching:\n        return\n    raise InterruptedError('supervisor signal ' + str(signum))\n\ndef terminate_captured(child, record, reason):\n    global cleaning\n    cleaning = True\n    cleanup_started = time.monotonic()\n    cleanup = {'reason': reason, 'capturedPid': child.pid, 'reaped': False}\n    record.setdefault('abnormalCleanup', []).append(cleanup)\n    try:\n        live = child.poll() is None\n        members = [] if live else group_members(child.pid)\n        cleanup['leaderWasLive'] = live\n        cleanup['membersAfterLeaderExit'] = members\n        if live or members:\n            try:\n                os.killpg(child.pid, signal.SIGKILL)\n                cleanup['signal'] = 'SIGKILL to captured group'\n            except ProcessLookupError:\n                cleanup['alreadyAbsent'] = True\n        child.wait(timeout=3)\n        cleanup['reaped'] = True\n    except BaseException as error:\n        cleanup['error'] = type(error).__name__ + ': ' + str(error)\n    finally:\n        cleanup['durationSeconds'] = time.monotonic() - cleanup_started\n        cleaning = False\n\ndef run_child(stage, index, argv, deadline, metadata=False):\n    global launching, finalizing\n    name = stage['id'] + '-' + str(index)\n    record = {'argv': argv, 'cwd': stage['cwd'], 'startedAt': utc(), 'timedOut': False,\n              'exitCode': None, 'exitSignal': None, 'capturedPid': None, 'metadataOnly': metadata}\n    tracker = None\n    if not metadata:\n        tracker = {'id': name, 'invocationReached': True, 'spawnAttempted': False,\n                   'capturedPid': None, 'finalReceiptPersisted': False, 'record': record}\n        primary_invocations.append(tracker)\n    write_new(name + '-start.json', record)\n    raw, errors = OUT / (name + '.log'), OUT / (name + '.stderr')\n    child, pointer = None, None\n    started = time.monotonic()\n    try:\n        with raw.open('xb') as output:\n            error_stream = errors.open('xb') if metadata else None\n            try:\n                assert deadline > time.monotonic() and not phase_signals, 'deadline/interruption before spawn'\n                launching = True\n                try:\n                    if tracker is not None:\n                        tracker['spawnAttempted'] = True\n                    child = subprocess.Popen(argv, cwd=stage['cwd'], env=env, stdout=output,\n                                             stderr=error_stream if metadata else subprocess.STDOUT,\n                                             start_new_session=True)\n                finally:\n                    launching = False\n                record['capturedPid'] = child.pid\n                if tracker is not None:\n                    tracker['capturedPid'] = child.pid\n                if phase_signals:\n                    raise InterruptedError('signal during captured launch: ' + repr(phase_signals))\n                try:\n                    child.wait(timeout=max(0, deadline - time.monotonic()))\n                except subprocess.TimeoutExpired:\n                    record['timedOut'] = True\n                    terminate_captured(child, record, 'absolute command/stage deadline')\n            finally:\n                if error_stream is not None:\n                    error_stream.close()\n    except BaseException as error:\n        record['executionError'] = type(error).__name__ + ': ' + str(error)\n    finally:\n        previous_finalizing, finalizing = finalizing, True\n        try:\n            try:\n                if child is not None:\n                    record['capturedPid'] = child.pid\n                    if tracker is not None:\n                        tracker['capturedPid'] = child.pid\n                    if child.poll() is None or record.get('executionError'):\n                        terminate_captured(child, record, 'abnormal or live command at finalization')\n                    remaining = group_members(child.pid)\n                    record['remainingBeforeCleanup'] = remaining\n                    if remaining:\n                        terminate_captured(child, record, 'captured descendants after leader exit')\n                    record['remainingCapturedSession'] = group_members(child.pid)\n                    record['exitCode'] = child.returncode if child.returncode is not None and child.returncode >= 0 else None\n                    record['exitSignal'] = -child.returncode if child.returncode is not None and child.returncode < 0 else None\n                else:\n                    record['remainingCapturedSession'] = []\n                assert not record['remainingCapturedSession'], 'captured command not quiescent'\n                for path, key in [(raw, 'raw'), (errors, 'rawStderr')]:\n                    if path.exists():\n                        record[key] = {'path': str(path), **identity(path.read_bytes())}\n            except BaseException as error:\n                record['finalizationError'] = type(error).__name__ + ': ' + str(error)\n                if child is not None:\n                    terminate_captured(child, record, 'failed protected finalization')\n            finally:\n                record['finishedAt'] = utc()\n                record['durationSeconds'] = time.monotonic() - started\n                record['interruptions'] = list(phase_signals)\n                record['cleanupSeconds'] = sum(row['durationSeconds'] for row in record.get('abnormalCleanup', []))\n                record['deadlineExceeded'] = time.monotonic() >= deadline\n                record['successful'] = bool(child is not None and record['exitCode'] == 0\n                                            and not record['timedOut'] and not record.get('executionError')\n                                            and not record.get('finalizationError') and not record.get('abnormalCleanup')\n                                            and not record['interruptions'] and not record['deadlineExceeded'])\n                pointer = write_new(name + '-receipt.json', record)\n                if tracker is not None:\n                    tracker['finalReceiptPersisted'] = True\n                    tracker['finalReceipt'] = pointer\n        finally:\n            finalizing = previous_finalizing\n    return pointer, record\n\ndef git_read(*arguments):\n    global metadata_counter\n    metadata_counter += 1\n    stage = {'id': prefix + '-' + boundary + '-metadata', 'cwd': str(REPO)}\n    pointer, record = run_child(stage, metadata_counter, [r1['tools']['git']['path'], *arguments],\n                                time.monotonic() + 30, metadata=True)\n    assert record['successful'], 'Git metadata failed; retained ' + pointer['path']\n    data = pathlib.Path(record['raw']['path']).read_bytes()\n    assert identity(data) == {key: record['raw'][key] for key in ['bytes', 'sha256', 'gitBlob']}\n    return data\n\n\ndef source_snapshot(overlays):\n    assert git_read('rev-parse', 'HEAD').decode().strip() == SOURCE_COMMIT\n    assert git_read('rev-parse', 'HEAD^{tree}').decode().strip() == SOURCE_TREE\n    leaves = []\n    for raw in git_read('ls-tree', '-rz', '--full-tree', 'HEAD').split(b'\\0'):\n        if raw:\n            metadata, path = raw.split(b'\\t', 1)\n            mode, kind, blob = metadata.decode().split()\n            leaves.append({'path': path.decode(), 'mode': mode, 'type': kind, 'gitBlob': blob})\n    expected_leaves = [{key: row[key] for key in ['path', 'mode', 'type', 'gitBlob']}\n                       for row in setup['sourceTreeRows']]\n    assert sorted(leaves, key=lambda row: row['path']) == sorted(expected_leaves, key=lambda row: row['path'])\n    assert len(leaves) == 11567, 'complete source tree changed'\n    assert git_read('diff', '--cached', '--name-only', '-z') == b'', 'staged changes'\n    assert git_read('ls-files', '--others', '--exclude-standard', '-z') == b'', 'untracked files'\n    base = {row['path']: row for row in inputs['sourceNonDoc']['rows']}\n    index = {}\n    for raw in git_read('ls-files', '--stage', '-z').split(b'\\0'):\n        if raw:\n            metadata, path = raw.split(b'\\t', 1)\n            mode, blob, stage = metadata.decode().split()\n            assert stage == '0', 'unmerged index'\n            index[path.decode()] = {'mode': mode, 'gitBlob': blob}\n    assert index == {row['path']: {key: row[key] for key in ['mode', 'gitBlob']}\n                     for row in expected_leaves}, 'complete stage0 index changed'\n    expected = dict(base)\n    for row in overlays:\n        assert row['path'] in OVERLAY_PATHS and row['mode'] == '100644'\n        assert identity(row['content'].encode()) == {key: row[key] for key in ['bytes', 'sha256', 'gitBlob']}\n        expected[row['path']] = {key: row[key] for key in ['path', 'mode', 'bytes', 'sha256', 'gitBlob']}\n    assert len(base) == len(expected) == 8798 and len({x['path'] for x in overlays}) == len(overlays)\n    changed = {path for path in expected if expected[path] != base[path]}\n    actual_changed = {p.decode() for p in git_read('diff', '--name-only', '-z', 'HEAD').split(b'\\0') if p}\n    assert actual_changed == changed, 'tracked source change set differs'\n    rows = [file_row(REPO / path, path) for path in sorted(expected)]\n    actual = {'actualLocalHead': SOURCE_COMMIT, 'tree': SOURCE_TREE, 'rows': rows,\n              'changedTrackedPaths': sorted(changed), 'allTreeLeaves': len(leaves),\n              'workflowLeaves': sum(x['path'].startswith('.github/workflows/') for x in leaves),\n              'localGitConfig': identity((REPO / '.git/config').read_bytes())}\n    pointer = write_new(prefix + '-' + boundary + '-source.json', actual)\n    assert rows == [expected[path] for path in sorted(expected)], 'source bytes differ; ' + pointer['path']\n    assert actual['localGitConfig'] == inputs['sourceFull']['localGitConfig'], 'local Git configuration changed'\n    assert actual['workflowLeaves'] == 42\n    return pointer\n\n\ndef provider_archives():\n    values = []\n    for pin in inputs['providers']['providers']:\n        archive = REPO / pin['archivePath']\n        assert identity(archive.read_bytes()) == pin['archiveIdentity']\n        installed = REPO / pin['installedRoot']\n        assert installed.is_dir() and not installed.is_symlink()\n        rows, seen = [], set()\n        with tarfile.open(archive, 'r:gz') as handle:\n            for member in handle.getmembers():\n                path = pathlib.PurePosixPath(member.name)\n                assert not path.is_absolute() and '..' not in path.parts and path.parts[0] == 'package'\n                assert member.name not in seen\n                seen.add(member.name)\n                if member.isdir():\n                    continue\n                assert member.isfile(), 'provider archive special/link member'\n                relative = path.relative_to('package').as_posix()\n                data = handle.extractfile(member).read()\n                actual = file_row(installed / relative, relative)\n                mode = '100755' if member.mode & stat.S_IXUSR else '100644'\n                assert actual == {'path': relative, 'mode': mode, **identity(data)}\n                rows.append({'path': relative, 'archiveMode': oct(member.mode), 'mode': mode,\n                             **identity(data), 'installedMatch': True})\n        assert rows == pin['regularMembers'], 'provider archive member census changed'\n        values.append({'name': pin['name'], 'archive': pin['archiveIdentity'],\n                       'regularMembers': len(rows), 'allRegularMembersEqual': True})\n    return values\n\n\ndef control_snapshot():\n    rows = []\n    for path, pin in control_pins:\n        assert path.is_file() and not path.is_symlink(), 'control path alias'\n        actual = identity(path.read_bytes())\n        assert actual == pin, 'exact admission control changed: ' + str(path)\n        rows.append({'path': str(path), **actual})\n    return rows\n\n\ndef source_metadata_snapshot(overlays):\n    result = {'source': source_snapshot(overlays), 'tools': tooling(),\n              'environment': environment_check(), 'controls': control_snapshot(),\n              'fullRuntimeInputsInspected': False, 'dependencies': 'UNINSPECTED',\n              'compiled': 'UNINSPECTED', 'providers': 'UNINSPECTED', 'bootstrapCache': 'UNINSPECTED',\n              'pnpm': identity((json.dumps(verify_pnpm(), indent=2) + '\\n').encode())}\n    assert env['AGENT_BACKEND_TEST_NODE'] == r1['tools']['node']['path']\n    assert env['TMPDIR'] == str(TASK_TMP) and env['NODE_DISABLE_COMPILE_CACHE'] == '1'\n    assert all(key not in env for key in ['NODE_COMPILE_CACHE', 'NODE_COMPILE_CACHE_PORTABLE'])\n    result['processCensus'] = process_rows()\n    result['testTemps'] = sorted([{'name': path.name, 'device': path.lstat().st_dev,\n                                  'inode': path.lstat().st_ino, 'mode': stat.S_IFMT(path.lstat().st_mode)}\n                                 for path in TASK_TMP.iterdir() if path.name.startswith('TEST-')],\n                                key=lambda row: row['name'])\n    result['taskTmpTopEntries'] = sorted(path.name for path in TASK_TMP.iterdir())\n    return result\n\n\ndef input_snapshot(overlays):\n    result = {'source': source_snapshot(overlays), 'controls': control_snapshot(),\n              'fullRuntimeInputsInspected': True}\n    checks = [('dependencies', dependencies, inputs['dependencies']),\n              ('compiled', compiled, inputs['compiled'])]\n    for name, read, expected in checks:\n        actual = read()\n        pointer = write_new(prefix + '-' + boundary + '-' + name + '.json', actual)\n        result[name] = pointer\n        assert actual == expected, name + ' changed; retained ' + pointer['path']\n    result['providers'] = provider_archives()\n    result['tools'] = tooling()\n    result['pnpm'] = identity((json.dumps(verify_pnpm(), indent=2) + '\\n').encode())\n    result['environment'] = environment_check()\n    assert env['AGENT_BACKEND_TEST_NODE'] == r1['tools']['node']['path']\n    assert env['TMPDIR'] == str(TASK_TMP) and env['NODE_DISABLE_COMPILE_CACHE'] == '1'\n    assert all(key not in env for key in ['NODE_COMPILE_CACHE', 'NODE_COMPILE_CACHE_PORTABLE'])\n    cache = []\n    for folder, directories, files in os.walk(ROOT / 'tmp', followlinks=False):\n        for name in sorted(directories + files):\n            path = pathlib.Path(folder) / name\n            if stat.S_ISDIR(path.lstat().st_mode):\n                continue\n            cache.append(file_row(path, path.relative_to(ROOT).as_posix()))\n    result['bootstrapCache'] = sorted(cache, key=lambda row: row['path'])\n    assert result['bootstrapCache'] == inputs['currentBoundary']['taskTempInventory'], 'bootstrap tmp changed'\n    result['processCensus'] = process_rows()\n    result['testTemps'] = sorted([{'name': path.name, 'device': path.lstat().st_dev,\n                                  'inode': path.lstat().st_ino, 'mode': stat.S_IFMT(path.lstat().st_mode)}\n                                 for path in TASK_TMP.iterdir() if path.name.startswith('TEST-')],\n                                key=lambda row: row['name'])\n    result['taskTmpTopEntries'] = sorted(path.name for path in TASK_TMP.iterdir())\n    return result\n\n\ndef preserved(before, after, include_source=True):\n    pointer_keys = ['dependencies', 'compiled'] + (['source'] if include_source else [])\n    return all(before[key]['sha256'] == after[key]['sha256'] for key in pointer_keys) and all(\n        before[key] == after[key] for key in ['providers', 'tools', 'pnpm', 'environment', 'bootstrapCache', 'controls'])\n\n\ndef ordinary_completion(record):\n    return bool(record and record['exitCode'] in [0, 1] and record['exitSignal'] is None\n                and not record['timedOut'] and not record.get('executionError')\n                and not record.get('finalizationError') and not record.get('abnormalCleanup')\n                and not record['interruptions'] and not record['deadlineExceeded']\n                and record['remainingCapturedSession'] == [])\n\n\ndef primary_cleanup_seconds(trackers):\n    values = [row['record'].get('cleanupSeconds', 0 if not row['spawnAttempted'] else None)\n              for row in trackers]\n    return sum(values) if all(isinstance(value, (int, float)) for value in values) else None\n\n\nassert len(sys.argv) == 5, 'binding path, binding SHA256, action and command required'\nbinding_path, binding_sha, action, command = sys.argv[1:]\nbinding_bytes = pathlib.Path(binding_path).read_bytes()\nassert hashlib.sha256(binding_bytes).hexdigest() == binding_sha\ncfg = json.loads(binding_bytes)\nassert pathlib.Path(__file__).resolve() == pathlib.Path(cfg['runnerLocalPath'])\nassert pathlib.Path(binding_path).resolve() == pathlib.Path(cfg['bindingLocalPath'])\nassert identity(pathlib.Path(__file__).read_bytes()) == cfg['runnerIdentity']\nassert cfg['publishedR1'] == R1 and cfg['phase'] in ['red', 'green']\nassert identity(cfg['crossR1Body'].encode()) == cfg['crossR1Identity']\nassert cfg['crossR1Identity']['gitBlob'] == R1_BLOB\ncross_r1 = json.loads(cfg['crossR1Body'])\nassert cfg['actualPublishedSubjectReadbackAccepted'] and cfg['combinedInputImportAdmission']['accepted']\nassert cfg['combinedInputImportAdmission']['sourceCommit'] == SOURCE_COMMIT\nassert command in (['red'] if cfg['phase'] == 'red' else ['green', 'validation-package'])\nassert action in ['run', 'materialize']\nassert action != 'materialize' or command == cfg['phase']\nassert set(cfg['inputFiles']) == set(INPUT_PATHS)\nassert ROOT.is_dir() and not ROOT.is_symlink() and REPO.is_dir() and not REPO.is_symlink()\nfor name in ['toolchain', 'bin', 'evidence', 'tmp', 'store', 'cache', 'state', 'config', 'data']:\n    assert (ROOT / name).is_dir() and not (ROOT / name).is_symlink(), name + ' root alias'\ncontrol_pins = [(pathlib.Path(__file__), cfg['runnerIdentity']),\n                (pathlib.Path(binding_path), identity(binding_bytes))]\ninputs = {}\nfor name, path in INPUT_PATHS.items():\n    pin = cfg['inputFiles'][name]\n    assert str(path) == pin['path'] and path.is_file() and not path.is_symlink()\n    data = path.read_bytes()\n    expected = {key: pin[key] for key in ['bytes', 'sha256', 'gitBlob']}\n    assert identity(data) == expected, name\n    control_pins.append((path, expected))\n    inputs[name] = json.loads(data)\nsetup = inputs['setupBinding']\nr1, amendment = json.loads(setup['r1Body']), json.loads(setup['amendmentBody'])\nassert identity(setup['r1Body'].encode()) == setup['r1Identity']\nassert identity(setup['amendmentBody'].encode()) == setup['amendmentIdentity']\nassert setup['publishedR1'] == '7e6f32741ccdb470e7688cec9de9481fd05827a1'\nassert setup['publishedAmendment'] == '0042eec33e3bcf145de25db96f5fc7c5b026a1fe'\nfor review in cfg['acceptedReviewBodies']:\n    assert identity(review['body'].encode()) == review['identity']\nassert len(inputs['sourceFull']['rows']) == 11567 and len(inputs['sourceNonDoc']['rows']) == 8798\nassert len(inputs['dependencies']) == 122773 and len(inputs['compiled']) == 1454\nassert inputs['sourceFull']['head'] == inputs['sourceNonDoc']['head'] == SOURCE_COMMIT\nassert inputs['sourceFull']['tree'] == inputs['sourceNonDoc']['tree'] == SOURCE_TREE\nexpected_before = BASE_PATHS if cfg['phase'] == 'red' else [*BASE_PATHS, PATHS[2]]\nexpected_after = [*BASE_PATHS, PATHS[2]] if cfg['phase'] == 'red' else OVERLAY_PATHS\nassert sorted(x['path'] for x in cfg['beforeSourceOverlay']) == sorted(expected_before)\nassert sorted(x['path'] for x in cfg['sourceOverlay']) == sorted(expected_after)\nfor overlays in [cfg['beforeSourceOverlay'], cfg['sourceOverlay']]:\n    for pin in cross_r1['preservedBaseline']['currentTwoOverlays']:\n        row = next(x for x in overlays if x['path'] == pin['path'])\n        assert {key: row[key] for key in pin} == pin, 'previous conversation producer changed'\n    for row in overlays:\n        assert row['mode'] == '100644'\n        assert identity(row['content'].encode()) == {key: row[key] for key in ['bytes', 'sha256', 'gitBlob']}\n        if row['path'] == PATHS[2]:\n            assert identity(row['content'].encode()) == TEST_IDENTITY\n        elif row['path'] in PATHS[:2]:\n            cap = 200 if row['path'] == PATHS[0] else 800\n            assert len(row['content'].splitlines()) <= cap\nbase_source = {row['path']: row for row in inputs['sourceNonDoc']['rows']}\nexpected_source = dict(base_source)\nfor row in cfg['sourceOverlay']:\n    expected_source[row['path']] = {key: row[key] for key in ['path', 'mode', 'bytes', 'sha256', 'gitBlob']}\nassert cfg['sourcePins'] == [expected_source[path] for path in sorted(OVERLAY_PATHS)]\nassert cfg['reviewedTestCensus']['wholeRuntimeCases'] == 133\nassert cfg['reviewedTestCensus']['wholeTest'] == TEST_IDENTITY\nwritten_paths = [PATHS[2]] if cfg['phase'] == 'red' else PATHS[:2]\nassert cfg['materializePaths'] == written_paths\nbefore_source = dict(base_source)\nfor row in cfg['beforeSourceOverlay']:\n    before_source[row['path']] = {key: row[key] for key in ['path', 'mode', 'bytes', 'sha256', 'gitBlob']}\nassert sorted(path for path in expected_source if expected_source[path] != before_source[path]) == sorted(written_paths)\npnpm_inventory = inputs['pnpm']\noriginal_environment = os.environ.copy()\nenv, captured_transport = admit_environment(original_environment)\nfor key in ['NODE_COMPILE_CACHE', 'NODE_COMPILE_CACHE_PORTABLE']:\n    env.pop(key, None)\nenv.update({'NODE_DISABLE_COMPILE_CACHE': '1', 'AGENT_BACKEND_TEST_NODE': r1['tools']['node']['path'],\n            'TMPDIR': str(TASK_TMP)})\ntempfile.tempdir = str(TASK_TMP)\nabsent_configs = [*r1['environment']['absentConfigFiles'], amendment['admission']['additionalAbsentConfig']['path']]\nnormalized_prefix = next(value for key, value in captured_transport.items() if key.lower() == 'npm_config_prefix')\nNODE = r1['tools']['node']['path']\nPNPM = [NODE, r1['tools']['pnpm']['executable'], '--config.pm-on-fail=error',\n        '--config.verify-deps-before-run=false', '--config.engine-strict=true']\nCOMMANDS = {'red': [NODE, '--test', PATHS[2]], 'green': [NODE, '--test', PATHS[2]],\n            'lint': [*PNPM, 'lint:fast:files', *PATHS],\n            'source-size': [*PNPM, 'guard:source-file-size'],\n            'diff-check': [r1['tools']['git']['path'], 'diff', '--check', '--', *OVERLAY_PATHS]}\nassert cfg['commandVectors'] == COMMANDS\nassert cfg['executionScope']['requiresObservedSupervisorExitZeroForContinuation'] is True\nowner = {'kind': 'c714-cross-close-evidence', 'base': SOURCE_COMMIT, 'publishedR1': R1,\n         'runner': cfg['runnerIdentity'], 'test': TEST_IDENTITY}\nif action == 'materialize' and cfg['phase'] == 'red':\n    OUT.mkdir(mode=0o700, exist_ok=False)\n    write_new('owner.json', owner)\nelse:\n    assert OUT.is_dir() and not OUT.is_symlink()\n    assert json.loads((OUT / 'owner.json').read_text()) == owner\nif cfg['phase'] == 'green':\n    red_pin = cfg['acceptedSemanticRed']\n    assert red_pin['independentReviewAccepted'] is True and red_pin['observedOuterSupervisorExit'] == 0\n    red_bytes = (OUT / 'red-receipt.json').read_bytes()\n    assert identity(red_bytes) == red_pin['identity']\n    red = json.loads(red_bytes)\n    assert red['command'] == 'red' and red['exitCode'] == 1 and red['inputsPreserved']\n    assert red['fullRuntimeInputsInspected'] and red['fullRuntimeInputsPreserved']\n    assert red['commandCompletedNormally'] and red['cleanup']['newTestTempsRemaining'] == []\n    assert red['scopeCompleted'] is True and red['interruptions'] == []\n    assert red['cleanup']['capturedSessionMembersAfter'] == []\n    assert not red.get('executionError') and not red.get('postflightError')\n    assert red['testIdentity'] == TEST_IDENTITY\nif action == 'run' and command in ['red', 'green']:\n    materialized = json.loads((OUT / ('materialize-' + command + '-receipt.json')).read_text())\n    assert materialized['action'] == 'materialize' and materialized['command'] == command\n    assert materialized['bindingIdentity'] == identity(binding_bytes)\n    assert materialized['publishedSubject'] == cfg['publishedSubject']\n    assert materialized['scopeCompleted'] and materialized['sourceAndSupervisorMetadataPreserved']\n    assert materialized['fullRuntimeInputsInspected'] is False\n    assert materialized['fullRuntimeInputsPreserved'] is None and materialized['inputsPreserved'] is None\n    assert materialized['writtenPaths'] == written_paths and materialized['interruptions'] == []\n    assert materialized['cleanup']['capturedSessionMembersAfter'] == []\n    assert materialized['cleanup']['newTestTempsRemaining'] == []\n    assert not materialized.get('executionError') and not materialized.get('postflightError')\nif command == 'validation-package':\n    green = json.loads((OUT / 'green-receipt.json').read_text())\n    assert green['command'] == 'green' and green['exitCode'] == 0 and green['inputsPreserved']\n    assert green['fullRuntimeInputsInspected'] and green['fullRuntimeInputsPreserved']\n    assert green['commandCompletedNormally'] and green['cleanup']['newTestTempsRemaining'] == []\n    assert green['scopeCompleted'] is True and green['interruptions'] == []\n    assert green['cleanup']['capturedSessionMembersAfter'] == []\n    assert green['publishedSubject'] == cfg['publishedSubject'] and green['bindingIdentity'] == identity(binding_bytes)\n    assert not green.get('executionError') and not green.get('postflightError')\nassert OUT.is_dir() and not OUT.is_symlink()\nTASK_TMP.mkdir(mode=0o700, exist_ok=True)\nassert TASK_TMP.is_dir() and not TASK_TMP.is_symlink()\nassert shutil.disk_usage(REPO).free >= 8 * 1024 * 1024 and shutil.disk_usage(OUT).free >= 64 * 1024 * 1024\nprefix = command if action == 'run' else 'materialize-' + cfg['phase']\nwith (OUT / (prefix + '.attempt')).open('x') as handle:\n    handle.write(utc() + '\\n')\nruntime_inputs = action == 'run'\nreceipt = {'kind': 'cross-close-test-first-bounded-invocation', 'command': command,\n           'action': action, 'attempt': 1, 'startedAt': utc(), 'publishedR1': R1,\n           'publishedSubject': cfg['publishedSubject'], 'actualLocalHead': SOURCE_COMMIT,\n           'runnerIdentity': cfg['runnerIdentity'], 'bindingIdentity': identity(binding_bytes),\n           'testIdentity': TEST_IDENTITY, 'sourcePins': cfg['sourcePins'],\n           'argv': COMMANDS.get(command) if action == 'run' else None, 'cwd': str(REPO),\n           'perPrimaryCommandLimitSeconds': 180, 'metadataCommandLimitSeconds': 30,\n           'fullRuntimeInputsRequested': runtime_inputs, 'fullRuntimeInputsInspected': False,\n           'fullRuntimeInputBoundaries': {key: 'UNREACHED' if runtime_inputs else 'UNINSPECTED' for key in ['before', 'after']},\n           'fullRuntimeInputsPreserved': False if runtime_inputs else None,\n           'inputsPreserved': False if runtime_inputs else None, 'sourceAndSupervisorMetadataPreserved': False,\n           'commandCompletedNormally': False, 'exitCode': None, 'exitSignal': None, 'timedOut': False,\n           'cleanupSeconds': 0, 'commandPhaseSeconds': 0,\n           'cleanupTimeAccounting': 'Captured termination/reap time is a subset of each commandPhaseSeconds.',\n           'snapshotScope': 'whole invocation; validation children share one full preflight and postflight' if runtime_inputs else 'source-and-supervisor-metadata-only',\n           'qualification': 'Finite actual-source cases/scoped guards only. Metadata materialization is not a behavioral or all-input result. No GUI/native/vendor or whole-E2E claim.'}\nif not runtime_inputs:\n    receipt['uninspectedRuntimeInputs'] = {key: 'UNINSPECTED' for key in\n        ['dependencies', 'compiled', 'providerArchivesAndInstalledMembers', 'bootstrapNodeCache']}\nif command == 'validation-package':\n    receipt['validationCommands'] = [{'command': name, 'argv': COMMANDS[name], 'status': 'UNREACHED'}\n                                     for name in ['lint', 'source-size', 'diff-check']]\nreceipt_path = OUT / (prefix + '-receipt.json')\nreceipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')\nmetadata_counter = 0\nphase_signals = []\ncleaning = finalizing = launching = False\nprevious_handlers = {sig: signal.signal(sig, interrupt) for sig in [signal.SIGINT, signal.SIGTERM]}\ninvocation_start = time.monotonic()\nbefore = after = primary = None\nprimaries = []\nprimary_invocations = []\nreceipt['primaryInvocations'] = primary_invocations\nexpected_command_outcome = False\nboundary = 'before'\nsnapshot = input_snapshot if runtime_inputs else source_metadata_snapshot\ntry:\n    preflight_start = time.monotonic()\n    overlays = cfg['beforeSourceOverlay'] if action == 'materialize' else cfg['sourceOverlay']\n    if runtime_inputs:\n        receipt['fullRuntimeInputBoundaries']['before'] = 'STARTED'\n    before = snapshot(overlays)\n    if runtime_inputs:\n        receipt['fullRuntimeInputBoundaries']['before'] = 'COMPLETE'\n    receipt['before'] = before\n    receipt['preflightSeconds'] = time.monotonic() - preflight_start\n    receipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')\n    if action == 'materialize':\n        receipt['writtenPaths'] = []\n        for path in written_paths:\n            assert not phase_signals\n            row = next(x for x in cfg['sourceOverlay'] if x['path'] == path)\n            (REPO / path).write_bytes(row['content'].encode())\n            receipt['writtenPaths'].append(path)\n        expected_command_outcome = True\n    elif command == 'validation-package':\n        package_start = time.monotonic()\n        try:\n            for entry in receipt['validationCommands']:\n                assert not phase_signals, 'supervisor interruption before next validation child'\n                command_start = time.monotonic()\n                entry['status'] = 'STARTED'\n                stage = {'id': prefix + '-' + entry['command'], 'cwd': str(REPO)}\n                invocation_offset = len(primary_invocations)\n                try:\n                    pointer, primary = run_child(stage, 1, entry['argv'], command_start + 180)\n                    primaries.append(primary)\n                    entry.update({'status': 'EXECUTED', 'primaryReceipt': pointer, 'record': primary})\n                finally:\n                    entry['commandPhaseSeconds'] = time.monotonic() - command_start\n                    entry['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations[invocation_offset:])\n                    entry['invocationRecords'] = primary_invocations[invocation_offset:]\n                assert identity(pathlib.Path(pointer['path']).read_bytes()) == {key: pointer[key] for key in ['bytes', 'sha256', 'gitBlob']}\n                assert primary.get('raw')\n                assert identity(pathlib.Path(primary['raw']['path']).read_bytes()) == {key: primary['raw'][key] for key in ['bytes', 'sha256', 'gitBlob']}\n                assert ordinary_completion(primary) and primary['successful'] and primary['exitCode'] == 0\n                assert primary['remainingCapturedSession'] == [] and not phase_signals\n                entry['nextCommandAdmitted'] = True\n            receipt['commandCompletedNormally'] = True\n            expected_command_outcome = True\n        finally:\n            receipt['commandPhaseSeconds'] = time.monotonic() - package_start\n            receipt['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations)\n            if primary:\n                for key in ['exitCode', 'exitSignal', 'timedOut']:\n                    receipt[key] = primary[key]\n    else:\n        command_start = time.monotonic()\n        stage = {'id': prefix + '-command', 'cwd': str(REPO)}\n        try:\n            pointer, primary = run_child(stage, 1, COMMANDS[command], command_start + 180)\n            primaries.append(primary)\n            receipt['primaryReceipt'] = pointer\n            for key in ['exitCode', 'exitSignal', 'timedOut']:\n                receipt[key] = primary[key]\n            receipt['commandCompletedNormally'] = ordinary_completion(primary)\n            receipt['rawCombinedOutput'] = primary.get('raw')\n            expected_command_outcome = receipt['commandCompletedNormally'] and primary['exitCode'] == (1 if command == 'red' else 0)\n        finally:\n            receipt['commandPhaseSeconds'] = time.monotonic() - command_start\n            receipt['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations)\nexcept BaseException as error:\n    receipt['executionError'] = type(error).__name__ + ': ' + str(error)\n    if 'preflightSeconds' not in receipt:\n        receipt['preflightSeconds'] = time.monotonic() - preflight_start\nfinally:\n    finalizing = True\n    postflight_start = time.monotonic()\n    try:\n        boundary = 'after'\n        if runtime_inputs:\n            receipt['fullRuntimeInputBoundaries']['after'] = 'STARTED'\n        after = snapshot(cfg['sourceOverlay'])\n        if runtime_inputs:\n            receipt['fullRuntimeInputBoundaries']['after'] = 'COMPLETE'\n        receipt['after'] = after\n        metadata_preserved = bool(before and all(before[key] == after[key] for key in ['tools', 'pnpm', 'environment', 'controls']))\n        receipt['sourceAndSupervisorMetadataPreserved'] = metadata_preserved\n        if runtime_inputs:\n            receipt['inputsPreserved'] = bool(before and preserved(before, after))\n            receipt['fullRuntimeInputsPreserved'] = receipt['inputsPreserved']\n        unknown_launches = [row['id'] for row in primary_invocations if row['spawnAttempted'] and row['capturedPid'] is None]\n        receipt['cleanup'] = {'unknownPrimaryLaunches': unknown_launches,\n                              'capturedSessionMembersAfter': None if unknown_launches else [member for row in primary_invocations if row.get('capturedPid')\n                                                              for member in group_members(row['capturedPid'])],\n                              'newTestTempsRemaining': [x for x in after['testTemps'] if before and x not in before['testTemps']],\n                              'scope': 'All captured primary sessions/groups and TEST-prefixed task temps; metadata sessions are checked individually. No universal escaped-child/native custody proof.'}\n    except BaseException as error:\n        receipt['postflightError'] = type(error).__name__ + ': ' + str(error)\n        if runtime_inputs:\n            receipt['inputsPreserved'] = receipt['fullRuntimeInputsPreserved'] = False\n        receipt['sourceAndSupervisorMetadataPreserved'] = False\n    finally:\n        managed_signals = set(previous_handlers)\n        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, managed_signals)\n        try:\n            pending_signals = sorted(int(sig) for sig in signal.sigpending() & managed_signals)\n            receipt['signalAdmissionCutoff'] = {\n                'at': utc(), 'pendingSignals': pending_signals, 'supervisorExitZeroRequired': True,\n                'scope': 'Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.'}\n            receipt['postflightSeconds'] = time.monotonic() - postflight_start\n            receipt['finishedAt'] = utc()\n            receipt['totalInvocationSeconds'] = time.monotonic() - invocation_start\n            receipt['interruptions'] = [*phase_signals, *pending_signals]\n            receipt['metadataCommands'] = metadata_counter\n            receipt['fullRuntimeInputsInspected'] = runtime_inputs and all(\n                value == 'COMPLETE' for value in receipt['fullRuntimeInputBoundaries'].values())\n            receipt['primaryUnreached'] = action == 'run' and not primary_invocations\n            receipt['primaryFinalizationComplete'] = all(row['finalReceiptPersisted'] for row in primary_invocations)\n            receipt['primaryInvocationsWithoutFinalReceipt'] = [row['id'] for row in primary_invocations\n                                                               if not row['finalReceiptPersisted']]\n            receipt['unreachedValidationCommands'] = [x['command'] for x in receipt.get('validationCommands', [])\n                                                       if x['status'] == 'UNREACHED']\n            selected_inputs_preserved = receipt['inputsPreserved'] if runtime_inputs else receipt['sourceAndSupervisorMetadataPreserved']\n            receipt['scopeCompleted'] = bool(selected_inputs_preserved and expected_command_outcome\n                                             and (not runtime_inputs or receipt['fullRuntimeInputsInspected'])\n                                             and receipt['primaryFinalizationComplete']\n                                             and not receipt.get('executionError') and not receipt.get('postflightError')\n                                             and not receipt['interruptions'] and not receipt['unreachedValidationCommands']\n                                             and receipt.get('cleanup', {}).get('newTestTempsRemaining') == []\n                                             and receipt.get('cleanup', {}).get('capturedSessionMembersAfter') == [])\n            receipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')\n        finally:\n            for sig, previous in previous_handlers.items():\n                signal.signal(sig, previous)\n            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)\nprint(json.dumps({key: receipt.get(key) for key in ['command', 'action', 'exitCode', 'exitSignal',\n      'timedOut', 'executionError', 'postflightError', 'inputsPreserved', 'fullRuntimeInputsInspected',\n      'fullRuntimeInputsPreserved', 'sourceAndSupervisorMetadataPreserved', 'commandCompletedNormally',\n      'scopeCompleted', 'preflightSeconds', 'commandPhaseSeconds', 'cleanupSeconds', 'postflightSeconds',\n      'totalInvocationSeconds', 'unreachedValidationCommands', 'rawCombinedOutput', 'cleanup', 'signalAdmissionCutoff']}), flush=True)\nsys.exit(0 if receipt['scopeCompleted'] and not phase_signals else 2)\n",
+    "selectedControlAndSourceGateExcerpt": {
+      "firstLine": 519,
+      "lastLine": 659,
+      "content": "assert len(sys.argv) == 5, 'binding path, binding SHA256, action and command required'\nbinding_path, binding_sha, action, command = sys.argv[1:]\nbinding_bytes = pathlib.Path(binding_path).read_bytes()\nassert hashlib.sha256(binding_bytes).hexdigest() == binding_sha\ncfg = json.loads(binding_bytes)\nassert pathlib.Path(__file__).resolve() == pathlib.Path(cfg['runnerLocalPath'])\nassert pathlib.Path(binding_path).resolve() == pathlib.Path(cfg['bindingLocalPath'])\nassert identity(pathlib.Path(__file__).read_bytes()) == cfg['runnerIdentity']\nassert cfg['publishedR1'] == R1 and cfg['phase'] in ['red', 'green']\nassert identity(cfg['crossR1Body'].encode()) == cfg['crossR1Identity']\nassert cfg['crossR1Identity']['gitBlob'] == R1_BLOB\ncross_r1 = json.loads(cfg['crossR1Body'])\nassert cfg['actualPublishedSubjectReadbackAccepted'] and cfg['combinedInputImportAdmission']['accepted']\nassert cfg['combinedInputImportAdmission']['sourceCommit'] == SOURCE_COMMIT\nassert command in (['red'] if cfg['phase'] == 'red' else ['green', 'validation-package'])\nassert action in ['run', 'materialize']\nassert action != 'materialize' or command == cfg['phase']\nassert set(cfg['inputFiles']) == set(INPUT_PATHS)\nassert ROOT.is_dir() and not ROOT.is_symlink() and REPO.is_dir() and not REPO.is_symlink()\nfor name in ['toolchain', 'bin', 'evidence', 'tmp', 'store', 'cache', 'state', 'config', 'data']:\n    assert (ROOT / name).is_dir() and not (ROOT / name).is_symlink(), name + ' root alias'\ncontrol_pins = [(pathlib.Path(__file__), cfg['runnerIdentity']),\n                (pathlib.Path(binding_path), identity(binding_bytes))]\ninputs = {}\nfor name, path in INPUT_PATHS.items():\n    pin = cfg['inputFiles'][name]\n    assert str(path) == pin['path'] and path.is_file() and not path.is_symlink()\n    data = path.read_bytes()\n    expected = {key: pin[key] for key in ['bytes', 'sha256', 'gitBlob']}\n    assert identity(data) == expected, name\n    control_pins.append((path, expected))\n    inputs[name] = json.loads(data)\nsetup = inputs['setupBinding']\nr1, amendment = json.loads(setup['r1Body']), json.loads(setup['amendmentBody'])\nassert identity(setup['r1Body'].encode()) == setup['r1Identity']\nassert identity(setup['amendmentBody'].encode()) == setup['amendmentIdentity']\nassert setup['publishedR1'] == '7e6f32741ccdb470e7688cec9de9481fd05827a1'\nassert setup['publishedAmendment'] == '0042eec33e3bcf145de25db96f5fc7c5b026a1fe'\nfor review in cfg['acceptedReviewBodies']:\n    assert identity(review['body'].encode()) == review['identity']\nassert len(inputs['sourceFull']['rows']) == 11567 and len(inputs['sourceNonDoc']['rows']) == 8798\nassert len(inputs['dependencies']) == 122773 and len(inputs['compiled']) == 1454\nassert inputs['sourceFull']['head'] == inputs['sourceNonDoc']['head'] == SOURCE_COMMIT\nassert inputs['sourceFull']['tree'] == inputs['sourceNonDoc']['tree'] == SOURCE_TREE\nexpected_before = BASE_PATHS if cfg['phase'] == 'red' else [*BASE_PATHS, PATHS[2]]\nexpected_after = [*BASE_PATHS, PATHS[2]] if cfg['phase'] == 'red' else OVERLAY_PATHS\nassert sorted(x['path'] for x in cfg['beforeSourceOverlay']) == sorted(expected_before)\nassert sorted(x['path'] for x in cfg['sourceOverlay']) == sorted(expected_after)\nfor overlays in [cfg['beforeSourceOverlay'], cfg['sourceOverlay']]:\n    for pin in cross_r1['preservedBaseline']['currentTwoOverlays']:\n        row = next(x for x in overlays if x['path'] == pin['path'])\n        assert {key: row[key] for key in pin} == pin, 'previous conversation producer changed'\n    for row in overlays:\n        assert row['mode'] == '100644'\n        assert identity(row['content'].encode()) == {key: row[key] for key in ['bytes', 'sha256', 'gitBlob']}\n        if row['path'] == PATHS[2]:\n            assert identity(row['content'].encode()) == TEST_IDENTITY\n        elif row['path'] in PATHS[:2]:\n            cap = 200 if row['path'] == PATHS[0] else 800\n            assert len(row['content'].splitlines()) <= cap\nbase_source = {row['path']: row for row in inputs['sourceNonDoc']['rows']}\nexpected_source = dict(base_source)\nfor row in cfg['sourceOverlay']:\n    expected_source[row['path']] = {key: row[key] for key in ['path', 'mode', 'bytes', 'sha256', 'gitBlob']}\nassert cfg['sourcePins'] == [expected_source[path] for path in sorted(OVERLAY_PATHS)]\nassert cfg['reviewedTestCensus']['wholeRuntimeCases'] == 133\nassert cfg['reviewedTestCensus']['wholeTest'] == TEST_IDENTITY\nwritten_paths = [PATHS[2]] if cfg['phase'] == 'red' else PATHS[:2]\nassert cfg['materializePaths'] == written_paths\nbefore_source = dict(base_source)\nfor row in cfg['beforeSourceOverlay']:\n    before_source[row['path']] = {key: row[key] for key in ['path', 'mode', 'bytes', 'sha256', 'gitBlob']}\nassert sorted(path for path in expected_source if expected_source[path] != before_source[path]) == sorted(written_paths)\npnpm_inventory = inputs['pnpm']\noriginal_environment = os.environ.copy()\nenv, captured_transport = admit_environment(original_environment)\nfor key in ['NODE_COMPILE_CACHE', 'NODE_COMPILE_CACHE_PORTABLE']:\n    env.pop(key, None)\nenv.update({'NODE_DISABLE_COMPILE_CACHE': '1', 'AGENT_BACKEND_TEST_NODE': r1['tools']['node']['path'],\n            'TMPDIR': str(TASK_TMP)})\ntempfile.tempdir = str(TASK_TMP)\nabsent_configs = [*r1['environment']['absentConfigFiles'], amendment['admission']['additionalAbsentConfig']['path']]\nnormalized_prefix = next(value for key, value in captured_transport.items() if key.lower() == 'npm_config_prefix')\nNODE = r1['tools']['node']['path']\nPNPM = [NODE, r1['tools']['pnpm']['executable'], '--config.pm-on-fail=error',\n        '--config.verify-deps-before-run=false', '--config.engine-strict=true']\nCOMMANDS = {'red': [NODE, '--test', PATHS[2]], 'green': [NODE, '--test', PATHS[2]],\n            'lint': [*PNPM, 'lint:fast:files', *PATHS],\n            'source-size': [*PNPM, 'guard:source-file-size'],\n            'diff-check': [r1['tools']['git']['path'], 'diff', '--check', '--', *OVERLAY_PATHS]}\nassert cfg['commandVectors'] == COMMANDS\nassert cfg['executionScope']['requiresObservedSupervisorExitZeroForContinuation'] is True\nowner = {'kind': 'c714-cross-close-evidence', 'base': SOURCE_COMMIT, 'publishedR1': R1,\n         'runner': cfg['runnerIdentity'], 'test': TEST_IDENTITY}\nif action == 'materialize' and cfg['phase'] == 'red':\n    OUT.mkdir(mode=0o700, exist_ok=False)\n    write_new('owner.json', owner)\nelse:\n    assert OUT.is_dir() and not OUT.is_symlink()\n    assert json.loads((OUT / 'owner.json').read_text()) == owner\nif cfg['phase'] == 'green':\n    red_pin = cfg['acceptedSemanticRed']\n    assert red_pin['independentReviewAccepted'] is True and red_pin['observedOuterSupervisorExit'] == 0\n    red_bytes = (OUT / 'red-receipt.json').read_bytes()\n    assert identity(red_bytes) == red_pin['identity']\n    red = json.loads(red_bytes)\n    assert red['command'] == 'red' and red['exitCode'] == 1 and red['inputsPreserved']\n    assert red['fullRuntimeInputsInspected'] and red['fullRuntimeInputsPreserved']\n    assert red['commandCompletedNormally'] and red['cleanup']['newTestTempsRemaining'] == []\n    assert red['scopeCompleted'] is True and red['interruptions'] == []\n    assert red['cleanup']['capturedSessionMembersAfter'] == []\n    assert not red.get('executionError') and not red.get('postflightError')\n    assert red['testIdentity'] == TEST_IDENTITY\nif action == 'run' and command in ['red', 'green']:\n    materialized = json.loads((OUT / ('materialize-' + command + '-receipt.json')).read_text())\n    assert materialized['action'] == 'materialize' and materialized['command'] == command\n    assert materialized['bindingIdentity'] == identity(binding_bytes)\n    assert materialized['publishedSubject'] == cfg['publishedSubject']\n    assert materialized['scopeCompleted'] and materialized['sourceAndSupervisorMetadataPreserved']\n    assert materialized['fullRuntimeInputsInspected'] is False\n    assert materialized['fullRuntimeInputsPreserved'] is None and materialized['inputsPreserved'] is None\n    assert materialized['writtenPaths'] == written_paths and materialized['interruptions'] == []\n    assert materialized['cleanup']['capturedSessionMembersAfter'] == []\n    assert materialized['cleanup']['newTestTempsRemaining'] == []\n    assert not materialized.get('executionError') and not materialized.get('postflightError')\nif command == 'validation-package':\n    green = json.loads((OUT / 'green-receipt.json').read_text())\n    assert green['command'] == 'green' and green['exitCode'] == 0 and green['inputsPreserved']\n    assert green['fullRuntimeInputsInspected'] and green['fullRuntimeInputsPreserved']\n    assert green['commandCompletedNormally'] and green['cleanup']['newTestTempsRemaining'] == []\n    assert green['scopeCompleted'] is True and green['interruptions'] == []\n    assert green['cleanup']['capturedSessionMembersAfter'] == []\n    assert green['publishedSubject'] == cfg['publishedSubject'] and green['bindingIdentity'] == identity(binding_bytes)\n    assert not green.get('executionError') and not green.get('postflightError')\nassert OUT.is_dir() and not OUT.is_symlink()\nTASK_TMP.mkdir(mode=0o700, exist_ok=True)\nassert TASK_TMP.is_dir() and not TASK_TMP.is_symlink()\nassert shutil.disk_usage(REPO).free >= 8 * 1024 * 1024 and shutil.disk_usage(OUT).free >= 64 * 1024 * 1024\nprefix = command if action == 'run' else 'materialize-' + cfg['phase']\nwith (OUT / (prefix + '.attempt')).open('x') as handle:\n    handle.write(utc() + '\\n')\n"
+    },
+    "codeReadQualification": "The entire832-line Python supervisor was read as source text. It was not parsed or executed in a Python runtime by this reviewer. All source/input/action composition checks in this record are independent of the separately attributed lifetime review."
+  },
+  "independentLifetimeLane": {
+    "reviewer": "/root/guard_review",
+    "runnerReview": {
+      "bytes": 85343,
+      "sha256": "68b71ed76d405006a4b125750e00902848a5713c3198655518208b2a89919c03",
+      "gitBlob": "d0c875cc0d5a9fd4c25f246e90137bc1babd0ee9"
+    },
+    "runnerVerdict": "ACCEPTED_CODE_ONLY",
+    "bindingSupplement": {
+      "bytes": 22539,
+      "sha256": "c05935baf86694bbf89d4652fcd570745cc011b48560589732843a285e908ba8",
+      "gitBlob": "1bc41522c3af0b9301a847a765a68be0adcf17db"
+    },
+    "bindingVerdict": "ACCEPTED_FOR_PUBLICATION_ONLY",
+    "completePeerRecordsFreshlyFetchedAndHashed": true,
+    "attribution": "Peer complete lifetime/negative-path acceptance is retained separately. This review owns full source/input/publication/body composition and selected semantic scope; it does not claim a second independent execution or duplicate native/input observation."
+  },
+  "compositionProof": {
+    "accepted": true,
+    "errors": [],
+    "sevenEmbeddedReviewsExact": true,
+    "eightInputsExactPreviousAcceptedBinding": true,
+    "allFiveOverlayInstancesHashed": true,
+    "crossR1WholeExact": true,
+    "wholeTestPrefixAndSuffixExact": true,
+    "completeSourceProof": {
+      "beforeCount": 8798,
+      "afterCount": 8798,
+      "changed": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "mode": "100644",
+          "bytes": 155423,
+          "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+          "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+        }
+      ],
+      "unchangedCount": 8797,
+      "beforePins": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "equal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "equal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "equal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "equal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "equal": true
+        }
+      ],
+      "afterPins": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+          "equal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+          "equal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+          "equal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "equal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "equal": true
+        }
+      ],
+      "publishedNonDocCount": 8798,
+      "completeAfterMatchesPublished": true,
+      "publicationDiffs": [],
+      "workflowCount": 42,
+      "workflowsIdentical": true,
+      "beforeRowsEqualPreviousActualSource": true
+    },
+    "actualPublishedBodies": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "exactActualPublishedBody": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-r1-independent-publication-readback-20261116.json",
+        "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34",
+        "bytes": 24775,
+        "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+        "exactActualPublishedBody": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-guard-r2-20261116.json",
+        "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7",
+        "bytes": 35700,
+        "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+        "exactActualPublishedBody": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-parity-r2-20261116.json",
+        "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884",
+        "bytes": 98112,
+        "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+        "exactActualPublishedBody": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-append-v1-unselected-20261116.txt",
+        "gitBlob": "89231746806bda01275c2e644c6f4c1a2b5f4093",
+        "bytes": 17740,
+        "sha256": "df5dce2e9f5bee54544f9412aae258224a43c9791cc57d3acabaa6919da26cf4",
+        "exactActualPublishedBody": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-reviewed-outcome-20261116.json",
+        "gitBlob": "d96c2ab50639168cca3f7673ef219c3f1a16b701",
+        "bytes": 4332,
+        "sha256": "f004dad9be5904649c25c78d890e621e609d399f1c827a4d5c88566639deb853",
+        "exactActualPublishedBody": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "gitBlob": "e242e3062cb5af2619ac08651f726223c9791be4",
+        "bytes": 2509658,
+        "sha256": "b12a7d687314793d2b7c35c2dad1013a141b1a535106d39214435283c6cf0c4e",
+        "exactActualPublishedBody": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "gitBlob": "2e70b0164e85d725da97fa910e71328ac986706b",
+        "bytes": 27620,
+        "sha256": "c25887a6dd485a19a36878f6473ad513feb451128e6497b95695171c4f90fc36",
+        "exactActualPublishedBody": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+        "gitBlob": "9806e132c92d759d559a33bbb4ad03747bcdfed6",
+        "bytes": 44509,
+        "sha256": "4dfb8e423e46ae65b523c515f3a94bf5c812e452024dfa72d1e340c750ff59b2",
+        "exactActualPublishedBody": true
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-publication-manifest-20261116.json",
+        "gitBlob": "8fba4d378af128310b65bfbd4012b85a7a6628c4",
+        "bytes": 5667,
+        "sha256": "f463c878f250cbc1af7357dfa8d8c36c3b014d157a38a949908b8ed3cf10e475",
+        "exactActualPublishedBody": true
+      }
+    ],
+    "publicationBodyTotalBytes": 2923536,
+    "caseCensus": {
+      "wholeRuntimeCases": 133,
+      "oldRuntimeCases": 97,
+      "addedRuntimeCases": 36,
+      "addedReadiness": 28,
+      "addedDriver": 8,
+      "targetVariants": 13,
+      "oldSourceExactPrefix": true,
+      "wholeTest": {
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      "staticPrediction": {
+        "pass": 118,
+        "semanticFail": 15,
+        "failureOrdinals": [
+          98,
+          99,
+          100,
+          101,
+          104,
+          105,
+          106,
+          107,
+          114,
+          115,
+          116,
+          126,
+          127,
+          128,
+          131
+        ],
+        "observed": false,
+        "targetVariantsExpectedReached": 8,
+        "targetVariantsExpectedUnreached": 5
+      },
+      "requiredActualRed": "All97 old cases PASS and all133 names/order fully retained. Only15 independently predicted semantic failures may fail; no missing import/export/extraction/setup, timeout, kill, skip/cancel/todo. Full raw, every failure site and unreached subcase, full current input/lifetime receipts and independently observed outer0 require independent acceptance before any producer authorship."
+    },
+    "onlyTestMaterializationSelected": true,
+    "conditionalFutureStagesUnselected": true
+  },
+  "remainingGates": [
+    "Exact runner/binding/control documentary checkpoint publication and complete root/independent actual readback.",
+    "Root-only one metadata/source materialization with actual receipt and separate outer0 acceptance.",
+    "Root-only one whole133 RED with complete full runtime input pre/post, raw semantic review and separate outer0 acceptance.",
+    "Only after accepted actual semanticRED may the already scoped two producer postimages be authored for new independent R2/publication."
+  ],
+  "qualifications": [
+    "Accepted for publication of these exact immutable controls only.",
+    "No source/test/runner local application, runtime execution, package import, provider CLI, native process, GUI, CI or ref/PR mutation was performed by this reviewer.",
+    "118PASS/15FAIL and8reached/5unreached target variants are static predictions, not actual results.",
+    "No old97 runtime result transfers to the new133 source. The entire old97 source prefix is preserved and will execute in the new whole-file run.",
+    "The full original8input records and prior actual67a source are identity joins; current runtime preservation remains to be observed by the admitted actual invocation.",
+    "The bare review blob is documentary evidence, not a source/test/runner postimage or additional execution allowance."
+  ],
+  "auditErrors": []
+}

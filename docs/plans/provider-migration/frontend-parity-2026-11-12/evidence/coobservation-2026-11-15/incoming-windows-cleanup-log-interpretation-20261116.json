@@ -1,0 +1,13 @@
+{
+  "kind": "Read-only correction to interpretation of incoming Windows ARM cleanup log fields",
+  "source": {
+    "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+    "bytes": 59216,
+    "sha256": "cb5a49b85ae57c28eaf64c1385c193f5aebf9e6ed0cafa4399b4ec1b50ec8931",
+    "gitBlob": "ca0c93b66d7cd7c51fe0e72c70ab26c3a02bf5c2"
+  },
+  "incomingCiReport": "0f2963af97dcabda330e2635af90c67a4e5d9651",
+  "observation": "In exact a07 source, TEST_SOURCE_CLEANUP logs originalHandleAbsent at310–315 before awaiting retained witness.wait at318 and setting handleAbsent=true at319. Slot0 was set by the earlier publish-A wait402–403.",
+  "correction": "The six captured false fields are pre-wait bookkeeping values, not six negative native absence results. They do not prove a process leak. The actual15s readiness refusal remains. Full final physical-absence/cleanup qualification remains open pending complete source/control-flow and retained result review.",
+  "newSourceOrRuntimeAction": false
+}

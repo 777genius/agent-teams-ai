@@ -1,0 +1,1319 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-complete-actual-Cross-Close-test-source-publication-readback",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/parity_audit",
+  "reviewDateUtc": "2026-11-16",
+  "accepted": true,
+  "parentNotifiedBeforeBareRetention": true,
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "subject": {
+    "commit": "c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+    "tree": "31554d5e9f57d07c4dff4514f494126633a3d934",
+    "orderedParents": [
+      "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86"
+    ],
+    "parentTree": "21ea9ec18febadf981f16ee455a7ad6fcf65ed5c"
+  },
+  "actualCommit": {
+    "sha": "c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+    "node_id": "C_kwDORVTEtNoAKGMwZWFkNDNmMjFkNWVkOTA3NzZkNDA4MGZhMzcyZjQ4Y2Y4MjcwZDU",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+    "html_url": "https://github.com/777genius/agent-teams-ai/commit/c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+    "author": {
+      "name": "Илия",
+      "email": "iliyazelenkog@gmail.com",
+      "date": "2026-11-16T16:35:22Z"
+    },
+    "committer": {
+      "name": "Илия",
+      "email": "iliyazelenkog@gmail.com",
+      "date": "2026-11-16T16:35:22Z"
+    },
+    "tree": {
+      "sha": "31554d5e9f57d07c4dff4514f494126633a3d934",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/31554d5e9f57d07c4dff4514f494126633a3d934"
+    },
+    "message": "test(ui): cover original same-Task Close readiness before producer changes",
+    "parents": [
+      {
+        "sha": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+        "html_url": "https://github.com/777genius/agent-teams-ai/commit/a4f5c2d2a05edd636ea0ff461c00615a2ff60d86"
+      }
+    ],
+    "verification": {
+      "verified": false,
+      "reason": "unsigned",
+      "signature": null,
+      "payload": null,
+      "verified_at": null
+    }
+  },
+  "actualInitialRef": {
+    "ref": "refs/heads/fix/frontend-parity-coobservation-c714-20261115",
+    "node_id": "REF_kwDORVTEtNoAOnJlZnMvaGVhZHMvZml4L2Zyb250ZW5kLXBhcml0eS1jb29ic2VydmF0aW9uLWM3MTQtMjAyNjExMTU",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs/heads/fix/frontend-parity-coobservation-c714-20261115",
+    "object": {
+      "sha": "c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+      "type": "commit",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/c0ead43f21d5ed90776d4080fa372f48cf8270d5"
+    }
+  },
+  "actualFinalRef": {
+    "ref": "refs/heads/fix/frontend-parity-coobservation-c714-20261115",
+    "node_id": "REF_kwDORVTEtNoAOnJlZnMvaGVhZHMvZml4L2Zyb250ZW5kLXBhcml0eS1jb29ic2VydmF0aW9uLWM3MTQtMjAyNjExMTU",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/refs/heads/fix/frontend-parity-coobservation-c714-20261115",
+    "object": {
+      "sha": "c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+      "type": "commit",
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/c0ead43f21d5ed90776d4080fa372f48cf8270d5"
+    }
+  },
+  "scope": "Fresh actual published commit, sole parent, branch at both boundaries, complete tree reconstruction, and all ten complete changed Git blob bodies. This is publication acceptance of the independently reviewed TEST-only source; no runtime result or runner admission.",
+  "completeInventoryProof": {
+    "parentLeaves": 11684,
+    "currentLeaves": 11690,
+    "commonRetainedC5Leaves": 8198,
+    "c5CompleteRows": 11567,
+    "c5Tree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+    "changedPaths": [
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 2509658,
+        "sha256": "b12a7d687314793d2b7c35c2dad1013a141b1a535106d39214435283c6cf0c4e",
+        "gitBlob": "e242e3062cb5af2619ac08651f726223c9791be4"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 27620,
+        "sha256": "c25887a6dd485a19a36878f6473ad513feb451128e6497b95695171c4f90fc36",
+        "gitBlob": "2e70b0164e85d725da97fa910e71328ac986706b"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-r1-independent-publication-readback-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 24775,
+        "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+        "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-append-v1-unselected-20261116.txt",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 17740,
+        "sha256": "df5dce2e9f5bee54544f9412aae258224a43c9791cc57d3acabaa6919da26cf4",
+        "gitBlob": "89231746806bda01275c2e644c6f4c1a2b5f4093"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-guard-r2-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 35700,
+        "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+        "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-parity-r2-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 98112,
+        "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+        "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-publication-manifest-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 5667,
+        "sha256": "f463c878f250cbc1af7357dfa8d8c36c3b014d157a38a949908b8ed3cf10e475",
+        "gitBlob": "8fba4d378af128310b65bfbd4012b85a7a6628c4"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-reviewed-outcome-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 4332,
+        "sha256": "f004dad9be5904649c25c78d890e621e609d399f1c827a4d5c88566639deb853",
+        "gitBlob": "d96c2ab50639168cca3f7673ef219c3f1a16b701"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 44509,
+        "sha256": "4dfb8e423e46ae65b523c515f3a94bf5c812e452024dfa72d1e340c750ff59b2",
+        "gitBlob": "9806e132c92d759d559a33bbb4ad03747bcdfed6"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "type": "blob",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      }
+    ],
+    "changedBytes": 2923536,
+    "otherNondocUnchanged": 8797,
+    "workflowUnchanged": 42,
+    "nonDocTotal": 8798,
+    "newLeaves": 6,
+    "changedExistingLeaves": 4,
+    "deletedLeaves": 0,
+    "modeChanges": 0,
+    "unlistedChanges": 0,
+    "parentCanonicalLeafList": {
+      "bytes": 2125824,
+      "sha256": "bb084ace1d8bb1b06e21dd5fd3437cbf1f96e4f0259c52520602cfae23178987",
+      "gitBlob": "875779a2ac0a5e922faa6dab0547e6040363943e"
+    },
+    "currentCanonicalLeafList": {
+      "bytes": 2127280,
+      "sha256": "6c58f449f224af687a6632b1d0888bddfd4bc4a4ea6ef4f2dbed408bf9ecc8a3",
+      "gitBlob": "713c14aead877d9ea4009823ceb9337a190e6929"
+    },
+    "sourcePins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "sha": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+        "unchanged": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "sha": "cf93da72a198dac636658e512093eef7828b5927",
+        "unchanged": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "sha": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+        "unchanged": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "sha": "3f1ce46fce847a861850ef874017f84227c62b0c",
+        "unchanged": true
+      }
+    ],
+    "catalogInverseExact": true,
+    "allTenFullBodiesFetchedAndRehashed": true,
+    "strategy": "Fetched both actual nonrecursive roots and complete untruncated current/parent docs and scripts subtrees. All52 other root entries match both parent and independently retained c5 root by exact path/mode/type/blob-or-tree identity. Reused only the previously fully reconstructed complete c5 row bodies beneath these cryptographically identical roots, excluding all docs/scripts; that contributes8198 exact unchanged leaves. Combined these with the actual full docs/scripts leaf arrays to reconstruct both complete parent and child leafsets, then compared every path/mode/type/blob/size.",
+    "rootEntriesEach": 54,
+    "otherUnchangedRootEntries": 52,
+    "otherUnchangedRootTreeEntries": 14,
+    "otherUnchangedRootBlobEntries": 38,
+    "actualCurrentDocs": {
+      "sha": "4853ccc588f6aa1a20b4f3bd219e09c16fbae3e9",
+      "recursiveEntries": 3298,
+      "leaves": 2892,
+      "truncated": false
+    },
+    "actualParentDocs": {
+      "sha": "21ca0acc770ebc69ce2ee1b3fed07513526af8f5",
+      "recursiveEntries": 3292,
+      "leaves": 2886,
+      "truncated": false
+    },
+    "actualCurrentScripts": {
+      "sha": "80b227a2d1ce22f75571d84438a837778caa1f19",
+      "recursiveEntries": 634,
+      "leaves": 600,
+      "truncated": false
+    },
+    "actualParentScripts": {
+      "sha": "c656735ac40ef41fbabce22cb87ba6028933fc15",
+      "recursiveEntries": 634,
+      "leaves": 600,
+      "truncated": false
+    },
+    "sharedBase": {
+      "head": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+      "tree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+      "completePreviouslyReviewedRows": 11567,
+      "actualNonrecursiveRootFreshlyFetched": true,
+      "priorFullRuntimeSourceReadback": "f2695e2c8ae5381a6175127fa240eef7b289c390"
+    },
+    "canonicalLeafArrayQualification": "Canonical list identities describe complete derived path/mode/type/sha/size arrays, sorted by path and JSON.stringify plusLF. They are audit checksums, not invented stored Git objects or a replacement for full component reads."
+  },
+  "transportComponents": [
+    {
+      "name": "commit",
+      "sourceSha": "c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+      "apiBodyIdentity": {
+        "bytes": 1187,
+        "sha256": "4125694828dad6e071032842f365bd91d74e5b28bcfb3ba5d26bc45eff538f40",
+        "gitBlob": "3675bddac0c3946693d344d35cd6d4009f919c41"
+      },
+      "truncated": null,
+      "entries": null,
+      "leafEntries": null
+    },
+    {
+      "name": "ref",
+      "sourceSha": "c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+      "apiBodyIdentity": {
+        "bytes": 492,
+        "sha256": "a883e4cd1c307e333d78d7e74c4da4c211d0c46aac73465af0f571c80eac5972",
+        "gitBlob": "cea7dc1be09658c233f1b8a3602cd0b22b7f86f7"
+      },
+      "truncated": null,
+      "entries": null,
+      "leafEntries": null
+    },
+    {
+      "name": "parentCommit",
+      "sourceSha": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+      "apiBodyIdentity": {
+        "bytes": 1174,
+        "sha256": "90e6cdc73298dc262a703850ab520c053b7b78cfe3accb08834e9c4895aa3b07",
+        "gitBlob": "731182edf05bcca63ba9075b1c2e15c426c6bffd"
+      },
+      "truncated": null,
+      "entries": null,
+      "leafEntries": null
+    },
+    {
+      "name": "root",
+      "sourceSha": "31554d5e9f57d07c4dff4514f494126633a3d934",
+      "apiBodyIdentity": {
+        "bytes": 12410,
+        "sha256": "14318edf2a60eff30b9bd57fdfcc73f6ad0c1ac8b0215b2cd3da8ea79d6d7680",
+        "gitBlob": "8c27e7092ba12af93716d61d364f7b7a0ff2a891"
+      },
+      "truncated": false,
+      "entries": 54,
+      "leafEntries": 38
+    },
+    {
+      "name": "parentRoot",
+      "sourceSha": "21ea9ec18febadf981f16ee455a7ad6fcf65ed5c",
+      "apiBodyIdentity": {
+        "bytes": 12410,
+        "sha256": "3f54280b439fc082981d06a354a9201b110ee64dd16d3e691d7ab41858dd053b",
+        "gitBlob": "f83fb1d0bb240e07ac5a50e71d5a185bda9e9931"
+      },
+      "truncated": false,
+      "entries": 54,
+      "leafEntries": 38
+    },
+    {
+      "name": "docs",
+      "sourceSha": "4853ccc588f6aa1a20b4f3bd219e09c16fbae3e9",
+      "apiBodyIdentity": {
+        "bytes": 1120658,
+        "sha256": "0bdbba7ead8f8db5ed8623d5f4bd4cb09d3d22224c7aef953cdb1e123bfa15f6",
+        "gitBlob": "fcbb5bb807c9580587707b53a011374937483cb7"
+      },
+      "truncated": false,
+      "entries": 3298,
+      "leafEntries": 2892
+    },
+    {
+      "name": "scripts",
+      "sourceSha": "80b227a2d1ce22f75571d84438a837778caa1f19",
+      "apiBodyIdentity": {
+        "bytes": 162740,
+        "sha256": "be74c2ed968299be4fdd55949e881bdc1e00663c30c2048c9d133748f94c54bd",
+        "gitBlob": "9b22c68f823b5f616fd46dea5a1d6bd060b760f4"
+      },
+      "truncated": false,
+      "entries": 634,
+      "leafEntries": 600
+    },
+    {
+      "name": "parentDocs",
+      "sourceSha": "21ca0acc770ebc69ce2ee1b3fed07513526af8f5",
+      "apiBodyIdentity": {
+        "bytes": 1118554,
+        "sha256": "6e3117a2773ada038f09bd5798f576ab7dd5473eedb0e375fc33fcc72722b3b5",
+        "gitBlob": "1d3ae815f2f1af3041e2cc176009c19ae83e61d0"
+      },
+      "truncated": false,
+      "entries": 3292,
+      "leafEntries": 2886
+    },
+    {
+      "name": "parentScripts",
+      "sourceSha": "c656735ac40ef41fbabce22cb87ba6028933fc15",
+      "apiBodyIdentity": {
+        "bytes": 162740,
+        "sha256": "fa67856da3c1f52c4ed8a8e002b1ba14ef45dafd59f36c5fafddbf104510cba1",
+        "gitBlob": "630bfb84e140f37ab00655f33e711dd1d6e4334c"
+      },
+      "truncated": false,
+      "entries": 634,
+      "leafEntries": 600
+    },
+    {
+      "name": "c5Root",
+      "sourceSha": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+      "apiBodyIdentity": {
+        "bytes": 12410,
+        "sha256": "3cdfb2a39b850669bb6a3e0dc970ef10f96b6a430f8227109c26dc3e748a8031",
+        "gitBlob": "4715bb291af3c63be4bab5706bee213d495415ef"
+      },
+      "truncated": false,
+      "entries": 54,
+      "leafEntries": 38
+    }
+  ],
+  "actualNonrecursiveRoot": {
+    "sha": "31554d5e9f57d07c4dff4514f494126633a3d934",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/31554d5e9f57d07c4dff4514f494126633a3d934",
+    "tree": [
+      {
+        "path": ".coderabbit.yaml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "cfdf47bf5d5759599f5383222ebfb8a385f09668",
+        "size": 669,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cfdf47bf5d5759599f5383222ebfb8a385f09668"
+      },
+      {
+        "path": ".dockerignore",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c2d844c25fc61f06640f362de761e3f8d310c3b5",
+        "size": 694,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c2d844c25fc61f06640f362de761e3f8d310c3b5"
+      },
+      {
+        "path": ".gitattributes",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "924c7377f9ae4c068d106e74e17e964297d61e6e",
+        "size": 180,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/924c7377f9ae4c068d106e74e17e964297d61e6e"
+      },
+      {
+        "path": ".github",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "d95091ab0edb488d6e418ffa789d0f07c447ecda",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/d95091ab0edb488d6e418ffa789d0f07c447ecda"
+      },
+      {
+        "path": ".gitignore",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "777569b186effad3a2bcbcb09cd770180c8c5e2c",
+        "size": 2867,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/777569b186effad3a2bcbcb09cd770180c8c5e2c"
+      },
+      {
+        "path": ".husky",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "665211222b358904b557bd356a129f1ff938ca7e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/665211222b358904b557bd356a129f1ff938ca7e"
+      },
+      {
+        "path": ".mcp.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "da61a538a43375404483bd1f810b6377da5cc72f",
+        "size": 296,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/da61a538a43375404483bd1f810b6377da5cc72f"
+      },
+      {
+        "path": ".node-version",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+        "size": 8,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+      },
+      {
+        "path": ".npmrc",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad",
+        "size": 19,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad"
+      },
+      {
+        "path": ".nvmrc",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+        "size": 8,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff"
+      },
+      {
+        "path": ".oxfmtrc.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b003c531d6e548a5939ceb0694f15296c92e5060",
+        "size": 847,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/b003c531d6e548a5939ceb0694f15296c92e5060"
+      },
+      {
+        "path": ".oxlintrc.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "cc0d2441ebfedc93354e081b0cf61b6a2109dcc9",
+        "size": 596,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/cc0d2441ebfedc93354e081b0cf61b6a2109dcc9"
+      },
+      {
+        "path": ".prettierignore",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2",
+        "size": 297,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/3d15b642e4d19c01f1c3ec61acc0ff367a0ccae2"
+      },
+      {
+        "path": ".prettierrc.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c96ec48e897a4ec478beb34716723e13d29068ed",
+        "size": 563,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c96ec48e897a4ec478beb34716723e13d29068ed"
+      },
+      {
+        "path": "AGENTS.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "0c8a4a63abf24c1510c934990a025ebc99c9e435",
+        "size": 8999,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/0c8a4a63abf24c1510c934990a025ebc99c9e435"
+      },
+      {
+        "path": "AGENT_CRITICAL_GUARDRAILS.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a9a087fa5216ede29c5900b3a10638fc1ec3e2f3",
+        "size": 2236,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a9a087fa5216ede29c5900b3a10638fc1ec3e2f3"
+      },
+      {
+        "path": "CLAUDE.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "88df8ee5ef8d951139b2a8eb9b518996babbcb3e",
+        "size": 16756,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/88df8ee5ef8d951139b2a8eb9b518996babbcb3e"
+      },
+      {
+        "path": "LICENSE",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "929839bc0872222df278f9e53f15e1268ff4e0ec",
+        "size": 32433,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/929839bc0872222df278f9e53f15e1268ff4e0ec"
+      },
+      {
+        "path": "README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "dbf976c3418f0dee7ef84e4458e49af39110bdd5",
+        "size": 48099,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/dbf976c3418f0dee7ef84e4458e49af39110bdd5"
+      },
+      {
+        "path": "agent-teams-controller",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "1ef9482608cbaa5b7f28dc42812820cba96b953e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/1ef9482608cbaa5b7f28dc42812820cba96b953e"
+      },
+      {
+        "path": "bin",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "e6b29ba2f2fda222d5831b3c672e88b72f5f7383",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/e6b29ba2f2fda222d5831b3c672e88b72f5f7383"
+      },
+      {
+        "path": "docker",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "7e4007a72bc3fdba8d94e8f5eebc3586f110c16e",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/7e4007a72bc3fdba8d94e8f5eebc3586f110c16e"
+      },
+      {
+        "path": "docs",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "4853ccc588f6aa1a20b4f3bd219e09c16fbae3e9",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/4853ccc588f6aa1a20b4f3bd219e09c16fbae3e9"
+      },
+      {
+        "path": "electron.vite.config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9045260aab02891055e324607b83e1bb39c7110a",
+        "size": 13238,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9045260aab02891055e324607b83e1bb39c7110a"
+      },
+      {
+        "path": "eslint.config.js",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+        "size": 37840,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/7ca4b71fe3a357c00c110c9b75d3034e06e4b22c"
+      },
+      {
+        "path": "eslint.fast.config.js",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+        "size": 7268,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb"
+      },
+      {
+        "path": "eslint.feature-overrides.mts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9c6450d54b87ce33f7d799f900226c316e367937",
+        "size": 657,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9c6450d54b87ce33f7d799f900226c316e367937"
+      },
+      {
+        "path": "eslint.gateway-boundaries.mts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "4975b20df1353a9687fd479ab043beb025e967ba",
+        "size": 3786,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/4975b20df1353a9687fd479ab043beb025e967ba"
+      },
+      {
+        "path": "i18next.config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5",
+        "size": 1051,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a8c56bbba2f1003e93fcf9f57e0c5eec4bb37ff5"
+      },
+      {
+        "path": "landing",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "193513230f45a135704f1b34dbfa0792e6823e26",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/193513230f45a135704f1b34dbfa0792e6823e26"
+      },
+      {
+        "path": "legacy-host.lock.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "6916f66ea9e4a7e8299c3ffd328e226d009ebd79",
+        "size": 947,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/6916f66ea9e4a7e8299c3ffd328e226d009ebd79"
+      },
+      {
+        "path": "managed-git.lock.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "2099dfe6b1e1c0ff0d64f45d6c8565b498af4333",
+        "size": 1026,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/2099dfe6b1e1c0ff0d64f45d6c8565b498af4333"
+      },
+      {
+        "path": "mcp-server",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/6dcfc48486817e03cbf5cfeca34d0f9c6f495ba5"
+      },
+      {
+        "path": "package.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "size": 26839,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+      },
+      {
+        "path": "packages",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "3934729cd387940917b79992f2579bf6269d157c",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/3934729cd387940917b79992f2579bf6269d157c"
+      },
+      {
+        "path": "patches",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "8eb2e6aaa216638cbe6c072d79802733d43f500d",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/8eb2e6aaa216638cbe6c072d79802733d43f500d"
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+        "size": 956788,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/9d2ce04a1bbf743e49403d2520873134b08b68de"
+      },
+      {
+        "path": "pnpm-workspace.yaml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a049a862742a85ba77faafea329fc221b3e500e4",
+        "size": 6946,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a049a862742a85ba77faafea329fc221b3e500e4"
+      },
+      {
+        "path": "postcss.config.cjs",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "85f717cc09ecb1153d6a4c0962284e09e4b8d6a9",
+        "size": 80,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/85f717cc09ecb1153d6a4c0962284e09e4b8d6a9"
+      },
+      {
+        "path": "resources",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "69acacf60db94f62dbe4a99ed308aab59310e905",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/69acacf60db94f62dbe4a99ed308aab59310e905"
+      },
+      {
+        "path": "runtime.lock.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+        "size": 6127,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/1757d79786da78e739a322e8bba81cd3dc88dcaa"
+      },
+      {
+        "path": "scripts",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "80b227a2d1ce22f75571d84438a837778caa1f19",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/80b227a2d1ce22f75571d84438a837778caa1f19"
+      },
+      {
+        "path": "src",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "ed69e62618e57d88c2e5237f98074a1ff8853e6f",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/ed69e62618e57d88c2e5237f98074a1ff8853e6f"
+      },
+      {
+        "path": "tailwind.config.js",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a52ebb338468d8fcef92837aa27aebd48c7206d7",
+        "size": 2941,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/a52ebb338468d8fcef92837aa27aebd48c7206d7"
+      },
+      {
+        "path": "terminal-platform.lock.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "039a8a2a7b959b44bf3d483e37335fdc6774e8cb",
+        "size": 1914,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/039a8a2a7b959b44bf3d483e37335fdc6774e8cb"
+      },
+      {
+        "path": "test",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "c771c2bb9ec6d147d4974361cb5730897f7653d6",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/c771c2bb9ec6d147d4974361cb5730897f7653d6"
+      },
+      {
+        "path": "tools",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "9356c03e96405eb578158f06d6fdcbc89d105bd6",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/9356c03e96405eb578158f06d6fdcbc89d105bd6"
+      },
+      {
+        "path": "tsconfig.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "568952f5025a88c16b0568c7279d8e85a4288b43",
+        "size": 1235,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/568952f5025a88c16b0568c7279d8e85a4288b43"
+      },
+      {
+        "path": "tsconfig.legacy-agent-host-scripts.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+        "size": 646,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/538fdfe23d7aa6bac6f18a483d5d364aef644a39"
+      },
+      {
+        "path": "tsconfig.node.json",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c94c942012bef62695dc3b22b1a2b7229d047f59",
+        "size": 824,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c94c942012bef62695dc3b22b1a2b7229d047f59"
+      },
+      {
+        "path": "vendor",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f",
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/bb912d7d38fa18b29d0cbe90e76d06a2603b8b4f"
+      },
+      {
+        "path": "vitest.config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+        "size": 1187,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c57faa53a1bb869b4379bf888194806ef7e228e3"
+      },
+      {
+        "path": "vitest.critical.config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "c32070bf9e1724892aa8cb695152e8f49f1293f0",
+        "size": 852,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/c32070bf9e1724892aa8cb695152e8f49f1293f0"
+      },
+      {
+        "path": "vitest.opencode-proof.config.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "274de1c0955ad4f98d220857a94576ce6a50864b",
+        "size": 601,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/blobs/274de1c0955ad4f98d220857a94576ce6a50864b"
+      }
+    ],
+    "truncated": false
+  },
+  "fullPublicationManifest": {
+    "identity": {
+      "bytes": 5667,
+      "sha256": "f463c878f250cbc1af7357dfa8d8c36c3b014d157a38a949908b8ed3cf10e475",
+      "gitBlob": "8fba4d378af128310b65bfbd4012b85a7a6628c4"
+    },
+    "content": {
+      "schemaVersion": 1,
+      "kind": "Cross Close test-first source publication; no runtime or producer result",
+      "repository": "777genius/agent-teams-ai",
+      "branch": "fix/frontend-parity-coobservation-c714-20261115",
+      "exactParent": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+      "exactParentTree": "21ea9ec18febadf981f16ee455a7ad6fcf65ed5c",
+      "parentLeaves": 11684,
+      "expectedLeaves": 11690,
+      "sourceDelta": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "preimage": {
+            "bytes": 136700,
+            "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+            "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+          },
+          "postimage": {
+            "bytes": 155423,
+            "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+            "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+          },
+          "prefixBytes": 136700,
+          "entirePrefixExact": true,
+          "addedSuffix": {
+            "bytes": 18723,
+            "sha256": "6ec52af0d302c23841ff811436c0fb774379b2b6d639e2f476de5b4c71b13546",
+            "gitBlob": "59ab4f281b044c45db8d1a53de064c0a14b3e2dd"
+          }
+        }
+      ],
+      "otherNonDocUnchanged": 8797,
+      "workflowLeavesUnchanged": 42,
+      "changedEntriesExcludingManifest": [
+        {
+          "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+          "bytes": 155423,
+          "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409"
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-r1-independent-publication-readback-20261116.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34",
+          "bytes": 24775,
+          "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1"
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-guard-r2-20261116.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "7fed0e34689f80f55dc49161afb13d939b680ee7",
+          "bytes": 35700,
+          "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01"
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-parity-r2-20261116.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "b55e84be7a38ecf556003cfc531773436b041884",
+          "bytes": 98112,
+          "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156"
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-append-v1-unselected-20261116.txt",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "89231746806bda01275c2e644c6f4c1a2b5f4093",
+          "bytes": 17740,
+          "sha256": "df5dce2e9f5bee54544f9412aae258224a43c9791cc57d3acabaa6919da26cf4"
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-reviewed-outcome-20261116.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "d96c2ab50639168cca3f7673ef219c3f1a16b701",
+          "bytes": 4332,
+          "sha256": "f004dad9be5904649c25c78d890e621e609d399f1c827a4d5c88566639deb853"
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "e242e3062cb5af2619ac08651f726223c9791be4",
+          "bytes": 2509658,
+          "sha256": "b12a7d687314793d2b7c35c2dad1013a141b1a535106d39214435283c6cf0c4e"
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "2e70b0164e85d725da97fa910e71328ac986706b",
+          "bytes": 27620,
+          "sha256": "c25887a6dd485a19a36878f6473ad513feb451128e6497b95695171c4f90fc36"
+        },
+        {
+          "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+          "mode": "100644",
+          "type": "blob",
+          "sha": "9806e132c92d759d559a33bbb4ad03747bcdfed6",
+          "bytes": 44509,
+          "sha256": "4dfb8e423e46ae65b523c515f3a94bf5c812e452024dfa72d1e340c750ff59b2"
+        }
+      ],
+      "appendOnlyPlan": {
+        "preimage": {
+          "bytes": 2507525,
+          "sha256": "703e6bbf1d3f08e2612d55a0b10558b889de6c3c5fb22a06b240b08ed2ae84b7",
+          "gitBlob": "12302bf2f1fdceb44c3259165d1d01b1372acb13"
+        },
+        "postimage": {
+          "bytes": 2509658,
+          "sha256": "b12a7d687314793d2b7c35c2dad1013a141b1a535106d39214435283c6cf0c4e",
+          "gitBlob": "e242e3062cb5af2619ac08651f726223c9791be4"
+        },
+        "addedBytes": 2133
+      },
+      "appendOnlyStatus": {
+        "preimage": {
+          "bytes": 26693,
+          "sha256": "98a94bb43a0e47497c11e3ff0492bd03c59fc3d700833a775ab7294f6f6a073c",
+          "gitBlob": "6c5da89ebce00f1811e3c4d5f7d0dda78044644d"
+        },
+        "postimage": {
+          "bytes": 27620,
+          "sha256": "c25887a6dd485a19a36878f6473ad513feb451128e6497b95695171c4f90fc36",
+          "gitBlob": "2e70b0164e85d725da97fa910e71328ac986706b"
+        }
+      },
+      "qualification": "Static test-only source acceptance. No actual133 result, historical four-pixel cause, GUI/platform/native or full E2E qualification.",
+      "requiresCompleteActualReadback": true,
+      "localApplicationOrExecutionAuthorizedByThisCheckpointAlone": false
+    }
+  },
+  "allTenFreshBodies": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "mode": "100644",
+      "type": "blob",
+      "bytes": 2509658,
+      "sha256": "b12a7d687314793d2b7c35c2dad1013a141b1a535106d39214435283c6cf0c4e",
+      "gitBlob": "e242e3062cb5af2619ac08651f726223c9791be4"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "mode": "100644",
+      "type": "blob",
+      "bytes": 27620,
+      "sha256": "c25887a6dd485a19a36878f6473ad513feb451128e6497b95695171c4f90fc36",
+      "gitBlob": "2e70b0164e85d725da97fa910e71328ac986706b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-r1-independent-publication-readback-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "bytes": 24775,
+      "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+      "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-append-v1-unselected-20261116.txt",
+      "mode": "100644",
+      "type": "blob",
+      "bytes": 17740,
+      "sha256": "df5dce2e9f5bee54544f9412aae258224a43c9791cc57d3acabaa6919da26cf4",
+      "gitBlob": "89231746806bda01275c2e644c6f4c1a2b5f4093"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-guard-r2-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "bytes": 35700,
+      "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+      "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-parity-r2-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "bytes": 98112,
+      "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+      "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-publication-manifest-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "bytes": 5667,
+      "sha256": "f463c878f250cbc1af7357dfa8d8c36c3b014d157a38a949908b8ed3cf10e475",
+      "gitBlob": "8fba4d378af128310b65bfbd4012b85a7a6628c4"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-reviewed-outcome-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "bytes": 4332,
+      "sha256": "f004dad9be5904649c25c78d890e621e609d399f1c827a4d5c88566639deb853",
+      "gitBlob": "d96c2ab50639168cca3f7673ef219c3f1a16b701"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "mode": "100644",
+      "type": "blob",
+      "bytes": 44509,
+      "sha256": "4dfb8e423e46ae65b523c515f3a94bf5c812e452024dfa72d1e340c750ff59b2",
+      "gitBlob": "9806e132c92d759d559a33bbb4ad03747bcdfed6"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    }
+  ],
+  "completePrefixProofs": {
+    "plan": {
+      "before": {
+        "bytes": 2507525,
+        "sha256": "703e6bbf1d3f08e2612d55a0b10558b889de6c3c5fb22a06b240b08ed2ae84b7",
+        "gitBlob": "12302bf2f1fdceb44c3259165d1d01b1372acb13"
+      },
+      "after": {
+        "bytes": 2509658,
+        "sha256": "b12a7d687314793d2b7c35c2dad1013a141b1a535106d39214435283c6cf0c4e",
+        "gitBlob": "e242e3062cb5af2619ac08651f726223c9791be4"
+      },
+      "entirePrefixExact": true,
+      "append": {
+        "bytes": 2133,
+        "sha256": "db913e8cc64e71f3412036eaef851f0d3134d958736191d771b3af687b0df662",
+        "gitBlob": "889a11bdcc9d140c8566e78d99208d341aa97e42"
+      },
+      "fullAppend": "\n\n## 2026-11-16 — Cross Close test-first source R2 (unexecuted)\n\nThe exact Cross R1 8abe2a1437489d5c0223d532535d6c520fd70184 was published at a4f5c2d2a05edd636ea0ff461c00615a2ff60d86 and fully read back by root and independently in 2e863fe3aa95696dc2b242dc5f9195a1f46f4a34 before the 16:14:49 UTC authorship gate. The selected test0aec698e88cc3af8d12c48f6d93b038efcc84900 preserves the entire136700-byte efd prefix and appends18723 bytes:97 existing +28 readiness +8 actual-driver cases =133 registrations. Both independent exact R2s accepted; all133 names/order,15 predicted semantic failure sites and13 target variants are retained in the parity review. The superseded ae805 candidate was neither selected nor executed; only timeout spelling and strict actual-import/single-action fixture extraction were corrected.\n\nThis checkpoint changes only the test source and documentary evidence. Controls ed57 and Selection cf93, both Cross producer preimages, all8797 other non-doc leaves and42 workflows stay exact. The133 baseline118PASS/15FAIL and8/13 target-variant reachability are predictions, not results. No test was locally applied or executed and neither Cross producer was authored. An adapted runner candidate is under independent review; final binding must pin this actual published test source after complete readback. Exact runner/binding R2 and their own publication/readback still precede the single metadata-only test materialization and full-input133 RED. Actual independent semantic/input/lifetime/outer0 acceptance must precede producer authorship.\n\nThe metadata-only materialization must explicitly leave dependency/compiled/provider/cache inputs UNINSPECTED. The ensuing RED independently rechecks all current runtime inputs. One unchanged133 GREEN and one original three-check validation package remain conditional. No frozen PR/run action, incoming-head adoption, new CI launch, real Claude/Codex, deadline/currentness/cleanup weakening, main merge or whole-E2E claim is selected. Canonical typing/build, actual GUI/platform acceptance, Windows15s/10s, strictP09 and later native/integration gates remain open.\n"
+    },
+    "status": {
+      "before": {
+        "bytes": 26693,
+        "sha256": "98a94bb43a0e47497c11e3ff0492bd03c59fc3d700833a775ab7294f6f6a073c",
+        "gitBlob": "6c5da89ebce00f1811e3c4d5f7d0dda78044644d"
+      },
+      "after": {
+        "bytes": 27620,
+        "sha256": "c25887a6dd485a19a36878f6473ad513feb451128e6497b95695171c4f90fc36",
+        "gitBlob": "2e70b0164e85d725da97fa910e71328ac986706b"
+      },
+      "entirePrefixExact": true,
+      "append": {
+        "bytes": 927,
+        "sha256": "31028137073f56ba49cab693a68153e2d1d00351b209d9cf74d627b05b9bae96",
+        "gitBlob": "41234bb876d0315ca634e76a3bd7d9acb22992e6"
+      },
+      "fullAppend": "\n\n## Cross Close — reviewed test source; actual133 still pending\n\nSelected append-only test0aec698 (155423B) preserves all97 previous cases and adds36 =133. Guard7fed0e3 and parityb55e84b accepted exact source and actual-import/single-action fixtures. Expected RED118P/15semanticF is unexecuted;5/13 target variants remain expected-unreached until GREEN. Only test source is selected in this checkpoint. No Cross producer authored, no test application/execution, no new CI action. Full test publication readback, exact runner/final binding R2/publication/readback, metadata-only source application and full runtime-input RED are still required in that order. Actual complete semantic RED + independent outer0 acceptance gates producer authorship. See cross-close-test-reviewed-outcome-20261116.json and both full R2 records. Prior97 GREEN+three guards remain accepted historical results, without transfer to133 or whole E2E.\n"
+    },
+    "test": {
+      "before": {
+        "bytes": 136700,
+        "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+        "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+      },
+      "after": {
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      "entire136700BytePrefixExact": true,
+      "append": {
+        "bytes": 18723,
+        "sha256": "6ec52af0d302c23841ff811436c0fb774379b2b6d639e2f476de5b4c71b13546",
+        "gitBlob": "59ab4f281b044c45db8d1a53de064c0a14b3e2dd"
+      },
+      "freshPublishedFullBodyEqualsAcceptedCandidate": true
+    },
+    "catalog": {
+      "before": {
+        "bytes": 42948,
+        "sha256": "32295b84e5c24d88cef878f10ad818d17a5c851fb8a067e91e1067ab913727b5",
+        "gitBlob": "022bb6f4cb3250a1907c5aeb5ed74611347eaa13"
+      },
+      "after": {
+        "bytes": 44509,
+        "sha256": "4dfb8e423e46ae65b523c515f3a94bf5c812e452024dfa72d1e340c750ff59b2",
+        "gitBlob": "9806e132c92d759d559a33bbb4ad03747bcdfed6"
+      },
+      "onlyAddedField": "currentCrossCloseStage",
+      "allPreviousFieldsAndArrayItemsUnchanged": true,
+      "deletingThatFieldAndOriginalPrettySerializationRestoresEntireOldBody": true,
+      "exactNewField": [
+        {
+          "path": "currentCrossCloseStage",
+          "after": {
+            "stage": "test-only-R2-published-runtime-pending",
+            "outcome": {
+              "bytes": 4332,
+              "sha256": "f004dad9be5904649c25c78d890e621e609d399f1c827a4d5c88566639deb853",
+              "gitBlob": "d96c2ab50639168cca3f7673ef219c3f1a16b701",
+              "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-test-reviewed-outcome-20261116.json"
+            },
+            "r1ActualReadback": {
+              "bytes": 24775,
+              "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+              "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+            },
+            "test": {
+              "bytes": 155423,
+              "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+              "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+            },
+            "guard": {
+              "bytes": 35700,
+              "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+              "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+            },
+            "parity": {
+              "bytes": 98112,
+              "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+              "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+            },
+            "census": {
+              "preserved": 97,
+              "addedReadiness": 28,
+              "addedDriver": 8,
+              "whole": 133,
+              "targetSubcases": 13
+            },
+            "actualNewExecutions": 0,
+            "producerAuthored": false,
+            "attemptsRemaining": {
+              "materializeTest": 1,
+              "red": 1,
+              "materializeProducer": 1,
+              "green": 1,
+              "validationPackage": 1
+            }
+          }
+        }
+      ]
+    }
+  },
+  "staticOutcomeFullBody": {
+    "schemaVersion": 1,
+    "kind": "Cross Close reviewed test-first source only; no runtime result",
+    "repository": "777genius/agent-teams-ai",
+    "exactParent": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+    "publishedR1": {
+      "bytes": 23142,
+      "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+      "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+    },
+    "r1ActualReadback": {
+      "bytes": 24775,
+      "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+      "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+    },
+    "postimageAuthorshipGate": "2026-11-16 16:14:49 UTC",
+    "source": {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "preimage": {
+        "bytes": 136700,
+        "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+        "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+      },
+      "postimage": {
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      "prefixBytes": 136700,
+      "entirePrefixExact": true,
+      "addedSuffix": {
+        "bytes": 18723,
+        "sha256": "6ec52af0d302c23841ff811436c0fb774379b2b6d639e2f476de5b4c71b13546",
+        "gitBlob": "59ab4f281b044c45db8d1a53de064c0a14b3e2dd"
+      }
+    },
+    "independentR2": {
+      "guard": {
+        "bytes": 35700,
+        "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+        "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+      },
+      "parity": {
+        "bytes": 98112,
+        "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+        "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+      },
+      "rootAccepted": true
+    },
+    "supersededTest": {
+      "whole": {
+        "bytes": 154440,
+        "sha256": "9ff80882a5e406936747aad822b37d40fc4a16a4ba1b6c74c9f0b40f2c88b193",
+        "gitBlob": "ae805e506b69fca544fa6ba38b57bb483c6c10a8"
+      },
+      "suffix": {
+        "bytes": 17740,
+        "sha256": "df5dce2e9f5bee54544f9412aae258224a43c9791cc57d3acabaa6919da26cf4",
+        "gitBlob": "89231746806bda01275c2e644c6f4c1a2b5f4093"
+      },
+      "selectedOrExecuted": false,
+      "correctedFindings": [
+        "Match original UI read timed out refusal",
+        "Bind only actual driver named imports",
+        "Reject nested or additional action statements"
+      ]
+    },
+    "census": {
+      "preserved": 97,
+      "addedReadiness": 28,
+      "addedDriver": 8,
+      "whole": 133,
+      "targetSubcases": 13
+    },
+    "unexecutedPrediction": {
+      "pass": 118,
+      "semanticFail": 15,
+      "failingOrdinals": [
+        98,
+        99,
+        100,
+        101,
+        104,
+        105,
+        106,
+        107,
+        114,
+        115,
+        116,
+        126,
+        127,
+        128,
+        131
+      ],
+      "targetVariantsReached": 8,
+      "targetVariantsUnreached": 5
+    },
+    "preserved": {
+      "otherSourceLeaves": 8797,
+      "workflowLeaves": 42,
+      "conversationControls": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "conversationSelection": "cf93da72a198dac636658e512093eef7828b5927",
+      "crossHelper": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+      "crossDriver": "3f1ce46fce847a861850ef874017f84227c62b0c",
+      "productionCap": 800,
+      "baselineExceptions": 141,
+      "productionSourceCount": 5020
+    },
+    "currentState": {
+      "sourceLocallyApplied": false,
+      "newTestExecutions": 0,
+      "producerPostimagesAuthored": 0,
+      "runnerCandidateAuthoredButUnselected": true,
+      "exactRunnerAndFinalBindingR2Pending": true
+    },
+    "nextGate": "Complete actual test-source publication readback; exact runner/final binding independent R2 and published full readback; metadata-only test materialization with runtime inputs UNINSPECTED; full current-input preflight and single whole133 RED. Independent complete actual semantic RED/input/lifetime/outer0 acceptance precedes any Cross producer authorship.",
+    "remainingOpen": [
+      "Windows Process15s",
+      "Windows Packaged10s",
+      "strictDarwinP09",
+      "laterP11/genuineM16",
+      "new-head reconciliation",
+      "canonical typecheck/build",
+      "actual fresh GUI/platform acceptance",
+      "whole E2E completion"
+    ],
+    "qualification": "Static test-only source acceptance. No actual133 result, historical four-pixel cause, GUI/platform/native or full E2E qualification."
+  },
+  "sourceAndReviewJoins": {
+    "selectedTest": {
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    },
+    "myFullTestR2": {
+      "bytes": 98112,
+      "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+      "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+    },
+    "freshPublishedReviewEqualsFullAcceptedBody": true,
+    "guardFullTestR2": {
+      "bytes": 35700,
+      "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+      "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+    },
+    "priorR1PublishedReadback": {
+      "bytes": 24775,
+      "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+      "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+    },
+    "unselectedOriginalSuffix": {
+      "bytes": 17740,
+      "sha256": "df5dce2e9f5bee54544f9412aae258224a43c9791cc57d3acabaa6919da26cf4",
+      "gitBlob": "89231746806bda01275c2e644c6f4c1a2b5f4093"
+    },
+    "unselectedSuffixEqualsKnownHeldCandidateSuffix": true,
+    "testNames": 133,
+    "preservedCases": 97,
+    "newReadinessCases": 28,
+    "newActualDriverCases": 8,
+    "targetVariants": 13,
+    "predictedOnly": {
+      "pass": 118,
+      "fail": 15,
+      "targetVariantsReached": 8,
+      "targetVariantsUnreached": 5
+    },
+    "actual133ExecutionsClaimed": 0,
+    "producerPostimagesSelected": 0,
+    "bothCrossProducerPreimagesAndControlsSelectionExact": true,
+    "runnerNotInThisCheckpoint": true
+  },
+  "publicationGate": "COMPLETE actual TEST-source publication readback ACCEPTED. Root may now author the exact final binding against this actual source under the already published R1. Runner/binding independent R2 and their own publication/readback still precede metadata-only materialization and actual RED. No child execution or source application is authorized or performed by this review.",
+  "limitations": [
+    "Only test0aec is changed among8798 non-doc leaves;8797 other non-doc leaves and42 workflows are identical. All six additions are documentation, with four existing changed leaves consisting of the test plus Plan/status/catalog.",
+    "The previous97 GREEN and original3guards remain historical exact-source results. Neither proves133 execution or a result for the future Cross producer.",
+    "Baseline118PASS/15semanticFAIL and8/13 target-variant reachability are explicitly unexecuted predictions.",
+    "Complete parent/child leafsets were reconstructed by untruncated subtree reads and exact shared-root identity. No oversized/truncated root recursion, compare-files cap or count-only substitution was used.",
+    "No source/test/runner/dependency/local checkout change, shell/runtime/compiler/provider/GUI, ref/commit/PR/CI action or artifact download by this reviewer.",
+    "Unknown historical4px movement cause, canonical typing/build, fresh GUI/native/platform and wholeE2E qualification remain outside this publication proof."
+  ],
+  "auditErrors": []
+}

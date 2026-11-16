@@ -1,0 +1,995 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-cross-close-runner-only-r2",
+  "reviewer": "/root/guard_review",
+  "reviewedAt": "2026-11-16 16:43:24 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "verdict": "ACCEPTED_CODE_ONLY",
+  "candidate": {
+    "identity": {
+      "bytes": 48838,
+      "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+      "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+    },
+    "physicalLines": 832,
+    "body": "import datetime\nimport hashlib\nimport json\nimport os\nimport pathlib\nimport shutil\nimport signal\nimport stat\nimport subprocess\nimport sys\nimport tarfile\nimport tempfile\nimport time\nimport urllib.parse\n\nROOT = pathlib.Path('/workspace/scratch/c714-fresh-20261116')\nREPO = ROOT / 'source'\nOUT = pathlib.Path('/tmp/c714-cross-close-evidence')\nTASK_TMP = OUT / 'test-tmp'\nSOURCE_COMMIT = 'c5ff4fc283e58d486c58147b4dfb00144ca10d34'\nSOURCE_TREE = '3239e6e6c8182f3d8e45ee671efc9108500b5137'\nR1 = 'a4f5c2d2a05edd636ea0ff461c00615a2ff60d86'\nR1_BLOB = '8abe2a1437489d5c0223d532535d6c520fd70184'\nWORKSPACES = ['', 'agent-teams-controller', 'mcp-server', 'landing',\n              'packages/agent-graph', 'packages/legacy-agent-host', 'packages/task-change-ledger']\nBASE_PATHS = ['scripts/legacy-agent-host/desktop-ui-controls.ts',\n              'scripts/legacy-agent-host/desktop-emulated-selection-ui.ts']\nPATHS = ['scripts/legacy-agent-host/desktop-task-comment-input-target.ts',\n         'scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts',\n         'scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts']\nOVERLAY_PATHS = [*BASE_PATHS, *PATHS]\nTEST_IDENTITY = {'bytes': 155423, 'sha256': 'b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409',\n                 'gitBlob': '0aec698e88cc3af8d12c48f6d93b038efcc84900'}\nINPUT_PATHS = {\n    'setupBinding': pathlib.Path('/tmp/c714-fresh-bootstrap-review/binding.json'),\n    'sourceFull': ROOT / 'evidence/source-restore-source-after.json',\n    'sourceNonDoc': ROOT / 'evidence/host-build-source-after.json',\n    'dependencies': ROOT / 'evidence/host-build-dependencies-after.json',\n    'compiled': ROOT / 'evidence/host-build-compiled-after.json',\n    'pnpm': ROOT / 'evidence/pnpm-inventory.json',\n    'currentBoundary': pathlib.Path('/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json'),\n    'providers': pathlib.Path('/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json'),\n}\n\n\ndef identity(data):\n    return {'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest(),\n            'gitBlob': hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\\0' + data).hexdigest()}\n\ndef canonical(value):\n    return json.dumps(value, sort_keys=True, separators=(',', ':')).encode()\n\ndef utc():\n    return datetime.datetime.now(datetime.timezone.utc).isoformat()\n\ndef write_new(name, value):\n    data = (json.dumps(value, indent=2) + '\\n').encode()\n    path = OUT / name\n    with path.open('xb') as handle:\n        handle.write(data)\n    return {'path': str(path), **identity(data)}\n\ndef process_rows():\n    rows = []\n    for item in pathlib.Path('/proc').iterdir():\n        if not item.name.isdigit():\n            continue\n        try:\n            raw = (item / 'stat').read_text()\n            close = raw.rfind(')')\n            tail = raw[close + 2:].split()\n            rows.append({'pid': int(item.name), 'name': raw[raw.index('(') + 1:close],\n                         'state': tail[0], 'ppid': int(tail[1]), 'pgid': int(tail[2]),\n                         'session': int(tail[3]), 'startTicks': int(tail[19])})\n        except FileNotFoundError:\n            continue\n    return sorted(rows, key=lambda row: row['pid'])\n\ndef package_values(environment):\n    return {key: value for key, value in environment.items()\n            if key.lower().startswith(('npm_config_', 'pnpm_config_'))}\n\ndef transport_values(environment):\n    return {key: value for key, value in environment.items()\n            if key.lower() in ['http_proxy', 'https_proxy', 'all_proxy', 'no_proxy', 'proxy']}\n\ndef admit_environment(original):\n    package = package_values(original)\n    network = transport_values(original)\n    admission = amendment['admission']\n    assert set(package) == set(admission['exactPackageConfigKeys']), 'package config key drift'\n    assert set(network) == set(admission['exactOrdinaryProxyKeys']), 'network key drift'\n    assert not any(key.upper().startswith('PNPM_') for key in original), 'unreviewed PNPM environment'\n    normalized = {}\n    for key, value in {**package, **network}.items():\n        lower = key.lower()\n        assert lower not in normalized or normalized[lower] == value, 'case alias conflict'\n        normalized[lower] = value\n    for pin in admission['fixedNormalizedPackageValues']:\n        data = normalized[pin['key']].encode()\n        assert len(data) == pin['bytes'] and hashlib.sha256(data).hexdigest() == pin['sha256']\n    for name in ['httpProxyGroup', 'allProxyGroup']:\n        group = admission[name]\n        values = [normalized[key] for key in group['normalizedKeys']]\n        assert len(set(values)) == 1, 'proxy group conflict'\n        value = values[0]\n        parsed = urllib.parse.urlsplit(value)\n        assert parsed.scheme == group['scheme'] and parsed.hostname == group['hostname']\n        assert parsed.username is None and parsed.password is None\n        assert parsed.path == parsed.query == parsed.fragment == ''\n        assert parsed.port is not None and group['port']['min'] <= parsed.port <= group['port']['max']\n        assert value == group['scheme'] + '://127.0.0.1:' + str(parsed.port), 'noncanonical proxy'\n    assert normalized['no_proxy'] == normalized['npm_config_noproxy']\n    selected = {**package, **network}\n    result = original.copy()\n    for key in list(result):\n        if key.lower().startswith(('npm_config_', 'pnpm_config_')):\n            del result[key]\n        elif key in r1['environment']['unset'] + r1['environment']['additionalUnset']:\n            del result[key]\n        elif any(key.startswith(prefix) for prefix in r1['environment']['unsetPrefixes']):\n            del result[key]\n    for key in r1['environment']['inheritedPackageConfigKeys']:\n        result[key] = normalized[key]\n    result.update(r1['environment']['assignments'])\n    return result, selected\n\ndef environment_check():\n    current = {**package_values(os.environ), **transport_values(os.environ)}\n    assert current == captured_transport, 'captured environment changed'\n    assert os.environ.get('HOME') == '/home/agent' and env.get('HOME') == '/home/agent'\n    assert env.get('CODEX_HOME') == original_environment.get('CODEX_HOME')\n    assert env.get('XDG_CONFIG_HOME') == str(ROOT / 'config')\n    assert all(not (pathlib.Path(path).exists() or pathlib.Path(path).is_symlink())\n               for path in absent_configs), 'new user/global config'\n    for name in ['config.yaml', 'auth.ini', 'pnpmfile.cjs', 'pnpmfile.mjs', '.pnpmfile.cjs']:\n        assert not (ROOT / 'config' / 'pnpm' / name).exists(), 'new task pnpm config'\n    assert pathlib.Path(normalized_prefix) / 'etc/npmrc' == pathlib.Path(absent_configs[-1])\n    return {'capturedTransportCanonicalSha256': hashlib.sha256(canonical(captured_transport)).hexdigest(),\n            'values': [{'key': key, 'bytes': len(value.encode()),\n                        'sha256': hashlib.sha256(value.encode()).hexdigest()}\n                       for key, value in sorted(captured_transport.items())],\n            'explicitAssignments': {key: env.get(key) for key in [*r1['environment']['assignments'],\n                                    'AGENT_BACKEND_TEST_NODE', 'NODE_DISABLE_COMPILE_CACHE']},\n            'homePreserved': True, 'codexHomePreserved': True, 'absentConfigs': absent_configs}\n\ndef tooling():\n    rows = []\n    for name in ['node', 'git', 'python', 'scriptShell']:\n        pin = r1['tools'][name]\n        path = pathlib.Path(pin['path'])\n        value = identity(path.read_bytes())\n        assert value['bytes'] == pin['bytes'] and value['sha256'] == pin['sha256'], name\n        if pin.get('realPath'):\n            assert str(path.resolve()) == pin['realPath'], name + ' resolved path'\n        rows.append({'tool': name, 'path': str(path), 'realPath': str(path.resolve()), **value})\n    assert str(pathlib.Path(sys.executable).resolve()) == r1['tools']['python']['realPath']\n    assert shutil.which('node', path=env['PATH']) == r1['tools']['node']['path']\n    return rows\n\ndef file_row(path, relative):\n    info = path.lstat()\n    if stat.S_ISLNK(info.st_mode):\n        data, mode = os.readlink(path).encode(), '120000'\n    else:\n        assert stat.S_ISREG(info.st_mode), 'special file: ' + relative\n        data = path.read_bytes()\n        mode = '100755' if info.st_mode & stat.S_IXUSR else '100644'\n    return {'path': relative, 'mode': mode, **identity(data)}\n\ndef directory_manifest(roots):\n    rows = []\n    for base in roots:\n        if not base.exists():\n            continue\n        assert base.is_dir() and not base.is_symlink(), 'unexpected root link: ' + str(base)\n        for folder, directories, files in os.walk(base, followlinks=False):\n            for name in sorted(directories + files):\n                path = pathlib.Path(folder) / name\n                info = path.lstat()\n                if stat.S_ISDIR(info.st_mode):\n                    continue\n                relative = path.relative_to(REPO).as_posix()\n                row = file_row(path, relative)\n                if stat.S_ISLNK(info.st_mode):\n                    assert path.resolve().is_relative_to(REPO), 'dependency link escapes source'\n                    row['target'] = os.readlink(path)\n                rows.append(row)\n    return sorted(rows, key=lambda row: row['path'])\n\ndef dependencies():\n    return directory_manifest([REPO / relative / 'node_modules' for relative in WORKSPACES])\n\ndef compiled():\n    return directory_manifest([REPO / 'packages/legacy-agent-host/dist',\n                               REPO / 'packages/task-change-ledger/dist'])\n\ndef toolchain_inventory():\n    rows = []\n    for folder, directories, files in os.walk(ROOT / 'toolchain', followlinks=False):\n        for name in sorted(directories + files):\n            path = pathlib.Path(folder) / name\n            if stat.S_ISDIR(path.lstat().st_mode):\n                continue\n            rows.append(file_row(path, path.relative_to(ROOT / 'toolchain').as_posix()))\n    return sorted(rows, key=lambda row: row['path'])\n\ndef verify_pnpm():\n    assert sorted(path.name for path in (ROOT / 'bin').iterdir()) == ([] if pnpm_inventory is None else ['pnpm'])\n    for relative in WORKSPACES:\n        for name in ['node', 'pnpm']:\n            shadow = REPO / relative / 'node_modules/.bin' / name\n            assert not (shadow.exists() or shadow.is_symlink()), 'unreviewed package-script tool shadow'\n    if pnpm_inventory is None:\n        return toolchain_inventory()\n    expected = [*pnpm_inventory['members'],\n                {'path': 'pnpm-11.22.0.tgz', 'mode': '100644',\n                 **{key: pnpm_inventory['archive'][key] for key in ['bytes', 'sha256', 'gitBlob']}}]\n    actual = toolchain_inventory()\n    assert actual == sorted(expected, key=lambda row: row['path']), 'complete staged pnpm inventory changed'\n    assert pathlib.Path(r1['tools']['pnpm']['launcher']).is_symlink()\n    assert os.readlink(r1['tools']['pnpm']['launcher']) == r1['tools']['pnpm']['executable']\n    assert pathlib.Path(r1['tools']['pnpm']['launcher']).resolve() == pathlib.Path(r1['tools']['pnpm']['executable'])\n    return actual\n\ndef group_members(pid):\n    return [row for row in process_rows() if row['session'] == pid or row['pgid'] == pid]\n\ndef interrupt(signum, _frame):\n    phase_signals.append(signum)\n    if cleaning or finalizing or launching:\n        return\n    raise InterruptedError('supervisor signal ' + str(signum))\n\ndef terminate_captured(child, record, reason):\n    global cleaning\n    cleaning = True\n    cleanup_started = time.monotonic()\n    cleanup = {'reason': reason, 'capturedPid': child.pid, 'reaped': False}\n    record.setdefault('abnormalCleanup', []).append(cleanup)\n    try:\n        live = child.poll() is None\n        members = [] if live else group_members(child.pid)\n        cleanup['leaderWasLive'] = live\n        cleanup['membersAfterLeaderExit'] = members\n        if live or members:\n            try:\n                os.killpg(child.pid, signal.SIGKILL)\n                cleanup['signal'] = 'SIGKILL to captured group'\n            except ProcessLookupError:\n                cleanup['alreadyAbsent'] = True\n        child.wait(timeout=3)\n        cleanup['reaped'] = True\n    except BaseException as error:\n        cleanup['error'] = type(error).__name__ + ': ' + str(error)\n    finally:\n        cleanup['durationSeconds'] = time.monotonic() - cleanup_started\n        cleaning = False\n\ndef run_child(stage, index, argv, deadline, metadata=False):\n    global launching, finalizing\n    name = stage['id'] + '-' + str(index)\n    record = {'argv': argv, 'cwd': stage['cwd'], 'startedAt': utc(), 'timedOut': False,\n              'exitCode': None, 'exitSignal': None, 'capturedPid': None, 'metadataOnly': metadata}\n    tracker = None\n    if not metadata:\n        tracker = {'id': name, 'invocationReached': True, 'spawnAttempted': False,\n                   'capturedPid': None, 'finalReceiptPersisted': False, 'record': record}\n        primary_invocations.append(tracker)\n    write_new(name + '-start.json', record)\n    raw, errors = OUT / (name + '.log'), OUT / (name + '.stderr')\n    child, pointer = None, None\n    started = time.monotonic()\n    try:\n        with raw.open('xb') as output:\n            error_stream = errors.open('xb') if metadata else None\n            try:\n                assert deadline > time.monotonic() and not phase_signals, 'deadline/interruption before spawn'\n                launching = True\n                try:\n                    if tracker is not None:\n                        tracker['spawnAttempted'] = True\n                    child = subprocess.Popen(argv, cwd=stage['cwd'], env=env, stdout=output,\n                                             stderr=error_stream if metadata else subprocess.STDOUT,\n                                             start_new_session=True)\n                finally:\n                    launching = False\n                record['capturedPid'] = child.pid\n                if tracker is not None:\n                    tracker['capturedPid'] = child.pid\n                if phase_signals:\n                    raise InterruptedError('signal during captured launch: ' + repr(phase_signals))\n                try:\n                    child.wait(timeout=max(0, deadline - time.monotonic()))\n                except subprocess.TimeoutExpired:\n                    record['timedOut'] = True\n                    terminate_captured(child, record, 'absolute command/stage deadline')\n            finally:\n                if error_stream is not None:\n                    error_stream.close()\n    except BaseException as error:\n        record['executionError'] = type(error).__name__ + ': ' + str(error)\n    finally:\n        previous_finalizing, finalizing = finalizing, True\n        try:\n            try:\n                if child is not None:\n                    record['capturedPid'] = child.pid\n                    if tracker is not None:\n                        tracker['capturedPid'] = child.pid\n                    if child.poll() is None or record.get('executionError'):\n                        terminate_captured(child, record, 'abnormal or live command at finalization')\n                    remaining = group_members(child.pid)\n                    record['remainingBeforeCleanup'] = remaining\n                    if remaining:\n                        terminate_captured(child, record, 'captured descendants after leader exit')\n                    record['remainingCapturedSession'] = group_members(child.pid)\n                    record['exitCode'] = child.returncode if child.returncode is not None and child.returncode >= 0 else None\n                    record['exitSignal'] = -child.returncode if child.returncode is not None and child.returncode < 0 else None\n                else:\n                    record['remainingCapturedSession'] = []\n                assert not record['remainingCapturedSession'], 'captured command not quiescent'\n                for path, key in [(raw, 'raw'), (errors, 'rawStderr')]:\n                    if path.exists():\n                        record[key] = {'path': str(path), **identity(path.read_bytes())}\n            except BaseException as error:\n                record['finalizationError'] = type(error).__name__ + ': ' + str(error)\n                if child is not None:\n                    terminate_captured(child, record, 'failed protected finalization')\n            finally:\n                record['finishedAt'] = utc()\n                record['durationSeconds'] = time.monotonic() - started\n                record['interruptions'] = list(phase_signals)\n                record['cleanupSeconds'] = sum(row['durationSeconds'] for row in record.get('abnormalCleanup', []))\n                record['deadlineExceeded'] = time.monotonic() >= deadline\n                record['successful'] = bool(child is not None and record['exitCode'] == 0\n                                            and not record['timedOut'] and not record.get('executionError')\n                                            and not record.get('finalizationError') and not record.get('abnormalCleanup')\n                                            and not record['interruptions'] and not record['deadlineExceeded'])\n                pointer = write_new(name + '-receipt.json', record)\n                if tracker is not None:\n                    tracker['finalReceiptPersisted'] = True\n                    tracker['finalReceipt'] = pointer\n        finally:\n            finalizing = previous_finalizing\n    return pointer, record\n\ndef git_read(*arguments):\n    global metadata_counter\n    metadata_counter += 1\n    stage = {'id': prefix + '-' + boundary + '-metadata', 'cwd': str(REPO)}\n    pointer, record = run_child(stage, metadata_counter, [r1['tools']['git']['path'], *arguments],\n                                time.monotonic() + 30, metadata=True)\n    assert record['successful'], 'Git metadata failed; retained ' + pointer['path']\n    data = pathlib.Path(record['raw']['path']).read_bytes()\n    assert identity(data) == {key: record['raw'][key] for key in ['bytes', 'sha256', 'gitBlob']}\n    return data\n\n\ndef source_snapshot(overlays):\n    assert git_read('rev-parse', 'HEAD').decode().strip() == SOURCE_COMMIT\n    assert git_read('rev-parse', 'HEAD^{tree}').decode().strip() == SOURCE_TREE\n    leaves = []\n    for raw in git_read('ls-tree', '-rz', '--full-tree', 'HEAD').split(b'\\0'):\n        if raw:\n            metadata, path = raw.split(b'\\t', 1)\n            mode, kind, blob = metadata.decode().split()\n            leaves.append({'path': path.decode(), 'mode': mode, 'type': kind, 'gitBlob': blob})\n    expected_leaves = [{key: row[key] for key in ['path', 'mode', 'type', 'gitBlob']}\n                       for row in setup['sourceTreeRows']]\n    assert sorted(leaves, key=lambda row: row['path']) == sorted(expected_leaves, key=lambda row: row['path'])\n    assert len(leaves) == 11567, 'complete source tree changed'\n    assert git_read('diff', '--cached', '--name-only', '-z') == b'', 'staged changes'\n    assert git_read('ls-files', '--others', '--exclude-standard', '-z') == b'', 'untracked files'\n    base = {row['path']: row for row in inputs['sourceNonDoc']['rows']}\n    index = {}\n    for raw in git_read('ls-files', '--stage', '-z').split(b'\\0'):\n        if raw:\n            metadata, path = raw.split(b'\\t', 1)\n            mode, blob, stage = metadata.decode().split()\n            assert stage == '0', 'unmerged index'\n            index[path.decode()] = {'mode': mode, 'gitBlob': blob}\n    assert index == {row['path']: {key: row[key] for key in ['mode', 'gitBlob']}\n                     for row in expected_leaves}, 'complete stage0 index changed'\n    expected = dict(base)\n    for row in overlays:\n        assert row['path'] in OVERLAY_PATHS and row['mode'] == '100644'\n        assert identity(row['content'].encode()) == {key: row[key] for key in ['bytes', 'sha256', 'gitBlob']}\n        expected[row['path']] = {key: row[key] for key in ['path', 'mode', 'bytes', 'sha256', 'gitBlob']}\n    assert len(base) == len(expected) == 8798 and len({x['path'] for x in overlays}) == len(overlays)\n    changed = {path for path in expected if expected[path] != base[path]}\n    actual_changed = {p.decode() for p in git_read('diff', '--name-only', '-z', 'HEAD').split(b'\\0') if p}\n    assert actual_changed == changed, 'tracked source change set differs'\n    rows = [file_row(REPO / path, path) for path in sorted(expected)]\n    actual = {'actualLocalHead': SOURCE_COMMIT, 'tree': SOURCE_TREE, 'rows': rows,\n              'changedTrackedPaths': sorted(changed), 'allTreeLeaves': len(leaves),\n              'workflowLeaves': sum(x['path'].startswith('.github/workflows/') for x in leaves),\n              'localGitConfig': identity((REPO / '.git/config').read_bytes())}\n    pointer = write_new(prefix + '-' + boundary + '-source.json', actual)\n    assert rows == [expected[path] for path in sorted(expected)], 'source bytes differ; ' + pointer['path']\n    assert actual['localGitConfig'] == inputs['sourceFull']['localGitConfig'], 'local Git configuration changed'\n    assert actual['workflowLeaves'] == 42\n    return pointer\n\n\ndef provider_archives():\n    values = []\n    for pin in inputs['providers']['providers']:\n        archive = REPO / pin['archivePath']\n        assert identity(archive.read_bytes()) == pin['archiveIdentity']\n        installed = REPO / pin['installedRoot']\n        assert installed.is_dir() and not installed.is_symlink()\n        rows, seen = [], set()\n        with tarfile.open(archive, 'r:gz') as handle:\n            for member in handle.getmembers():\n                path = pathlib.PurePosixPath(member.name)\n                assert not path.is_absolute() and '..' not in path.parts and path.parts[0] == 'package'\n                assert member.name not in seen\n                seen.add(member.name)\n                if member.isdir():\n                    continue\n                assert member.isfile(), 'provider archive special/link member'\n                relative = path.relative_to('package').as_posix()\n                data = handle.extractfile(member).read()\n                actual = file_row(installed / relative, relative)\n                mode = '100755' if member.mode & stat.S_IXUSR else '100644'\n                assert actual == {'path': relative, 'mode': mode, **identity(data)}\n                rows.append({'path': relative, 'archiveMode': oct(member.mode), 'mode': mode,\n                             **identity(data), 'installedMatch': True})\n        assert rows == pin['regularMembers'], 'provider archive member census changed'\n        values.append({'name': pin['name'], 'archive': pin['archiveIdentity'],\n                       'regularMembers': len(rows), 'allRegularMembersEqual': True})\n    return values\n\n\ndef control_snapshot():\n    rows = []\n    for path, pin in control_pins:\n        assert path.is_file() and not path.is_symlink(), 'control path alias'\n        actual = identity(path.read_bytes())\n        assert actual == pin, 'exact admission control changed: ' + str(path)\n        rows.append({'path': str(path), **actual})\n    return rows\n\n\ndef source_metadata_snapshot(overlays):\n    result = {'source': source_snapshot(overlays), 'tools': tooling(),\n              'environment': environment_check(), 'controls': control_snapshot(),\n              'fullRuntimeInputsInspected': False, 'dependencies': 'UNINSPECTED',\n              'compiled': 'UNINSPECTED', 'providers': 'UNINSPECTED', 'bootstrapCache': 'UNINSPECTED',\n              'pnpm': identity((json.dumps(verify_pnpm(), indent=2) + '\\n').encode())}\n    assert env['AGENT_BACKEND_TEST_NODE'] == r1['tools']['node']['path']\n    assert env['TMPDIR'] == str(TASK_TMP) and env['NODE_DISABLE_COMPILE_CACHE'] == '1'\n    assert all(key not in env for key in ['NODE_COMPILE_CACHE', 'NODE_COMPILE_CACHE_PORTABLE'])\n    result['processCensus'] = process_rows()\n    result['testTemps'] = sorted([{'name': path.name, 'device': path.lstat().st_dev,\n                                  'inode': path.lstat().st_ino, 'mode': stat.S_IFMT(path.lstat().st_mode)}\n                                 for path in TASK_TMP.iterdir() if path.name.startswith('TEST-')],\n                                key=lambda row: row['name'])\n    result['taskTmpTopEntries'] = sorted(path.name for path in TASK_TMP.iterdir())\n    return result\n\n\ndef input_snapshot(overlays):\n    result = {'source': source_snapshot(overlays), 'controls': control_snapshot(),\n              'fullRuntimeInputsInspected': True}\n    checks = [('dependencies', dependencies, inputs['dependencies']),\n              ('compiled', compiled, inputs['compiled'])]\n    for name, read, expected in checks:\n        actual = read()\n        pointer = write_new(prefix + '-' + boundary + '-' + name + '.json', actual)\n        result[name] = pointer\n        assert actual == expected, name + ' changed; retained ' + pointer['path']\n    result['providers'] = provider_archives()\n    result['tools'] = tooling()\n    result['pnpm'] = identity((json.dumps(verify_pnpm(), indent=2) + '\\n').encode())\n    result['environment'] = environment_check()\n    assert env['AGENT_BACKEND_TEST_NODE'] == r1['tools']['node']['path']\n    assert env['TMPDIR'] == str(TASK_TMP) and env['NODE_DISABLE_COMPILE_CACHE'] == '1'\n    assert all(key not in env for key in ['NODE_COMPILE_CACHE', 'NODE_COMPILE_CACHE_PORTABLE'])\n    cache = []\n    for folder, directories, files in os.walk(ROOT / 'tmp', followlinks=False):\n        for name in sorted(directories + files):\n            path = pathlib.Path(folder) / name\n            if stat.S_ISDIR(path.lstat().st_mode):\n                continue\n            cache.append(file_row(path, path.relative_to(ROOT).as_posix()))\n    result['bootstrapCache'] = sorted(cache, key=lambda row: row['path'])\n    assert result['bootstrapCache'] == inputs['currentBoundary']['taskTempInventory'], 'bootstrap tmp changed'\n    result['processCensus'] = process_rows()\n    result['testTemps'] = sorted([{'name': path.name, 'device': path.lstat().st_dev,\n                                  'inode': path.lstat().st_ino, 'mode': stat.S_IFMT(path.lstat().st_mode)}\n                                 for path in TASK_TMP.iterdir() if path.name.startswith('TEST-')],\n                                key=lambda row: row['name'])\n    result['taskTmpTopEntries'] = sorted(path.name for path in TASK_TMP.iterdir())\n    return result\n\n\ndef preserved(before, after, include_source=True):\n    pointer_keys = ['dependencies', 'compiled'] + (['source'] if include_source else [])\n    return all(before[key]['sha256'] == after[key]['sha256'] for key in pointer_keys) and all(\n        before[key] == after[key] for key in ['providers', 'tools', 'pnpm', 'environment', 'bootstrapCache', 'controls'])\n\n\ndef ordinary_completion(record):\n    return bool(record and record['exitCode'] in [0, 1] and record['exitSignal'] is None\n                and not record['timedOut'] and not record.get('executionError')\n                and not record.get('finalizationError') and not record.get('abnormalCleanup')\n                and not record['interruptions'] and not record['deadlineExceeded']\n                and record['remainingCapturedSession'] == [])\n\n\ndef primary_cleanup_seconds(trackers):\n    values = [row['record'].get('cleanupSeconds', 0 if not row['spawnAttempted'] else None)\n              for row in trackers]\n    return sum(values) if all(isinstance(value, (int, float)) for value in values) else None\n\n\nassert len(sys.argv) == 5, 'binding path, binding SHA256, action and command required'\nbinding_path, binding_sha, action, command = sys.argv[1:]\nbinding_bytes = pathlib.Path(binding_path).read_bytes()\nassert hashlib.sha256(binding_bytes).hexdigest() == binding_sha\ncfg = json.loads(binding_bytes)\nassert pathlib.Path(__file__).resolve() == pathlib.Path(cfg['runnerLocalPath'])\nassert pathlib.Path(binding_path).resolve() == pathlib.Path(cfg['bindingLocalPath'])\nassert identity(pathlib.Path(__file__).read_bytes()) == cfg['runnerIdentity']\nassert cfg['publishedR1'] == R1 and cfg['phase'] in ['red', 'green']\nassert identity(cfg['crossR1Body'].encode()) == cfg['crossR1Identity']\nassert cfg['crossR1Identity']['gitBlob'] == R1_BLOB\ncross_r1 = json.loads(cfg['crossR1Body'])\nassert cfg['actualPublishedSubjectReadbackAccepted'] and cfg['combinedInputImportAdmission']['accepted']\nassert cfg['combinedInputImportAdmission']['sourceCommit'] == SOURCE_COMMIT\nassert command in (['red'] if cfg['phase'] == 'red' else ['green', 'validation-package'])\nassert action in ['run', 'materialize']\nassert action != 'materialize' or command == cfg['phase']\nassert set(cfg['inputFiles']) == set(INPUT_PATHS)\nassert ROOT.is_dir() and not ROOT.is_symlink() and REPO.is_dir() and not REPO.is_symlink()\nfor name in ['toolchain', 'bin', 'evidence', 'tmp', 'store', 'cache', 'state', 'config', 'data']:\n    assert (ROOT / name).is_dir() and not (ROOT / name).is_symlink(), name + ' root alias'\ncontrol_pins = [(pathlib.Path(__file__), cfg['runnerIdentity']),\n                (pathlib.Path(binding_path), identity(binding_bytes))]\ninputs = {}\nfor name, path in INPUT_PATHS.items():\n    pin = cfg['inputFiles'][name]\n    assert str(path) == pin['path'] and path.is_file() and not path.is_symlink()\n    data = path.read_bytes()\n    expected = {key: pin[key] for key in ['bytes', 'sha256', 'gitBlob']}\n    assert identity(data) == expected, name\n    control_pins.append((path, expected))\n    inputs[name] = json.loads(data)\nsetup = inputs['setupBinding']\nr1, amendment = json.loads(setup['r1Body']), json.loads(setup['amendmentBody'])\nassert identity(setup['r1Body'].encode()) == setup['r1Identity']\nassert identity(setup['amendmentBody'].encode()) == setup['amendmentIdentity']\nassert setup['publishedR1'] == '7e6f32741ccdb470e7688cec9de9481fd05827a1'\nassert setup['publishedAmendment'] == '0042eec33e3bcf145de25db96f5fc7c5b026a1fe'\nfor review in cfg['acceptedReviewBodies']:\n    assert identity(review['body'].encode()) == review['identity']\nassert len(inputs['sourceFull']['rows']) == 11567 and len(inputs['sourceNonDoc']['rows']) == 8798\nassert len(inputs['dependencies']) == 122773 and len(inputs['compiled']) == 1454\nassert inputs['sourceFull']['head'] == inputs['sourceNonDoc']['head'] == SOURCE_COMMIT\nassert inputs['sourceFull']['tree'] == inputs['sourceNonDoc']['tree'] == SOURCE_TREE\nexpected_before = BASE_PATHS if cfg['phase'] == 'red' else [*BASE_PATHS, PATHS[2]]\nexpected_after = [*BASE_PATHS, PATHS[2]] if cfg['phase'] == 'red' else OVERLAY_PATHS\nassert sorted(x['path'] for x in cfg['beforeSourceOverlay']) == sorted(expected_before)\nassert sorted(x['path'] for x in cfg['sourceOverlay']) == sorted(expected_after)\nfor overlays in [cfg['beforeSourceOverlay'], cfg['sourceOverlay']]:\n    for pin in cross_r1['preservedBaseline']['currentTwoOverlays']:\n        row = next(x for x in overlays if x['path'] == pin['path'])\n        assert {key: row[key] for key in pin} == pin, 'previous conversation producer changed'\n    for row in overlays:\n        assert row['mode'] == '100644'\n        assert identity(row['content'].encode()) == {key: row[key] for key in ['bytes', 'sha256', 'gitBlob']}\n        if row['path'] == PATHS[2]:\n            assert identity(row['content'].encode()) == TEST_IDENTITY\n        elif row['path'] in PATHS[:2]:\n            cap = 200 if row['path'] == PATHS[0] else 800\n            assert len(row['content'].splitlines()) <= cap\nbase_source = {row['path']: row for row in inputs['sourceNonDoc']['rows']}\nexpected_source = dict(base_source)\nfor row in cfg['sourceOverlay']:\n    expected_source[row['path']] = {key: row[key] for key in ['path', 'mode', 'bytes', 'sha256', 'gitBlob']}\nassert cfg['sourcePins'] == [expected_source[path] for path in sorted(OVERLAY_PATHS)]\nassert cfg['reviewedTestCensus']['wholeRuntimeCases'] == 133\nassert cfg['reviewedTestCensus']['wholeTest'] == TEST_IDENTITY\nwritten_paths = [PATHS[2]] if cfg['phase'] == 'red' else PATHS[:2]\nassert cfg['materializePaths'] == written_paths\nbefore_source = dict(base_source)\nfor row in cfg['beforeSourceOverlay']:\n    before_source[row['path']] = {key: row[key] for key in ['path', 'mode', 'bytes', 'sha256', 'gitBlob']}\nassert sorted(path for path in expected_source if expected_source[path] != before_source[path]) == sorted(written_paths)\npnpm_inventory = inputs['pnpm']\noriginal_environment = os.environ.copy()\nenv, captured_transport = admit_environment(original_environment)\nfor key in ['NODE_COMPILE_CACHE', 'NODE_COMPILE_CACHE_PORTABLE']:\n    env.pop(key, None)\nenv.update({'NODE_DISABLE_COMPILE_CACHE': '1', 'AGENT_BACKEND_TEST_NODE': r1['tools']['node']['path'],\n            'TMPDIR': str(TASK_TMP)})\ntempfile.tempdir = str(TASK_TMP)\nabsent_configs = [*r1['environment']['absentConfigFiles'], amendment['admission']['additionalAbsentConfig']['path']]\nnormalized_prefix = next(value for key, value in captured_transport.items() if key.lower() == 'npm_config_prefix')\nNODE = r1['tools']['node']['path']\nPNPM = [NODE, r1['tools']['pnpm']['executable'], '--config.pm-on-fail=error',\n        '--config.verify-deps-before-run=false', '--config.engine-strict=true']\nCOMMANDS = {'red': [NODE, '--test', PATHS[2]], 'green': [NODE, '--test', PATHS[2]],\n            'lint': [*PNPM, 'lint:fast:files', *PATHS],\n            'source-size': [*PNPM, 'guard:source-file-size'],\n            'diff-check': [r1['tools']['git']['path'], 'diff', '--check', '--', *OVERLAY_PATHS]}\nassert cfg['commandVectors'] == COMMANDS\nassert cfg['executionScope']['requiresObservedSupervisorExitZeroForContinuation'] is True\nowner = {'kind': 'c714-cross-close-evidence', 'base': SOURCE_COMMIT, 'publishedR1': R1,\n         'runner': cfg['runnerIdentity'], 'test': TEST_IDENTITY}\nif action == 'materialize' and cfg['phase'] == 'red':\n    OUT.mkdir(mode=0o700, exist_ok=False)\n    write_new('owner.json', owner)\nelse:\n    assert OUT.is_dir() and not OUT.is_symlink()\n    assert json.loads((OUT / 'owner.json').read_text()) == owner\nif cfg['phase'] == 'green':\n    red_pin = cfg['acceptedSemanticRed']\n    assert red_pin['independentReviewAccepted'] is True and red_pin['observedOuterSupervisorExit'] == 0\n    red_bytes = (OUT / 'red-receipt.json').read_bytes()\n    assert identity(red_bytes) == red_pin['identity']\n    red = json.loads(red_bytes)\n    assert red['command'] == 'red' and red['exitCode'] == 1 and red['inputsPreserved']\n    assert red['fullRuntimeInputsInspected'] and red['fullRuntimeInputsPreserved']\n    assert red['commandCompletedNormally'] and red['cleanup']['newTestTempsRemaining'] == []\n    assert red['scopeCompleted'] is True and red['interruptions'] == []\n    assert red['cleanup']['capturedSessionMembersAfter'] == []\n    assert not red.get('executionError') and not red.get('postflightError')\n    assert red['testIdentity'] == TEST_IDENTITY\nif action == 'run' and command in ['red', 'green']:\n    materialized = json.loads((OUT / ('materialize-' + command + '-receipt.json')).read_text())\n    assert materialized['action'] == 'materialize' and materialized['command'] == command\n    assert materialized['bindingIdentity'] == identity(binding_bytes)\n    assert materialized['publishedSubject'] == cfg['publishedSubject']\n    assert materialized['scopeCompleted'] and materialized['sourceAndSupervisorMetadataPreserved']\n    assert materialized['fullRuntimeInputsInspected'] is False\n    assert materialized['fullRuntimeInputsPreserved'] is None and materialized['inputsPreserved'] is None\n    assert materialized['writtenPaths'] == written_paths and materialized['interruptions'] == []\n    assert materialized['cleanup']['capturedSessionMembersAfter'] == []\n    assert materialized['cleanup']['newTestTempsRemaining'] == []\n    assert not materialized.get('executionError') and not materialized.get('postflightError')\nif command == 'validation-package':\n    green = json.loads((OUT / 'green-receipt.json').read_text())\n    assert green['command'] == 'green' and green['exitCode'] == 0 and green['inputsPreserved']\n    assert green['fullRuntimeInputsInspected'] and green['fullRuntimeInputsPreserved']\n    assert green['commandCompletedNormally'] and green['cleanup']['newTestTempsRemaining'] == []\n    assert green['scopeCompleted'] is True and green['interruptions'] == []\n    assert green['cleanup']['capturedSessionMembersAfter'] == []\n    assert green['publishedSubject'] == cfg['publishedSubject'] and green['bindingIdentity'] == identity(binding_bytes)\n    assert not green.get('executionError') and not green.get('postflightError')\nassert OUT.is_dir() and not OUT.is_symlink()\nTASK_TMP.mkdir(mode=0o700, exist_ok=True)\nassert TASK_TMP.is_dir() and not TASK_TMP.is_symlink()\nassert shutil.disk_usage(REPO).free >= 8 * 1024 * 1024 and shutil.disk_usage(OUT).free >= 64 * 1024 * 1024\nprefix = command if action == 'run' else 'materialize-' + cfg['phase']\nwith (OUT / (prefix + '.attempt')).open('x') as handle:\n    handle.write(utc() + '\\n')\nruntime_inputs = action == 'run'\nreceipt = {'kind': 'cross-close-test-first-bounded-invocation', 'command': command,\n           'action': action, 'attempt': 1, 'startedAt': utc(), 'publishedR1': R1,\n           'publishedSubject': cfg['publishedSubject'], 'actualLocalHead': SOURCE_COMMIT,\n           'runnerIdentity': cfg['runnerIdentity'], 'bindingIdentity': identity(binding_bytes),\n           'testIdentity': TEST_IDENTITY, 'sourcePins': cfg['sourcePins'],\n           'argv': COMMANDS.get(command) if action == 'run' else None, 'cwd': str(REPO),\n           'perPrimaryCommandLimitSeconds': 180, 'metadataCommandLimitSeconds': 30,\n           'fullRuntimeInputsRequested': runtime_inputs, 'fullRuntimeInputsInspected': False,\n           'fullRuntimeInputBoundaries': {key: 'UNREACHED' if runtime_inputs else 'UNINSPECTED' for key in ['before', 'after']},\n           'fullRuntimeInputsPreserved': False if runtime_inputs else None,\n           'inputsPreserved': False if runtime_inputs else None, 'sourceAndSupervisorMetadataPreserved': False,\n           'commandCompletedNormally': False, 'exitCode': None, 'exitSignal': None, 'timedOut': False,\n           'cleanupSeconds': 0, 'commandPhaseSeconds': 0,\n           'cleanupTimeAccounting': 'Captured termination/reap time is a subset of each commandPhaseSeconds.',\n           'snapshotScope': 'whole invocation; validation children share one full preflight and postflight' if runtime_inputs else 'source-and-supervisor-metadata-only',\n           'qualification': 'Finite actual-source cases/scoped guards only. Metadata materialization is not a behavioral or all-input result. No GUI/native/vendor or whole-E2E claim.'}\nif not runtime_inputs:\n    receipt['uninspectedRuntimeInputs'] = {key: 'UNINSPECTED' for key in\n        ['dependencies', 'compiled', 'providerArchivesAndInstalledMembers', 'bootstrapNodeCache']}\nif command == 'validation-package':\n    receipt['validationCommands'] = [{'command': name, 'argv': COMMANDS[name], 'status': 'UNREACHED'}\n                                     for name in ['lint', 'source-size', 'diff-check']]\nreceipt_path = OUT / (prefix + '-receipt.json')\nreceipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')\nmetadata_counter = 0\nphase_signals = []\ncleaning = finalizing = launching = False\nprevious_handlers = {sig: signal.signal(sig, interrupt) for sig in [signal.SIGINT, signal.SIGTERM]}\ninvocation_start = time.monotonic()\nbefore = after = primary = None\nprimaries = []\nprimary_invocations = []\nreceipt['primaryInvocations'] = primary_invocations\nexpected_command_outcome = False\nboundary = 'before'\nsnapshot = input_snapshot if runtime_inputs else source_metadata_snapshot\ntry:\n    preflight_start = time.monotonic()\n    overlays = cfg['beforeSourceOverlay'] if action == 'materialize' else cfg['sourceOverlay']\n    if runtime_inputs:\n        receipt['fullRuntimeInputBoundaries']['before'] = 'STARTED'\n    before = snapshot(overlays)\n    if runtime_inputs:\n        receipt['fullRuntimeInputBoundaries']['before'] = 'COMPLETE'\n    receipt['before'] = before\n    receipt['preflightSeconds'] = time.monotonic() - preflight_start\n    receipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')\n    if action == 'materialize':\n        receipt['writtenPaths'] = []\n        for path in written_paths:\n            assert not phase_signals\n            row = next(x for x in cfg['sourceOverlay'] if x['path'] == path)\n            (REPO / path).write_bytes(row['content'].encode())\n            receipt['writtenPaths'].append(path)\n        expected_command_outcome = True\n    elif command == 'validation-package':\n        package_start = time.monotonic()\n        try:\n            for entry in receipt['validationCommands']:\n                assert not phase_signals, 'supervisor interruption before next validation child'\n                command_start = time.monotonic()\n                entry['status'] = 'STARTED'\n                stage = {'id': prefix + '-' + entry['command'], 'cwd': str(REPO)}\n                invocation_offset = len(primary_invocations)\n                try:\n                    pointer, primary = run_child(stage, 1, entry['argv'], command_start + 180)\n                    primaries.append(primary)\n                    entry.update({'status': 'EXECUTED', 'primaryReceipt': pointer, 'record': primary})\n                finally:\n                    entry['commandPhaseSeconds'] = time.monotonic() - command_start\n                    entry['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations[invocation_offset:])\n                    entry['invocationRecords'] = primary_invocations[invocation_offset:]\n                assert identity(pathlib.Path(pointer['path']).read_bytes()) == {key: pointer[key] for key in ['bytes', 'sha256', 'gitBlob']}\n                assert primary.get('raw')\n                assert identity(pathlib.Path(primary['raw']['path']).read_bytes()) == {key: primary['raw'][key] for key in ['bytes', 'sha256', 'gitBlob']}\n                assert ordinary_completion(primary) and primary['successful'] and primary['exitCode'] == 0\n                assert primary['remainingCapturedSession'] == [] and not phase_signals\n                entry['nextCommandAdmitted'] = True\n            receipt['commandCompletedNormally'] = True\n            expected_command_outcome = True\n        finally:\n            receipt['commandPhaseSeconds'] = time.monotonic() - package_start\n            receipt['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations)\n            if primary:\n                for key in ['exitCode', 'exitSignal', 'timedOut']:\n                    receipt[key] = primary[key]\n    else:\n        command_start = time.monotonic()\n        stage = {'id': prefix + '-command', 'cwd': str(REPO)}\n        try:\n            pointer, primary = run_child(stage, 1, COMMANDS[command], command_start + 180)\n            primaries.append(primary)\n            receipt['primaryReceipt'] = pointer\n            for key in ['exitCode', 'exitSignal', 'timedOut']:\n                receipt[key] = primary[key]\n            receipt['commandCompletedNormally'] = ordinary_completion(primary)\n            receipt['rawCombinedOutput'] = primary.get('raw')\n            expected_command_outcome = receipt['commandCompletedNormally'] and primary['exitCode'] == (1 if command == 'red' else 0)\n        finally:\n            receipt['commandPhaseSeconds'] = time.monotonic() - command_start\n            receipt['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations)\nexcept BaseException as error:\n    receipt['executionError'] = type(error).__name__ + ': ' + str(error)\n    if 'preflightSeconds' not in receipt:\n        receipt['preflightSeconds'] = time.monotonic() - preflight_start\nfinally:\n    finalizing = True\n    postflight_start = time.monotonic()\n    try:\n        boundary = 'after'\n        if runtime_inputs:\n            receipt['fullRuntimeInputBoundaries']['after'] = 'STARTED'\n        after = snapshot(cfg['sourceOverlay'])\n        if runtime_inputs:\n            receipt['fullRuntimeInputBoundaries']['after'] = 'COMPLETE'\n        receipt['after'] = after\n        metadata_preserved = bool(before and all(before[key] == after[key] for key in ['tools', 'pnpm', 'environment', 'controls']))\n        receipt['sourceAndSupervisorMetadataPreserved'] = metadata_preserved\n        if runtime_inputs:\n            receipt['inputsPreserved'] = bool(before and preserved(before, after))\n            receipt['fullRuntimeInputsPreserved'] = receipt['inputsPreserved']\n        unknown_launches = [row['id'] for row in primary_invocations if row['spawnAttempted'] and row['capturedPid'] is None]\n        receipt['cleanup'] = {'unknownPrimaryLaunches': unknown_launches,\n                              'capturedSessionMembersAfter': None if unknown_launches else [member for row in primary_invocations if row.get('capturedPid')\n                                                              for member in group_members(row['capturedPid'])],\n                              'newTestTempsRemaining': [x for x in after['testTemps'] if before and x not in before['testTemps']],\n                              'scope': 'All captured primary sessions/groups and TEST-prefixed task temps; metadata sessions are checked individually. No universal escaped-child/native custody proof.'}\n    except BaseException as error:\n        receipt['postflightError'] = type(error).__name__ + ': ' + str(error)\n        if runtime_inputs:\n            receipt['inputsPreserved'] = receipt['fullRuntimeInputsPreserved'] = False\n        receipt['sourceAndSupervisorMetadataPreserved'] = False\n    finally:\n        managed_signals = set(previous_handlers)\n        previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, managed_signals)\n        try:\n            pending_signals = sorted(int(sig) for sig in signal.sigpending() & managed_signals)\n            receipt['signalAdmissionCutoff'] = {\n                'at': utc(), 'pendingSignals': pending_signals, 'supervisorExitZeroRequired': True,\n                'scope': 'Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.'}\n            receipt['postflightSeconds'] = time.monotonic() - postflight_start\n            receipt['finishedAt'] = utc()\n            receipt['totalInvocationSeconds'] = time.monotonic() - invocation_start\n            receipt['interruptions'] = [*phase_signals, *pending_signals]\n            receipt['metadataCommands'] = metadata_counter\n            receipt['fullRuntimeInputsInspected'] = runtime_inputs and all(\n                value == 'COMPLETE' for value in receipt['fullRuntimeInputBoundaries'].values())\n            receipt['primaryUnreached'] = action == 'run' and not primary_invocations\n            receipt['primaryFinalizationComplete'] = all(row['finalReceiptPersisted'] for row in primary_invocations)\n            receipt['primaryInvocationsWithoutFinalReceipt'] = [row['id'] for row in primary_invocations\n                                                               if not row['finalReceiptPersisted']]\n            receipt['unreachedValidationCommands'] = [x['command'] for x in receipt.get('validationCommands', [])\n                                                       if x['status'] == 'UNREACHED']\n            selected_inputs_preserved = receipt['inputsPreserved'] if runtime_inputs else receipt['sourceAndSupervisorMetadataPreserved']\n            receipt['scopeCompleted'] = bool(selected_inputs_preserved and expected_command_outcome\n                                             and (not runtime_inputs or receipt['fullRuntimeInputsInspected'])\n                                             and receipt['primaryFinalizationComplete']\n                                             and not receipt.get('executionError') and not receipt.get('postflightError')\n                                             and not receipt['interruptions'] and not receipt['unreachedValidationCommands']\n                                             and receipt.get('cleanup', {}).get('newTestTempsRemaining') == []\n                                             and receipt.get('cleanup', {}).get('capturedSessionMembersAfter') == [])\n            receipt_path.write_text(json.dumps(receipt, indent=2) + '\\n')\n        finally:\n            for sig, previous in previous_handlers.items():\n                signal.signal(sig, previous)\n            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)\nprint(json.dumps({key: receipt.get(key) for key in ['command', 'action', 'exitCode', 'exitSignal',\n      'timedOut', 'executionError', 'postflightError', 'inputsPreserved', 'fullRuntimeInputsInspected',\n      'fullRuntimeInputsPreserved', 'sourceAndSupervisorMetadataPreserved', 'commandCompletedNormally',\n      'scopeCompleted', 'preflightSeconds', 'commandPhaseSeconds', 'cleanupSeconds', 'postflightSeconds',\n      'totalInvocationSeconds', 'unreachedValidationCommands', 'rawCombinedOutput', 'cleanup', 'signalAdmissionCutoff']}), flush=True)\nsys.exit(0 if receipt['scopeCompleted'] and not phase_signals else 2)\n"
+  },
+  "authority": {
+    "selectedR1": {
+      "bytes": 23142,
+      "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+      "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+    },
+    "publishedR1": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+    "baseRunner": {
+      "bytes": 35916,
+      "sha256": "495fac79660eb36f0795f74ff14bd665d79ac3e43534349c2f65234bda89d0f5",
+      "gitBlob": "6af0ac85f09ef02488ce15331828713882a73d13"
+    },
+    "baseSourceCommit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+    "baseSourceTree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+    "fixedTest": {
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    },
+    "ownAcceptedTestReview": "7fed0e34689f80f55dc49161afb13d939b680ee7",
+    "caseCount": 133,
+    "caseAuthority": "Previously reviewed append-only old97 plus28 readiness and8 driver registrations; no actual133 result in this review."
+  },
+  "methods": {
+    "fullCandidateBodyRead": true,
+    "fullCandidateGitAndSha256Recomputed": true,
+    "priorWhole6afAnd42d62BodiesRead": true,
+    "revisionInverseWholeBodyExact": true,
+    "revisionHunks": 18,
+    "addedLines": 67,
+    "removedLines": 19,
+    "sourceTextOnly": true,
+    "shellExecuted": false,
+    "pythonExecuted": false,
+    "nodeExecuted": false,
+    "appOrPackageEvaluated": false,
+    "localMaterialization": false,
+    "sourceAuthored": false,
+    "refCommitPrCiMutated": false,
+    "externalMessagesSent": false,
+    "perFunctionIdentities": [
+      {
+        "name": "identity",
+        "identity": {
+          "bytes": 197,
+          "sha256": "6945b8229d7c6e16dc90de687c6fc36ece804e6769d3faa4c0b6b01a63edfae2",
+          "gitBlob": "bc0a4bae8477a2ad4031882e39ee63277259e605"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "canonical",
+        "identity": {
+          "bytes": 100,
+          "sha256": "5032092fe454c2fda2efebace7b4cbfea3127588118d8833bc6307d7c2256a01",
+          "gitBlob": "68408ebec5ae79c7d76695e4a3cf2d9478399623"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "utc",
+        "identity": {
+          "bytes": 80,
+          "sha256": "7be38ebd469ff3fa4bdad9a1cf71023d6d4e497fb6fe56c76bcdd3783c202c28",
+          "gitBlob": "c95897478593e5be71ebbcac7be4404c44c9e025"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "write_new",
+        "identity": {
+          "bytes": 220,
+          "sha256": "f9be73b781acaab0d94e6c199b44f6fef8d0b8148c900eba7735d66e5a9c426f",
+          "gitBlob": "8059bb6dc2d4d4be19880f7835d1a3570e0bc533"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "process_rows",
+        "identity": {
+          "bytes": 639,
+          "sha256": "45185fbc2a6060c9e62d28d61387b66522794ead799b3ce3b9ccc1aa69e3d5b2",
+          "gitBlob": "3e421996e3b45aaa4ebf245a467fd2ec4b188e3d"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "package_values",
+        "identity": {
+          "bytes": 167,
+          "sha256": "11a84c9a92270496c7fc5b5a8dee088f47062da83a044fd564e7322b97f69f3e",
+          "gitBlob": "07949b016be8e4b1fb26a95aba4131a90e7b0163"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "transport_values",
+        "identity": {
+          "bytes": 192,
+          "sha256": "3f557cda55c256d5b839482c27fad7ee16f198ad3b5c04febff08a8267b841fc",
+          "gitBlob": "94c035a7ca2a7f1d1b8136732afadc75a3837a73"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "admit_environment",
+        "identity": {
+          "bytes": 2261,
+          "sha256": "7b20105ca4f1d1716e3c8450164cecbc3877804356b36ad340b7d6d565a94a90",
+          "gitBlob": "be031caf7b4adc3435729412570b5f9f5df225ae"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "environment_check",
+        "identity": {
+          "bytes": 1448,
+          "sha256": "a7d7de381bd0fbfd0ffacf27d17860998281297b3c1c52c15cca538c72f480a5",
+          "gitBlob": "bbf21ae33b02a860179a5478ce3b0f007912d2cb"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "tooling",
+        "identity": {
+          "bytes": 695,
+          "sha256": "7249aed221889609afcec7a0b66a8ff56a0ab9b5ea74c62a8ac217a9bcda6a5d",
+          "gitBlob": "1575abda72427c72d189c8b2b688cce867d12f07"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "file_row",
+        "identity": {
+          "bytes": 393,
+          "sha256": "33b654ca7319d8a586fede2ffd68d590b9e16d955d3a979469677a8ee8125c27",
+          "gitBlob": "6772a7f9d17083ae3ddd8f92a0a16a8c0ebd81bb"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "directory_manifest",
+        "identity": {
+          "bytes": 897,
+          "sha256": "edf64f34feacc448a4d5dd260778f23d38eca7055f411338ae3368030c40a13e",
+          "gitBlob": "bb0d24388988ecf2cec5463b253ace092f16b6b5"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "dependencies",
+        "identity": {
+          "bytes": 114,
+          "sha256": "cac06ac70de142507971a4ab9558a99c5c11412ebcf8c20950b31d491d118db7",
+          "gitBlob": "be11fc3e38d3eedded0bde5f44673bee5502b6f6"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "compiled",
+        "identity": {
+          "bytes": 165,
+          "sha256": "1845f8267e6a1455fa4ad24d7b49e3a1dcfa947481b067c91d21eb223a9c9b0d",
+          "gitBlob": "0fa089afb525410d4a8d34f3716014ecfe0267a7"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "toolchain_inventory",
+        "identity": {
+          "bytes": 442,
+          "sha256": "852f03fb0200a29737a545e3b41ebb16e6b9c6ab0b168ff9c351f0bfce990b00",
+          "gitBlob": "3fa334f89bf49baa2400866c814972e35984323d"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "verify_pnpm",
+        "identity": {
+          "bytes": 1094,
+          "sha256": "f3cccb716c22ddf7114bef3ce9b199554cae5ceecbf248917886ec64fa797fdd",
+          "gitBlob": "1965c670e88ebdca4a0a04c7dd6fd7eebb2bf274"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "group_members",
+        "identity": {
+          "bytes": 115,
+          "sha256": "5c9e5ce7b3ec14a230c9ee8ca59ac71819eb389330d35ab1fd7f057c30d84e6e",
+          "gitBlob": "79c589efc927acd09d5fbd559414e9ab6bad99c9"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "interrupt",
+        "identity": {
+          "bytes": 187,
+          "sha256": "01a13b0f13f5e58c23f157f88e2b6a8210db036df4fb1f5429c0ce3afa93eb3b",
+          "gitBlob": "52a12e23272cff44105e4436940a1a62c7b08083"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "terminate_captured",
+        "identity": {
+          "bytes": 985,
+          "sha256": "19e8d99a3d8706c37bd319bd15ddddae92c618d1d85673de5283ee17a04a87ae",
+          "gitBlob": "60f2d4214ed4b12fd8b8814d16d9ef184e23915f"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "run_child",
+        "identity": {
+          "bytes": 5089,
+          "sha256": "542474cdb96933f11bfda2f669f93a4ff71973cc64ff7814d2441430e9906709",
+          "gitBlob": "e08382e6af1498be8ddf3747690ac324145b6495"
+        },
+        "sameAs6af": false
+      },
+      {
+        "name": "git_read",
+        "identity": {
+          "bytes": 584,
+          "sha256": "58cedbe06c248442bce3aebaa4bb368cd1f38f709f031503da2e169f69e45f46",
+          "gitBlob": "89c28e4e204faba44789350d7079294564c1f81a"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "source_snapshot",
+        "identity": {
+          "bytes": 3027,
+          "sha256": "1ddbc2edb1616a13e39ab18989b15896b71040fb2d514c5cac84163807e4ca11",
+          "gitBlob": "ae786600473f9e7489649123613fddfa678a09f7"
+        },
+        "sameAs6af": false
+      },
+      {
+        "name": "provider_archives",
+        "identity": {
+          "bytes": 1627,
+          "sha256": "6864d53d928e29d5ada8fd3c45aa7464295bf2f3d8e6d8f2332dee490474ba2e",
+          "gitBlob": "e389447177234848fff95eae868e69f21a092e54"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "control_snapshot",
+        "identity": {
+          "bytes": 343,
+          "sha256": "d81cef95d01cda8fe6f68bcc069a77cb7c8fffb5265c32895da2155dcbab4d1a",
+          "gitBlob": "1e95a9fa1d34b98dcc6e359a76be63c971f78ff5"
+        },
+        "sameAs6af": false
+      },
+      {
+        "name": "source_metadata_snapshot",
+        "identity": {
+          "bytes": 1220,
+          "sha256": "1c802e8e7cef6604cc2cedb2feff80706f6e0a4cd817a07c2f46799704a3f468",
+          "gitBlob": "895bc943126f9a934f2391471f6d12780e2d512a"
+        },
+        "sameAs6af": false
+      },
+      {
+        "name": "input_snapshot",
+        "identity": {
+          "bytes": 2047,
+          "sha256": "6baf2f7a60f031d124d38aeae09d78a24fe7aed07214bccbc7e57179fb1aa847",
+          "gitBlob": "3985a174942ae7a24d74852746b46bca8a2b5f90"
+        },
+        "sameAs6af": false
+      },
+      {
+        "name": "preserved",
+        "identity": {
+          "bytes": 359,
+          "sha256": "3a6baafdcf399f150b92e0643e15f26d67f0d6a6f4804df206ab8c0892584244",
+          "gitBlob": "1947ccbe22d68fd3d813670e3f58a1975cec3d91"
+        },
+        "sameAs6af": false
+      },
+      {
+        "name": "ordinary_completion",
+        "identity": {
+          "bytes": 443,
+          "sha256": "55f1b977a85713e032619a77bf062a8052b20955e9706ff04052e166e83ba98d",
+          "gitBlob": "c4b2be97237a297a74e2a267bf2525cfa04c670b"
+        },
+        "sameAs6af": true
+      },
+      {
+        "name": "primary_cleanup_seconds",
+        "identity": {
+          "bytes": 261,
+          "sha256": "05a9b54e141a49babe3396378a9b62c6b90057db9cf2a6f16d951b75c6983d55",
+          "gitBlob": "c3a95c9661b4edff55d82d709f58c5478ada09e2"
+        },
+        "sameAs6af": false
+      }
+    ]
+  },
+  "heldHistory": {
+    "candidate": {
+      "bytes": 45907,
+      "sha256": "7cd7ce0eb2e1bdd5cfa7623bf3dfc0217a0650c95b31d140a84533c7d1573f38",
+      "gitBlob": "42d62ca41b3e350b2f90cb960205fe885de227ae"
+    },
+    "selection": "HELD_UNEXECUTED",
+    "findings": [
+      {
+        "id": "complete-runtime-input-inspection",
+        "lines": [
+          647,
+          675,
+          736
+        ],
+        "finding": "True is initialized from requested mode before any full runtime boundary completes.",
+        "required": "Separate requested scope and before/after states; only completed full snapshots support complete inspection."
+      },
+      {
+        "id": "unreturned-primary-is-not-unreached",
+        "lines": [
+          695,
+          696,
+          717,
+          718,
+          743,
+          765
+        ],
+        "finding": "A launched child whose final receipt persistence raises does not enter primaries; current final fields can then claim primaryUnreached and no captured members from an empty list.",
+        "required": "Retain invocation/spawn/capture/record state outside successful return; unknown failed finalization stays failed/unknown and every captured PID is checked."
+      },
+      {
+        "id": "failed-primary-timing",
+        "lines": [
+          697,
+          699,
+          709,
+          710,
+          717,
+          720,
+          721
+        ],
+        "finding": "A final receipt failure loses the single command elapsed/cleanup fields, and per-entry package timing does not finish.",
+        "required": "Per-primary caller finally records actual elapsed and retained cleanup subset without moving/resetting its prelaunch 180-second deadline."
+      }
+    ],
+    "closure": "All three findings close in this exact revised body. Intermediate d7307 was reported unselected by root and is not reviewed or selected here."
+  },
+  "exactRevisionHunks": [
+    [
+      {
+        "kind": "add",
+        "newLine": 265,
+        "text": "    tracker = None"
+      },
+      {
+        "kind": "add",
+        "newLine": 266,
+        "text": "    if not metadata:"
+      },
+      {
+        "kind": "add",
+        "newLine": 267,
+        "text": "        tracker = {'id': name, 'invocationReached': True, 'spawnAttempted': False,"
+      },
+      {
+        "kind": "add",
+        "newLine": 268,
+        "text": "                   'capturedPid': None, 'finalReceiptPersisted': False, 'record': record}"
+      },
+      {
+        "kind": "add",
+        "newLine": 269,
+        "text": "        primary_invocations.append(tracker)"
+      }
+    ],
+    [
+      {
+        "kind": "add",
+        "newLine": 281,
+        "text": "                    if tracker is not None:"
+      },
+      {
+        "kind": "add",
+        "newLine": 282,
+        "text": "                        tracker['spawnAttempted'] = True"
+      }
+    ],
+    [
+      {
+        "kind": "add",
+        "newLine": 289,
+        "text": "                if tracker is not None:"
+      },
+      {
+        "kind": "add",
+        "newLine": 290,
+        "text": "                    tracker['capturedPid'] = child.pid"
+      }
+    ],
+    [
+      {
+        "kind": "add",
+        "newLine": 308,
+        "text": "                    record['capturedPid'] = child.pid"
+      },
+      {
+        "kind": "add",
+        "newLine": 309,
+        "text": "                    if tracker is not None:"
+      },
+      {
+        "kind": "add",
+        "newLine": 310,
+        "text": "                        tracker['capturedPid'] = child.pid"
+      }
+    ],
+    [
+      {
+        "kind": "add",
+        "newLine": 341,
+        "text": "                if tracker is not None:"
+      },
+      {
+        "kind": "add",
+        "newLine": 342,
+        "text": "                    tracker['finalReceiptPersisted'] = True"
+      },
+      {
+        "kind": "add",
+        "newLine": 343,
+        "text": "                    tracker['finalReceipt'] = pointer"
+      }
+    ],
+    [
+      {
+        "kind": "add",
+        "newLine": 513,
+        "text": "def primary_cleanup_seconds(trackers):"
+      },
+      {
+        "kind": "add",
+        "newLine": 514,
+        "text": "    values = [row['record'].get('cleanupSeconds', 0 if not row['spawnAttempted'] else None)"
+      },
+      {
+        "kind": "add",
+        "newLine": 515,
+        "text": "              for row in trackers]"
+      },
+      {
+        "kind": "add",
+        "newLine": 516,
+        "text": "    return sum(values) if all(isinstance(value, (int, float)) for value in values) else None"
+      },
+      {
+        "kind": "add",
+        "newLine": 517,
+        "text": ""
+      },
+      {
+        "kind": "add",
+        "newLine": 518,
+        "text": ""
+      }
+    ],
+    [
+      {
+        "kind": "add",
+        "newLine": 668,
+        "text": "           'fullRuntimeInputsRequested': runtime_inputs, 'fullRuntimeInputsInspected': False,"
+      },
+      {
+        "kind": "add",
+        "newLine": 669,
+        "text": "           'fullRuntimeInputBoundaries': {key: 'UNREACHED' if runtime_inputs else 'UNINSPECTED' for key in ['before', 'after']},"
+      },
+      {
+        "kind": "add",
+        "newLine": 670,
+        "text": "           'fullRuntimeInputsPreserved': False if runtime_inputs else None,"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 647,
+        "text": "           'fullRuntimeInputsInspected': runtime_inputs, 'fullRuntimeInputsPreserved': False if runtime_inputs else None,"
+      }
+    ],
+    [
+      {
+        "kind": "add",
+        "newLine": 692,
+        "text": "primary_invocations = []"
+      },
+      {
+        "kind": "add",
+        "newLine": 693,
+        "text": "receipt['primaryInvocations'] = primary_invocations"
+      }
+    ],
+    [
+      {
+        "kind": "add",
+        "newLine": 700,
+        "text": "    if runtime_inputs:"
+      },
+      {
+        "kind": "add",
+        "newLine": 701,
+        "text": "        receipt['fullRuntimeInputBoundaries']['before'] = 'STARTED'"
+      }
+    ],
+    [
+      {
+        "kind": "add",
+        "newLine": 703,
+        "text": "    if runtime_inputs:"
+      },
+      {
+        "kind": "add",
+        "newLine": 704,
+        "text": "        receipt['fullRuntimeInputBoundaries']['before'] = 'COMPLETE'"
+      }
+    ],
+    [
+      {
+        "kind": "add",
+        "newLine": 724,
+        "text": "                invocation_offset = len(primary_invocations)"
+      },
+      {
+        "kind": "add",
+        "newLine": 725,
+        "text": "                try:"
+      },
+      {
+        "kind": "add",
+        "newLine": 726,
+        "text": "                    pointer, primary = run_child(stage, 1, entry['argv'], command_start + 180)"
+      },
+      {
+        "kind": "add",
+        "newLine": 727,
+        "text": "                    primaries.append(primary)"
+      },
+      {
+        "kind": "add",
+        "newLine": 728,
+        "text": "                    entry.update({'status': 'EXECUTED', 'primaryReceipt': pointer, 'record': primary})"
+      },
+      {
+        "kind": "add",
+        "newLine": 729,
+        "text": "                finally:"
+      },
+      {
+        "kind": "add",
+        "newLine": 730,
+        "text": "                    entry['commandPhaseSeconds'] = time.monotonic() - command_start"
+      },
+      {
+        "kind": "add",
+        "newLine": 731,
+        "text": "                    entry['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations[invocation_offset:])"
+      },
+      {
+        "kind": "add",
+        "newLine": 732,
+        "text": "                    entry['invocationRecords'] = primary_invocations[invocation_offset:]"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 695,
+        "text": "                pointer, primary = run_child(stage, 1, entry['argv'], command_start + 180)"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 696,
+        "text": "                primaries.append(primary)"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 697,
+        "text": "                entry.update({'status': 'EXECUTED', 'primaryReceipt': pointer,"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 698,
+        "text": "                              'commandPhaseSeconds': time.monotonic() - command_start,"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 699,
+        "text": "                              'cleanupSeconds': primary['cleanupSeconds'], 'record': primary})"
+      }
+    ],
+    [
+      {
+        "kind": "add",
+        "newLine": 743,
+        "text": "            receipt['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations)"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 710,
+        "text": "            receipt['cleanupSeconds'] = sum(row['cleanupSeconds'] for row in primaries)"
+      }
+    ],
+    [
+      {
+        "kind": "add",
+        "newLine": 750,
+        "text": "        try:"
+      },
+      {
+        "kind": "add",
+        "newLine": 751,
+        "text": "            pointer, primary = run_child(stage, 1, COMMANDS[command], command_start + 180)"
+      },
+      {
+        "kind": "add",
+        "newLine": 752,
+        "text": "            primaries.append(primary)"
+      },
+      {
+        "kind": "add",
+        "newLine": 753,
+        "text": "            receipt['primaryReceipt'] = pointer"
+      },
+      {
+        "kind": "add",
+        "newLine": 754,
+        "text": "            for key in ['exitCode', 'exitSignal', 'timedOut']:"
+      },
+      {
+        "kind": "add",
+        "newLine": 755,
+        "text": "                receipt[key] = primary[key]"
+      },
+      {
+        "kind": "add",
+        "newLine": 756,
+        "text": "            receipt['commandCompletedNormally'] = ordinary_completion(primary)"
+      },
+      {
+        "kind": "add",
+        "newLine": 757,
+        "text": "            receipt['rawCombinedOutput'] = primary.get('raw')"
+      },
+      {
+        "kind": "add",
+        "newLine": 758,
+        "text": "            expected_command_outcome = receipt['commandCompletedNormally'] and primary['exitCode'] == (1 if command == 'red' else 0)"
+      },
+      {
+        "kind": "add",
+        "newLine": 759,
+        "text": "        finally:"
+      },
+      {
+        "kind": "add",
+        "newLine": 760,
+        "text": "            receipt['commandPhaseSeconds'] = time.monotonic() - command_start"
+      },
+      {
+        "kind": "add",
+        "newLine": 761,
+        "text": "            receipt['cleanupSeconds'] = primary_cleanup_seconds(primary_invocations)"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 717,
+        "text": "        pointer, primary = run_child(stage, 1, COMMANDS[command], command_start + 180)"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 718,
+        "text": "        primaries.append(primary)"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 719,
+        "text": "        receipt['primaryReceipt'] = pointer"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 720,
+        "text": "        receipt['commandPhaseSeconds'] = time.monotonic() - command_start"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 721,
+        "text": "        receipt['cleanupSeconds'] = primary['cleanupSeconds']"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 722,
+        "text": "        for key in ['exitCode', 'exitSignal', 'timedOut']:"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 723,
+        "text": "            receipt[key] = primary[key]"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 724,
+        "text": "        receipt['commandCompletedNormally'] = ordinary_completion(primary)"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 725,
+        "text": "        receipt['rawCombinedOutput'] = primary.get('raw')"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 726,
+        "text": "        expected_command_outcome = receipt['commandCompletedNormally'] and primary['exitCode'] == (1 if command == 'red' else 0)"
+      }
+    ],
+    [
+      {
+        "kind": "add",
+        "newLine": 771,
+        "text": "        if runtime_inputs:"
+      },
+      {
+        "kind": "add",
+        "newLine": 772,
+        "text": "            receipt['fullRuntimeInputBoundaries']['after'] = 'STARTED'"
+      }
+    ],
+    [
+      {
+        "kind": "add",
+        "newLine": 774,
+        "text": "        if runtime_inputs:"
+      },
+      {
+        "kind": "add",
+        "newLine": 775,
+        "text": "            receipt['fullRuntimeInputBoundaries']['after'] = 'COMPLETE'"
+      }
+    ],
+    [
+      {
+        "kind": "add",
+        "newLine": 782,
+        "text": "        unknown_launches = [row['id'] for row in primary_invocations if row['spawnAttempted'] and row['capturedPid'] is None]"
+      },
+      {
+        "kind": "add",
+        "newLine": 783,
+        "text": "        receipt['cleanup'] = {'unknownPrimaryLaunches': unknown_launches,"
+      },
+      {
+        "kind": "add",
+        "newLine": 784,
+        "text": "                              'capturedSessionMembersAfter': None if unknown_launches else [member for row in primary_invocations if row.get('capturedPid')"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 743,
+        "text": "        receipt['cleanup'] = {'capturedSessionMembersAfter': [member for row in primaries if row.get('capturedPid')"
+      }
+    ],
+    [
+      {
+        "kind": "add",
+        "newLine": 806,
+        "text": "            receipt['fullRuntimeInputsInspected'] = runtime_inputs and all("
+      },
+      {
+        "kind": "add",
+        "newLine": 807,
+        "text": "                value == 'COMPLETE' for value in receipt['fullRuntimeInputBoundaries'].values())"
+      },
+      {
+        "kind": "add",
+        "newLine": 808,
+        "text": "            receipt['primaryUnreached'] = action == 'run' and not primary_invocations"
+      },
+      {
+        "kind": "add",
+        "newLine": 809,
+        "text": "            receipt['primaryFinalizationComplete'] = all(row['finalReceiptPersisted'] for row in primary_invocations)"
+      },
+      {
+        "kind": "add",
+        "newLine": 810,
+        "text": "            receipt['primaryInvocationsWithoutFinalReceipt'] = [row['id'] for row in primary_invocations"
+      },
+      {
+        "kind": "add",
+        "newLine": 811,
+        "text": "                                                               if not row['finalReceiptPersisted']]"
+      },
+      {
+        "kind": "remove",
+        "oldLine": 765,
+        "text": "            receipt['primaryUnreached'] = action == 'run' and not primaries"
+      }
+    ],
+    [
+      {
+        "kind": "add",
+        "newLine": 816,
+        "text": "                                             and (not runtime_inputs or receipt['fullRuntimeInputsInspected'])"
+      },
+      {
+        "kind": "add",
+        "newLine": 817,
+        "text": "                                             and receipt['primaryFinalizationComplete']"
+      }
+    ]
+  ],
+  "sourceAndBindingScope": {
+    "sourceRows": 8798,
+    "fullTreeLeaves": 11567,
+    "indexScope": "All 11567 stage0 rows are compared, including docs, against the exact original tree; all unmerged/staged/untracked/change-set mismatches refuse.",
+    "workflowLeaves": 42,
+    "root": "/workspace/scratch/c714-fresh-20261116",
+    "source": "/workspace/scratch/c714-fresh-20261116/source",
+    "newOutputRoot": "/tmp/c714-cross-close-evidence",
+    "metadataTestWrite": "Exactly the reviewed test path; before two preserved conversation overlays, after those two plus fixed0aec test.",
+    "metadataProducerWrite": "Exactly helper and Taskboard driver; before two preserved conversation overlays plus fixed0aec test, after those three plus two reviewed producer bodies supplied only by a future exact GREEN binding.",
+    "preservedConversationProducers": [
+      "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+      "cf93da72a198dac636658e512093eef7828b5927"
+    ],
+    "producerCaps": {
+      "helperPhysicalLines": 200,
+      "driverPhysicalLines": 800
+    },
+    "sourceIdentityProof": "Both snapshot calls independently assert every current source row against the appropriate complete expected overlay. Materialization intentionally changes only the specified written_paths; success does not mean the test/producer bytes are equal before and after.",
+    "bindingPending": true,
+    "publishedSubjectBinding": "The runner checks exact control file identities, phases and schemas. Remote publication and independent semantic acceptance still require the final reviewed binding and separately observed actual readbacks; a Boolean in a proposed binding is not accepted by this review as proof."
+  },
+  "metadataOnly": {
+    "nodeOrPnpmExecuted": false,
+    "required": [
+      "Complete source HEAD/tree/index/source8798/workflows42",
+      "Pinned Python/Git/Node/dash byte identities without executing Node",
+      "Complete staged pnpm/launcher identity without executing pnpm",
+      "Runner, binding and all eight pinned admission evidence files",
+      "Exact inherited transport and child environment/config boundaries",
+      "Individually captured finite Git metadata commands",
+      "Task temporary entry census and captured-session proof"
+    ],
+    "runtimeInputsRequested": false,
+    "runtimeInputsInspected": false,
+    "runtimeInputsPreserved": null,
+    "inputsPreserved": null,
+    "runtimeBoundaries": "UNINSPECTED",
+    "uninspected": [
+      "Dependency tree",
+      "Compiled tree",
+      "Provider archives and installed members",
+      "Bootstrap Node cache"
+    ],
+    "qualification": "Hashing the pinned evidence JSON as a control file is not inspection of the corresponding live runtime tree. The next RED or GREEN full preflight must inspect all live runtime inputs before any primary executes."
+  },
+  "runtimeInputs": {
+    "requestedSeparateFromInspected": true,
+    "beforeAfterStates": [
+      "UNREACHED",
+      "STARTED",
+      "COMPLETE"
+    ],
+    "completeFlag": "Only true after both full input_snapshot calls actually return.",
+    "completeFullChecks": [
+      "Source8798 and full tree/index11567/workflows42",
+      "Dependencies122773 exact rows and bytes",
+      "Compiled1454 exact rows and bytes",
+      "Provider253D+12SPI archive and installed regular-member identities",
+      "Pinned Node/Git/Python/dash and full staged pnpm",
+      "Captured environment/proxy/config",
+      "Seven retained bootstrap Node-cache file identities",
+      "All exact control files"
+    ],
+    "compileCache": "NODE_DISABLE_COMPILE_CACHE=1; NODE_COMPILE_CACHE and PORTABLE absent; retained cache is inspected, not silently discarded.",
+    "failedPreflight": "Exclusive attempt has already been created. Primary remains truly unreached only if no primary invocation is reached; no automatic resume or substitution."
+  },
+  "lifetime": {
+    "commonEnvironmentOnce": true,
+    "metadataCommandLimitSeconds": 30,
+    "primaryCommandLimitSeconds": 180,
+    "primaryClock": "Each command_start is captured before stage/start/raw/launch work and passed as command_start+180; no reset after spawn.",
+    "preAndPostOutsidePrimaryClock": true,
+    "cleanupSubset": "Captured terminate/reap duration is separately summed within the elapsed command phase. Unknown cleanup is null rather than fabricated0.",
+    "tracker": "Registered before primary start-record persistence; spawnAttempted set before Popen; captured PID copied on ordinary path and recovered from child in protected finalization. The actual record stays referenced even if final receipt writing raises.",
+    "primaryUnreached": "Means no primary invocation tracker, not merely no returned receipt.",
+    "receiptFailure": "primaryInvocationsWithoutFinalReceipt and primaryFinalizationComplete distinguish missing finalization. Every failing caller finally retains actual elapsed command duration and tracker cleanup data.",
+    "captureBoundary": "All known tracker PIDs are examined at final cleanup; an attempted launch without a captured PID produces unknownPrimaryLaunches and capturedSessionMembersAfter=null.",
+    "cleanupLimits": "Only captured session/group members and newly observed TEST-prefixed task temps are covered; no universal escaped-process, native custody, or global temporary-files proof.",
+    "terminalCutoff": "Managed signals are blocked, handler-collected and pending signals are reconciled at the explicit cutoff, the first successful final receipt is written under the mask, then handlers and mask are restored. Later signals remain outside the receipt guarantee.",
+    "outerExit": "Independent observed actual supervisor exit0 is required for any continuation, in addition to the complete inner evidence. This static review contains no such execution."
+  },
+  "validationPackage": {
+    "attempts": 1,
+    "order": [
+      "lint",
+      "source-size",
+      "diff-check"
+    ],
+    "scope": "One complete full input/source preflight and one postflight around the entire package, not per-child snapshots.",
+    "environment": "One captured immutable child environment is shared; each primary receives a distinct captured session/group.",
+    "commands": "Exact declared vectors only: pinned pnpm fast lint for three Cross paths; pinned pnpm source-size guard; pinned git diff --check for all five overlay paths.",
+    "perChildAdmission": [
+      "Complete retained start/raw/final receipt",
+      "Rehashed final receipt and raw bytes",
+      "Ordinary primary exit0 and successful deadline status",
+      "No execution/finalization/cleanup error or abnormal cleanup",
+      "No timeout or deadline breach",
+      "Empty captured session",
+      "No child interruption and still-clear supervisor interruption state"
+    ],
+    "failure": "First failure exits the loop. Later entries stay permanently UNREACHED, the package attempt stays spent, and there is no partial-resume command.",
+    "timing": "Every STARTED entry records elapsed commandPhaseSeconds and cleanupSeconds in its caller finally, including failures before return. Aggregate timing surrounds the whole sequential package.",
+    "resultInterpretation": "Per-entry records, primaryInvocations, missing-final-receipt list, scopeCompleted and actual outer outcome are authoritative. The package top-level exitCode mirrors the last returned primary and alone is not package success."
+  },
+  "negativePathReview": [
+    {
+      "path": "First source/Git/full-input preflight failure",
+      "result": "before remains STARTED, after is independently attempted; complete runtime flag false unless both complete, primary no invocation, scope false, attempt spent."
+    },
+    {
+      "path": "Primary start-record/raw-open failure before spawn",
+      "result": "Invocation retained, spawnAttempted false, no fictitious execution; finalization incomplete/missing as applicable and scope false."
+    },
+    {
+      "path": "Popen throws without captured PID",
+      "result": "spawnAttempted true, unknown launch retained, final captured-session proof null, scope false."
+    },
+    {
+      "path": "Signal after Popen but before normal PID bookkeeping",
+      "result": "Protected child finalization recovers child.pid into record/tracker and handles live captured group; signal remains admission failure."
+    },
+    {
+      "path": "Child/raw/finalization/receipt persistence failure",
+      "result": "Tracker and caller timing retained, no UNREACHED promotion, incomplete final receipt prevents success and later package commands remain unrun."
+    },
+    {
+      "path": "Timeout, abnormal cleanup or remaining captured session",
+      "result": "Ordinary completion or strict package success fails; no retry."
+    },
+    {
+      "path": "Postflight input/control/source drift or interrupted postflight",
+      "result": "Preservation false/postflight error; complete scope refuses."
+    },
+    {
+      "path": "Signal during terminal receipt or afterward",
+      "result": "Cutoff captures pending/handled signals through its stated boundary; separate outer exit admission covers subsequent completion outcome."
+    }
+  ],
+  "commandAndAuthorityLimits": {
+    "newInstallBuildOrProviderCommand": false,
+    "newWorkflowOrCiAction": false,
+    "incomingAdoption": false,
+    "newRealProviderOrNativeGuiRuntime": false,
+    "sourceWritePaths": "Only phase-selected reviewed test or two reviewed producers, supplied through exact data bindings.",
+    "testOrGuardAttemptSpentByReview": false,
+    "applicationAdmitted": false,
+    "executionAdmitted": false,
+    "remainingGates": [
+      "Final exact RED binding with actual published TEST subject and full independent binding R2",
+      "Full actual publication/readback of runner+binding control checkpoint",
+      "Root-only exact materialization and complete actual metadata/outer0 review",
+      "One whole133 RED and full semantic/input/lifetime/outer0 acceptance before producer authoring",
+      "Separate producer R2/publication/GREEN binding/materialization and actual GREEN review",
+      "Only then the one original bounded validation package",
+      "Canonical typecheck/build and full GUI/platform acceptance remain open and separate"
+    ]
+  }
+}

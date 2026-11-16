@@ -1,0 +1,491 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-Cross-Close-final-RED-binding-and-runner-R2-supplement",
+  "reviewer": "/root/guard_review",
+  "reviewedAtUTC": "2026-11-16 16:46:15 UTC",
+  "repository": "777genius/agent-teams-ai",
+  "verdict": "ACCEPTED_FOR_PUBLICATION_ONLY",
+  "accepted": true,
+  "runner": {
+    "bytes": 48838,
+    "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+    "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+  },
+  "runnerFullReview": {
+    "bytes": 85343,
+    "sha256": "68b71ed76d405006a4b125750e00902848a5713c3198655518208b2a89919c03",
+    "gitBlob": "d0c875cc0d5a9fd4c25f246e90137bc1babd0ee9"
+  },
+  "binding": {
+    "bytes": 840295,
+    "sha256": "d8fd4d1e33f666f64a7e8512a63a92aedd27bf105fc248eaa13494599e468fc2",
+    "gitBlob": "cb12381b46948c807d443fc41581a9a48d18e051"
+  },
+  "publishedR1": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+  "selectedR1": {
+    "bytes": 23142,
+    "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+    "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+  },
+  "publishedTestSubject": {
+    "commit": "c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+    "tree": "31554d5e9f57d07c4dff4514f494126633a3d934",
+    "qualification": "Exact published test-only0aec append preserving97 prior cases; Cross helper/driver preimages unchanged. Local C5 index plus fixed ed57/cf93 and selected test overlay; remote documentation is not claimed locally materialized."
+  },
+  "method": {
+    "fullBindingFetched": true,
+    "fullBindingGitAndSha256Recomputed": true,
+    "allSevenLiteralReviewBodiesRehashed": true,
+    "wholeR1ComparedToPriorAcceptedBody": true,
+    "wholeTestComparedToPriorAcceptedBody": true,
+    "allFiveOverlayInstancesRehashed": true,
+    "existingReviewAndSourceBodiesReusedOnlyAfterExactIdentity": true,
+    "sourceComparison": "Complete retained accepted8798-row source67a plus exact overlay mapping; this review performs no new filesystem scan. Runtime currentness remains the runner preflight requirement.",
+    "source67a": {
+      "bytes": 2478453,
+      "sha256": "74ec4a5825417fc6b646b486a4e88e7c782dd8a4a24fa665c5fbaaf6ff6813fb",
+      "gitBlob": "67a014a69edb6c0e1379fff08bff15ce95e6ec9a"
+    },
+    "freshGitRefRead": false,
+    "publicationAuthority": "Root actual readback and independent full6f8d publication review embedded in binding; both subject/tree/parent/source pins and complete report identities were joined here. This supplement does not claim to have repeated those remote API reads.",
+    "shellOrChildExecution": false,
+    "packageOrTargetCodeEvaluation": false,
+    "localWritesOrMaterialization": false,
+    "sourceTestRunnerAuthoring": false,
+    "refCommitPrCiActions": false
+  },
+  "exactJoins": {
+    "runnerIdentity": true,
+    "inputPinsExactlyEqualPriorAcceptedBinding": "21878f51fd1b7bfca5bab18ff71c7c1beca5aaef",
+    "eightInputFiles": {
+      "setupBinding": {
+        "path": "/tmp/c714-fresh-bootstrap-review/binding.json",
+        "bytes": 2790411,
+        "sha256": "6c917133945366fdb46a5655437d1f4fdabdd2906fdf94d7c6082eaf51e82131",
+        "gitBlob": "37bd0dcb54d3bac498b6530a08e1f24d4a984609"
+      },
+      "sourceFull": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/source-restore-source-after.json",
+        "bytes": 3451167,
+        "sha256": "de13a8064731cee0d92d48535646b84214a628cd9b087976d36ac0776997b961",
+        "gitBlob": "f0addc1fb3d74fa2005c17feeb184aa1951ab6c9"
+      },
+      "sourceNonDoc": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-source-after.json",
+        "bytes": 2478318,
+        "sha256": "59c7f9685204ac139b645c018b11373e26f963df5ff957b0e7de3aa695da8751",
+        "gitBlob": "51bf0d0962e07fcc7843fcd65c3202ec9133a607"
+      },
+      "dependencies": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-dependencies-after.json",
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "compiled": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/host-build-compiled-after.json",
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      },
+      "pnpm": {
+        "path": "/workspace/scratch/c714-fresh-20261116/evidence/pnpm-inventory.json",
+        "bytes": 253936,
+        "sha256": "d46761c199d6d34461281869fc0d6b6a838517acfe5715be10d65adb677469b5",
+        "gitBlob": "4b35e3db57d510b867f17f425c85b2612f79137c"
+      },
+      "currentBoundary": {
+        "path": "/tmp/c714-bootstrap-data-review/fresh-current-input-boundary.json",
+        "bytes": 3654,
+        "sha256": "a64029a2dfffecffe8a50535b50b009cdc29ee8c9d1cc3a62ab8c693852b010a",
+        "gitBlob": "f8dd300b5842bae00ef3967e997b98d51a34a578"
+      },
+      "providers": {
+        "path": "/tmp/c714-bootstrap-data-review/provider-archives-fresh-review.json",
+        "bytes": 789090,
+        "sha256": "7e83285776675d6a95a08182948d1d3590384f9406f2f408b3fac0cfaaabe925",
+        "gitBlob": "aea94f43ce13a48e4e8e0c065926cbff2a2aa344"
+      }
+    },
+    "sevenReviewBodies": [
+      {
+        "role": "freshBootstrapGuardActualReview",
+        "identity": {
+          "bytes": 32514,
+          "sha256": "90810a8b4e1e41f0e93305fa8eaf217f42becc9d48d2c3289f28120ba25c0be1",
+          "gitBlob": "6253ffe549fb6d93c13e955ddc94b13de74c4075"
+        }
+      },
+      {
+        "role": "freshSdkIndependentReview",
+        "identity": {
+          "bytes": 84719,
+          "sha256": "3b4817d8e35e4bdb98870c9847c5c0fc040f943c20707111c4a2e27de6c1457e",
+          "gitBlob": "24edbc3d30da325e938c72dea556ac5651858ae6"
+        }
+      },
+      {
+        "role": "freshMcpIndependentReview",
+        "identity": {
+          "bytes": 155439,
+          "sha256": "60ab2ac59131729416c29a9fadff21b94a631f089e62ce845cd9becf6fc503bd",
+          "gitBlob": "75f89c1560d381f1ada8b67ab912bfb8bf9f1239"
+        }
+      },
+      {
+        "role": "crossR1ActualPublicationReadback",
+        "identity": {
+          "bytes": 24775,
+          "sha256": "885af8f2f5e47cb57a9164f70bee403816840b91dc95c6b0ce146ce1d3620bc1",
+          "gitBlob": "2e863fe3aa95696dc2b242dc5f9195a1f46f4a34"
+        }
+      },
+      {
+        "role": "crossTestGuardR2",
+        "identity": {
+          "bytes": 35700,
+          "sha256": "f017d731ccb03e0fbbbc1ea7fa8932629bf579e9b8ae062802a62e7765d06e01",
+          "gitBlob": "7fed0e34689f80f55dc49161afb13d939b680ee7"
+        }
+      },
+      {
+        "role": "crossTestParityR2",
+        "identity": {
+          "bytes": 98112,
+          "sha256": "111540b83687b7e8cd9cdf10dd7ee9881a1e9c20828409157118dcaff3116156",
+          "gitBlob": "b55e84be7a38ecf556003cfc531773436b041884"
+        }
+      },
+      {
+        "role": "crossTestActualPublicationReadback",
+        "identity": {
+          "bytes": 56894,
+          "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+          "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+        }
+      }
+    ],
+    "selectedWholeR1": {
+      "bytes": 23142,
+      "sha256": "dd69c7fdf35f72e74d55e6a8f097b947ac1d621648d4f7c8c9a651edeacaf932",
+      "gitBlob": "8abe2a1437489d5c0223d532535d6c520fd70184"
+    },
+    "retainedSourceAndCommands": {
+      "sourceBeforeCurrent67a": true,
+      "changed": [
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "otherSourceRowsPreserved": 8797,
+      "workflowsPreserved": 42,
+      "commandVectorsExact": true,
+      "reviewedPhase": "red",
+      "futureCommandsSelectable": false,
+      "wholePublicationReviewRehashedAndSubjectJoined": true
+    },
+    "sourceBefore": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36207,
+        "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+        "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 6433,
+        "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+        "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 136700,
+        "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+        "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      }
+    ],
+    "sourceAfter": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 36207,
+        "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+        "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "mode": "100644",
+        "bytes": 6433,
+        "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+        "gitBlob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      }
+    ],
+    "beforeOverlay": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      }
+    ],
+    "afterOverlay": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+      }
+    ],
+    "materializePaths": [
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+    ],
+    "commandVectors": {
+      "red": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "green": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "lint": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "lint:fast:files",
+        "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "source-size": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "guard:source-file-size"
+      ],
+      "diff-check": [
+        "/usr/local/bin/git",
+        "diff",
+        "--check",
+        "--",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ]
+    }
+  },
+  "actualPublicationJoins": {
+    "rootAndIndependentAccepted": true,
+    "commit": "c0ead43f21d5ed90776d4080fa372f48cf8270d5",
+    "tree": "31554d5e9f57d07c4dff4514f494126633a3d934",
+    "soleParent": "a4f5c2d2a05edd636ea0ff461c00615a2ff60d86",
+    "independentReview": {
+      "bytes": 56894,
+      "sha256": "a6a75b27f4f85d17e7ec303af47fd307368055db285405c2adcba16cc4894e5a",
+      "gitBlob": "6f8dbb18844f8949e75e144452d9b13decad7b48"
+    },
+    "actualTreeLeaves": 11690,
+    "actualNonDocLeaves": 8798,
+    "changedSourceLeaves": 1,
+    "otherNonDocPreserved": 8797,
+    "workflowLeavesPreserved": 42,
+    "changedFullBodies": 10,
+    "changedFullBytes": 2923536,
+    "qualification": "These are the actual TEST-source publication facts retained in root and independent reports. Local detached C5 is intentionally retained with exact two existing conversation overlays; remote documentation is not claimed locally restored."
+  },
+  "phaseAndAuthority": {
+    "phase": "red",
+    "runnerLocalPath": "/tmp/c714-cross-close-review/runner.py",
+    "bindingLocalPath": "/tmp/c714-cross-close-review/binding-red.json",
+    "behavioralAttempts": {
+      "materializeTest": 1,
+      "red": 1,
+      "materializeProducer": 0,
+      "green": 0,
+      "validationPackage": 0,
+      "previousCrossWholeFileExecutions": 0
+    },
+    "onlySelectedActions": [
+      "materialize red",
+      "run red"
+    ],
+    "futureProducerBodiesPresent": false,
+    "futureProducerMaterializationSelected": false,
+    "futureGreenSelected": false,
+    "futureValidationPackageSelected": false,
+    "sharedFutureVectors": "The runner/binding contains schema-required GREEN/lint/source-size/diff vectors, but phase red rejects selecting any of them. Their presence creates no execution authority.",
+    "sourceWrites": "Exactly one metadata-only write, the fixed0aec test; all other8797 source rows and42 workflows must be verified unchanged.",
+    "firstOutputRootMustBeAbsent": true,
+    "attemptMarkers": "Exclusive one-attempt materialize-red and red markers under the new owned output root; no resume or retry path."
+  },
+  "materialization": {
+    "scope": {
+      "scope": "source-and-supervisor-metadata-only",
+      "fullRuntimeInputsInspected": false,
+      "fullRuntimeInputsPreserved": null,
+      "dependencies": "UNINSPECTED",
+      "compiled": "UNINSPECTED",
+      "providerArchivesAndInstalledMembers": "UNINSPECTED",
+      "bootstrapNodeCache": "UNINSPECTED",
+      "required": "Complete actual source/control/tool/config and captured metadata/session lifecycle before/after plus independent observed outer0. Source preservation is stated separately with exactly authorized written paths. This is not a behavioral or all-input result."
+    },
+    "expectedRuntimeInspectionRequested": false,
+    "expectedBeforeAfterRuntimeBoundaryStates": "UNINSPECTED",
+    "expectedInputsPreserved": null,
+    "expectedFullRuntimeInputsPreserved": null,
+    "fullSourceAndMetadataRequired": true,
+    "actualOuterZeroRequired": true,
+    "doesNotClaimBehavioralPass": true,
+    "doesNotClaimLiveDependencyCompiledProviderCachePreservation": true,
+    "controls": "Exact runner, exact binding and all eight pinned control evidence files rehashed at both metadata boundaries. Live Node/pnpm/provider code is not evaluated."
+  },
+  "runtimeAdmission": {
+    "timing": {
+      "commandSeconds": 180,
+      "placement": "After full preflight and initial receipt save; before command start record/raw/Popen. Child gets the remainder of that same absolute clock. No reset after spawn.",
+      "postflight": "Input hashing is outside the original command deadline. Separate preflight/command/postflight/whole-invocation timings are mandatory; whole invocation is not claimed under180s.",
+      "gitMetadata": "Read-only metadata calls retain captured-process supervision and a30-second per-read refusal cap; these do not grant behavioral retries."
+    },
+    "environment": {
+      "inheritSameAdmittedTransportPerInvocation": true,
+      "homeAndCodexHomePreserved": true,
+      "cache": "Strip NODE_COMPILE_CACHE/NODE_COMPILE_CACHE_PORTABLE and force NODE_DISABLE_COMPILE_CACHE=1. Preserve and rehash seven bootstrap residue files.",
+      "testTmp": "/tmp/c714-cross-close-evidence/test-tmp",
+      "nodeChildSeam": "The six existing test-created children use process.execPath with explicit TEST_ONLY_VALUE-only env. AGENT_BACKEND_TEST_NODE remains bound to the same Node but is not the selector used by those six calls."
+    },
+    "fullCurrentInputs": "RED requires complete actual before and after source8798/index11567/workflows42/dependency122773/compiled1454/provider253+12/tool/pnpm/config/cache/control checks. Historical exact reports cannot replace actual preflight.",
+    "completionFlags": "Requested scope is separate. Both before and after boundaries must actually return COMPLETE before fullRuntimeInputsInspected=true.",
+    "childAndFailureTracking": "Accepted165f runner retains every primary invocation before start receipt, attempted launch/PID/final receipt state, actual elapsed command timing and unknown cleanup outcomes. A failed full preflight spends the invocation and leaves the primary unrun. A started command without a returned receipt is failed/unknown, never recategorized as unstarted.",
+    "signalAndOuterBoundary": "The receipt covers managed signals captured or pending at its explicitly recorded blocked-mask cutoff. Root must separately observe actual supervisor exit0 before any continuation, and join that outcome into independent actual semantic RED/GREEN acceptance; a successful receipt alone does not cover later signals.",
+    "outerZeroRequired": true,
+    "readOnlyMetadataLimitSeconds": 30,
+    "primaryLimitSeconds": 180,
+    "deadlinePlacement": "Original absolute prelaunch command clock; separate full-input preflight and postflight timing. No whole-invocation180s claim."
+  },
+  "semanticRedGate": {
+    "test": {
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    },
+    "wholeCases": 133,
+    "oldCases": 97,
+    "addedCases": 36,
+    "addedReadiness": 28,
+    "addedDriver": 8,
+    "staticPrediction": {
+      "pass": 118,
+      "semanticFail": 15,
+      "failureOrdinals": [
+        98,
+        99,
+        100,
+        101,
+        104,
+        105,
+        106,
+        107,
+        114,
+        115,
+        116,
+        126,
+        127,
+        128,
+        131
+      ],
+      "observed": false,
+      "targetVariantsExpectedReached": 8,
+      "targetVariantsExpectedUnreached": 5
+    },
+    "predictionObserved": false,
+    "requiredActualResult": "All97 old cases PASS and all133 names/order fully retained. Only15 independently predicted semantic failures may fail; no missing import/export/extraction/setup, timeout, kill, skip/cancel/todo. Full raw, every failure site and unreached subcase, full current input/lifetime receipts and independently observed outer0 require independent acceptance before any producer authorship.",
+    "producerAuthoringHeldUntilActualIndependentAcceptance": true,
+    "previous97Results": "Historical exact97 GREEN and guards are preserved evidence, not a133 runtime result."
+  },
+  "remainingGates": [
+    "Complete exact test-source c0ead43 root and independent actual publication readback",
+    "Exact runner and final RED binding independent full R2",
+    "Immediate-push runner/binding publication and complete root/independent actual readback",
+    "Source/metadata-only materialization complete source/tool/control/environment/session receipt and independently observed actual outer0",
+    "Before RED: full current runtime-source/dependency/compiled/provider/toolchain/cache/config preflight; any failure spends the attempted invocation with primary UNREACHED"
+  ],
+  "qualification": {
+    "localApplicationPerformed": false,
+    "executionPerformed": false,
+    "actualCross133Result": false,
+    "exactRunnerAndBindingPublicationReadbackStillRequired": true,
+    "rootOnlyApplicationAndExecution": true,
+    "sourceAdoptionOrDependencyChange": false,
+    "newRealClaudeCodexOrProviderExecution": false,
+    "newWorkflowOrCiVenue": false,
+    "canonicalTypecheckBuildGuiPlatformWholeE2E": "Remain separate open qualifications; this review admits none of them."
+  },
+  "auditErrors": []
+}
