@@ -880,7 +880,7 @@ function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessa
    ${humanOnlyApproval ? `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", expectedReviewRequestId: "<reviewRequestId from the cycle you reviewed>", note?: "<optional note>" }` : `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", note?: "<optional note>", notifyOwner: true }`}
    CRITICAL: Text comments like "approved" or "LGTM" do NOT change review state. You MUST call ${reviewDecisionTool}; in human-only mode, an agent NEVER moves a task to Approved.
 5. If review fails and changes are needed, use MCP tool review_request_changes:
-   { teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", comment: "<what to fix>" }
+   ${humanOnlyApproval ? `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", comment: "<what to fix>", expectedReviewRequestId: "<reviewRequestId from the cycle you reviewed>" }` : `{ teamName: "${teamName}", taskId: "<taskId>", from: "<your-name>", comment: "<what to fix>" }`}
 6. NEVER skip status updates. A task is NOT done until completed status is written.
    - Never "bulk-complete" a batch of tasks at the end. Update status incrementally as you work.
 7. To reply to a comment on a task, use MCP tool task_add_comment:

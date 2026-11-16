@@ -364,7 +364,8 @@ export const KanbanBoard = memo(function KanbanBoard({
                 type="button"
                 variant="ghost"
                 size="sm"
-                aria-label="Approved column settings"
+                aria-label={t('kanban.approvalSettings.title')}
+                data-testid="kanban-approved-settings"
                 className="kanban-grid-no-drag h-6 w-6 p-0 text-[var(--color-text-muted)]"
                 disabled={approvalPolicyPending}
                 onPointerDown={(event) => event.stopPropagation()}
@@ -373,7 +374,7 @@ export const KanbanBoard = memo(function KanbanBoard({
               </Button>
             </DropdownMenuTrigger>
           </TooltipTrigger>
-          <TooltipContent side="top">Approved column settings</TooltipContent>
+          <TooltipContent side="top">{t('kanban.approvalSettings.title')}</TooltipContent>
         </Tooltip>
         <DropdownMenuContent align="end">
           <DropdownMenuCheckboxItem
@@ -389,12 +390,12 @@ export const KanbanBoard = memo(function KanbanBoard({
                 .finally(() => setApprovalPolicyPending(false));
             }}
           >
-            Only users can move tasks to Approved
+            {t('kanban.approvalSettings.onlyHumans')}
           </DropdownMenuCheckboxItem>
         </DropdownMenuContent>
       </DropdownMenu>
     );
-  }, [approvalPolicyPending, kanbanState.humanOnlyApproval, onHumanOnlyApprovalChange]);
+  }, [approvalPolicyPending, kanbanState.humanOnlyApproval, onHumanOnlyApprovalChange, t]);
   const hasReviewers = kanbanState.reviewers.length > 0;
   const enableTaskSorting =
     viewMode === 'columns' && !!onColumnOrderChange && sort.field === 'manual';

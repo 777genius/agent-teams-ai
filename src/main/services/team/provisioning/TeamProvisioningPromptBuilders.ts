@@ -441,7 +441,7 @@ export function buildMemberReviewFlowReminder(): string {
   return [
     '- Review flow rule: review is a state transition on the SAME work task, not a separate task.',
     '- If your task #X needs review and a reviewer exists or has been named, finish the work on #X, call task_complete on #X, then use review_request on #X for that reviewer. If no reviewer exists, leave #X completed. Do NOT create a separate "review task".',
-    '- If you review task #X, call review_start on #X first and preserve its reviewRequestId. Read kanban_get humanOnlyApproval at decision time: when enabled use review_complete with expectedReviewRequestId (or review_request_changes); otherwise use review_approve (or review_request_changes) on #X itself.',
+    '- If you review task #X, call review_start on #X first and preserve its reviewRequestId. Read kanban_get humanOnlyApproval at decision time: when enabled use review_complete or review_request_changes with expectedReviewRequestId from the same review cycle; otherwise use review_approve or review_request_changes on #X itself.',
     '- If review requests changes, resume/fix the SAME task #X, then task_complete #X and send #X back through review_request when ready.',
   ].join('\n');
 }
@@ -767,7 +767,7 @@ export function buildTeamCtlOpsInstructions(teamName: string, leadName: string):
       `  When humanOnlyApproval is false, call review_approve EXACTLY ONCE per review. Include feedback in the note field. Do not call it twice.`,
       `- Complete AI review when humanOnlyApproval is true: review_complete { teamName: "${teamName}", taskId: "<id>", from: "${leadName}", expectedReviewRequestId: "<reviewRequestId from the reviewed cycle>", note?: "<note>" }`,
       `  Read humanOnlyApproval with kanban_get at decision time. Save reviewRequestId from the review request or review_start. Never fetch a newer ID at completion. review_complete returns the task to Done; only a human can approve it.`,
-      `- Request changes: review_request_changes { teamName: "${teamName}", taskId: "<id>", from: "${leadName}", comment: "<what to fix>" }`,
+      `- Request changes: review_request_changes { teamName: "${teamName}", taskId: "<id>", from: "${leadName}", comment: "<what to fix>"` + `, expectedReviewRequestId: "<original reviewRequestId>"` + ` } when humanOnlyApproval is true; omit expectedReviewRequestId only when false.`,
       `CRITICAL: Review is a state transition on the EXISTING work task. When implementation for task #X needs review, move #X through the review flow with review_request/review_start/(review_complete or review_approve)/review_request_changes. Do NOT create a new separate task just to represent that review.`,
       `CRITICAL: Only send task #X into review when a concrete reviewer exists for #X. If no reviewer exists yet, keep #X completed until you assign/decide the reviewer. Do NOT use review_request just to park the task in REVIEW without an actual reviewer.`,
       `CRITICAL: Comments saying "approved" or "LGTM" do NOT change review state. When humanOnlyApproval is false call review_approve; when true call review_complete with the original reviewRequestId. An agent never grants human acceptance.`,

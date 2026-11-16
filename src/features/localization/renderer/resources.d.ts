@@ -4462,6 +4462,10 @@ export default interface Resources {
       "trashAvailable": "Reversible trash for draft/stopped teams is available."
     },
     "kanban": {
+      "approvalSettings": {
+        "onlyHumans": "Only users can move tasks to Approved",
+        "title": "Approved column settings"
+      },
       "board": {
         "addTask": "Add task",
         "columnsView": "Columns view",

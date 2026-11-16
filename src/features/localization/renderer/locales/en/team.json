@@ -2618,6 +2618,10 @@
     }
   },
   "kanban": {
+    "approvalSettings": {
+      "title": "Approved column settings",
+      "onlyHumans": "Only users can move tasks to Approved"
+    },
     "taskCard": {
       "cancelTask": "Cancel task {{taskId}}",
       "cancel": "Cancel",

@@ -397,14 +397,21 @@ try {
   // A hidden loading skeleton button must not count as the loaded Grid header.
   const toggleHumanApproval = async (layout: 'grid' | 'columns', checked: boolean): Promise<void> => {
     const selector = layout === 'grid'
-      ? '.kanban-grid-item-wrapper button[aria-label="Approved column settings"]'
-      : 'button[aria-label="Approved column settings"]';
+      ? '.kanban-grid-item-wrapper [data-testid="kanban-approved-settings"]'
+      : '[data-testid="kanban-approved-settings"]';
     await until(() => cdp!.evaluate(
       `(()=>{const b=document.querySelector(${JSON.stringify(selector)});return b instanceof HTMLButtonElement&&!b.disabled&&b.getBoundingClientRect().width>0;})()`
     ), `loaded ${layout} Approved-column settings button`);
     await cdp!.evaluate(
-      `(()=>{const b=document.querySelector(${JSON.stringify(selector)});if(!(b instanceof HTMLButtonElement))throw Error('Approved settings missing');b.click();})()`
+      `(()=>{const b=document.querySelector(${JSON.stringify(selector)});if(!(b instanceof HTMLButtonElement))throw Error('Approved settings missing');b.focus();})()`
     );
+    // Radix DropdownMenuTrigger opens on Enter/pointerdown, not DOM HTMLElement.click().
+    await cdp!.send('Input.dispatchKeyEvent', {
+      type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
+    });
+    await cdp!.send('Input.dispatchKeyEvent', {
+      type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
+    });
     await until(() => cdp!.evaluate(
       `(()=>{const item=document.querySelector('[role=menuitemcheckbox]');return item?.getAttribute('aria-checked')===${JSON.stringify(String(!checked))};})()`
     ), `${layout} approval policy menu opened`);
