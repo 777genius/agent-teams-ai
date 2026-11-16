@@ -1,0 +1,467 @@
+{
+  "schemaVersion": 1,
+  "kind": "bounded-original-OpenCode-first-target-source-review",
+  "result": "SOURCE_FINDINGS_RECORDED_NO_PROVEN_REPAIR",
+  "createdAt": "2026-11-16T01:49:03.713991+00:00",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "sourceTree": "e70ccffc6d55ad42c2249518bf142e2ed32ddf91",
+  "reviewer": "migration_scope",
+  "worktreeCleanBeforeAndAfter": true,
+  "scope": "Original pre-click geometry assertion only. This is not another artifact qualification or cleanup audit, and contains no implementation candidate or R1.",
+  "originalEvidence": {
+    "receipt": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/extracted/TEST-desktop-backend-DXg4Xj/desktop-backend-receipt.json",
+      "bytes": 756997,
+      "blob": "aeb2650c4ce00e53c7a8b746b506d992eac985e0",
+      "sha256": "189e97065f05e8afba47064b1eb8c63ffc87d97cc6a4b292fd1ca461a092bde3"
+    },
+    "audit": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/audit.json",
+      "bytes": 27581,
+      "blob": "457d4d6f606f30381acd8cd669b3766e98ac87e7",
+      "sha256": "df6bacc3bbd4c622d3e69cbaa00bff508c8f77a4e26c85007a2c78b5ca8896fe"
+    },
+    "sourcePinAudit": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    },
+    "checkpoint": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/checkpoint-opencode-failure.json",
+      "bytes": 6728,
+      "blob": "4d945d84a45543d694a4138d3308dd854e1f6ad3",
+      "sha256": "db708488f6e255420353aab823a0f4308fe1e9c76092804593946a5e30b1b82e"
+    },
+    "appendixV2": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/Plan29-opencode-failure-appendix-v2.md",
+      "bytes": 5950,
+      "blob": "3355042930be89d70cccce47e1e36eafb1e7dcba",
+      "sha256": "7e9f5e46135f626a60446b2de7fba94b263d0850c3ea5e3c09b3b465bfc18f12"
+    }
+  },
+  "sourceJoin": {
+    "jobId": 133017915900,
+    "runId": 43780997237,
+    "reportedSourceDirty": false,
+    "receiptOrderedPrePostEqual": true,
+    "originalPinCount": 1757,
+    "independentlyRehashedSourceSubset": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 25052,
+        "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+        "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7",
+        "lines": 456,
+        "reviewedLineRanges": [
+          [
+            26,
+            44
+          ],
+          [
+            149,
+            319
+          ]
+        ],
+        "worktreeBytesEqual": true,
+        "inOriginalReceiptPins": true,
+        "originalPrePostAndGitJoinExact": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+        "bytes": 68760,
+        "blob": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+        "sha256": "6ca239d1ea242a3ac64323bf28d41b84450fc1d5d7e4ae2324a069d03bff18ad",
+        "lines": 788,
+        "reviewedLineRanges": [
+          [
+            25,
+            95
+          ]
+        ],
+        "worktreeBytesEqual": true,
+        "inOriginalReceiptPins": true,
+        "originalPrePostAndGitJoinExact": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "bytes": 54778,
+        "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+        "lines": 791,
+        "reviewedLineRanges": [
+          [
+            690,
+            789
+          ]
+        ],
+        "worktreeBytesEqual": true,
+        "inOriginalReceiptPins": true,
+        "originalPrePostAndGitJoinExact": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+        "bytes": 26258,
+        "blob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+        "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8",
+        "lines": 394,
+        "reviewedLineRanges": [
+          [
+            373,
+            394
+          ]
+        ],
+        "worktreeBytesEqual": true,
+        "inOriginalReceiptPins": true,
+        "originalPrePostAndGitJoinExact": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "bytes": 103573,
+        "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921",
+        "lines": 1766,
+        "reviewedLineRanges": [
+          [
+            611,
+            637
+          ],
+          [
+            665,
+            681
+          ],
+          [
+            1192,
+            1223
+          ]
+        ],
+        "worktreeBytesEqual": true,
+        "inOriginalReceiptPins": true,
+        "originalPrePostAndGitJoinExact": true
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "bytes": 101741,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+        "lines": 1312,
+        "reviewedLineRanges": [],
+        "worktreeBytesEqual": true,
+        "inOriginalReceiptPins": false
+      },
+      {
+        "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+        "bytes": 132317,
+        "blob": "4bd95a0f2e5636a21d1f0d83dd45f228b054b048",
+        "sha256": "af7b6f9da352008ef014dad120b868090626e071cd5d94037fd03385e2234d40",
+        "lines": 3219,
+        "reviewedLineRanges": [
+          [
+            1530,
+            1668
+          ],
+          [
+            1712,
+            1818
+          ],
+          [
+            1999,
+            2045
+          ],
+          [
+            2125,
+            2148
+          ],
+          [
+            2484,
+            2501
+          ],
+          [
+            2641,
+            2677
+          ],
+          [
+            2991,
+            3085
+          ],
+          [
+            3183,
+            3208
+          ]
+        ],
+        "worktreeBytesEqual": true,
+        "inOriginalReceiptPins": true,
+        "originalPrePostAndGitJoinExact": true
+      },
+      {
+        "path": "src/renderer/components/ui/dialog.tsx",
+        "bytes": 4914,
+        "blob": "046c7452239fccb9d18858c86e9d075984888031",
+        "sha256": "038c9966ee8a0047c0ab1e32f5feb61ca8a2a38ea838260139187b5f041767f2",
+        "lines": 130,
+        "reviewedLineRanges": [
+          [
+            30,
+            70
+          ]
+        ],
+        "worktreeBytesEqual": true,
+        "inOriginalReceiptPins": false
+      },
+      {
+        "path": "src/renderer/components/team/dialogs/OptionalSettingsSection.tsx",
+        "bytes": 7553,
+        "blob": "83244b15d0af25a146b8c61dbd2fb300dc251348",
+        "sha256": "bad2fe006d0a6b0e14ae38e1a31c953ff0ecc71821a1353579815a0c22ed4cc8",
+        "lines": 220,
+        "reviewedLineRanges": [
+          [
+            68,
+            220
+          ]
+        ],
+        "worktreeBytesEqual": true,
+        "inOriginalReceiptPins": false
+      },
+      {
+        "path": "src/renderer/components/team/dialogs/OptionalSettingsSection.css",
+        "bytes": 766,
+        "blob": "744e2ab6eb8a310c325765a0fd447e6620d84ab0",
+        "sha256": "a60ca13dcb40ee4f1201c32ab52e4c00378379534b9bdf91d5a7140243a55840",
+        "lines": 38,
+        "reviewedLineRanges": [
+          [
+            1,
+            38
+          ]
+        ],
+        "worktreeBytesEqual": true,
+        "inOriginalReceiptPins": false
+      },
+      {
+        "path": "src/renderer/components/team/dialogs/ProvisioningProviderStatusList.tsx",
+        "bytes": 42571,
+        "blob": "c56bf49a427da2fca02ff2e292ba62c9288db124",
+        "sha256": "a4af6df3ec0f99964a80167236c7183f88d94beb860f901deca3ba8fb00593c4",
+        "lines": 1205,
+        "reviewedLineRanges": [
+          [
+            820,
+            885
+          ],
+          [
+            954,
+            1075
+          ]
+        ],
+        "worktreeBytesEqual": true,
+        "inOriginalReceiptPins": false
+      },
+      {
+        "path": "src/renderer/components/team/dialogs/ProviderPrepareReadyNotice.tsx",
+        "bytes": 1747,
+        "blob": "d78e8b5ceb64ed0dd09594bc534b676483ac8bfe",
+        "sha256": "d9dd93413682339b0bd61fe8207c8e47ae6354f2b0cc77b03af433681e88a158",
+        "lines": 51,
+        "reviewedLineRanges": [
+          [
+            1,
+            51
+          ]
+        ],
+        "worktreeBytesEqual": true,
+        "inOriginalReceiptPins": false
+      },
+      {
+        "path": "src/renderer/components/team/dialogs/useProvisioningPreparePresentationState.ts",
+        "bytes": 759,
+        "blob": "efa7bea6889ed9db9850a7d1a98a9fbe92816fe6",
+        "sha256": "9da4aa3ef0042593ddf92967259ed7c06b4189349600fe0138807ddd29bccce4",
+        "lines": 27,
+        "reviewedLineRanges": [
+          [
+            1,
+            27
+          ]
+        ],
+        "worktreeBytesEqual": true,
+        "inOriginalReceiptPins": false
+      },
+      {
+        "path": "src/renderer/components/ui/collapsible.tsx",
+        "bytes": 252,
+        "blob": "3cf31c06566691aa8fb978cef99a02844e5f11cd",
+        "sha256": "d4f388e9ff2403b018b75d05f4ae3fd93887e2a0f417cd41e7c970b5f5100f36",
+        "lines": 5,
+        "reviewedLineRanges": [
+          [
+            1,
+            5
+          ]
+        ],
+        "worktreeBytesEqual": true,
+        "inOriginalReceiptPins": false
+      }
+    ],
+    "limit": "Full source bytes were hashed for this 14-file subset. Semantic reading is the listed ranges; the previous full 1,757-pin audit is retained separately, not repeated here."
+  },
+  "actualBoundary": {
+    "status": "INCOMPLETE",
+    "failure": "Original UI target moved after ownership check\n+ actual - expected\n\n  [\n    700,\n+   505.75,\n-   494.75,\n    'BUTTON'\n  ]\n",
+    "failureSource": {
+      "kind": "assertion",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:288:12",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts:87:37",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:421:12",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+      ]
+    },
+    "lastRetainedAction": {
+      "action": "mouseMoved",
+      "label": "hover expand original saved launch settings",
+      "selector": "[role=\"dialog\"] button[aria-controls=\"_r_2r_\"]",
+      "target": {
+        "x": 700,
+        "y": 507.5,
+        "text": "Optional launch settingsOptional•OpenCode•test-provider/TEST-model•Fresh lead session",
+        "tag": "BUTTON"
+      }
+    },
+    "originalStepCount": 8,
+    "commands": [],
+    "stablePointFromAssertion": [
+      700,
+      494.75,
+      "BUTTON"
+    ],
+    "finalPointFromAssertion": [
+      700,
+      505.75,
+      "BUTTON"
+    ],
+    "finalSnapshotOptionalButton": {
+      "text": "Optional launch settingsOptional•OpenCode•test-provider/TEST-model•Fresh lead session",
+      "disabled": false,
+      "x": 310,
+      "y": 481.75,
+      "width": 780,
+      "height": 48
+    },
+    "finalSnapshotReadyTextPresent": true,
+    "noExpansionAttemptRow": true,
+    "businessLaunchNotReached": true,
+    "sourceReachabilityOnly": [
+      "The failure at controls288 follows the stableSamples===2 assertion and final original ownership guard.",
+      "At least the two original 100-ms waits precede that branch, but exact actual sample count, elapsed time, intermediate values, layout and readiness state were not retained."
+    ],
+    "unreached": [
+      "expansion mousePressed/mouseReleased",
+      "prompt TEST_UI_BOOT insertion",
+      "unchecked permission oracle",
+      "original 90-second enabled-Launch preflight wait",
+      "original business Launch",
+      "remaining Runtime/Thinking/Logs/Stop sequence"
+    ],
+    "noRootCauseClaim": true
+  },
+  "sourceFindings": [
+    {
+      "finding": "The original final read reuses the complete target expression after the ownership guard, rejects a missing target, then compares x/y/tag before the only press/release. Its rejection is required behavior for the observed changed point.",
+      "source": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:174-187",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:269-316"
+      ]
+    },
+    {
+      "finding": "The saved-settings hydration predicate proves a unique Optional-settings button whose summary includes the saved model. It does not prove provider preflight completion. The expansion occurs before the existing enabled-Launch preflight wait.",
+      "source": [
+        "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts:84-93"
+      ]
+    },
+    {
+      "finding": "The dialog is in a fixed, vertically centered flex container and its content has variable height with an overflow-y-auto/max-h bound. A height change can move a preceding button without changing that button's own local layout.",
+      "source": [
+        "src/renderer/components/ui/dialog.tsx:42-55"
+      ]
+    },
+    {
+      "finding": "Optional settings is above the footer. The footer independently changes between loading progress/check rows and ready/message/detail rows as the current preparation result updates. This is a concrete possible geometry mechanism, not an identification of the recorded transition.",
+      "source": [
+        "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx:2641-2677",
+        "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx:2999-3072",
+        "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx:1631-1663",
+        "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx:1736-1794",
+        "src/renderer/components/team/dialogs/ProviderPrepareReadyNotice.tsx:26-49",
+        "src/renderer/components/team/dialogs/ProvisioningProviderStatusList.tsx:1006-1033"
+      ]
+    },
+    {
+      "finding": "The Optional-settings button is initially closed and its local open state changes through the Collapsible onOpenChange callback. Hover classes change colors; the inspected code contains no hover-triggered opening. Its expansion/collapse CSS is not evidence that an expansion actually happened before the refused click.",
+      "source": [
+        "src/renderer/components/team/dialogs/OptionalSettingsSection.tsx:68-80",
+        "src/renderer/components/team/dialogs/OptionalSettingsSection.tsx:122-145",
+        "src/renderer/components/team/dialogs/OptionalSettingsSection.css:1-38"
+      ]
+    },
+    {
+      "finding": "The dialog has an original 200-ms entry animation, and the presentation hook delays only failed-state presentation. Neither source possibility identifies the historical shift. No retained per-sample parent rectangle, scroll offset, animation state or preparation-state transition is available.",
+      "source": [
+        "src/renderer/components/ui/dialog.tsx:49",
+        "src/renderer/components/team/dialogs/useProvisioningPreparePresentationState.ts:1-27"
+      ]
+    }
+  ],
+  "causalLimit": {
+    "conclusion": "A centered-dialog resize is source-supported as possible. The +11px movement is not proven to be readiness, an animation, a scroll, a specific rerender, a wrong target, or a product bug.",
+    "conditionalGeometry": "If viewport, dialog centering and target local offset were unchanged, a 22px dialog-height decrease would move that target down 11px. Those antecedents were not observed at the earlier sample; this arithmetic is not reconstruction of a missing state.",
+    "repairDisposition": "No wait reordering, threshold, retry, deadline extension, layout change, or acceptance weakening is justified by this review."
+  },
+  "minimalProspectiveObservation": {
+    "status": "DESIGN_ONLY_NOT_IMPLEMENTED_NOT_AUTHORIZED_FOR_APPLICATION",
+    "purpose": "Distinguish a parent-dialog move/resize from movement inside a stable dialog at this exact original pre-click refusal. It would still not name a particular asynchronous preparation result.",
+    "scope": "Gate only the original expand-original-saved-launch-settings target path; no broad observer, other click, app component, store/currentness read or new public API.",
+    "data": "Two fixed closed slots: the last accepted stable target sample and the original final target sample. Preserve the original target rectangle and the nearest dialog rectangle and scrollTop; use finite primitive numeric tuples or unknown. Do not retain text, HTML, arbitrary attributes, provider state, credentials or unbounded arrays.",
+    "carrier": "One optional bounded observation object attached to the existing hover evidence row; the actual Runtime step callback retains the row in proof.steps. Update only the two slots, protected, before original assertions. Existing receipt write already serializes proof.steps; existing compact stdout summaries may omit it.",
+    "newCosts": [
+      "Reuse the already-read target rectangle; no second target measurement is needed.",
+      "For each existing successful eligible target evaluation, at most one closest lookup, one nearest-dialog getBoundingClientRect and one scrollTop getter are genuinely additional DOM work. Absent/throwing/malformed auxiliary observations stay unknown and must not alter the original target result.",
+      "There is no new CDP/RPC evaluation, ownership check, loop iteration, clock/timer, input, observer/listener, subscription, retry, screenshot or filesystem call.",
+      "The existing CDP result and existing full receipt serialization/write would carry extra bounded bytes, and protected updates add CPU/allocation work within the original deadlines. No zero-cost or bounded-latency claim.",
+      "A later exact R1 must fix and prove the byte cap and closed validation; this report does not pretend a source candidate or serialized bound is already reviewed."
+    ],
+    "nonInterference": [
+      "Keep original target filters/hit test/disabled semantics and evaluation order.",
+      "Keep all original ownership guards, x/y/tag comparisons, error identity, two-stable-sample rule, 15-sample bound, 100-ms waits, 30-second read budgets, and one physical press/release.",
+      "Do not read extra data after failure or change cleanup/error propagation. Diagnostic read/write failures must not replace original refusal."
+    ],
+    "testSeam": "The existing exported createDesktopUiControls tests at desktop-team-ui-smoke.test.ts:1192-1223 already induce a change only at the final ownership guard and assert exactly five original expressions plus only one hover dispatch. A later retention-only test can first establish those original refusal/action oracles, then fail only for absent fixed diagnostic slots. Use the actual emitted target expression for any additional DOM getter/exception/cap assertions; do not copy a replacement control implementation or call this a reproduced product cause.",
+    "sequence": "Dormant behind independently reviewed current original Team privacy semantic RED and separately required one-helper CI GREEN, plus useful original-cohort preservation. Original CI only; no local project fallback.",
+    "overlap": {
+      "installerProposalMetadata": {
+        "path": "/workspace/scratch/82d3f9ba6b85/m-installer-navigation-diagnostics-r1/candidate-metadata.json",
+        "bytes": 2592,
+        "blob": "120d7ab45405bf79ae148725a4b2b27b14b38b7d",
+        "sha256": "5ecdcec93a52b18eefdff23944ae46711eb5a1389305a218aaff94674f561504"
+      },
+      "installerR1": {
+        "path": "/workspace/scratch/82d3f9ba6b85/m-installer-navigation-diagnostics-r1/R1-appendix.md",
+        "bytes": 14979,
+        "blob": "bf13222c0ee519945db20b9e027b2942ebac3d8e",
+        "sha256": "29c763c29cccaeb6e7368a80357ab89469a67fd25caa8c5518e357f4272978eb"
+      },
+      "paths": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        ".github/workflows/host-emulated-acceptance.yml"
+      ],
+      "limit": "Any implementation requires a fresh exact preimage/union R1 and independent review preserving dormant Installer observer metadata/tests and permanent lint operands. This report neither composes nor applies those candidates."
+    }
+  },
+  "limits": [
+    "No project command, Node/compiler/lint/install/provider/native execution, CI poll/replay or source/ref mutation by this review.",
+    "No complete Runtime/Logs/Thinking, business Launch/Stop, cleanup, release or privacy qualification.",
+    "Cleanup cause and physical-group debt remain under the separate original artifact/native reviews; this source review does not change them.",
+    "The report is derived evidence outside the repository and outside all frozen original bundles."
+  ]
+}

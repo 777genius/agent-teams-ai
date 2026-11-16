@@ -1,0 +1,44 @@
+## Prospective original M privacy GREEN: one helper only after complete semantic RED and independent review
+
+### Authority and exact source
+
+This is a fresh resulting-source R1 for the next bounded privacy correction, prepared against actual M source `0660c748f88675063e3051fb0f8b2022e8f6f056` and the existing documentation-only followup `85355e11fcd08ffe87f96be5003675305458a354`. Both contain helper `6b6c7003960eb4075d74ca449d303602e99ef83e` and the same24-case test `0727339627757c3a96d54da2933eb7c1b60685f7`. It selects the already preserved future preview `0b0fc2a68fe678ebbce24227bf6e6002d12701d9` on the current M preimage. It does not restore the older pre-endpoint-optional helper or roll back any of the other12 non-documentation M changes relative to9e. The complete candidate, exact patch and full metadata accompany this R1; none has been applied to the tracked source.
+
+PR1192 remains open Draft, with base `feat/provider-host-frontend-parity-20261112` at `def734338f13bcc3209e78079a0cedbc48f05a5b`. The current primary is0660. R1 publication and this future source child use the existing followup branch, with ordinary expected-SHA updates, no force/history rewrite and no new PR/runner/workflow. Root assesses the existing useful-original-evidence rule before the necessary primary fast-forward; a queued cohort is neither a blocker nor a universal all-jobs-terminal requirement. No Ready/main merge, release, default Host activation or Stage2 is authorized here.
+
+### Original observed RED and its exact limits
+
+Original Host run43780997237, Team job133017916079, completed its unchanged full ten-file command on0660 with177 actual cases:174PASS/3FAIL/0SKIP/0cancelled/0TODO. Its complete stderr file contributes24 cases:21PASS/3FAIL. The three failures are the predeclared `held whitespace values cannot leak after contextual syntax redaction` variants space, tab and mixed. Each reaches test declaration250 and first assertion258, where the retained JSON contains `TEST_HELD_SUFFIX` (actualtrue, expectedfalse). Later prefix-absence and exact-marker assertions in those cases were not executed. The Boolean failure does not retain an entire historical output string.
+
+The complete original log is123603bytes, bloba077622804d499d0a8ca20465aa6d7eba62b2b5c/SHA2568a07b50c59d8d8a7507c9b5279cae5cfe50f28895f90474a12518eddc8f7b27b. Original Node24.21.0, pnpm11.22.0, frozen installation and fresh Host/ledger/controller/MCP prerequisites passed; the full eight-helper suite115PASS and installer suite7PASS preceded the ten-file command. The current lock and source select the exact9423 provider/SPI pair, not a changed dependency. Actual tests import the original built `../dist` helper. No independent installed-tree/dist/Node-binary byte census is present in this job. Steps10–30 did not run. The always-upload step found no files, so no Team Desktop archive, screenshot, cleanup certificate or static success is invented. The complete raw/source audit and independent actual RED R2 must be durably published with this R1 before source application.
+
+### Exact one-path change and semantics
+
+| Item | Original M | Selected candidate |
+| --- | --- | --- |
+| Helper blob | `6b6c7003960eb4075d74ca449d303602e99ef83e` | `0b0fc2a68fe678ebbce24227bf6e6002d12701d9` |
+| Bytes / lines |7855 /165 |8310 /172 |
+| Helper SHA256 |`df315063bd119870f52b932daf72880ac4ea40340e023049a236fed79e505c37` |`10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7` |
+| Patch | one existing statement replaced |8added /1removed,1081bytes,blob`958de68314a85da4ef85237c3af79d72d3d623d1` |
+
+The changed path is `packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts`. The observed defect is compositional: contextual syntax redaction can remove only the first component of an already-held whitespace value, leaving a suffix that no longer matches the held complete value. The selected correction computes the whitespace-normalized original line and the existing syntax-sanitized line. If syntax rewriting changed that normalized line and the already-held exact-value masker detects a held value in the original or normalized input, it emits a single `[redacted]` marker for the entire ambiguous line. Otherwise it runs the unchanged exact-value masker on the sanitized result. This avoids reconstructing fragment provenance from a lossy rewrite. Public context surrounding a held value on a rewritten line can also be hidden; that conservative readability tradeoff is explicit. The original safe/unambiguous control stays in the same24-case file and must pass.
+
+This adds one normalization and up to two calls to the existing exact-value masker on a bounded decoded line, with bounded temporary masks/strings. It is not described as zero CPU/allocation overhead. It introduces no new filesystem/process/network read, listener, event, clock, deadline, retry, owner, provider call or action. All other helper bytes remain exact, including optional endpoint/type and conditional private-value collection; original stdin/stdout authority; UTF-8/NUL/ANSI handling;24KiB line/output checks; dump suppression and512-character scan tail; original exceptions/tail flush/reentrant-close/listener cleanup. The helper remains172 lines under the unchanged800 source cap. TypeScript7.0.2, all141 frozen size exceptions and TeamSlice5017/5020 remain untouched.
+
+The metadata binds the complete non-documentation leaf map of0660 (8798 leaves) and its exact one-path result using canonical SHA256, not just a selected diff. Base map: `bc2cf7b3aba4eb3b6d14f3a8c41bd173150a77cf3a1035fc65a4fbd5839e8a7a`. Candidate map: `d3ed00695b2d09d3bcd38d41830ddde5670908c858a600bae03c757dc00bc397`. Everything outside this helper, including all24 tests, all ten operands and the complete workflow, stays byte-exact. No Installer navigation observation, OpenCode target observation, P11 test/driver/route, fixture, timeout, skip or lint operand is folded into this source child.
+
+### Original CI GREEN and later gates
+
+After independent actual RED review and exact prospective source R2, publish the evidence/R1 first. Only then may root create and immediately ordinary-push the separate one-helper source child, verify its actual tree/bytes with independent readback, and perform the authorized primary advance once useful current originals are preserved. All execution remains in the existing original CI. No local project install/bootstrap/compiler/lint/test, third compiler retry, manual Actions dispatch/rerun/cancellation or alternate narrow test is authorized.
+
+The unchanged required command is:
+
+```text
+node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts
+```
+
+On the exact new source, retain the fresh original9423 install/build/toolchain and full command output again. The source-backed prediction is24stderrPASS/0FAIL/0SKIP and177whole-commandPASS/0FAIL/0SKIP; neither is an actual GREEN yet. The same complete tests must reach and pass all previously failing suffix, later prefix and exact-marker assertions, every positive control and every other original case. A setup/module/build/timeout/cancellation failure is not GREEN; any unrelated semantic failure remains separately open. No test selection or substituted shorter command is permitted.
+
+The existing subsequent Team workflow gates, including full workspace and dedicated backend project checks, the unchanged93-file fast lint and original typed scopes/guards, remain required when reached. Their priorM SKIPPED states are retained. The historical K compiler-9/older137 records stay failures with no retry inference. Original Host runtime remains Node24.21.0 and the original general/frontend runtime26.12.1; no toolchain drift is proposed.
+
+Only after the actual complete one-helper GREEN and independent review can the separately dormant Installer diagnostic or P11 stages be selected under a fresh exact ordered composition/R1/R2. Their overlapping test/workflow proposals are not automatically applicable. The two OpenCode/Installer Desktop failures, Darwin P09 findings, remaining current platform/native/packaged/static work and whole-goal acceptance are not discharged by this privacy correction. This R1 is concrete source review material; it asserts no new execution, cleanup, universal native capability or final readiness.

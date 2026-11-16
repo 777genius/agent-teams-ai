@@ -1,0 +1,1762 @@
+﻿2026-11-16T01:26:28.1555675Z Current runner version: '2.338.2'
+2026-11-16T01:26:28.1579327Z ##[group]Runner Image Provisioner
+2026-11-16T01:26:28.1580163Z Hosted Compute Agent
+2026-11-16T01:26:28.1580687Z Version: 20261103.629
+2026-11-16T01:26:28.1581264Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-16T01:26:28.1581938Z Build Date: 2026-11-03T17:26:59Z
+2026-11-16T01:26:28.1582556Z Worker ID: {f482a449-2470-4dad-9423-bf30a7e6b267}
+2026-11-16T01:26:28.1583189Z Region: westus2
+2026-11-16T01:26:28.1583673Z Cloud: Azure
+2026-11-16T01:26:28.1584150Z ##[endgroup]
+2026-11-16T01:26:28.1585442Z ##[group]Operating System
+2026-11-16T01:26:28.1586004Z Ubuntu
+2026-11-16T01:26:28.1586463Z 26.04.1
+2026-11-16T01:26:28.1586900Z LTS
+2026-11-16T01:26:28.1587348Z ##[endgroup]
+2026-11-16T01:26:28.1588016Z ##[group]Runner Image
+2026-11-16T01:26:28.1588553Z Image: ubuntu-26.04
+2026-11-16T01:26:28.1589061Z Version: 20261111.196.1
+2026-11-16T01:26:28.1590168Z Included Software: https://github.com/actions/runner-images/blob/ubuntu26/20261111.196/images/ubuntu/Ubuntu2604-Readme.md
+2026-11-16T01:26:28.1591582Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu26%2F20261111.196
+2026-11-16T01:26:28.1592494Z ##[endgroup]
+2026-11-16T01:26:28.1593475Z ##[group]GITHUB_TOKEN Permissions
+2026-11-16T01:26:28.1595454Z Contents: read
+2026-11-16T01:26:28.1595999Z Metadata: read
+2026-11-16T01:26:28.1596489Z ##[endgroup]
+2026-11-16T01:26:28.1598680Z Secret source: Actions
+2026-11-16T01:26:28.1599524Z Cache mode: write
+2026-11-16T01:26:28.1600506Z Prepare workflow directory
+2026-11-16T01:26:28.2163043Z Prepare all required actions
+2026-11-16T01:26:28.2212635Z Getting action download info
+2026-11-16T01:26:28.5820853Z Download action repository 'actions/checkout@v6' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-11-16T01:26:28.6818903Z Download action repository 'pnpm/action-setup@v6' (SHA:73e46992e05b19abd31f2f3c20e0e7370d762115)
+2026-11-16T01:26:28.8652566Z Download action repository 'actions/setup-node@v6' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+2026-11-16T01:26:28.9711657Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-16T01:26:29.1963635Z Complete job name: Offline Host Desktop (linux-x64, selection)
+2026-11-16T01:26:29.3085580Z ##[group]Run actions/checkout@v6
+2026-11-16T01:26:29.3086639Z with:
+2026-11-16T01:26:29.3087255Z   ref: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:26:29.3088330Z   persist-credentials: false
+2026-11-16T01:26:29.3089067Z   repository: 777genius/agent-teams-ai
+2026-11-16T01:26:29.3097951Z   token: ***
+2026-11-16T01:26:29.3098461Z   ssh-strict: true
+2026-11-16T01:26:29.3098989Z   ssh-user: git
+2026-11-16T01:26:29.3099503Z   clean: true
+2026-11-16T01:26:29.3100063Z   sparse-checkout-cone-mode: true
+2026-11-16T01:26:29.3100774Z   fetch-depth: 1
+2026-11-16T01:26:29.3101296Z   fetch-tags: false
+2026-11-16T01:26:29.3101850Z   show-progress: true
+2026-11-16T01:26:29.3102411Z   lfs: false
+2026-11-16T01:26:29.3102890Z   submodules: false
+2026-11-16T01:26:29.3103561Z   set-safe-directory: true
+2026-11-16T01:26:29.3104709Z   allow-unsafe-pr-checkout: false
+2026-11-16T01:26:29.3105963Z env:
+2026-11-16T01:26:29.3106520Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:26:29.3107877Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:26:29.3109081Z   HOST_EMULATED_LANE: selection
+2026-11-16T01:26:29.3109792Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:26:29.3110496Z ##[endgroup]
+2026-11-16T01:26:29.5783825Z Syncing repository: 777genius/agent-teams-ai
+2026-11-16T01:26:29.5786452Z ##[group]Getting Git version info
+2026-11-16T01:26:29.5788411Z Working directory is '/home/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-16T01:26:29.5790362Z [command]/usr/bin/git version
+2026-11-16T01:26:29.5801962Z git version 2.56.1
+2026-11-16T01:26:29.5826294Z ##[endgroup]
+2026-11-16T01:26:29.5842740Z Temporarily overriding HOME='/home/runner/work/_temp/78025227-99cc-4336-96c3-1022d1bb269f' before making global git config changes
+2026-11-16T01:26:29.5847367Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T01:26:29.5851190Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T01:26:29.5913991Z Deleting the contents of '/home/runner/work/agent-teams-ai/agent-teams-ai'
+2026-11-16T01:26:29.5917854Z ##[group]Determining repository object format
+2026-11-16T01:26:29.5920352Z ##[endgroup]
+2026-11-16T01:26:29.5921982Z ##[group]Initializing the repository
+2026-11-16T01:26:29.5925785Z [command]/usr/bin/git init /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T01:26:29.6043268Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-16T01:26:29.6046680Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-16T01:26:29.6050223Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-16T01:26:29.6052712Z hint: call:
+2026-11-16T01:26:29.6053922Z hint:
+2026-11-16T01:26:29.6055223Z hint: 	git config --global init.defaultBranch <name>
+2026-11-16T01:26:29.6056938Z hint:
+2026-11-16T01:26:29.6058669Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-16T01:26:29.6061651Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-16T01:26:29.6063930Z hint:
+2026-11-16T01:26:29.6064935Z hint: 	git branch -m <name>
+2026-11-16T01:26:29.6067169Z hint:
+2026-11-16T01:26:29.6069201Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-16T01:26:29.6072738Z Initialized empty Git repository in /home/runner/work/agent-teams-ai/agent-teams-ai/.git/
+2026-11-16T01:26:29.6078691Z [command]/usr/bin/git remote add origin https://github.com/777genius/agent-teams-ai
+2026-11-16T01:26:29.6124191Z ##[endgroup]
+2026-11-16T01:26:29.6125928Z ##[group]Disabling automatic garbage collection
+2026-11-16T01:26:29.6128674Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-16T01:26:29.6165211Z ##[endgroup]
+2026-11-16T01:26:29.6167103Z ##[group]Setting up auth
+2026-11-16T01:26:29.6168685Z Removing SSH command configuration
+2026-11-16T01:26:29.6174919Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T01:26:29.6215540Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T01:26:29.6779955Z Removing HTTP extra header
+2026-11-16T01:26:29.6788834Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T01:26:29.6829664Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T01:26:29.7096286Z Removing includeIf entries pointing to credentials config files
+2026-11-16T01:26:29.7103390Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T01:26:29.7140090Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T01:26:29.7416102Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-7553e625-7beb-4105-9788-0ea281f32f44.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-16T01:26:29.7456578Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path /home/runner/work/_temp/git-credentials-7553e625-7beb-4105-9788-0ea281f32f44.config
+2026-11-16T01:26:29.7488314Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-7553e625-7beb-4105-9788-0ea281f32f44.config
+2026-11-16T01:26:29.7523541Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-7553e625-7beb-4105-9788-0ea281f32f44.config
+2026-11-16T01:26:29.7555787Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-7553e625-7beb-4105-9788-0ea281f32f44.config
+2026-11-16T01:26:29.7583543Z ##[endgroup]
+2026-11-16T01:26:29.7584522Z ##[group]Fetching the repository
+2026-11-16T01:26:29.7592300Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:26:36.4355488Z From https://github.com/777genius/agent-teams-ai
+2026-11-16T01:26:36.4356305Z  * branch            0660c748f88675063e3051fb0f8b2022e8f6f056 -> FETCH_HEAD
+2026-11-16T01:26:36.4370745Z [command]/usr/bin/git rev-parse --verify --quiet 0660c748f88675063e3051fb0f8b2022e8f6f056^{object}
+2026-11-16T01:26:36.4398703Z 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:26:36.4404788Z ##[endgroup]
+2026-11-16T01:26:36.4405734Z ##[group]Determining the checkout info
+2026-11-16T01:26:36.4407309Z ##[endgroup]
+2026-11-16T01:26:36.4412717Z [command]/usr/bin/git sparse-checkout disable
+2026-11-16T01:26:36.4468670Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-16T01:26:36.4502595Z ##[group]Checking out the ref
+2026-11-16T01:26:36.4506685Z [command]/usr/bin/git checkout --progress --force 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:26:37.4734890Z Note: switching to '0660c748f88675063e3051fb0f8b2022e8f6f056'.
+2026-11-16T01:26:37.4735550Z 
+2026-11-16T01:26:37.4735894Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-16T01:26:37.4736600Z changes and commit them, and you can discard any commits you make in this
+2026-11-16T01:26:37.4737289Z state without impacting any branches by switching back to a branch.
+2026-11-16T01:26:37.4737969Z 
+2026-11-16T01:26:37.4738406Z If you want to create a new branch to retain commits you create, you may
+2026-11-16T01:26:37.4739355Z do so (now or later) by using -c with the switch command. Example:
+2026-11-16T01:26:37.4788886Z 
+2026-11-16T01:26:37.4789379Z   git switch -c <new-branch-name>
+2026-11-16T01:26:37.4790084Z 
+2026-11-16T01:26:37.4790962Z Or undo this operation with:
+2026-11-16T01:26:37.4791330Z 
+2026-11-16T01:26:37.4791503Z   git switch -
+2026-11-16T01:26:37.4791723Z 
+2026-11-16T01:26:37.4792170Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-16T01:26:37.4792920Z 
+2026-11-16T01:26:37.4793595Z HEAD is now at 0660c74 docs: bind actual reconciliation and preserve completed original CI evidence
+2026-11-16T01:26:37.4796088Z ##[endgroup]
+2026-11-16T01:26:37.4850968Z [command]/usr/bin/git log -1 --format=%H
+2026-11-16T01:26:37.4876773Z 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:26:37.4887358Z ##[group]Removing auth
+2026-11-16T01:26:37.4888195Z Removing SSH command configuration
+2026-11-16T01:26:37.4892879Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T01:26:37.4926451Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T01:26:37.5213363Z Removing HTTP extra header
+2026-11-16T01:26:37.5220116Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T01:26:37.5256824Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T01:26:37.5540263Z Removing includeIf entries pointing to credentials config files
+2026-11-16T01:26:37.5544153Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T01:26:37.5605293Z includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-16T01:26:37.5606418Z includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-16T01:26:37.5619125Z includeif.gitdir:/github/workspace/.git.path
+2026-11-16T01:26:37.5619597Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T01:26:37.5621895Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path
+2026-11-16T01:26:37.5622992Z /home/runner/work/_temp/git-credentials-7553e625-7beb-4105-9788-0ea281f32f44.config
+2026-11-16T01:26:37.5625001Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git.path /home/runner/work/_temp/git-credentials-7553e625-7beb-4105-9788-0ea281f32f44.config
+2026-11-16T01:26:37.5657819Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path
+2026-11-16T01:26:37.5680148Z /home/runner/work/_temp/git-credentials-7553e625-7beb-4105-9788-0ea281f32f44.config
+2026-11-16T01:26:37.5691873Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/agent-teams-ai/agent-teams-ai/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-7553e625-7beb-4105-9788-0ea281f32f44.config
+2026-11-16T01:26:37.5730495Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-11-16T01:26:37.5755194Z /github/runner_temp/git-credentials-7553e625-7beb-4105-9788-0ea281f32f44.config
+2026-11-16T01:26:37.5763138Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-7553e625-7beb-4105-9788-0ea281f32f44.config
+2026-11-16T01:26:37.5798598Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-11-16T01:26:37.5820578Z /github/runner_temp/git-credentials-7553e625-7beb-4105-9788-0ea281f32f44.config
+2026-11-16T01:26:37.5827488Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-7553e625-7beb-4105-9788-0ea281f32f44.config
+2026-11-16T01:26:37.5861798Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T01:26:37.6140694Z Removing credentials config '/home/runner/work/_temp/git-credentials-7553e625-7beb-4105-9788-0ea281f32f44.config'
+2026-11-16T01:26:37.6149021Z ##[endgroup]
+2026-11-16T01:26:37.6461193Z ##[group]Run pnpm/action-setup@v6
+2026-11-16T01:26:37.6461555Z with:
+2026-11-16T01:26:37.6461757Z   dest: ~/setup-pnpm
+2026-11-16T01:26:37.6461992Z   run_install: null
+2026-11-16T01:26:37.6462371Z   cache: false
+2026-11-16T01:26:37.6462665Z   cache_dependency_path: pnpm-lock.yaml
+2026-11-16T01:26:37.6462963Z   package_json_file: package.json
+2026-11-16T01:26:37.6463483Z   standalone: false
+2026-11-16T01:26:37.6463786Z env:
+2026-11-16T01:26:37.6464361Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:26:37.6464802Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:26:37.6465184Z   HOST_EMULATED_LANE: selection
+2026-11-16T01:26:37.6465440Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:26:37.6465686Z ##[endgroup]
+2026-11-16T01:26:37.8153537Z ##[group]Running self-installer...
+2026-11-16T01:26:39.1322681Z 
+2026-11-16T01:26:39.1323280Z added 1 package, and audited 2 packages in 1s
+2026-11-16T01:26:39.1323810Z 
+2026-11-16T01:26:39.1324118Z 1 package is looking for funding
+2026-11-16T01:26:39.1324637Z   run `npm fund` for details
+2026-11-16T01:26:39.1333287Z 
+2026-11-16T01:26:39.1333458Z found 0 vulnerabilities
+2026-11-16T01:26:39.8914136Z Checking for updates...
+2026-11-16T01:26:40.0673090Z Switching pnpm from v11.28.10 to v11.22.0...
+2026-11-16T01:26:41.3699245Z .../v11/ba6-1a1e1f6a923-9f151781495ec7e0 | Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-16T01:26:41.3719184Z .../v11/ba6-1a1e1f6a923-9f151781495ec7e0 |   +1 +
+2026-11-16T01:26:41.7523082Z .../v11/ba6-1a1e1f6a923-9f151781495ec7e0 | Progress: resolved 1, reused 0, downloaded 1, added 1, done
+2026-11-16T01:26:42.4631997Z [WARN] Detected a pnpm v10 installation layout at PNPM_HOME. The pnpm shims at PNPM_HOME have been refreshed so the new version is active, but pnpm v11 expects bins in PNPM_HOME/bin. Run "pnpm setup" to migrate your PATH to the v11 layout.
+2026-11-16T01:26:42.4693008Z Successfully updated pnpm to v11.22.0
+2026-11-16T01:26:42.5064708Z ##[endgroup]
+2026-11-16T01:26:42.5065145Z Installation Completed!
+2026-11-16T01:26:42.5247392Z ##[group]Run actions/setup-node@v6
+2026-11-16T01:26:42.5247861Z with:
+2026-11-16T01:26:42.5248065Z   node-version: 24.21.0
+2026-11-16T01:26:42.5248287Z   cache: pnpm
+2026-11-16T01:26:42.5248481Z   check-latest: false
+2026-11-16T01:26:42.5250933Z   token: ***
+2026-11-16T01:26:42.5251150Z   package-manager-cache: true
+2026-11-16T01:26:42.5251392Z env:
+2026-11-16T01:26:42.5251587Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:26:42.5251951Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:26:42.5252308Z   HOST_EMULATED_LANE: selection
+2026-11-16T01:26:42.5252573Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:26:42.5252878Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T01:26:42.5253177Z ##[endgroup]
+2026-11-16T01:26:42.6613084Z Attempting to download 24.21.0...
+2026-11-16T01:26:43.1436171Z Acquiring 24.21.0 - x64 from https://github.com/actions/node-versions/releases/download/24.21.0-34304089047/node-24.21.0-linux-x64.tar.gz
+2026-11-16T01:26:43.9008665Z Extracting ...
+2026-11-16T01:26:43.9141323Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/dace0ff3-1402-4a7e-9220-1cfdd6563df2 -f /home/runner/work/_temp/10e21692-20c7-4dcb-9a02-d3d5ceeddce8
+2026-11-16T01:26:44.7064979Z Adding to the cache ...
+2026-11-16T01:26:46.4550487Z ##[group]Environment details
+2026-11-16T01:26:46.6911826Z node: v24.21.0
+2026-11-16T01:26:46.6912294Z npm: 11.19.0
+2026-11-16T01:26:46.6912762Z yarn: 1.22.22
+2026-11-16T01:26:46.6913682Z ##[endgroup]
+2026-11-16T01:26:46.6936293Z [command]/home/runner/setup-pnpm/node_modules/.bin/bin/pnpm store path --silent
+2026-11-16T01:26:47.3176230Z /home/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-11-16T01:26:47.5632946Z Cache hit for: node-cache-Linux-x64-pnpm-e41c5038acc80c011488727c0ad32bbe3761689d5355c2cac2cd5bccb79e675e
+2026-11-16T01:26:48.8407894Z Received 20971520 of 499350497 (4.2%), 20.0 MBs/sec
+2026-11-16T01:26:49.8429016Z Received 167772160 of 499350497 (33.6%), 80.0 MBs/sec
+2026-11-16T01:26:50.8408294Z Received 264241152 of 499350497 (52.9%), 84.0 MBs/sec
+2026-11-16T01:26:51.8404327Z Received 343932928 of 499350497 (68.9%), 82.0 MBs/sec
+2026-11-16T01:26:52.8414619Z Received 486767585 of 499350497 (97.5%), 92.8 MBs/sec
+2026-11-16T01:26:52.9615308Z Received 499350497 of 499350497 (100.0%), 93.0 MBs/sec
+2026-11-16T01:26:52.9616255Z Cache Size: ~476 MB (499350497 B)
+2026-11-16T01:26:52.9726255Z [command]/usr/bin/tar -xf /home/runner/work/_temp/522e2773-db7a-4bd1-8a80-9de879e5eb46/cache.tzst -P -C /home/runner/work/agent-teams-ai/agent-teams-ai --use-compress-program unzstd
+2026-11-16T01:26:59.3751473Z Cache restored successfully
+2026-11-16T01:26:59.3956910Z Cache restored from key: node-cache-Linux-x64-pnpm-e41c5038acc80c011488727c0ad32bbe3761689d5355c2cac2cd5bccb79e675e
+2026-11-16T01:26:59.4255665Z ##[group]Run set -euo pipefail
+2026-11-16T01:26:59.4256110Z [36;1mset -euo pipefail[0m
+2026-11-16T01:26:59.4256540Z [36;1mtest "$(git rev-parse HEAD)" = "$HOST_EMULATED_SOURCE_HEAD"[0m
+2026-11-16T01:26:59.4257364Z [36;1mnode -e "require('node:assert/strict').equal(process.platform + '-' + process.arch, process.env.HOST_EMULATED_PLATFORM)"[0m
+2026-11-16T01:26:59.4258399Z [36;1mprintf 'TMPDIR=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"[0m
+2026-11-16T01:26:59.4313601Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T01:26:59.4313955Z env:
+2026-11-16T01:26:59.4314170Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:26:59.4314534Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:26:59.4315144Z   HOST_EMULATED_LANE: selection
+2026-11-16T01:26:59.4315400Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:26:59.4315707Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T01:26:59.4316006Z ##[endgroup]
+2026-11-16T01:26:59.4746404Z ##[group]Run set -euo pipefail
+2026-11-16T01:26:59.4746725Z [36;1mset -euo pipefail[0m
+2026-11-16T01:26:59.4746977Z [36;1msudo apt-get update[0m
+2026-11-16T01:26:59.4747257Z [36;1msudo apt-get install -y xvfb xauth lsof[0m
+2026-11-16T01:26:59.4798601Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T01:26:59.4798941Z env:
+2026-11-16T01:26:59.4799165Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:26:59.4799525Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:26:59.4799896Z   HOST_EMULATED_LANE: selection
+2026-11-16T01:26:59.4800170Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:26:59.4800482Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T01:26:59.4800815Z   TMPDIR: /home/runner/work/_temp
+2026-11-16T01:26:59.4801068Z ##[endgroup]
+2026-11-16T01:26:59.5627516Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+2026-11-16T01:26:59.5852692Z Get:6 https://packages.microsoft.com/ubuntu/26.04/prod resolute InRelease [3964 B]
+2026-11-16T01:26:59.5971477Z Hit:2 http://azure.archive.ubuntu.com/ubuntu resolute InRelease
+2026-11-16T01:26:59.5999412Z Get:3 http://azure.archive.ubuntu.com/ubuntu resolute-updates InRelease [137 kB]
+2026-11-16T01:26:59.6033503Z Get:4 http://azure.archive.ubuntu.com/ubuntu resolute-backports InRelease [137 kB]
+2026-11-16T01:26:59.6070245Z Get:5 http://azure.archive.ubuntu.com/ubuntu resolute-security InRelease [137 kB]
+2026-11-16T01:26:59.6151664Z Get:7 https://packages.microsoft.com/ubuntu/26.04/prod resolute/main amd64 Packages [158 kB]
+2026-11-16T01:26:59.6373224Z Get:8 https://packages.microsoft.com/ubuntu/26.04/prod resolute/main arm64 Packages [143 kB]
+2026-11-16T01:26:59.6530398Z Get:9 http://azure.archive.ubuntu.com/ubuntu resolute-updates/main amd64v3 Packages [869 kB]
+2026-11-16T01:26:59.6551017Z Get:10 http://azure.archive.ubuntu.com/ubuntu resolute-updates/main Translation-en [195 kB]
+2026-11-16T01:26:59.6584220Z Get:11 http://azure.archive.ubuntu.com/ubuntu resolute-updates/universe amd64v3 Packages [390 kB]
+2026-11-16T01:26:59.6688932Z Get:12 http://azure.archive.ubuntu.com/ubuntu resolute-updates/universe Translation-en [122 kB]
+2026-11-16T01:26:59.6859359Z Get:13 http://azure.archive.ubuntu.com/ubuntu resolute-security/main amd64v3 Packages [718 kB]
+2026-11-16T01:26:59.6879289Z Get:14 http://azure.archive.ubuntu.com/ubuntu resolute-security/main Translation-en [157 kB]
+2026-11-16T01:26:59.6889332Z Get:15 http://azure.archive.ubuntu.com/ubuntu resolute-security/universe amd64v3 Packages [220 kB]
+2026-11-16T01:26:59.6903234Z Get:16 http://azure.archive.ubuntu.com/ubuntu resolute-security/universe Translation-en [72.5 kB]
+2026-11-16T01:26:59.6918782Z Get:17 http://azure.archive.ubuntu.com/ubuntu resolute-security/restricted amd64v3 Packages [590 kB]
+2026-11-16T01:26:59.6949446Z Get:18 http://azure.archive.ubuntu.com/ubuntu resolute-security/restricted Translation-en [122 kB]
+2026-11-16T01:27:01.8168654Z Fetched 4172 kB in 0s (11.7 MB/s)
+2026-11-16T01:27:02.4642563Z Reading package lists...
+2026-11-16T01:27:02.4973008Z Reading package lists...
+2026-11-16T01:27:02.6482181Z Building dependency tree...
+2026-11-16T01:27:02.6489626Z Reading state information...
+2026-11-16T01:27:02.6851616Z xvfb is already the newest version (2:21.1.22-1ubuntu1.3).
+2026-11-16T01:27:02.6852269Z xauth is already the newest version (1:1.1.2-1.1build1).
+2026-11-16T01:27:02.6852747Z xauth set to manually installed.
+2026-11-16T01:27:02.6853599Z lsof is already the newest version (4.99.4+dfsg-2build2).
+2026-11-16T01:27:02.6854241Z lsof set to manually installed.
+2026-11-16T01:27:02.7379881Z Solving dependencies...
+2026-11-16T01:27:02.8520940Z 0 upgraded, 0 newly installed, 0 to remove and 24 not upgraded.
+2026-11-16T01:27:02.8576496Z ##[group]Run set -euo pipefail
+2026-11-16T01:27:02.8576994Z [36;1mset -euo pipefail[0m
+2026-11-16T01:27:02.8577401Z [36;1mnode scripts/ci/install-dependencies-with-retry.mjs --child-concurrency=1[0m
+2026-11-16T01:27:02.8578196Z [36;1mnode scripts/ensure-electron-install.cjs --strict[0m
+2026-11-16T01:27:02.8578748Z [36;1mnode -e "require('node:assert/strict').equal(require('electron/package.json').version, '44.10.1')"[0m
+2026-11-16T01:27:02.8579424Z [36;1mpnpm exec electron-rebuild --module-dir . --force --only better-sqlite3 --version 44.10.1[0m
+2026-11-16T01:27:02.8629786Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T01:27:02.8630130Z env:
+2026-11-16T01:27:02.8630339Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:27:02.8630703Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:27:02.8631066Z   HOST_EMULATED_LANE: selection
+2026-11-16T01:27:02.8631331Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:27:02.8631687Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T01:27:02.8632016Z   TMPDIR: /home/runner/work/_temp
+2026-11-16T01:27:02.8632259Z ##[endgroup]
+2026-11-16T01:27:03.5489910Z Scope: all 7 workspace projects
+2026-11-16T01:27:03.7611915Z ? Verifying lockfile against supply-chain policies (2533 entries)...
+2026-11-16T01:27:03.8451839Z Lockfile is up to date, resolution step is skipped
+2026-11-16T01:27:04.0700933Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-16T01:27:04.2996270Z Packages: +2293
+2026-11-16T01:27:04.2997169Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-11-16T01:27:05.0852018Z Progress: resolved 2293, reused 273, downloaded 0, added 0
+2026-11-16T01:27:06.0869053Z Progress: resolved 2293, reused 697, downloaded 0, added 0
+2026-11-16T01:27:07.0876411Z Progress: resolved 2293, reused 1121, downloaded 0, added 0
+2026-11-16T01:27:08.0962555Z Progress: resolved 2293, reused 1677, downloaded 0, added 0
+2026-11-16T01:27:09.1079421Z Progress: resolved 2293, reused 2197, downloaded 0, added 0
+2026-11-16T01:27:09.2975573Z Packages are hard linked from the content-addressable store to the virtual store.
+2026-11-16T01:27:09.2999728Z   Content-addressable store is at: /home/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-11-16T01:27:09.3029392Z   Virtual store is at:             node_modules/.pnpm
+2026-11-16T01:27:10.1079385Z Progress: resolved 2293, reused 2278, downloaded 0, added 81
+2026-11-16T01:27:11.1142432Z Progress: resolved 2293, reused 2278, downloaded 0, added 241
+2026-11-16T01:27:12.1423969Z Progress: resolved 2293, reused 2278, downloaded 0, added 486
+2026-11-16T01:27:12.8088613Z ✓ Lockfile passes supply-chain policies (2533 entries in 9s)
+2026-11-16T01:27:13.1429399Z Progress: resolved 2293, reused 2278, downloaded 0, added 1367
+2026-11-16T01:27:13.4715276Z Progress: resolved 2293, reused 2278, downloaded 0, added 2293, done
+2026-11-16T01:27:14.5034282Z .../node_modules/better-sqlite3 install$ prebuild-install || node-gyp rebuild --release
+2026-11-16T01:27:14.6157513Z .../node_modules/better-sqlite3 install: (node:3278) [DEP0176] DeprecationWarning: fs.R_OK is deprecated, use fs.constants.R_OK instead
+2026-11-16T01:27:14.6159702Z .../node_modules/better-sqlite3 install: (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T01:27:14.8801032Z .../node_modules/better-sqlite3 install: Done
+2026-11-16T01:27:14.9657897Z .../node_modules/better-sqlite3 install$ prebuild-install || node-gyp rebuild --release
+2026-11-16T01:27:15.0670881Z .../node_modules/better-sqlite3 install: (node:3296) [DEP0176] DeprecationWarning: fs.R_OK is deprecated, use fs.constants.R_OK instead
+2026-11-16T01:27:15.0671938Z .../node_modules/better-sqlite3 install: (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T01:27:15.2248882Z .../node_modules/better-sqlite3 install: Done
+2026-11-16T01:27:15.2817351Z .../node-pty@1.1.0/node_modules/node-pty install$ node scripts/prebuild.js || node-gyp rebuild
+2026-11-16T01:27:15.3292952Z .../node-pty@1.1.0/node_modules/node-pty install: [32m> Checking prebuilds...[0m
+2026-11-16T01:27:15.3295707Z .../node-pty@1.1.0/node_modules/node-pty install: [33m> Rebuilding because directory /home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty/prebuilds/linux-x64 does not exist[0m
+2026-11-16T01:27:15.3699460Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info it worked if it ends with ok
+2026-11-16T01:27:15.3700580Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info using node-gyp@12.3.0
+2026-11-16T01:27:15.3701769Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info using node@24.21.0 | linux | x64
+2026-11-16T01:27:15.4235310Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info find Python using Python version 3.14.4 found at "/usr/bin/python3"
+2026-11-16T01:27:15.4998615Z .../node-pty@1.1.0/node_modules/node-pty install: gyp http GET https://nodejs.org/download/release/v24.21.0/node-v24.21.0-headers.tar.gz
+2026-11-16T01:27:15.5714098Z .../node-pty@1.1.0/node_modules/node-pty install: gyp http 200 https://nodejs.org/download/release/v24.21.0/node-v24.21.0-headers.tar.gz
+2026-11-16T01:27:17.8342071Z .../node-pty@1.1.0/node_modules/node-pty install: gyp http GET https://nodejs.org/download/release/v24.21.0/SHASUMS256.txt
+2026-11-16T01:27:17.8674134Z .../node-pty@1.1.0/node_modules/node-pty install: gyp http 200 https://nodejs.org/download/release/v24.21.0/SHASUMS256.txt
+2026-11-16T01:27:18.4625881Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn /usr/bin/python3
+2026-11-16T01:27:18.4638855Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args [
+2026-11-16T01:27:18.4640718Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '/home/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/dc8d3876d00d043d3555db001e2ba9d24405eb491a94744fe66d252f449eed04/node_modules/pnpm/dist/node_modules/node-gyp/gyp/gyp_main.py',
+2026-11-16T01:27:18.4642357Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args 'binding.gyp',
+2026-11-16T01:27:18.4643273Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-f',
+2026-11-16T01:27:18.4644133Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args 'make',
+2026-11-16T01:27:18.4645053Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-I',
+2026-11-16T01:27:18.4646431Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty/build/config.gypi',
+2026-11-16T01:27:18.4648045Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-I',
+2026-11-16T01:27:18.4650292Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '/home/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/dc8d3876d00d043d3555db001e2ba9d24405eb491a94744fe66d252f449eed04/node_modules/pnpm/dist/node_modules/node-gyp/addon.gypi',
+2026-11-16T01:27:18.4652205Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-I',
+2026-11-16T01:27:18.4653880Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '/home/runner/.cache/node-gyp/24.21.0/include/node/common.gypi',
+2026-11-16T01:27:18.4655272Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dlibrary=shared_library',
+2026-11-16T01:27:18.4656613Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dvisibility=default',
+2026-11-16T01:27:18.4658301Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dnode_root_dir=/home/runner/.cache/node-gyp/24.21.0',
+2026-11-16T01:27:18.4660784Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dnode_gyp_dir=/home/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/dc8d3876d00d043d3555db001e2ba9d24405eb491a94744fe66d252f449eed04/node_modules/pnpm/dist/node_modules/node-gyp',
+2026-11-16T01:27:18.4663201Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dnode_lib_file=/home/runner/.cache/node-gyp/24.21.0/<(target_arch)/node.lib',
+2026-11-16T01:27:18.4665401Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dmodule_root_dir=/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty',
+2026-11-16T01:27:18.4666922Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Dnode_engine=v8',
+2026-11-16T01:27:18.4668364Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '--depth=.',
+2026-11-16T01:27:18.4669650Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '--no-parallel',
+2026-11-16T01:27:18.4671004Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '--generator-output',
+2026-11-16T01:27:18.4672219Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args 'build',
+2026-11-16T01:27:18.4673500Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args '-Goutput_dir=.'
+2026-11-16T01:27:18.4674679Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args ]
+2026-11-16T01:27:18.6078578Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn make
+2026-11-16T01:27:18.6080638Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info spawn args [ 'BUILDTYPE=Release', '-C', 'build' ]
+2026-11-16T01:27:18.6096156Z .../node-pty@1.1.0/node_modules/node-pty install: make: Entering directory '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty/build'
+2026-11-16T01:27:18.6127055Z .../node-pty@1.1.0/node_modules/node-pty install:   TOUCH Release/obj.target/../../../node-addon-api@7.1.1/node_modules/node-addon-api/node_addon_api_except.stamp
+2026-11-16T01:27:18.6220721Z .../node-pty@1.1.0/node_modules/node-pty install:   CXX(target) Release/obj.target/pty/src/unix/pty.o
+2026-11-16T01:27:20.3520188Z .../node-pty@1.1.0/node_modules/node-pty install:   SOLINK_MODULE(target) Release/obj.target/pty.node
+2026-11-16T01:27:20.4308085Z .../node-pty@1.1.0/node_modules/node-pty install:   COPY Release/pty.node
+2026-11-16T01:27:20.4389837Z .../node-pty@1.1.0/node_modules/node-pty install: make: Leaving directory '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/node-pty@1.1.0/node_modules/node-pty/build'
+2026-11-16T01:27:20.4399376Z .../node-pty@1.1.0/node_modules/node-pty install: gyp info ok 
+2026-11-16T01:27:20.4580273Z .../node-pty@1.1.0/node_modules/node-pty install: Done
+2026-11-16T01:27:20.4581346Z .../node-pty@1.1.0/node_modules/node-pty postinstall$ node scripts/post-install.js
+2026-11-16T01:27:20.5138230Z .../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Cleaning release folder...[0m
+2026-11-16T01:27:20.5144036Z .../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Moving conpty.dll...[0m
+2026-11-16T01:27:20.5145125Z .../node-pty@1.1.0/node_modules/node-pty postinstall:   SKIPPED (not Windows)
+2026-11-16T01:27:20.5168539Z .../node-pty@1.1.0/node_modules/node-pty postinstall: Done
+2026-11-16T01:27:20.7868062Z .../node_modules/cpu-features install$ node buildcheck.js > buildcheck.gypi && node-gyp rebuild
+2026-11-16T01:27:22.4131499Z .../node_modules/cpu-features install: gyp info it worked if it ends with ok
+2026-11-16T01:27:22.4132665Z .../node_modules/cpu-features install: gyp info using node-gyp@12.3.0
+2026-11-16T01:27:22.4133794Z .../node_modules/cpu-features install: gyp info using node@24.21.0 | linux | x64
+2026-11-16T01:27:22.4681661Z .../node_modules/cpu-features install: gyp info find Python using Python version 3.14.4 found at "/usr/bin/python3"
+2026-11-16T01:27:22.5513294Z .../node_modules/cpu-features install: gyp info spawn /usr/bin/python3
+2026-11-16T01:27:22.5514556Z .../node_modules/cpu-features install: gyp info spawn args [
+2026-11-16T01:27:22.5517951Z .../node_modules/cpu-features install: gyp info spawn args '/home/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/dc8d3876d00d043d3555db001e2ba9d24405eb491a94744fe66d252f449eed04/node_modules/pnpm/dist/node_modules/node-gyp/gyp/gyp_main.py',
+2026-11-16T01:27:22.5520479Z .../node_modules/cpu-features install: gyp info spawn args 'binding.gyp',
+2026-11-16T01:27:22.5521528Z .../node_modules/cpu-features install: gyp info spawn args '-f',
+2026-11-16T01:27:22.5522465Z .../node_modules/cpu-features install: gyp info spawn args 'make',
+2026-11-16T01:27:22.5523421Z .../node_modules/cpu-features install: gyp info spawn args '-I',
+2026-11-16T01:27:22.5525351Z .../node_modules/cpu-features install: gyp info spawn args '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/cpu-features@0.0.10/node_modules/cpu-features/build/config.gypi',
+2026-11-16T01:27:22.5527032Z .../node_modules/cpu-features install: gyp info spawn args '-I',
+2026-11-16T01:27:22.5529834Z .../node_modules/cpu-features install: gyp info spawn args '/home/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/dc8d3876d00d043d3555db001e2ba9d24405eb491a94744fe66d252f449eed04/node_modules/pnpm/dist/node_modules/node-gyp/addon.gypi',
+2026-11-16T01:27:22.5531953Z .../node_modules/cpu-features install: gyp info spawn args '-I',
+2026-11-16T01:27:22.5533351Z .../node_modules/cpu-features install: gyp info spawn args '/home/runner/.cache/node-gyp/24.21.0/include/node/common.gypi',
+2026-11-16T01:27:22.5534777Z .../node_modules/cpu-features install: gyp info spawn args '-Dlibrary=shared_library',
+2026-11-16T01:27:22.5535969Z .../node_modules/cpu-features install: gyp info spawn args '-Dvisibility=default',
+2026-11-16T01:27:22.5537395Z .../node_modules/cpu-features install: gyp info spawn args '-Dnode_root_dir=/home/runner/.cache/node-gyp/24.21.0',
+2026-11-16T01:27:22.5540409Z .../node_modules/cpu-features install: gyp info spawn args '-Dnode_gyp_dir=/home/runner/setup-pnpm/node_modules/.bin/store/v11/links/@/pnpm/11.22.0/dc8d3876d00d043d3555db001e2ba9d24405eb491a94744fe66d252f449eed04/node_modules/pnpm/dist/node_modules/node-gyp',
+2026-11-16T01:27:22.5543181Z .../node_modules/cpu-features install: gyp info spawn args '-Dnode_lib_file=/home/runner/.cache/node-gyp/24.21.0/<(target_arch)/node.lib',
+2026-11-16T01:27:22.5545584Z .../node_modules/cpu-features install: gyp info spawn args '-Dmodule_root_dir=/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/cpu-features@0.0.10/node_modules/cpu-features',
+2026-11-16T01:27:22.5547406Z .../node_modules/cpu-features install: gyp info spawn args '-Dnode_engine=v8',
+2026-11-16T01:27:22.5548713Z .../node_modules/cpu-features install: gyp info spawn args '--depth=.',
+2026-11-16T01:27:22.5549796Z .../node_modules/cpu-features install: gyp info spawn args '--no-parallel',
+2026-11-16T01:27:22.5550911Z .../node_modules/cpu-features install: gyp info spawn args '--generator-output',
+2026-11-16T01:27:22.5551989Z .../node_modules/cpu-features install: gyp info spawn args 'build',
+2026-11-16T01:27:22.5552993Z .../node_modules/cpu-features install: gyp info spawn args '-Goutput_dir=.'
+2026-11-16T01:27:22.5553940Z .../node_modules/cpu-features install: gyp info spawn args ]
+2026-11-16T01:27:22.7028472Z .../node_modules/cpu-features install: gyp info spawn make
+2026-11-16T01:27:22.7030015Z .../node_modules/cpu-features install: gyp info spawn args [ 'BUILDTYPE=Release', '-C', 'build' ]
+2026-11-16T01:27:22.7041728Z .../node_modules/cpu-features install: make: Entering directory '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/cpu-features@0.0.10/node_modules/cpu-features/build'
+2026-11-16T01:27:22.7066109Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_aarch64_linux_or_android.o
+2026-11-16T01:27:22.7358920Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_aarch64_macos_or_iphone.o
+2026-11-16T01:27:22.7642031Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_aarch64_windows.o
+2026-11-16T01:27:22.7926196Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_arm_linux_or_android.o
+2026-11-16T01:27:22.8205929Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_mips_linux_or_android.o
+2026-11-16T01:27:22.8485818Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_ppc_linux.o
+2026-11-16T01:27:22.8770396Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_freebsd.o
+2026-11-16T01:27:22.9050500Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_linux_or_android.o
+2026-11-16T01:27:23.2828905Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_macos.o
+2026-11-16T01:27:23.3113721Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_windows.o
+2026-11-16T01:27:23.3396033Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/filesystem.o
+2026-11-16T01:27:23.3932958Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/stack_line_reader.o
+2026-11-16T01:27:23.4509854Z .../node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/string_view.o
+2026-11-16T01:27:23.5609662Z .../node_modules/cpu-features install: rm -f Release/obj.target/deps/cpu_features/cpu_features.a Release/obj.target/deps/cpu_features/cpu_features.a.ar-file-list; mkdir -p `dirname Release/obj.target/deps/cpu_features/cpu_features.a`
+2026-11-16T01:27:23.5772698Z .../node_modules/cpu-features install: ar crs Release/obj.target/deps/cpu_features/cpu_features.a @Release/obj.target/deps/cpu_features/cpu_features.a.ar-file-list
+2026-11-16T01:27:24.2145039Z .../node_modules/cpu-features install:   COPY Release/cpu_features.a
+2026-11-16T01:27:24.2244821Z .../node_modules/cpu-features install:   CXX(target) Release/obj.target/cpufeatures/src/binding.o
+2026-11-16T01:27:25.0842857Z .../node_modules/cpu-features install: In file included from ../src/binding.cc:1:
+2026-11-16T01:27:25.0848857Z .../node_modules/cpu-features install: /home/runner/.cache/node-gyp/24.21.0/include/node/node.h:1374:7: warning: cast between incompatible function types from ‘void (*)(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE)’ {aka ‘void (*)(v8::Local<v8::Object>)’} to ‘node::addon_register_func’ {aka ‘void (*)(v8::Local<v8::Object>, v8::Local<v8::Value>, void*)’} [-Wcast-function-type]
+2026-11-16T01:27:25.0852505Z .../node_modules/cpu-features install:  1374 |       (node::addon_register_func) (regfunc),                          \
+2026-11-16T01:27:25.0853941Z .../node_modules/cpu-features install:       |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2026-11-16T01:27:25.0855203Z .../node_modules/cpu-features install: /home/runner/.cache/node-gyp/24.21.0/include/node/node.h:1408:3: note: in expansion of macro ‘NODE_MODULE_X’
+2026-11-16T01:27:25.0858607Z .../node_modules/cpu-features install:  1408 |   NODE_MODULE_X(modname, regfunc, NULL, 0)  // NOLINT (readability/null_usage)
+2026-11-16T01:27:25.0860044Z .../node_modules/cpu-features install:       |   ^~~~~~~~~~~~~
+2026-11-16T01:27:25.0861538Z .../node_modules/cpu-features install: ../src/binding.cc:151:1: note: in expansion of macro ‘NODE_MODULE’
+2026-11-16T01:27:25.0862926Z .../node_modules/cpu-features install:   151 | NODE_MODULE(cpufeatures, init)
+2026-11-16T01:27:25.0863752Z .../node_modules/cpu-features install:       | ^~~~~~~~~~~
+2026-11-16T01:27:25.4037583Z .../node_modules/cpu-features install:   SOLINK_MODULE(target) Release/obj.target/cpufeatures.node
+2026-11-16T01:27:25.4550359Z .../node_modules/cpu-features install:   COPY Release/cpufeatures.node
+2026-11-16T01:27:25.4622517Z .../node_modules/cpu-features install: make: Leaving directory '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/cpu-features@0.0.10/node_modules/cpu-features/build'
+2026-11-16T01:27:25.4636594Z .../node_modules/cpu-features install: gyp info ok 
+2026-11-16T01:27:25.4708383Z .../node_modules/cpu-features install: Done
+2026-11-16T01:27:25.6190314Z [WARN] Failed to create bin at /home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js'
+2026-11-16T01:27:25.8098078Z 
+2026-11-16T01:27:25.8098865Z dependencies:
+2026-11-16T01:27:25.8099983Z + @agent-teams/legacy-agent-host 0.1.0 <- packages/legacy-agent-host
+2026-11-16T01:27:25.8101298Z + @agent-teams/task-change-ledger 0.1.0 <- packages/task-change-ledger
+2026-11-16T01:27:25.8102472Z + @claude-teams/agent-graph 0.1.0 <- packages/agent-graph
+2026-11-16T01:27:25.8103316Z + @codemirror/autocomplete 6.20.0
+2026-11-16T01:27:25.8103761Z + @codemirror/commands 6.10.2
+2026-11-16T01:27:25.8104205Z + @codemirror/lang-cpp 6.0.3
+2026-11-16T01:27:25.8104628Z + @codemirror/lang-css 6.3.1
+2026-11-16T01:27:25.8105011Z + @codemirror/lang-go 6.0.1
+2026-11-16T01:27:25.8105448Z + @codemirror/lang-html 6.4.11
+2026-11-16T01:27:25.8105835Z + @codemirror/lang-java 6.0.2
+2026-11-16T01:27:25.8106247Z + @codemirror/lang-javascript 6.2.4
+2026-11-16T01:27:25.8106815Z + @codemirror/lang-json 6.0.2
+2026-11-16T01:27:25.8107355Z + @codemirror/lang-less 6.0.2
+2026-11-16T01:27:25.8108081Z + @codemirror/lang-markdown 6.5.0
+2026-11-16T01:27:25.8108814Z + @codemirror/lang-php 6.0.2
+2026-11-16T01:27:25.8109319Z + @codemirror/lang-python 6.2.1
+2026-11-16T01:27:25.8109791Z + @codemirror/lang-rust 6.0.2
+2026-11-16T01:27:25.8110243Z + @codemirror/lang-sass 6.0.2
+2026-11-16T01:27:25.8110625Z + @codemirror/lang-sql 6.10.0
+2026-11-16T01:27:25.8110885Z + @codemirror/lang-xml 6.1.0
+2026-11-16T01:27:25.8111145Z + @codemirror/lang-yaml 6.1.2
+2026-11-16T01:27:25.8111404Z + @codemirror/language 6.12.1
+2026-11-16T01:27:25.8111688Z + @codemirror/language-data 6.5.2
+2026-11-16T01:27:25.8111965Z + @codemirror/lint 6.9.5
+2026-11-16T01:27:25.8112218Z + @codemirror/merge 6.12.0
+2026-11-16T01:27:25.8112478Z + @codemirror/search 6.6.0
+2026-11-16T01:27:25.8112722Z + @codemirror/state 6.5.4
+2026-11-16T01:27:25.8113003Z + @codemirror/theme-one-dark 6.1.3
+2026-11-16T01:27:25.8113294Z + @codemirror/view 6.39.15
+2026-11-16T01:27:25.8113541Z + @daypicker/react 10.0.1
+2026-11-16T01:27:25.8113780Z + @dnd-kit/core 6.3.1
+2026-11-16T01:27:25.8114022Z + @dnd-kit/sortable 10.0.0
+2026-11-16T01:27:25.8114266Z + @dnd-kit/utilities 3.2.2
+2026-11-16T01:27:25.8114506Z + @fastify/cors 11.2.0
+2026-11-16T01:27:25.8114740Z + @fastify/static 10.1.2
+2026-11-16T01:27:25.8115028Z + @file-viewer/preset-office 3.1.2
+2026-11-16T01:27:25.8115338Z + @file-viewer/react 3.1.2
+2026-11-16T01:27:25.8115580Z + @floating-ui/dom 1.7.6
+2026-11-16T01:27:25.8115826Z + @headless-tree/core 1.7.0
+2026-11-16T01:27:25.8116092Z + @headless-tree/react 1.7.0
+2026-11-16T01:27:25.8116351Z + @openuidev/lang-core 0.3.2
+2026-11-16T01:27:25.8116641Z + @openuidev/react-headless 0.17.0
+2026-11-16T01:27:25.8116918Z + @openuidev/react-lang 0.3.2
+2026-11-16T01:27:25.8117189Z + @openuidev/react-ui 0.17.0
+2026-11-16T01:27:25.8117484Z + @radix-ui/react-alert-dialog 1.1.15
+2026-11-16T01:27:25.8118086Z + @radix-ui/react-checkbox 1.3.3
+2026-11-16T01:27:25.8118409Z + @radix-ui/react-collapsible 1.1.12
+2026-11-16T01:27:25.8118728Z + @radix-ui/react-context-menu 2.2.16
+2026-11-16T01:27:25.8119027Z + @radix-ui/react-dialog 1.1.15
+2026-11-16T01:27:25.8119336Z + @radix-ui/react-dropdown-menu 2.1.16
+2026-11-16T01:27:25.8119650Z + @radix-ui/react-hover-card 1.1.15
+2026-11-16T01:27:25.8119933Z + @radix-ui/react-label 2.1.8
+2026-11-16T01:27:25.8120221Z + @radix-ui/react-popover 1.1.15
+2026-11-16T01:27:25.8120516Z + @radix-ui/react-presence 1.1.5
+2026-11-16T01:27:25.8120799Z + @radix-ui/react-select 2.2.6
+2026-11-16T01:27:25.8121065Z + @radix-ui/react-slot 1.2.4
+2026-11-16T01:27:25.8121337Z + @radix-ui/react-switch 1.3.7
+2026-11-16T01:27:25.8121594Z + @radix-ui/react-tabs 1.1.13
+2026-11-16T01:27:25.8122169Z + @radix-ui/react-tooltip 1.2.8
+2026-11-16T01:27:25.8123003Z + @sentry/electron 7.10.0
+2026-11-16T01:27:25.8123405Z + @sentry/react 10.45.0
+2026-11-16T01:27:25.8123798Z + @tanstack/react-table 9.3.1
+2026-11-16T01:27:25.8124279Z + @tanstack/react-virtual 3.13.24
+2026-11-16T01:27:25.8124823Z + @terminal-platform/design-tokens 0.1.0
+2026-11-16T01:27:25.8125445Z + @terminal-platform/foundation 0.1.0
+2026-11-16T01:27:25.8125949Z + @terminal-platform/runtime-types 0.1.0
+2026-11-16T01:27:25.8126354Z + @terminal-platform/workspace-adapter-websocket 0.1.0
+2026-11-16T01:27:25.8126768Z + @terminal-platform/workspace-contracts 0.1.0
+2026-11-16T01:27:25.8127142Z + @terminal-platform/workspace-core 0.1.0
+2026-11-16T01:27:25.8127500Z + @terminal-platform/workspace-elements 0.1.0
+2026-11-16T01:27:25.8128324Z + @terminal-platform/workspace-gateway-node 0.1.0
+2026-11-16T01:27:25.8129020Z + @terminal-platform/workspace-react 0.1.0
+2026-11-16T01:27:25.8129672Z + @tiptap/extension-placeholder 3.30.5
+2026-11-16T01:27:25.8130243Z + @tiptap/markdown 3.30.5
+2026-11-16T01:27:25.8130699Z + @tiptap/pm 3.30.5
+2026-11-16T01:27:25.8131180Z + @tiptap/react 3.30.5
+2026-11-16T01:27:25.8131611Z + @tiptap/starter-kit 3.30.5
+2026-11-16T01:27:25.8132136Z + @xterm/addon-fit 0.11.0
+2026-11-16T01:27:25.8132621Z + @xterm/addon-web-links 0.12.0
+2026-11-16T01:27:25.8133174Z + @xterm/xterm 6.0.0
+2026-11-16T01:27:25.8133776Z + agent-teams-controller 1.0.0 <- agent-teams-controller
+2026-11-16T01:27:25.8134365Z + better-sqlite3 12.11.1
+2026-11-16T01:27:25.8134838Z + builder-util-runtime 9.7.0
+2026-11-16T01:27:25.8135260Z + chokidar 4.0.3
+2026-11-16T01:27:25.8135722Z + class-variance-authority 0.7.1
+2026-11-16T01:27:25.8136211Z + clsx 2.1.1
+2026-11-16T01:27:25.8136533Z + cmdk 1.0.4
+2026-11-16T01:27:25.8136878Z + croner 10.0.1
+2026-11-16T01:27:25.8137275Z + cronstrue 3.13.0
+2026-11-16T01:27:25.8137879Z + date-fns 3.6.0
+2026-11-16T01:27:25.8138267Z + diff 8.0.3
+2026-11-16T01:27:25.8138644Z + dompurify 3.4.17
+2026-11-16T01:27:25.8139052Z + drizzle-orm 0.45.2
+2026-11-16T01:27:25.8139536Z + electron-updater 6.8.9
+2026-11-16T01:27:25.8139852Z + fast-json-stringify 6.4.0
+2026-11-16T01:27:25.8140096Z + fastify 5.12.5
+2026-11-16T01:27:25.8140401Z + highlight.js 11.11.1
+2026-11-16T01:27:25.8140799Z + i18next 26.2.0
+2026-11-16T01:27:25.8141215Z + idb-keyval 6.2.2
+2026-11-16T01:27:25.8141644Z + isbinaryfile 6.0.0
+2026-11-16T01:27:25.8142160Z + json-schema-ref-resolver 3.0.0
+2026-11-16T01:27:25.8142688Z + jsonc-parser 3.3.1
+2026-11-16T01:27:25.8143132Z + lucide-react 0.577.0
+2026-11-16T01:27:25.8143572Z + mdast-util-to-hast 13.2.1
+2026-11-16T01:27:25.8144007Z + mermaid 11.15.0
+2026-11-16T01:27:25.8144355Z + motion 12.38.0
+2026-11-16T01:27:25.8144749Z + node-diff3 3.2.0
+2026-11-16T01:27:25.8145124Z + node-pty 1.1.0
+2026-11-16T01:27:25.8145510Z + pica 9.0.1
+2026-11-16T01:27:25.8145881Z + pidusage 4.0.1
+2026-11-16T01:27:25.8146295Z + posthog-js 1.396.6
+2026-11-16T01:27:25.8146703Z + react 19.2.4
+2026-11-16T01:27:25.8147078Z + react-dom 19.2.4
+2026-11-16T01:27:25.8147513Z + react-grid-layout 2.2.2
+2026-11-16T01:27:25.8148157Z + react-i18next 17.0.8
+2026-11-16T01:27:25.8148621Z + react-markdown 10.1.0
+2026-11-16T01:27:25.8149093Z + react-modal-sheet 5.6.0
+2026-11-16T01:27:25.8149555Z + react-resizable 3.1.3
+2026-11-16T01:27:25.8149966Z + rehype-highlight 7.0.2
+2026-11-16T01:27:25.8150359Z + rehype-raw 7.0.0
+2026-11-16T01:27:25.8150754Z + rehype-sanitize 6.0.0
+2026-11-16T01:27:25.8151168Z + remark-gfm 4.0.1
+2026-11-16T01:27:25.8151559Z + remark-parse 11.0.0
+2026-11-16T01:27:25.8151954Z + simple-git 4.0.2
+2026-11-16T01:27:25.8152333Z + ssh-config 5.0.4
+2026-11-16T01:27:25.8152686Z + ssh2 1.17.0
+2026-11-16T01:27:25.8153069Z + strip-markdown 6.0.0
+2026-11-16T01:27:25.8153521Z + tailwind-merge 3.5.0
+2026-11-16T01:27:25.8154002Z + tailwindcss-animate 1.0.7
+2026-11-16T01:27:25.8155070Z + terminal-platform-node terminal-platform-node@file:vendor/terminal-platform/terminal-platform-node-stub
+2026-11-16T01:27:25.8156024Z + unified 11.0.5
+2026-11-16T01:27:25.8156403Z + ws 8.21.0
+2026-11-16T01:27:25.8157248Z + yaml 2.9.0
+2026-11-16T01:27:25.8158137Z + yet-another-react-lightbox 3.29.1
+2026-11-16T01:27:25.8158612Z + zod 4.6.7
+2026-11-16T01:27:25.8158968Z + zustand 4.5.7
+2026-11-16T01:27:25.8159194Z 
+2026-11-16T01:27:25.8159361Z devDependencies:
+2026-11-16T01:27:25.8159784Z + @electron/rebuild 4.2.0
+2026-11-16T01:27:25.8160468Z + @eslint-community/eslint-plugin-eslint-comments 4.6.0
+2026-11-16T01:27:25.8161107Z + @eslint/js 9.39.2
+2026-11-16T01:27:25.8161572Z + @file-viewer/vite-plugin 3.1.2
+2026-11-16T01:27:25.8162084Z + @sentry/vite-plugin 5.1.1
+2026-11-16T01:27:25.8162628Z + @tailwindcss/typography 0.5.19
+2026-11-16T01:27:25.8163195Z + @types/better-sqlite3 7.6.13
+2026-11-16T01:27:25.8163682Z + @types/hast 3.0.4
+2026-11-16T01:27:25.8164070Z + @types/mdast 4.0.4
+2026-11-16T01:27:25.8164468Z + @types/node 24.12.4
+2026-11-16T01:27:25.8164899Z + @types/pidusage 2.0.5
+2026-11-16T01:27:25.8165346Z + @types/react 19.2.14
+2026-11-16T01:27:25.8165788Z + @types/react-dom 19.2.3
+2026-11-16T01:27:25.8166261Z + @types/ssh2 1.15.5
+2026-11-16T01:27:25.8166761Z + @typescript/native <- typescript 7.0.2
+2026-11-16T01:27:25.8167323Z + @vitejs/plugin-react 4.7.0
+2026-11-16T01:27:25.8168009Z + @vitest/coverage-v8 3.2.6
+2026-11-16T01:27:25.8168476Z + autoprefixer 10.4.23
+2026-11-16T01:27:25.8169075Z + better-sqlite3-node <- better-sqlite3 12.10.1
+2026-11-16T01:27:25.8169640Z + electron 44.10.1
+2026-11-16T01:27:25.8170080Z + electron-builder 26.17.0
+2026-11-16T01:27:25.8170552Z + electron-vite 5.0.0
+2026-11-16T01:27:25.8170965Z + eslint 9.39.4
+2026-11-16T01:27:25.8171441Z + eslint-config-prettier 10.1.8
+2026-11-16T01:27:25.8172034Z + eslint-import-resolver-typescript 4.4.4
+2026-11-16T01:27:25.8172619Z + eslint-plugin-boundaries 5.3.1
+2026-11-16T01:27:25.8173125Z + eslint-plugin-import 2.32.0
+2026-11-16T01:27:25.8173659Z + eslint-plugin-jsx-a11y 6.10.2
+2026-11-16T01:27:25.8174174Z + eslint-plugin-react 7.37.5
+2026-11-16T01:27:25.8174707Z + eslint-plugin-react-hooks 7.0.1
+2026-11-16T01:27:25.8175299Z + eslint-plugin-react-refresh 0.4.26
+2026-11-16T01:27:25.8175902Z + eslint-plugin-security 3.0.1
+2026-11-16T01:27:25.8176483Z + eslint-plugin-simple-import-sort 12.1.1
+2026-11-16T01:27:25.8177057Z + eslint-plugin-sonarjs 3.0.6
+2026-11-16T01:27:25.8177607Z + eslint-plugin-tailwindcss 3.18.2
+2026-11-16T01:27:25.8178386Z + fake-indexeddb 6.2.5
+2026-11-16T01:27:25.8178809Z + globals 17.2.0
+2026-11-16T01:27:25.8179175Z + happy-dom 21.0.4
+2026-11-16T01:27:25.8179533Z + husky 9.1.7
+2026-11-16T01:27:25.8179902Z + i18next-cli 1.58.0
+2026-11-16T01:27:25.8180288Z + knip 5.82.1
+2026-11-16T01:27:25.8180655Z + lint-staged 16.2.7
+2026-11-16T01:27:25.8181035Z + oxfmt 0.72.0
+2026-11-16T01:27:25.8181410Z + oxlint 1.87.0
+2026-11-16T01:27:25.8181794Z + postcss 8.5.28
+2026-11-16T01:27:25.8182176Z + prettier 3.8.1
+2026-11-16T01:27:25.8182663Z + prettier-plugin-tailwindcss 0.7.2
+2026-11-16T01:27:25.8183130Z + tailwindcss 3.4.19
+2026-11-16T01:27:25.8183499Z + tsx 4.23.15
+2026-11-16T01:27:25.8183877Z + typescript 5.9.3
+2026-11-16T01:27:25.8184304Z + typescript-eslint 8.54.0
+2026-11-16T01:27:25.8184725Z + vite 6.4.4
+2026-11-16T01:27:25.8185077Z + vitest 3.2.6
+2026-11-16T01:27:25.8185277Z 
+2026-11-16T01:27:25.8274295Z landing postinstall$ node ./scripts/patch-minimatch-brace-expansion.mjs && node ../scripts/ci/transitive-security.ts --apply
+2026-11-16T01:27:25.8803101Z landing postinstall: [landing postinstall] skipped npm layout patch; pnpm patchedDependencies handles compatibility
+2026-11-16T01:27:26.0869068Z landing postinstall: Verified braces security backport in 1 package(s)
+2026-11-16T01:27:26.1975658Z landing postinstall: Verified http-cache-semantics security backport in 1 package(s)
+2026-11-16T01:27:26.2030251Z landing postinstall: Done
+2026-11-16T01:27:26.2822934Z [WARN] Failed to create bin at /home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.bin/legacy-agent-host. ENOENT: no such file or directory, open '/home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/@agent-teams/legacy-agent-host/dist/cli.js'
+2026-11-16T01:27:26.2889049Z . preinstall$ node ./scripts/ci/enforce-pnpm-install.mjs
+2026-11-16T01:27:26.3337518Z . preinstall: Done
+2026-11-16T01:27:26.3338767Z . postinstall$ node ./scripts/postinstall-electron.cjs
+2026-11-16T01:27:26.3847480Z . postinstall: Done
+2026-11-16T01:27:26.3850183Z . prepare$ husky
+2026-11-16T01:27:26.4526366Z . prepare: Done
+2026-11-16T01:27:26.4847584Z Done in 23.5s using pnpm v11.22.0
+2026-11-16T01:27:26.6112648Z Electron installation is incomplete, running installer: /home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.pnpm/electron@44.10.1_supports-color@10.2.2/node_modules/electron/dist/electron
+2026-11-16T01:27:30.9926777Z Searching dependency tree
+2026-11-16T01:27:31.2208651Z Building modules: better-sqlite3
+2026-11-16T01:28:29.3202128Z ✔ Rebuild Complete
+2026-11-16T01:28:29.3469724Z ##[group]Run set -euo pipefail
+2026-11-16T01:28:29.3470161Z [36;1mset -euo pipefail[0m
+2026-11-16T01:28:29.3470823Z [36;1mif [[ "$RUNNER_OS" = Linux ]]; then node scripts/build/buildLinuxNodeExec.mjs; fi[0m
+2026-11-16T01:28:29.3471423Z [36;1mpnpm --filter @agent-teams/legacy-agent-host build[0m
+2026-11-16T01:28:29.3471973Z [36;1mpnpm --filter agent-teams-controller build[0m
+2026-11-16T01:28:29.3472436Z [36;1mpnpm --filter agent-teams-mcp build[0m
+2026-11-16T01:28:29.3474782Z [36;1mnode --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts[0m
+2026-11-16T01:28:29.3477072Z [36;1mnode --test test/scripts/installDependenciesWithRetry.test.mjs[0m
+2026-11-16T01:28:29.3583334Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T01:28:29.3583697Z env:
+2026-11-16T01:28:29.3583925Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:28:29.3584322Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:28:29.3584693Z   HOST_EMULATED_LANE: selection
+2026-11-16T01:28:29.3584954Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:28:29.3585263Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T01:28:29.3585594Z   TMPDIR: /home/runner/work/_temp
+2026-11-16T01:28:29.3585848Z ##[endgroup]
+2026-11-16T01:28:30.5193513Z $ pnpm --filter @agent-teams/task-change-ledger build
+2026-11-16T01:28:31.0265037Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
+2026-11-16T01:28:31.4709612Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json
+2026-11-16T01:28:35.0511491Z $ node ./scripts/build.mjs
+2026-11-16T01:28:35.6068042Z $ tsup
+2026-11-16T01:28:35.9248855Z [34mCLI[39m Building entry: src/index.ts
+2026-11-16T01:28:35.9251750Z [34mCLI[39m Using tsconfig: tsconfig.json
+2026-11-16T01:28:35.9253431Z [34mCLI[39m tsup v8.5.1
+2026-11-16T01:28:35.9254637Z [34mCLI[39m Using tsup config: /home/runner/work/agent-teams-ai/agent-teams-ai/mcp-server/tsup.config.ts
+2026-11-16T01:28:35.9268602Z [34mCLI[39m Target: node24
+2026-11-16T01:28:35.9275585Z [34mCLI[39m Cleaning output folder
+2026-11-16T01:28:35.9286504Z [34mESM[39m Build start
+2026-11-16T01:28:36.3744248Z [32mESM[39m [1mdist/index.js     [22m[32m3.04 MB[39m
+2026-11-16T01:28:36.3745332Z [32mESM[39m [1mdist/index.js.map [22m[32m4.78 MB[39m
+2026-11-16T01:28:36.3746105Z [32mESM[39m ⚡️ Build success in 446ms
+2026-11-16T01:28:38.1104464Z ✔ offline Desktop admission refuses inherited native selections before preparing a fixture (9.259934ms)
+2026-11-16T01:28:38.1129083Z ✔ TEST management admission retains only the exact direct detached Host peer without signaling (6.43934ms)
+2026-11-16T01:28:38.1169714Z ✔ Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder (17.44064ms)
+2026-11-16T01:28:38.1171688Z ✔ Linux zero-group rows remain observable without becoming owned app groups; malformed census stays an error (2.847233ms)
+2026-11-16T01:28:38.1174145Z ✔ the same original-root oracle uses each existing caller deadline after a long provider phase, without renewing reads (2.654643ms)
+2026-11-16T01:28:38.1175935Z ✔ read-only discovery survives navigation during the actual IPC read, then reads the new context (1.113111ms)
+2026-11-16T01:28:38.1177524Z ✔ unregistered initial discovery waits, but owner failures are never hidden as navigation (0.713655ms)
+2026-11-16T01:28:38.1179311Z ✔ initial discovery passes only its remaining captured budget to the IPC await (0.400168ms)
+2026-11-16T01:28:38.1180704Z ✔ exhausted initial observation never dispatches the backend IPC (0.773016ms)
+2026-11-16T01:28:38.1182272Z ✔ other discovery callers retain the default CDP budget (0.297306ms)
+2026-11-16T01:28:38.1216357Z ✔ an explicit IPC observation budget lets the same read settle after30s within60s (1.511426ms)
+2026-11-16T01:28:38.1217902Z ✔ default CDP evaluations still reject at30s without a resend (0.450623ms)
+2026-11-16T01:28:38.1219353Z ✔ macOS original Node zombie is the same unreaped harness child, never a changed live command (3.555829ms)
+2026-11-16T01:28:38.1221186Z ✔ live stat can become original defunct before the guard; only original child reap and whole-group absence settle it (4.741836ms)
+2026-11-16T01:28:38.1223078Z ✔ changed command/start, wrong child/group and initial descendants never authorize a recovery observation (0.373699ms)
+2026-11-16T01:28:38.1224846Z ✔ an already observed original natural exit still requires fresh group and captured Host absence (0.326661ms)
+2026-11-16T01:28:38.1226310Z ✔ original crash/signal and process-table failures remain debt (0.332101ms)
+2026-11-16T01:28:38.1228069Z ✔ the original deadline is not renewed after initial settlement consumed it (0.218178ms)
+2026-11-16T01:28:38.1229830Z ✔ numeric group absence without this original child exit observation expires within the remaining original budget (0.366946ms)
+2026-11-16T01:28:38.1231579Z ✔ a process-table read that crosses the original deadline cannot qualify natural exit (0.236171ms)
+2026-11-16T01:28:38.1233310Z ✔ an already reaped original child waits for actual descendant and original Host absence (0.927034ms)
+2026-11-16T01:28:38.1235073Z ✔ an orphan descendant, moved captured descendant or original Host cannot be cleared by an expired budget (0.712692ms)
+2026-11-16T01:28:38.1236998Z ✔ absent leader observation rejects wrong child, live/crashed/signaled child and invalid captured identities (0.482262ms)
+2026-11-16T01:28:38.1238982Z ✔ a reused leader PID and unavailable full process census retain debt without signaling (0.359081ms)
+2026-11-16T01:28:38.1240555Z ✔ absent leader observation never renews the original deadline or accepts a late census (3.335957ms)
+2026-11-16T01:28:38.1589897Z ✔ original peer observation accepts later-row only with its retained launch row (63.658575ms)
+2026-11-16T01:28:38.1685177Z ✔ original peer observation accepts exit only with its retained launch row (16.457084ms)
+2026-11-16T01:28:38.1754159Z ✔ original peer observation refuses reuse without admitting the census PID (7.313226ms)
+2026-11-16T01:28:38.1797584Z ✔ original peer observation refuses reparent without admitting the census PID (4.39734ms)
+2026-11-16T01:28:38.1847466Z ✔ original peer observation refuses argv without admitting the census PID (4.758347ms)
+2026-11-16T01:28:38.1888640Z ✔ original peer observation refuses duplicate without admitting the census PID (4.098444ms)
+2026-11-16T01:28:38.1928216Z ✔ original peer observation refuses missing without admitting the census PID (4.0863ms)
+2026-11-16T01:28:38.1967362Z ✔ original peer observation refuses late without admitting the census PID (3.565406ms)
+2026-11-16T01:28:38.2024799Z ✔ original peer observation accepts a valid empty journal with no current children (4.500094ms)
+2026-11-16T01:28:38.2054328Z ✔ original peer observation validates no-child-failure before returning without children (4.010409ms)
+2026-11-16T01:28:38.2085762Z ✔ original peer observation validates no-child-malformed before returning without children (3.373087ms)
+2026-11-16T01:28:38.2110302Z ✔ original peer observation validates no-child-late before returning without children (3.168654ms)
+2026-11-16T01:28:38.6898829Z ✔ requested Quit lets the original child report its natural exit before the cleanup census (635.347784ms)
+2026-11-16T01:28:38.7507406Z ✔ finite Codex exact native MCP catalog exits with empty inventory without allocating a Runtime (233.571751ms)
+2026-11-16T01:28:38.7514100Z ✔ finite Codex catalog refuses changed argv, Runtime authority and nonempty selected configuration (415.871673ms)
+2026-11-16T01:28:39.3581500Z ✔ finite Codex answers the original D managed config before connecting its selected Team on thread start (599.843205ms)
+2026-11-16T01:28:39.6829954Z ✔ finite managed Codex policy refuses alternate syntax, extra servers and enabled apps before connection (331.742158ms)
+2026-11-16T01:28:39.8788076Z ✔ runtime-derived Codex ordinary model probe (default) completes through original Host/D once (196.37754ms)
+2026-11-16T01:28:40.0273449Z ✔ runtime-derived Codex ordinary model probe (low) completes through original Host/D once (147.92822ms)
+2026-11-16T01:28:40.2133228Z ✔ finite Codex standalone retains empty MCP readiness and completes only its original ephemeral thread (185.659662ms)
+2026-11-16T01:28:41.1552806Z ✔ finite Codex standalone refuses Team authority, persistent threads and unselected thread work (942.595252ms)
+2026-11-16T01:28:41.7929568Z ✔ extensions Settings peer exposes only isolated auth status through original custody (537.933419ms)
+2026-11-16T01:28:41.7931353Z ✔ saved-import Settings peer exposes only isolated auth status through original custody (517.090157ms)
+2026-11-16T01:28:41.7933765Z ✔ finite extension status uses the original Host auth command and retains its exact private namespace (156.078972ms)
+2026-11-16T01:28:41.7936010Z ✔ finite extensions run through original Host ownership, persist four commands and survive inventory reload without replay (910.169893ms)
+2026-11-16T01:28:42.2374440Z ✔ finite extension CLI refuses changed names/scopes and does not overwrite selected config (444.156981ms)
+2026-11-16T01:28:45.5217320Z ✔ saved-import finite metadata and actual original probe receipt preserve model/effort with no extra input on lookup (3284.45136ms)
+2026-11-16T01:28:46.0221090Z ✔ saved-import peer refuses a business input without producing a probe or touching Host receipts (498.798288ms)
+2026-11-16T01:28:46.0223593Z ✔ receipt summaries retain only the original nested mixed Settings owner (1.707052ms)
+2026-11-16T01:28:46.0642803Z ✔ retained c226 original rejected-key receipt joins its published seed and exact observed native probe (100.468403ms)
+2026-11-16T01:28:46.0644527Z ✔ V2 receipt binding rejects foreign revisions, scope, seed owner, engine and executable (7.028201ms)
+2026-11-16T01:28:46.0645664Z ✔ V2 publication rejects an internally rehashed foreign descriptor grant or replacement executable (6.657368ms)
+2026-11-16T01:28:46.0646584Z ✔ V2 source history accounts for every publication and the exact retained current chain (16.487138ms)
+2026-11-16T01:28:46.0647543Z ✔ original Host rejects old other-project cwd and accepts only its separate exact private-account seed (3.861971ms)
+2026-11-16T01:28:46.0648811Z ✔ archived V2 tuple isolation restores the real runner and preserves foreign-platform refusal (6.923084ms)
+2026-11-16T01:28:46.0649728Z ✔ original V2 default intent joins its selected saving row within the same receipt deadline (24.288324ms)
+2026-11-16T01:28:46.0650603Z ✔ published receipt reads survive the real controller writer before its atomic rename (102.965903ms)
+2026-11-16T01:28:46.0651415Z ✔ receipt reads reject foreign staging names, directories and symbolic links (21.810401ms)
+2026-11-16T01:28:46.1689254Z ✔ captured UI discovery waits for Main admission and actual mount while early diagnostics remain active (206.190939ms)
+2026-11-16T01:28:46.1690839Z ✔ the original remaining startup deadline rejects a pending snapshot without late discovery or a reset (500.684437ms)
+2026-11-16T01:28:46.1693366Z ✔ packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin (6.349162ms)
+2026-11-16T01:28:46.1695651Z ✔ HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted (3.219289ms)
+2026-11-16T01:28:46.1697508Z ✔ isolated shell fixture emits the actual framed environment and refuses shell effects (196.515553ms)
+2026-11-16T01:28:46.1699702Z ✔ original in-progress Task comment prerequisite requires its exact stage without an assignment control (11.607985ms)
+2026-11-16T01:28:46.1701903Z ✔ Task attachment comment waits for its original focused owner after one click before inserting text (208.594814ms)
+2026-11-16T01:28:46.1703278Z ✔ original Task assignment prerequisite refuses receipt-only, pending and stale renderer state (3.924297ms)
+2026-11-16T01:28:46.1704232Z ✔ original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface (4.046867ms)
+2026-11-16T01:28:46.1705112Z ✔ original desktop click waits for stable target geometry, without repeating input (301.917069ms)
+2026-11-16T01:28:46.1705965Z ✔ original Task hover waits through layout and unavailability before its one physical move (601.629972ms)
+2026-11-16T01:28:46.1706782Z ✔ original desktop click refuses a constantly moving target before dispatch (1504.622232ms)
+2026-11-16T01:28:46.1707997Z ✔ original owner-qualified click rereads its full expression through unavailability at unchanged coordinates (302.322787ms)
+2026-11-16T01:28:46.1708939Z ✔ login failure facts retain only bounded original attempts and confirmed milestones (1.800056ms)
+2026-11-16T01:28:46.1709800Z ✔ finite readiness failure summaries keep only bounded states and never private snapshot data (1.332071ms)
+2026-11-16T01:28:46.1710711Z ✔ Taskboard failure summaries compare retained identities without exposing private snapshot values (1.890715ms)
+2026-11-16T01:28:46.1711694Z ✔ installer failure summaries preserve original wait sites and attempts without inferring installation effects (2.211816ms)
+2026-11-16T01:28:46.1712681Z ✔ installer failure projection does not invoke input getters and leaves oversized observations unknown (0.596646ms)
+2026-11-16T01:28:46.1713515Z ✔ installer CDP and cleanup projection retains only exact finite observations (0.977838ms)
+2026-11-16T01:28:46.1714297Z ✔ Selection target summaries retain the exact original phase and six closed facts (1.066204ms)
+2026-11-16T01:28:46.1715192Z ✔ Selection target projection rejects unknown or malformed facts without exposing text or invoking getters (0.563904ms)
+2026-11-16T01:28:46.1716182Z ✔ Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input (1.495557ms)
+2026-11-16T01:28:46.1717082Z ✔ original desktop click refuses a target unavailable during the final ownership check (200.798034ms)
+2026-11-16T01:28:46.3724260Z ✔ original desktop click refuses a target moved during the final ownership check (201.483136ms)
+2026-11-16T01:28:46.3725892Z ✔ original default scroll preserves a disabled control before its readiness wait (1.274994ms)
+2026-11-16T01:28:46.4751012Z ✔ original scroll opt-in reveals a covered checkbox with one bounded wheel (102.756836ms)
+2026-11-16T01:28:46.6770925Z ✔ original desktop click rechecks owner after its pending final target read (201.742882ms)
+2026-11-16T01:28:46.9497168Z ✔ original desktop click rechecks cutoff after its pending final target read (201.51752ms)
+2026-11-16T01:28:46.9499604Z ✔ original clarification lookup admits its retained read without completing the assignment prerequisite (3.117339ms)
+2026-11-16T01:28:46.9505024Z ✔ original clarification lookup refuses changed owner, revision, refresh and retained-read joins (22.342276ms)
+2026-11-16T01:28:46.9509721Z ✔ original owner availability admits three captured A Teams through its actual first DOM read (3.073517ms)
+2026-11-16T01:28:46.9513515Z ✔ original owner availability retains singleton, subset and duplicate-row cardinality semantics (3.087413ms)
+2026-11-16T01:28:46.9518019Z ✔ original owner availability refuses foreign identities and preserves its existing aggregate guards (31.8158ms)
+2026-11-16T01:28:46.9520211Z ✔ original owner availability refuses invalid captured discovery before navigation (0.921563ms)
+2026-11-16T01:28:46.9522585Z ✔ owner availability admits every captured A Team through the actual first observation (0.77543ms)
+2026-11-16T01:28:46.9525670Z ✔ owner availability refuses healthy B in unavailable A rows (0.598479ms)
+2026-11-16T01:28:46.9528334Z ✔ owner availability refuses captured foreign owner in unavailable A rows (0.467364ms)
+2026-11-16T01:28:46.9531355Z ✔ owner availability refuses unknown Team in unavailable A rows (0.788323ms)
+2026-11-16T01:28:46.9533671Z ✔ owner availability refuses malformed Team in unavailable A rows (0.713724ms)
+2026-11-16T01:28:46.9537607Z ✔ owner availability refuses missing selected A before original navigation (0.373919ms)
+2026-11-16T01:28:46.9541762Z ✔ owner availability refuses non-string A handle before original navigation (0.332742ms)
+2026-11-16T01:28:46.9551217Z ✔ owner availability refuses empty A handle before original navigation (0.272209ms)
+2026-11-16T01:28:46.9553338Z ✔ owner availability refuses duplicate A handle before original navigation (0.24061ms)
+2026-11-16T01:28:46.9554368Z ✔ owner availability refuses over-bound capture before original navigation (0.337621ms)
+2026-11-16T01:28:46.9606205Z (node:4512) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+2026-11-16T01:28:46.9607922Z (Use `node --trace-warnings ...` to show where the warning was created)
+2026-11-16T01:28:46.9624568Z ✔ original Selection final Stop joins physical absence with its exact stopped UI within the same poll budget (14.020606ms)
+2026-11-16T01:28:46.9968408Z ✔ Selection stopped convergence refuses wrong identity, unaccepted progress, visible progress and exhausted observation budget (34.536177ms)
+2026-11-16T01:28:47.0353367Z ✔ ordinary Node imports and synchronous observations remain inert (3.276256ms)
+2026-11-16T01:28:47.0354530Z ✔ constructor subscription observes the original async child after pid assignment (60.780527ms)
+2026-11-16T01:28:47.0355668Z ✔ the observer preserves an actual unhandled child-process error (201.077785ms)
+2026-11-16T01:28:47.0356730Z ✔ failed reads, writes and unknown child fields cannot change the original operation (2.027992ms)
+2026-11-16T01:28:47.0358691Z ✔ the original TEST helper path exposes only its closed requested target class (2.223978ms)
+2026-11-16T01:28:47.0360293Z ✔ event and pending-child bounds explicitly preserve incomplete coverage (1.633375ms)
+2026-11-16T01:28:47.0361132Z ℹ tests 115
+2026-11-16T01:28:47.0361498Z ℹ suites 0
+2026-11-16T01:28:47.0361915Z ℹ pass 115
+2026-11-16T01:28:47.0362342Z ℹ fail 0
+2026-11-16T01:28:47.0362676Z ℹ cancelled 0
+2026-11-16T01:28:47.0363039Z ℹ skipped 0
+2026-11-16T01:28:47.0363411Z ℹ todo 0
+2026-11-16T01:28:47.0363793Z ℹ duration_ms 10599.659248
+2026-11-16T01:28:47.3174013Z ✔ original frozen install retains its lockfile and selects only the explicit serial lifecycle option (124.597455ms)
+2026-11-16T01:28:47.3176711Z ✔ unknown or duplicate frozen-install options refuse before any TEST installer is allocated (58.828496ms)
+2026-11-16T01:28:47.3179312Z ✔ long unfinished engine warning does not turn a transient 503 into a terminal failure (1.132838ms)
+2026-11-16T01:28:47.3181476Z ✔ next fatal engine line is not masked by a prior long warning (4.23907ms)
+2026-11-16T01:28:47.3184912Z ✔ 404 marker fragmented across chunks within one stream is terminal (0.191528ms)
+2026-11-16T01:28:47.3186747Z ✔ separate output streams cannot fabricate a 404 marker (0.240059ms)
+2026-11-16T01:28:47.3188898Z ✔ whole-output classifier distinguishes long warning from fatal engine (0.248866ms)
+2026-11-16T01:28:47.3276286Z ℹ tests 7
+2026-11-16T01:28:47.3277417Z ℹ suites 0
+2026-11-16T01:28:47.3279446Z ℹ pass 7
+2026-11-16T01:28:47.3280261Z ℹ fail 0
+2026-11-16T01:28:47.3280900Z ℹ cancelled 0
+2026-11-16T01:28:47.3281623Z ℹ skipped 0
+2026-11-16T01:28:47.3282721Z ℹ todo 0
+2026-11-16T01:28:47.3283407Z ℹ duration_ms 253.099923
+2026-11-16T01:28:47.3400545Z ##[group]Run set -euo pipefail
+2026-11-16T01:28:47.3401152Z [36;1mset -euo pipefail[0m
+2026-11-16T01:28:47.3401686Z [36;1mselected_inputs="$(mktemp -d "$RUNNER_TEMP/TEST-emulated-ui-inputs-XXXXXX")"[0m
+2026-11-16T01:28:47.3402221Z [36;1mmkdir "$selected_inputs/corepack" "$selected_inputs/cache"[0m
+2026-11-16T01:28:47.3402699Z [36;1mprintf '{"private":true}\n' > "$selected_inputs/corepack/package.json"[0m
+2026-11-16T01:28:47.3403271Z [36;1mpnpm --dir "$selected_inputs/corepack" add --ignore-scripts --save-exact corepack@0.36.0[0m
+2026-11-16T01:28:47.3404018Z [36;1mCOREPACK_HOME="$selected_inputs/cache" node "$selected_inputs/corepack/node_modules/corepack/dist/pnpm.js" --version[0m
+2026-11-16T01:28:47.3404600Z [36;1mif [[ "$RUNNER_OS" = Linux ]]; then[0m
+2026-11-16T01:28:47.3405148Z [36;1m  LEGACY_LINUX_CHILD_EXEC_GO=1 node packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts \[0m
+2026-11-16T01:28:47.3405961Z [36;1m    --linux-child-exec "$selected_inputs/linux-child-exec" "$(command -v cc)" "$(command -v readelf)" \[0m
+2026-11-16T01:28:47.3406578Z [36;1m    > "$RUNNER_TEMP/host-emulated-linux-child-exec-selection.json"[0m
+2026-11-16T01:28:47.3406952Z [36;1mfi[0m
+2026-11-16T01:28:47.3407285Z [36;1mHOST_EMULATED_INPUTS="$selected_inputs" node --input-type=module <<'NODE'[0m
+2026-11-16T01:28:47.3408141Z [36;1mimport assert from 'node:assert/strict';[0m
+2026-11-16T01:28:47.3408497Z [36;1mimport { createHash } from 'node:crypto';[0m
+2026-11-16T01:28:47.3408973Z [36;1mimport { appendFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';[0m
+2026-11-16T01:28:47.3409634Z [36;1mimport { captureLinuxNodeExecArtifact } from './src/main/utils/linuxNodeExecArtifact.ts';[0m
+2026-11-16T01:28:47.3410298Z [36;1mimport { verifyLinuxChildExecInput } from './src/main/utils/linuxChildLaunchSelection.ts';[0m
+2026-11-16T01:28:47.3410785Z [36;1mimport { join } from 'node:path';[0m
+2026-11-16T01:28:47.3411231Z [36;1mconst sha = path => createHash('sha256').update(readFileSync(path)).digest('hex');[0m
+2026-11-16T01:28:47.3411721Z [36;1mconst selected = process.env.HOST_EMULATED_INPUTS;[0m
+2026-11-16T01:28:47.3412197Z [36;1mconst corepack = realpathSync(join(selected, 'corepack/node_modules/corepack'));[0m
+2026-11-16T01:28:47.3412831Z [36;1massert.equal(JSON.parse(readFileSync(join(corepack, 'package.json'), 'utf8')).version, '0.36.0');[0m
+2026-11-16T01:28:47.3413364Z [36;1mconst pnpm = join(corepack, 'dist/pnpm.js');[0m
+2026-11-16T01:28:47.3413695Z [36;1mlet processLauncher, linuxChildExec;[0m
+2026-11-16T01:28:47.3414012Z [36;1mif (process.platform === 'linux') {[0m
+2026-11-16T01:28:47.3414535Z [36;1m  const launcher = captureLinuxNodeExecArtifact(realpathSync('resources/process-launch/linux-x64'));[0m
+2026-11-16T01:28:47.3415268Z [36;1m  processLauncher = { manifestSha256: launcher.manifestSha256, binarySha256: launcher.binarySha256 };[0m
+2026-11-16T01:28:47.3416091Z [36;1m  const pin = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-linux-child-exec-selection.json'), 'utf8'));[0m
+2026-11-16T01:28:47.3416887Z [36;1m  assert.deepEqual(Object.keys(pin).sort(), ['binarySha256', 'manifestPath', 'manifestSha256']);[0m
+2026-11-16T01:28:47.3417511Z [36;1m  assert.equal(pin.manifestPath, join(selected, 'linux-child-exec/manifest.json'));[0m
+2026-11-16T01:28:47.3418236Z [36;1m  assert.ok(!/[\r\n]/.test(pin.manifestPath));[0m
+2026-11-16T01:28:47.3418612Z [36;1m  linuxChildExec = verifyLinuxChildExecInput(pin);[0m
+2026-11-16T01:28:47.3418978Z [36;1m  assert.deepEqual(linuxChildExec, pin);[0m
+2026-11-16T01:28:47.3419420Z [36;1m  assert.equal(JSON.parse(readFileSync(pin.manifestPath, 'utf8')).sourceSha256,[0m
+2026-11-16T01:28:47.3419945Z [36;1m    sha('packages/legacy-agent-host/native/linux-child-exec.c'));[0m
+2026-11-16T01:28:47.3420302Z [36;1m}[0m
+2026-11-16T01:28:47.3420506Z [36;1mconst values = {[0m
+2026-11-16T01:28:47.3421214Z [36;1m  LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',[0m
+2026-11-16T01:28:47.3421671Z [36;1m  LEGACY_DESKTOP_COREPACK_HOME: join(selected, 'cache'),[0m
+2026-11-16T01:28:47.3422118Z [36;1m  LEGACY_DESKTOP_NODE_SHA256: sha(realpathSync(process.execPath)),[0m
+2026-11-16T01:28:47.3422654Z [36;1m  LEGACY_DESKTOP_HOST_ENTRY_SHA256: sha('packages/legacy-agent-host/dist/cli.js'),[0m
+2026-11-16T01:28:47.3423202Z [36;1m  LEGACY_DESKTOP_PNPM_PATH: pnpm, LEGACY_DESKTOP_PNPM_SHA256: sha(pnpm),[0m
+2026-11-16T01:28:47.3423739Z [36;1m  LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256: sha(join(corepack, 'package.json')),[0m
+2026-11-16T01:28:47.3424329Z [36;1m  LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256: sha(join(corepack, 'dist/lib/corepack.cjs')),[0m
+2026-11-16T01:28:47.3424944Z [36;1m  ...(linuxChildExec ? { LEGACY_LINUX_CHILD_EXEC_MANIFEST: linuxChildExec.manifestPath,[0m
+2026-11-16T01:28:47.3425507Z [36;1m    LEGACY_LINUX_CHILD_EXEC_SHA256: linuxChildExec.manifestSha256 } : {}),[0m
+2026-11-16T01:28:47.3425902Z [36;1m};[0m
+2026-11-16T01:28:47.3426358Z [36;1mfor (const [key, value] of Object.entries(values)) appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);[0m
+2026-11-16T01:28:47.3427081Z [36;1mwriteFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), JSON.stringify({[0m
+2026-11-16T01:28:47.3427924Z [36;1m  sourceHead: process.env.HOST_EMULATED_SOURCE_HEAD, platform: process.platform,[0m
+2026-11-16T01:28:47.3428820Z [36;1m  architecture: process.arch, nativeProviders: process.env.HOST_EMULATED_LANE === 'opencode-v2-management' ? 'OpenCode V2 with finite localhost model only' : 'forbidden',[0m
+2026-11-16T01:28:47.3429581Z [36;1m  values, linuxChildExec, processLauncher,[0m
+2026-11-16T01:28:47.3429890Z [36;1m}, null, 2), { mode: 0o600 });[0m
+2026-11-16T01:28:47.3430150Z [36;1mNODE[0m
+2026-11-16T01:28:47.3480403Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T01:28:47.3480748Z env:
+2026-11-16T01:28:47.3480964Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:28:47.3481342Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:28:47.3481710Z   HOST_EMULATED_LANE: selection
+2026-11-16T01:28:47.3481965Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:28:47.3482276Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T01:28:47.3482594Z   TMPDIR: /home/runner/work/_temp
+2026-11-16T01:28:47.3482836Z ##[endgroup]
+2026-11-16T01:28:47.9481263Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-16T01:28:47.9628899Z Packages: +1
+2026-11-16T01:28:47.9648555Z +
+2026-11-16T01:28:48.1001004Z Packages are hard linked from the content-addressable store to the virtual store.
+2026-11-16T01:28:48.1002269Z   Content-addressable store is at: /home/runner/setup-pnpm/node_modules/.bin/store/v11
+2026-11-16T01:28:48.1003246Z   Virtual store is at:             node_modules/.pnpm
+2026-11-16T01:28:48.1004143Z Progress: resolved 1, reused 0, downloaded 1, added 1, done
+2026-11-16T01:28:48.1228873Z 
+2026-11-16T01:28:48.1229188Z dependencies:
+2026-11-16T01:28:48.1229534Z + corepack 0.36.0
+2026-11-16T01:28:48.1229716Z 
+2026-11-16T01:28:48.1314018Z Done in 741ms using pnpm v11.22.0
+2026-11-16T01:28:48.2151268Z ! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-11.22.0.tgz
+2026-11-16T01:28:49.7799337Z 11.22.0
+2026-11-16T01:28:50.8076404Z ##[group]Run set -euo pipefail
+2026-11-16T01:28:50.8076755Z [36;1mset -euo pipefail[0m
+2026-11-16T01:28:50.8077182Z [36;1mxvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \[0m
+2026-11-16T01:28:50.8078426Z [36;1m  bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \[0m
+2026-11-16T01:28:50.8079312Z [36;1m  2>&1 | tee "$RUNNER_TEMP/host-emulated-emulated-selection-ui.log"[0m
+2026-11-16T01:28:50.8129345Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T01:28:50.8129696Z env:
+2026-11-16T01:28:50.8130087Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:28:50.8130451Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:28:50.8130816Z   HOST_EMULATED_LANE: selection
+2026-11-16T01:28:50.8131075Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:28:50.8131435Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T01:28:50.8131768Z   TMPDIR: /home/runner/work/_temp
+2026-11-16T01:28:50.8132028Z   LEGACY_DESKTOP_BACKEND_GO: 1
+2026-11-16T01:28:50.8132278Z   LEGACY_DESKTOP_EMULATED_ONLY: 1
+2026-11-16T01:28:50.8132700Z   LEGACY_DESKTOP_COREPACK_HOME: /home/runner/work/_temp/TEST-emulated-ui-inputs-d282PE/cache
+2026-11-16T01:28:50.8133325Z   LEGACY_DESKTOP_NODE_SHA256: 7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c
+2026-11-16T01:28:50.8133965Z   LEGACY_DESKTOP_HOST_ENTRY_SHA256: 7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add
+2026-11-16T01:28:50.8134834Z   LEGACY_DESKTOP_PNPM_PATH: /home/runner/work/_temp/TEST-emulated-ui-inputs-d282PE/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js
+2026-11-16T01:28:50.8135692Z   LEGACY_DESKTOP_PNPM_SHA256: 7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb
+2026-11-16T01:28:50.8136356Z   LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256: 6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714
+2026-11-16T01:28:50.8137051Z   LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256: abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e
+2026-11-16T01:28:50.8137938Z   LEGACY_LINUX_CHILD_EXEC_MANIFEST: /home/runner/work/_temp/TEST-emulated-ui-inputs-d282PE/linux-child-exec/manifest.json
+2026-11-16T01:28:50.8138659Z   LEGACY_LINUX_CHILD_EXEC_SHA256: e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734
+2026-11-16T01:28:50.8139150Z   LEGACY_DESKTOP_PROOF_MODE: emulated-selection-ui
+2026-11-16T01:28:50.8139443Z ##[endgroup]
+2026-11-16T01:28:53.2602410Z {"phase":"prepared","receipt":"/home/runner/work/_temp/TEST-desktop-backend-JWiNYE/desktop-backend-receipt.json"}
+2026-11-16T01:31:26.3091448Z {"status":"PASS","receipt":"/home/runner/work/_temp/TEST-desktop-backend-JWiNYE/desktop-backend-receipt.json"}
+2026-11-16T01:31:26.3665594Z ##[group]Run set -euo pipefail
+2026-11-16T01:31:26.3666997Z [36;1mset -euo pipefail[0m
+2026-11-16T01:31:26.3667286Z [36;1mnode --input-type=module <<'NODE'[0m
+2026-11-16T01:31:26.3667614Z [36;1mimport assert from 'node:assert/strict';[0m
+2026-11-16T01:31:26.3668327Z [36;1mimport { createHash } from 'node:crypto';[0m
+2026-11-16T01:31:26.3668811Z [36;1mimport { readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';[0m
+2026-11-16T01:31:26.3669456Z [36;1mimport { captureLinuxNodeExecArtifact } from './src/main/utils/linuxNodeExecArtifact.ts';[0m
+2026-11-16T01:31:26.3670134Z [36;1mimport { verifyLinuxChildExecInput } from './src/main/utils/linuxChildLaunchSelection.ts';[0m
+2026-11-16T01:31:26.3670673Z [36;1mimport { basename, dirname, join } from 'node:path';[0m
+2026-11-16T01:31:26.3671245Z [36;1mimport { isSkillsMetadataRefusal } from './scripts/legacy-agent-host/desktop-skills-fixture.ts';[0m
+2026-11-16T01:31:26.3672126Z [36;1mimport { assertDesktopEmulatedImportModelChecks } from './scripts/legacy-agent-host/desktop-emulated-import-ui.ts';[0m
+2026-11-16T01:31:26.3673072Z [36;1mimport { readDesktopStoppedImportSeed, stoppedImportSourceBytes } from './scripts/legacy-agent-host/desktop-stopped-import-fixture.ts';[0m
+2026-11-16T01:31:26.3673987Z [36;1mconst inputs = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), 'utf8'));[0m
+2026-11-16T01:31:26.3674666Z [36;1massert.equal(inputs.sourceHead, process.env.HOST_EMULATED_SOURCE_HEAD);[0m
+2026-11-16T01:31:26.3675277Z [36;1massert.equal(inputs.platform + '-' + inputs.architecture, process.env.HOST_EMULATED_PLATFORM);[0m
+2026-11-16T01:31:26.3675819Z [36;1massert.equal(inputs.nativeProviders, 'forbidden');[0m
+2026-11-16T01:31:26.3676166Z [36;1mlet linuxChildExec;[0m
+2026-11-16T01:31:26.3676438Z [36;1mif (process.platform === 'linux') {[0m
+2026-11-16T01:31:26.3677253Z [36;1m  const processLauncher = captureLinuxNodeExecArtifact(realpathSync('resources/process-launch/linux-x64'));[0m
+2026-11-16T01:31:26.3678324Z [36;1m  assert.equal(processLauncher.manifestSha256, inputs.processLauncher.manifestSha256);[0m
+2026-11-16T01:31:26.3678994Z [36;1m  assert.equal(processLauncher.binarySha256, inputs.processLauncher.binarySha256);[0m
+2026-11-16T01:31:26.3679578Z [36;1m  linuxChildExec = verifyLinuxChildExecInput(inputs.linuxChildExec);[0m
+2026-11-16T01:31:26.3680076Z [36;1m  assert.deepEqual(linuxChildExec, inputs.linuxChildExec);[0m
+2026-11-16T01:31:26.3680631Z [36;1m  assert.equal(inputs.values.LEGACY_LINUX_CHILD_EXEC_MANIFEST, linuxChildExec.manifestPath);[0m
+2026-11-16T01:31:26.3681290Z [36;1m  assert.equal(inputs.values.LEGACY_LINUX_CHILD_EXEC_SHA256, linuxChildExec.manifestSha256);[0m
+2026-11-16T01:31:26.3681744Z [36;1m} else {[0m
+2026-11-16T01:31:26.3682116Z [36;1m  assert.equal(process.platform, 'darwin'); assert.equal(process.arch, 'arm64');[0m
+2026-11-16T01:31:26.3682779Z [36;1m  assert.equal(inputs.linuxChildExec, undefined); assert.equal(inputs.processLauncher, undefined);[0m
+2026-11-16T01:31:26.3683263Z [36;1m}[0m
+2026-11-16T01:31:26.3683469Z [36;1mconst modesByLane = {[0m
+2026-11-16T01:31:26.3683733Z [36;1m  team: ['team-ui'],[0m
+2026-11-16T01:31:26.3683996Z [36;1m  taskboard: ['task-board-ui'],[0m
+2026-11-16T01:31:26.3684280Z [36;1m  skills: ['skills-ui'],[0m
+2026-11-16T01:31:26.3684586Z [36;1m  'cross-team': ['task-board-cross-team-ui'],[0m
+2026-11-16T01:31:26.3684958Z [36;1m  collaboration: ['emulated-collaboration-ui'],[0m
+2026-11-16T01:31:26.3685310Z [36;1m  extensions: ['emulated-extensions-ui'],[0m
+2026-11-16T01:31:26.3685630Z [36;1m  import: ['emulated-import-ui'],[0m
+2026-11-16T01:31:26.3685947Z [36;1m  management: ['emulated-management-ui'],[0m
+2026-11-16T01:31:26.3686290Z [36;1m  'codex-login': ['emulated-codex-login-ui'],[0m
+2026-11-16T01:31:26.3686630Z [36;1m  codex: ['emulated-codex-runtime-ui'],[0m
+2026-11-16T01:31:26.3686967Z [36;1m  claude: ['emulated-claude-runtime-ui'],[0m
+2026-11-16T01:31:26.3687531Z [36;1m  'claude-lifecycle': ['emulated-claude-lifecycle-ui'],[0m
+2026-11-16T01:31:26.3688204Z [36;1m  opencode: ['emulated-opencode-runtime-ui'],[0m
+2026-11-16T01:31:26.3688569Z [36;1m  review: ['review-ui', 'review-readback-ui'],[0m
+2026-11-16T01:31:26.3688911Z [36;1m  selection: ['emulated-selection-ui'],[0m
+2026-11-16T01:31:26.3689255Z [36;1m  installer: ['emulated-installer-ui'],[0m
+2026-11-16T01:31:26.3689574Z [36;1m  processes: ['process-cold-ui'],[0m
+2026-11-16T01:31:26.3689848Z [36;1m};[0m
+2026-11-16T01:31:26.3690091Z [36;1mconst lane = process.env.HOST_EMULATED_LANE;[0m
+2026-11-16T01:31:26.3690530Z [36;1massert.ok(Object.hasOwn(modesByLane, lane), 'one exact declared UI lane');[0m
+2026-11-16T01:31:26.3691095Z [36;1mconst sha = path => createHash('sha256').update(readFileSync(path)).digest('hex');[0m
+2026-11-16T01:31:26.3691595Z [36;1mconst readRecords = (directory, optional = false) => {[0m
+2026-11-16T01:31:26.3691949Z [36;1m  let names;[0m
+2026-11-16T01:31:26.3692208Z [36;1m  try { names = readdirSync(directory); }[0m
+2026-11-16T01:31:26.3692508Z [36;1m  catch (error) {[0m
+2026-11-16T01:31:26.3692870Z [36;1m    if (optional && error.code === 'ENOENT' && error.path === directory) return [];[0m
+2026-11-16T01:31:26.3693271Z [36;1m    throw error;[0m
+2026-11-16T01:31:26.3693498Z [36;1m  }[0m
+2026-11-16T01:31:26.3693765Z [36;1m  names = names.filter(name => name.endsWith('.json'));[0m
+2026-11-16T01:31:26.3694123Z [36;1m  assert.ok(names.length <= 256);[0m
+2026-11-16T01:31:26.3694555Z [36;1m  return names.map(name => JSON.parse(readFileSync(join(directory, name), 'utf8')));[0m
+2026-11-16T01:31:26.3694981Z [36;1m};[0m
+2026-11-16T01:31:26.3695182Z [36;1mconst completed = [];[0m
+2026-11-16T01:31:26.3695463Z [36;1mfor (const mode of modesByLane[lane]) {[0m
+2026-11-16T01:31:26.3695954Z [36;1m  const rows = readFileSync(join(process.env.RUNNER_TEMP, `host-emulated-${mode}.log`), 'utf8')[0m
+2026-11-16T01:31:26.3696739Z [36;1m    .split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line));[0m
+2026-11-16T01:31:26.3697241Z [36;1m  const last = rows.findLast(row => row.receipt && row.status);[0m
+2026-11-16T01:31:26.3697917Z [36;1m  assert.ok(last && last.status === 'PASS', 'original UI flow and cleanup must pass');[0m
+2026-11-16T01:31:26.3698497Z [36;1m  const receipt = JSON.parse(readFileSync(last.receipt, 'utf8'));[0m
+2026-11-16T01:31:26.3698930Z [36;1m  const root = realpathSync(dirname(last.receipt));[0m
+2026-11-16T01:31:26.3699338Z [36;1m  assert.match(basename(root), /^TEST-desktop-backend-/);[0m
+2026-11-16T01:31:26.3699810Z [36;1m  assert.equal(receipt.status, 'PASS'); assert.equal(receipt.mode, mode);[0m
+2026-11-16T01:31:26.3700345Z [36;1m  assert.equal(receipt.source.head, process.env.HOST_EMULATED_SOURCE_HEAD);[0m
+2026-11-16T01:31:26.3700796Z [36;1m  assert.equal(receipt.source.dirty, false);[0m
+2026-11-16T01:31:26.3701222Z [36;1m  assert.deepEqual(receipt.linuxChildExecInput, linuxChildExec);[0m
+2026-11-16T01:31:26.3701816Z [36;1m  if (linuxChildExec) assert.equal(receipt.linuxChildExecInputVerifiedAfterCleanup, true);[0m
+2026-11-16T01:31:26.3702716Z [36;1m  const runtimeProvider = { 'emulated-codex-runtime-ui': 'codex', 'emulated-claude-runtime-ui': 'claude', 'emulated-opencode-runtime-ui': 'opencode' }[mode];[0m
+2026-11-16T01:31:26.3703545Z [36;1m  const skills = mode === 'skills-ui', crossTeam = mode === 'task-board-cross-team-ui';[0m
+2026-11-16T01:31:26.3704048Z [36;1m  const taskboard = mode === 'task-board-ui' || crossTeam;[0m
+2026-11-16T01:31:26.3704456Z [36;1m  const installer = mode === 'emulated-installer-ui';[0m
+2026-11-16T01:31:26.3705002Z [36;1m  const selection = mode === 'emulated-selection-ui' || installer, processes = mode === 'process-cold-ui';[0m
+2026-11-16T01:31:26.3705590Z [36;1m  const lifecycle = mode === 'emulated-claude-lifecycle-ui';[0m
+2026-11-16T01:31:26.3706052Z [36;1m  const collaboration = mode === 'emulated-collaboration-ui';[0m
+2026-11-16T01:31:26.3706788Z [36;1m  const extensions = mode === 'emulated-extensions-ui', savedImport = mode === 'emulated-import-ui';[0m
+2026-11-16T01:31:26.3707478Z [36;1m  // Settings fixtures pin a Runtime profile, while their wrappers permit management only.[0m
+2026-11-16T01:31:26.3708350Z [36;1m  const runtime = runtimeProvider !== undefined || selection || lifecycle || collaboration || extensions || savedImport;[0m
+2026-11-16T01:31:26.3708970Z [36;1m  const codexLogin = mode === 'emulated-codex-login-ui';[0m
+2026-11-16T01:31:26.3709468Z [36;1m  assert.deepEqual(receipt.emulation, { only: true, runtimeConfigured: runtime,[0m
+2026-11-16T01:31:26.3710337Z [36;1m    managementConfigured: mode === 'emulated-management-ui' || codexLogin || runtime || skills, noNativeHostChildrenBeforeUi: true, noNativeHostChildren: true });[0m
+2026-11-16T01:31:26.3711152Z [36;1m  assert.equal(receipt.hostChild.observedBeforeShutdown, true);[0m
+2026-11-16T01:31:26.3711631Z [36;1m  assert.equal(receipt.cleanup.capturedHostAbsent, true);[0m
+2026-11-16T01:31:26.3712053Z [36;1m  assert.deepEqual(receipt.cleanup.remaining, []);[0m
+2026-11-16T01:31:26.3712475Z [36;1m  assert.equal(receipt.cleanup.cleanupFailure, undefined);[0m
+2026-11-16T01:31:26.3712907Z [36;1m  assert.equal(receipt.sourceFreezeFailure, undefined);[0m
+2026-11-16T01:31:26.3713497Z [36;1m  assert.deepEqual(receipt.selectedSourceHashesAfterFlow, receipt.selectedSourceHashesBeforeApp);[0m
+2026-11-16T01:31:26.3714431Z [36;1m  if (skills) assert.ok(receipt.finalSentinelCensus.refusedInvocations.every(isSkillsMetadataRefusal), 'only exact original metadata refusals');[0m
+2026-11-16T01:31:26.3715264Z [36;1m  else assert.deepEqual(receipt.finalSentinelCensus.refusedInvocations, []);[0m
+2026-11-16T01:31:26.3715813Z [36;1m  assert.ok(receipt.finalSentinelCensus.invocations.length > 0);[0m
+2026-11-16T01:31:26.3716534Z [36;1m  const proof = mode === 'team-ui' ? receipt.userControlProof : taskboard ? receipt.taskBoardUiProof : skills ? receipt.skillsUiProof :[0m
+2026-11-16T01:31:26.3717779Z [36;1m    collaboration ? receipt.emulatedCollaborationUiProof : extensions ? receipt.nativeExtensionsUi : savedImport ? receipt.stoppedImportUiProof :[0m
+2026-11-16T01:31:26.3719049Z [36;1m    codexLogin ? receipt.codexLoginUi : lifecycle ? receipt.emulatedLifecycleUiProof : mode === 'emulated-management-ui' ? receipt.emulatedManagementUiProof : selection ? receipt.emulatedSelectionUiProof :[0m
+2026-11-16T01:31:26.3720183Z [36;1m    processes ? receipt.nativeProcessUi : runtime ? receipt.emulatedRuntimeUiProof : receipt.reviewUiProof;[0m
+2026-11-16T01:31:26.3720833Z [36;1m  assert.equal(proof.status, 'PASS'); assert.ok(proof.steps.length > 0);[0m
+2026-11-16T01:31:26.3721231Z [36;1m  if (skills) {[0m
+2026-11-16T01:31:26.3721514Z [36;1m    assert.equal(proof.finalJournal.length, 5);[0m
+2026-11-16T01:31:26.3721946Z [36;1m    assert.equal(proof.nativeTrash.completed.phase, 'completed');[0m
+2026-11-16T01:31:26.3722444Z [36;1m    assert.equal(proof.nativeTrash.completed.resourceHeld, false);[0m
+2026-11-16T01:31:26.3722930Z [36;1m    assert.equal(proof.nativeTrash.replacementSurvived, true);[0m
+2026-11-16T01:31:26.3723296Z [36;1m  }[0m
+2026-11-16T01:31:26.3723501Z [36;1m  if (crossTeam) {[0m
+2026-11-16T01:31:26.3723936Z [36;1m    for (const key of ['taskReviewCycleUiProof', 'taskNotificationUiProof', 'crossTeamUiProof',[0m
+2026-11-16T01:31:26.3724668Z [36;1m      'oversizedCommentUiProof', 'taskTrashRestoreUiProof', 'f08ReadTimingProof', 'ownerDefaultRoutingProof'])[0m
+2026-11-16T01:31:26.3725391Z [36;1m      assert.equal(receipt[key].status, 'PASS', 'original complete cross-Team proof: ' + key);[0m
+2026-11-16T01:31:26.3725978Z [36;1m    assert.equal(receipt.ownerDefaultRoutingProof.epochs.length, 3);[0m
+2026-11-16T01:31:26.3726496Z [36;1m    for (const epoch of receipt.ownerDefaultRoutingProof.epochs) {[0m
+2026-11-16T01:31:26.3727044Z [36;1m      assert.equal(epoch.status, 'PASS'); assert.equal(epoch.cleanup.hostsAbsent, true);[0m
+2026-11-16T01:31:26.3727908Z [36;1m      assert.deepEqual(epoch.cleanup.remaining, []); assert.equal(epoch.cleanupFailure, undefined);[0m
+2026-11-16T01:31:26.3728394Z [36;1m    }[0m
+2026-11-16T01:31:26.3728588Z [36;1m  }[0m
+2026-11-16T01:31:26.3728855Z [36;1m  if (collaboration || extensions || savedImport) {[0m
+2026-11-16T01:31:26.3729331Z [36;1m    const pins = proof.fixturePins, cleanup = receipt.emulatedRuntimeCleanup;[0m
+2026-11-16T01:31:26.3729956Z [36;1m    assert.equal(pins.runtimeConfigured, true); assert.equal(pins.managementConfigured, true);[0m
+2026-11-16T01:31:26.3730478Z [36;1m    assert.equal(pins.vendorsAllowed, false);[0m
+2026-11-16T01:31:26.3730946Z [36;1m    assert.equal(cleanup.absent, true); assert.deepEqual(cleanup.remaining, []);[0m
+2026-11-16T01:31:26.3731450Z [36;1m    assert.equal(cleanup.observationFailed, undefined);[0m
+2026-11-16T01:31:26.3731856Z [36;1m    assert.ok(cleanup.originalPeerPids.length > 0);[0m
+2026-11-16T01:31:26.3732315Z [36;1m    const births = cleanup.effects.filter(row => row.event === 'launch');[0m
+2026-11-16T01:31:26.3732732Z [36;1m    assert.ok(births.length > 0);[0m
+2026-11-16T01:31:26.3733150Z [36;1m    assert.equal(cleanup.effects.some(row => row.event === 'failure'), false);[0m
+2026-11-16T01:31:26.3733689Z [36;1m    const inventory = extensions ? proof.finitePluginInventoryRead : null;[0m
+2026-11-16T01:31:26.3734107Z [36;1m    let inventoryBirth;[0m
+2026-11-16T01:31:26.3734366Z [36;1m    if (extensions) {[0m
+2026-11-16T01:31:26.3734703Z [36;1m      assert.deepEqual(inventory.command, ['plugin', 'list']);[0m
+2026-11-16T01:31:26.3735151Z [36;1m      assert.deepEqual(inventory.executable, pins.executable);[0m
+2026-11-16T01:31:26.3735635Z [36;1m      assert.ok(Number.isSafeInteger(inventory.pid) && inventory.pid > 1);[0m
+2026-11-16T01:31:26.3736203Z [36;1m      assert.ok(Number.isSafeInteger(inventory.parentPid) && inventory.parentPid > 1);[0m
+2026-11-16T01:31:26.3736902Z [36;1m      assert.notEqual(inventory.parentPid, receipt.hostChild.pid);[0m
+2026-11-16T01:31:26.3737355Z [36;1m      assert.equal(inventory.app.pid, receipt.app.pid);[0m
+2026-11-16T01:31:26.3738015Z [36;1m      assert.equal(inventory.app.pgid, receipt.app.processGroup);[0m
+2026-11-16T01:31:26.3738480Z [36;1m      assert.equal(inventory.app.ppid, inventory.parentPid);[0m
+2026-11-16T01:31:26.3738981Z [36;1m      assert.equal(inventory.exitCode, 0); assert.equal(inventory.signal, null);[0m
+2026-11-16T01:31:26.3739836Z [36;1m      assert.equal(inventory.outputSha256, createHash('sha256').update('Installed plugins:\n  frontend-design@claude-plugins-official (user)\n').digest('hex'));[0m
+2026-11-16T01:31:26.3740644Z [36;1m      const readers = births.filter(row => row.pid === inventory.pid);[0m
+2026-11-16T01:31:26.3741137Z [36;1m      assert.equal(readers.length, 1); inventoryBirth = readers[0];[0m
+2026-11-16T01:31:26.3741622Z [36;1m      assert.deepEqual(inventoryBirth.command, ['plugin', 'list']);[0m
+2026-11-16T01:31:26.3742173Z [36;1m      const observations = cleanup.effects.filter(row => row.pid === inventory.pid);[0m
+2026-11-16T01:31:26.3742789Z [36;1m      assert.deepEqual(observations.map(row => row.event), ['launch', 'extension-read']);[0m
+2026-11-16T01:31:26.3743474Z [36;1m      assert.ok(observations.every(row => JSON.stringify(row.command) === JSON.stringify(['plugin', 'list'])));[0m
+2026-11-16T01:31:26.3743973Z [36;1m    }[0m
+2026-11-16T01:31:26.3744204Z [36;1m    for (const birth of births) {[0m
+2026-11-16T01:31:26.3744580Z [36;1m      assert.ok(Number.isSafeInteger(birth.pid) && birth.pid > 1);[0m
+2026-11-16T01:31:26.3745192Z [36;1m      assert.equal(birth.parentPid, birth === inventoryBirth ? inventory.parentPid : receipt.hostChild.pid);[0m
+2026-11-16T01:31:26.3745798Z [36;1m      assert.ok(cleanup.originalPeerPids.includes(birth.pid));[0m
+2026-11-16T01:31:26.3746156Z [36;1m    }[0m
+2026-11-16T01:31:26.3746551Z [36;1m    for (const pin of [...pins.sources, ...(collaboration ? pins.executables : [pins.executable])]) {[0m
+2026-11-16T01:31:26.3747243Z [36;1m      assert.equal(realpathSync(pin.path), pin.path);[0m
+2026-11-16T01:31:26.3747738Z [36;1m      assert.equal(sha(pin.path), pin.sha256);[0m
+2026-11-16T01:31:26.3748040Z [36;1m    }[0m
+2026-11-16T01:31:26.3748255Z [36;1m    if (extensions || savedImport) {[0m
+2026-11-16T01:31:26.3748624Z [36;1m      assert.equal(proof.execution, 'finite-protocol-peer');[0m
+2026-11-16T01:31:26.3749176Z [36;1m      assert.equal(pins.provider, 'claude'); assert.equal(pins.protocolRevision, 'sdk-0.3.305');[0m
+2026-11-16T01:31:26.3749957Z [36;1m      assert.ok(cleanup.effects.every(row => row.provider === 'claude' && (row.role === 'management' || savedImport && row.role === 'runtime')));[0m
+2026-11-16T01:31:26.3750826Z [36;1m      assert.deepEqual(readRecords(join(root, 'hoststore/runtime-sessions'), true), [], 'no allocated Runtime session');[0m
+2026-11-16T01:31:26.3751364Z [36;1m    }[0m
+2026-11-16T01:31:26.3751589Z [36;1m  }[0m
+2026-11-16T01:31:26.3751792Z [36;1m  if (collaboration) {[0m
+2026-11-16T01:31:26.3752294Z [36;1m    assert.equal(proof.execution, 'finite-protocol-peers'); assert.equal(proof.nativeQualification, false);[0m
+2026-11-16T01:31:26.3752943Z [36;1m    assert.deepEqual(proof.providers, ['claude', 'codex', 'opencode']);[0m
+2026-11-16T01:31:26.3753454Z [36;1m    assert.deepEqual(proof.fixturePins.providers, proof.providers);[0m
+2026-11-16T01:31:26.3753973Z [36;1m    assert.equal(proof.fixturePins.collaborationVariant, 'mixed-v1');[0m
+2026-11-16T01:31:26.3754658Z [36;1m    assert.deepEqual(proof.fixturePins.protocolRevisions, { claude: 'sdk-0.3.305', codex: '0.162.0', opencode: '1.19.4' });[0m
+2026-11-16T01:31:26.3755289Z [36;1m    assert.equal(proof.initial.sessions.length, 2);[0m
+2026-11-16T01:31:26.3755684Z [36;1m    assert.equal(proof.initial.physical.length, 2);[0m
+2026-11-16T01:31:26.3756147Z [36;1m    for (const [kind, value] of [['add', proof.added], ['restore', proof.restored]]) {[0m
+2026-11-16T01:31:26.3756819Z [36;1m      assert.equal(value.receipt.liveMembership.phase, 'completed');[0m
+2026-11-16T01:31:26.3757320Z [36;1m      assert.equal(value.receipt.liveMembership.delta.kind, kind);[0m
+2026-11-16T01:31:26.3758029Z [36;1m      assert.equal(value.member.name, 'carol'); assert.equal(value.member.settings.providerId, 'opencode');[0m
+2026-11-16T01:31:26.3758770Z [36;1m      assert.equal(value.readiness.probe.phase, 'completed'); assert.equal(value.readiness.probe.ok, true);[0m
+2026-11-16T01:31:26.3759595Z [36;1m      assert.equal(value.readiness.probe.resourceHeld, false); assert.equal(value.readiness.consumer.disposition, 'consumed');[0m
+2026-11-16T01:31:26.3760182Z [36;1m    }[0m
+2026-11-16T01:31:26.3760543Z [36;1m    assert.equal(proof.removed.receipt.liveMembership.delta.kind, 'remove');[0m
+2026-11-16T01:31:26.3761124Z [36;1m    assert.equal(proof.removed.receipt.liveMembership.phase, 'completed');[0m
+2026-11-16T01:31:26.3761816Z [36;1m    assert.equal(proof.removed.originalProcessAbsent, true); assert.equal(proof.removed.oldGrant.revoked, true);[0m
+2026-11-16T01:31:26.3762629Z [36;1m    assert.equal(proof.removed.session.phase, 'closed'); assert.equal(proof.removed.session.custody, 'released');[0m
+2026-11-16T01:31:26.3763325Z [36;1m    assert.equal(proof.restored.member.memberId, proof.added.member.memberId);[0m
+2026-11-16T01:31:26.3763946Z [36;1m    assert.notEqual(proof.restored.binding.generation, proof.added.binding.generation);[0m
+2026-11-16T01:31:26.3764633Z [36;1m    assert.notEqual(proof.restored.selection.principalId, proof.added.selection.principalId);[0m
+2026-11-16T01:31:26.3765321Z [36;1m    assert.notEqual(proof.restored.session.sessionRef, proof.added.session.sessionRef);[0m
+2026-11-16T01:31:26.3765922Z [36;1m    assert.notEqual(proof.restored.physical.pid, proof.added.physical.pid);[0m
+2026-11-16T01:31:26.3766617Z [36;1m    assert.equal(proof.direct.direct.physical.to, 'bob'); assert.equal(proof.direct.dispatched.physical.to, 'carol');[0m
+2026-11-16T01:31:26.3767255Z [36;1m    assert.equal(proof.direct.reply.phase, 'completed');[0m
+2026-11-16T01:31:26.3767991Z [36;1m    assert.equal(proof.direct.reply.principalId, proof.added.selection.principalId);[0m
+2026-11-16T01:31:26.3768645Z [36;1m    assert.equal(proof.group.logical.length, 2); assert.equal(proof.group.sends.length, 2);[0m
+2026-11-16T01:31:26.3769338Z [36;1m    assert.equal(proof.group.deliveries.length, 3); assert.equal(proof.group.observedInputs.length, 3);[0m
+2026-11-16T01:31:26.3770114Z [36;1m    assert.deepEqual(proof.group.logical.find(row => row.text === 'TEST_UI_COLLAB_GROUP').groupRecipientNames, ['bob']);[0m
+2026-11-16T01:31:26.3770998Z [36;1m    assert.deepEqual([...proof.group.logical.find(row => row.text === 'TEST_UI_COLLAB_GROUP_REPLY').groupRecipientNames].sort(), ['alice', 'carol']);[0m
+2026-11-16T01:31:26.3772037Z [36;1m    for (const delivery of [proof.direct.direct, proof.direct.dispatched, proof.attachments.delivery, proof.restored.delivery, ...proof.group.deliveries]) {[0m
+2026-11-16T01:31:26.3772969Z [36;1m      assert.equal(delivery.receipt.phase, 'completed'); assert.equal(delivery.outbox.phase, 'admitted');[0m
+2026-11-16T01:31:26.3773691Z [36;1m      assert.equal(delivery.input.phase, 'terminal'); assert.equal(delivery.input.terminal, 'succeeded');[0m
+2026-11-16T01:31:26.3774342Z [36;1m      assert.equal(delivery.input.intent.messageId, delivery.physical.messageId);[0m
+2026-11-16T01:31:26.3774789Z [36;1m      if (delivery.ack) {[0m
+2026-11-16T01:31:26.3775196Z [36;1m        assert.equal(delivery.ack.inboxMessageId, delivery.physical.messageId);[0m
+2026-11-16T01:31:26.3775753Z [36;1m        assert.equal(delivery.ack.groupRunKey, delivery.physical.groupRunKey);[0m
+2026-11-16T01:31:26.3776164Z [36;1m      }[0m
+2026-11-16T01:31:26.3776362Z [36;1m    }[0m
+2026-11-16T01:31:26.3776637Z [36;1m    const attachments = receipt.nativeChatAttachments;[0m
+2026-11-16T01:31:26.3777215Z [36;1m    assert.equal(attachments.status, 'PASS'); assert.equal(attachments.execution, 'finite-protocol-peer');[0m
+2026-11-16T01:31:26.3778210Z [36;1m    assert.equal(proof.attachments.observedBytes.image.sha256, attachments.preparedImage.sha256);[0m
+2026-11-16T01:31:26.3778951Z [36;1m    assert.equal(proof.attachments.observedBytes.document.sha256, attachments.download.sha256);[0m
+2026-11-16T01:31:26.3779611Z [36;1m    assert.equal(attachments.preview.sha256, attachments.preparedImage.sha256);[0m
+2026-11-16T01:31:26.3780363Z [36;1m    assert.deepEqual(attachments.finiteReadback, { previewRetained: true, downloadedBytesRetained: true, downloadClicks: 0 });[0m
+2026-11-16T01:31:26.3781195Z [36;1m    assert.equal(proof.stopped.sessions.length, 4); assert.equal(proof.stopped.originalBirths.length, 4);[0m
+2026-11-16T01:31:26.3781813Z [36;1m    assert.equal(proof.stopped.originalProcessesAbsent, true);[0m
+2026-11-16T01:31:26.3782415Z [36;1m    assert.deepEqual(proof.stopped.sessions.map(row => row.inputs.length).sort(), [1, 2, 2, 3]);[0m
+2026-11-16T01:31:26.3782954Z [36;1m    for (const session of proof.stopped.sessions) {[0m
+2026-11-16T01:31:26.3783443Z [36;1m      assert.equal(session.phase, 'closed'); assert.equal(session.custody, 'released');[0m
+2026-11-16T01:31:26.3784074Z [36;1m      assert.ok(session.inputs.every(row => row.phase === 'terminal' && row.terminal === 'succeeded'));[0m
+2026-11-16T01:31:26.3784536Z [36;1m    }[0m
+2026-11-16T01:31:26.3784833Z [36;1m    const effects = receipt.emulatedRuntimeCleanup.effects;[0m
+2026-11-16T01:31:26.3785381Z [36;1m    const runtimeBirths = effects.filter(row => row.event === 'launch' && row.role === 'runtime');[0m
+2026-11-16T01:31:26.3786021Z [36;1m    assert.equal(new Set(runtimeBirths.map(row => row.pid)).size, runtimeBirths.length);[0m
+2026-11-16T01:31:26.3786609Z [36;1m    const originalPids = proof.stopped.originalBirths.map(row => row.pid);[0m
+2026-11-16T01:31:26.3787070Z [36;1m    assert.equal(new Set(originalPids).size, 4);[0m
+2026-11-16T01:31:26.3787898Z [36;1m    const catalogBirths = runtimeBirths.filter(birth => effects.some(row => row.pid === birth.pid && row.event === 'mcp-catalog'));[0m
+2026-11-16T01:31:26.3788679Z [36;1m    for (const birth of catalogBirths) {[0m
+2026-11-16T01:31:26.3789080Z [36;1m      assert.equal(originalPids.includes(birth.pid), false);[0m
+2026-11-16T01:31:26.3789560Z [36;1m      assert.equal(birth.provider, 'codex'); assert.equal(birth.argc, 3);[0m
+2026-11-16T01:31:26.3790068Z [36;1m      const observations = effects.filter(row => row.pid === birth.pid);[0m
+2026-11-16T01:31:26.3790641Z [36;1m      assert.ok(observations.every(row => row.provider === 'codex' && row.role === 'runtime'));[0m
+2026-11-16T01:31:26.3791260Z [36;1m      assert.deepEqual(observations.map(row => row.event), ['launch', 'mcp-catalog']);[0m
+2026-11-16T01:31:26.3791775Z [36;1m      assert.equal(observations[1].configuredServers, 0);[0m
+2026-11-16T01:31:26.3792111Z [36;1m    }[0m
+2026-11-16T01:31:26.3792459Z [36;1m    const births = runtimeBirths.filter(row => originalPids.includes(row.pid));[0m
+2026-11-16T01:31:26.3793103Z [36;1m    assert.deepEqual(births.map(row => row.provider).sort(), ['claude', 'codex', 'opencode', 'opencode']);[0m
+2026-11-16T01:31:26.3793745Z [36;1m    assert.deepEqual(births.map(row => row.pid).sort(), [...originalPids].sort());[0m
+2026-11-16T01:31:26.3794343Z [36;1m    // Derived probe profiles retain their Runtime environment. Every remaining birth must[0m
+2026-11-16T01:31:26.3794945Z [36;1m    // satisfy the pinned finite probe protocol; unknown children are never discarded.[0m
+2026-11-16T01:31:26.3795612Z [36;1m    const probeBirths = runtimeBirths.filter(row => !births.includes(row) && !catalogBirths.includes(row));[0m
+2026-11-16T01:31:26.3796346Z [36;1m    assert.deepEqual(probeBirths.map(row => row.provider).sort(), ['claude', 'codex', 'opencode', 'opencode']);[0m
+2026-11-16T01:31:26.3797197Z [36;1m    const policyPins = proof.fixturePins.sources.filter(row => row.path.endsWith('/adapters/providers/OpenCodeMcpPolicyPlugin.js'));[0m
+2026-11-16T01:31:26.3798205Z [36;1m    assert.equal(policyPins.length, 1);[0m
+2026-11-16T01:31:26.3798548Z [36;1m    for (const birth of probeBirths) {[0m
+2026-11-16T01:31:26.3798927Z [36;1m      const rows = effects.filter(row => row.pid === birth.pid);[0m
+2026-11-16T01:31:26.3799468Z [36;1m      assert.ok(rows.every(row => row.provider === birth.provider && row.role === 'runtime'));[0m
+2026-11-16T01:31:26.3800014Z [36;1m      const event = name => rows.filter(row => row.event === name);[0m
+2026-11-16T01:31:26.3800605Z [36;1m      const one = name => { const selected = event(name); assert.equal(selected.length, 1); return selected[0]; };[0m
+2026-11-16T01:31:26.3801134Z [36;1m      assert.equal(one('launch'), birth);[0m
+2026-11-16T01:31:26.3801507Z [36;1m      const input = one('input'), terminal = one('terminal');[0m
+2026-11-16T01:31:26.3801909Z [36;1m      assert.equal(input.marker, 'TEST_MODEL_PROBE');[0m
+2026-11-16T01:31:26.3802284Z [36;1m      const allowed = birth.provider === 'claude'[0m
+2026-11-16T01:31:26.3802755Z [36;1m        ? ['launch', 'started', 'initialized', 'input', 'terminal', 'stdin-ended', 'exited'][0m
+2026-11-16T01:31:26.3803208Z [36;1m        : birth.provider === 'codex'[0m
+2026-11-16T01:31:26.3803615Z [36;1m          ? ['launch', 'managed-configuration-read', 'input', 'terminal', 'exit'][0m
+2026-11-16T01:31:26.3804112Z [36;1m          : ['launch', 'policy-configured', 'input', 'terminal', 'exit'];[0m
+2026-11-16T01:31:26.3804739Z [36;1m      assert.ok(rows.every(row => allowed.includes(row.event)), 'no business, control, MCP or unknown probe effects');[0m
+2026-11-16T01:31:26.3805358Z [36;1m      for (const name of allowed) assert.ok(event(name).length <= 1);[0m
+2026-11-16T01:31:26.3806106Z [36;1m      const core = rows.filter(row => !['stdin-ended', 'exited', 'exit', 'managed-configuration-read', 'policy-configured'].includes(row.event));[0m
+2026-11-16T01:31:26.3806856Z [36;1m      assert.deepEqual(core.map(row => row.event), birth.provider === 'claude'[0m
+2026-11-16T01:31:26.3807570Z [36;1m        ? ['launch', 'started', 'initialized', 'input', 'terminal'] : ['launch', 'input', 'terminal']);[0m
+2026-11-16T01:31:26.3808250Z [36;1m      if (birth.provider !== 'claude') assert.equal(event('exit').length, 1);[0m
+2026-11-16T01:31:26.3808779Z [36;1m      for (const row of rows.filter(row => ['exited', 'exit'].includes(row.event))) {[0m
+2026-11-16T01:31:26.3809352Z [36;1m        assert.equal(row.code, 0); assert.ok(rows.indexOf(row) > rows.indexOf(terminal));[0m
+2026-11-16T01:31:26.3809768Z [36;1m      }[0m
+2026-11-16T01:31:26.3810009Z [36;1m      if (birth.provider === 'claude') {[0m
+2026-11-16T01:31:26.3810489Z [36;1m        assert.equal(birth.restored, false); assert.equal(typeof birth.sessionId, 'string');[0m
+2026-11-16T01:31:26.3810996Z [36;1m        for (const name of ['started', 'initialized']) {[0m
+2026-11-16T01:31:26.3811527Z [36;1m          assert.equal(one(name).sessionId, birth.sessionId); assert.equal(one(name).restored, false);[0m
+2026-11-16T01:31:26.3812002Z [36;1m        }[0m
+2026-11-16T01:31:26.3812437Z [36;1m        assert.equal(input.sessionId, birth.sessionId); assert.equal(typeof input.inputId, 'string');[0m
+2026-11-16T01:31:26.3813163Z [36;1m        assert.ok(input.inputId.length > 0); assert.equal(input.wrapped, false);[0m
+2026-11-16T01:31:26.3813633Z [36;1m        assert.equal(terminal.inputId, input.inputId);[0m
+2026-11-16T01:31:26.3814163Z [36;1m        assert.equal(terminal.marker, 'Reply only OK. Do not use tools, access files or run commands.');[0m
+2026-11-16T01:31:26.3814800Z [36;1m        assert.equal(terminal.outcome, 'succeeded'); assert.equal(terminal.text, 'OK');[0m
+2026-11-16T01:31:26.3815284Z [36;1m        for (const row of event('stdin-ended')) {[0m
+2026-11-16T01:31:26.3815774Z [36;1m          assert.equal(row.active, false); assert.ok(rows.indexOf(row) > rows.indexOf(terminal));[0m
+2026-11-16T01:31:26.3816218Z [36;1m        }[0m
+2026-11-16T01:31:26.3816421Z [36;1m      } else {[0m
+2026-11-16T01:31:26.3816869Z [36;1m        assert.equal(terminal.marker, 'TEST_MODEL_PROBE');[0m
+2026-11-16T01:31:26.3817235Z [36;1m        if (birth.provider === 'codex') {[0m
+2026-11-16T01:31:26.3817817Z [36;1m          assert.equal(typeof input.turnId, 'string'); assert.equal(terminal.turnId, input.turnId);[0m
+2026-11-16T01:31:26.3818313Z [36;1m          assert.ok(input.turnId.length > 0);[0m
+2026-11-16T01:31:26.3818663Z [36;1m          assert.equal(terminal.status, 'completed');[0m
+2026-11-16T01:31:26.3819072Z [36;1m          for (const row of event('managed-configuration-read')) {[0m
+2026-11-16T01:31:26.3819643Z [36;1m            assert.deepEqual(row.selectedServers, []); assert.ok(rows.indexOf(row) < rows.indexOf(input));[0m
+2026-11-16T01:31:26.3820125Z [36;1m          }[0m
+2026-11-16T01:31:26.3820334Z [36;1m        } else {[0m
+2026-11-16T01:31:26.3820623Z [36;1m          assert.equal(terminal.outcome, 'succeeded');[0m
+2026-11-16T01:31:26.3821000Z [36;1m          for (const row of event('policy-configured')) {[0m
+2026-11-16T01:31:26.3821591Z [36;1m            assert.equal(row.pluginSha256, policyPins[0].sha256); assert.ok(rows.indexOf(row) < rows.indexOf(input));[0m
+2026-11-16T01:31:26.3822105Z [36;1m          }[0m
+2026-11-16T01:31:26.3822304Z [36;1m        }[0m
+2026-11-16T01:31:26.3822498Z [36;1m      }[0m
+2026-11-16T01:31:26.3822689Z [36;1m    }[0m
+2026-11-16T01:31:26.3823054Z [36;1m    // Validate the original durable probe bodies independently of the process effects.[0m
+2026-11-16T01:31:26.3823654Z [36;1m    // The producer does not persist a PID-to-command join, so no such join is inferred.[0m
+2026-11-16T01:31:26.3824470Z [36;1m    const { FileManagementCommandStore } = await import('./packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore.js');[0m
+2026-11-16T01:31:26.3825304Z [36;1m    const probes = [...new FileManagementCommandStore(join(root, 'hoststore'), true).list()][0m
+2026-11-16T01:31:26.3825804Z [36;1m      .filter(row => row.kind === 'model.probe');[0m
+2026-11-16T01:31:26.3826517Z [36;1m    assert.equal(probes.length, 4); assert.equal(new Set(probes.map(row => row.commandId)).size, 4);[0m
+2026-11-16T01:31:26.3827022Z [36;1m    for (const probe of probes) {[0m
+2026-11-16T01:31:26.3827406Z [36;1m      assert.match(probe.profileId, /^team-probe-[a-f0-9]{64}$/u);[0m
+2026-11-16T01:31:26.3827952Z [36;1m      assert.equal(probe.configRevision, probe.profileId);[0m
+2026-11-16T01:31:26.3828558Z [36;1m      assert.equal(probe.phase, 'completed'); assert.equal(probe.ok, true); assert.equal(probe.resourceHeld, false);[0m
+2026-11-16T01:31:26.3829073Z [36;1m    }[0m
+2026-11-16T01:31:26.3829426Z [36;1m    assert.deepEqual(probes.map(row => [row.providerId, row.modelId]).sort(), [[0m
+2026-11-16T01:31:26.3830102Z [36;1m      ['anthropic', 'sonnet'], ['codex', 'TEST-model'], ['test-provider', 'TEST-model'], ['test-provider', 'TEST-model'],[0m
+2026-11-16T01:31:26.3830606Z [36;1m    ]);[0m
+2026-11-16T01:31:26.3845832Z [36;1m    assert.notEqual(proof.added.readiness.probe.commandId, proof.restored.readiness.probe.commandId);[0m
+2026-11-16T01:31:26.3846651Z [36;1m    for (const value of [proof.added, proof.restored]) {[0m
+2026-11-16T01:31:26.3847110Z [36;1m      const { reference, consumer, probe } = value.readiness;[0m
+2026-11-16T01:31:26.3847613Z [36;1m      const selected = probes.filter(row => row.commandId === probe.commandId);[0m
+2026-11-16T01:31:26.3848275Z [36;1m      assert.equal(selected.length, 1);[0m
+2026-11-16T01:31:26.3848653Z [36;1m      const { readinessRetired, ...projected } = selected[0];[0m
+2026-11-16T01:31:26.3849145Z [36;1m      assert.equal(readinessRetired, true); assert.deepEqual(projected, probe);[0m
+2026-11-16T01:31:26.3849936Z [36;1m      for (const key of ['commandId', 'profileId', 'configRevision', 'context', 'fingerprint', 'selectionDigest', 'resourceId', 'purpose', 'expiresAt'])[0m
+2026-11-16T01:31:26.3850670Z [36;1m        assert.deepEqual(reference[key], probe[key]);[0m
+2026-11-16T01:31:26.3851459Z [36;1m      const origin = probe.localModelReadinessOrigin, preparation = probe.localModelReadinessPreparation;[0m
+2026-11-16T01:31:26.3852174Z [36;1m      const scope = probe.readinessScope, capture = value.receipt.liveMembership.capture;[0m
+2026-11-16T01:31:26.3852733Z [36;1m      assert.equal(probe.purpose, 'native-local-readiness-v1');[0m
+2026-11-16T01:31:26.3853423Z [36;1m      assert.equal(probe.readiness.context, probe.context); assert.equal(probe.readiness.selectionDigest, probe.selectionDigest);[0m
+2026-11-16T01:31:26.3854321Z [36;1m      assert.equal(probe.readiness.evidence.ordinary, 'confirmed'); assert.equal(probe.readiness.evidence.decision, 'allow');[0m
+2026-11-16T01:31:26.3855183Z [36;1m      assert.equal(origin.commandId, value.receipt.commandId); assert.equal(preparation.commandId, origin.commandId);[0m
+2026-11-16T01:31:26.3855995Z [36;1m      assert.equal(capture.commandId, origin.commandId); assert.equal(value.captured.commandId, origin.commandId);[0m
+2026-11-16T01:31:26.3856812Z [36;1m      for (const key of ['ownerDigest', 'contextId', 'selectionDigest']) assert.equal(preparation[key], origin[key]);[0m
+2026-11-16T01:31:26.3857876Z [36;1m      assert.equal(preparation.anchorCommandId, probe.commandId); assert.equal(preparation.expiresAt, probe.expiresAt);[0m
+2026-11-16T01:31:26.3858666Z [36;1m      assert.equal(scope.kind, 'team'); assert.equal(scope.rosterRevision, capture.expectedRevision);[0m
+2026-11-16T01:31:26.3859401Z [36;1m      assert.equal(scope.sourceRevision, capture.captureDigest); assert.equal(scope.cutoff, probe.expiresAt);[0m
+2026-11-16T01:31:26.3860056Z [36;1m      assert.equal(reference.mechanismDigest, scope.mechanismDigest);[0m
+2026-11-16T01:31:26.3860619Z [36;1m      assert.equal(probe.profileId, 'team-probe-' + value.captured.configurationDigest);[0m
+2026-11-16T01:31:26.3861149Z [36;1m      assert.equal(probe.configRevision, probe.profileId);[0m
+2026-11-16T01:31:26.3861779Z [36;1m      assert.equal(consumer.actionId, value.receipt.commandId); assert.equal(consumer.groupCommandId, probe.commandId);[0m
+2026-11-16T01:31:26.3862742Z [36;1m      assert.equal(consumer.memberId, value.member.memberId); assert.deepEqual(consumer.binding, value.binding);[0m
+2026-11-16T01:31:26.3863533Z [36;1m      assert.equal(consumer.inputDigest, capture.requestDigest); assert.equal(consumer.cutoff, scope.cutoff);[0m
+2026-11-16T01:31:26.3864254Z [36;1m      assert.equal(consumer.baseConfigurationDigest, value.captured.configurationDigest);[0m
+2026-11-16T01:31:26.3864906Z [36;1m      assert.equal(consumer.configurationDigest, value.captured.configurationDigest);[0m
+2026-11-16T01:31:26.3865559Z [36;1m      assert.equal(value.selection.configurationDigest, value.captured.configurationDigest);[0m
+2026-11-16T01:31:26.3866095Z [36;1m      assert.equal(consumer.disposition, 'consumed');[0m
+2026-11-16T01:31:26.3866412Z [36;1m    }[0m
+2026-11-16T01:31:26.3867040Z [36;1m    const initialProbes = probes.filter(row => ![proof.added.readiness.probe.commandId, proof.restored.readiness.probe.commandId].includes(row.commandId));[0m
+2026-11-16T01:31:26.3868232Z [36;1m    assert.deepEqual(initialProbes.map(row => [row.providerId, row.modelId, row.effort]).sort(),[0m
+2026-11-16T01:31:26.3868832Z [36;1m      [['anthropic', 'sonnet', 'low'], ['codex', 'TEST-model', undefined]]);[0m
+2026-11-16T01:31:26.3869430Z [36;1m    assert.equal(proof.reload.historyRetained, true); assert.equal(proof.reload.noEffects, true);[0m
+2026-11-16T01:31:26.3870052Z [36;1m    assert.equal(proof.effects.some(row => row.event === 'failure'), false);[0m
+2026-11-16T01:31:26.3870439Z [36;1m  }[0m
+2026-11-16T01:31:26.3870651Z [36;1m  if (extensions) {[0m
+2026-11-16T01:31:26.3871116Z [36;1m    const selected = JSON.parse(readFileSync(join(root, 'native-extensions-selection.json'), 'utf8'));[0m
+2026-11-16T01:31:26.3871699Z [36;1m    assert.equal(selected.execution, 'finite-protocol-peer');[0m
+2026-11-16T01:31:26.3872236Z [36;1m    assert.deepEqual(selected.profile.executable, proof.fixturePins.executable);[0m
+2026-11-16T01:31:26.3873046Z [36;1m    assert.equal(proof.nativePluginListObserved, true); assert.equal(proof.reloadObserved, true);[0m
+2026-11-16T01:31:26.3873806Z [36;1m    assert.equal(proof.neighborUnchanged, true); assert.equal(sha(selected.neighborPath), selected.neighborSha256);[0m
+2026-11-16T01:31:26.3874456Z [36;1m    assert.equal(proof.completedOriginalCommandIds.length, 4);[0m
+2026-11-16T01:31:26.3874957Z [36;1m    assert.equal(new Set(proof.completedOriginalCommandIds).size, 4);[0m
+2026-11-16T01:31:26.3875652Z [36;1m    const mutations = readRecords(join(root, 'hoststore/management-commands')).filter(row => row.kind === 'extension.mutation');[0m
+2026-11-16T01:31:26.3876484Z [36;1m    assert.deepEqual(mutations.map(row => row.commandId).sort(), [...proof.completedOriginalCommandIds].sort());[0m
+2026-11-16T01:31:26.3877137Z [36;1m    assert.deepEqual(mutations.map(row => [row.action, row.scope]).sort(),[0m
+2026-11-16T01:31:26.3878067Z [36;1m      [['mcp.install', 'global'], ['mcp.uninstall', 'user'], ['plugin.install', 'user'], ['plugin.uninstall', 'user']]);[0m
+2026-11-16T01:31:26.3878928Z [36;1m    assert.ok(mutations.every(row => row.phase === 'completed' && row.resourceHeld === false && row.profileId === selected.profile.profileId));[0m
+2026-11-16T01:31:26.3879635Z [36;1m    const effects = receipt.emulatedRuntimeCleanup.effects;[0m
+2026-11-16T01:31:26.3880111Z [36;1m    assert.equal(effects.some(row => row.event === 'input'), false);[0m
+2026-11-16T01:31:26.3880710Z [36;1m    assert.deepEqual(effects.filter(row => row.event === 'extension-command').map(row => row.command), [[0m
+2026-11-16T01:31:26.3881347Z [36;1m      ['plugin', 'install', '-s', 'user', 'frontend-design@claude-plugins-official'],[0m
+2026-11-16T01:31:26.3881902Z [36;1m      ['plugin', 'uninstall', '-s', 'user', 'frontend-design@claude-plugins-official'],[0m
+2026-11-16T01:31:26.3882657Z [36;1m      ['mcp', 'add', '-s', 'user', '-t', 'http', 'test-native-extension-config-only', 'http://127.0.0.1:9/TEST-native-extension-config-only'],[0m
+2026-11-16T01:31:26.3883528Z [36;1m      ['mcp', 'remove', '-s', 'user', 'test-native-extension-config-only'],[0m
+2026-11-16T01:31:26.3883909Z [36;1m    ]);[0m
+2026-11-16T01:31:26.3884379Z [36;1m    assert.ok(effects.some(row => row.event === 'extension-read' && row.command[0] === 'mcp' && row.status === 'failed'));[0m
+2026-11-16T01:31:26.3885463Z [36;1m    assert.equal(JSON.parse(readFileSync(join(selected.profile.environment.CLAUDE_CONFIG_DIR, 'settings.json'), 'utf8')).enabledPlugins['frontend-design@claude-plugins-official'], undefined);[0m
+2026-11-16T01:31:26.3886601Z [36;1m    assert.equal(JSON.parse(readFileSync(selected.nativeConfig, 'utf8')).mcpServers['test-native-extension-config-only'], undefined);[0m
+2026-11-16T01:31:26.3887934Z [36;1m    assert.deepEqual(proof.screenshots, ['native-extensions-plugin-installed.png', 'native-extensions-plugin-uninstalled.png', 'native-extensions-mcp-installed.png']);[0m
+2026-11-16T01:31:26.3888939Z [36;1m    assert.deepEqual(Object.keys(proof.screenshotHashes).sort(), [...proof.screenshots].sort());[0m
+2026-11-16T01:31:26.3889420Z [36;1m  }[0m
+2026-11-16T01:31:26.3889630Z [36;1m  if (savedImport) {[0m
+2026-11-16T01:31:26.3889988Z [36;1m    assert.equal(proof.sourceKind, 'legacy-format-test-archive');[0m
+2026-11-16T01:31:26.3890603Z [36;1m    assert.equal(proof.noLaunchSubmit, true); assert.equal(proof.sameOriginalImportAfterReload, true);[0m
+2026-11-16T01:31:26.3891169Z [36;1m    assert.deepEqual(proof.runtimeSessions, []);[0m
+2026-11-16T01:31:26.3891582Z [36;1m    assert.deepEqual(proof.sourceAfter, proof.sourceBefore);[0m
+2026-11-16T01:31:26.3892027Z [36;1m    const seed = await readDesktopStoppedImportSeed(root);[0m
+2026-11-16T01:31:26.3892568Z [36;1m    assert.equal(seed.sourceKind, undefined, 'finite archive is not a genuine native donor');[0m
+2026-11-16T01:31:26.3893192Z [36;1m    assert.equal(sha(join(root, 'stopped-import-ui-seed.json')), proof.seedSha256);[0m
+2026-11-16T01:31:26.3893962Z [36;1m    assert.deepEqual(await stoppedImportSourceBytes(root, seed.roots), proof.sourceAfter);[0m
+2026-11-16T01:31:26.3894522Z [36;1m    assert.equal(proof.importRecord.phase, 'published');[0m
+2026-11-16T01:31:26.3895119Z [36;1m    assert.deepEqual(readRecords(join(root, 'hoststore/.host-team-registry/imports')), [proof.importRecord]);[0m
+2026-11-16T01:31:26.3895779Z [36;1m    const ownerRoot = join(root, 'hoststore/teams', seed.teamName, '.host-owner');[0m
+2026-11-16T01:31:26.3896338Z [36;1m    const owner = JSON.parse(readFileSync(join(ownerRoot, 'state.json'), 'utf8'));[0m
+2026-11-16T01:31:26.3896823Z [36;1m    assert.deepEqual(owner.runtimeCaptures ?? [], []);[0m
+2026-11-16T01:31:26.3897352Z [36;1m    assert.deepEqual(readRecords(join(ownerRoot, 'outbox'), true), [], 'no imported Team input');[0m
+2026-11-16T01:31:26.3898305Z [36;1m    for (const [key, value] of Object.entries(seed.savedSettings)) assert.equal(owner.savedSettings[key], value);[0m
+2026-11-16T01:31:26.3898949Z [36;1m    assert.equal(proof.importedBlobSha256, sha(seed.blobPath));[0m
+2026-11-16T01:31:26.3899538Z [36;1m    assert.deepEqual(assertDesktopEmulatedImportModelChecks(proof.modelPreflightReceipts,[0m
+2026-11-16T01:31:26.3900196Z [36;1m      receipt.emulatedRuntimeCleanup.effects, seed.savedSettings), proof.probes);[0m
+2026-11-16T01:31:26.3900902Z [36;1m    assert.deepEqual(readRecords(join(root, 'hoststore/management-commands')).map(row => row.commandId).sort(),[0m
+2026-11-16T01:31:26.3901561Z [36;1m      proof.modelPreflightReceipts.map(row => row.commandId).sort());[0m
+2026-11-16T01:31:26.3901997Z [36;1m    const attachments = proof.attachmentsUi;[0m
+2026-11-16T01:31:26.3902519Z [36;1m    assert.equal(attachments.status, 'PASS'); assert.equal(attachments.download.status, 'PASS');[0m
+2026-11-16T01:31:26.3903086Z [36;1m    assert.equal(attachments.download.nativePicker, false);[0m
+2026-11-16T01:31:26.3903625Z [36;1m    assert.equal(attachments.ownerReadBytes.sha256, seed.sourceMessage.file.sha256);[0m
+2026-11-16T01:31:26.3904371Z [36;1m    assert.equal(attachments.download.sha256, seed.sourceMessage.file.sha256);[0m
+2026-11-16T01:31:26.3905022Z [36;1m    assert.equal(dirname(realpathSync(attachments.download.path)), join(root, 'home/Downloads'));[0m
+2026-11-16T01:31:26.3905666Z [36;1m    assert.equal(sha(attachments.download.path), seed.sourceMessage.file.sha256);[0m
+2026-11-16T01:31:26.3906237Z [36;1m    for (const key of ['kanbanThumbnail', 'lightboxImage', 'taskDetailThumbnail'])[0m
+2026-11-16T01:31:26.3906791Z [36;1m      assert.equal(attachments[key].sha256, seed.sourceMessage.image.sha256);[0m
+2026-11-16T01:31:26.3907276Z [36;1m    assert.equal(attachments.screenshots.length, 3);[0m
+2026-11-16T01:31:26.3907960Z [36;1m    assert.deepEqual(proof.taskReferenceNavigation.map(row => row.kind), ['destination', 'archive', 'gap']);[0m
+2026-11-16T01:31:26.3908658Z [36;1m    assert.equal(proof.taskReferenceNavigation[0].teamName, proof.lookup.selection);[0m
+2026-11-16T01:31:26.3909247Z [36;1m    assert.equal(proof.taskReferenceNavigation[0].taskId, seed.linkedTaskId);[0m
+2026-11-16T01:31:26.3909762Z [36;1m    for (const row of proof.taskReferenceNavigation.slice(1)) {[0m
+2026-11-16T01:31:26.3910310Z [36;1m      assert.equal(row.taskId, null); assert.equal(row.identity.taskId, row.requestedTaskId);[0m
+2026-11-16T01:31:26.3910821Z [36;1m      assert.equal(row.ownerSurfaceId, row.tabId);[0m
+2026-11-16T01:31:26.3911251Z [36;1m      assert.equal(row.outcome, 'unavailable at captured source owner');[0m
+2026-11-16T01:31:26.3911719Z [36;1m      assert.ok(['unavailable', 'missing'].includes(row.phase));[0m
+2026-11-16T01:31:26.3912064Z [36;1m    }[0m
+2026-11-16T01:31:26.3912254Z [36;1m  }[0m
+2026-11-16T01:31:26.3912489Z [36;1m  if (mode === 'emulated-management-ui') {[0m
+2026-11-16T01:31:26.3913048Z [36;1m    assert.deepEqual(proof.savedSelection, { providerId: 'opencode', model: 'local/TEST-model', effort: 'high' });[0m
+2026-11-16T01:31:26.3913683Z [36;1m    assert.equal(proof.selectionRetainedAfterReload, true);[0m
+2026-11-16T01:31:26.3914334Z [36;1m    assert.equal(proof.fixturePins.runtimeConfigured, false);[0m
+2026-11-16T01:31:26.3914806Z [36;1m    assert.equal(proof.fixturePins.managementConfigured, true);[0m
+2026-11-16T01:31:26.3915294Z [36;1m    assert.equal(receipt.emulatedManagementCleanup.absent, true);[0m
+2026-11-16T01:31:26.3915849Z [36;1m    assert.ok(receipt.emulatedManagementCleanup.originalPeerPids.length > 0);[0m
+2026-11-16T01:31:26.3916421Z [36;1m    assert.deepEqual(receipt.emulatedManagementCleanup.remaining, []);[0m
+2026-11-16T01:31:26.3917165Z [36;1m    assert.deepEqual(proof.oauthCancellation, { phase: 'cancelled', resourceHeld: false, credentialAbsent: true, testOpenerCount: 1 });[0m
+2026-11-16T01:31:26.3918135Z [36;1m    assert.deepEqual(proof.oauthDeviceCancellation, { phaseBeforeCancel: 'completing', phase: 'cancelled',[0m
+2026-11-16T01:31:26.3918872Z [36;1m      resourceHeld: false, credentialAbsent: true, deviceCodeRendered: true, copyAcknowledged: true,[0m
+2026-11-16T01:31:26.3919493Z [36;1m      privateTextAbsent: true, privateLinkAbsent: true, cancelEnabled: true,[0m
+2026-11-16T01:31:26.3919996Z [36;1m      testOpenerCount: 2, authorizeCount: 1, callbackCount: 1 });[0m
+2026-11-16T01:31:26.3920639Z [36;1m    assert.equal(proof.oauthDeviceWaitingScreenshot.path, join(root, 'ui-emulated-oauth-device-waiting.png'));[0m
+2026-11-16T01:31:26.3921479Z [36;1m    assert.equal(proof.oauthDeviceWaitingScreenshot.sha256, sha(join(root, 'ui-emulated-oauth-device-waiting.png')));[0m
+2026-11-16T01:31:26.3922044Z [36;1m[0m
+2026-11-16T01:31:26.3922416Z [36;1m    for (const key of ['peerSha256', 'sourceSha256', 'versionSentinelSha256', 'openerSha256'])[0m
+2026-11-16T01:31:26.3922943Z [36;1m      assert.match(proof.fixturePins[key], /^[a-f0-9]{64}$/);[0m
+2026-11-16T01:31:26.3923279Z [36;1m  }[0m
+2026-11-16T01:31:26.3923491Z [36;1m  if (codexLogin) {[0m
+2026-11-16T01:31:26.3923817Z [36;1m    assert.equal(proof.execution, 'finite-protocol-peer');[0m
+2026-11-16T01:31:26.3924234Z [36;1m    assert.equal(proof.protocolRevision, '0.162.0');[0m
+2026-11-16T01:31:26.3924910Z [36;1m    assert.equal(proof.vendorExecutable, false); assert.equal(proof.nativeVersion, undefined);[0m
+2026-11-16T01:31:26.3925522Z [36;1m    assert.equal(receipt.codexInitialAccount.managedAccount, null);[0m
+2026-11-16T01:31:26.3926081Z [36;1m    assert.deepEqual(proof.cases.map(row => row.mode), ['browser', 'device_code']);[0m
+2026-11-16T01:31:26.3926527Z [36;1m    for (const row of proof.cases) {[0m
+2026-11-16T01:31:26.3926969Z [36;1m      assert.equal(row.status, 'PASS'); assert.equal(row.nativeStatus, 'pending');[0m
+2026-11-16T01:31:26.3927575Z [36;1m      for (const key of ['copyAcknowledged', 'externalOpenDispatched', 'reopenPreservedOriginal',[0m
+2026-11-16T01:31:26.3928296Z [36;1m        'cancelledOriginal', 'privateFieldsCleared']) assert.equal(row[key], true);[0m
+2026-11-16T01:31:26.3928708Z [36;1m    }[0m
+2026-11-16T01:31:26.3929107Z [36;1m    assert.equal(proof.input.allClicksTrusted, true); assert.ok(proof.input.clicks >= 8);[0m
+2026-11-16T01:31:26.3929649Z [36;1m    assert.equal(proof.fixturePins.kind, 'codex-login');[0m
+2026-11-16T01:31:26.3930095Z [36;1m    assert.equal(proof.fixturePins.protocolRevision, '0.162.0');[0m
+2026-11-16T01:31:26.3930570Z [36;1m    assert.equal(proof.fixturePins.vendorExecutable, false);[0m
+2026-11-16T01:31:26.3931022Z [36;1m    assert.equal(proof.fixturePins.runtimeConfigured, false);[0m
+2026-11-16T01:31:26.3931486Z [36;1m    assert.equal(proof.fixturePins.managementConfigured, true);[0m
+2026-11-16T01:31:26.3931969Z [36;1m    for (const key of ['peerSha256', 'sourceSha256', 'openerSha256'])[0m
+2026-11-16T01:31:26.3932410Z [36;1m      assert.match(proof.fixturePins[key], /^[a-f0-9]{64}$/);[0m
+2026-11-16T01:31:26.3932833Z [36;1m    const cleanup = receipt.emulatedManagementCleanup;[0m
+2026-11-16T01:31:26.3933322Z [36;1m    assert.equal(cleanup.absent, true); assert.deepEqual(cleanup.remaining, []);[0m
+2026-11-16T01:31:26.3933942Z [36;1m    assert.ok(cleanup.originalPeerPids.length >= 2);[0m
+2026-11-16T01:31:26.3934332Z [36;1m    assert.equal(cleanup.externalOpenCount, 2);[0m
+2026-11-16T01:31:26.3934748Z [36;1m    assert.deepEqual(cleanup.fixturePins, proof.fixturePins);[0m
+2026-11-16T01:31:26.3935292Z [36;1m    assert.deepEqual(cleanup.protocol, { browserStarts: 1, deviceStarts: 1, cancellations: 2,[0m
+2026-11-16T01:31:26.3935936Z [36;1m      originalLoginIdsCancelled: true, accountReads: cleanup.protocol.accountReads,[0m
+2026-11-16T01:31:26.3936480Z [36;1m      logout: 0, sessionOrModelRequests: 0, accountAbsent: true });[0m
+2026-11-16T01:31:26.3937093Z [36;1m    assert.ok(Number.isSafeInteger(cleanup.protocol.accountReads) && cleanup.protocol.accountReads > 0);[0m
+2026-11-16T01:31:26.3937861Z [36;1m    for (const key of ['launchLogSha256', 'wireLogSha256', 'externalOpenLogSha256'])[0m
+2026-11-16T01:31:26.3938331Z [36;1m      assert.match(cleanup[key], /^[a-f0-9]{64}$/);[0m
+2026-11-16T01:31:26.3938632Z [36;1m  }[0m
+2026-11-16T01:31:26.3938906Z [36;1m  if (mode === 'review-ui' || mode === 'review-readback-ui') {[0m
+2026-11-16T01:31:26.3939296Z [36;1m    assert.ok(proof.persistence.length > 0);[0m
+2026-11-16T01:31:26.3939798Z [36;1m    assert.match(proof.seedSha256, /^[a-f0-9]{64}$/); assert.match(proof.fileSha256, /^[a-f0-9]{64}$/);[0m
+2026-11-16T01:31:26.3940253Z [36;1m  }[0m
+2026-11-16T01:31:26.3940481Z [36;1m  if (runtimeProvider !== undefined) {[0m
+2026-11-16T01:31:26.3940989Z [36;1m    assert.equal(proof.provider, runtimeProvider); assert.equal(proof.reloadWithoutReplay, true);[0m
+2026-11-16T01:31:26.3941881Z [36;1m    assert.equal(proof.stopReleased, true); assert.equal(proof.stoppedInput.phase, 'unknown'); assert.equal(proof.stoppedInput.terminalConfirmed, false);[0m
+2026-11-16T01:31:26.3942846Z [36;1m    const catalog = { codex: ['/cost'], claude: ['/compact', '/cost', '/review', '/test-desktop-skill'], opencode: [] }[runtimeProvider];[0m
+2026-11-16T01:31:26.3943510Z [36;1m    assert.deepEqual([...proof.catalog].sort(), [...catalog].sort());[0m
+2026-11-16T01:31:26.3944031Z [36;1m    if (runtimeProvider === 'claude') {[0m
+2026-11-16T01:31:26.3944388Z [36;1m      assert.equal(proof.nativeCommands.length, 4);[0m
+2026-11-16T01:31:26.3944985Z [36;1m      assert.equal(proof.standalone.logVisible, true); assert.equal(proof.standalone.deletedWhileActive, true);[0m
+2026-11-16T01:31:26.3945749Z [36;1m      assert.equal(proof.standalone.cleanup, 'confirmed'); assert.equal(proof.standalone.taskWrites, 0);[0m
+2026-11-16T01:31:26.3946606Z [36;1m      assert.equal(proof.standalone.originalPids.length, 2); assert.deepEqual(proof.standalone.limits, { maxTurns: 6, maxBudgetUsd: 0.25 });[0m
+2026-11-16T01:31:26.3947589Z [36;1m      assert.equal(proof.standalone.releasedRecord.phase, 'closed'); assert.equal(proof.standalone.releasedRecord.custody, 'released');[0m
+2026-11-16T01:31:26.3948294Z [36;1m    }[0m
+2026-11-16T01:31:26.3948528Z [36;1m    if (runtimeProvider === 'opencode') {[0m
+2026-11-16T01:31:26.3949042Z [36;1m      for (const key of ['inputTokens', 'outputTokens', 'costUsd']) assert.equal(proof.stats[key], null);[0m
+2026-11-16T01:31:26.3949858Z [36;1m      assert.deepEqual(proof.unsupportedBaseline, ['structured questions', 'native slash commands', 'native usage counters']);[0m
+2026-11-16T01:31:26.3950422Z [36;1m    }[0m
+2026-11-16T01:31:26.3950707Z [36;1m    assert.equal(proof.fixturePins.vendorsAllowed, false);[0m
+2026-11-16T01:31:26.3951167Z [36;1m    assert.equal(proof.fixturePins.runtimeConfigured, true);[0m
+2026-11-16T01:31:26.3951638Z [36;1m    assert.equal(proof.fixturePins.managementConfigured, true);[0m
+2026-11-16T01:31:26.3952326Z [36;1m    assert.equal(proof.fixturePins.protocolRevision, { codex: '0.162.0', claude: 'sdk-0.3.305', opencode: '1.19.4' }[runtimeProvider]);[0m
+2026-11-16T01:31:26.3953098Z [36;1m    assert.equal(proof.schedule.status, 'dispatched'); assert.ok(proof.schedule.taskId);[0m
+2026-11-16T01:31:26.3953999Z [36;1m    assert.equal(proof.schedule.savedPromptAcknowledged, true); assert.equal(proof.schedule.savedPromptNotReplayed, true);[0m
+2026-11-16T01:31:26.3954639Z [36;1m    const automatic = proof.automaticSchedule;[0m
+2026-11-16T01:31:26.3955163Z [36;1m    assert.equal(automatic.trigger, 'real-cron-tick'); assert.equal(automatic.runNowClicks, 0);[0m
+2026-11-16T01:31:26.3955834Z [36;1m    assert.equal(automatic.status, 'dispatched'); assert.equal(automatic.taskCompleted, true);[0m
+2026-11-16T01:31:26.3956497Z [36;1m    assert.equal(automatic.paused, true); assert.equal(automatic.savedPromptNotReplayed, true);[0m
+2026-11-16T01:31:26.3957082Z [36;1m    assert.equal(automatic.scheduleId, proof.schedule.scheduleId);[0m
+2026-11-16T01:31:26.3957851Z [36;1m    assert.notEqual(automatic.runId, proof.schedule.runId); assert.notEqual(automatic.taskId, proof.schedule.taskId);[0m
+2026-11-16T01:31:26.3958509Z [36;1m    assert.equal(automatic.peerEffect.taskId, automatic.taskId);[0m
+2026-11-16T01:31:26.3959060Z [36;1m    assert.ok(Date.parse(automatic.armedAt) < Date.parse(automatic.selectedNextRunAt));[0m
+2026-11-16T01:31:26.3959711Z [36;1m    assert.ok(Date.parse(automatic.scheduledFor) >= Date.parse(automatic.selectedNextRunAt));[0m
+2026-11-16T01:31:26.3960392Z [36;1m    assert.ok(Date.parse(automatic.scheduledFor) < Date.parse(automatic.selectedNextRunAt) + 15000);[0m
+2026-11-16T01:31:26.3960969Z [36;1m    assert.equal(automatic.startedAt, automatic.scheduledFor);[0m
+2026-11-16T01:31:26.3961431Z [36;1m    assert.equal(receipt.emulatedRuntimeCleanup.absent, true);[0m
+2026-11-16T01:31:26.3961953Z [36;1m    assert.ok(receipt.emulatedRuntimeCleanup.originalPeerPids.length > 0);[0m
+2026-11-16T01:31:26.3962505Z [36;1m    assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);[0m
+2026-11-16T01:31:26.3963064Z [36;1m    assert.ok(proof.effects.some(row => ['connected', 'mcp-connected'].includes(row.event)));[0m
+2026-11-16T01:31:26.3963638Z [36;1m    assert.equal(proof.effects.some(row => row.event === 'failure'), false);[0m
+2026-11-16T01:31:26.3964028Z [36;1m  }[0m
+2026-11-16T01:31:26.3964229Z [36;1m  if (lifecycle) {[0m
+2026-11-16T01:31:26.3964777Z [36;1m    assert.equal(proof.provider, 'claude'); assert.equal(proof.nativeQualification, false);[0m
+2026-11-16T01:31:26.3965443Z [36;1m    assert.equal(proof.awaitingOriginalQuit, false); assert.equal(proof.resume.status, 'PASS');[0m
+2026-11-16T01:31:26.3966102Z [36;1m    assert.notEqual(proof.resume.sourceGeneration, proof.resume.selectedGeneration);[0m
+2026-11-16T01:31:26.3966640Z [36;1m    assert.equal(proof.resume.originalPromptReplays, 0);[0m
+2026-11-16T01:31:26.3967100Z [36;1m    assert.equal(proof.resume.reference, proof.source.reference);[0m
+2026-11-16T01:31:26.3967606Z [36;1m    assert.equal(proof.resume.nativeSession, proof.source.nativeSession);[0m
+2026-11-16T01:31:26.3968292Z [36;1m    assert.equal(proof.resume.peer.resumedHistory.sha256, proof.source.historySha256);[0m
+2026-11-16T01:31:26.3968840Z [36;1m    assert.equal(proof.resume.peer.resumedHistory.rows, 2);[0m
+2026-11-16T01:31:26.3969334Z [36;1m    assert.equal(proof.resume.peer.resumedHistory.bootRetained, true);[0m
+2026-11-16T01:31:26.3969910Z [36;1m    assert.equal(proof.fixturePins.lifecycleVariant, 'cold-resume-active-quit-v1');[0m
+2026-11-16T01:31:26.3970473Z [36;1m    assert.equal(proof.fixturePins.protocolRevision, 'sdk-0.3.305');[0m
+2026-11-16T01:31:26.3970946Z [36;1m    assert.equal(proof.fixturePins.vendorsAllowed, false);[0m
+2026-11-16T01:31:26.3971606Z [36;1m    assert.equal(proof.fixturePins.runtimeConfigured, true); assert.equal(proof.fixturePins.managementConfigured, true);[0m
+2026-11-16T01:31:26.3972253Z [36;1m    const cold = receipt.emulatedColdResumeBoundary;[0m
+2026-11-16T01:31:26.3972746Z [36;1m    assert.equal(cold.status, 'PASS'); assert.equal(cold.nativeQualification, false);[0m
+2026-11-16T01:31:26.3973419Z [36;1m    assert.equal(cold.firstCleanup.appExitCode, 0); assert.equal(cold.firstCleanup.appSignalCode, null);[0m
+2026-11-16T01:31:26.3974371Z [36;1m    assert.equal(cold.firstCleanup.capturedHostAbsent, true); assert.equal(cold.firstCleanup.writerLockReleased, true);[0m
+2026-11-16T01:31:26.3975232Z [36;1m    assert.deepEqual(cold.firstCleanup.remaining, []); assert.equal(cold.firstCleanup.peerCleanup.absent, true);[0m
+2026-11-16T01:31:26.3975837Z [36;1m    assert.equal(cold.secondEpoch.status, 'PASS');[0m
+2026-11-16T01:31:26.3976364Z [36;1m    assert.notEqual(cold.firstEpoch.app.processGroup, cold.secondEpoch.app.processGroup);[0m
+2026-11-16T01:31:26.3976983Z [36;1m    assert.notEqual(cold.firstEpoch.host.pid, cold.secondEpoch.host.pid);[0m
+2026-11-16T01:31:26.3977527Z [36;1m    assert.equal(cold.secondEpoch.checkpointAndHistoryUnchanged, true);[0m
+2026-11-16T01:31:26.3978157Z [36;1m    assert.equal(cold.secondEpoch.originalProductUnchanged, true);[0m
+2026-11-16T01:31:26.3978796Z [36;1m    assert.equal(cold.secondEpoch.runtimeAllocations, 0); assert.equal(cold.secondEpoch.promptReplays, 0);[0m
+2026-11-16T01:31:26.3979797Z [36;1m    assert.deepEqual(cold.firstEpoch.compiledBundleHashesAfterStartup, cold.secondEpoch.compiledBundleHashesAfterStartup);[0m
+2026-11-16T01:31:26.3980702Z [36;1m    assert.equal(proof.afterQuit.activeOutcome, 'unknown'); assert.equal(proof.afterQuit.queuedOutcome, 'cancelled');[0m
+2026-11-16T01:31:26.3981545Z [36;1m    assert.equal(proof.afterQuit.queuedNativeDeliveries, 0); assert.equal(proof.afterQuit.session.custody, 'released');[0m
+2026-11-16T01:31:26.3982347Z [36;1m    for (const key of ['productUnchanged', 'bothAppGroupsAbsent', 'bothHostsAbsent', 'writerLockReleased'])[0m
+2026-11-16T01:31:26.3982901Z [36;1m      assert.equal(proof.afterQuit[key], true);[0m
+2026-11-16T01:31:26.3983516Z [36;1m    assert.equal(proof.afterQuit.peerCleanup.absent, true); assert.deepEqual(proof.afterQuit.peerCleanup.remaining, []);[0m
+2026-11-16T01:31:26.3984422Z [36;1m    assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);[0m
+2026-11-16T01:31:26.3985192Z [36;1m    assert.ok(receipt.emulatedRuntimeCleanup.originalPeerPids.length >= 2);[0m
+2026-11-16T01:31:26.3986067Z [36;1m    assert.equal(proof.effects.filter(row => row.event === 'input' && row.marker === 'TEST_UI_BOOT').length, 1);[0m
+2026-11-16T01:31:26.3986815Z [36;1m    assert.equal(proof.effects.filter(row => row.event === 'input' && row.marker === 'TEST_UI_RESUME').length, 1);[0m
+2026-11-16T01:31:26.3987541Z [36;1m    assert.equal(proof.effects.some(row => row.event === 'input' && row.marker === 'TEST_UI_QUIT_QUEUED'), false);[0m
+2026-11-16T01:31:26.3988264Z [36;1m    assert.equal(proof.effects.some(row => row.event === 'failure'), false);[0m
+2026-11-16T01:31:26.3988659Z [36;1m  }[0m
+2026-11-16T01:31:26.3988862Z [36;1m  if (selection) {[0m
+2026-11-16T01:31:26.3989192Z [36;1m    assert.equal(proof.selectionRetainedAfterReload, true);[0m
+2026-11-16T01:31:26.3989738Z [36;1m    for (const [name, model, effort] of [['a', 'TEST-model', 'low'], ['b', 'TEST-model-next', 'high']]) {[0m
+2026-11-16T01:31:26.3990408Z [36;1m      assert.equal(proof[name].thread.model, model); assert.equal(proof[name].thread.effort, effort);[0m
+2026-11-16T01:31:26.3990949Z [36;1m      assert.equal(proof[name].thread.runtimeMcp, true);[0m
+2026-11-16T01:31:26.3991425Z [36;1m      assert.equal(proof[name].definition.capture.savedSettings.model, model);[0m
+2026-11-16T01:31:26.3991998Z [36;1m      assert.equal(proof[name].definition.capture.savedSettings.effort, effort);[0m
+2026-11-16T01:31:26.3992732Z [36;1m      assert.equal(proof[name + 'Stop'].phase, 'closed'); assert.equal(proof[name + 'Stop'].custody, 'released');[0m
+2026-11-16T01:31:26.3993289Z [36;1m      assert.equal(proof[name + 'Stop'].absent, true);[0m
+2026-11-16T01:31:26.3993606Z [36;1m    }[0m
+2026-11-16T01:31:26.3994136Z [36;1m    assert.notEqual(proof.a.thread.pid, proof.b.thread.pid); assert.notEqual(proof.a.thread.threadId, proof.b.thread.threadId);[0m
+2026-11-16T01:31:26.3994997Z [36;1m    assert.equal(proof.savedSelection.model, 'TEST-model-next'); assert.equal(proof.savedSelection.effort, 'high');[0m
+2026-11-16T01:31:26.3996120Z [36;1m    assert.equal(proof.stream.survivedBStop, true); assert.equal(proof.stream.terminal, 'succeeded');[0m
+2026-11-16T01:31:26.3996797Z [36;1m    assert.deepEqual(proof.observations.map(row => row.phase), ['before-create',[0m
+2026-11-16T01:31:26.3997453Z [36;1m      ...(installer ? ['before-original-installer-update', 'after-original-installer-ready'] : []),[0m
+2026-11-16T01:31:26.3998315Z [36;1m      'after-save-only', 'after-reload-before-next-launch', 'after-next-launch',[0m
+2026-11-16T01:31:26.3998962Z [36;1m      ...(installer ? ['before-original-installer-settings', 'before-original-installer-settings',[0m
+2026-11-16T01:31:26.3999631Z [36;1m        'after-original-installer-settings', 'after-original-installer-settings'] : []),[0m
+2026-11-16T01:31:26.4000119Z [36;1m      'after-b-stop-during-a-input']);[0m
+2026-11-16T01:31:26.4000761Z [36;1m    assert.equal(proof.fixturePins.selectionVariant, 'two-models-v1'); assert.equal(proof.fixturePins.protocolRevision, '0.162.0');[0m
+2026-11-16T01:31:26.4001670Z [36;1m    assert.equal(proof.fixturePins.vendorsAllowed, false); assert.equal(proof.fixturePins.runtimeConfigured, true);[0m
+2026-11-16T01:31:26.4002337Z [36;1m    assert.equal(proof.fixturePins.managementConfigured, true);[0m
+2026-11-16T01:31:26.4003052Z [36;1m    assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);[0m
+2026-11-16T01:31:26.4003818Z [36;1m    assert.ok(receipt.emulatedRuntimeCleanup.originalPeerPids.length >= 2);[0m
+2026-11-16T01:31:26.4004502Z [36;1m    assert.equal(proof.effects.filter(row => row.event === 'thread-selection' && row.runtimeMcp === true).length, 2);[0m
+2026-11-16T01:31:26.4005155Z [36;1m    assert.equal(proof.effects.some(row => row.event === 'failure'), false);[0m
+2026-11-16T01:31:26.4005552Z [36;1m  }[0m
+2026-11-16T01:31:26.4005756Z [36;1m  if (installer) {[0m
+2026-11-16T01:31:26.4006023Z [36;1m    const update = proof.installer;[0m
+2026-11-16T01:31:26.4006631Z [36;1m    assert.equal(update.status, 'PASS'); assert.equal(update.nativeQualification, false);[0m
+2026-11-16T01:31:26.4007169Z [36;1m    assert.equal(update.initialStatus.version, '0.162.0');[0m
+2026-11-16T01:31:26.4007615Z [36;1m    assert.equal(update.initialStatus.source, 'captured-host');[0m
+2026-11-16T01:31:26.4008173Z [36;1m    assert.equal(update.installedStatus.version, '0.169.0');[0m
+2026-11-16T01:31:26.4008623Z [36;1m    assert.equal(update.installedStatus.source, 'app-managed');[0m
+2026-11-16T01:31:26.4009103Z [36;1m    assert.equal(update.installedStatus.progress.phase, 'ready');[0m
+2026-11-16T01:31:26.4009770Z [36;1m    assert.equal(update.readbackStatus.sourceRevision, update.installedStatus.sourceRevision);[0m
+2026-11-16T01:31:26.4010498Z [36;1m    assert.notEqual(update.initialStatus.sourceRevision, update.installedStatus.sourceRevision);[0m
+2026-11-16T01:31:26.4011227Z [36;1m    assert.equal(update.publication.previousRevision, update.initialStatus.sourceRevision);[0m
+2026-11-16T01:31:26.4011901Z [36;1m    assert.equal(update.publication.revision, update.installedStatus.sourceRevision);[0m
+2026-11-16T01:31:26.4012426Z [36;1m    assert.equal(update.command.phase, 'published');[0m
+2026-11-16T01:31:26.4012897Z [36;1m    assert.equal(update.command.commandId, update.publication.commandId);[0m
+2026-11-16T01:31:26.4013491Z [36;1m    for (const key of ['sourceWrites', 'updateClicks', 'downloads']) assert.equal(update[key], 1);[0m
+2026-11-16T01:31:26.4014163Z [36;1m    for (const key of ['initialGetSourceWrites', 'finalGetSourceWrites']) assert.equal(update[key], 0);[0m
+2026-11-16T01:31:26.4014733Z [36;1m    assert.equal(update.originalRuntimeRetained, true);[0m
+2026-11-16T01:31:26.4015164Z [36;1m    assert.equal(proof.aInvocation.pid, proof.a.thread.pid);[0m
+2026-11-16T01:31:26.4015585Z [36;1m    assert.equal(proof.aInvocation.version, '0.162.0');[0m
+2026-11-16T01:31:26.4016128Z [36;1m    assert.equal(proof.bInvocation.pid, proof.b.thread.pid);[0m
+2026-11-16T01:31:26.4016555Z [36;1m    assert.equal(proof.bInvocation.version, '0.169.0');[0m
+2026-11-16T01:31:26.4017052Z [36;1m    assert.equal(proof.bInvocation.executable, update.installed.executable.path);[0m
+2026-11-16T01:31:26.4017756Z [36;1m    assert.notEqual(proof.aInvocation.executable, proof.bInvocation.executable);[0m
+2026-11-16T01:31:26.4018334Z [36;1m    assert.equal(proof.bSource.revision, update.publication.revision);[0m
+2026-11-16T01:31:26.4018957Z [36;1m    assert.equal(update.registry.filter(row => row.kind === 'tarball' && row.event === 'response').length, 1);[0m
+2026-11-16T01:31:26.4019651Z [36;1m    assert.ok(update.invocations.some(row => row.kind === 'version' && row.version === '0.169.0'));[0m
+2026-11-16T01:31:26.4020191Z [36;1m    assert.equal(update.fixturePins.aVersion, '0.162.0');[0m
+2026-11-16T01:31:26.4020613Z [36;1m    assert.equal(update.fixturePins.bVersion, '0.169.0');[0m
+2026-11-16T01:31:26.4021129Z [36;1m    assert.equal(update.fixturePins.bSha256, update.installed.executable.sha256);[0m
+2026-11-16T01:31:26.4021691Z [36;1m    for (const key of ['aSha256', 'bSha256', 'packageSha256', 'preloadSha256'])[0m
+2026-11-16T01:31:26.4022182Z [36;1m      assert.match(update.fixturePins[key], /^[a-f0-9]{64}$/);[0m
+2026-11-16T01:31:26.4022591Z [36;1m    assert.equal(update.settings.status, 'PASS');[0m
+2026-11-16T01:31:26.4023190Z [36;1m    for (const key of ['manageOpened', 'providerReady', 'accountHealthy', 'installActionAbsent', 'originalRuntimesRetained'])[0m
+2026-11-16T01:31:26.4023798Z [36;1m      assert.equal(update.settings[key], true);[0m
+2026-11-16T01:31:26.4024227Z [36;1m    assert.equal(update.settings.visibleVersionClaimed, false);[0m
+2026-11-16T01:31:26.4024829Z [36;1m    assert.equal(update.settings.sourceWrites, 0); assert.equal(update.settings.extraDownloads, 0);[0m
+2026-11-16T01:31:26.4025432Z [36;1m    assert.equal(update.settings.finalStatus.version, '0.169.0');[0m
+2026-11-16T01:31:26.4025943Z [36;1m    assert.equal(update.settings.finalStatus.source, 'app-managed');[0m
+2026-11-16T01:31:26.4026664Z [36;1m    assert.equal(update.settings.finalStatus.sourceRevision, update.publication.revision);[0m
+2026-11-16T01:31:26.4027140Z [36;1m  }[0m
+2026-11-16T01:31:26.4027344Z [36;1m  if (processes) {[0m
+2026-11-16T01:31:26.4027948Z [36;1m    const controlled = receipt.controlledProcessColdUi, capturePin = inputs.controlledProcesses.capture;[0m
+2026-11-16T01:31:26.4028723Z [36;1m    const captureBytes = readFileSync(capturePin.path), capture = JSON.parse(captureBytes.toString('utf8'));[0m
+2026-11-16T01:31:26.4029428Z [36;1m    assert.equal(createHash('sha256').update(captureBytes).digest('hex'), capturePin.sha256);[0m
+2026-11-16T01:31:26.4030170Z [36;1m    assert.equal(capture.kind, 'TEST-controlled-process-no-provider-v1'); assert.equal(capture.claude, undefined);[0m
+2026-11-16T01:31:26.4030981Z [36;1m    assert.equal(controlled.captureKind, capture.kind); assert.equal(controlled.providersConfigured, false);[0m
+2026-11-16T01:31:26.4031730Z [36;1m    assert.deepEqual(controlled.processArtifact, inputs.controlledProcesses.processArtifact);[0m
+2026-11-16T01:31:26.4032452Z [36;1m    const manifestBytes = readFileSync(join(controlled.processArtifact.directory, 'manifest.json'));[0m
+2026-11-16T01:31:26.4033226Z [36;1m    assert.equal(createHash('sha256').update(manifestBytes).digest('hex'), controlled.processArtifact.manifestSha256);[0m
+2026-11-16T01:31:26.4033876Z [36;1m    const manifest = JSON.parse(manifestBytes.toString('utf8'));[0m
+2026-11-16T01:31:26.4034420Z [36;1m    assert.equal(manifest.binarySha256, inputs.controlledProcesses.binarySha256);[0m
+2026-11-16T01:31:26.4035024Z [36;1m    assert.equal(manifest.sourceSha256, inputs.controlledProcesses.sourceSha256);[0m
+2026-11-16T01:31:26.4035701Z [36;1m    const binary = readFileSync(join(controlled.processArtifact.directory, 'registered-process.node'));[0m
+2026-11-16T01:31:26.4036518Z [36;1m    assert.equal(createHash('sha256').update(binary).digest('hex'), manifest.binarySha256);[0m
+2026-11-16T01:31:26.4037198Z [36;1m    assert.equal(controlled.status, 'PASS'); assert.equal(controlled.runtimeCustody, 'NOT_ALLOCATED');[0m
+2026-11-16T01:31:26.4037991Z [36;1m    assert.equal(controlled.hostA.exitCode, 0); assert.equal(controlled.hostA.signalCode, null);[0m
+2026-11-16T01:31:26.4038753Z [36;1m    assert.equal(controlled.hostA.writerLockReleased, true); assert.equal(controlled.hostB.distinctFromHostA, true);[0m
+2026-11-16T01:31:26.4039633Z [36;1m    assert.notEqual(controlled.hostA.pid, controlled.hostB.pid); assert.equal(controlled.neighborHealthyBeforeCleanup, true);[0m
+2026-11-16T01:31:26.4040376Z [36;1m    assert.equal(controlled.canonicalPrimary.capturedNative.version, 3);[0m
+2026-11-16T01:31:26.4041017Z [36;1m    assert.equal(controlled.cleanup.status, 'PASS'); assert.equal(controlled.cleanup.rootExitCode, 0);[0m
+2026-11-16T01:31:26.4041607Z [36;1m    assert.equal(controlled.cleanup.rootSignalCode, null);[0m
+2026-11-16T01:31:26.4042400Z [36;1m    for (const key of ['originalTargetObservation', 'originalNeighborObservation', 'originalRootObservation']) assert.equal(controlled.cleanup[key], 'absent');[0m
+2026-11-16T01:31:26.4043418Z [36;1m    assert.equal(controlled.cleanup.primaryCleanupSignals, 0); assert.equal(controlled.cleanup.neighborCleanupSignals, 1);[0m
+2026-11-16T01:31:26.4044148Z [36;1m    assert.equal(receipt.controlledProcessCleanupFailure, undefined);[0m
+2026-11-16T01:31:26.4044957Z [36;1m    assert.equal(proof.runtimeCustody, 'NOT_ALLOCATED'); assert.deepEqual(proof.nativeRuntimeAllocation, { providerSessions: 0, inputs: 0, modelServers: 0 });[0m
+2026-11-16T01:31:26.4045925Z [36;1m    assert.equal(proof.qualificationScope, 'controlled-native-kernel-real-Host-restart-original-UI-stop');[0m
+2026-11-16T01:31:26.4046611Z [36;1m    assert.equal(proof.stopQualification, 'COMPLETED_ORIGINAL_REF_STOP');[0m
+2026-11-16T01:31:26.4047203Z [36;1m    assert.equal(proof.terminalStop.originalProcessRef, controlled.originalProcessRef);[0m
+2026-11-16T01:31:26.4048231Z [36;1m    assert.equal(proof.terminalStop.state.phase, 'completed'); assert.equal(proof.terminalStop.state.native, 'observed-absent');[0m
+2026-11-16T01:31:26.4049067Z [36;1m    assert.equal(proof.ownerHistory.length, 1); assert.equal(proof.stoppedRenderedRow.killCount, 0);[0m
+2026-11-16T01:31:26.4049892Z [36;1m    assert.equal(proof.stoppedRenderedRow.stoppedStyle, true); assert.equal(proof.stoppedRenderedRow.stoppedIndicator, true);[0m
+2026-11-16T01:31:26.4050704Z [36;1m    assert.deepEqual(proof.neighborLifecycleAfterStop, proof.neighborLifecycleBeforeStop);[0m
+2026-11-16T01:31:26.4051183Z [36;1m  }[0m
+2026-11-16T01:31:26.4051413Z [36;1m  if (mode === 'review-readback-ui') {[0m
+2026-11-16T01:31:26.4051837Z [36;1m    assert.equal(proof.staleGuard.externalChangeBanner, true);[0m
+2026-11-16T01:31:26.4052288Z [36;1m    assert.equal(proof.staleGuard.undoDisabled, true);[0m
+2026-11-16T01:31:26.4052630Z [36;1m  }[0m
+2026-11-16T01:31:26.4052942Z [36;1m  const screenshots = mode === 'team-ui' ? [receipt.uiScreenshot] :[0m
+2026-11-16T01:31:26.4053614Z [36;1m    collaboration ? ['initial', 'direct', 'attachments', 'group', 'restored', 'stopped', 'reload'].map(key => proof[key].screenshot) :[0m
+2026-11-16T01:31:26.4054435Z [36;1m    extensions ? proof.screenshots.map(name => ({ path: join(root, name), sha256: proof.screenshotHashes[name] })) :[0m
+2026-11-16T01:31:26.4055289Z [36;1m    (taskboard ? ['initialScreenshot', 'dependencyScreenshot', 'reorderedScreenshot', 'blockedStartScreenshot', 'reloadedScreenshot'] :[0m
+2026-11-16T01:31:26.4056541Z [36;1m      skills ? ['initialScreenshot', 'importPreviewScreenshot', 'knownRejectedScreenshot', 'importAppliedScreenshot', 'editAppliedScreenshot', 'trashCompletedScreenshot', 'unknownHeldScreenshot', 'staleContextScreenshot'] :[0m
+2026-11-16T01:31:26.4057736Z [36;1m      savedImport ? ['importedDialogScreenshot', 'reloadedDialogScreenshot'] :[0m
+2026-11-16T01:31:26.4058316Z [36;1m      codexLogin ? ['finalScreenshot'] :[0m
+2026-11-16T01:31:26.4059130Z [36;1m      mode === 'emulated-management-ui' ? ['selectionScreenshot', 'reloadedScreenshot', 'connectedScreenshot', 'oauthWaitingScreenshot', 'oauthDeviceWaitingScreenshot', 'finalScreenshot'] :[0m
+2026-11-16T01:31:26.4060374Z [36;1m      selection ? ['aLaunchScreenshot', 'selectedScreenshot', 'reloadedScreenshot', 'bLaunchScreenshot', 'aSurvivedScreenshot', 'completedScreenshot', 'stoppedScreenshot'] :[0m
+2026-11-16T01:31:26.4061176Z [36;1m      processes ? ['beforeScreenshot', 'afterScreenshot'] :[0m
+2026-11-16T01:31:26.4061696Z [36;1m      lifecycle ? ['launchScreenshot', 'stoppedScreenshot', 'resumeSelectedScreenshot'] :[0m
+2026-11-16T01:31:26.4062811Z [36;1m      runtime ? ['launchScreenshot', 'partialScreenshot', 'completedScreenshot', 'denyScreenshot', 'allowScreenshot', 'logsScreenshot', 'statsScreenshot', 'reloadedScreenshot', 'scheduleScreenshot', 'heldScreenshot', 'stoppedScreenshot',[0m
+2026-11-16T01:31:26.4064008Z [36;1m        ...(runtimeProvider !== 'opencode' ? ['questionScreenshot', 'questionDeclineScreenshot', 'costScreenshot'] : []),[0m
+2026-11-16T01:31:26.4065096Z [36;1m        ...(runtimeProvider === 'claude' ? ['compactScreenshot', 'skillScreenshot', 'reviewScreenshot', 'standaloneCompletedScreenshot', 'standaloneHeldScreenshot', 'standaloneDeletedScreenshot'] : [])] :[0m
+2026-11-16T01:31:26.4066231Z [36;1m      mode === 'review-ui' ? ['historyScreenshot', 'reloadedHistoryScreenshot'] : ['restartedHistoryScreenshot', 'staleScreenshot'])[0m
+2026-11-16T01:31:26.4066819Z [36;1m      .map(key => proof[key]);[0m
+2026-11-16T01:31:26.4067422Z [36;1m  if (crossTeam) screenshots.push(receipt.taskReviewCycleUiProof.screenshot, receipt.taskNotificationUiProof.screenshot,[0m
+2026-11-16T01:31:26.4068543Z [36;1m    receipt.crossTeamUiProof.screenshot, receipt.oversizedCommentUiProof.screenshot, receipt.taskTrashRestoreUiProof.deletedScreenshot);[0m
+2026-11-16T01:31:26.4069356Z [36;1m  if (savedImport) screenshots.push(...proof.attachmentsUi.screenshots);[0m
+2026-11-16T01:31:26.4070064Z [36;1m  if (lifecycle) screenshots.push(proof.resume.screenshot, proof.beforeQuit.screenshot);[0m
+2026-11-16T01:31:26.4070782Z [36;1m  if (installer) screenshots.push(proof.installer.beforeScreenshot, proof.installer.readyScreenshot,[0m
+2026-11-16T01:31:26.4071495Z [36;1m    proof.installer.settings.pageScreenshot, proof.installer.settings.dialogScreenshot);[0m
+2026-11-16T01:31:26.4072158Z [36;1m  if (runtimeProvider !== undefined) screenshots.push(proof.automaticSchedule.screenshot);[0m
+2026-11-16T01:31:26.4072665Z [36;1m  for (const screenshot of screenshots) {[0m
+2026-11-16T01:31:26.4073059Z [36;1m    assert.equal(dirname(realpathSync(screenshot.path)), root);[0m
+2026-11-16T01:31:26.4073476Z [36;1m    const bytes = readFileSync(screenshot.path);[0m
+2026-11-16T01:31:26.4073911Z [36;1m    assert.equal(bytes.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');[0m
+2026-11-16T01:31:26.4074526Z [36;1m    assert.ok(bytes.readUInt32BE(16) >= 640 && bytes.readUInt32BE(20) >= 480, 'actual rendered viewport');[0m
+2026-11-16T01:31:26.4075177Z [36;1m    assert.equal(createHash('sha256').update(bytes).digest('hex'), screenshot.sha256);[0m
+2026-11-16T01:31:26.4075608Z [36;1m  }[0m
+2026-11-16T01:31:26.4076031Z [36;1m  completed.push({ mode, receipt: last.receipt, screenshots: screenshots.map(row => row.sha256) });[0m
+2026-11-16T01:31:26.4076496Z [36;1m}[0m
+2026-11-16T01:31:26.4076893Z [36;1mwriteFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-summary.json'), JSON.stringify({[0m
+2026-11-16T01:31:26.4077610Z [36;1m  status: 'PASS', scope: 'selected lane only', lane, sourceHead: process.env.HOST_EMULATED_SOURCE_HEAD, completed,[0m
+2026-11-16T01:31:26.4078410Z [36;1m  nativeProviders: 'not executed', vendorAuthQualified: false, releaseQualified: false,[0m
+2026-11-16T01:31:26.4078992Z [36;1m  visualReview: 'original screenshots retained for independent inspection',[0m
+2026-11-16T01:31:26.4079525Z [36;1m}, null, 2));[0m
+2026-11-16T01:31:26.4079752Z [36;1mNODE[0m
+2026-11-16T01:31:26.4129659Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-16T01:31:26.4129997Z env:
+2026-11-16T01:31:26.4130219Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:31:26.4130572Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:31:26.4130938Z   HOST_EMULATED_LANE: selection
+2026-11-16T01:31:26.4131195Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:31:26.4131507Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T01:31:26.4131828Z   TMPDIR: /home/runner/work/_temp
+2026-11-16T01:31:26.4132082Z   LEGACY_DESKTOP_BACKEND_GO: 1
+2026-11-16T01:31:26.4132325Z   LEGACY_DESKTOP_EMULATED_ONLY: 1
+2026-11-16T01:31:26.4132748Z   LEGACY_DESKTOP_COREPACK_HOME: /home/runner/work/_temp/TEST-emulated-ui-inputs-d282PE/cache
+2026-11-16T01:31:26.4133370Z   LEGACY_DESKTOP_NODE_SHA256: 7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c
+2026-11-16T01:31:26.4134007Z   LEGACY_DESKTOP_HOST_ENTRY_SHA256: 7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add
+2026-11-16T01:31:26.4134898Z   LEGACY_DESKTOP_PNPM_PATH: /home/runner/work/_temp/TEST-emulated-ui-inputs-d282PE/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js
+2026-11-16T01:31:26.4135764Z   LEGACY_DESKTOP_PNPM_SHA256: 7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb
+2026-11-16T01:31:26.4136425Z   LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256: 6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714
+2026-11-16T01:31:26.4137121Z   LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256: abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e
+2026-11-16T01:31:26.4137993Z   LEGACY_LINUX_CHILD_EXEC_MANIFEST: /home/runner/work/_temp/TEST-emulated-ui-inputs-d282PE/linux-child-exec/manifest.json
+2026-11-16T01:31:26.4138724Z   LEGACY_LINUX_CHILD_EXEC_SHA256: e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734
+2026-11-16T01:31:26.4139185Z ##[endgroup]
+2026-11-16T01:31:27.5452261Z ##[group]Run actions/upload-artifact@v4
+2026-11-16T01:31:27.5452588Z with:
+2026-11-16T01:31:27.5452968Z   name: host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-selection
+2026-11-16T01:31:27.5453415Z   retention-days: 14
+2026-11-16T01:31:27.5453649Z   if-no-files-found: warn
+2026-11-16T01:31:27.5468336Z   path: /home/runner/work/_temp/host-emulated-*.json
+/home/runner/work/_temp/host-emulated-*.log
+/home/runner/work/_temp/TEST-emulated-ui-inputs-*/linux-child-exec/manifest.json
+/home/runner/work/_temp/TEST-emulated-ui-inputs-*/linux-child-exec/linux-child-exec
+/home/runner/work/_temp/TEST-emulated-ui-inputs-*/process-ui-capture.json
+/home/runner/work/_temp/TEST-emulated-ui-inputs-*/process-custody/manifest.json
+/home/runner/work/_temp/TEST-emulated-ui-inputs-*/process-custody/registered-process.node
+/home/runner/work/_temp/TEST-desktop-backend-*/desktop-backend-receipt.json
+/home/runner/work/_temp/TEST-desktop-backend-*/desktop-app.log
+/home/runner/work/_temp/TEST-desktop-backend-*/desktop-backend-app.log
+/home/runner/work/_temp/TEST-desktop-backend-*/owner-routing-*.log
+/home/runner/work/_temp/TEST-desktop-backend-*/owner-routing-*-failure.png
+/home/runner/work/_temp/TEST-desktop-backend-*/host-profile.json
+/home/runner/work/_temp/TEST-desktop-backend-*/desktop-descriptor.json
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/management-commands/*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/runtime-sources/index.json
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/runtime-sessions/*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/teams/*/inboxes/*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/teams/*/group-chat*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/tasks/test-stopped-legacy/*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/preferences/**/*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/desktop-review-readback-receipt.json
+/home/runner/work/_temp/TEST-desktop-backend-*/desktop-review-readback-app.log
+/home/runner/work/_temp/TEST-desktop-backend-*/review-ui-seed.json
+/home/runner/work/_temp/TEST-desktop-backend-*/review-ui-initial-git-diff.txt
+/home/runner/work/_temp/TEST-desktop-backend-*/sentinel-invocations.ndjson
+/home/runner/work/_temp/TEST-desktop-backend-*/TEST-oauth-host-management/native-effects.ndjson
+/home/runner/work/_temp/TEST-desktop-backend-*/TEST-codex-login-management/home/TEST-login-processes.ndjson
+/home/runner/work/_temp/TEST-desktop-backend-*/TEST-codex-login-management/home/TEST-wire.ndjson
+/home/runner/work/_temp/TEST-desktop-backend-*/external-open.jsonl
+/home/runner/work/_temp/TEST-desktop-backend-*/TEST-peer-*/effects.ndjson
+/home/runner/work/_temp/TEST-desktop-backend-*/TEST-codex-install/*.ndjson
+/home/runner/work/_temp/TEST-desktop-backend-*/userData/data/runtimes/codex/current.json
+/home/runner/work/_temp/TEST-desktop-backend-*/TEST-peer-claude-scope/config/projects/TEST-desktop-peer/*.jsonl
+/home/runner/work/_temp/TEST-desktop-backend-*/hoststore/runtime-checkpoints/*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/emulated-cold-resume-epoch1-bundles/**
+/home/runner/work/_temp/TEST-desktop-backend-*/ui-*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/ui-*.png
+/home/runner/work/_temp/TEST-desktop-backend-*/native-extensions-*.png
+/home/runner/work/_temp/TEST-desktop-backend-*/native-extensions-selection.json
+/home/runner/work/_temp/TEST-desktop-backend-*/stopped-import-ui-seed.json
+/home/runner/work/_temp/TEST-desktop-backend-*/claude/teams/test-stopped-legacy/**
+/home/runner/work/_temp/TEST-desktop-backend-*/claude/tasks/test-stopped-legacy/**
+/home/runner/work/_temp/TEST-desktop-backend-*/userData/data/attachments/test-stopped-legacy/**
+/home/runner/work/_temp/TEST-desktop-backend-*/userData/data/task-attachments/test-stopped-legacy/**
+/home/runner/work/_temp/TEST-desktop-backend-*/native-chat-attachment-inputs/**
+/home/runner/work/_temp/TEST-desktop-backend-*/home/Downloads/source-original.txt
+/home/runner/work/_temp/TEST-desktop-backend-*/home/Downloads/TEST-native-chat.txt
+/home/runner/work/_temp/TEST-desktop-backend-*/controlled-process-*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/process-ui-seed.json
+/home/runner/work/_temp/TEST-desktop-backend-*/workspace/process-*.json
+/home/runner/work/_temp/TEST-desktop-backend-*/workspace/process-*.ndjson
+
+2026-11-16T01:31:27.5483005Z   compression-level: 6
+2026-11-16T01:31:27.5483239Z   overwrite: false
+2026-11-16T01:31:27.5483458Z   include-hidden-files: false
+2026-11-16T01:31:27.5483696Z env:
+2026-11-16T01:31:27.5483904Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci
+2026-11-16T01:31:27.5484256Z   HOST_EMULATED_SOURCE_HEAD: 0660c748f88675063e3051fb0f8b2022e8f6f056
+2026-11-16T01:31:27.5484623Z   HOST_EMULATED_LANE: selection
+2026-11-16T01:31:27.5484882Z   HOST_EMULATED_PLATFORM: linux-x64
+2026-11-16T01:31:27.5485198Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-16T01:31:27.5485515Z   TMPDIR: /home/runner/work/_temp
+2026-11-16T01:31:27.5485770Z   LEGACY_DESKTOP_BACKEND_GO: 1
+2026-11-16T01:31:27.5486033Z   LEGACY_DESKTOP_EMULATED_ONLY: 1
+2026-11-16T01:31:27.5486465Z   LEGACY_DESKTOP_COREPACK_HOME: /home/runner/work/_temp/TEST-emulated-ui-inputs-d282PE/cache
+2026-11-16T01:31:27.5487088Z   LEGACY_DESKTOP_NODE_SHA256: 7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c
+2026-11-16T01:31:27.5487955Z   LEGACY_DESKTOP_HOST_ENTRY_SHA256: 7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add
+2026-11-16T01:31:27.5488846Z   LEGACY_DESKTOP_PNPM_PATH: /home/runner/work/_temp/TEST-emulated-ui-inputs-d282PE/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js
+2026-11-16T01:31:27.5489727Z   LEGACY_DESKTOP_PNPM_SHA256: 7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb
+2026-11-16T01:31:27.5490400Z   LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256: 6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714
+2026-11-16T01:31:27.5491113Z   LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256: abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e
+2026-11-16T01:31:27.5492145Z   LEGACY_LINUX_CHILD_EXEC_MANIFEST: /home/runner/work/_temp/TEST-emulated-ui-inputs-d282PE/linux-child-exec/manifest.json
+2026-11-16T01:31:27.5492886Z   LEGACY_LINUX_CHILD_EXEC_SHA256: e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734
+2026-11-16T01:31:27.5493342Z ##[endgroup]
+2026-11-16T01:31:27.7439174Z (node:8787) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-16T01:31:27.7439995Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-16T01:31:27.8142495Z With the provided path, there will be 28 files uploaded
+2026-11-16T01:31:27.8158211Z Artifact name is valid!
+2026-11-16T01:31:27.8185406Z Root directory input is valid!
+2026-11-16T01:31:28.1815405Z Beginning upload of artifact content to blob storage
+2026-11-16T01:31:28.3056959Z (node:8787) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-16T01:31:28.9805492Z Uploaded bytes 1307479
+2026-11-16T01:31:29.0523556Z Finished uploading artifact content to blob storage!
+2026-11-16T01:31:29.0525184Z SHA256 digest of uploaded artifact zip is 060a8d84afc1e32e017979d175e106dcdcdbd0c9c7b5bde98c80264a51d10a3d
+2026-11-16T01:31:29.0526591Z Finalizing artifact upload
+2026-11-16T01:31:29.4276335Z Artifact host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-selection.zip successfully finalized. Artifact ID 14190562781
+2026-11-16T01:31:29.4278347Z Artifact host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-selection has been successfully uploaded! Final size is 1307479 bytes. Artifact ID is 14190562781
+2026-11-16T01:31:29.4283234Z Artifact download URL: https://github.com/777genius/agent-teams-ai/actions/runs/43780997237/artifacts/14190562781
+2026-11-16T01:31:29.4513556Z Post job cleanup.
+2026-11-16T01:31:29.5835044Z Cache hit occurred on the primary key node-cache-Linux-x64-pnpm-e41c5038acc80c011488727c0ad32bbe3761689d5355c2cac2cd5bccb79e675e, not saving cache.
+2026-11-16T01:31:29.5953368Z Post job cleanup.
+2026-11-16T01:31:29.7529913Z Pruning is unnecessary.
+2026-11-16T01:31:29.7770958Z Post job cleanup.
+2026-11-16T01:31:29.8818964Z [command]/usr/bin/git version
+2026-11-16T01:31:29.8871029Z git version 2.56.1
+2026-11-16T01:31:29.8921635Z Temporarily overriding HOME='/home/runner/work/_temp/7add8e3f-118d-4b09-ba92-0f62c17eef65' before making global git config changes
+2026-11-16T01:31:29.8922950Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-16T01:31:29.8928607Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/agent-teams-ai/agent-teams-ai
+2026-11-16T01:31:29.8973672Z Removing SSH command configuration
+2026-11-16T01:31:29.8982210Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-16T01:31:29.9041215Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-16T01:31:29.9399352Z Removing HTTP extra header
+2026-11-16T01:31:29.9408226Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-16T01:31:29.9467323Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-16T01:31:29.9971047Z Removing includeIf entries pointing to credentials config files
+2026-11-16T01:31:29.9978588Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-16T01:31:30.0032474Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-16T01:31:30.0493973Z Cleaning up orphan processes
+2026-11-16T01:31:30.1022506Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

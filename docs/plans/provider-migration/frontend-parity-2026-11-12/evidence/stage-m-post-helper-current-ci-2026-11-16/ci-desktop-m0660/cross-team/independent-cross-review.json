@@ -1,0 +1,2140 @@
+{
+  "schema": "independent-current-M-cross-original-evidence-review/1",
+  "reviewedUtc": "2026-11-16T02:33:06.249401+00:00",
+  "result": "APPROVE",
+  "reviewScope": "Approval of exact original evidence and bounded failure attribution; Cross remains FAIL/INCOMPLETE. No product fix, native qualification, privacy GREEN or current followup execution is asserted.",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "jobId": 133017916047,
+  "jobConclusion": "failure",
+  "independentOriginalByteReadbackExact": true,
+  "checkpoint": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/checkpoint-cross-team.json",
+    "bytes": 9607,
+    "blob": "2bb04315249dd9c3f3e7d0111ac46c0069e07b23",
+    "sha256": "278730aa2bd765a43a330ac54d63fc5bf4f0f578ce37fe0be7b5a157811a2214"
+  },
+  "authorAudit": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/audit.json",
+    "bytes": 169543,
+    "blob": "f3cf04d5c7e16ddb485c897df02c0fe759f10417",
+    "sha256": "4d6390338bc261608cb364ebec744cddd0391ff0179bcbb65e2a6a84a0ce29b1"
+  },
+  "approvedAppendix": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/Plan29-cross-team-failure-appendix.md",
+    "bytes": 6359,
+    "blob": "afbca9fed68bc56e5014d0c9cfffc86b09227752",
+    "sha256": "f7f2743ea93ce4edb787c693b2846271237ab7d19981dc22935a33b1fa266c72"
+  },
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/job-133017916047.log",
+      "bytes": 188846,
+      "blob": "08a9bde4944bd24376ceaf09a87444231936be39",
+      "sha256": "b88ecff84df20b1f0526fca453965b746c8f2ac1398991887974ba989ca6c23c"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/artifact-14192410704.zip",
+      "bytes": 1436127,
+      "blob": "0525b930a2e5fd5cd3d05c701ac3925c0288972f",
+      "sha256": "49a1f1d6408374dcbd48db0483e8c9e02b07d3d5ff803032291b85f270ebcb50"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/archive-audit.json",
+      "bytes": 6093,
+      "blob": "bce68655c00f21159b04f8ad74b535a629912de1",
+      "sha256": "075055c8a92ed9704b3072a7fc8680a022ba3567472c36af5bd076bb382ea350"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-artifacts-0215.json",
+      "bytes": 19753,
+      "blob": "699d3f9f470c9aba779664f159cefac43cbc4861",
+      "sha256": "f434f1a38fce2695c3e828119cd6424c0a986afbf95406a147c2eadfca87416e"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0215.json",
+      "bytes": 210786,
+      "blob": "ce23677db2bb7bd7b13466fc141f8354a709932b",
+      "sha256": "5970c06c49581ee9d93fc68b749d63df855689aaacd8878ef870853ebbb0b860"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/audit.json",
+      "bytes": 169543,
+      "blob": "f3cf04d5c7e16ddb485c897df02c0fe759f10417",
+      "sha256": "4d6390338bc261608cb364ebec744cddd0391ff0179bcbb65e2a6a84a0ce29b1"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/Plan29-cross-team-failure-appendix.md",
+      "bytes": 6359,
+      "blob": "afbca9fed68bc56e5014d0c9cfffc86b09227752",
+      "sha256": "f7f2743ea93ce4edb787c693b2846271237ab7d19981dc22935a33b1fa266c72"
+    }
+  ],
+  "payloadCount": 8,
+  "payloadBytes": 2620808,
+  "officialArtifact": {
+    "id": 14192410704,
+    "name": "host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-cross-team",
+    "size_in_bytes": 1436127,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192410704",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192410704/zip",
+    "expired": false,
+    "created_at": "2026-11-16T02:09:17Z",
+    "expires_at": "2026-11-30T02:09:15Z",
+    "updated_at": "2026-11-16T02:09:17Z",
+    "digest": "sha256:49a1f1d6408374dcbd48db0483e8c9e02b07d3d5ff803032291b85f270ebcb50",
+    "workflow_run": {
+      "id": 43780997237,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+    }
+  },
+  "officialJob": {
+    "id": 133017916047,
+    "name": "Offline Host Desktop (linux-x64, cross-team)",
+    "status": "completed",
+    "conclusion": "failure",
+    "run_id": 43780997237,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Verify original checkout and runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Prepare private Linux display",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Install frozen workspace and Electron",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build existing Desktop prerequisites and verify admission",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Verify original Runtime and Team conversation contracts",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 9
+      },
+      {
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 10
+      },
+      {
+        "name": "Capture package-manager and Host inputs without vendor executables",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Capture original controlled Linux process input without a provider",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Exercise ordinary Team controls and renderer reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Exercise ordinary Taskboard controls and persistence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Exercise original Skills and cross-Team controls",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 15
+      },
+      {
+        "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Exercise original Review after a cold Host and app restart",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Exercise saved next-launch selection while the original Team remains live",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 24
+      },
+      {
+        "name": "Exercise stock Codex Update while the original Team retains its captured source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 25
+      },
+      {
+        "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 26
+      },
+      {
+        "name": "Prepare exact OpenCode V2 Bun and engine graph",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 27
+      },
+      {
+        "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 28
+      },
+      {
+        "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 29
+      },
+      {
+        "name": "Verify exact source, original screenshots, receipts and cleanup",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 30
+      },
+      {
+        "name": "Preserve original Desktop evidence, including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 60
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 61
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 62
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 63
+      }
+    ]
+  },
+  "archive": {
+    "zip": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/artifact-14192410704.zip",
+      "bytes": 1436127,
+      "blob": "0525b930a2e5fd5cd3d05c701ac3925c0288972f",
+      "sha256": "49a1f1d6408374dcbd48db0483e8c9e02b07d3d5ff803032291b85f270ebcb50"
+    },
+    "memberCount": 21,
+    "uncompressedBytes": 2626839,
+    "safeUniquePaths": true,
+    "allCRCAndRecordedHashesAndExtractedBytesExact": true,
+    "members": [
+      {
+        "path": "TEST-desktop-backend-wUzd4r/desktop-app.log",
+        "bytes": 22811,
+        "blob": "291e797d7e35a2e27b7333918b382a07d5d70d43",
+        "sha256": "e6cfdb0721eb408cf48158e736978904bd5c21d7569ed8d467ff475b9cbd1480",
+        "crc32": "8b208016",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "TEST-desktop-backend-wUzd4r/desktop-descriptor.json",
+        "bytes": 2993,
+        "blob": "80b16fe93a9abcd70b548461885367a54c69d842",
+        "sha256": "f978341f27daae95117761325230dd59dabd1f303849d552e1117a939bb855e0",
+        "crc32": "2b877bec",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "TEST-desktop-backend-wUzd4r/desktop-backend-receipt.json",
+        "bytes": 905927,
+        "blob": "feb446be328b0befa1f06f2a692126886f09d7e0",
+        "sha256": "a5559c472af67b90541a598c75d94e97345db0eff84cced30c7ea34ab4f11f54",
+        "crc32": "03783207",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "TEST-desktop-backend-wUzd4r/host-profile.json",
+        "bytes": 2618,
+        "blob": "2342d53b42d99fce33399e306c54102a98872716",
+        "sha256": "9a24587d026643acb1ebe64ebff50531cec39350f5df3b794fcc55934ad327b4",
+        "crc32": "7f23adee",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "TEST-desktop-backend-wUzd4r/hoststore/teams/test-desktop-backend/group-chats.json",
+        "bytes": 340,
+        "blob": "5e3e4ecaab6badfdb48a590217d421c8054b8b02",
+        "sha256": "f174510346f0d16652fbed767cecae1f8f0fd732752f76fa205c46e7ded57bf2",
+        "crc32": "6171997d",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "TEST-desktop-backend-wUzd4r/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+        "bytes": 1295,
+        "blob": "56185db3785ed078abdc45ce312de8c7330dd390",
+        "sha256": "f0f219db40ab8993d38a7b1dd0635dd078566e815c5593bf10430f255fb0ca5c",
+        "crc32": "9947972d",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "TEST-desktop-backend-wUzd4r/sentinel-invocations.ndjson",
+        "bytes": 96,
+        "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+        "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+        "crc32": "9fc3bdb4",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "TEST-desktop-backend-wUzd4r/ui-failure.png",
+        "bytes": 126006,
+        "blob": "79dde3482a0588f28131950edc35ff4a77a53334",
+        "sha256": "a5b8955581d0ab2ee8396abbafbd97d91d5d3577a5b188eadc8be9ca8f5f4e8c",
+        "crc32": "217d4c67",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "TEST-desktop-backend-wUzd4r/ui-group-seed-receipt.json",
+        "bytes": 593,
+        "blob": "133738a6787d3f1c3df61536335b4a792ad8233e",
+        "sha256": "29461f100115e9a6ecde9829a9f8606075caad08d639c9cc19c99cff8c7ab1aa",
+        "crc32": "a5e3ed29",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "TEST-desktop-backend-wUzd4r/ui-seed-receipt.json",
+        "bytes": 2197,
+        "blob": "f38854ebb50a3a02b1998698b2cb555fff11722c",
+        "sha256": "922a7d4c62e3f70abadc584f502885db3aaebc44a9a3378dd45cb4cb4c09db25",
+        "crc32": "09e21d47",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "TEST-desktop-backend-wUzd4r/ui-task-board-assigned-blocked.png",
+        "bytes": 109479,
+        "blob": "0247671b13f403ce67873b8deb6198596d0e3140",
+        "sha256": "cb503c3031ab0601410de197b3121d5e95881e820c818960223d55cfb122bfe4",
+        "crc32": "59291c00",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "TEST-desktop-backend-wUzd4r/ui-task-board-attachment-added.png",
+        "bytes": 127508,
+        "blob": "c1aede06ae1448188496d006a0cd1377f782d717",
+        "sha256": "786b8ee3f90963bc6988badbd16ccacd2a9544996a24c8ee69e04a4161460c4e",
+        "crc32": "d5b82d15",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "TEST-desktop-backend-wUzd4r/ui-task-board-blocked-start.png",
+        "bytes": 145382,
+        "blob": "38d00b762753eb9d422bcdf661f1024b4b470974",
+        "sha256": "028ab933ae449b8db05b158877f48f5f1841cc5388086e1b5da015ce9da61994",
+        "crc32": "252580d8",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "TEST-desktop-backend-wUzd4r/ui-task-board-initial.png",
+        "bytes": 108012,
+        "blob": "f19b237c80062fe231a0657888e8342f44f8eadf",
+        "sha256": "4600b6d53245608af52cc36de92eca2fedc4f24ca30063b3e0a21824bb65c0d8",
+        "crc32": "eb1ca106",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "TEST-desktop-backend-wUzd4r/ui-task-board-reloaded.png",
+        "bytes": 124111,
+        "blob": "e6e3bb65bf898c7b5e8993c5eb68a752ed9959bc",
+        "sha256": "d9d424a8bb27dfc67abf8eaa480339058acfc2d1254bd31502aee3f3c30edd61",
+        "crc32": "8e064128",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "TEST-desktop-backend-wUzd4r/ui-task-board-reordered.png",
+        "bytes": 145329,
+        "blob": "7c61277231be9180f3aecd3834bfb7df190e197e",
+        "sha256": "ed510a4b0426361fc25c85c50cd50eed2c62e6c6c03495ae0c8d0ce54291caf0",
+        "crc32": "31dca1e8",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-ZHrOkm/linux-child-exec/linux-child-exec",
+        "bytes": 790608,
+        "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+        "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+        "crc32": "ed0ca14b",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-ZHrOkm/linux-child-exec/manifest.json",
+        "bytes": 2406,
+        "blob": "9d295189c6e88a7f57193e79097621d00f21c395",
+        "sha256": "4ef7cd76c1a549d6fef41c4dc7561b5433547278d59b0c2907affe2be9a646f1",
+        "crc32": "e3de74e8",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "host-emulated-inputs.json",
+        "bytes": 1803,
+        "blob": "2248a139ec132f4931eb15dbe2c142be631ff42a",
+        "sha256": "245b3907e2d04c2f2bac94d3d39737e17b9c0be62f1af1861594762a63369410",
+        "crc32": "67439d55",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "host-emulated-linux-child-exec-selection.json",
+        "bytes": 271,
+        "blob": "bcf3cd4be0a93af7d12780d6ee26dea1c3b7b3fa",
+        "sha256": "5492b9346f26384f4bbf209504f8eac703ba95c1379f3aea3915edd327f450f7",
+        "crc32": "b2c43fc6",
+        "extractedBytesExact": true
+      },
+      {
+        "path": "host-emulated-task-board-cross-team-ui.log",
+        "bytes": 7054,
+        "blob": "0626009229a3f113eb711abf2e282505de666228",
+        "sha256": "2cd40519dfbb73ae86a759c4d94c52e17f022bf5404ca8b90142efe5955857a2",
+        "crc32": "4cf7d194",
+        "extractedBytesExact": true
+      }
+    ]
+  },
+  "originalReceipt": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/extracted/TEST-desktop-backend-wUzd4r/desktop-backend-receipt.json",
+    "bytes": 905927,
+    "blob": "feb446be328b0befa1f06f2a692126886f09d7e0",
+    "sha256": "a5559c472af67b90541a598c75d94e97345db0eff84cced30c7ea34ab4f11f54"
+  },
+  "sourceCensus": {
+    "selectedCount": 1757,
+    "uniquePaths": 1757,
+    "allFourOrderedBeforeAfterArraysExact": true,
+    "crossBeforeAfterEqualsSelectionBeforeAfter": true,
+    "sharedCensusOrderedRowsExact": true,
+    "all1757GitObjectIdsFreshlyCompared": true,
+    "gitLfBytes": 20308016,
+    "reuseBasis": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/selection/root-independent-review.json",
+      "bytes": 29680,
+      "blob": "eeec84656302462c0400a5716369b36a9df804ea",
+      "sha256": "00e8c036c60a73f17efbf8eb302704f058ae7b250db400b64f265b8395c9161d"
+    },
+    "basisReceipt": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/selection/extracted/TEST-desktop-backend-JWiNYE/desktop-backend-receipt.json",
+      "bytes": 796834,
+      "blob": "6ee1d49b6cfaf5cb7249dd9ae514a5b27a78bc97",
+      "sha256": "529fc164a2e76cfff09178f312fccebb47efafcc6953beccd707fedb0f6a9914"
+    },
+    "sharedCensus": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    },
+    "scope": "Reuse only the exact independently Git-hashed Selection source census, after full ordered array equality and fresh Git OID comparison. Business, cleanup and acceptance results are independently read for this Cross receipt; none are transferred. Seven critical leaves and three supporting leaves re-read/rehashed below."
+  },
+  "freshlyRehashedSourceLeaves": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "3f1ce46fce847a861850ef874017f84227c62b0c",
+      "bytes": 36207,
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-attachments-ui.ts",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "e128514aef972fd4f3fcf745155b8a937fbbc71e",
+      "bytes": 25110,
+      "sha256": "83b92a2f8a1f2141bf1672548d9f01402a514720783f850897bf3cd98560e656"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "db4d98b333e1fb1103c82cf7851a252c0ecff3a5",
+      "bytes": 8576,
+      "sha256": "4e62a8eee6a03074e05bf75f17c8cdfb2b717cd99f923d188a0ffe7f3db54e6a"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+      "bytes": 6433,
+      "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+      "bytes": 25052,
+      "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "bytes": 54778,
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc"
+    },
+    {
+      "path": "src/main/utils/testChildProcessTrace.ts",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "b3d2ec4b410de5df6d63075955fa8f89fc7c9b88",
+      "bytes": 9633,
+      "sha256": "bff51a48a14cc0d77f8c7233c034c1bbe0eb79b0f5f5270c9540faf70e6472eb"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "bytes": 49613,
+      "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73"
+    },
+    {
+      "path": "scripts/legacy-agent-host/startup-passive-observer.ts",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "00ae1cd153f5bd51638edc0f222307cba88eb047",
+      "bytes": 7792,
+      "sha256": "4c64958f572aa2c06e8792244b40d923e5a4a12fecab41807b7580db851e5afc"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "mode": "100644",
+      "type": "blob",
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "bytes": 101741,
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+    }
+  ],
+  "originalLogReview": {
+    "fullLog": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/job-133017916047.log",
+      "bytes": 188846,
+      "blob": "08a9bde4944bd24376ceaf09a87444231936be39",
+      "sha256": "b88ecff84df20b1f0526fca453965b746c8f2ac1398991887974ba989ca6c23c"
+    },
+    "lineCount": 1797,
+    "archivedTee": {
+      "path": "host-emulated-task-board-cross-team-ui.log",
+      "bytes": 7054,
+      "blob": "0626009229a3f113eb711abf2e282505de666228",
+      "sha256": "2cd40519dfbb73ae86a759c4d94c52e17f022bf5404ca8b90142efe5955857a2",
+      "crc32": "4cf7d194",
+      "extractedBytesExact": true
+    },
+    "teeExactSubstringOfTimestampAndANSIstrippedOriginalLog": true,
+    "node": "24.21.0",
+    "originalEightHelperArgv": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "originalEightHelperTotals": {
+      "tests": 115,
+      "pass": 115,
+      "fail": 0,
+      "cancelled": 0,
+      "skip": 0,
+      "todo": 0,
+      "durationMs": 8582.121023
+    },
+    "originalInstallDependenciesArgv": "node --test test/scripts/installDependenciesWithRetry.test.mjs",
+    "originalInstallDependenciesTotals": {
+      "tests": 7,
+      "pass": 7,
+      "fail": 0,
+      "cancelled": 0,
+      "skip": 0,
+      "todo": 0,
+      "durationMs": 180.592074
+    },
+    "separateFailureExitMarkers": 2,
+    "failedSteps": [
+      15,
+      30
+    ],
+    "skippedTeamPrivacyAndWorkspaceTypes": true,
+    "firstErrorCustody": "The exact first product-read message lives in the original receipt. Original tee/log retain its source frames and bounded failure projection, followed by incomplete-proof assertion and step30 verifier refusal; the latter do not establish two separate product causes.",
+    "compiledOutputLimit": "Actual compiled main/preload JS bytes hashed after owned app startup; no claim of reproducible source-to-bundle rebuild",
+    "receiptPins": {
+      "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "corepackPackageSha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+      "corepackLibrarySha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+      "pnpmStubSha256": "a24bf856b259b1435b047fe1d6fc147c4956f0fe3815b7ef8b14fc670c8b1fbb",
+      "profileSha256": "9a24587d026643acb1ebe64ebff50531cec39350f5df3b794fcc55934ad327b4",
+      "descriptorSha256": "f978341f27daae95117761325230dd59dabd1f303849d552e1117a939bb855e0",
+      "sentinelSha256": "b0db5627286f504892fcc1a4264fb991c5d9c53c473baa852414e159ffdc18a9",
+      "shellProbeSha256": "40766cffed7f0f6913a2fac0dad2783f2ce0041dec2a79028cf9d56424e3f621",
+      "providerArchiveSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+      "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+      "electronSha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+      "smokeSourceSha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "fixtureSourceSha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+      "uiSourceSha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf"
+    },
+    "compiledBundleHashesAfterStartup": [
+      {
+        "path": "main/chunks/index-D9GX0Q6a.cjs",
+        "sha256": "89c988b7be61f7f30f0effaed6a2626a2279b0ed753228360e77e227884d0a92"
+      },
+      {
+        "path": "main/chunks/index-yaJFGvjB.cjs",
+        "sha256": "ec64b11e28a53961fd7846392857a0167886b8b086d14f54e20041ddc9927155"
+      },
+      {
+        "path": "main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+        "sha256": "7babbc9bd69c863a2210647b3d5f589d96437a9a80fd794b54196387849217f6"
+      },
+      {
+        "path": "main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+        "sha256": "c14cfc36aeec6fd7103c507f258097aaeccf552dbbf608fea43f9e3c7a7ef3b3"
+      },
+      {
+        "path": "main/chunks/taskChangeState-rZolvpL6.cjs",
+        "sha256": "f40557112189b351692a4b0f19244d7845a4dfe754f468326a21c36386efa1cd"
+      },
+      {
+        "path": "main/chunks/taskHistory-2kbwfqIg.cjs",
+        "sha256": "1d336b6cea5aa5c4768954541a24347fe89bb46a83faddaf8b26fd6e0afb7f85"
+      },
+      {
+        "path": "main/chunks/TeamDataService-DySh5-O-.cjs",
+        "sha256": "ed455bf2423e0511bf1fb8e30069280fe99b505e8e4968df3705309a7131556e"
+      },
+      {
+        "path": "main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+        "sha256": "2915a9af73772eda67fa92bd4499976d75724d9605cc947e356bd1dc1cee600c"
+      },
+      {
+        "path": "main/index.cjs",
+        "sha256": "c451aecd5463c127c7e72bc238a802912304a21eafb255acb547f38e8851b771"
+      },
+      {
+        "path": "main/internal-storage-worker.cjs",
+        "sha256": "3433cb94575a5748d3133174952698af2a98ac2afb348cb159fcb1110e0b284f"
+      },
+      {
+        "path": "main/task-change-worker.cjs",
+        "sha256": "f8fcc24dd4dc9842cd0f70ffe02891d39eef84019d4aab4ed21b529ba9326446"
+      },
+      {
+        "path": "main/team-data-worker.cjs",
+        "sha256": "dc145e9f1fb5fdfa2e5f51ca6d6f2db8e22e89cb3ab34dae2745ccfd4e6f3823"
+      },
+      {
+        "path": "main/team-fs-worker.cjs",
+        "sha256": "6e6410a44a3d1b97065085259858215045ed137b5bd0dd27bf70f797091c9c83"
+      },
+      {
+        "path": "preload/index.js",
+        "sha256": "4f02e5f1659bb0373f5515d81c7edf5f9bc7af8b67a39f1600171f8acb291406"
+      }
+    ]
+  },
+  "originalPrefix": {
+    "status": "INCOMPLETE",
+    "stepCount": 79,
+    "actionCounts": {
+      "mouseMoved": 32,
+      "mouseClick": 31,
+      "observation": 8,
+      "mouseWheel": 1,
+      "fixtureAction": 1,
+      "pointerDrag": 1,
+      "keyPress": 3,
+      "assertion": 1,
+      "DOM.setFileInputFiles": 1
+    },
+    "sameCommentFocusMouseClickCount": 1,
+    "lastStep": {
+      "monotonicMs": 92275,
+      "action": "mouseClick",
+      "label": "focus original Task comment",
+      "selector": "[role=\"dialog\"] textarea[id=\"task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D\"]",
+      "target": {
+        "x": 700,
+        "y": 672.75,
+        "text": "",
+        "tag": "TEXTAREA"
+      },
+      "state": "attempted"
+    },
+    "noRecordedCommentTextInsertionOrSubmit": true,
+    "noLaterCommentObservationKeys": true,
+    "commandReceipts": [
+      {
+        "key": "createReceipt",
+        "operation": "task.create",
+        "commandId": "f0776389-5b2c-4cc9-b5ac-941aba5100a0",
+        "phase": "completed",
+        "payload": {
+          "subject": "TEST ordinary dependent board task",
+          "groupChatId": "10000000-0000-4000-8000-000000000017",
+          "blockedBy": [
+            "fc451a85-8ac0-572c-a084-040e38e8b393"
+          ],
+          "descriptionTaskRefs": []
+        }
+      },
+      {
+        "key": "assignmentReceipt",
+        "operation": "task.assign",
+        "commandId": "18f1c9db-460d-408f-9c7e-9a80c8bb7249",
+        "phase": "completed",
+        "payload": {
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "owner": "alice"
+        }
+      },
+      {
+        "key": "clarificationReceipt",
+        "operation": "task.clarification",
+        "commandId": "eb663a8b-3e7b-44ac-9c0d-4b870b035098",
+        "phase": "completed",
+        "payload": {
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "value": null
+        }
+      },
+      {
+        "key": "orderReceipt",
+        "operation": "task.board.order",
+        "commandId": "7ca2bded-8302-491d-bb8d-c872a0916804",
+        "phase": "completed",
+        "payload": {
+          "columnId": "todo",
+          "orderedTaskIds": [
+            "fc451a85-8ac0-572c-a084-040e38e8b393",
+            "92e9245e-e80d-5055-bba7-35d679a6c8d3"
+          ]
+        }
+      },
+      {
+        "key": "blockedStartReceipt",
+        "operation": "task.start",
+        "commandId": "355e55f7-3fa9-47fa-b207-dfb46645eb79",
+        "phase": "rejected",
+        "payload": {
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "notification": "user"
+        }
+      }
+    ],
+    "groupAssociation": {
+      "status": "PASS",
+      "groupChatId": "10000000-0000-4000-8000-000000000017",
+      "name": "TEST board group",
+      "commandId": "TEST-task-board-group-seed",
+      "fixtureReceipt": {
+        "kind": "group-chat-command",
+        "commandId": "TEST-task-board-group-seed",
+        "phase": "completed",
+        "operation": "create",
+        "result": {
+          "id": "10000000-0000-4000-8000-000000000017",
+          "name": "TEST board group",
+          "createdAt": "2026-11-16T02:07:22.761Z",
+          "membership": {
+            "kind": "fixed",
+            "memberNames": [
+              "alice",
+              "board-peer"
+            ]
+          },
+          "archivedAt": null,
+          "memberNames": [
+            "alice",
+            "board-peer"
+          ],
+          "availableRecipientNames": [],
+          "canSend": false,
+          "reason": "recipient-unavailable: alice, board-peer"
+        }
+      },
+      "canonicalGroupReceipt": {
+        "schemaVersion": 1,
+        "family": "group-chat",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-wUzd4r",
+          "teamId": "TEST-desktop-team",
+          "teamName": "test-desktop-backend"
+        },
+        "commandId": "TEST-task-board-group-seed",
+        "principalId": "TEST-human",
+        "actor": "user",
+        "authorityRevision": 1,
+        "request": {
+          "operation": "create",
+          "id": "10000000-0000-4000-8000-000000000017",
+          "name": "TEST board group",
+          "selectedMemberNames": [
+            "alice",
+            "board-peer"
+          ],
+          "excludedMemberNames": [],
+          "autoIncludeNewMembers": false
+        },
+        "createdAt": "2026-11-16T02:07:22.755Z",
+        "phase": "completed",
+        "publication": "requested",
+        "deliveries": [],
+        "fingerprint": "9314def6a090fced5f0f5b054b7263bb61b8d62fb4f0bdcaff3f98829b249f6d",
+        "response": {
+          "id": "10000000-0000-4000-8000-000000000017",
+          "name": "TEST board group",
+          "createdAt": "2026-11-16T02:07:22.761Z",
+          "membership": {
+            "kind": "fixed",
+            "memberNames": [
+              "alice",
+              "board-peer"
+            ]
+          },
+          "archivedAt": null,
+          "memberNames": [
+            "alice",
+            "board-peer"
+          ],
+          "availableRecipientNames": [],
+          "canSend": false,
+          "reason": "recipient-unavailable: alice, board-peer"
+        }
+      },
+      "beforeCreate": {
+        "phase": "before",
+        "revision": "5f3b1da15ef11631d04e21891639467d68b9b24207b795f36281802a86fba4fe",
+        "feed": {
+          "streamId": "56e02b8f-4f11-4ff4-9821-24f896a99fa7",
+          "cursor": "17a958bc-c15a-4270-b16b-e80161bbf9eb",
+          "sequence": 0
+        },
+        "pageCount": 3,
+        "taskIds": [
+          "fc451a85-8ac0-572c-a084-040e38e8b393"
+        ],
+        "groupChatId": "10000000-0000-4000-8000-000000000017",
+        "originalOwnerPagesComplete": true
+      },
+      "originalFilterSelection": "TEST board group",
+      "afterCreate": {
+        "phase": "created",
+        "revision": "6e27f7e39aec4de902178cbe0feb9ed02908edf46289a8b44ab9a71f7752c8f3",
+        "feed": {
+          "streamId": "56e02b8f-4f11-4ff4-9821-24f896a99fa7",
+          "cursor": "8c79b591-865c-46ee-8fb4-bd7ff4bad115",
+          "sequence": 1
+        },
+        "pageCount": 3,
+        "taskIds": [
+          "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "fc451a85-8ac0-572c-a084-040e38e8b393"
+        ],
+        "groupChatId": "10000000-0000-4000-8000-000000000017",
+        "originalOwnerPagesComplete": true
+      },
+      "filterClearedBeforeRemainingWorkflow": true,
+      "afterReload": {
+        "phase": "reloaded",
+        "revision": "aa5045cfd8eab0e7cbfa3829e4f49bec6438ea628a4a3fc7fee1989200d6dec1",
+        "feed": {
+          "streamId": "56e02b8f-4f11-4ff4-9821-24f896a99fa7",
+          "cursor": "8dae06c1-db54-4bf3-95ca-e79800a1c6d9",
+          "sequence": 8
+        },
+        "pageCount": 3,
+        "taskIds": [
+          "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "fc451a85-8ac0-572c-a084-040e38e8b393"
+        ],
+        "groupChatId": "10000000-0000-4000-8000-000000000017",
+        "originalOwnerPagesComplete": true
+      }
+    },
+    "imageAttachmentReference": {
+      "artifactId": "3d3052220b60624a042258dba7894f85dd5953cab93e84aa4d236de45fd0a68c",
+      "mimeType": "image/png",
+      "byteLength": 71,
+      "digest": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6"
+    },
+    "imageBeforeReload": {
+      "sha256": "5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6",
+      "width": 2,
+      "height": 1
+    },
+    "imageAddReceiptPhase": "completed",
+    "limits": "These completed prefix actions do not make Taskboard/Cross complete. The original clarification fixture setup and ordinary input/control rows are retained, not relabelled provider business inputs."
+  },
+  "firstFailure": {
+    "message": "Task board product read timed out: same original Task comment owner and empty draft settled after the one focus click; no mutation retry",
+    "source": {
+      "kind": "error",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts:139:11",
+        "scripts/legacy-agent-host/desktop-task-board-attachments-ui.ts:275:26",
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts:765:3",
+        "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts:137:5",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:470:7",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+      ]
+    },
+    "originalWaitBudgetMs": 20000,
+    "gate": "commentReady(empty,0) AND focused AND documentFocused after one original focus click",
+    "sourceStrictPostReadDeadline": false,
+    "failureScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-wUzd4r/ui-failure.png",
+      "sha256": "a5b8955581d0ab2ee8396abbafbd97d91d5d3577a5b188eadc8be9ca8f5f4e8c"
+    },
+    "sourceRead": "Taskboard lines127-139 sets Date.now()+20000, checks before reads, preserves original ownership then await read/matches/pause. Attachments lines267-285 reads the unchanged original owner/empty input after one scroll/click and requires focus; typing287-288 and submit315 follow and are unreached. Cross wrapper137 must complete before later review/notification/cross flows146-148.",
+    "deadlineLimit": "No strict after-read cutoff and no measured continuous/atomic focus guarantee. No timeout or replay amendment is approved.",
+    "sourceStackMatchesOriginalReceiptAndTee": true
+  },
+  "focusObservation": {
+    "passiveEventCount": 36,
+    "finalSevenEvents": [
+      {
+        "type": "pointerdown",
+        "timeMs": 13960,
+        "x": 700,
+        "y": 672.75,
+        "button": 0,
+        "buttons": 1,
+        "trusted": true,
+        "buttonClass": null,
+        "target": {
+          "tag": "TEXTAREA",
+          "id": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+          "ariaLabel": null,
+          "className": "flex w-full border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 text-sm transition-[height] duratio"
+        },
+        "focusBefore": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": "Collapse section",
+          "className": "absolute inset-0 z-0 cursor-pointer transition-colors hover:bg-[var(--color-section-hover)] rounded-t-md bg-[var(--color"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "taskClarification": null,
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": "Collapse section",
+          "className": "absolute inset-0 z-0 cursor-pointer transition-colors hover:bg-[var(--color-section-hover)] rounded-t-md bg-[var(--color"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "TEXTAREA",
+          "id": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+          "ariaLabel": null,
+          "className": "flex w-full border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 text-sm transition-[height] duratio"
+        }
+      },
+      {
+        "type": "focusout",
+        "timeMs": 13960,
+        "trusted": true,
+        "buttonClass": "absolute inset-0 z-0 cursor-pointer transition-colors hover:bg-[var(--color-section-hover)] rounded-t-md bg-[var(--color",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": "Collapse section",
+          "className": "absolute inset-0 z-0 cursor-pointer transition-colors hover:bg-[var(--color-section-hover)] rounded-t-md bg-[var(--color"
+        },
+        "focusBefore": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "TEXTAREA",
+          "id": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+          "ariaLabel": null,
+          "className": "flex w-full border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 text-sm transition-[height] duratio"
+        }
+      },
+      {
+        "type": "focusin",
+        "timeMs": 13961,
+        "trusted": true,
+        "buttonClass": null,
+        "target": {
+          "tag": "TEXTAREA",
+          "id": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+          "ariaLabel": null,
+          "className": "flex w-full border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 text-sm transition-[height] duratio"
+        },
+        "focusBefore": {
+          "tag": "TEXTAREA",
+          "id": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+          "ariaLabel": null,
+          "className": "flex w-full border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 text-sm transition-[height] duratio"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "TEXTAREA",
+          "id": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+          "ariaLabel": null,
+          "className": "flex w-full border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 text-sm transition-[height] duratio"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "TEXTAREA",
+          "id": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+          "ariaLabel": null,
+          "className": "flex w-full border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 text-sm transition-[height] duratio"
+        }
+      },
+      {
+        "type": "pointerup",
+        "timeMs": 13963,
+        "x": 700,
+        "y": 672.75,
+        "button": 0,
+        "buttons": 0,
+        "trusted": true,
+        "buttonClass": null,
+        "target": {
+          "tag": "TEXTAREA",
+          "id": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+          "ariaLabel": null,
+          "className": "flex w-full border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 text-sm transition-[height] duratio"
+        },
+        "focusBefore": {
+          "tag": "TEXTAREA",
+          "id": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+          "ariaLabel": null,
+          "className": "flex w-full border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 text-sm transition-[height] duratio"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "taskClarification": null,
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "TEXTAREA",
+          "id": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+          "ariaLabel": null,
+          "className": "flex w-full border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 text-sm transition-[height] duratio"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "TEXTAREA",
+          "id": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+          "ariaLabel": null,
+          "className": "flex w-full border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 text-sm transition-[height] duratio"
+        }
+      },
+      {
+        "type": "click",
+        "timeMs": 13964,
+        "x": 700,
+        "y": 672,
+        "button": 0,
+        "buttons": 0,
+        "trusted": true,
+        "buttonClass": null,
+        "target": {
+          "tag": "TEXTAREA",
+          "id": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+          "ariaLabel": null,
+          "className": "flex w-full border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 text-sm transition-[height] duratio"
+        },
+        "focusBefore": {
+          "tag": "TEXTAREA",
+          "id": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+          "ariaLabel": null,
+          "className": "flex w-full border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 text-sm transition-[height] duratio"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "taskClarification": null,
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "TEXTAREA",
+          "id": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+          "ariaLabel": null,
+          "className": "flex w-full border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 text-sm transition-[height] duratio"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "TEXTAREA",
+          "id": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+          "ariaLabel": null,
+          "className": "flex w-full border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 text-sm transition-[height] duratio"
+        }
+      },
+      {
+        "type": "focusout",
+        "timeMs": 14614,
+        "trusted": true,
+        "buttonClass": null,
+        "target": {
+          "tag": "TEXTAREA",
+          "id": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+          "ariaLabel": null,
+          "className": "flex w-full border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 text-sm transition-[height] duratio"
+        },
+        "focusBefore": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        }
+      },
+      {
+        "type": "focusin",
+        "timeMs": 14721,
+        "trusted": true,
+        "buttonClass": null,
+        "target": {
+          "tag": "DIV",
+          "id": "radix-_r_35_",
+          "ariaLabel": null,
+          "className": "relative mx-auto grid w-full max-w-lg grid-cols-[minmax(0,1fr)] gap-4 border border-[var(--color-border)] bg-[var(--colo"
+        },
+        "focusBefore": {
+          "tag": "DIV",
+          "id": "radix-_r_35_",
+          "ariaLabel": null,
+          "className": "relative mx-auto grid w-full max-w-lg grid-cols-[minmax(0,1fr)] gap-4 border border-[var(--color-border)] bg-[var(--colo"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "DIV",
+          "id": "radix-_r_35_",
+          "ariaLabel": null,
+          "className": "relative mx-auto grid w-full max-w-lg grid-cols-[minmax(0,1fr)] gap-4 border border-[var(--color-border)] bg-[var(--colo"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "DIV",
+          "id": "radix-_r_35_",
+          "ariaLabel": null,
+          "className": "relative mx-auto grid w-full max-w-lg grid-cols-[minmax(0,1fr)] gap-4 border border-[var(--color-border)] bg-[var(--colo"
+        }
+      }
+    ],
+    "exactSameInputSingleTrustedClick": true,
+    "transitionCount": 11,
+    "transitionRows": [
+      {
+        "ownerPresent": false,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": true,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": false,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": true,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": true,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": false,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": true,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": false,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": true,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": false,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": true,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": false,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": true,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      }
+    ],
+    "lastObservation": {
+      "owner": {
+        "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-wUzd4r",
+        "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+        "identity": {
+          "contextId": "local",
+          "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-wUzd4r",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3"
+        },
+        "surfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+        "inputId": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+        "commentText": "",
+        "submitPending": false,
+        "submitError": null,
+        "ownerRevision": 3,
+        "partRevisions": {
+          "commentText": 0,
+          "pendingAttachments": 0
+        },
+        "pendingPreparationCount": 0,
+        "canSubmit": true,
+        "attachmentError": null,
+        "pendingAttachmentCount": 0,
+        "canEditNow": true,
+        "canResolveClarification": false,
+        "selector": "[role=\"dialog\"] textarea[id=\"task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D\"]"
+      },
+      "inputProbe": {
+        "present": true,
+        "connected": true,
+        "disabled": false,
+        "focused": false,
+        "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+        "ownerRevision": 3,
+        "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+        "detailPhase": "ready",
+        "refreshPending": false,
+        "taskStatus": "in_progress",
+        "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+        "activeContextId": "local",
+        "contextSwitching": false
+      },
+      "settled": true,
+      "domValue": "",
+      "inputEnabled": true,
+      "focused": false,
+      "documentFocused": true,
+      "visibility": "visible",
+      "activeElement": {
+        "tag": "DIV",
+        "id": "radix-_r_35_"
+      },
+      "timeMs": 33958
+    },
+    "firstReadyBeforeClick": {
+      "owner": {
+        "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-wUzd4r",
+        "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+        "identity": {
+          "contextId": "local",
+          "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-wUzd4r",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3"
+        },
+        "surfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+        "inputId": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+        "commentText": "",
+        "submitPending": false,
+        "submitError": null,
+        "ownerRevision": 3,
+        "partRevisions": {
+          "commentText": 0,
+          "pendingAttachments": 0
+        },
+        "pendingPreparationCount": 0,
+        "canSubmit": true,
+        "attachmentError": null,
+        "pendingAttachmentCount": 0,
+        "canEditNow": true,
+        "canResolveClarification": false,
+        "selector": "[role=\"dialog\"] textarea[id=\"task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D\"]"
+      },
+      "inputProbe": {
+        "present": true,
+        "connected": true,
+        "disabled": false,
+        "focused": false,
+        "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+        "ownerRevision": 3,
+        "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+        "detailPhase": "ready",
+        "refreshPending": false,
+        "taskStatus": "in_progress",
+        "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+        "activeContextId": "local",
+        "contextSwitching": false
+      },
+      "settled": true,
+      "domValue": "",
+      "inputEnabled": true,
+      "focused": false,
+      "documentFocused": true,
+      "visibility": "visible",
+      "activeElement": {
+        "tag": "BUTTON",
+        "id": ""
+      },
+      "timeMs": 13501
+    },
+    "sameOriginalOwnerAssertion": {
+      "monotonicMs": 89821,
+      "assertion": "exact original Task comment owner/surface",
+      "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-wUzd4r",
+      "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+      "identity": {
+        "contextId": "local",
+        "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-wUzd4r",
+        "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3"
+      },
+      "surfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+      "inputId": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+      "commentText": "",
+      "submitPending": false,
+      "submitError": null,
+      "ownerRevision": 3,
+      "partRevisions": {
+        "commentText": 0,
+        "pendingAttachments": 0
+      },
+      "pendingPreparationCount": 0,
+      "canSubmit": true,
+      "attachmentError": null,
+      "pendingAttachmentCount": 0,
+      "canEditNow": true,
+      "canResolveClarification": false,
+      "selector": "[role=\"dialog\"] textarea[id=\"task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D\"]"
+    },
+    "sourceSemantics": "readCommentInput first awaits the existing readiness expression, then separately evaluates the current owner and DOM/store probes. Transition rows are capped at12 and omit individual clocks; these11 are retained state changes, not every read. No continuous history or precise source cause follows.",
+    "conclusion": "A delivered one-click is positively observed; owner unavailable while initially focused, then disabled/unfocused, then recovered owner and enabled empty input while focus remains false. The cause of the owner/disabled/focus transitions remains unproved."
+  },
+  "screenshots": [
+    {
+      "path": "TEST-desktop-backend-wUzd4r/ui-failure.png",
+      "bytes": 126006,
+      "blob": "79dde3482a0588f28131950edc35ff4a77a53334",
+      "sha256": "a5b8955581d0ab2ee8396abbafbd97d91d5d3577a5b188eadc8be9ca8f5f4e8c",
+      "crc32": "217d4c67",
+      "extractedBytesExact": true,
+      "actuallyViewed": true,
+      "visualObservation": "Same image and empty composer; frame cannot establish the cause of the focus transition."
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/ui-task-board-assigned-blocked.png",
+      "bytes": 109479,
+      "blob": "0247671b13f403ce67873b8deb6198596d0e3140",
+      "sha256": "cb503c3031ab0601410de197b3121d5e95881e820c818960223d55cfb122bfe4",
+      "crc32": "59291c00",
+      "extractedBytesExact": true,
+      "actuallyViewed": true,
+      "visualObservation": "Dependent Task pending, assigned alice, awaiting clarification, blocked by the seed; empty composer."
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/ui-task-board-attachment-added.png",
+      "bytes": 127508,
+      "blob": "c1aede06ae1448188496d006a0cd1377f782d717",
+      "sha256": "786b8ee3f90963bc6988badbd16ccacd2a9544996a24c8ee69e04a4161460c4e",
+      "crc32": "d5b82d15",
+      "extractedBytesExact": true,
+      "actuallyViewed": true,
+      "visualObservation": "Same dependent Task with one displayed image and empty comment composer."
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/ui-task-board-blocked-start.png",
+      "bytes": 145382,
+      "blob": "38d00b762753eb9d422bcdf661f1024b4b470974",
+      "sha256": "028ab933ae449b8db05b158877f48f5f1841cc5388086e1b5da015ce9da61994",
+      "crc32": "252580d8",
+      "extractedBytesExact": true,
+      "actuallyViewed": true,
+      "visualObservation": "Dependent remains TODO; same sidebar error. Rejected Start is established by the saved command receipt, not screenshot alone."
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/ui-task-board-initial.png",
+      "bytes": 108012,
+      "blob": "f19b237c80062fe231a0657888e8342f44f8eadf",
+      "sha256": "4600b6d53245608af52cc36de92eca2fedc4f24ca30063b3e0a21824bb65c0d8",
+      "crc32": "eb1ca106",
+      "extractedBytesExact": true,
+      "actuallyViewed": true,
+      "visualObservation": "Offline Team and members; initial board contains loading skeleton, not a settled board claim."
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/ui-task-board-reloaded.png",
+      "bytes": 124111,
+      "blob": "e6e3bb65bf898c7b5e8993c5eb68a752ed9959bc",
+      "sha256": "d9d424a8bb27dfc67abf8eaa480339058acfc2d1254bd31502aee3f3c30edd61",
+      "crc32": "8e064128",
+      "extractedBytesExact": true,
+      "actuallyViewed": true,
+      "visualObservation": "Dependent IN PROGRESS, completed seed and start message visible; Team remains offline."
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/ui-task-board-reordered.png",
+      "bytes": 145329,
+      "blob": "7c61277231be9180f3aecd3834bfb7df190e197e",
+      "sha256": "ed510a4b0426361fc25c85c50cd50eed2c62e6c6c03495ae0c8d0ce54291caf0",
+      "crc32": "31dca1e8",
+      "extractedBytesExact": true,
+      "actuallyViewed": true,
+      "visualObservation": "Seed/dependent ordering visible; sidebar retains Host read crossed a mutation boundary error."
+    }
+  ],
+  "actuallyViewedPngCount": 7,
+  "cleanup": {
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "quitRequested": true,
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [],
+    "recordedCleanup": {
+      "processGroup": 4469,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "passiveTrace": [
+      {
+        "line": 62,
+        "record": {
+          "mainPid": 4588,
+          "event": "trace-active",
+          "limit": 256,
+          "childLimit": 64,
+          "coverage": "node-async-and-unix-process-table-only"
+        }
+      },
+      {
+        "line": 76,
+        "record": {
+          "mainPid": 4588,
+          "event": "async-spawn",
+          "pid": 4676,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "ps",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "46509",
+            "parentPid": 4588,
+            "processGroupId": 4469
+          },
+          "atomic": false,
+          "observedAtMs": 1794794868531
+        }
+      },
+      {
+        "line": 77,
+        "record": {
+          "mainPid": 4588,
+          "event": "async-exit",
+          "pid": 4676,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794794868541
+        }
+      },
+      {
+        "line": 78,
+        "record": {
+          "mainPid": 4588,
+          "event": "sync-result",
+          "requestedCommand": "unix-process-table",
+          "pid": 4682,
+          "status": 0,
+          "signal": null,
+          "observedBirth": null,
+          "atomic": false,
+          "observedAtMs": 1794794868602
+        }
+      },
+      {
+        "line": 79,
+        "record": {
+          "mainPid": 4588,
+          "event": "async-spawn",
+          "pid": 4681,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "node",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "46515",
+            "parentPid": 4588,
+            "processGroupId": 4469
+          },
+          "atomic": false,
+          "observedAtMs": 1794794868605
+        }
+      },
+      {
+        "line": 81,
+        "record": {
+          "mainPid": 4588,
+          "event": "async-exit",
+          "pid": 4681,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794794868626
+        }
+      },
+      {
+        "line": 82,
+        "record": {
+          "mainPid": 4588,
+          "event": "sync-result",
+          "requestedCommand": "unix-process-table",
+          "pid": 4693,
+          "status": 0,
+          "signal": null,
+          "observedBirth": null,
+          "atomic": false,
+          "observedAtMs": 1794794868679
+        }
+      },
+      {
+        "line": 83,
+        "record": {
+          "mainPid": 4588,
+          "event": "async-spawn",
+          "pid": 4692,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "node",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "46522",
+            "parentPid": 4588,
+            "processGroupId": 4469
+          },
+          "atomic": false,
+          "observedAtMs": 1794794868684
+        }
+      },
+      {
+        "line": 86,
+        "record": {
+          "mainPid": 4588,
+          "event": "async-exit",
+          "pid": 4692,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794794869617
+        }
+      },
+      {
+        "line": 87,
+        "record": {
+          "mainPid": 4588,
+          "event": "async-spawn",
+          "pid": 4797,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "node",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "46642",
+            "parentPid": 4588,
+            "processGroupId": 4469
+          },
+          "atomic": false,
+          "observedAtMs": 1794794869858
+        }
+      },
+      {
+        "line": 88,
+        "record": {
+          "mainPid": 4588,
+          "event": "async-exit",
+          "pid": 4797,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794794869861
+        }
+      },
+      {
+        "line": 89,
+        "record": {
+          "mainPid": 4588,
+          "event": "async-spawn",
+          "pid": 4798,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "node",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "46643",
+            "parentPid": 4588,
+            "processGroupId": 4469
+          },
+          "atomic": false,
+          "observedAtMs": 1794794869866
+        }
+      },
+      {
+        "line": 96,
+        "record": {
+          "mainPid": 4588,
+          "event": "async-spawn",
+          "pid": 5162,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "ps",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "47773",
+            "parentPid": 4588,
+            "processGroupId": 4469
+          },
+          "atomic": false,
+          "observedAtMs": 1794794881177
+        }
+      },
+      {
+        "line": 97,
+        "record": {
+          "mainPid": 4588,
+          "event": "async-exit",
+          "pid": 5162,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794794881217
+        }
+      },
+      {
+        "line": 188,
+        "record": {
+          "mainPid": 4588,
+          "event": "async-exit",
+          "pid": 4798,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794794954665
+        }
+      },
+      {
+        "line": 190,
+        "record": {
+          "mainPid": 4588,
+          "event": "async-spawn",
+          "pid": 8324,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "ps",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "55124",
+            "parentPid": 4588,
+            "processGroupId": 4469
+          },
+          "atomic": false,
+          "observedAtMs": 1794794954680
+        }
+      },
+      {
+        "line": 191,
+        "record": {
+          "mainPid": 4588,
+          "event": "async-exit",
+          "pid": 8324,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794794954685
+        }
+      },
+      {
+        "line": 192,
+        "record": {
+          "mainPid": 4588,
+          "event": "async-spawn",
+          "pid": 8325,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "ps",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "55125",
+            "parentPid": 4588,
+            "processGroupId": 4469
+          },
+          "atomic": false,
+          "observedAtMs": 1794794954691
+        }
+      },
+      {
+        "line": 193,
+        "record": {
+          "mainPid": 4588,
+          "event": "async-exit",
+          "pid": 8325,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794794954696
+        }
+      },
+      {
+        "line": 197,
+        "record": {
+          "mainPid": 4588,
+          "event": "trace-summary",
+          "rows": 18,
+          "droppedObservations": 0,
+          "observedChildren": 8,
+          "unobservedChildren": 0,
+          "observationFailures": 0,
+          "limited": false,
+          "coverage": "node-async-and-unix-process-table-only"
+        }
+      }
+    ],
+    "finalSentinelCensus": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": null,
+      "postQuitOrCleanupInvocations": null,
+      "refusedInvocations": [],
+      "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+    },
+    "emulation": {
+      "only": true,
+      "runtimeConfigured": false,
+      "managementConfigured": false,
+      "noNativeHostChildrenBeforeUi": true
+    },
+    "linuxInputVerifiedAfterCleanup": true,
+    "sourceInterpretation": "cleanupCapturedDesktopApp examines remaining group to discover a Host only if no prior hostPid. Here the group is already empty, so hostPid remains undefined and capturedHostAbsent stays null. Empty before/final group and observed launcher exit0/null are retained without inventing a distinct Host identity/custody proof. The branch that sends SIGTERM requires nonempty remaining; this receipt does not show that branch. Passive Main child records do not grant Host identity.",
+    "qualificationLimit": "No configured Runtime/management provider, real provider invocation, native child custody or post-Quit zero-call census is qualified. One allowed sentinel version row is a finite TEST observation; pre/post counts remain null."
+  },
+  "boundedTaskboardCounterpoint": {
+    "jobId": 133017916005,
+    "runId": 43780997237,
+    "receipt": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/taskboard/extracted/TEST-desktop-backend-okmuEL/desktop-backend-receipt.json",
+      "bytes": 1048507,
+      "blob": "cc3170d8ab394394130596bcd3bb837cffcfbd7f",
+      "sha256": "9d25d1d40258faf16700809d392840a77d778d9ca817e9c3ce5aedba06de64a9"
+    },
+    "authorAudit": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/taskboard/audit.json",
+      "bytes": 408306,
+      "blob": "37c190e87bb8ec05359bc00d5727f9a2bc2f713b",
+      "sha256": "3b069c56696048e4e3055736bce0a06da32325367ea727151425a29e5addca80"
+    },
+    "exactSameOrderedSourceArrays": true,
+    "sameAttachmentSourceSha256": "83b92a2f8a1f2141bf1672548d9f01402a514720783f850897bf3cd98560e656",
+    "receiptStatuses": [
+      "PASS",
+      "PASS",
+      "PASS"
+    ],
+    "focusSample": {
+      "owner": {
+        "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-okmuEL",
+        "taskId": "be297d47-4a62-5c7c-9a62-82a42cc157af",
+        "identity": {
+          "contextId": "local",
+          "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-okmuEL",
+          "taskId": "be297d47-4a62-5c7c-9a62-82a42cc157af"
+        },
+        "surfaceId": "0d9e3518-5b9d-4b77-add6-4805e9bfde9c",
+        "inputId": "task-comment-input-%5B%220d9e3518-5b9d-4b77-add6-4805e9bfde9c%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-okmuEL%5C%22%2C%5C%22be297d47-4a62-5c7c-9a62-82a42cc157af%5C%22%5D%22%5D",
+        "commentText": "",
+        "submitPending": false,
+        "submitError": null,
+        "ownerRevision": 3,
+        "partRevisions": {
+          "commentText": 0,
+          "pendingAttachments": 0
+        },
+        "pendingPreparationCount": 0,
+        "canSubmit": true,
+        "attachmentError": null,
+        "pendingAttachmentCount": 0,
+        "canEditNow": true,
+        "canResolveClarification": false,
+        "selector": "[role=\"dialog\"] textarea[id=\"task-comment-input-%5B%220d9e3518-5b9d-4b77-add6-4805e9bfde9c%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-okmuEL%5C%22%2C%5C%22be297d47-4a62-5c7c-9a62-82a42cc157af%5C%22%5D%22%5D\"]"
+      },
+      "inputProbe": {
+        "present": true,
+        "connected": true,
+        "disabled": false,
+        "focused": true,
+        "ownerSurfaceId": "0d9e3518-5b9d-4b77-add6-4805e9bfde9c",
+        "ownerRevision": 3,
+        "expectedSurfaceId": "0d9e3518-5b9d-4b77-add6-4805e9bfde9c",
+        "detailPhase": "ready",
+        "refreshPending": false,
+        "taskStatus": "in_progress",
+        "taskId": "be297d47-4a62-5c7c-9a62-82a42cc157af",
+        "activeContextId": "local",
+        "contextSwitching": false
+      },
+      "settled": true,
+      "domValue": "",
+      "inputEnabled": true,
+      "focused": true,
+      "documentFocused": true,
+      "visibility": "visible",
+      "activeElement": {
+        "tag": "TEXTAREA",
+        "id": "task-comment-input-%5B%220d9e3518-5b9d-4b77-add6-4805e9bfde9c%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-okmuEL%5C%22%2C%5C%22be297d47-4a62-5c7c-9a62-82a42cc157af%5C%22%5D%22%5D"
+      },
+      "timeMs": 16983
+    },
+    "scope": "Only source/focus/receipt counterpoint read here. This independent Cross report is not the separate full Taskboard R2 and transfers no success or cause. A PASS from another invocation does not repair this Cross failure."
+  },
+  "findings": [],
+  "approvedLimits": [
+    "This is an original offline task-board prefix failure, before the later review/notification/cross-Team routing sequence; no availability or clarification cause is transferred from historical failures.",
+    "The original 20-second wait has a before-read cutoff only; no strict after-read bound or atomic/continuous focus guarantee is invented.",
+    "Retained event callbacks prove the one click reached the actual textarea and focus later left it. They do not identify why it became disabled or why React/current-owner observations changed.",
+    "Last transition samples have no per-transition timestamps; post-read and event clocks are separate observation windows, not an atomic state history.",
+    "The final empty process group and launcher0/null are retained; a separately captured Host identity/absence/custody proof is unavailable. Passive Main child callbacks are preserved without assigning the long-lived child a Host identity.",
+    "No Runtime or management providers were configured. The single admitted sentinel version check does not qualify native providers. preQuitCount/postQuitOrCleanupInvocations are null.",
+    "Original post-failure verifier step30 fails as well. No Task comment submission, attachment comment, final Cross availability route, complete flow or privacy GREEN is qualified."
+  ],
+  "projectExecutions": 0,
+  "ciPolls": 0,
+  "sourceRefMutations": 0,
+  "trackedTreeCleanBeforeAfter": true,
+  "sourceFixOrNewR1Proposed": false
+}

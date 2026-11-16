@@ -1,0 +1,220 @@
+{
+  "schema": "current-M-completed-UI-evidence-bundle/v1",
+  "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "name": "M0660-Creation-win-mac-and-Installer",
+  "completedJobs": [
+    133017913998,
+    133017914037,
+    133017916038
+  ],
+  "payloadCount": 28,
+  "payloadBytes": 6175362,
+  "officialArchives": 3,
+  "officialArchiveMembers": 111,
+  "originalPNG": 89,
+  "actuallyViewedPNG": 10,
+  "rows": [
+    {
+      "bundlePath": "ci-desktop-m0660/creation-completed-checkpoint.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-completed-checkpoint.json",
+      "bytes": 5317,
+      "blob": "c54f407e1ff4f6a5e83d1f98bd7ca1e652eb7ae9",
+      "sha256": "9b39cd6ff9bf8b4922fc6687a367067852d953185277e979214ee0349a57f410"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/creation-macos/Plan29-creation-macos-appendix.md",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-macos/Plan29-creation-macos-appendix.md",
+      "bytes": 3819,
+      "blob": "174bd6bfa667eceeda26c8e02cab2fc2f74de996",
+      "sha256": "3192cefe953fefa54d9ab7a19a09c67389153116de0de69750866277fe1d09b7"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/creation-macos/archive-integrity.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-macos/archive-integrity.json",
+      "bytes": 11050,
+      "blob": "9c3cb26d866ea279a0b6ac73cfa374c12455799a",
+      "sha256": "cb6f8b1bb2089288062ca108151f67ad092542606fe1d971d756ea6e755fb9a6"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/creation-macos/creation-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-macos/creation-audit.json",
+      "bytes": 15019,
+      "blob": "d8950b5b7fa4798797f342e69eac89fd1fab76f9",
+      "sha256": "eb7ce7edbd4875f34e57dc64e9945a86ca0be0e661645d68ab11fe448e22fdda"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/creation-macos/job-133017913998.log",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-macos/job-133017913998.log",
+      "bytes": 61194,
+      "blob": "39922912a4ba7bae9727f28924768b3d67ac0a78",
+      "sha256": "4dab25766a995e8f1a00d47c4398a59770ab56a4f27d29f86a9f3a427c73519d"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/creation-macos/original-artifact-14188985298.zip",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-macos/original-artifact-14188985298.zip",
+      "bytes": 2266179,
+      "blob": "d74a297481345d51cafd319e7632612e37180778",
+      "sha256": "9683bc89237ede7a81795627dc3928cf125317acb03fbbeb267f3524ca65efa5"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/creation-windows/Plan29-creation-windows-appendix.md",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-windows/Plan29-creation-windows-appendix.md",
+      "bytes": 3503,
+      "blob": "4a032d9650e6478b2acef5e309d820e5af3c11ab",
+      "sha256": "35144b4c4e98ee16dfa79899f13e53c7f5a15d5e0c73824b7c854cec2f15fafe"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/creation-windows/archive-integrity.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-windows/archive-integrity.json",
+      "bytes": 11052,
+      "blob": "49528e550091c31cb759d4ff5b1c42588e73d134",
+      "sha256": "09dc686c2499705615d6d770504ab748b38bb9f8c7fbaa852fa1342e7e3caacd"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/creation-windows/creation-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-windows/creation-audit.json",
+      "bytes": 15977,
+      "blob": "d60ccf11f515196f9582fe69e69c206faebfc3f1",
+      "sha256": "09d21eac5a7b626e51c9d542b74d88a4e6e7394158bc843984ee728c871af123"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/creation-windows/job-133017914037.log",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-windows/job-133017914037.log",
+      "bytes": 90785,
+      "blob": "8f9f8ca0c33ba2b1c5394d790ead710b0b274324",
+      "sha256": "44caee2efb13f3fbd9a76fd907c3f1bd30315314dfa61377ccffd257feb485f7"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/creation-windows/original-artifact-14188273363.zip",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-windows/original-artifact-14188273363.zip",
+      "bytes": 1810102,
+      "blob": "6984350411327031149dfb0087bdc22cb3e35ee8",
+      "sha256": "16071f3a69ff6da4d587f1483d75ef4f6b48cc197c0d91be22796ddc8ab34295"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/full-api-jobs-0045.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0045.json",
+      "bytes": 22016,
+      "blob": "6e51c4058b32b3ee5d9ef799fea82b37f18e7664",
+      "sha256": "4c487cfbb927ee6ab3a5a58bdddb773fe9699fbf9c2154d78fcf28785597695b"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/full-api-jobs-0050.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0050.json",
+      "bytes": 22361,
+      "blob": "714fbe2a02b6889b343e9868149148879c0e1fbb",
+      "sha256": "c9700d9ae9b5f8141bbcb25e7b2e1fdfe3113ca055deff347cc9768c1bc01ef7"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/full-api-jobs-0102.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0102.json",
+      "bytes": 26002,
+      "blob": "55228c64f23eb20ab1f2e3f44478b696525fa8c6",
+      "sha256": "69792bf428011f74dd1216aa309737a10208808462f0b6197a561d58b7de28e4"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/host-official-artifacts-0057.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/host-official-artifacts-0057.json",
+      "bytes": 923,
+      "blob": "3bf2e25e9b803cd2923e2bffff084a73ea37b371",
+      "sha256": "f7e628dc0f2cdc20f5ed2b43538cdb78ab590bc54ec2c322c697fb782b714ede"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/initial-api-runs-jobs-0038.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/initial-api-runs-jobs-0038.json",
+      "bytes": 58753,
+      "blob": "8689e935e0ae5041a5bdc3c2d4e6b2169b529f5b",
+      "sha256": "6ed2698023541fec692ef81f93ee4bd4cd12a44f3decdde234284c4a1b4e6d4a"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/installer-macos/Plan29-installer-failure-appendix.md",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/installer-macos/Plan29-installer-failure-appendix.md",
+      "bytes": 8427,
+      "blob": "8b82c7acf00b9642438d3dbf7e9a8c481c463fef",
+      "sha256": "0508a64db94abb5268bc2b34b26b0e08151fbd8a3ab12b40e2fd90e418560e2c"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/installer-macos/archive-integrity.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/installer-macos/archive-integrity.json",
+      "bytes": 8976,
+      "blob": "b360a9e5ed9024e8ee96ef6d59b2c622e86c0df2",
+      "sha256": "5740dd6ad7fa98ebc35717f4e2cea7ba1abe7c2bdc77aeccb5d3c9229aa0c21a"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/installer-macos/checkpoint-installer-failure.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/installer-macos/checkpoint-installer-failure.json",
+      "bytes": 5965,
+      "blob": "76ea101e182cd9c6f723429d347286fd501d1c70",
+      "sha256": "452feac8ebe1043dd40d624f9c72d8b3faa2f6e0bd3f2bd715da87aabaf94b42"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/installer-macos/installer-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/installer-macos/installer-audit.json",
+      "bytes": 47644,
+      "blob": "6609839430af4d14b17b7c9a39657d6977754831",
+      "sha256": "bd5b7b5a0b03d4f4c2ddc104c5312be235a3e810c950f2d6c6d63fe563e434f7"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/installer-macos/job-133017916038.log",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/installer-macos/job-133017916038.log",
+      "bytes": 182452,
+      "blob": "e60b871a82cc8cfc1757da368b2c29c3acfc13e6",
+      "sha256": "7138725a1afcbae1635fc375c630615cee185f174c5693cec16a2e6e36c93e26"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/installer-macos/original-artifact-14189036908.zip",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/installer-macos/original-artifact-14189036908.zip",
+      "bytes": 945509,
+      "blob": "9196aa2aa6cd118f9e295ec2f1783a922b0cad98",
+      "sha256": "9198d782ed088ad61e6f2b45e7ea7b0091617a89d93f1d851f91afb362b37e76"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/installer-macos/source-pin-audit.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/installer-macos/source-pin-audit.json",
+      "bytes": 456818,
+      "blob": "858df222cc0c164d09830bf76ff24884be487d4c",
+      "sha256": "d8ea8db687ba64c898b46cf6e6705647360291727099a98efe84dc195e6716b7"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/root-independent-creation-win-mac-review.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/root-independent-creation-win-mac-review.json",
+      "bytes": 27473,
+      "blob": "d93caa199521edba316396d55fbfb35bb11e0c85",
+      "sha256": "34afb98eb9ede2e4c29d6150c3938e7202221fe2e8adceb526c86c4cfe9c1621"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/root-independent-installer-failure-review.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/root-independent-installer-failure-review.json",
+      "bytes": 47470,
+      "blob": "7287e405ad796acbcb6a25ab413072faafbcb71d",
+      "sha256": "b0f389306781d3828ac71047edbec004edd724599b4d6267b8997d054737fbac"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/teams-official-artifacts-0046.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/teams-official-artifacts-0046.json",
+      "bytes": 918,
+      "blob": "9a73d01580b87d66e61d19e9ba06d7c271054d8e",
+      "sha256": "e7ac29d896e065be523583cfa0869568fa9ac68074c3a899db2b32fd4d2a931f"
+    },
+    {
+      "bundlePath": "ci-desktop-m0660/teams-official-artifacts-0051.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/teams-official-artifacts-0051.json",
+      "bytes": 1814,
+      "blob": "68c066788d30558dcb9198c04efca815e55a3c1d",
+      "sha256": "271d5a27cb39f5e4cb482961b6e4ec14ce02f78677bfbd4c7fcaac88df164283"
+    },
+    {
+      "bundlePath": "native-audit-M0660/installer-navigation-source-review.json",
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/installer-navigation-source-review.json",
+      "bytes": 17844,
+      "blob": "f0aa903a02cf7f8090749589597d420f17bfd7c8",
+      "sha256": "048dfbe9de4ea8a9a91f94c59f28f473ca98570e00a59f96d52f7457e6ca851a"
+    }
+  ],
+  "limits": [
+    "Original source-bound evidence only; Installer remains FAILURE where included.",
+    "No transfer to privacy Team10 RED/GREEN, other UI/native lanes, full workspace/backend types, release or a later source.",
+    "Frozen earlier checkpoints remain unchanged; new independent reviews are separately retained payloads.",
+    "Original raw ZIPs recover all derivative members; extracted duplicates are not separately bundled."
+  ]
+}

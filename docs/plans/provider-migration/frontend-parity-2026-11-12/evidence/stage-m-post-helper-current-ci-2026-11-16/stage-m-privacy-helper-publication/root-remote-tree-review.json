@@ -1,0 +1,27 @@
+{
+  "schema": "root-exact-remote-one-helper-tree-R2/v1",
+  "reviewedAtUTC": "2026-11-16T02:25:52.780246+00:00",
+  "verdict": "APPROVE exact published-R1 candidate tree before separate source commit",
+  "parent": "9ead131e41ba806ce3ab47d3ad28feacc5fbd911",
+  "tree": "f7cd0a34bcbfba5a6fe30aa559a22dbbde2b2227",
+  "changedPaths": [
+    "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts"
+  ],
+  "preimage": {
+    "bytes": 7855,
+    "blob": "6b6c7003960eb4075d74ca449d303602e99ef83e",
+    "sha256": "df315063bd119870f52b932daf72880ac4ea40340e023049a236fed79e505c37"
+  },
+  "candidate": {
+    "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-m-privacy-helper-publication/observeMemberProcessStderr.ts",
+    "bytes": 8310,
+    "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+    "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7"
+  },
+  "leafCount": 10244,
+  "allOther10243LeavesExact": true,
+  "all1514RemoteDirectoryObjectsRehashed": true,
+  "documentationUnchanged": true,
+  "actualGREENObserved": false,
+  "projectExecution": false
+}

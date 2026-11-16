@@ -1,0 +1,552 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "jobId": 133017915916,
+  "status": "PASS",
+  "qualification": "Original finite current-source Selection journey and recorded cleanup only.",
+  "originalLog": {
+    "path": "job-133017915916.log",
+    "bytes": 180864,
+    "blob": "24219e78fa2bd846a7e91589d553b8293ec8cea3",
+    "sha256": "b6ede9087714f43ea014e06d9421a51a662ea6d8d667cee93921f1102741714d"
+  },
+  "originalZip": {
+    "path": "artifact-14190562781.zip",
+    "bytes": 1307479,
+    "blob": "ff83df6b393e78b0cb518769f20484f2348dd481",
+    "sha256": "060a8d84afc1e32e017979d175e106dcdcdbd0c9c7b5bde98c80264a51d10a3d"
+  },
+  "receipt": {
+    "path": "extracted/TEST-desktop-backend-JWiNYE/desktop-backend-receipt.json",
+    "bytes": 796834,
+    "blob": "6ee1d49b6cfaf5cb7249dd9ae514a5b27a78bc97",
+    "sha256": "529fc164a2e76cfff09178f312fccebb47efafcc6953beccd707fedb0f6a9914"
+  },
+  "sourcePins": {
+    "path": "source-pin-audit.json",
+    "bytes": 312678,
+    "blob": "669aec529a68b06c9aaa6908d6f32d904c99f309",
+    "sha256": "9530ab676a473c8483b36d41df3267f84b3ef5143e258dc55d21f8ec93b27b9b"
+  },
+  "sourceSelection": {
+    "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+    "blob": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+    "bytes": 26261,
+    "sha256": "a4f1f19bd9ce451946309c5aa6ed2a1437a9244494741937699360a7fe6bab60"
+  },
+  "observations": [
+    {
+      "phase": "before-create",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-JWiNYE",
+        "teamId": "TEST-desktop-team",
+        "runId": "d6e38eec-e03d-5e77-b9fe-9a2da7cfaae4",
+        "memberId": "alice-id",
+        "generation": "capture-28c67a26-0798-551a-b1b4-7538a22106e2"
+      },
+      "sessionRef": "f90e0135-1b28-5d43-9f1f-ee287cf2b4a3",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-6673",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 6673
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": true
+    },
+    {
+      "phase": "after-save-only",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-JWiNYE",
+        "teamId": "TEST-desktop-team",
+        "runId": "d6e38eec-e03d-5e77-b9fe-9a2da7cfaae4",
+        "memberId": "alice-id",
+        "generation": "capture-28c67a26-0798-551a-b1b4-7538a22106e2"
+      },
+      "sessionRef": "f90e0135-1b28-5d43-9f1f-ee287cf2b4a3",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-6673",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 6673
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": true
+    },
+    {
+      "phase": "after-reload-before-next-launch",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-JWiNYE",
+        "teamId": "TEST-desktop-team",
+        "runId": "d6e38eec-e03d-5e77-b9fe-9a2da7cfaae4",
+        "memberId": "alice-id",
+        "generation": "capture-28c67a26-0798-551a-b1b4-7538a22106e2"
+      },
+      "sessionRef": "f90e0135-1b28-5d43-9f1f-ee287cf2b4a3",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-6673",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 6673
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": true
+    },
+    {
+      "phase": "after-next-launch",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-JWiNYE",
+        "teamId": "TEST-desktop-team",
+        "runId": "d6e38eec-e03d-5e77-b9fe-9a2da7cfaae4",
+        "memberId": "alice-id",
+        "generation": "capture-28c67a26-0798-551a-b1b4-7538a22106e2"
+      },
+      "sessionRef": "f90e0135-1b28-5d43-9f1f-ee287cf2b4a3",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-6673",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 6673
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": true
+    },
+    {
+      "phase": "after-b-stop-during-a-input",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-JWiNYE",
+        "teamId": "TEST-desktop-team",
+        "runId": "d6e38eec-e03d-5e77-b9fe-9a2da7cfaae4",
+        "memberId": "alice-id",
+        "generation": "capture-28c67a26-0798-551a-b1b4-7538a22106e2"
+      },
+      "sessionRef": "f90e0135-1b28-5d43-9f1f-ee287cf2b4a3",
+      "thread": {
+        "event": "thread-selection",
+        "threadId": "TEST-thread-6673",
+        "model": "TEST-model",
+        "effort": "low",
+        "runtimeMcp": true,
+        "provider": "codex",
+        "role": "runtime",
+        "pid": 6673
+      },
+      "nativeReady": true,
+      "originalInputsUnchanged": false
+    }
+  ],
+  "a": {
+    "capture": {
+      "commandId": "capture:launch:roster:03afba0f-0ca0-4b34-939f-ed6f3c6f94fe",
+      "configurationRevision": "e76508f1e2f3e4d69ce1c95261fded3ad644ce45c9b38eefe1244dc85509073c",
+      "launchId": "d6e38eec-e03d-5e77-b9fe-9a2da7cfaae4",
+      "members": [
+        {
+          "memberId": "alice-id",
+          "principalId": "agent:9b7fb175-96b5-5adc-bff6-1d89da2ec77c",
+          "delivery": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-JWiNYE",
+            "teamId": "TEST-desktop-team",
+            "teamName": "test-desktop-backend",
+            "runId": "d6e38eec-e03d-5e77-b9fe-9a2da7cfaae4",
+            "memberId": "alice-id",
+            "generation": "capture-28c67a26-0798-551a-b1b4-7538a22106e2"
+          }
+        }
+      ],
+      "principalId": "TEST-human",
+      "fingerprint": "89bad2af9d9798c86027034fa4f8e433795007846f648e68984c844773a1e162"
+    },
+    "definition": {
+      "launchId": "d6e38eec-e03d-5e77-b9fe-9a2da7cfaae4",
+      "rosterRevision": "e57fc228be0584b2c532f2c498a8978d081a0117ba3591ffd4d9048edd777bcf",
+      "rosterScope": {
+        "projectId": "TEST-project-TEST-desktop-backend-JWiNYE",
+        "workspaceId": "TEST-workspace-TEST-desktop-backend-JWiNYE",
+        "teamId": "TEST-desktop-team",
+        "runId": "TEST-run-TEST-desktop-backend-JWiNYE",
+        "memberId": "human",
+        "generation": "1"
+      },
+      "capture": {
+        "commandId": "capture:launch:roster:03afba0f-0ca0-4b34-939f-ed6f3c6f94fe",
+        "rosterCommandId": "roster:03afba0f-0ca0-4b34-939f-ed6f3c6f94fe",
+        "configurationRevision": "e76508f1e2f3e4d69ce1c95261fded3ad644ce45c9b38eefe1244dc85509073c",
+        "mcpCaptureVersion": 1,
+        "mcpRecipeReferences": [
+          {
+            "memberId": "alice-id",
+            "digest": "504768866dc8550282887fe99aec7520537bff5aac6d9a3114857339d9eae26d"
+          }
+        ],
+        "savedSettings": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-JWiNYE/workspace",
+          "prompt": "TEST_UI_BOOT",
+          "providerId": "codex",
+          "providerBackendId": "codex-native",
+          "model": "TEST-model",
+          "effort": "low",
+          "fastMode": "inherit",
+          "syncModelsWithLead": true,
+          "limitContext": false,
+          "skipPermissions": false,
+          "allowExperimentalLocalModels": false
+        },
+        "members": [
+          {
+            "memberId": "alice-id",
+            "name": "alice",
+            "role": "lead",
+            "settings": {},
+            "recipeDigest": "eddbf8896a34d12e75415272c479eda235de2546a9f77c1a1a907a51d204085b"
+          }
+        ]
+      },
+      "members": [
+        {
+          "memberId": "alice-id",
+          "binding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-JWiNYE",
+            "teamId": "TEST-desktop-team",
+            "runId": "d6e38eec-e03d-5e77-b9fe-9a2da7cfaae4",
+            "memberId": "alice-id",
+            "generation": "capture-28c67a26-0798-551a-b1b4-7538a22106e2"
+          },
+          "configurationDigest": "77bc4ffb4c2773634294a210d02abb57607277082a36d0a42a378467bd6a087f",
+          "contextDigest": "05e75b873634db86687f481ac769da5eb7a7c7d96b717354950b4381ce6ff305",
+          "configRevision": "capture-c5ae384f58c827511fe69469970646f14753053ad2fb9e9dd4c38ca835822aff",
+          "skipped": false,
+          "timeoutMs": 90000,
+          "runtimeGeneration": 2,
+          "baseConfigurationDigest": "77bc4ffb4c2773634294a210d02abb57607277082a36d0a42a378467bd6a087f"
+        }
+      ]
+    },
+    "thread": {
+      "event": "thread-selection",
+      "threadId": "TEST-thread-6673",
+      "model": "TEST-model",
+      "effort": "low",
+      "runtimeMcp": true,
+      "provider": "codex",
+      "role": "runtime",
+      "pid": 6673
+    }
+  },
+  "b": {
+    "capture": {
+      "commandId": "capture:launch:roster:ac48d0bc-c66c-4114-a22b-4859cbc33f04",
+      "configurationRevision": "61d852ac01b8f2f217b52bb8e53b08ee26ba79412b1662a84642e2aeb2f75c34",
+      "launchId": "767b4bb9-cd9a-552c-8f1d-626d309a843f",
+      "members": [
+        {
+          "memberId": "aa713a92-9295-507f-b25c-89c3865aff50",
+          "principalId": "agent:9c298689-2537-5170-a6a2-e7a7d977d4b6",
+          "delivery": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-JWiNYE",
+            "teamId": "c7c9de69-a6b9-59db-abcd-983f4cb31b3e",
+            "teamName": "test-selection-next-team",
+            "runId": "767b4bb9-cd9a-552c-8f1d-626d309a843f",
+            "memberId": "aa713a92-9295-507f-b25c-89c3865aff50",
+            "generation": "capture-839a7346-926e-59b3-81f6-37b6cb03949f"
+          }
+        }
+      ],
+      "principalId": "TEST-human",
+      "fingerprint": "ec58a911a84b602f2545c5ccbe12ab0fd7458b431ce0392e8600cf4c0b5aba70"
+    },
+    "definition": {
+      "launchId": "767b4bb9-cd9a-552c-8f1d-626d309a843f",
+      "rosterRevision": "0a5eaf811447537d7cebfd11ab2931835c46e201bb3c993cd4c4e6d7d96c9a6d",
+      "rosterScope": {
+        "projectId": "local",
+        "workspaceId": "local",
+        "teamId": "c7c9de69-a6b9-59db-abcd-983f4cb31b3e",
+        "runId": "7a6211c0-d7f9-5bad-9730-a703e1542d40",
+        "memberId": "user",
+        "generation": "1"
+      },
+      "capture": {
+        "commandId": "capture:launch:roster:ac48d0bc-c66c-4114-a22b-4859cbc33f04",
+        "rosterCommandId": "roster:ac48d0bc-c66c-4114-a22b-4859cbc33f04",
+        "configurationRevision": "61d852ac01b8f2f217b52bb8e53b08ee26ba79412b1662a84642e2aeb2f75c34",
+        "mcpCaptureVersion": 1,
+        "mcpRecipeReferences": [
+          {
+            "memberId": "aa713a92-9295-507f-b25c-89c3865aff50",
+            "digest": "818ea3e3dc9b27ffbf0354575b9024be0631cc4d763bdee224fc9f139b981d11"
+          }
+        ],
+        "savedSettings": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-JWiNYE/workspace",
+          "prompt": "TEST_UI_BOOT",
+          "providerId": "codex",
+          "providerBackendId": "codex-native",
+          "model": "TEST-model-next",
+          "effort": "high",
+          "fastMode": "off",
+          "syncModelsWithLead": true,
+          "limitContext": false,
+          "skipPermissions": false,
+          "allowExperimentalLocalModels": false
+        },
+        "members": [
+          {
+            "memberId": "aa713a92-9295-507f-b25c-89c3865aff50",
+            "name": "team-lead",
+            "role": "lead",
+            "settings": {},
+            "recipeDigest": "dd9e607a12f7ab0da5fb517ff4f321a73f88bde9b4e3352cbc85d99729f5301e"
+          }
+        ]
+      },
+      "members": [
+        {
+          "memberId": "aa713a92-9295-507f-b25c-89c3865aff50",
+          "binding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-JWiNYE",
+            "teamId": "c7c9de69-a6b9-59db-abcd-983f4cb31b3e",
+            "runId": "767b4bb9-cd9a-552c-8f1d-626d309a843f",
+            "memberId": "aa713a92-9295-507f-b25c-89c3865aff50",
+            "generation": "capture-839a7346-926e-59b3-81f6-37b6cb03949f"
+          },
+          "configurationDigest": "c7127a629fe2c18bcbd75a82f9d18ae52c5976a642cfd0c3417e1360dcab0287",
+          "contextDigest": "0fb12e39d2b34b9ac3bc91d3826087d96daa75b60216793b44120e91ae3b6d2b",
+          "configRevision": "capture-ff560f8de2f01c70cbc31207e844df32e5f760e30203385902425caf640002aa",
+          "skipped": false,
+          "timeoutMs": 90000,
+          "runtimeGeneration": 2,
+          "baseConfigurationDigest": "c7127a629fe2c18bcbd75a82f9d18ae52c5976a642cfd0c3417e1360dcab0287"
+        }
+      ]
+    },
+    "thread": {
+      "event": "thread-selection",
+      "threadId": "TEST-thread-7951",
+      "model": "TEST-model-next",
+      "effort": "high",
+      "runtimeMcp": true,
+      "provider": "codex",
+      "role": "runtime",
+      "pid": 7951
+    }
+  },
+  "savedSelection": {
+    "cwd": "/home/runner/work/_temp/TEST-desktop-backend-JWiNYE/workspace",
+    "providerId": "codex",
+    "providerBackendId": "codex-native",
+    "model": "TEST-model-next",
+    "effort": "high",
+    "fastMode": "off",
+    "syncModelsWithLead": true,
+    "limitContext": false,
+    "skipPermissions": false
+  },
+  "selectionRetainedAfterReload": true,
+  "creationPhase": "published",
+  "aStop": {
+    "binding": {
+      "backendId": "TEST-desktop-owner-TEST-desktop-backend-JWiNYE",
+      "teamId": "TEST-desktop-team",
+      "runId": "d6e38eec-e03d-5e77-b9fe-9a2da7cfaae4",
+      "memberId": "alice-id",
+      "generation": "capture-28c67a26-0798-551a-b1b4-7538a22106e2"
+    },
+    "phase": "closed",
+    "custody": "released",
+    "originalPid": 6673,
+    "absent": true
+  },
+  "bStop": {
+    "binding": {
+      "backendId": "TEST-desktop-owner-TEST-desktop-backend-JWiNYE",
+      "teamId": "c7c9de69-a6b9-59db-abcd-983f4cb31b3e",
+      "runId": "767b4bb9-cd9a-552c-8f1d-626d309a843f",
+      "memberId": "aa713a92-9295-507f-b25c-89c3865aff50",
+      "generation": "capture-839a7346-926e-59b3-81f6-37b6cb03949f"
+    },
+    "phase": "closed",
+    "custody": "released",
+    "originalPid": 7951,
+    "absent": true
+  },
+  "stream": {
+    "commandId": "3e005da9-5e5f-488c-92b0-eaa36dbff7ae",
+    "inputId": "c94481c0-1d21-5e37-a83e-3b7e62954e87",
+    "terminal": "succeeded",
+    "survivedBStop": true
+  },
+  "uiStepCount": 104,
+  "originalStopAttemptCount": 2,
+  "finalAStoppedUiAcceptance": {
+    "sourceEnforcedBeforeFinalScreenshot": true,
+    "physicalOriginalPidAbsent": true,
+    "ownerKeyAndOpaqueRunDerivedFromOriginalCapturedDefinition": true,
+    "sameSelectedTeamAndBothRunPinsRequired": true,
+    "sameRunOwnerQualifiedProgressStateRequired": "disconnected",
+    "visibleUniqueOwnerSectionRequired": true,
+    "visibleOfflineBannerAndSingleEnabledLaunchRequired": true,
+    "directAdjacentProgressDivRequiredEmpty": true,
+    "sameOriginalPhysicalAbsencePollBudgetMs": 75000,
+    "cdpTimeoutCappedToRemainingMs": true,
+    "postAwaitStrictDeadlineCheck": true,
+    "pollIntervalMs": 100,
+    "BDefaultUnchanged": true,
+    "rawAcceptedRendererTuplePersistedSeparately": false,
+    "limit": "Passed exact source path enforces this join; receipt serializes original physical stop result, not a standalone accepted progress sample or atomic Stop-to-screenshot timestamp."
+  },
+  "screenshots": [
+    {
+      "proofField": "aLaunchScreenshot",
+      "path": "extracted/TEST-desktop-backend-JWiNYE/ui-emulated-selection-a-launch.png",
+      "bytes": 102027,
+      "blob": "03f130bc1b3192346822bf759acf48861e34eb1f",
+      "sha256": "7c7083dc269686afaa43921b197096605ff437dc5652b7419437bf6e344df833"
+    },
+    {
+      "proofField": "selectedScreenshot",
+      "path": "extracted/TEST-desktop-backend-JWiNYE/ui-emulated-selection-selected.png",
+      "bytes": 102758,
+      "blob": "74b15413e7dcf6d7f9e95e5fb28793abe7431c0e",
+      "sha256": "fef8513388ff57114f6ba4c2cf1add25f4bc1917fb66259b4fc29318f5a04ad3"
+    },
+    {
+      "proofField": "reloadedScreenshot",
+      "path": "extracted/TEST-desktop-backend-JWiNYE/ui-emulated-selection-reloaded.png",
+      "bytes": 111143,
+      "blob": "ac847fb78e8f8f4083922c72b517bd7fd99f93c1",
+      "sha256": "53c042a909fbefe561c7a22d647f7257219bf83aacfe18607ccdb3c523d4d985"
+    },
+    {
+      "proofField": "bLaunchScreenshot",
+      "path": "extracted/TEST-desktop-backend-JWiNYE/ui-emulated-selection-b-launch.png",
+      "bytes": 97894,
+      "blob": "507eca809dac9dd193ae8df92bfcf05872c10d0f",
+      "sha256": "93d2befc998b8b63de8bafb0d6abfbec783a6a96bccdc82e9f7a4925429a5055"
+    },
+    {
+      "proofField": "aSurvivedScreenshot",
+      "path": "extracted/TEST-desktop-backend-JWiNYE/ui-emulated-selection-a-survived.png",
+      "bytes": 114695,
+      "blob": "48207bf38edeee8f752b6c2d2bd4286f569c5843",
+      "sha256": "42d91d5fc87cf147eb6d0a599e4261de754d170c04cd8c7a00c10a9a79b8ae16"
+    },
+    {
+      "proofField": "completedScreenshot",
+      "path": "extracted/TEST-desktop-backend-JWiNYE/ui-emulated-selection-completed.png",
+      "bytes": 115990,
+      "blob": "75f6ba57ceba6dd367c379b031d6b3bf43bcb31f",
+      "sha256": "d5b2cdd731ee32caf839d9c2683da63691075896ea7254b4ed7d1f08436818ff"
+    },
+    {
+      "proofField": "stoppedScreenshot",
+      "path": "extracted/TEST-desktop-backend-JWiNYE/ui-emulated-selection-stopped.png",
+      "bytes": 109133,
+      "blob": "bb39862e5c74e96a6f26976acdc94a1e3217b9a1",
+      "sha256": "cfb5ec68af486b6658d849eafeebd95f90ce987624c05f23feff10b2b46d45f8"
+    }
+  ],
+  "visualReview": {
+    "rawReceiptTextUnchanged": "Original screenshots require independent inspection",
+    "actuallyViewed": [
+      "ui-emulated-selection-selected.png",
+      "ui-emulated-selection-a-survived.png",
+      "ui-emulated-selection-stopped.png"
+    ],
+    "facts": [
+      "Selected next-team form shows TEST-model-next and High effort.",
+      "A-survived frame shows original A Running, TEST-model/Low and held partial while B is stopped.",
+      "Stopped frame shows original A Offline/Launch, Alice offline and completed stream; no green launch or progress panel."
+    ],
+    "other4Images": "Byte/hash/CRC verified; no separate visual-inspection claim in this audit."
+  },
+  "effects": {
+    "raw": {
+      "path": "extracted/TEST-desktop-backend-JWiNYE/TEST-peer-codex-scope/effects.ndjson",
+      "bytes": 14620,
+      "blob": "9f656ad6af52df0f75a87927001b2277a34b88e8",
+      "sha256": "fc316c947b73084b6e116fbdf93f6721d8e7107935d03952c988955d9b97413d"
+    },
+    "counts": {
+      "launch": 52,
+      "exit": 39,
+      "thread-selection": 5,
+      "input": 6,
+      "terminal": 6,
+      "mcp-catalog": 13,
+      "managed-configuration-read": 9,
+      "connected": 2,
+      "partial": 1
+    },
+    "total": 133,
+    "rawEqualsProofAndFinalPeerReceipt": true,
+    "capturedPeers": 52,
+    "allCapturedPeersAbsent": true,
+    "recordedExitCodeZeroRows": 39,
+    "all52ExitCodesObserved": false
+  },
+  "cleanup": {
+    "processGroup": 4959,
+    "remaining": [],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostObserved": true,
+    "capturedHostAbsent": true,
+    "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+  },
+  "beforeHarnessCleanup": [
+    {
+      "pid": 5033,
+      "ppid": 1,
+      "pgid": 4959
+    }
+  ],
+  "originalRequestedQuitExit": {
+    "initialExitCode": 0,
+    "initialSignalCode": null,
+    "exitCode": 0,
+    "signalCode": null
+  },
+  "sentinel": {
+    "invocations": [
+      {
+        "executable": "claude-multimodel",
+        "allowed": true,
+        "argc": 1,
+        "command": null,
+        "flags": [
+          "--version"
+        ]
+      }
+    ],
+    "preQuitCount": 1,
+    "postQuitOrCleanupInvocations": [],
+    "refusedInvocations": [],
+    "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+  },
+  "limits": [
+    "No real vendor/authentication/native-provider qualification.",
+    "Physical absence of52 peers does not imply52 retained exit callbacks;39 are recorded.",
+    "No separate Host exit code is exposed; Host absence is the recorded captured observation.",
+    "The raw accepted progress/store tuple is not serialized separately; no event-time or duration claim about earlier mixed frames.",
+    "No privacy24case semantic RED/one-helper GREEN, Installer success, other-provider conversation or whole campaign qualification.",
+    "No source/test/CI mutation or reviewer project execution."
+  ]
+}

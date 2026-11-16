@@ -1,0 +1,1228 @@
+[
+  {
+    "provider": "claude",
+    "role": "management",
+    "pid": 5645,
+    "event": "launch",
+    "parentPid": 4858,
+    "sessionId": "82aff765-b1a1-46fb-a95b-73eea7b6d790",
+    "restored": false
+  },
+  {
+    "provider": "claude",
+    "role": "management",
+    "pid": 5645,
+    "event": "started",
+    "sessionId": "82aff765-b1a1-46fb-a95b-73eea7b6d790",
+    "restored": false
+  },
+  {
+    "provider": "claude",
+    "role": "management",
+    "pid": 5645,
+    "event": "initialized",
+    "sessionId": "82aff765-b1a1-46fb-a95b-73eea7b6d790",
+    "restored": false,
+    "commands": [
+      "compact",
+      "usage",
+      "code-review",
+      "test-desktop-skill"
+    ]
+  },
+  {
+    "provider": "claude",
+    "role": "management",
+    "pid": 5873,
+    "event": "launch",
+    "parentPid": 4858,
+    "sessionId": "189e11f3-b20e-4c42-bbc9-9c303ea89bb4",
+    "restored": false
+  },
+  {
+    "provider": "claude",
+    "role": "management",
+    "pid": 5873,
+    "event": "started",
+    "sessionId": "189e11f3-b20e-4c42-bbc9-9c303ea89bb4",
+    "restored": false
+  },
+  {
+    "provider": "claude",
+    "role": "management",
+    "pid": 5873,
+    "event": "initialized",
+    "sessionId": "189e11f3-b20e-4c42-bbc9-9c303ea89bb4",
+    "restored": false,
+    "commands": [
+      "compact",
+      "usage",
+      "code-review",
+      "test-desktop-skill"
+    ]
+  },
+  {
+    "provider": "claude",
+    "role": "runtime",
+    "pid": 5986,
+    "event": "launch",
+    "parentPid": 4858,
+    "sessionId": "39003d62-d884-4cdb-b3f4-fba6e91b207f",
+    "restored": false
+  },
+  {
+    "provider": "claude",
+    "role": "runtime",
+    "pid": 5986,
+    "event": "started",
+    "sessionId": "39003d62-d884-4cdb-b3f4-fba6e91b207f",
+    "restored": false
+  },
+  {
+    "provider": "claude",
+    "role": "runtime",
+    "pid": 5986,
+    "event": "initialized",
+    "sessionId": "39003d62-d884-4cdb-b3f4-fba6e91b207f",
+    "restored": false,
+    "commands": [
+      "compact",
+      "usage",
+      "code-review",
+      "test-desktop-skill"
+    ]
+  },
+  {
+    "provider": "claude",
+    "role": "runtime",
+    "pid": 5986,
+    "event": "input",
+    "inputId": "69b1b5f8-81d2-4260-b645-af39998d5db3",
+    "marker": "TEST_MODEL_PROBE",
+    "sessionId": "39003d62-d884-4cdb-b3f4-fba6e91b207f",
+    "wrapped": false
+  },
+  {
+    "provider": "claude",
+    "role": "runtime",
+    "pid": 5986,
+    "event": "terminal",
+    "inputId": "69b1b5f8-81d2-4260-b645-af39998d5db3",
+    "marker": "Reply only OK. Do not use tools, access files or run commands.",
+    "outcome": "succeeded",
+    "text": "OK",
+    "usage": {
+      "input_tokens": 42,
+      "output_tokens": 18,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0
+    },
+    "cumulativeCostUsd": 0.0123
+  },
+  {
+    "provider": "claude",
+    "role": "runtime",
+    "pid": 6137,
+    "event": "launch",
+    "parentPid": 4858,
+    "sessionId": "06964c8f-336d-4acb-a6c7-8df5e8f73e8b",
+    "restored": false
+  },
+  {
+    "provider": "claude",
+    "role": "runtime",
+    "pid": 6137,
+    "event": "started",
+    "sessionId": "06964c8f-336d-4acb-a6c7-8df5e8f73e8b",
+    "restored": false
+  },
+  {
+    "provider": "claude",
+    "role": "runtime",
+    "pid": 6137,
+    "event": "mcp-connected",
+    "sessionId": "06964c8f-336d-4acb-a6c7-8df5e8f73e8b",
+    "tools": [
+      "group_chat_list",
+      "group_chat_create",
+      "group_chat_send",
+      "group_chat_react",
+      "group_chat_lookup",
+      "task_create",
+      "task_update",
+      "task_set_owner",
+      "task_lifecycle",
+      "task_set_status",
+      "task_add_comment",
+      "task_set_clarification",
+      "task_link",
+      "task_unlink",
+      "review_request",
+      "review_start",
+      "review_approve",
+      "review_request_changes",
+      "task_get",
+      "message_send",
+      "command_lookup",
+      "task_start",
+      "task_complete",
+      "task_restore",
+      "task_delete",
+      "cross_team_send",
+      "cross_team_list_targets",
+      "cross_team_get_outbox",
+      "cross_team_lookup",
+      "process_register",
+      "process_list",
+      "process_stop",
+      "process_unregister",
+      "process_lookup",
+      "team_member_create",
+      "team_member_create_lookup",
+      "team_member_action_prepare",
+      "team_member_action_execute",
+      "team_member_actions_read",
+      "team_member_action_lookup",
+      "team_member_retry",
+      "member_work_sync_status",
+      "member_work_sync_report",
+      "member_briefing",
+      "team_get",
+      "kanban_get",
+      "kanban_list_reviewers",
+      "task_get_comment",
+      "task_list",
+      "task_briefing",
+      "lead_briefing"
+    ]
+  },
+  {
+    "provider": "claude",
+    "role": "runtime",
+    "pid": 6137,
+    "event": "initialized",
+    "sessionId": "06964c8f-336d-4acb-a6c7-8df5e8f73e8b",
+    "restored": false,
+    "commands": [
+      "compact",
+      "usage",
+      "code-review",
+      "test-desktop-skill"
+    ]
+  },
+  {
+    "provider": "claude",
+    "role": "runtime",
+    "pid": 6137,
+    "event": "input",
+    "inputId": "66a80be7-3dff-417c-bf73-80ed0425d424",
+    "marker": "TEST_UI_BOOT",
+    "sessionId": "06964c8f-336d-4acb-a6c7-8df5e8f73e8b",
+    "wrapped": false
+  },
+  {
+    "provider": "claude",
+    "role": "runtime",
+    "pid": 6137,
+    "event": "terminal",
+    "inputId": "66a80be7-3dff-417c-bf73-80ed0425d424",
+    "marker": "TEST_UI_BOOT",
+    "outcome": "succeeded",
+    "text": "TEST boot ready",
+    "usage": {
+      "input_tokens": 42,
+      "output_tokens": 18,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0
+    },
+    "cumulativeCostUsd": 0.0123
+  },
+  {
+    "provider": "claude",
+    "role": "runtime",
+    "pid": 6137,
+    "event": "input",
+    "inputId": "fc82df8c-05ac-437a-b435-262ec69e8430",
+    "marker": "TEST_UI_COLLAB_ATTACH",
+    "sessionId": "06964c8f-336d-4acb-a6c7-8df5e8f73e8b",
+    "wrapped": true
+  },
+  {
+    "provider": "claude",
+    "role": "runtime",
+    "pid": 6137,
+    "event": "collaboration-attachments",
+    "marker": "TEST_UI_COLLAB_ATTACH",
+    "inputId": "fc82df8c-05ac-437a-b435-262ec69e8430",
+    "memberName": "alice",
+    "image": {
+      "sha256": "43d614f0bc1b36ec2da1effa16b34498a3a62922caff5fd38238990423c50d49",
+      "size": 90,
+      "mimeType": "image/png"
+    },
+    "document": {
+      "sha256": "55af81cd5ddf9f9313ee38f2929d75f1f15429edd697b9196cf2d70e996d81af",
+      "size": 40,
+      "mimeType": "text/plain"
+    }
+  },
+  {
+    "provider": "claude",
+    "role": "runtime",
+    "pid": 6137,
+    "event": "terminal",
+    "inputId": "fc82df8c-05ac-437a-b435-262ec69e8430",
+    "marker": "TEST_UI_COLLAB_ATTACH",
+    "outcome": "succeeded",
+    "text": "TEST collaboration attachments received",
+    "usage": {
+      "input_tokens": 42,
+      "output_tokens": 18,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0
+    },
+    "cumulativeCostUsd": 0.0246
+  },
+  {
+    "provider": "claude",
+    "role": "runtime",
+    "pid": 6137,
+    "event": "input",
+    "inputId": "283cbe91-7301-4441-9d09-c7ed8cb57cf9",
+    "marker": "TEST_UI_COLLAB_GROUP_REPLY",
+    "sessionId": "06964c8f-336d-4acb-a6c7-8df5e8f73e8b",
+    "wrapped": true
+  },
+  {
+    "provider": "claude",
+    "role": "runtime",
+    "pid": 6137,
+    "event": "collaboration-call",
+    "marker": "TEST_UI_COLLAB_GROUP_REPLY",
+    "inputId": "283cbe91-7301-4441-9d09-c7ed8cb57cf9",
+    "memberName": "alice",
+    "name": "group_chat_react",
+    "commandId": "TEST-collab-alice-6137-283cbe91-7301-4441-9d09-c7ed8cb57cf9-ack"
+  },
+  {
+    "provider": "claude",
+    "role": "runtime",
+    "pid": 6137,
+    "event": "collaboration-group",
+    "marker": "TEST_UI_COLLAB_GROUP_REPLY",
+    "inputId": "283cbe91-7301-4441-9d09-c7ed8cb57cf9",
+    "memberName": "alice",
+    "groupChatId": "813e86ab-6038-42ea-b5a8-0e3c00e7e123",
+    "messageId": "b79fd675-3375-4972-8dec-bad006df8b89:g:2bd806c97f0e00af1a1fc332",
+    "groupMessageId": "b79fd675-3375-4972-8dec-bad006df8b89",
+    "groupRunKey": "host-group-v1:43d610459a483e4b5de10c6719353397d00cf11e3dc95c81842f59222542d64d"
+  },
+  {
+    "provider": "claude",
+    "role": "runtime",
+    "pid": 6137,
+    "event": "terminal",
+    "inputId": "283cbe91-7301-4441-9d09-c7ed8cb57cf9",
+    "marker": "TEST_UI_COLLAB_GROUP_REPLY",
+    "outcome": "succeeded",
+    "text": "TEST group acknowledged",
+    "usage": {
+      "input_tokens": 42,
+      "output_tokens": 18,
+      "cache_read_input_tokens": 0,
+      "cache_creation_input_tokens": 0
+    },
+    "cumulativeCostUsd": 0.0369
+  },
+  {
+    "provider": "claude",
+    "role": "management",
+    "pid": 9989,
+    "event": "launch",
+    "parentPid": 4858,
+    "sessionId": "84a1c463-3b5c-4f4d-a9fe-a87c987fc3ca",
+    "restored": false
+  },
+  {
+    "provider": "claude",
+    "role": "management",
+    "pid": 9989,
+    "event": "started",
+    "sessionId": "84a1c463-3b5c-4f4d-a9fe-a87c987fc3ca",
+    "restored": false
+  },
+  {
+    "provider": "claude",
+    "role": "management",
+    "pid": 9989,
+    "event": "initialized",
+    "sessionId": "84a1c463-3b5c-4f4d-a9fe-a87c987fc3ca",
+    "restored": false,
+    "commands": [
+      "compact",
+      "usage",
+      "code-review",
+      "test-desktop-skill"
+    ]
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "management",
+    "pid": 5652
+  },
+  {
+    "event": "exit",
+    "code": 0,
+    "provider": "codex",
+    "role": "management",
+    "pid": 5652
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "management",
+    "pid": 5889
+  },
+  {
+    "event": "exit",
+    "code": 0,
+    "provider": "codex",
+    "role": "management",
+    "pid": 5889
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "management",
+    "pid": 5898
+  },
+  {
+    "event": "exit",
+    "code": 0,
+    "provider": "codex",
+    "role": "management",
+    "pid": 5898
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "management",
+    "pid": 5906
+  },
+  {
+    "event": "exit",
+    "code": 0,
+    "provider": "codex",
+    "role": "management",
+    "pid": 5906
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 5930
+  },
+  {
+    "event": "input",
+    "marker": "TEST_MODEL_PROBE",
+    "turnId": "TEST-turn-5930-1",
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 5930
+  },
+  {
+    "event": "terminal",
+    "marker": "TEST_MODEL_PROBE",
+    "turnId": "TEST-turn-5930-1",
+    "status": "completed",
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 5930
+  },
+  {
+    "event": "exit",
+    "code": 0,
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 5930
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6101
+  },
+  {
+    "event": "mcp-catalog",
+    "configuredServers": 0,
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6101
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "management",
+    "pid": 6114
+  },
+  {
+    "event": "exit",
+    "code": 0,
+    "provider": "codex",
+    "role": "management",
+    "pid": 6114
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6130
+  },
+  {
+    "event": "mcp-catalog",
+    "configuredServers": 0,
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6130
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 7,
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6149
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6161
+  },
+  {
+    "event": "mcp-catalog",
+    "configuredServers": 0,
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6161
+  },
+  {
+    "event": "managed-configuration-read",
+    "selectedServers": [
+      "team"
+    ],
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6149
+  },
+  {
+    "event": "connected",
+    "tools": [
+      "group_chat_list",
+      "group_chat_create",
+      "group_chat_send",
+      "group_chat_react",
+      "group_chat_lookup",
+      "task_create",
+      "task_update",
+      "task_set_owner",
+      "task_lifecycle",
+      "task_set_status",
+      "task_add_comment",
+      "task_set_clarification",
+      "task_link",
+      "task_unlink",
+      "review_request",
+      "review_start",
+      "review_approve",
+      "review_request_changes",
+      "task_get",
+      "message_send",
+      "command_lookup",
+      "task_start",
+      "task_complete",
+      "task_restore",
+      "task_delete",
+      "cross_team_send",
+      "cross_team_list_targets",
+      "cross_team_get_outbox",
+      "cross_team_lookup",
+      "process_register",
+      "process_list",
+      "process_stop",
+      "process_unregister",
+      "process_lookup",
+      "team_member_create",
+      "team_member_create_lookup",
+      "team_member_action_prepare",
+      "team_member_action_execute",
+      "team_member_actions_read",
+      "team_member_action_lookup",
+      "team_member_retry",
+      "member_work_sync_status",
+      "member_work_sync_report",
+      "member_briefing",
+      "team_get",
+      "kanban_get",
+      "kanban_list_reviewers",
+      "task_get_comment",
+      "task_list",
+      "task_briefing",
+      "lead_briefing"
+    ],
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6149
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6190
+  },
+  {
+    "event": "mcp-catalog",
+    "configuredServers": 0,
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6190
+  },
+  {
+    "event": "managed-configuration-read",
+    "selectedServers": [
+      "team"
+    ],
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6149
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6202
+  },
+  {
+    "event": "mcp-catalog",
+    "configuredServers": 0,
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6202
+  },
+  {
+    "event": "managed-configuration-read",
+    "selectedServers": [
+      "team"
+    ],
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6149
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "management",
+    "pid": 6356
+  },
+  {
+    "event": "exit",
+    "code": 0,
+    "provider": "codex",
+    "role": "management",
+    "pid": 6356
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "management",
+    "pid": 6572
+  },
+  {
+    "event": "exit",
+    "code": 0,
+    "provider": "codex",
+    "role": "management",
+    "pid": 6572
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "management",
+    "pid": 6820
+  },
+  {
+    "event": "exit",
+    "code": 0,
+    "provider": "codex",
+    "role": "management",
+    "pid": 6820
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "management",
+    "pid": 7002
+  },
+  {
+    "event": "exit",
+    "code": 0,
+    "provider": "codex",
+    "role": "management",
+    "pid": 7002
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 7045
+  },
+  {
+    "event": "mcp-catalog",
+    "configuredServers": 0,
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 7045
+  },
+  {
+    "event": "managed-configuration-read",
+    "selectedServers": [
+      "team"
+    ],
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6149
+  },
+  {
+    "event": "input",
+    "marker": "TEST_UI_COLLAB_DM",
+    "turnId": "TEST-turn-6149-1",
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6149
+  },
+  {
+    "event": "collaboration-call",
+    "marker": "TEST_UI_COLLAB_DM",
+    "inputId": "TEST-turn-6149-1",
+    "memberName": "bob",
+    "name": "message_send",
+    "commandId": "TEST-collab-bob-6149-TEST-turn-6149-1-dispatch",
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6149
+  },
+  {
+    "event": "terminal",
+    "marker": "TEST_UI_COLLAB_DM",
+    "turnId": "TEST-turn-6149-1",
+    "status": "completed",
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6149
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "management",
+    "pid": 7187
+  },
+  {
+    "event": "exit",
+    "code": 0,
+    "provider": "codex",
+    "role": "management",
+    "pid": 7187
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 7829
+  },
+  {
+    "event": "mcp-catalog",
+    "configuredServers": 0,
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 7829
+  },
+  {
+    "event": "managed-configuration-read",
+    "selectedServers": [
+      "team"
+    ],
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6149
+  },
+  {
+    "event": "input",
+    "marker": "TEST_UI_COLLAB_GROUP",
+    "turnId": "TEST-turn-6149-2",
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6149
+  },
+  {
+    "event": "collaboration-call",
+    "marker": "TEST_UI_COLLAB_GROUP",
+    "inputId": "TEST-turn-6149-2",
+    "memberName": "bob",
+    "name": "group_chat_list",
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6149
+  },
+  {
+    "event": "collaboration-call",
+    "marker": "TEST_UI_COLLAB_GROUP",
+    "inputId": "TEST-turn-6149-2",
+    "memberName": "bob",
+    "name": "group_chat_react",
+    "commandId": "TEST-collab-bob-6149-TEST-turn-6149-2-ack",
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6149
+  },
+  {
+    "event": "collaboration-call",
+    "marker": "TEST_UI_COLLAB_GROUP",
+    "inputId": "TEST-turn-6149-2",
+    "memberName": "bob",
+    "name": "group_chat_send",
+    "commandId": "TEST-collab-bob-6149-TEST-turn-6149-2-group-reply",
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6149
+  },
+  {
+    "event": "collaboration-group",
+    "marker": "TEST_UI_COLLAB_GROUP",
+    "inputId": "TEST-turn-6149-2",
+    "memberName": "bob",
+    "groupChatId": "813e86ab-6038-42ea-b5a8-0e3c00e7e123",
+    "messageId": "554bdd58-2638-4a50-8a97-9cb5eef0734b:g:81b637d8fcd2c6da6359e696",
+    "groupMessageId": "554bdd58-2638-4a50-8a97-9cb5eef0734b",
+    "groupRunKey": "host-group-v1:3476218b7fdca9d2c566415da16c405e78da1f87ea6b11b1dcf7ba28a6e7e964",
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6149
+  },
+  {
+    "event": "terminal",
+    "marker": "TEST_UI_COLLAB_GROUP",
+    "turnId": "TEST-turn-6149-2",
+    "status": "completed",
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6149
+  },
+  {
+    "event": "exit",
+    "code": 0,
+    "provider": "codex",
+    "role": "runtime",
+    "pid": 6149
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 3,
+    "provider": "codex",
+    "role": "management",
+    "pid": 9995
+  },
+  {
+    "event": "exit",
+    "code": 0,
+    "provider": "codex",
+    "role": "management",
+    "pid": 9995
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 5,
+    "provider": "opencode",
+    "role": "management",
+    "pid": 5665
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 5,
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 6552
+  },
+  {
+    "event": "input",
+    "marker": "TEST_MODEL_PROBE",
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 6552
+  },
+  {
+    "event": "terminal",
+    "marker": "TEST_MODEL_PROBE",
+    "outcome": "succeeded",
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 6552
+  },
+  {
+    "event": "exit",
+    "code": 0,
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 6552
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 5,
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 6648
+  },
+  {
+    "event": "policy-configured",
+    "pluginSha256": "64d2db6a0a14d6214e37e2f81a6e9b3afffd9f901f37bcd351026f98bf64f02b",
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 6648
+  },
+  {
+    "event": "connected",
+    "tools": [
+      "group_chat_list",
+      "group_chat_create",
+      "group_chat_send",
+      "group_chat_react",
+      "group_chat_lookup",
+      "task_create",
+      "task_update",
+      "task_set_owner",
+      "task_lifecycle",
+      "task_set_status",
+      "task_add_comment",
+      "task_set_clarification",
+      "task_link",
+      "task_unlink",
+      "review_request",
+      "review_start",
+      "review_approve",
+      "review_request_changes",
+      "task_get",
+      "message_send",
+      "command_lookup",
+      "task_start",
+      "task_complete",
+      "task_restore",
+      "task_delete",
+      "cross_team_send",
+      "cross_team_list_targets",
+      "cross_team_get_outbox",
+      "cross_team_lookup",
+      "process_register",
+      "process_list",
+      "process_stop",
+      "process_unregister",
+      "process_lookup",
+      "team_member_create",
+      "team_member_create_lookup",
+      "team_member_action_prepare",
+      "team_member_action_execute",
+      "team_member_actions_read",
+      "team_member_action_lookup",
+      "team_member_retry",
+      "member_work_sync_status",
+      "member_work_sync_report",
+      "member_briefing",
+      "team_get",
+      "kanban_get",
+      "kanban_list_reviewers",
+      "task_get_comment",
+      "task_list",
+      "task_briefing",
+      "lead_briefing"
+    ],
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 6648
+  },
+  {
+    "event": "collaboration-session",
+    "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+    "sessionId": "ses_TESTdesktop6648",
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 6648
+  },
+  {
+    "event": "input",
+    "marker": "TEST_UI_COLLAB_WORK",
+    "inputId": "msg_1e211c6a600021bba3fbd32c93",
+    "messageId": "msg_1e211c6a6000TTTTTTTTTTTTT1",
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 6648
+  },
+  {
+    "event": "collaboration-call",
+    "marker": "TEST_UI_COLLAB_WORK",
+    "inputId": "msg_1e211c6a600021bba3fbd32c93",
+    "memberName": "carol",
+    "name": "message_send",
+    "commandId": "TEST-collab-carol-6648-msg_1e211c6a600021bba3fbd32c93-reply",
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 6648
+  },
+  {
+    "event": "terminal",
+    "marker": "TEST_UI_COLLAB_WORK",
+    "inputId": "msg_1e211c6a600021bba3fbd32c93",
+    "messageId": "msg_1e211c6a6000TTTTTTTTTTTTT1",
+    "outcome": "succeeded",
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 6648
+  },
+  {
+    "event": "input",
+    "marker": "TEST_UI_COLLAB_GROUP_REPLY",
+    "inputId": "msg_1e21229d4000745893b4255599",
+    "messageId": "msg_1e21229d4000TTTTTTTTTTTTT2",
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 6648
+  },
+  {
+    "event": "collaboration-call",
+    "marker": "TEST_UI_COLLAB_GROUP_REPLY",
+    "inputId": "msg_1e21229d4000745893b4255599",
+    "memberName": "carol",
+    "name": "group_chat_react",
+    "commandId": "TEST-collab-carol-6648-msg_1e21229d4000745893b4255599-ack",
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 6648
+  },
+  {
+    "event": "collaboration-group",
+    "marker": "TEST_UI_COLLAB_GROUP_REPLY",
+    "inputId": "msg_1e21229d4000745893b4255599",
+    "memberName": "carol",
+    "groupChatId": "813e86ab-6038-42ea-b5a8-0e3c00e7e123",
+    "messageId": "b79fd675-3375-4972-8dec-bad006df8b89:g:4c26d9074c27d89ede59270c",
+    "groupMessageId": "b79fd675-3375-4972-8dec-bad006df8b89",
+    "groupRunKey": "host-group-v1:cd7f7d9e3ad2b1d5bfa872042726570b393989e0ca005b067b110b33951c1fe5",
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 6648
+  },
+  {
+    "event": "terminal",
+    "marker": "TEST_UI_COLLAB_GROUP_REPLY",
+    "inputId": "msg_1e21229d4000745893b4255599",
+    "messageId": "msg_1e21229d4000TTTTTTTTTTTTT2",
+    "outcome": "succeeded",
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 6648
+  },
+  {
+    "event": "exit",
+    "code": 0,
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 6648
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 5,
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 8603
+  },
+  {
+    "event": "input",
+    "marker": "TEST_MODEL_PROBE",
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 8603
+  },
+  {
+    "event": "terminal",
+    "marker": "TEST_MODEL_PROBE",
+    "outcome": "succeeded",
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 8603
+  },
+  {
+    "event": "exit",
+    "code": 0,
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 8603
+  },
+  {
+    "event": "launch",
+    "parentPid": 4858,
+    "argc": 5,
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 8763
+  },
+  {
+    "event": "policy-configured",
+    "pluginSha256": "64d2db6a0a14d6214e37e2f81a6e9b3afffd9f901f37bcd351026f98bf64f02b",
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 8763
+  },
+  {
+    "event": "connected",
+    "tools": [
+      "group_chat_list",
+      "group_chat_create",
+      "group_chat_send",
+      "group_chat_react",
+      "group_chat_lookup",
+      "task_create",
+      "task_update",
+      "task_set_owner",
+      "task_lifecycle",
+      "task_set_status",
+      "task_add_comment",
+      "task_set_clarification",
+      "task_link",
+      "task_unlink",
+      "review_request",
+      "review_start",
+      "review_approve",
+      "review_request_changes",
+      "task_get",
+      "message_send",
+      "command_lookup",
+      "task_start",
+      "task_complete",
+      "task_restore",
+      "task_delete",
+      "cross_team_send",
+      "cross_team_list_targets",
+      "cross_team_get_outbox",
+      "cross_team_lookup",
+      "process_register",
+      "process_list",
+      "process_stop",
+      "process_unregister",
+      "process_lookup",
+      "team_member_create",
+      "team_member_create_lookup",
+      "team_member_action_prepare",
+      "team_member_action_execute",
+      "team_member_actions_read",
+      "team_member_action_lookup",
+      "team_member_retry",
+      "member_work_sync_status",
+      "member_work_sync_report",
+      "member_briefing",
+      "team_get",
+      "kanban_get",
+      "kanban_list_reviewers",
+      "task_get_comment",
+      "task_list",
+      "task_briefing",
+      "lead_briefing"
+    ],
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 8763
+  },
+  {
+    "event": "collaboration-session",
+    "memberId": "bb16b405-8941-51b4-a053-7897f24ff9be",
+    "sessionId": "ses_TESTdesktop8763",
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 8763
+  },
+  {
+    "event": "input",
+    "marker": "TEST_UI_COLLAB_RESTORE",
+    "inputId": "msg_1e21305c0000bf58d5ef7cc55a",
+    "messageId": "msg_1e21305c0000TTTTTTTTTTTTT1",
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 8763
+  },
+  {
+    "event": "collaboration-call",
+    "marker": "TEST_UI_COLLAB_RESTORE",
+    "inputId": "msg_1e21305c0000bf58d5ef7cc55a",
+    "memberName": "carol",
+    "name": "message_send",
+    "commandId": "TEST-collab-carol-8763-msg_1e21305c0000bf58d5ef7cc55a-reply",
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 8763
+  },
+  {
+    "event": "terminal",
+    "marker": "TEST_UI_COLLAB_RESTORE",
+    "inputId": "msg_1e21305c0000bf58d5ef7cc55a",
+    "messageId": "msg_1e21305c0000TTTTTTTTTTTTT1",
+    "outcome": "succeeded",
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 8763
+  },
+  {
+    "event": "exit",
+    "code": 0,
+    "provider": "opencode",
+    "role": "runtime",
+    "pid": 8763
+  }
+]

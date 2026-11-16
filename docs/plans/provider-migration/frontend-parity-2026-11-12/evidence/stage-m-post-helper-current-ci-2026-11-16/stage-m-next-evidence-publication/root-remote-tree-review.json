@@ -1,0 +1,26 @@
+{
+  "schema": "root-actual-unpublished-remote-documentation-tree-review/v1",
+  "reviewedAtUTC": "2026-11-16T02:22:01.739701+00:00",
+  "verdict": "APPROVE exact immutable remote tree; commit/ref not yet created",
+  "manifest": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-m-next-evidence-publication/upload-manifest.json",
+    "bytes": 110785,
+    "blob": "c524fe4c68895cd5770026486e12fbba5ccb19c3",
+    "sha256": "c3dd18869abc701ff0d200b7b987da02b31db21ea6e9e4d7912b1c4a5b814784"
+  },
+  "remoteAPI": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-m-next-evidence-publication/remote-recursive-tree.json",
+    "bytes": 3962962,
+    "blob": "26bac23f693fafe0874562a85d8d5492e3244912",
+    "sha256": "1dce1530fbd4f768060ef94fc648848835f9ceb5e663804b2e7534621b29c1c2"
+  },
+  "expectedTree": "9404f42e9e9c83a3b199389f5bbc2e4386432f72",
+  "fullLeafCount": 10244,
+  "remoteTreeObjectsRehashedIncludingRoot": 1514,
+  "all125ExactChangedPaths": true,
+  "all10119UnaffectedParentLeavesExact": true,
+  "all8798NonDocumentationLeavesUnchanged": true,
+  "sourceCandidatesApplied": false,
+  "commitCreated": false,
+  "refChanged": false
+}
