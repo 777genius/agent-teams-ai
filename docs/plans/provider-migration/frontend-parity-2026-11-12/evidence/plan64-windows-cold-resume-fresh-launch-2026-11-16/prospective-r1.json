@@ -1,0 +1,322 @@
+{
+  "kind": "W07_FINITE_WINDOWS_COLD_FRESH_PROSPECTIVE_R1",
+  "status": "PROPOSED_NOT_SELECTED",
+  "reviewer": "/root/frontend_gaps",
+  "sourceHead": "946488197cf45a9012e84c7a45b402c4eef17a90",
+  "plan": {
+    "path": "plan.md",
+    "gitBlob": "244eff62a93cf317e2a66738a2fe1eb829828549",
+    "sha256": "94b0ce22d4a5490445dccdb396b419a4f857c63b7bb7c69db2a202f0cae35439",
+    "bytes": 19135,
+    "physicalLines": 85
+  },
+  "sourceInventory": [
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "gitBlob": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+      "sha256": "0a23987a84677fc2fc20f44f565cd20150ee6108111dc5793d52bcc9e01ff436",
+      "bytes": 59461,
+      "physicalLines": 800
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceCold.ts",
+      "before": null,
+      "gitBlob": null,
+      "new": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "gitBlob": "e0a107ffb1f57b62396c725cef57e9cadb78c5b1",
+      "sha256": "ece91a5b47fb81afe2f271a2ec627e577615eca256f309c2a51dcce291d41767",
+      "bytes": 25025,
+      "physicalLines": 291
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "gitBlob": "2d0a94f85c2d23232f9ce1a7375e7765f552ebb9",
+      "sha256": "d503beb57a0e2e41d81c89a73349acbecd1f7e1c958b3d732db4500bd532fb21",
+      "bytes": 593,
+      "physicalLines": 6
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "gitBlob": "458a88ff6b3b197282f9144951aeb79074cc8d5b",
+      "sha256": "e8bafc0f5bc8016a6a7f55591436edf470f2e0eb259a6a85cc5a986d9f956d88",
+      "bytes": 141809,
+      "physicalLines": 1767
+    }
+  ],
+  "preservationSegments": [
+    {
+      "name": "original_poll",
+      "startLine": 59,
+      "endLine": 68,
+      "sha256": "5cff757a128ba988dd5215e82b9b8b7c4c0c64224fb8fd941576c765b6e57316",
+      "bytes": 399,
+      "assertCalls": 2
+    },
+    {
+      "name": "physical_epoch_owner",
+      "startLine": 187,
+      "endLine": 327,
+      "sha256": "ad0109a2e151d03fbc663153e4c091488bdc5f415e217834300082a3f050e16a",
+      "bytes": 9070,
+      "assertCalls": 10
+    },
+    {
+      "name": "launch_oracle",
+      "startLine": 409,
+      "endLine": 532,
+      "sha256": "1a0199ec56092cd57f4a95113615ee0493631a4c75ae66389d55ac491062df5c",
+      "bytes": 9773,
+      "assertCalls": 40
+    },
+    {
+      "name": "original_boot",
+      "startLine": 533,
+      "endLine": 544,
+      "sha256": "dcc6cd5ab1a946492e5e6ec364c26b98e1e3cf18a1521731a99b63d35b7a4a6b",
+      "bytes": 811,
+      "assertCalls": 1
+    },
+    {
+      "name": "live_checkpoint_and_both_stops",
+      "startLine": 661,
+      "endLine": 675,
+      "sha256": "5b73011aafb35e6a7742a0ffe1344e3a12721d906c13bf216c19dd7b72113de7",
+      "bytes": 975,
+      "assertCalls": 6
+    },
+    {
+      "name": "generic_cold_replay_keep_byte_exact",
+      "startLine": 677,
+      "endLine": 692,
+      "sha256": "5cdbd0a7d802cc96374b4cd798996f867129f7116694df05e1adff4604bcc82e",
+      "bytes": 1426,
+      "assertCalls": 14
+    },
+    {
+      "name": "existing_claude_cold_restore_to_preserve",
+      "startLine": 693,
+      "endLine": 717,
+      "sha256": "094682d2ee52a05a45f86a1d144e361cf0830f604b1d771bbfdd3ad9ab56b136",
+      "bytes": 2142,
+      "assertCalls": 16
+    },
+    {
+      "name": "outer_close_and_final_cleanup",
+      "startLine": 718,
+      "endLine": 800,
+      "sha256": "d3d3e573b789cae97661e6d46ab4394dcec1a099a969d1c570aee93f6cb991c4",
+      "bytes": 7009,
+      "assertCalls": 32
+    }
+  ],
+  "unchangedDependencies": [
+    {
+      "path": "packages/legacy-agent-host/src/runtime/CheckpointCoordinator.ts",
+      "gitBlob": "cc6a36675b183d68ed29c9fd409694a0754adbdb",
+      "sha256": "744bea0c1c9b8fb0644b88dd4de3bfd1e85bdaec1dfabe4406df7859de8dc56e",
+      "bytes": 19496
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeHostMethods.ts",
+      "gitBlob": "552a0319b25be43cc64dd17098d174eb03198f1c",
+      "sha256": "6cb3cd08afaff21382882887cfebdd8065f8b0d99ea0d6530d3b2c35e9204727",
+      "bytes": 2723
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/readMemberCheckpoints.ts",
+      "gitBlob": "7d40a5c937f1546a303ce3205fd7023aa3b83195",
+      "sha256": "46b36ca52d56bae8d6146c62901094ab25a82dcf7e0f56196b46e7fbff0b5158",
+      "bytes": 1460
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/executeCapturedRuntimeControl.ts",
+      "gitBlob": "76a6cc219ac606a44e9b26f0198be85096f6a34a",
+      "sha256": "10f619093d48565df2ca372d8e1a62a8116601826588cc04e2c815ce4d5dcb04",
+      "bytes": 14590
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/runtimeControlValues.ts",
+      "gitBlob": "2415f5141bd1607f9b6d0ef938c1ff9ec8cab6a4",
+      "sha256": "70765b2aad5966c6b8b402dda769349cd6f77159f41160bd21daec4b13a2a746",
+      "bytes": 1404
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/checkpointContracts.ts",
+      "gitBlob": "490dde3b6e247a7c6869be010c94db05ace6f2f1",
+      "sha256": "578f996c7d654e3bf60c34e8eb00896ad1f1db8ece4d602b783bc0bd27aaa99d",
+      "bytes": 2669
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+      "sha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd",
+      "bytes": 15213
+    },
+    {
+      "path": "tools/owned-process-broker/gateController.cpp",
+      "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+      "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+      "bytes": 5935
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "gitBlob": "93606e49aedfe84b6452aee487efdf2055f45524",
+      "sha256": "1aa35cca543a731d88fb257522458e99f73964b1d18553c5118f4c8542815e7e",
+      "bytes": 32370
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "gitBlob": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+      "sha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d",
+      "bytes": 30469
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+      "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+      "bytes": 32221
+    }
+  ],
+  "officialReadbacks": [
+    {
+      "path": "official-checkpoint-control-readbacks.json",
+      "sha256": "22ab5f1316f66b1d60489d52362b2dbcff9341f861a4ae496635d63a9b201db3",
+      "bytes": 75786
+    },
+    {
+      "path": "official-checkpoint-rpc-readbacks.json",
+      "sha256": "6f50f62c166e6577f91e709f115cb6b7cd61f40f4847d13af4a919a672af5cc6",
+      "bytes": 6723
+    },
+    {
+      "path": "official-controller-clock-readback.json",
+      "sha256": "19aa758e224a0e73eeb3995f71ac5896e19831decb51cd7d7aedc387dc347c87",
+      "bytes": 8640
+    },
+    {
+      "path": "official-controller-readback.json",
+      "sha256": "07d256b3457eef360351ee4e7cb79b2988f49260a2595180e39af3c88b5c8c34",
+      "bytes": 21455
+    },
+    {
+      "path": "official-directory-bindings.json",
+      "sha256": "d5b75dc5cf22ad11b436be213a6b149d2f64d60c75aa71ecf6d20e06466fe3bc",
+      "bytes": 9803
+    },
+    {
+      "path": "official-process-workflow-readback.json",
+      "sha256": "7ead37267055ec5eac1891e9ce0bbe4cd4a089b0747d9b4bc88f6a997a42a065",
+      "bytes": 45069
+    },
+    {
+      "path": "official-source-readbacks.json",
+      "sha256": "5340330a990781100517654f1d96c7d6ce6139d8a29209b14341f755da48c3f8",
+      "bytes": 145757
+    },
+    {
+      "path": "official-stop-peer-readbacks.json",
+      "sha256": "f2f23cfe3ba58b9dff08ec855f2910d782a3fe75c63e8665193184539499b7d1",
+      "bytes": 87273
+    }
+  ],
+  "lint": {
+    "beforeOperands": 132,
+    "afterProposedOperands": 133,
+    "beforeOrderedOperandsSha256": "a5d659eaf4b9b0a26f6b09683eb7cb5554e2b0b51cd013030937e6772277f697",
+    "onlyProposedAppend": "tools/owned-process-broker/nativeEmulatedSourceCold.ts"
+  },
+  "checks": [
+    {
+      "check": "Exact preimage tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact preimage tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact preimage tools/owned-process-broker/tsconfig.json",
+      "passed": true
+    },
+    {
+      "check": "Exact preimage .github/workflows/host-emulated-acceptance.yml",
+      "passed": true
+    },
+    {
+      "check": "Exact official new helper absence",
+      "passed": true
+    },
+    {
+      "check": "Host workflow directory binding",
+      "passed": true
+    },
+    {
+      "check": "Incoming Plan62 helper exclusion preserved",
+      "passed": true
+    },
+    {
+      "check": "Original fast lint has132 finite operands",
+      "passed": true
+    },
+    {
+      "check": "New helper absent from original lint",
+      "passed": true
+    },
+    {
+      "check": "Original scenario and profile are already linted",
+      "passed": true
+    },
+    {
+      "check": "Current scenario is800 physical lines",
+      "passed": true
+    },
+    {
+      "check": "Original cold restore ends with Stop and lacks a fresh launch",
+      "passed": true
+    },
+    {
+      "check": "Owner captures or reuses before close",
+      "passed": true
+    },
+    {
+      "check": "Public existing checkpoint availability is read-only",
+      "passed": true
+    },
+    {
+      "check": "Original controller root wait120000",
+      "passed": true
+    },
+    {
+      "check": "Original process job30min and existing Claude source route",
+      "passed": true
+    },
+    {
+      "check": "Original validator permits extra observed cold Job while requiring all cleanup",
+      "passed": true
+    },
+    {
+      "check": "No afterimage created",
+      "passed": true
+    },
+    {
+      "check": "Exact946488 stop/peer bytes match prior audited source packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "passed": true
+    },
+    {
+      "check": "Exact946488 stop/peer bytes match prior audited source tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "passed": true
+    }
+  ],
+  "checkCount": 20,
+  "erratum": "Earlier sealed seam R1 prose799 is corrected to800 physical lines for the same original b1f0e95c bytes; earlier artifact preserved.",
+  "scopeLimits": [
+    "Finite TEST Claude peer Windows engineering composition only; no genuine Claude/Codex/V1 or Desktop/release qualification.",
+    "One post-Stop public read, reuse exact prior live reference; no post-close checkpoint capture and nativeBacking remains unverified until actual restore.",
+    "Keep generic cold replay and physical lifetime/cleanup owner unchanged; helper owns only the existing optional Claude restore plus its fresh suffix.",
+    "No new routing, workflow jobs, matrices, controller gates, deadlines, provider APIs, production hooks or standalone framework.",
+    "No project/compiler/test/provider/GUI/CI execution, polling or remote mutations; five-path afterimages require selected published plan and actual source R2."
+  ]
+}
