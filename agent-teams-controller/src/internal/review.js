@@ -515,31 +515,27 @@ function completeReview(context, taskId, flags = {}) {
     );
     if (completedCycle && (state === 'reviewed' || state === 'approved')) {
       const placement = kanban.getKanbanState(context).tasks?.[task.id]?.column;
-      let recovered = false;
       if (state === 'reviewed' && placement === 'review') {
         // The task event committed but clearing the overlay failed. Repair the
         // placement and dispatch the original event's previously skipped notices.
         kanban.clearKanban(context, task.id, {
           transition: 'review_complete', nextReviewState: 'reviewed',
         });
-        recovered = true;
       } else if (state === 'reviewed' && placement === 'approved') {
         throw new Error('Human approval placement awaits a recorded human decision');
       }
       return {
-        duplicate: true, recovered,
+        duplicate: true,
         payload: {
           ok: true, taskId: task.id, displayId: task.displayId,
           column: state === 'approved' ? 'approved' : 'done',
           reviewState: state, reviewRequestId: expectedId, alreadyCompleted: true,
         },
-        ...(recovered ? {
-          task: tasks.getTask(context, task.id),
-          actor: completedCycle.actor,
-          note: completedCycle.note || 'AI review completed',
-          leadSessionId: resolveLeadSessionId(context, flags),
-          humanOnlyApproval: kanban.getKanbanState(context).humanOnlyApproval === true,
-        } : {}),
+        task: tasks.getTask(context, task.id),
+        actor: completedCycle.actor,
+        note: completedCycle.note || 'AI review completed',
+        leadSessionId: resolveLeadSessionId(context, flags),
+        humanOnlyApproval: kanban.getKanbanState(context).humanOnlyApproval === true,
       };
     }
     assertReviewTransitionAllowed(context, task, 'completing review');
@@ -566,7 +562,8 @@ function completeReview(context, taskId, flags = {}) {
     leadSessionId: resolveLeadSessionId(context, flags),
     humanOnlyApproval: kanban.getKanbanState(context).humanOnlyApproval === true };
   });
-  if (result.duplicate && !result.recovered) return result.payload;
+  // Retry post-commit notices with the same event ID. Inbox rows and dependency
+  // comments deduplicate it, even if a prior overlay write already succeeded.
   const event = [...(result.task.historyEvents || [])].reverse()
     .find((item) => item.type === 'review_completed' &&
       item.reviewRequestId === result.payload.reviewRequestId);
@@ -626,10 +623,10 @@ function approveAsHuman(context, taskId) {
         task: tasks.getTask(context, task.id),
         alreadyApproved: true,
         recovered,
-        // Retry the original dependency release only if this repaired a
-        // partially written approval directly from an open Review/Needs Fixes.
-        releasesDependencies: recovered &&
-          (humanEvent?.from === 'review' || humanEvent?.from === 'needsFix'),
+        // Replay original dependency release even if the placement write succeeded
+        // before a later failure; the human event ID deduplicates notices.
+        releasesDependencies:
+          humanEvent?.from === 'review' || humanEvent?.from === 'needsFix',
       };
     }
     const timestamp = new Date().toISOString();
@@ -653,7 +650,7 @@ function approveAsHuman(context, taskId) {
       releasesDependencies: prevReviewState === 'review' || prevReviewState === 'needsFix',
     };
   });
-  if (result.releasesDependencies && (!result.alreadyApproved || result.recovered)) {
+  if (result.releasesDependencies) {
     try {
       tasks.notifyUnblockedOwners(context, result.task, {
         reviewCycleId: [...(result.task.historyEvents || [])].reverse()

@@ -118,6 +118,46 @@ describe('human-only review approval', () => {
     expect(events(task.id, 'review_completed')).toHaveLength(1);
   });
 
+  it('replays notices after a review overlay was persisted before an error', () => {
+    const task = board.createTask({ subject: 'Post-write review failure', owner: 'bob' });
+    board.completeTask(task.id, 'bob');
+    board.setHumanOnlyApproval(true);
+    board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+    const dependent = board.createTask({
+      subject: 'Waiting on AI review', owner: 'bob', blockedBy: [task.id],
+    });
+    const cycle = events(task.id, 'review_requested').at(-1).id;
+    const inboxFile = path.join(dir, 'teams', 'fixture', 'inboxes', 'alice.json');
+    const leadBefore = JSON.parse(fs.readFileSync(inboxFile, 'utf8')).length;
+    const commentsBefore = board.getTask(dependent.id).comments.length;
+    const realClear = kanban.clearKanban;
+    const fail = vi.spyOn(kanban, 'clearKanban').mockImplementationOnce((...args) => {
+      realClear(...args);
+      throw new Error('synthetic error after review overlay write');
+    });
+    expect(() => board.completeReview(task.id, {
+      from: 'alice', expectedReviewRequestId: cycle,
+    })).toThrow(/after review overlay write/);
+    fail.mockRestore();
+
+    expect(board.getKanbanState().tasks[task.id]).toBeUndefined();
+    expect(board.getTask(task.id).reviewState).toBe('reviewed');
+    expect(board.getTask(dependent.id).comments).toHaveLength(commentsBefore);
+    expect(JSON.parse(fs.readFileSync(inboxFile, 'utf8'))).toHaveLength(leadBefore);
+
+    expect(board.completeReview(task.id, {
+      from: 'alice', expectedReviewRequestId: cycle,
+    })).toMatchObject({ alreadyCompleted: true, column: 'done' });
+    const commentsAfter = board.getTask(dependent.id).comments.length;
+    const leadAfter = JSON.parse(fs.readFileSync(inboxFile, 'utf8')).length;
+    expect(commentsAfter).toBe(commentsBefore + 1);
+    expect(leadAfter).toBe(leadBefore + 1);
+    board.completeReview(task.id, { from: 'alice', expectedReviewRequestId: cycle });
+    expect(board.getTask(dependent.id).comments).toHaveLength(commentsAfter);
+    expect(JSON.parse(fs.readFileSync(inboxFile, 'utf8'))).toHaveLength(leadAfter);
+    expect(events(task.id, 'review_completed')).toHaveLength(1);
+  });
+
   it('repairs an Approved placement without treating it as recorded human consent', () => {
     const task = board.createTask({ subject: 'Recover human history', owner: 'bob' });
     board.completeTask(task.id, 'bob');
@@ -149,6 +189,35 @@ describe('human-only review approval', () => {
     board.setHumanOnlyApproval(false);
     expect(board.approveAsHuman(task.id)).toMatchObject({ reviewState: 'approved' });
     expect(board.getKanbanState().tasks[task.id].column).toBe('approved');
+    expect(events(task.id, 'human_approved')).toHaveLength(1);
+  });
+
+  it('replays dependency notice after the human approval overlay already persisted', () => {
+    const task = board.createTask({ subject: 'Human approval post-write failure', owner: 'bob' });
+    board.completeTask(task.id, 'bob');
+    board.setHumanOnlyApproval(true);
+    board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+    const dependent = board.createTask({
+      subject: 'Waiting on human approval', owner: 'bob', blockedBy: [task.id],
+    });
+    const commentsBefore = board.getTask(dependent.id).comments.length;
+    const realSet = kanbanStore.setKanbanColumn;
+    const fail = vi.spyOn(kanbanStore, 'setKanbanColumn').mockImplementationOnce((...args) => {
+      realSet(...args);
+      throw new Error('synthetic error after human overlay write');
+    });
+    expect(() => board.approveAsHuman(task.id)).toThrow(/after human overlay write/);
+    fail.mockRestore();
+
+    expect(board.getKanbanState().tasks[task.id].column).toBe('approved');
+    expect(events(task.id, 'human_approved')).toHaveLength(1);
+    expect(board.getTask(dependent.id).comments).toHaveLength(commentsBefore);
+
+    expect(board.approveAsHuman(task.id).reviewState).toBe('approved');
+    const commentsAfter = board.getTask(dependent.id).comments.length;
+    expect(commentsAfter).toBe(commentsBefore + 1);
+    board.approveAsHuman(task.id);
+    expect(board.getTask(dependent.id).comments).toHaveLength(commentsAfter);
     expect(events(task.id, 'human_approved')).toHaveLength(1);
   });
 

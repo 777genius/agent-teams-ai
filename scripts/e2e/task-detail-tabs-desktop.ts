@@ -396,14 +396,28 @@ try {
   // Real Electron + IPC + on-disk acceptance of the opt-in approval policy.
   // A hidden loading skeleton button must not count as the loaded Grid header.
   const toggleHumanApproval = async (layout: 'grid' | 'columns', checked: boolean): Promise<void> => {
-    const selector = layout === 'grid'
-      ? '.kanban-grid-item-wrapper [data-testid="kanban-approved-settings"]'
-      : '[data-testid="kanban-approved-settings"]';
+    // Both CDP programs are constant source strings; choose selectors inside
+    // the renderer rather than interpolating host values into executable code.
     await until(() => cdp!.evaluate(
-      `(()=>{const b=document.querySelector(${JSON.stringify(selector)});return b instanceof HTMLButtonElement&&!b.disabled&&b.getBoundingClientRect().width>0;})()`
+      `(()=>{
+        const grid = !!document.querySelector('[data-testid="kanban-view-grid"][aria-pressed="true"]');
+        const selector = grid
+          ? '.kanban-grid-item-wrapper [data-testid="kanban-approved-settings"]'
+          : '[data-testid="kanban-approved-settings"]';
+        const b = document.querySelector(selector);
+        return b instanceof HTMLButtonElement && !b.disabled && b.getBoundingClientRect().width > 0;
+      })()`
     ), `loaded ${layout} Approved-column settings button`);
     await cdp!.evaluate(
-      `(()=>{const b=document.querySelector(${JSON.stringify(selector)});if(!(b instanceof HTMLButtonElement))throw Error('Approved settings missing');b.focus();})()`
+      `(()=>{
+        const grid = !!document.querySelector('[data-testid="kanban-view-grid"][aria-pressed="true"]');
+        const selector = grid
+          ? '.kanban-grid-item-wrapper [data-testid="kanban-approved-settings"]'
+          : '[data-testid="kanban-approved-settings"]';
+        const b = document.querySelector(selector);
+        if (!(b instanceof HTMLButtonElement)) throw Error('Approved settings missing');
+        b.focus();
+      })()`
     );
     // Radix DropdownMenuTrigger opens on Enter/pointerdown, not DOM HTMLElement.click().
     await cdp!.send('Input.dispatchKeyEvent', {
@@ -412,9 +426,12 @@ try {
     await cdp!.send('Input.dispatchKeyEvent', {
       type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
     });
-    await until(() => cdp!.evaluate(
-      `(()=>{const item=document.querySelector('[role=menuitemcheckbox]');return item?.getAttribute('aria-checked')===${JSON.stringify(String(!checked))};})()`
-    ), `${layout} approval policy menu opened`);
+    await until(async () => {
+      const actual = await cdp!.evaluate(
+        "document.querySelector('[role=menuitemcheckbox]')?.getAttribute('aria-checked')"
+      );
+      return actual === String(!checked);
+    }, `${layout} approval policy menu opened`);
     await cdp!.evaluate(
       "(()=>{const item=document.querySelector('[role=menuitemcheckbox]');if(!(item instanceof HTMLElement))throw Error('Approval policy checkbox missing');item.click();})()"
     );
