@@ -1,0 +1,62 @@
+✔ the original finite captured child retains sanitized stderr and excludes its stdout protocol (12.754989ms)
+(node:119) [CLAUDE_SDK_CAN_USE_TOOL_SHADOWED] Warning: canUseTool will not be invoked for: mcp__team__task_create, mcp__team__task_update, mcp__team__task_set_owner, mcp__team__task_lifecycle, mcp__team__task_set_status, mcp__team__task_add_comment, mcp__team__task_set_clarification, mcp__team__task_link, mcp__team__task_unlink, mcp__team__review_request, mcp__team__review_start, mcp__team__review_approve, mcp__team__review_request_changes, mcp__team__task_get, mcp__team__message_send, mcp__team__command_lookup, mcp__team__task_start, mcp__team__task_complete, mcp__team__task_restore, mcp__team__task_delete, mcp__team__member_briefing, mcp__team__team_get, mcp__team__kanban_get, mcp__team__kanban_list_reviewers, mcp__team__task_get_comment, mcp__team__task_list, mcp__team__task_briefing, mcp__team__lead_briefing. Bare allowedTools entries auto-approve the whole tool before the callback is consulted. To gate every tool call, use a PreToolUse hook; or remove the bare names from allowedTools so they fall through to canUseTool. Allow rules from settings files can also shadow the callback but are not visible here.
+(Use `node --trace-warnings ...` to show where the warning was created)
+legacy-agent-host: claude-close {"binding":{"backendId":"TEST-backend","teamId":"TEST-team","runId":"TEST-run","memberId":"alice","generation":"1"},"sessionRef":"TEST-session","stage":"custody-confirmed","physicalConfirmed":true}
+legacy-agent-host: claude-close {"binding":{"backendId":"TEST-backend","teamId":"TEST-team","runId":"TEST-run","memberId":"alice","generation":"1"},"sessionRef":"TEST-session","stage":"sdk-close-completed","physicalConfirmed":true}
+legacy-agent-host: claude-close {"binding":{"backendId":"TEST-backend","teamId":"TEST-team","runId":"TEST-run","memberId":"alice","generation":"1"},"sessionRef":"TEST-session","stage":"sdk-read-completed","physicalConfirmed":true}
+✔ original Claude SDK child stderr reaches the member observer before failed startup and flushes its final tail (46.807317ms)
+✔ original standalone claude child retains startup stderr and its closing tail without an endpoint (18.821131ms)
+✔ original standalone codex child retains startup stderr and its closing tail without an endpoint (39.428632ms)
+✔ captured native executable is pinned again at launch and sealing forbids late allocation (1.776845ms)
+✔ captured launch rejects exact inode changes hidden by numeric file metadata before spawning (1.931376ms)
+✔ captured launch rejects exact mtime changes hidden by numeric file metadata before spawning (1.346104ms)
+✔ captured launch rejects exact ctime changes hidden by numeric file metadata before spawning (0.98083ms)
+✔ custody closes its live original process group, preserving a neighboring process (1576.803058ms)
+ℹ {"cleanupConfirmed":true,"descendantAbsent":true,"neighborPreserved":true}
+✔ custody holds an unverified group after parent exit until TEST descendants leave naturally (3645.991086ms)
+ℹ {"cleanupConfirmed":false,"descendantAbsent":true,"neighborPreserved":true}
+✔ an exited original cannot signal a positively probed replacement group (3556.151073ms)
+✔ captured launch revalidates selected cwd before any process allocation (9.49461ms)
+✔ original stderr captures startup and tail while redacting selected values across UTF-8 chunks (7.290017ms)
+✔ standalone stderr uses selected private values without a Team endpoint (0.907762ms)
+✔ invalid UTF-8 and NUL are readable diagnostics, including a final incomplete sequence (1.995432ms)
+✔ decoded UTF-8 and NUL expansion cannot exceed the retained text byte limit (1.492322ms)
+✔ oversized lines discard their complete suffix and preserve a multiline dump opener (0.719922ms)
+✔ dump continuations stay suppressed through ordinary newlines and oversized fragments (0.549558ms)
+✔ observer errors and reentrant close cannot change stream outcomes or duplicate a tail (0.517841ms)
+✔ a bounded escape-heavy line remains subject to the existing serialized journal limit (1.421197ms)
+✔ held escaped, URI and whitespace-normalized values and quoted assignments cannot leave secret suffixes (1.137865ms)
+✔ overlapping held values are masked in one pass: ABABAB (0.524411ms)
+✔ overlapping held values are masked in one pass: a (0.43666ms)
+✔ long split ANSI does not lose a dump opener before flush (0.666853ms)
+✔ long split ANSI does not lose a dump opener before discard (0.832049ms)
+✔ dump detection continues through already discarded oversized fragments (0.645271ms)
+✔ a short held value cannot destroy sensitive syntax before classification: s (0.386826ms)
+✔ a short held value cannot destroy sensitive syntax before classification: a (0.286987ms)
+✔ a short held value cannot destroy sensitive syntax before classification: h (0.431933ms)
+✔ syntax redaction cannot expose fragments of a transformed held value (0.776196ms)
+✔ an ANSI prefix larger than the line budget remains fail-closed (false) (0.767403ms)
+✔ an ANSI prefix larger than the line budget remains fail-closed (true) (0.846331ms)
+✔ held whitespace values cannot leak after contextual syntax redaction (space) (0.506183ms)
+✔ held whitespace values cannot leak after contextual syntax redaction (tab) (0.38224ms)
+✔ held whitespace values cannot leak after contextual syntax redaction (mixed) (0.494957ms)
+✔ safe diagnostics and unambiguous held-value context remain readable (0.534396ms)
+✔ held escaped forms stay private after contextual whitespace normalization (false) (0.440616ms)
+✔ held escaped forms stay private after contextual whitespace normalization (true) (0.411873ms)
+✔ post-mask expansion preserves the oversized gap before contextual ambiguity refusal (0.740844ms)
+✔ finite Host run keeps scheduled choices, one input and original outcome across replay and cold restart (154.001435ms)
+✔ cancel before start and during native open never submit; original physical cleanup releases the pending factory (33.293166ms)
+✔ original scheduled stderr is retained before SessionRef even when opening fails, without an input or replay (50.706391ms)
+✔ scheduled diagnostics refuse replaced selection, Team authority, workspace, writer and Host seal (40.755238ms)
+✔ scheduled stderr keeps the first 16 KiB on UTF-8 boundaries and one warning across cold reads (59.629608ms)
+✔ unknown cleanup is retained and cannot authorize replay or another native occurrence (112.426443ms)
+✔ independent schedules run concurrently and cancelling one preserves the original neighbor (44.75988ms)
+✔ actual pinned SDK standalone run completes, cancels and survives cold replay without mutating the Team recipe (7142.982864ms)
+ℹ tests 47
+ℹ suites 0
+ℹ pass 47
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 17910.029059

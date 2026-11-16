@@ -1,0 +1,116 @@
+{
+  "sourceHead": "67c7135fb4e7d656c8cb4d96ad07a04d33bec263",
+  "sourceTree": "da33c24a0c4bcaab7cd137efc56370d76ec9d9e6",
+  "publishedR1": "7129c83e73e17b0f79d6116dc14a7f811596d647",
+  "originalRedCommit": "0c534c9eed4c99b8cb85fb2e0860226beb0a4a7d",
+  "sourceFiles": [
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "blob": "6ea373c48119c94b796e28209a03602d0a438e86",
+      "bytes": 8127,
+      "sha256": "d318e1fdf5daeb98f955d9c8a6578249be1302b5585c181307521dd5d298cc69",
+      "physicalLines": 170
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "blob": "2891a53b464c400c64ab41dd99674ac6c463b39a",
+      "bytes": 17991,
+      "sha256": "99af998fb6d65e0e5b7f3957268a07898530c985aebbebed55df6bc3c3e2c493",
+      "physicalLines": 309
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "blob": "d2b952c9e6ac2281a14a00665cf4689d9c7d4b5c",
+      "bytes": 17005,
+      "sha256": "12be8f565712c09537d99ba75b63aa6e01774708ad1967c7ee2fdd964d747712",
+      "physicalLines": 366
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+      "blob": "dbbd17b11db24a9dc3fb989e0266101847f0a778",
+      "bytes": 41863,
+      "sha256": "f3f9147184700663c24d85a2a81ff6ab54724b7883a9e6fcc9bf9c324f473ab5",
+      "physicalLines": 598
+    }
+  ],
+  "steps": [
+    {
+      "path": "stderr-privacy-host-build.log",
+      "argv": [
+        "pnpm",
+        "--filter",
+        "@agent-teams/legacy-agent-host",
+        "build"
+      ],
+      "startedAt": "2026-11-16T01:08:17.714148+00:00",
+      "completedAt": "2026-11-16T01:08:20.718427+00:00",
+      "exitCode": 0,
+      "bytes": 182,
+      "sha256": "d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789"
+    },
+    {
+      "path": "stderr-privacy-green-three-files.log",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--test",
+        "--test-concurrency=1",
+        "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+        "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+        "packages/legacy-agent-host/tests/scheduled-run-host.test.ts"
+      ],
+      "startedAt": "2026-11-16T01:08:20.718713+00:00",
+      "completedAt": "2026-11-16T01:08:38.677421+00:00",
+      "exitCode": 0,
+      "bytes": 6905,
+      "sha256": "45c2880a7e30181e2eb0bfeba2c02abbd5e5fb708eb72e5dbbcdfdbb2b390076"
+    },
+    {
+      "path": "stderr-privacy-scoped-lint.log",
+      "argv": [
+        "pnpm",
+        "lint:fast:files",
+        "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+        "packages/legacy-agent-host/tests/member-process-stderr.test.ts"
+      ],
+      "startedAt": "2026-11-16T01:08:38.677699+00:00",
+      "completedAt": "2026-11-16T01:08:40.943131+00:00",
+      "exitCode": 0,
+      "bytes": 251,
+      "sha256": "c5245a6d402706af29f941844eaaab0629c3279fb3dc160a6f580e4e011e84c4"
+    },
+    {
+      "path": "stderr-privacy-diff-check.log",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "a3a9f56baf00a67f18256caea7721c3f6b954ca3",
+        "67c7135fb4e7d656c8cb4d96ad07a04d33bec263",
+        "--",
+        "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+        "packages/legacy-agent-host/tests/member-process-stderr.test.ts"
+      ],
+      "startedAt": "2026-11-16T01:08:40.943547+00:00",
+      "completedAt": "2026-11-16T01:08:40.948221+00:00",
+      "exitCode": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "nodeExecutable": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "pnpmVersion": "11.22.0",
+  "resourceFlags": null,
+  "dependencyGraph": "unchanged a3a9 frozen c79 pair",
+  "sourceDeltaFromA3": [
+    "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+    "packages/legacy-agent-host/tests/member-process-stderr.test.ts"
+  ],
+  "statusAfter": "",
+  "builtDist": {
+    "path": "packages/legacy-agent-host/dist/adapters/providers/observeMemberProcessStderr.js",
+    "bytes": 8412,
+    "sha256": "5cb7e0122cbd8d9ebb3e224c7d0b2322df349c1f0a8092fe7aeaf8a19fd2d581"
+  },
+  "qualification": "Exact resulting-source scoped local observations only; actual complete case count requires raw review; platform/GUI/native/whole-workspace qualification remains open"
+}

@@ -1,0 +1,19 @@
+{
+  "sourceHead": "67c7135fb4e7d656c8cb4d96ad07a04d33bec263",
+  "rosterBlob": "b52876e3215910eba3a3a24756f61c289a0965f9",
+  "bothChangedPathsPresentExactlyOnce": [
+    "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+    "packages/legacy-agent-host/tests/member-process-stderr.test.ts"
+  ],
+  "allSourceRosterFilesUnchangedFromA3": true,
+  "sourceFileCountUnchanged": 5020,
+  "sourceExceptionCountUnchanged": 141,
+  "productionLineCap": 800,
+  "actualHelperLines": 170,
+  "actualTestLines": 309,
+  "literalInversesReviewed": true,
+  "commonCountUnchanged": 1757,
+  "windowsCountUnchanged": 1798,
+  "packagedCountUnchanged": 1759,
+  "qualification": "Static unchanged-roster membership and exact two-source delta only; no new full compiler/native/GUI claim"
+}
