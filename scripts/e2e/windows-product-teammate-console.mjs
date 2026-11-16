@@ -185,19 +185,29 @@ async function ownedStillAlive(before) {
   return true;
 }
 
-/** Verify the original owned teammate wrapper in the live Win32 ancestry, not by assuming
- * the runtime snapshot's PID names the wrapper rather than its real CLI child. */
-async function findOriginalTeammateJobLauncher(member, teamName) {
+/** Alice is launched by the CLI inside the app-owned Job wrapper, not by Electron.
+ * Require the live ancestor chain to reach this exact original Electron Main. */
+async function findOriginalTeammateJobLauncher(member, main) {
   let current = member;
+  let wrapper = null;
+  const visited = new Set();
   const inspected = [];
-  for (let depth = 0; depth < 8 && current; depth++) {
-    inspected.push({ pid: current.pid, parent: current.parent, command: current.command });
-    if (current.command?.toLowerCase().includes('teammate.exe') &&
-        current.command.includes(teamName)) return current;
+  for (let depth = 0; depth < 12 && current; depth++) {
+    if (visited.has(current.pid)) break;
+    visited.add(current.pid);
+    const isWrapper = current.command?.toLowerCase().includes('teammate.exe') === true;
+    inspected.push({ pid: current.pid, parent: current.parent, isWrapper });
+    if (current.pid === main.pid) {
+      assert.equal(current.creation, main.creation,
+        'Original Electron Main identity changed during native Job ancestry proof');
+      assert(wrapper, 'Original lead has no owned Windows Job wrapper ancestor');
+      return wrapper;
+    }
+    if (isWrapper && !wrapper) wrapper = current;
     if (!Number.isSafeInteger(current.parent) || current.parent <= 0) break;
     current = await getProcess(current.parent);
   }
-  throw new Error('Product lead has no verified original Windows Job launcher ancestor: ' +
+  throw new Error('Original lead Job wrapper is not linked to this Electron Main: ' +
     JSON.stringify(inspected));
 }
 
@@ -568,7 +578,7 @@ async function run() {
   assert(forceExitMember.pid !== originalMember.pid,
     'Forced-exit product member must be a new process, not a recycled stopped member');
   forceExitOwnedLauncher = await findOriginalTeammateJobLauncher(
-    forceExitMember, forcedTeamName);
+    forceExitMember, mainBirth);
   assert(await ownedStillAlive(forceExitOwnedLauncher),
     'Owned Windows Job launcher retired before forced Electron Main shutdown');
   assert(await ownedStillAlive(forceExitMember),
