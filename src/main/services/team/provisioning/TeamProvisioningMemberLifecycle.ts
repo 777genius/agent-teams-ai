@@ -90,7 +90,10 @@ import {
   createNodeUpdateDirectTmuxRestartMemberConfigUseCase,
   type DirectTmuxRestartMemberConfigInput,
 } from './TeamProvisioningUpdateDirectTmuxRestartMemberConfigUseCase';
-import { spawnWindowsTeamRuntimeCli } from './TeamProvisioningWindowsRuntimeLauncher';
+import {
+  isOwnedWindowsTeamRuntimeWrapperProcess,
+  spawnWindowsTeamRuntimeCli,
+} from './TeamProvisioningWindowsRuntimeLauncher';
 
 import type { NativeAppManagedBootstrapSpec } from '../bootstrap/NativeAppManagedBootstrapContextBuilder';
 import type { TeamLaunchRuntimeAdapter } from '../runtime';
@@ -1094,6 +1097,9 @@ export class TeamProvisioningMemberLifecycleController {
           bootstrapExpectedAfter,
           backendType: 'process',
           runtimePid,
+          ...(isOwnedWindowsTeamRuntimeWrapperProcess(child)
+            ? { runtimePidRole: 'wrapper' as const }
+            : {}),
           bootstrapRuntimeEventsPath: runtimePaths.eventsPath,
           bootstrapProofToken,
           bootstrapRunId: input.run.runId,

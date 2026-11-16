@@ -123,6 +123,7 @@ export interface BootstrapRuntimeMemberLike {
   bootstrapBriefingHash?: string;
   bootstrapRuntimeEventsPath?: string;
   runtimePid?: number;
+  runtimePidRole?: 'wrapper';
 }
 
 export type BootstrapTranscriptRegularFileReader = (
@@ -677,6 +678,7 @@ export function isRuntimeBootstrapTransportEventCurrent(input: {
   runtimeMember?: BootstrapRuntimeMemberLike;
   expectedPid?: number;
   expectedBootstrapRunId?: string;
+  allowWrapperChildPidWithRunId?: boolean;
   boundaryMs: number;
 }): boolean {
   const { event, teamName, memberName, runtimeMember, expectedPid, expectedBootstrapRunId } = input;
@@ -709,7 +711,18 @@ export function isRuntimeBootstrapTransportEventCurrent(input: {
   }
   const eventPid = typeof event.pid === 'number' && Number.isFinite(event.pid) ? event.pid : NaN;
   if (typeof expectedPid === 'number' && expectedPid > 0 && eventPid !== expectedPid) {
-    return false;
+    // A native Windows Job wrapper has a different PID from its runtime child.
+    // Accept the child's diagnostic only when its launch-scoped run ID is present
+    // and exactly matches this attempt; other backends retain strict PID matching.
+    if (
+      input.allowWrapperChildPidWithRunId !== true ||
+      !Number.isSafeInteger(eventPid) ||
+      eventPid <= 0 ||
+      !expectedBootstrapRunId ||
+      eventBootstrapRunId !== expectedBootstrapRunId
+    ) {
+      return false;
+    }
   }
   if (Number.isFinite(input.boundaryMs)) {
     const timestamp = typeof event.timestamp === 'string' ? event.timestamp : '';
@@ -773,6 +786,8 @@ export async function readProcessBootstrapTransportSummary(input: {
       runtimeMember,
       expectedPid,
       expectedBootstrapRunId,
+      allowWrapperChildPidWithRunId:
+        runtimeMember?.runtimePidRole === 'wrapper' || memberRecord.runtimePidRole === 'wrapper',
       boundaryMs,
     })
   );
