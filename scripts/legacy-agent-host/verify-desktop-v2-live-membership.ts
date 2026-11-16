@@ -90,7 +90,7 @@ assert.equal(selected.nativeQualification, false); assert.equal(selected.linuxId
 const peers = rows(selected.peers); assert.deepEqual(peers.map(row => row.provider), ['claude', 'codex']);
 for (const peer of peers) {
   assert.equal(peer.root, join(current.root, 'TEST-peer-' + peer.provider + '-scope'));
-  const provider = templates.find(row => row.provider === peer.provider); assert.ok(provider);
+  const provider: NonNullable<typeof templates>[number] | undefined = templates.find(row => row.provider === peer.provider); assert.ok(provider);
   assert.deepEqual(provider.executable, peer.executable); assert.equal(provider.environment.TEST_EMULATED_DESKTOP_PROVIDER, '1');
   assert.equal(provider.environment.TEST_PEER_ROLE, 'runtime'); assert.equal(provider.environment.TEST_DESKTOP_COLLABORATION, undefined);
   assert.equal(provider.environment.TEST_DESKTOP_PEER_ROOT, peer.root);

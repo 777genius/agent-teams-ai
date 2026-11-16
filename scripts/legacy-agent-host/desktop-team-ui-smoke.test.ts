@@ -111,7 +111,7 @@ test('view-load diagnostics retain and echo the same bounded current-document pr
     events: unknown[];
     viewLoads: { events: Record<string, unknown>[]; overflow: boolean };
   };
-  assert.deepEqual(diagnostic.viewLoads, { events: [], overflow: false },
+  assert.deepEqual<typeof diagnostic.viewLoads>(diagnostic.viewLoads, { events: [], overflow: false },
     'an event before the original document fence is not attributed to the current view');
   emit(viewLoadEvent(viewLoadSample));
   assert.equal(diagnostic.viewLoads.events.length, 1);
