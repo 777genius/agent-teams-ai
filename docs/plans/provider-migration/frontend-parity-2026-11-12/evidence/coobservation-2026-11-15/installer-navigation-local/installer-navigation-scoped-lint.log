@@ -1,0 +1,1 @@
+$ eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content scripts/legacy-agent-host/desktop-ui-controls.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts

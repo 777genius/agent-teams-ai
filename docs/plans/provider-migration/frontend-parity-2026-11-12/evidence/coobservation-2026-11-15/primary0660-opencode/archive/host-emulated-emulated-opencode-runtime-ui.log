@@ -1,0 +1,24 @@
+{"phase":"prepared","receipt":"/home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/desktop-backend-receipt.json"}
+{"status":"INCOMPLETE","receipt":"/home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/desktop-backend-receipt.json","failureSource":{"kind":"assertion","frames":["scripts/legacy-agent-host/desktop-ui-controls.ts:288:12","scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts:87:37","scripts/legacy-agent-host/desktop-backend-smoke.ts:421:12","scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"]},"emulatedReadinessFailure":{"schemaVersion":1,"status":"available","snapshotRecorded":true,"snapshotUnavailable":null,"storeRecorded":true,"selectedTeamError":{"present":false,"bounded":null,"terms":[]},"importRecorded":false,"hydrationRecorded":false,"hydration":{"text":{"present":false,"bounded":null,"terms":[]},"permissions":null},"provisioning":{"count":1,"overflow":false,"items":[{"recorded":true,"progressRecorded":false,"currentProvisioningRunRecorded":false,"currentRuntimeRunRecorded":false,"state":null,"configReady":null,"error":{"present":false,"bounded":null,"terms":[]},"progressError":{"present":false,"bounded":null,"terms":[]},"message":{"present":false,"bounded":null,"terms":[]}}]},"peerCleanup":{"recorded":true,"absent":true,"observationFailed":null}}}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: provider-emulation UI proof incomplete; original receipt retained
++ actual - expected
+
++ 'INCOMPLETE'
+- 'PASS'
+
+    at assertDesktopProofCompleted (file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-proof-evidence.ts:70:28)
+    at main (file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-backend-smoke.ts:770:5)
+    at async file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'INCOMPLETE',
+  expected: 'PASS',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.21.0

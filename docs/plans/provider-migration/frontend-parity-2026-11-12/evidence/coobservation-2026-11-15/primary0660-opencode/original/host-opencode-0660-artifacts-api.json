@@ -1,0 +1,23 @@
+{
+  "artifacts": [
+    {
+      "id": 14189374994,
+      "name": "host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-opencode",
+      "size_in_bytes": 665565,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14189374994",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14189374994/zip",
+      "expired": false,
+      "created_at": "2026-11-16T01:26:58Z",
+      "expires_at": "2026-11-30T01:26:57Z",
+      "updated_at": "2026-11-16T01:26:58Z",
+      "digest": "sha256:4ebbd3445d8a455746843c471d9115e46502be1909c8a2b7b60110aaa0c57a2e",
+      "workflow_run": {
+        "id": 43780997237,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+      }
+    }
+  ]
+}

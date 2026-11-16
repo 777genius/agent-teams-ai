@@ -1,0 +1,97 @@
+{
+  "repository": "777genius/agent-teams-ai",
+  "head": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "run": 43780997237,
+  "job": 133017915900,
+  "artifact": 14189374994,
+  "archiveBytes": 665565,
+  "archiveSha256": "4ebbd3445d8a455746843c471d9115e46502be1909c8a2b7b60110aaa0c57a2e",
+  "crcVerified": true,
+  "uniqueSafePaths": true,
+  "members": [
+    {
+      "path": "TEST-desktop-backend-DXg4Xj/desktop-app.log",
+      "bytes": 16293,
+      "sha256": "b2ca4576e68242005e07157f4b5f5c993890eec8089ec6adb30835330c6911a9",
+      "gitBlobSha1": "71c36b4b187baa1371c8ab81ec53b0f885eced5a"
+    },
+    {
+      "path": "TEST-desktop-backend-DXg4Xj/TEST-peer-opencode-scope/effects.ndjson",
+      "bytes": 565,
+      "sha256": "78d878f13f081f16decd1645f3e413e55af5c115443236e3153a3b20645f4e56",
+      "gitBlobSha1": "eb87bd36e0473b88f81331383a05ba463baf9990"
+    },
+    {
+      "path": "TEST-desktop-backend-DXg4Xj/desktop-descriptor.json",
+      "bytes": 2653,
+      "sha256": "528640ae4a657a87074d59e9a8f9d9dc4689db383ff83c5571b6af4b06187d52",
+      "gitBlobSha1": "141556c6c2d4cd0f2afb8262d59be1e57ba33874"
+    },
+    {
+      "path": "TEST-desktop-backend-DXg4Xj/desktop-backend-receipt.json",
+      "bytes": 756997,
+      "sha256": "189e97065f05e8afba47064b1eb8c63ffc87d97cc6a4b292fd1ca461a092bde3",
+      "gitBlobSha1": "aeb2650c4ce00e53c7a8b746b506d992eac985e0"
+    },
+    {
+      "path": "TEST-desktop-backend-DXg4Xj/host-profile.json",
+      "bytes": 9801,
+      "sha256": "1e7f748d40236ce6e3daacb3385be78e79c4779c29dedd65ace1025bf69409b3",
+      "gitBlobSha1": "f6a15be5d9f8752cdfaaa3a3fe25cdd92e2e1931"
+    },
+    {
+      "path": "TEST-desktop-backend-DXg4Xj/hoststore/management-commands/03f164d40dc60de82996a045c86a527d1d3ec139a9a69116110d14689f27bf44.json",
+      "bytes": 5775,
+      "sha256": "772633be8830dc65b2aa3fb96045da5061d5e978d3d20a0a9e01e53d3dc18176",
+      "gitBlobSha1": "3ba570840ab36cfca3ad51b6f3c60aa867128733"
+    },
+    {
+      "path": "TEST-desktop-backend-DXg4Xj/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+      "gitBlobSha1": "6364a862f901e4ca8d4ecccb4d90cdd842a44162"
+    },
+    {
+      "path": "TEST-desktop-backend-DXg4Xj/ui-failure.png",
+      "bytes": 98967,
+      "sha256": "030e755d3913c47faf2364394dd0caa306f254c631ff482bf269a1ac5969aaaa",
+      "gitBlobSha1": "9e1393d49d0cfdfaefec629c2ff7b8e4ed513ee5"
+    },
+    {
+      "path": "TEST-desktop-backend-DXg4Xj/ui-seed-receipt.json",
+      "bytes": 2335,
+      "sha256": "6eb07e7d3a8e0bf32c75ed9268bb45a9de62d25a07cf6bedffada6c9df0fe3ff",
+      "gitBlobSha1": "832f6c08d971ee2c3b74172d8a76c217d53e8ea9"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-QEC5M5/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "gitBlobSha1": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-QEC5M5/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "gitBlobSha1": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517"
+    },
+    {
+      "path": "host-emulated-emulated-opencode-runtime-ui.log",
+      "bytes": 2078,
+      "sha256": "02347ed73389978c19a0d4fb6eaa5712061ba9d8f20acc689dbea350c4aca387",
+      "gitBlobSha1": "33a85ee8a2e44dbefb2c04dcc6da5cce0c9e06c6"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1803,
+      "sha256": "147371c4828cab7f4844faebceda5facee7085e055aa7bcff47488fca44e8f4d",
+      "gitBlobSha1": "50d7301c41f1f19300b2f88a14f10822212dcd2d"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "sha256": "f4d8276eefe8bae7fdfb1b961d5eb2cc302fac8def45bc38ea2fce2f9ea12720",
+      "gitBlobSha1": "44fcdb5cab964df596102f7bc6550d96b2107d70"
+    }
+  ]
+}

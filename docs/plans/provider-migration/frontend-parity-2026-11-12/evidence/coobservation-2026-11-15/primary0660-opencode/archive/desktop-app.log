@@ -1,0 +1,150 @@
+[WARN] Your node_modules are out of sync with your lockfile. The value of the enableGlobalVirtualStore setting has changed
+$ node ./scripts/dev-with-runtime.mjs --remoteDebuggingPort 9222 --remoteDebuggingPort 9222 --noSandbox
+Using runtime from explicit runtime override /home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/bin/claude-multimodel
+Runtime version: 2.777.777 (teams orchestrator)
+Using terminal-platform runtime from CLAUDE_TERMINAL_DAEMON_BINARY
+vite v6.4.4 building SSR bundle for development...
+transforming...
+node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js (74:0): A comment
+
+"/** Anchors a pattern source. The interpolation lives here rather than at the call site because
+ * esbuild will not drop a `@__PURE__` call whose own argument interpolates a variable, but it
+ * will drop `anchor(dateSource)`. Keeping it inline pinned `date` into every bundle. */"
+
+in "node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/regexes.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js (400:0): A comment
+
+"// Wrapped in a `@__PURE__` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle."
+
+in "node_modules/.pnpm/zod@4.6.7/node_modules/zod/v4/core/util.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+"fchmodSync", "ftruncateSync", "renameSync" and "unlinkSync" are imported from external module "fs" but never used in "node_modules/.pnpm/@anthropic-ai+claude-agent-sdk@0.3.305_@anthropic-ai+sdk@0.122.0_zod@4.6.7__@modelconte_62c9a77da74e02db303bb50cb88ff403/node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs".
+✓ 4018 modules transformed.
+rendering chunks...
+dist-electron/main/sentry-artifact-inventory.json                       0.22 kB
+dist-electron/main/task-change-worker.cjs                               2.35 kB │ map:      2.29 kB
+dist-electron/main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs       4.25 kB │ map:      7.76 kB
+dist-electron/main/chunks/index-yaJFGvjB.cjs                            4.30 kB │ map:      6.10 kB
+dist-electron/main/team-data-worker.cjs                                 6.59 kB │ map:     10.78 kB
+dist-electron/main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs       9.72 kB │ map:     19.61 kB
+dist-electron/main/chunks/index-D9GX0Q6a.cjs                           28.61 kB │ map:     38.45 kB
+dist-electron/main/team-fs-worker.cjs                                  56.73 kB │ map:    108.01 kB
+dist-electron/main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs              68.95 kB │ map:    135.17 kB
+dist-electron/main/internal-storage-worker.cjs                        212.54 kB │ map:    417.54 kB
+dist-electron/main/chunks/taskChangeState-rZolvpL6.cjs                561.88 kB │ map:    792.47 kB
+dist-electron/main/chunks/TeamDataService-DySh5-O-.cjs                800.65 kB │ map:  1,744.24 kB
+dist-electron/main/chunks/taskHistory-2kbwfqIg.cjs                  1,646.70 kB │ map:  3,906.02 kB
+dist-electron/main/index.cjs                                       11,737.96 kB │ map: 24,511.67 kB
+✓ built in 14.70s
+
+electron main process built successfully
+
+-----
+
+vite v6.4.4 building SSR bundle for development...
+transforming...
+✓ 109 modules transformed.
+rendering chunks...
+dist-electron/preload/index.js  96.17 kB
+✓ built in 85ms
+
+electron preload scripts built successfully
+
+-----
+
+[file-viewer:vite-plugin] Copied 18/18 renderer assets to /home/runner/work/agent-teams-ai/agent-teams-ai/node_modules/.cache/document-preview-public/file-viewer
+dev server running for the electron renderer process at:
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+
+starting electron app...
+
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"trace-active","limit":256,"childLimit":64,"coverage":"node-async-and-unix-process-table-only"}
+[App] Electron dev path overrides enabled {
+  userDataDir: '/home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/userData',
+  claudeRoot: '/home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/claude'
+}
+[4428:1116/012624.209978:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+
+DevTools listening on ws://127.0.0.1:9222/devtools/browser/50a30dd2-e023-434c-9801-c2b883184396
+[4428:1116/012624.270577:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[App] [dev] loading renderer from http://localhost:5173
+[4428:1116/012624.309950:ERROR:dbus/object_proxy.cc:589] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[4428:1116/012624.310027:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[Feature:Announcements] State transition { reason: 'writer_busy' }
+[4428:1116/012624.334600:ERROR:dbus/object_proxy.cc:589] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-spawn","pid":4510,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"ps","versionOnly":false,"observedBirth":{"startTicks":"32392","parentPid":4428,"processGroupId":4281},"atomic":false,"observedAtMs":1794792384386}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-exit","pid":4510,"status":0,"signal":null,"observedAtMs":1794792384401}
+[Feature:Announcements] State transition { reason: 'disabled' }
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"sync-result","requestedCommand":"unix-process-table","pid":4515,"status":0,"signal":null,"observedBirth":null,"atomic":false,"observedAtMs":1794792384483}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-spawn","pid":4514,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"node","versionOnly":false,"observedBirth":{"startTicks":"32398","parentPid":4428,"processGroupId":4281},"atomic":false,"observedAtMs":1794792384488}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-exit","pid":4514,"status":0,"signal":null,"observedAtMs":1794792384497}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"sync-result","requestedCommand":"unix-process-table","pid":4534,"status":0,"signal":null,"observedBirth":null,"atomic":false,"observedAtMs":1794792384571}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-spawn","pid":4533,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"node","versionOnly":false,"observedBirth":{"startTicks":"32409","parentPid":4428,"processGroupId":4281},"atomic":false,"observedAtMs":1794792384574}
+[App] [startup] renderer dom-ready
+[App] [startup] renderer did-finish-load
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-exit","pid":4533,"status":0,"signal":null,"observedAtMs":1794792386168}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-spawn","pid":4602,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"node","versionOnly":false,"observedBirth":{"startTicks":"32651","parentPid":4428,"processGroupId":4281},"atomic":false,"observedAtMs":1794792386968}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-exit","pid":4602,"status":0,"signal":null,"observedAtMs":1794792386974}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-spawn","pid":4604,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"node","versionOnly":false,"observedBirth":{"startTicks":"32653","parentPid":4428,"processGroupId":4281},"atomic":false,"observedAtMs":1794792386985}
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/claude/projects
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-spawn","pid":4904,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"ps","versionOnly":false,"observedBirth":{"startTicks":"33787","parentPid":4428,"processGroupId":4281},"atomic":false,"observedAtMs":1794792398338}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-exit","pid":4904,"status":0,"signal":null,"observedAtMs":1794792398369}
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/claude/projects
+[Discovery:ProjectScanner] Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/claude/projects
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/claude/projects
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-spawn","pid":5319,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"other","versionOnly":false,"observedBirth":{"startTicks":"35514","parentPid":4428,"processGroupId":4281},"atomic":false,"observedAtMs":1794792415602}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-exit","pid":5319,"status":0,"signal":null,"observedAtMs":1794792415603}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-spawn","pid":5320,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"other","versionOnly":false,"observedBirth":{"startTicks":"35515","parentPid":4428,"processGroupId":4281},"atomic":false,"observedAtMs":1794792415611}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-exit","pid":5320,"status":0,"signal":null,"observedAtMs":1794792415618}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-spawn","pid":5323,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"other","versionOnly":false,"observedBirth":{"startTicks":"35517","parentPid":4428,"processGroupId":4281},"atomic":false,"observedAtMs":1794792415627}
+Error occurred in handler for 'codexAccount:getSnapshot': BackendRoutingError: Backend routing: unavailable
+    at DesktopBackendFeature.captureSourceTarget (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59471:13)
+    at DesktopBackendFeature.captureCurrentManagementTarget (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59460:32)
+    at DesktopBackendFeature.captureProviderManagement (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59356:17)
+    at async /home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:138666:22
+    at async Object.getSnapshot (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:76658:22)
+    at async Session.<anonymous> (node:electron/js2c/browser_init:1:119027) {
+  code: 'unavailable',
+  outcome: 'not-dispatched'
+}
+Error occurred in handler for 'codexAccount:getSnapshot': BackendRoutingError: Backend routing: unavailable
+    at DesktopBackendFeature.captureSourceTarget (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59471:13)
+    at DesktopBackendFeature.captureCurrentManagementTarget (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59460:32)
+    at DesktopBackendFeature.captureProviderManagement (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:59356:17)
+    at async /home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:138666:22
+    at async Object.getSnapshot (/home/runner/work/agent-teams-ai/agent-teams-ai/dist-electron/main/index.cjs:76658:22)
+    at async Session.<anonymous> (node:electron/js2c/browser_init:1:119027) {
+  code: 'unavailable',
+  outcome: 'not-dispatched'
+}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-exit","pid":5323,"status":0,"signal":null,"observedAtMs":1794792415686}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-spawn","pid":5324,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"other","versionOnly":false,"observedBirth":{"startTicks":"35524","parentPid":4428,"processGroupId":4281},"atomic":false,"observedAtMs":1794792415701}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-exit","pid":5324,"status":0,"signal":null,"observedAtMs":1794792415702}
+[Service:FileWatcher] FileWatcher: Projects directory does not exist: /home/runner/work/_temp/TEST-desktop-backend-DXg4Xj/claude/projects
+[4428:1116/012656.492563:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[4428:1116/012656.492610:ERROR:dbus/object_proxy.cc:589] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[4428:1116/012656.492636:ERROR:dbus/bus.cc:406] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[4428:1116/012656.492644:ERROR:dbus/object_proxy.cc:589] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-exit","pid":4604,"status":0,"signal":null,"observedAtMs":1794792416634}
+[Feature:Announcements] State transition { reason: 'writer_busy' }
+[Feature:AgentBackendConnections] Captured backend discovery held { phase: 'discover-bindings', code: 'unavailable' }
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-spawn","pid":5370,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"ps","versionOnly":false,"observedBirth":{"startTicks":"35619","parentPid":4428,"processGroupId":4281},"atomic":false,"observedAtMs":1794792416651}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-exit","pid":5370,"status":0,"signal":null,"observedAtMs":1794792416658}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-spawn","pid":5371,"requestedCommand":"linux-child-exec","linuxChildExecTarget":"ps","versionOnly":false,"observedBirth":{"startTicks":"35621","parentPid":4428,"processGroupId":4281},"atomic":false,"observedAtMs":1794792416665}
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"async-exit","pid":5371,"status":0,"signal":null,"observedAtMs":1794792416672}
+Error occurred in handler for 'agentBackend:connections': Error: No handler registered for 'agentBackend:connections'
+    at Session.<anonymous> (node:electron/js2c/browser_init:1:119140)
+    at Session.emit (node:events:514:28)
+[TEST_MAIN_CHILD_PROCESS] {"mainPid":4428,"event":"trace-summary","rows":26,"droppedObservations":0,"observedChildren":12,"unobservedChildren":0,"observationFailures":0,"limited":false,"coverage":"node-async-and-unix-process-table-only"}

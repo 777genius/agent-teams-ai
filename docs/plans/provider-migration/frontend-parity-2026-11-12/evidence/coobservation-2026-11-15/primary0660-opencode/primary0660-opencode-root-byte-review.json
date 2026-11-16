@@ -1,0 +1,159 @@
+{
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "run": 43780997237,
+  "attempt": 1,
+  "job": 133017915900,
+  "conclusion": "failure",
+  "fullFiveBytesVerified": true,
+  "payloads": [
+    {
+      "path": "host-opencode-0660-artifacts-api.json",
+      "bytes": 919,
+      "gitBlob": "847358f0c269432af32714f703d71d7307e9d79d",
+      "sha256": "a1ca336a25e5507c7b9512b6a23f2b205338fb13293f20636a148fbd9baddb8c"
+    },
+    {
+      "path": "host-opencode-0660-job.log",
+      "bytes": 184267,
+      "gitBlob": "18de3a01b1af208e57279ba29317c6c12637911c",
+      "sha256": "e96323c7cd7ec9baba03e6f0c34153b9eec9f99c1b8b9b6b6ba6aa2739e3e422"
+    },
+    {
+      "path": "host-opencode-0660-jobs-api.json",
+      "bytes": 105404,
+      "gitBlob": "a95dfca2bc98a6f6adc61520f50c6eed6f1f9699",
+      "sha256": "788df02ed1b8216424c2c7b6305f08e16032d1c8351998cb330bb92b0296b945"
+    },
+    {
+      "path": "host-opencode-0660-manifest.json",
+      "bytes": 17295,
+      "gitBlob": "7ae2c37d69fe0e78132ca5ebc306ae7a500bfccc",
+      "sha256": "2951f762a1673b6c900c68bc42a9c4774f17f2ed0555f69b4b660e6e07c8a105"
+    },
+    {
+      "path": "host-opencode-0660-run-api.json",
+      "bytes": 13831,
+      "gitBlob": "be4e42e61d18361820e72eaacb0ca3c97f55d597",
+      "sha256": "0fcb1e655580135634430ab3294ebd85a3d8216b7617a4ea9b51afb438eb31ed"
+    }
+  ],
+  "totalBytes": 321716,
+  "apiRunJobArtifactAndUploadJoins": true,
+  "actualNodeSpecReporterCensus": {
+    "tests": [
+      115,
+      7
+    ],
+    "pass": [
+      115,
+      7
+    ],
+    "fail": [
+      0,
+      0
+    ],
+    "cancelled": [
+      0,
+      0
+    ],
+    "skipped": [
+      0,
+      0
+    ],
+    "todo": [
+      0,
+      0
+    ]
+  },
+  "prerequisites": {
+    "node": "24.21.0",
+    "pnpm": "11.22.0",
+    "originalDesktopEightFiles": {
+      "tests": 115,
+      "pass": 115,
+      "fail": 0,
+      "skip": 0,
+      "cancelled": 0
+    },
+    "installParser": {
+      "tests": 7,
+      "pass": 7,
+      "fail": 0,
+      "skip": 0,
+      "cancelled": 0
+    }
+  },
+  "firstFailure": {
+    "kind": "assertion",
+    "sourceSite": "scripts/legacy-agent-host/desktop-ui-controls.ts:288",
+    "assertion": "Original UI target moved after ownership check",
+    "comparedFields": [
+      "x",
+      "y",
+      "tag"
+    ],
+    "caller": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts:87",
+    "originalActionLabel": "expand original saved launch settings",
+    "phase": "Final target equality after stable samples and the original ownership check, before this action's mousePressed/mouseReleased.",
+    "reachedBeforeFailure": [
+      "ui.observeInput",
+      "original sidebar selection",
+      "open original saved Team Launch",
+      "saved TEST launch settings hydrate",
+      "the expansion control was not already expanded"
+    ],
+    "notReachedInSource": [
+      "fill dialog-prompt with TEST_UI_BOOT",
+      "Launch team preflight wait",
+      "launch saved TEST selection once",
+      "runtime launch capture wait",
+      "original provider business-input and schedule assertions"
+    ]
+  },
+  "sourceFreezeReview": {
+    "source": {
+      "head": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "dirty": false
+    },
+    "beforeCount": 1757,
+    "afterCount": 1757,
+    "orderedBeforeAfterEqual": true,
+    "all1757HashesMatchExactGitSource": true,
+    "receiptBytes": 756997,
+    "receiptSha256": "189e97065f05e8afba47064b1eb8c63ffc87d97cc6a4b292fd1ca461a092bde3",
+    "historicalFailureRetained": "Original UI target moved after ownership check\n+ actual - expected\n\n  [\n    700,\n+   505.75,\n-   494.75,\n    'BUTTON'\n  ]\n",
+    "originalCleanup": {
+      "processGroup": 4281,
+      "remaining": [
+        {
+          "pid": 4354,
+          "ppid": 1,
+          "pgid": 4281
+        }
+      ],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "cleanupFailure": "captured leader absent; retain cleanup debt without signaling",
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    }
+  },
+  "archive": {
+    "actualDownloadedBytes": 665565,
+    "sha256": "4ebbd3445d8a455746843c471d9115e46502be1909c8a2b7b60110aaa0c57a2e",
+    "crcVerified": true,
+    "safeUniqueMembers": 14
+  },
+  "initialReviewCorrection": {
+    "firstCheckerExit": 1,
+    "reason": "The root review checker incorrectly expected the receipt-only assertion string in console stdout. The stdout retains its exact failure frames; the complete receipt supplies the error operands.",
+    "alsoCorrectedBeforeNextExecution": "The original Node output uses the spec reporter \u2139 counters, not # TAP counter spelling.",
+    "correctionScope": "Read-only evidence checker, no product/source/test/runtime rerun or outcome replacement."
+  },
+  "limits": [
+    "The exact producer of the measured11px shift is not proven.",
+    "The original final geometry guard refused before the action press; no action replay.",
+    "One app process-group member remains; peerabsence does not establish fullcleanup."
+  ]
+}

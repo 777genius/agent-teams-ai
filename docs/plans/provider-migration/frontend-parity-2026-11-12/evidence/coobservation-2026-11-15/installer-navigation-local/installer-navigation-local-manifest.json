@@ -1,0 +1,141 @@
+{
+  "sourceHead": "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+  "sourceTree": "0b3ff52f7d0bbfb8544e4a9295acb9f2f24ca103",
+  "parent": "5e604214ab04da67125eb28963b3da5347964c3a",
+  "startedAt": "2026-11-16T02:00:11.447643+00:00",
+  "statusBefore": "clean",
+  "sourceFiles": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "gitBlob": "a78bfc7d0d656cd2a785aeb0a9bdd59a7262769e",
+      "bytes": 112084,
+      "physicalLines": 1849,
+      "sha256": "44d820e13772e553854e425b38314e96748d45310dbe1b20588336184f5df583"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78",
+      "bytes": 28741,
+      "physicalLines": 493,
+      "sha256": "9d5233b82df6a7dfa0d735b27c11f39f130824f3947c38896a0d052ca549cba4"
+    }
+  ],
+  "nodeExecutable": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeVersion": "v24.21.0",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "pnpmVersion": "11.22.0",
+  "AGENT_TEAMS_INSTALL_PROFILE": "node-ci",
+  "AGENT_BACKEND_TEST_NODE": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "resourceFlags": {
+    "NODE_OPTIONS": null,
+    "GOMAXPROCS": null,
+    "GOMEMLIMIT": null
+  },
+  "buildReuse": {
+    "newBuildAttempts": 0,
+    "verifiedHostBuildSource": "67c7135fb4e7d656c8cb4d96ad07a04d33bec263",
+    "allInterveningNonDocsPaths": [
+      "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts"
+    ],
+    "compiledDependencyInputsUnchanged": true,
+    "privacyHelperArtifactBytes": 8412,
+    "privacyHelperArtifactSha256": "5cb7e0122cbd8d9ebb3e224c7d0b2322df349c1f0a8092fe7aeaf8a19fd2d581"
+  },
+  "steps": [
+    {
+      "name": "installer-navigation-whole-file.log",
+      "argv": [
+        "node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "startedAt": "2026-11-16T02:00:11.594694+00:00",
+      "finishedAt": "2026-11-16T02:00:17.554928+00:00",
+      "durationSeconds": 5.960239061998436,
+      "exitCode": 0,
+      "bytes": 5276,
+      "sha256": "ae566f6dbc56d96b80857bf6725e45b43f604d62261fd210b55ecf049916b0e3"
+    },
+    {
+      "name": "installer-navigation-scoped-lint.log",
+      "argv": [
+        "pnpm",
+        "lint:fast:files",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "startedAt": "2026-11-16T02:00:17.555416+00:00",
+      "finishedAt": "2026-11-16T02:00:19.785237+00:00",
+      "durationSeconds": 2.2298359669948695,
+      "exitCode": 0,
+      "bytes": 213,
+      "sha256": "fda4e78fd032f058b70c348c60e94ba7e95ca57f6400b697cbecdb2d5bf4372f"
+    },
+    {
+      "name": "installer-navigation-source-size.log",
+      "argv": [
+        "pnpm",
+        "guard:source-file-size"
+      ],
+      "startedAt": "2026-11-16T02:00:19.785664+00:00",
+      "finishedAt": "2026-11-16T02:00:20.661154+00:00",
+      "durationSeconds": 0.8755077059904579,
+      "exitCode": 0,
+      "bytes": 249,
+      "sha256": "26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f"
+    },
+    {
+      "name": "installer-navigation-provisioning.log",
+      "argv": [
+        "pnpm",
+        "guard:team-provisioning-architecture"
+      ],
+      "startedAt": "2026-11-16T02:00:20.661677+00:00",
+      "finishedAt": "2026-11-16T02:00:21.135780+00:00",
+      "durationSeconds": 0.474117927995394,
+      "exitCode": 0,
+      "bytes": 245,
+      "sha256": "7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c"
+    },
+    {
+      "name": "installer-navigation-source-diff.log",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "5e604214ab04da67125eb28963b3da5347964c3a",
+        "2abcf83fddacbc1efedee83f9c1d203d12ed656e",
+        "--",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "startedAt": "2026-11-16T02:00:21.136177+00:00",
+      "finishedAt": "2026-11-16T02:00:21.139729+00:00",
+      "durationSeconds": 0.00355377999949269,
+      "exitCode": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "installer-navigation-source-closure.log",
+      "argv": [
+        "node",
+        "--input-type=module",
+        "-e",
+        "import assert from 'node:assert/strict';\nimport {existsSync,readFileSync} from 'node:fs';\nimport {createHash} from 'node:crypto';\nimport {desktopProofSources} from './scripts/legacy-agent-host/desktop-proof-sources.ts';\nimport {desktopProofWindowsRetrySources} from './scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts';\nconst file='scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts',source=readFileSync(file,'utf8');\nconst blocks=[...source.matchAll(/const sources = \\[\\.\\.\\.new Set\\(\\[\\.\\.\\.desktopProofSources,([\\s\\S]*?)\\]\\)\\];/g)];\nassert.equal(blocks.length,1);\nconst extras=[...blocks[0][1].matchAll(/'([^']+)'/g)].map(m=>m[1]);\nassert.deepEqual(extras,[file,'packages/legacy-agent-host/tests/opencode-v1-version-source.ts','scripts/e2e/comment-notification/cdp.mjs']);\nconst common=[...new Set(desktopProofSources)].sort(),windows=[...new Set([...common,...desktopProofWindowsRetrySources])].sort(),packaged=[...new Set([...common,...extras])].sort();\nconst rows=[['common',common,1757,'2e4566fa4aafd7b6db99195177385ffa96c2b1e50b72f260dd13fb61181473eb'],['windows',windows,1798,'2c8ba366802fe193a354ec13a4ec39b2231e6bfccbd3462f6fec0b60797dc9f6'],['packaged',packaged,1760,'c33360dbea805e11577d133b488682a9f3b7de83686801ab656eafcec1b94625']];\nfor(const[name,paths,count,digest]of rows){const raw=JSON.stringify(paths)+'\\n',actual=createHash('sha256').update(raw).digest('hex');assert.equal(paths.length,count);assert.equal(actual,digest);for(const p of paths)assert.ok(existsSync(p),p);console.log(JSON.stringify({name,count,bytes:Buffer.byteLength(raw),sha256:actual,allPathsExist:true}));}\n"
+      ],
+      "startedAt": "2026-11-16T02:00:21.139961+00:00",
+      "finishedAt": "2026-11-16T02:00:21.214335+00:00",
+      "durationSeconds": 0.07439089400577359,
+      "exitCode": 0,
+      "bytes": 432,
+      "sha256": "2c53b68d58c40380f407657ef9eab248acbe9cb729aeea3e378509fb2497d247"
+    }
+  ],
+  "qualification": "Bounded original whole-file observer regression and scoped guards only; historical GUI failures, native/platform and compiler qualification remain separate.",
+  "statusAfter": "",
+  "finishedAt": "2026-11-16T02:00:21.230541+00:00",
+  "allAuthorizedStepsPassed": true
+}

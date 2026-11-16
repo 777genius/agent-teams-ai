@@ -1,0 +1,29 @@
+{
+  "source": {
+    "head": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "dirty": false
+  },
+  "beforeCount": 1757,
+  "afterCount": 1757,
+  "orderedBeforeAfterEqual": true,
+  "all1757HashesMatchExactGitSource": true,
+  "receiptBytes": 756997,
+  "receiptSha256": "189e97065f05e8afba47064b1eb8c63ffc87d97cc6a4b292fd1ca461a092bde3",
+  "historicalFailureRetained": "Original UI target moved after ownership check\n+ actual - expected\n\n  [\n    700,\n+   505.75,\n-   494.75,\n    'BUTTON'\n  ]\n",
+  "originalCleanup": {
+    "processGroup": 4281,
+    "remaining": [
+      {
+        "pid": 4354,
+        "ppid": 1,
+        "pgid": 4281
+      }
+    ],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "cleanupFailure": "captured leader absent; retain cleanup debt without signaling",
+    "capturedHostObserved": false,
+    "capturedHostAbsent": null,
+    "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+  }
+}
