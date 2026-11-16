@@ -3014,6 +3014,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 cliProviderStatusLoading={cliProviderStatusLoading}
                 multimodelEnabled={multimodelEnabled}
                 codexSnapshotPending={codexSnapshotPending}
+                hasCapturedTeamReadiness={capturedReadiness.permits}
                 openCodePreparationEvidence={openCodePreparationEvidence}
                 providerIds={selectedMemberProviders}
                 label="Selected providers"

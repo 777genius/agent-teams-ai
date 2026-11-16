@@ -4,15 +4,15 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { basename, join, win32 } from 'node:path';
 
-import { afterEach, expect, it } from 'vitest';
 import { applyLaunchConfiguration, buildOpenCodeCoordinationConfig, buildOpenCodeCoordinationEnvironment,
   buildOpenCodeManagementEnvironment, runtimeMemberProfileSchema, runtimeSourceRecipeIdentity,
   selectOpenCodeCoordinationProvider, teamModelProbeProfile, withOpenCodeModelLimits } from '@agent-teams/legacy-agent-host/owned-process';
+import { afterEach, expect, it } from 'vitest';
 
-import { OpenCodeManagementHost } from '../../../packages/legacy-agent-host/dist/adapters/providers/OpenCodeManagementHost.js';
-import { applyOpenCodeRuntimeSource } from '../../../packages/legacy-agent-host/dist/composition/applyOpenCodeRuntimeSource.js';
 import { FileRuntimeSourceIndex } from '../../../packages/legacy-agent-host/dist/adapters/profile/FileRuntimeSourceIndex.js';
 import { FileManagementCommandStore } from '../../../packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore.js';
+import { OpenCodeManagementHost } from '../../../packages/legacy-agent-host/dist/adapters/providers/OpenCodeManagementHost.js';
+import { applyOpenCodeRuntimeSource } from '../../../packages/legacy-agent-host/dist/composition/applyOpenCodeRuntimeSource.js';
 import { publishRuntimeSourceSchema } from '../../../packages/legacy-agent-host/dist/composition/runtimeSourceContracts.js';
 import { teamHostProfileSchema } from '../../../packages/legacy-agent-host/dist/composition/TeamHost.js';
 import { providerManagementProfileSchema } from '../../../packages/legacy-agent-host/dist/management/profile.js';
@@ -20,8 +20,8 @@ import { runtimeDigest } from '../../../packages/legacy-agent-host/dist/runtime/
 import { CapturedWindowsRuntimeSources } from '../../../src/features/agent-backend/main/infrastructure/CapturedWindowsRuntimeSources';
 import { captureWindowsSourceAssociation } from '../../../src/features/agent-backend/main/infrastructure/capturedWindowsSourceAssociation';
 
-import type { NativeProcessProfile, ResolvedLaunchSpec, RuntimeSourceProcessOrigin } from '@agent-teams/legacy-agent-host/owned-process';
 import type { SelectedWindowsProcessProfile } from '../../../src/features/agent-backend/main/infrastructure/CapturedWindowsRuntimeSources';
+import type { NativeProcessProfile, ResolvedLaunchSpec, RuntimeSourceProcessOrigin } from '@agent-teams/legacy-agent-host/owned-process';
 
 const roots: string[] = [];
 afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true }); });

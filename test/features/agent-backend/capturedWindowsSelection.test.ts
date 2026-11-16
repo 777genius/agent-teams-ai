@@ -10,14 +10,14 @@ import { applyLaunchConfiguration, buildOpenCodeCoordinationConfig, buildOpenCod
 import { expect, it, vi } from 'vitest';
 
 import { createCodexMemberProvider } from '../../../packages/legacy-agent-host/dist/adapters/providers/CodexMemberProvider.js';
-import { createOpenCodeMemberProvider } from '../../../packages/legacy-agent-host/dist/adapters/providers/OpenCodeMemberProvider.js';
 import { OpenCodeManagementHost } from '../../../packages/legacy-agent-host/dist/adapters/providers/OpenCodeManagementHost.js';
+import { createOpenCodeMemberProvider } from '../../../packages/legacy-agent-host/dist/adapters/providers/OpenCodeMemberProvider.js';
 import { captureMainWindowsCustody } from '../../../src/features/agent-backend/main/infrastructure/CapturedWindowsCustody';
 
-import type { NativeProcessProfile } from '@agent-teams/legacy-agent-host/owned-process';
 import type { MemberProviderContext } from '../../../packages/legacy-agent-host/dist/adapters/providers/MemberProvider.js';
 import type { RuntimeMemberProfile } from '../../../packages/legacy-agent-host/dist/composition/runtimeProfile.js';
 import type { SelectedHostProfile } from '../../../src/features/agent-backend/main/infrastructure/selectedHostProfile';
+import type { NativeProcessProfile } from '@agent-teams/legacy-agent-host/owned-process';
 import type { PathLike, ReadStream } from 'node:fs';
 import type { FileHandle } from 'node:fs/promises';
 

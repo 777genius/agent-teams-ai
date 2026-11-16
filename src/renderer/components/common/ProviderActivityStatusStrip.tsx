@@ -32,6 +32,7 @@ interface ProviderActivityStatusStripProps {
   readonly cliProviderStatusLoading: Partial<Record<CliProviderId, boolean>>;
   readonly multimodelEnabled: boolean;
   readonly codexSnapshotPending?: boolean;
+  readonly hasCapturedTeamReadiness?: (providerId: CliProviderId, now: number) => boolean;
   readonly openCodePreparationEvidence?: OpenCodeScopedPreparationEvidence;
   readonly forceLoadingProviderIds?: readonly CliProviderId[];
   readonly providerIds?: readonly CliProviderId[];
@@ -86,6 +87,7 @@ function useProviderActivityDisplay({
   cliProviderStatusLoading,
   multimodelEnabled,
   codexSnapshotPending = false,
+  hasCapturedTeamReadiness,
   openCodePreparationEvidence,
   forceLoadingProviderIds,
   providerIds,
@@ -99,6 +101,7 @@ function useProviderActivityDisplay({
   | 'cliProviderStatusLoading'
   | 'multimodelEnabled'
   | 'codexSnapshotPending'
+  | 'hasCapturedTeamReadiness'
   | 'openCodePreparationEvidence'
   | 'forceLoadingProviderIds'
   | 'providerIds'
@@ -159,13 +162,18 @@ function useProviderActivityDisplay({
       return {
         provider,
         loading,
-        error: !loading && !scopedOpenCodeReady && !hasEffectiveProviderLaunchAuthority(provider),
+        error:
+          !loading &&
+          !scopedOpenCodeReady &&
+          hasCapturedTeamReadiness?.(provider.providerId, Date.now()) !== true &&
+          !hasEffectiveProviderLaunchAuthority(provider),
       };
     });
   }, [
     cliProviderStatusLoading,
     codexSnapshotPending,
     forcedLoadingProviderIdSet,
+    hasCapturedTeamReadiness,
     openCodePreparationEvidence,
     providerIdSet,
     renderCliStatus?.providers,
@@ -263,6 +271,7 @@ export const ProviderActivityStatusStrip = ({
   cliProviderStatusLoading,
   multimodelEnabled,
   codexSnapshotPending = false,
+  hasCapturedTeamReadiness,
   openCodePreparationEvidence,
   forceLoadingProviderIds,
   providerIds,
@@ -284,6 +293,7 @@ export const ProviderActivityStatusStrip = ({
     cliProviderStatusLoading,
     multimodelEnabled,
     codexSnapshotPending,
+    hasCapturedTeamReadiness,
     openCodePreparationEvidence,
     forceLoadingProviderIds,
     providerIds,

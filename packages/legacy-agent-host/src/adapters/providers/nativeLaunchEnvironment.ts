@@ -81,7 +81,7 @@ export function buildOpenCodeMemberConfiguration(profile: OpenCodeMemberProfile,
       },
     },
   };
-  return { serverName, required, effectiveAgent, nativeConfig };
+  return { serverName, required, effectiveAgent, nativeConfig, approvalMode, selectedPermissions };
 }
 
 export function buildOpenCodeMemberEnvironment(environment: Environment, nativeConfig: RecordValue,

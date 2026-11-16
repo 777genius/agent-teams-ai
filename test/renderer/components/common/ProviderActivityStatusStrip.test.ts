@@ -2,12 +2,14 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
+import { hasCapturedTeamLaunchReadiness } from '@renderer/components/team/dialogs/capturedTeamLaunchReadiness';
 import { getPendingProviderPreflightIds } from '@renderer/components/team/dialogs/optionalProviderPreflight';
 import { createLaunchGuard } from '@renderer/components/team/dialogs/providerLaunchAuthority';
 import { ProviderLaunchAuthorityNotice } from '@renderer/components/team/dialogs/ProviderLaunchAuthorityNotice';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { ProvisioningProviderCheck } from '@renderer/components/team/dialogs/provisioningProviderChecks';
 import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
 
 vi.mock('@renderer/api', () => ({
@@ -264,6 +266,133 @@ describe('ProviderActivityStatusStrip', () => {
       await act(async () => root.unmount());
     }
   );
+
+  it.each([
+    'draft',
+    'team',
+    'preparation',
+    'selection',
+    'expired',
+    'closed',
+    'text-only',
+    'failed',
+    'loading',
+  ] as const)('presents only current captured Team readiness through %s changes', async (scenario) => {
+    const now = 2_000_000_000_000;
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(now);
+    const scope = {
+      teamName: 'host-team:TEST-handle',
+      preparationId: 'TEST-preparation',
+      selectionSignature: 'TEST-selection',
+      draftSignature: 'TEST-current-draft',
+      open: true,
+    };
+    const proof = {
+      handleId: 'TEST-handle',
+      preparationId: scope.preparationId,
+      selectionSignature: scope.selectionSignature,
+      launchId: 'TEST-launch',
+      rosterRevision: 'TEST-source',
+      expiresAt: now + 60_000,
+    };
+    const check: ProvisioningProviderCheck = {
+      providerId: 'codex',
+      status: 'ready',
+      details: ['TEST selected model ready'],
+      capturedTeamDraftSignature: scope.draftSignature,
+      capturedTeamReadiness: proof,
+    };
+    const provider = createProvider({
+      providerId: 'codex',
+      displayName: 'Codex',
+      verificationState: 'error',
+      statusMessage: 'TEST global discovery is unavailable',
+    });
+    const cliStatus = createMultimodelStatus([
+      provider,
+      createProvider({
+        providerId: 'anthropic',
+        displayName: 'Anthropic',
+        verificationState: 'error',
+      }),
+    ]);
+    const originalStatus = JSON.stringify(cliStatus);
+    const permits = (providerId: CliProviderId, at: number) =>
+      hasCapturedTeamLaunchReadiness(scope, [check], providerId, at);
+    const statuses = new Map([['codex' as const, provider]]);
+    const guard = createLaunchGuard(['codex'], statuses, undefined, { permits });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = async (loading = false) => {
+      await act(async () => {
+        root.render(
+          React.createElement(ProviderActivityStatusStrip, {
+            cliStatus,
+            sourceCliStatus: cliStatus,
+            cliStatusLoading: false,
+            cliProviderStatusLoading: {},
+            multimodelEnabled: true,
+            hasCapturedTeamReadiness: (providerId, at) => permits(providerId, at),
+            forceLoadingProviderIds: loading ? ['codex'] : undefined,
+            showReadyProviders: true,
+            readyStatusText: 'Ready',
+          })
+        );
+      });
+    };
+    try {
+      await render();
+      const chip = () => host.querySelector('[data-testid="provider-activity-status-codex"]');
+      expect(chip()?.getAttribute('data-tone')).toBe('checked');
+      expect(chip()?.textContent).toContain('Ready');
+      expect(chip()?.textContent).not.toContain('Needs attention');
+      expect(guard.blocked(true)).toBe(false);
+      expect(createLaunchGuard(['codex'], statuses).blocked(true)).toBe(true);
+      expect(
+        host.querySelector('[data-testid="provider-activity-status-anthropic"]')?.getAttribute('data-tone')
+      ).toBe('error');
+
+      switch (scenario) {
+        case 'draft':
+          scope.draftSignature = 'TEST-edited-draft';
+          break;
+        case 'team':
+          scope.teamName = 'host-team:TEST-other-handle';
+          break;
+        case 'preparation':
+          scope.preparationId = 'TEST-other-preparation';
+          break;
+        case 'selection':
+          scope.selectionSignature = 'TEST-other-selection';
+          break;
+        case 'expired':
+          clock.mockReturnValue(proof.expiresAt);
+          break;
+        case 'closed':
+          scope.open = false;
+          break;
+        case 'text-only':
+          delete check.capturedTeamReadiness;
+          break;
+        case 'failed':
+          check.status = 'failed';
+          break;
+        case 'loading':
+          break;
+      }
+      await render(scenario === 'loading');
+      expect(chip()?.getAttribute('data-tone')).toBe(scenario === 'loading' ? 'loading' : 'error');
+      expect(chip()?.textContent).toContain(scenario === 'loading' ? 'Checking...' : 'Needs attention');
+      expect(chip()?.textContent).not.toContain('Ready');
+      expect(guard.blocked(true)).toBe(scenario !== 'loading');
+      expect(createLaunchGuard(['codex'], statuses).blocked(true)).toBe(true);
+      expect(JSON.stringify(cliStatus)).toBe(originalStatus);
+    } finally {
+      await act(async () => root.unmount());
+      clock.mockRestore();
+    }
+  });
 
   it('shows OpenCode ready when selected scoped catalogs settle passive discovery', async () => {
     const passiveProvider = createProvider({

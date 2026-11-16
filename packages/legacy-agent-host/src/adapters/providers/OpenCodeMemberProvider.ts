@@ -85,9 +85,10 @@ export function createOpenCodeMemberProvider(
   const requiredToolNames = createTeamMcpTools(context.connection)
     .list()
     .map((tool) => tool.name);
-  const { serverName, required, effectiveAgent, nativeConfig } = buildOpenCodeMemberConfiguration(
-    profile, config, prompt, { mcp, prefix, endpoint: context.endpoint, requiredToolNames,
-      ...(plugin ? { plugin } : {}) });
+  const { serverName, required, effectiveAgent, nativeConfig, approvalMode, selectedPermissions } =
+    buildOpenCodeMemberConfiguration(
+      profile, config, prompt, { mcp, prefix, endpoint: context.endpoint, requiredToolNames,
+        ...(plugin ? { plugin } : {}) });
   const expectedMcp = structuredClone(nativeConfig.mcp);
   if (policyNonce)
     record(record(expectedMcp[serverName]).headers)['X-Legacy-Mcp-Policy'] = policyNonce;

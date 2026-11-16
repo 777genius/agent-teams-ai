@@ -1,7 +1,11 @@
 // @vitest-environment node
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
 import { expect, it, vi } from 'vitest';
 
 import { captureRuntimeSources } from '../../../src/features/agent-backend/main/infrastructure/CapturedRuntimeSources';
+import { observeEmulatedSourcePeerReadiness } from '../../../tools/owned-process-broker/nativeEmulatedSourceReadiness';
 
 import type { JsonValue } from '@agent-teams/legacy-agent-host/contracts';
 import type { RuntimeSourceGrant, RuntimeSourcePublishIntent } from '@agent-teams/legacy-agent-host/runtime-sources';
@@ -64,4 +68,87 @@ it('cold read, retained discovery and lookup have no probe admission; explicit r
   expect(events).toEqual([]);
   await sources.recover(); await sources.refreshConfiguration({ commandId: input.commandId, expectedRevision: input.expectedRevision });
   expect(events).toEqual(['recover', 'recover-close', 'refresh', 'refresh-close']);
+});
+
+it('retains bounded existing Codex peer stages without private values or fabricated readiness', () => {
+  const privateValue = 'TEST-private-peer-value';
+  const event = (event: string, fields: Record<string, unknown> = {}) =>
+    ({ provider: 'codex', role: 'runtime', pid: 42, event, privateValue, ...fields });
+  const values = [
+    event('launch', { parentPid: 40, argc: 5 }),
+    event('mcp-catalog', { configuredServers: 0 }),
+    event('managed-configuration-read', { selectedServers: ['team'] }),
+    event('managed-configuration-read', { selectedServers: ['team'] }),
+    event('connected', { tools: [privateValue, 'task_list'] }),
+    event('exit', { code: 0 }),
+    event('input', { marker: privateValue }),
+    { ...event('connected', { tools: [privateValue] }), provider: 'opencode' },
+  ];
+  const evidence: Record<string, unknown> = {};
+  observeEmulatedSourcePeerReadiness(evidence, values, 'codex');
+  expect(evidence.sourcePeerReadiness).toEqual({
+    status: 'observed', provider: 'codex', capturePoint: 'existing-post-cleanup-effects-read',
+    atomicWithReadinessFailure: false, truncated: false,
+    events: [
+      { ordinal: 1, event: 'launch', pid: 42, role: 'runtime', parentPid: 40, argc: 5 },
+      { ordinal: 2, event: 'mcp-catalog', pid: 42, role: 'runtime', configuredServers: 0 },
+      { ordinal: 3, event: 'managed-configuration-read', pid: 42, role: 'runtime', selectedServerCount: 1, teamSelected: true },
+      { ordinal: 4, event: 'managed-configuration-read', pid: 42, role: 'runtime', selectedServerCount: 1, teamSelected: true },
+      { ordinal: 5, event: 'connected', pid: 42, role: 'runtime', toolCount: 2 },
+      { ordinal: 6, event: 'exit', pid: 42, role: 'runtime', code: 0 },
+    ],
+  });
+  expect(JSON.stringify(evidence)).not.toContain(privateValue);
+  expect(values[2]).toEqual(values[3]);
+  const bounded: Record<string, unknown> = {};
+  observeEmulatedSourcePeerReadiness(bounded,
+    Array.from({ length: 65 }, () => event('mcp-catalog', { configuredServers: 0 })), 'codex');
+  const retained = bounded.sourcePeerReadiness as { events: unknown[]; truncated: boolean };
+  expect(retained.events).toHaveLength(64); expect(retained.truncated).toBe(true);
+  const absent: Record<string, unknown> = {};
+  observeEmulatedSourcePeerReadiness(absent, values, 'claude'); expect(absent).toEqual({});
+  for (const invalid of [
+    event('launch', { parentPid: 40, argc: 1025 }),
+    event('mcp-catalog', { configuredServers: -1 }),
+    event('managed-configuration-read', { selectedServers: [privateValue] }),
+    event('connected', { tools: [null] }),
+    event('exit', { code: 7 }),
+    Object.defineProperty(event('launch', { parentPid: 40, argc: 5 }), 'pid', {
+      get() { throw new Error(privateValue); },
+    }),
+  ]) {
+    const unknown: Record<string, unknown> = {};
+    expect(() => observeEmulatedSourcePeerReadiness(unknown, [invalid], 'codex')).not.toThrow();
+    expect(unknown).toEqual({ sourcePeerReadiness: { status: 'unknown', provider: 'codex' } });
+  }
+});
+
+it('the actual existing effects/pins callsite keeps one read and original failure identity', () => {
+  const source = readFileSync(new URL('../../../tools/owned-process-broker/nativeEmulatedSourceScenario.ts', import.meta.url), 'utf8');
+  const lines = source.split('\n'), marker =
+    '    try { observeEmulatedSourcePeerReadiness(evidence, effects(), provider);';
+  const indexes = lines.flatMap((line, index) => line.startsWith(marker) ? [index] : []);
+  expect(indexes).toHaveLength(1);
+  const originalTail = new Function('observeEmulatedSourcePeerReadiness', 'evidence', 'effects',
+    'provider', 'fixture', 'fileHash', 'assert', 'errors',
+    lines.slice(indexes[0]!, indexes[0]! + 2).join('\n')) as (...args: unknown[]) => void;
+  for (const outcome of ['complete', 'effects-refusal', 'observer-and-pin-refusal'] as const) {
+    const error = new Error('TEST-original-' + outcome), calls: string[] = [], errors: unknown[] = [];
+    const evidence: Record<string, unknown> = {};
+    if (outcome === 'observer-and-pin-refusal') Object.defineProperty(evidence, 'sourcePeerReadiness', {
+      set() { throw new Error('TEST-passive-observer-refusal'); },
+    });
+    originalTail((...args: Parameters<typeof observeEmulatedSourcePeerReadiness>) => {
+      calls.push('observe'); observeEmulatedSourcePeerReadiness(...args);
+    }, evidence, () => {
+      calls.push('effects'); if (outcome === 'effects-refusal') throw error; return [];
+    }, 'codex', { pins: [{ path: 'TEST-original-pin', sha256: 'TEST-original-sha' }] }, (path: string) => {
+      calls.push('pin'); expect(path).toBe('TEST-original-pin');
+      if (outcome === 'observer-and-pin-refusal') throw error;
+      return 'TEST-original-sha';
+    }, assert, errors);
+    expect(calls).toEqual(outcome === 'effects-refusal' ? ['effects'] : ['effects', 'observe', 'pin']);
+    if (outcome === 'complete') expect(errors).toEqual([]);
+    else { expect(errors).toHaveLength(1); expect(errors[0]).toBe(error); }
+  }
 });

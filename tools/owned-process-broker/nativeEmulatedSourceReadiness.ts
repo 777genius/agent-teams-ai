@@ -84,3 +84,58 @@ export function readEmulatedSourceActionProbe(options: {
   assert.equal(receipt.readiness.evidence.decision, 'allow');
   return receipt;
 }
+
+/** Passive projection of the existing TEST peer journal, after original cleanup attempts. */
+export function observeEmulatedSourcePeerReadiness(
+  evidence: Record<string, unknown>, values: readonly Record<string, unknown>[], provider: string
+): void {
+  if (provider !== 'codex') return;
+  try {
+    const data = (row: object, key: string): unknown => {
+      const property = Object.getOwnPropertyDescriptor(row, key);
+      if (property && !('value' in property)) throw new Error('TEST non-data peer observation');
+      return property?.value;
+    };
+    const integer = (value: unknown, maximum = Number.MAX_SAFE_INTEGER): value is number =>
+      typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= maximum;
+    const events: Record<string, unknown>[] = [];
+    let truncated = false;
+    for (const [index, value] of values.entries()) {
+      if (data(value, 'provider') !== 'codex') continue;
+      const event = data(value, 'event');
+      if (typeof event !== 'string' ||
+          !['launch', 'mcp-catalog', 'managed-configuration-read', 'connected', 'exit'].includes(event)) continue;
+      if (events.length === 64) { truncated = true; break; }
+      const pid = data(value, 'pid'), role = data(value, 'role');
+      assert.ok(integer(pid) && pid > 0 && (role === 'runtime' || role === 'management'));
+      const row: Record<string, unknown> = { ordinal: index + 1, event, pid, role };
+      if (event === 'launch') {
+        const parentPid = data(value, 'parentPid'), argc = data(value, 'argc');
+        assert.ok(integer(parentPid) && parentPid > 0 && integer(argc, 1024));
+        row.parentPid = parentPid; row.argc = argc;
+      } else if (event === 'mcp-catalog') {
+        const configuredServers = data(value, 'configuredServers');
+        assert.ok(integer(configuredServers, 256)); row.configuredServers = configuredServers;
+      } else if (event === 'managed-configuration-read') {
+        const selected = data(value, 'selectedServers');
+        assert.ok(Array.isArray(selected) && selected.length <= 1 && selected.every(name => name === 'team'));
+        row.selectedServerCount = selected.length; row.teamSelected = selected.includes('team');
+      } else if (event === 'connected') {
+        const tools = data(value, 'tools');
+        assert.ok(Array.isArray(tools) && tools.length <= 256 && tools.every(name => typeof name === 'string'));
+        row.toolCount = tools.length;
+      } else {
+        const code = data(value, 'code');
+        assert.ok(code === 0 || code === 1); row.code = code;
+      }
+      events.push(row);
+    }
+    evidence.sourcePeerReadiness = {
+      status: 'observed', provider, capturePoint: 'existing-post-cleanup-effects-read',
+      atomicWithReadinessFailure: false, events, truncated,
+    };
+  } catch {
+    try { evidence.sourcePeerReadiness = { status: 'unknown', provider }; }
+    catch { /* Passive evidence cannot replace the original failure or pin check. */ }
+  }
+}

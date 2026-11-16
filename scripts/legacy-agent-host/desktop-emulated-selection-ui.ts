@@ -95,7 +95,8 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort & { evaluate(
     await fill('[role="dialog"] #dialog-prompt', 'TEST_UI_BOOT');
     assert.equal(await cdp.evaluate(`document.querySelector('[role="dialog"] #dialog-skip-permissions')?.getAttribute('data-state')`), 'unchecked');
     await ui.scrollTo('[role="dialog"] button', 'original Launch team', 'Launch team');
-    await ui.waitRead(`[...document.querySelectorAll('[role="dialog"] button')].some(e=>e.textContent.trim()==='Launch team'&&!e.disabled)`, 'original selected model preflight', 90_000);
+    await ui.waitRead(`[...document.querySelectorAll('[role="dialog"] button')].some(e=>e.textContent.trim()==='Launch team'&&!e.disabled)&&
+      (!${Boolean(installer)}||document.querySelector('[role="dialog"] [data-testid="provider-activity-status-codex"]')?.getAttribute('data-tone')==='checked')`, 'original selected model preflight', 90_000);
     assert.deepEqual((await selected.owner()).runtimeCaptures ?? [], []);
   };
   const launch = async (selected: Team) => {

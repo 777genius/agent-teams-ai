@@ -174,6 +174,9 @@ export const desktopProofSupplementarySources = [
   'src/features/runtime-provider-management/renderer/hooks/runtimeProviderConnectionTelemetry.ts',
   // Integrated Desktop runtime helper closure.
   'src/renderer/components/team/dialogs/useTeamModelProviderStatus.ts',
+  'src/renderer/components/common/ProviderActivityStatusStrip.tsx',
+  'src/renderer/utils/providerReadiness.ts',
+  'test/renderer/components/common/ProviderActivityStatusStrip.test.ts',
   'src/renderer/components/team/messages/useComposerTextarea.ts',
   'packages/legacy-agent-host/tests/fixtures/native-host.ts',
   'packages/legacy-agent-host/tests/fixtures/native-message-image.ts',

@@ -31,7 +31,7 @@ import { capturedQueryableWitness } from './nativeGateContext';
 import { createNativeGateEvents } from './nativeGateEvents';
 import { fileHash } from './nativeEmulatedProfile';
 import { finiteSourceProbe, prepareEmulatedSourceProfile } from './nativeEmulatedSourceProfile';
-import { readEmulatedSourceActionProbe } from './nativeEmulatedSourceReadiness';
+import { readEmulatedSourceActionProbe, observeEmulatedSourcePeerReadiness } from './nativeEmulatedSourceReadiness';
 
 import type { HostCustodyOwner, RuntimeSourceProcessOrigin } from '@agent-teams/legacy-agent-host/owned-process';
 import type { RuntimeSourcePublishIntent, RuntimeSourceSummary } from '@agent-teams/legacy-agent-host/runtime-sources';
@@ -724,7 +724,7 @@ export async function nativeEmulatedSourceScenario(sandbox: string, broker: stri
   finally {
     const errors: unknown[] = [];
     for (const epoch of epochs) try { await epoch.close(); } catch (error) { errors.push(error); }
-    try { effects(); for (const pin of fixture.pins) assert.equal(fileHash(pin.path), pin.sha256); }
+    try { observeEmulatedSourcePeerReadiness(evidence, effects(), provider); for (const pin of fixture.pins) assert.equal(fileHash(pin.path), pin.sha256); }
     catch (error) { errors.push(error); }
     evidence.epochs = epochs.map(epoch => ({ mainEpoch: epoch.physical.mainEpoch, pending: epoch.pending,
       serviceOperations: epoch.counts.service, firstCloseEntryMs: epoch.firstCloseEntryMs,

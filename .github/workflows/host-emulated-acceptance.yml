@@ -118,6 +118,7 @@ jobs:
             packages/legacy-agent-host/tests/saved-team-model-probe.test.ts \
             tools/owned-process-broker/nativeEmulatedSourceProfile.ts \
             tools/owned-process-broker/nativeEmulatedSourceScenario.ts \
+            tools/owned-process-broker/nativeEmulatedSourceReadiness.ts \
             packages/legacy-agent-host/tests/opencode-configuration-source.test.ts \
             scripts/e2e/opencode-diagnostics/platform.mjs \
             scripts/e2e/opencode-diagnostics/platform.test.mjs \
@@ -149,9 +150,13 @@ jobs:
             src/features/agent-backend/renderer/createHostTeamChanges.ts \
             src/features/agent-backend/renderer/createHostTeamProvisioning.ts \
             src/features/agent-backend/renderer/index.ts \
+            src/renderer/components/common/ProviderActivityStatusStrip.tsx \
+            src/renderer/components/team/dialogs/LaunchTeamDialog.tsx \
+            test/renderer/components/common/ProviderActivityStatusStrip.test.ts \
             src/renderer/store/slices/teamSlice.ts \
             src/renderer/store/team/teamRuntimeRunAdoption.ts \
             test/features/agent-backend/capturedWindowsSelection.test.ts \
+            test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts \
             test/features/agent-backend/hostMemberSpawnStatuses.test.ts \
             test/features/agent-backend/runtimeActivityFacade.test.ts \
             test/renderer/store/teamRuntimeRunAdoption.test.ts \

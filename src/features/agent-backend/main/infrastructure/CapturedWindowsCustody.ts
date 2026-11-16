@@ -16,12 +16,12 @@ import {
 
 import { bindMainWindowsRuntimeSources, CapturedWindowsRuntimeSources } from './CapturedWindowsRuntimeSources';
 import { captureWindowsSourceAssociation } from './capturedWindowsSourceAssociation';
-import { capturedHostProfileDigest } from './selectedHostProfile';
 import { captureWindowsEnvironmentRecipe, matchesWindowsLaunchEnvironment } from './matchesWindowsLaunchEnvironment';
+import { capturedHostProfileDigest } from './selectedHostProfile';
 
 import type { SelectedWindowsProcessProfile, WindowsSourceLaunchSelection } from './CapturedWindowsRuntimeSources';
-import type { SelectedHostProfile } from './selectedHostProfile';
 import type { WindowsPolicyPlugin } from './matchesWindowsLaunchEnvironment';
+import type { SelectedHostProfile } from './selectedHostProfile';
 import type { RuntimeSourceGrant } from '@agent-teams/legacy-agent-host/runtime-sources';
 
 function unavailable(): never {
