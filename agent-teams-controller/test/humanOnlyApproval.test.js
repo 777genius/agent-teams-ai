@@ -104,6 +104,22 @@ describe('human-only review approval', () => {
       .toThrow(/Stale review request/);
   });
 
+  it('retains manual acceptance of reviewed Done after the policy is switched off', () => {
+    const task = board.createTask({ subject: 'Reviewed before toggle', owner: 'bob' });
+    board.completeTask(task.id, 'bob');
+    board.setHumanOnlyApproval(true);
+    board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+    const cycle = events(task.id, 'review_requested')[0].id;
+    board.completeReview(task.id, { from: 'alice', expectedReviewRequestId: cycle });
+    board.setHumanOnlyApproval(false);
+    expect(() => board.approveReview(task.id, { from: 'alice' })).toThrow(/must be in review/);
+    expect(board.approveAsHuman(task.id)).toMatchObject({ reviewState: 'approved' });
+    expect(events(task.id, 'human_approved')).toHaveLength(1);
+    expect(board.completeReview(task.id, {
+      from: 'alice', expectedReviewRequestId: cycle,
+    })).toMatchObject({ alreadyCompleted: true, reviewState: 'approved', column: 'approved' });
+  });
+
   it('lets only the trusted human path request changes from reviewed Done', () => {
     const task = board.createTask({ subject: 'Human rejects AI review', owner: 'bob' });
     board.completeTask(task.id, 'bob');
