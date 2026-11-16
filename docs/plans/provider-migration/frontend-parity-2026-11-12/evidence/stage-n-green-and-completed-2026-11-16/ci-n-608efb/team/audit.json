@@ -1,0 +1,1946 @@
+{
+  "kind": "N608EFB_ORIGINAL_TEAM_PRIVACY_GREEN_AND_STATIC_FAILURE_AUDIT",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "sourceTree": "87e104735545a0860ec2bbcd9bf1ef2318dbbebb",
+  "runId": 43795234483,
+  "jobId": 133062441494,
+  "jobConclusion": "failure",
+  "rawInputs": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/team/job-133062441494.log",
+      "bytes": 2205340,
+      "gitBlob": "c5446ac9cf26e5515cf8c2b2c9f0df55f8e43795",
+      "sha256": "52b2fd9b7d2f66475e7e1818b91d3b3ca0f90636e8dee0fb1527279f68021fdd"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/team/original-job-log-response.json",
+      "bytes": 2221302,
+      "gitBlob": "cc9ef5825d11764ba1849705815a8b408aa75be0",
+      "sha256": "c1d612ec191ea3bbc403bd38e9346d9823274a81043baf7f89aa87da2014b5c8"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/owned-api-jobs-0359.json",
+      "bytes": 74155,
+      "gitBlob": "1d22478c6f314ce2384e2aa49be1cfc5f5d24691",
+      "sha256": "a1c4586cff2c3355ca035f881a1d42211247a89c3136fe8a347676f5b3b8d014"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/host-original-run-0258.json",
+      "bytes": 30088,
+      "gitBlob": "ea302039d9efa1062aad0a3c3c062fb462c39774",
+      "sha256": "c1cefe9db820bb9a40b1e371d99d4aa628bd66d1826a35bd8787c99d5e7a9a10"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/official-host-artifacts-0359.json",
+      "bytes": 6683,
+      "gitBlob": "14b0bd728f5173fba3a26cba373e2c7fd3fb1002",
+      "sha256": "c11a14868785e967397dd0307da8c2be6ea320f1d1ec933b7859a8b47d2f8318"
+    }
+  ],
+  "rawMcpDecodedContentEqualsLog": true,
+  "jobAndAllSteps": {
+    "id": 133062441494,
+    "name": "Offline Host Desktop (linux-x64, team)",
+    "status": "completed",
+    "conclusion": "failure",
+    "run_id": 43795234483,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Verify original checkout and runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Prepare private Linux display",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Install frozen workspace and Electron",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build existing Desktop prerequisites and verify admission",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Verify original Runtime and Team conversation contracts",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 10
+      },
+      {
+        "name": "Capture package-manager and Host inputs without vendor executables",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 11
+      },
+      {
+        "name": "Capture original controlled Linux process input without a provider",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Exercise ordinary Team controls and renderer reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Exercise ordinary Taskboard controls and persistence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Exercise original Skills and cross-Team controls",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15
+      },
+      {
+        "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Exercise original Review after a cold Host and app restart",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Exercise saved next-launch selection while the original Team remains live",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 24
+      },
+      {
+        "name": "Exercise stock Codex Update while the original Team retains its captured source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 25
+      },
+      {
+        "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 26
+      },
+      {
+        "name": "Prepare exact OpenCode V2 Bun and engine graph",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 27
+      },
+      {
+        "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 28
+      },
+      {
+        "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 29
+      },
+      {
+        "name": "Verify exact source, original screenshots, receipts and cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 30
+      },
+      {
+        "name": "Preserve original Desktop evidence, including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 60
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 61
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 62
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 63
+      }
+    ]
+  },
+  "runtime": {
+    "node": "24.21.0",
+    "pnpm": "11.22.0",
+    "electron": "44.10.1",
+    "typescriptNativeSelectedVersion": "7.0.2",
+    "tscVersionLimit": "The selected native compiler version is lock-derived; the log does not print an independent --version census."
+  },
+  "installAndBuild": {
+    "installCommand": "node scripts/ci/install-dependencies-with-retry.mjs --child-concurrency=1",
+    "frozenLockfileDeclaredByPinnedInstaller": true,
+    "lockfileUpToDateLine": "2026-11-16T03:43:41.4957650Z Lockfile is up to date, resolution step is skipped",
+    "installCompletedLine": "2026-11-16T03:44:06.5900067Z Done in 25.7s using pnpm v11.22.0",
+    "selected9423Tarballs": [
+      {
+        "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+        "bytes": 185996,
+        "gitBlob": "7130609dd29851148c9e2106e2764b75982739b1",
+        "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+        "sha512Base64": "97w75rWGES5ITobUIXcPu2S4JNgsd4HH3IpyQLECi68+iCNr/BYj9W+Uc8h7gDtKHU5o6sW+mueG2VDiNvBFcQ==",
+        "lockIntegrityMatches": true
+      },
+      {
+        "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+        "bytes": 6230,
+        "gitBlob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+        "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+        "sha512Base64": "ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g==",
+        "lockIntegrityMatches": true
+      }
+    ],
+    "hostBuildCommand": "pnpm --filter @agent-teams/legacy-agent-host build",
+    "hostPrebuild": "pnpm --filter @agent-teams/task-change-ledger build",
+    "hostBuildBody": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json",
+    "hostIncludes": "src/**/*.ts",
+    "freshOriginalBuildTranscript": [
+      {
+        "line": 652,
+        "raw": "2026-11-16T03:44:08.8920919Z Building modules: better-sqlite3"
+      },
+      {
+        "line": 653,
+        "raw": "2026-11-16T03:44:51.6301259Z ✔ Rebuild Complete"
+      },
+      {
+        "line": 654,
+        "raw": "2026-11-16T03:44:51.6487258Z ##[group]Run set -euo pipefail"
+      },
+      {
+        "line": 655,
+        "raw": "2026-11-16T03:44:51.6487617Z \u001b[36;1mset -euo pipefail\u001b[0m"
+      },
+      {
+        "line": 656,
+        "raw": "2026-11-16T03:44:51.6488009Z \u001b[36;1mif [[ \"$RUNNER_OS\" = Linux ]]; then node scripts/build/buildLinuxNodeExec.mjs; fi\u001b[0m"
+      },
+      {
+        "line": 657,
+        "raw": "2026-11-16T03:44:51.6488440Z \u001b[36;1mpnpm --filter @agent-teams/legacy-agent-host build\u001b[0m"
+      },
+      {
+        "line": 658,
+        "raw": "2026-11-16T03:44:51.6488817Z \u001b[36;1mpnpm --filter agent-teams-controller build\u001b[0m"
+      },
+      {
+        "line": 659,
+        "raw": "2026-11-16T03:44:51.6489251Z \u001b[36;1mpnpm --filter agent-teams-mcp build\u001b[0m"
+      },
+      {
+        "line": 660,
+        "raw": "2026-11-16T03:44:51.6490877Z \u001b[36;1mnode --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts\u001b[0m"
+      },
+      {
+        "line": 661,
+        "raw": "2026-11-16T03:44:51.6492660Z \u001b[36;1mnode --test test/scripts/installDependenciesWithRetry.test.mjs\u001b[0m"
+      },
+      {
+        "line": 662,
+        "raw": "2026-11-16T03:44:51.6566238Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}"
+      },
+      {
+        "line": 663,
+        "raw": "2026-11-16T03:44:51.6566635Z env:"
+      },
+      {
+        "line": 664,
+        "raw": "2026-11-16T03:44:51.6566934Z   AGENT_TEAMS_INSTALL_PROFILE: node-ci"
+      },
+      {
+        "line": 665,
+        "raw": "2026-11-16T03:44:51.6567300Z   HOST_EMULATED_SOURCE_HEAD: 608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+      },
+      {
+        "line": 666,
+        "raw": "2026-11-16T03:44:51.6567685Z   HOST_EMULATED_LANE: team"
+      },
+      {
+        "line": 667,
+        "raw": "2026-11-16T03:44:51.6567953Z   HOST_EMULATED_PLATFORM: linux-x64"
+      },
+      {
+        "line": 668,
+        "raw": "2026-11-16T03:44:51.6568257Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin"
+      },
+      {
+        "line": 669,
+        "raw": "2026-11-16T03:44:51.6568615Z   TMPDIR: /home/runner/work/_temp"
+      },
+      {
+        "line": 670,
+        "raw": "2026-11-16T03:44:51.6568860Z ##[endgroup]"
+      },
+      {
+        "line": 671,
+        "raw": "2026-11-16T03:44:52.3572251Z $ pnpm --filter @agent-teams/task-change-ledger build"
+      },
+      {
+        "line": 672,
+        "raw": "2026-11-16T03:44:52.7024703Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json"
+      },
+      {
+        "line": 673,
+        "raw": "2026-11-16T03:44:52.9815016Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json"
+      },
+      {
+        "line": 674,
+        "raw": "2026-11-16T03:44:55.2006539Z $ node ./scripts/build.mjs"
+      },
+      {
+        "line": 675,
+        "raw": "2026-11-16T03:44:55.5754587Z $ tsup"
+      },
+      {
+        "line": 676,
+        "raw": "2026-11-16T03:44:55.7998764Z \u001b[34mCLI\u001b[39m Building entry: src/index.ts"
+      },
+      {
+        "line": 677,
+        "raw": "2026-11-16T03:44:55.7999437Z \u001b[34mCLI\u001b[39m Using tsconfig: tsconfig.json"
+      },
+      {
+        "line": 678,
+        "raw": "2026-11-16T03:44:55.8000119Z \u001b[34mCLI\u001b[39m tsup v8.5.1"
+      },
+      {
+        "line": 679,
+        "raw": "2026-11-16T03:44:55.8000888Z \u001b[34mCLI\u001b[39m Using tsup config: /home/runner/work/agent-teams-ai/agent-teams-ai/mcp-server/tsup.config.ts"
+      },
+      {
+        "line": 680,
+        "raw": "2026-11-16T03:44:55.8012690Z \u001b[34mCLI\u001b[39m Target: node24"
+      },
+      {
+        "line": 681,
+        "raw": "2026-11-16T03:44:55.8017499Z \u001b[34mCLI\u001b[39m Cleaning output folder"
+      },
+      {
+        "line": 682,
+        "raw": "2026-11-16T03:44:55.8025819Z \u001b[34mESM\u001b[39m Build start"
+      },
+      {
+        "line": 683,
+        "raw": "2026-11-16T03:44:56.1177337Z \u001b[32mESM\u001b[39m \u001b[1mdist/index.js     \u001b[22m\u001b[32m3.04 MB\u001b[39m"
+      },
+      {
+        "line": 684,
+        "raw": "2026-11-16T03:44:56.1177761Z \u001b[32mESM\u001b[39m \u001b[1mdist/index.js.map \u001b[22m\u001b[32m4.78 MB\u001b[39m"
+      },
+      {
+        "line": 685,
+        "raw": "2026-11-16T03:44:56.1178082Z \u001b[32mESM\u001b[39m ⚡️ Build success in 315ms"
+      },
+      {
+        "line": 686,
+        "raw": "2026-11-16T03:44:57.1823860Z ✔ offline Desktop admission refuses inherited native selections before preparing a fixture (5.765589ms)"
+      }
+    ],
+    "stderrTestsImportFreshDist": "import { observeMemberProcessStderr } from '../dist/adapters/providers/observeMemberProcessStderr.js';",
+    "limits": [
+      "9423 identifies the checked pair selected by exact frozen dependency/lock bytes and successful original install. No independent installed-file census or native-provider qualification is invented.",
+      "Original ledger/Host/controller/MCP build commands finish before tests under set-e; no independent rebuild or complete generated-output inventory was performed by this audit."
+    ]
+  },
+  "originalPrerequisites": {
+    "helperFiles": 8,
+    "helperCounts": {
+      "total": 115,
+      "passed": 115,
+      "failed": 0,
+      "skipped": 0
+    },
+    "installerHelperCounts": {
+      "total": 7,
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "contracts": {
+    "command": "node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+    "testPaths": [
+      "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "packages/legacy-agent-host/tests/team-snapshot.test.ts",
+      "packages/legacy-agent-host/tests/team-product-changes.test.ts",
+      "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+      "packages/legacy-agent-host/tests/owned-process-facade.test.ts"
+    ],
+    "counts": {
+      "tests": 177,
+      "suites": 0,
+      "passed": 177,
+      "failed": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "durationMs": 62694.474306
+    },
+    "allCaseResults": [
+      {
+        "name": "the original finite captured child retains sanitized stderr and excludes its stdout protocol",
+        "milliseconds": 12.066527,
+        "line": 838,
+        "rawTimestamp": "2026-11-16T03:45:05.4402636Z"
+      },
+      {
+        "name": "original Claude SDK child stderr reaches the member observer before failed startup and flushes its final tail",
+        "milliseconds": 45.304364,
+        "line": 844,
+        "rawTimestamp": "2026-11-16T03:45:05.4848563Z"
+      },
+      {
+        "name": "original standalone claude child retains startup stderr and its closing tail without an endpoint",
+        "milliseconds": 22.361536,
+        "line": 845,
+        "rawTimestamp": "2026-11-16T03:45:05.5071582Z"
+      },
+      {
+        "name": "original standalone codex child retains startup stderr and its closing tail without an endpoint",
+        "milliseconds": 40.830125,
+        "line": 846,
+        "rawTimestamp": "2026-11-16T03:45:05.5482787Z"
+      },
+      {
+        "name": "captured native executable is pinned again at launch and sealing forbids late allocation",
+        "milliseconds": 1.513741,
+        "line": 847,
+        "rawTimestamp": "2026-11-16T03:45:05.5498261Z"
+      },
+      {
+        "name": "captured launch rejects exact inode changes hidden by numeric file metadata before spawning",
+        "milliseconds": 1.997313,
+        "line": 848,
+        "rawTimestamp": "2026-11-16T03:45:05.5517286Z"
+      },
+      {
+        "name": "captured launch rejects exact mtime changes hidden by numeric file metadata before spawning",
+        "milliseconds": 1.376745,
+        "line": 849,
+        "rawTimestamp": "2026-11-16T03:45:05.5531332Z"
+      },
+      {
+        "name": "captured launch rejects exact ctime changes hidden by numeric file metadata before spawning",
+        "milliseconds": 1.357464,
+        "line": 850,
+        "rawTimestamp": "2026-11-16T03:45:05.5549258Z"
+      },
+      {
+        "name": "custody closes its live original process group, preserving a neighboring process",
+        "milliseconds": 1599.969467,
+        "line": 851,
+        "rawTimestamp": "2026-11-16T03:45:07.1553145Z"
+      },
+      {
+        "name": "custody holds an unverified group after parent exit until TEST descendants leave naturally",
+        "milliseconds": 3619.023909,
+        "line": 853,
+        "rawTimestamp": "2026-11-16T03:45:10.7743360Z"
+      },
+      {
+        "name": "an exited original cannot signal a positively probed replacement group",
+        "milliseconds": 3536.838435,
+        "line": 855,
+        "rawTimestamp": "2026-11-16T03:45:14.3113784Z"
+      },
+      {
+        "name": "captured launch revalidates selected cwd before any process allocation",
+        "milliseconds": 1.780649,
+        "line": 856,
+        "rawTimestamp": "2026-11-16T03:45:14.3127393Z"
+      },
+      {
+        "name": "Codex observes only original stderr before initialization completes and retains the final tail",
+        "milliseconds": 27.223555,
+        "line": 857,
+        "rawTimestamp": "2026-11-16T03:45:14.6738181Z"
+      },
+      {
+        "name": "Codex profile is a finite private union and requires captured namespace paths",
+        "milliseconds": 9.135859,
+        "line": 858,
+        "rawTimestamp": "2026-11-16T03:45:14.6760207Z"
+      },
+      {
+        "name": "Codex profile enforces native 1 MiB ceiling before allocation and preserves Claude bounds",
+        "milliseconds": 5.437141,
+        "line": 859,
+        "rawTimestamp": "2026-11-16T03:45:14.6772832Z"
+      },
+      {
+        "name": "Codex 0.162.0 enforces tuple eligibility before selected-config tools, attributed inputs and exact interrupt",
+        "milliseconds": 15.827542,
+        "line": 860,
+        "rawTimestamp": "2026-11-16T03:45:14.6948208Z"
+      },
+      {
+        "name": "Codex 0.169.0 enforces tuple eligibility before selected-config tools, attributed inputs and exact interrupt",
+        "milliseconds": 3.372009,
+        "line": 861,
+        "rawTimestamp": "2026-11-16T03:45:14.7309390Z"
+      },
+      {
+        "name": "Codex missingTools setup failure cleans captured handles before throwing",
+        "milliseconds": 8.357055,
+        "line": 862,
+        "rawTimestamp": "2026-11-16T03:45:14.7323362Z"
+      },
+      {
+        "name": "Codex failInitialize setup failure cleans captured handles before throwing",
+        "milliseconds": 8.745384,
+        "line": 863,
+        "rawTimestamp": "2026-11-16T03:45:14.7404523Z"
+      },
+      {
+        "name": "Codex checkpoint setup failure cleans captured handles before throwing",
+        "milliseconds": 7.788067,
+        "line": 864,
+        "rawTimestamp": "2026-11-16T03:45:14.7405286Z"
+      },
+      {
+        "name": "seal or lost allocation authority prevents a Codex process allocation",
+        "milliseconds": 11.039149,
+        "line": 865,
+        "rawTimestamp": "2026-11-16T03:45:14.7405856Z"
+      },
+      {
+        "name": "Host Codex adapter awaits its captured original-input baseline and terminal observer through real public D",
+        "milliseconds": 19.173097,
+        "line": 866,
+        "rawTimestamp": "2026-11-16T03:45:14.7473653Z"
+      },
+      {
+        "name": "captured Codex options preserve none across each input and true-only Fast config",
+        "milliseconds": 7.143062,
+        "line": 867,
+        "rawTimestamp": "2026-11-16T03:45:14.7538121Z"
+      },
+      {
+        "name": "captured Codex options preserve minimal across each input and true-only Fast config",
+        "milliseconds": 6.337361,
+        "line": 868,
+        "rawTimestamp": "2026-11-16T03:45:14.7599663Z"
+      },
+      {
+        "name": "captured Codex options preserve ultra across each input and true-only Fast config",
+        "milliseconds": 6.71603,
+        "line": 869,
+        "rawTimestamp": "2026-11-16T03:45:14.7672584Z"
+      },
+      {
+        "name": "captured Codex options preserve TEST-future-native-effort across each input and true-only Fast config",
+        "milliseconds": 6.154314,
+        "line": 870,
+        "rawTimestamp": "2026-11-16T03:45:14.7898975Z"
+      },
+      {
+        "name": "Codex Default/absent options preserve the captured recipe; explicit false adds no native Fast override",
+        "milliseconds": 11.83723,
+        "line": 871,
+        "rawTimestamp": "2026-11-16T03:45:14.7920009Z"
+      },
+      {
+        "name": "managed Codex 0.162.0 appOnly enforces tuple eligibility and retained-thread restore across Host endpoint rotation",
+        "milliseconds": 25.183872,
+        "line": 872,
+        "rawTimestamp": "2026-11-16T03:45:14.8112555Z"
+      },
+      {
+        "name": "managed Codex 0.162.0 inherited enforces tuple eligibility and retained-thread restore across Host endpoint rotation",
+        "milliseconds": 20.059051,
+        "line": 873,
+        "rawTimestamp": "2026-11-16T03:45:14.8354507Z"
+      },
+      {
+        "name": "managed Codex 0.169.0 appOnly enforces tuple eligibility and retained-thread restore across Host endpoint rotation",
+        "milliseconds": 1.802012,
+        "line": 874,
+        "rawTimestamp": "2026-11-16T03:45:14.8361500Z"
+      },
+      {
+        "name": "managed Codex 0.169.0 inherited enforces tuple eligibility and retained-thread restore across Host endpoint rotation",
+        "milliseconds": 1.51653,
+        "line": 875,
+        "rawTimestamp": "2026-11-16T03:45:14.8375358Z"
+      },
+      {
+        "name": "captured appOnly launches veto original plugin names and exact native gate precedes thread allocation",
+        "milliseconds": 16.823962,
+        "line": 876,
+        "rawTimestamp": "2026-11-16T03:45:14.8548486Z"
+      },
+      {
+        "name": "changed original native census refuses before app-server allocation and without a thread",
+        "milliseconds": 3.139729,
+        "line": 877,
+        "rawTimestamp": "2026-11-16T03:45:14.8616390Z"
+      },
+      {
+        "name": "new captured selection without original native census refuses before process custody",
+        "milliseconds": 1.183335,
+        "line": 878,
+        "rawTimestamp": "2026-11-16T03:45:14.8618027Z"
+      },
+      {
+        "name": "captured Codex argv reaches only the selected app-server launch, preserving managed flags",
+        "milliseconds": 5.145745,
+        "line": 879,
+        "rawTimestamp": "2026-11-16T03:45:14.8619028Z"
+      },
+      {
+        "name": "captured Codex managed aliases and positional prompts refuse before custody allocation",
+        "milliseconds": 5.304254,
+        "line": 880,
+        "rawTimestamp": "2026-11-16T03:45:14.8620011Z"
+      },
+      {
+        "name": "original stderr captures startup and tail while redacting selected values across UTF-8 chunks",
+        "milliseconds": 7.402829,
+        "line": 881,
+        "rawTimestamp": "2026-11-16T03:45:14.9714212Z"
+      },
+      {
+        "name": "standalone stderr uses selected private values without a Team endpoint",
+        "milliseconds": 0.983118,
+        "line": 882,
+        "rawTimestamp": "2026-11-16T03:45:14.9720936Z"
+      },
+      {
+        "name": "invalid UTF-8 and NUL are readable diagnostics, including a final incomplete sequence",
+        "milliseconds": 0.607285,
+        "line": 883,
+        "rawTimestamp": "2026-11-16T03:45:14.9722287Z"
+      },
+      {
+        "name": "decoded UTF-8 and NUL expansion cannot exceed the retained text byte limit",
+        "milliseconds": 2.622165,
+        "line": 884,
+        "rawTimestamp": "2026-11-16T03:45:14.9723261Z"
+      },
+      {
+        "name": "oversized lines discard their complete suffix and preserve a multiline dump opener",
+        "milliseconds": 0.951567,
+        "line": 885,
+        "rawTimestamp": "2026-11-16T03:45:14.9724176Z"
+      },
+      {
+        "name": "dump continuations stay suppressed through ordinary newlines and oversized fragments",
+        "milliseconds": 0.704003,
+        "line": 886,
+        "rawTimestamp": "2026-11-16T03:45:14.9725560Z"
+      },
+      {
+        "name": "observer errors and reentrant close cannot change stream outcomes or duplicate a tail",
+        "milliseconds": 0.849394,
+        "line": 887,
+        "rawTimestamp": "2026-11-16T03:45:14.9726604Z"
+      },
+      {
+        "name": "a bounded escape-heavy line remains subject to the existing serialized journal limit",
+        "milliseconds": 1.193865,
+        "line": 888,
+        "rawTimestamp": "2026-11-16T03:45:14.9746193Z"
+      },
+      {
+        "name": "held escaped, URI and whitespace-normalized values and quoted assignments cannot leave secret suffixes",
+        "milliseconds": 1.189103,
+        "line": 889,
+        "rawTimestamp": "2026-11-16T03:45:14.9755543Z"
+      },
+      {
+        "name": "overlapping held values are masked in one pass: ABABAB",
+        "milliseconds": 0.710084,
+        "line": 890,
+        "rawTimestamp": "2026-11-16T03:45:14.9756409Z"
+      },
+      {
+        "name": "overlapping held values are masked in one pass: a",
+        "milliseconds": 0.516101,
+        "line": 891,
+        "rawTimestamp": "2026-11-16T03:45:14.9756928Z"
+      },
+      {
+        "name": "long split ANSI does not lose a dump opener before flush",
+        "milliseconds": 0.871969,
+        "line": 892,
+        "rawTimestamp": "2026-11-16T03:45:14.9757563Z"
+      },
+      {
+        "name": "long split ANSI does not lose a dump opener before discard",
+        "milliseconds": 1.201476,
+        "line": 893,
+        "rawTimestamp": "2026-11-16T03:45:14.9758272Z"
+      },
+      {
+        "name": "dump detection continues through already discarded oversized fragments",
+        "milliseconds": 0.85661,
+        "line": 894,
+        "rawTimestamp": "2026-11-16T03:45:14.9759074Z"
+      },
+      {
+        "name": "a short held value cannot destroy sensitive syntax before classification: s",
+        "milliseconds": 0.682074,
+        "line": 895,
+        "rawTimestamp": "2026-11-16T03:45:14.9759957Z"
+      },
+      {
+        "name": "a short held value cannot destroy sensitive syntax before classification: a",
+        "milliseconds": 0.413198,
+        "line": 896,
+        "rawTimestamp": "2026-11-16T03:45:14.9760744Z"
+      },
+      {
+        "name": "a short held value cannot destroy sensitive syntax before classification: h",
+        "milliseconds": 0.43113,
+        "line": 897,
+        "rawTimestamp": "2026-11-16T03:45:14.9761349Z"
+      },
+      {
+        "name": "syntax redaction cannot expose fragments of a transformed held value",
+        "milliseconds": 0.927028,
+        "line": 898,
+        "rawTimestamp": "2026-11-16T03:45:14.9762174Z"
+      },
+      {
+        "name": "an ANSI prefix larger than the line budget remains fail-closed (false)",
+        "milliseconds": 1.253206,
+        "line": 899,
+        "rawTimestamp": "2026-11-16T03:45:14.9763019Z"
+      },
+      {
+        "name": "an ANSI prefix larger than the line budget remains fail-closed (true)",
+        "milliseconds": 0.7822,
+        "line": 900,
+        "rawTimestamp": "2026-11-16T03:45:14.9763566Z"
+      },
+      {
+        "name": "held whitespace values cannot leak after contextual syntax redaction (space)",
+        "milliseconds": 0.53159,
+        "line": 901,
+        "rawTimestamp": "2026-11-16T03:45:14.9764088Z"
+      },
+      {
+        "name": "held whitespace values cannot leak after contextual syntax redaction (tab)",
+        "milliseconds": 0.366114,
+        "line": 902,
+        "rawTimestamp": "2026-11-16T03:45:14.9764791Z"
+      },
+      {
+        "name": "held whitespace values cannot leak after contextual syntax redaction (mixed)",
+        "milliseconds": 0.621435,
+        "line": 903,
+        "rawTimestamp": "2026-11-16T03:45:14.9765709Z"
+      },
+      {
+        "name": "safe diagnostics and unambiguous held-value context remain readable",
+        "milliseconds": 0.668479,
+        "line": 904,
+        "rawTimestamp": "2026-11-16T03:45:14.9766544Z"
+      },
+      {
+        "name": "closed provider authority reads one fresh state with three namespace traversals and keeps original refusals",
+        "milliseconds": 72.979837,
+        "line": 905,
+        "rawTimestamp": "2026-11-16T03:45:15.7736988Z"
+      },
+      {
+        "name": "restored provider authority binds the complete open request and keeps current fences",
+        "milliseconds": 45.043667,
+        "line": 907,
+        "rawTimestamp": "2026-11-16T03:45:15.7746262Z"
+      },
+      {
+        "name": "restored native input keeps the full checkpoint-bearing request identity",
+        "milliseconds": 31.741947,
+        "line": 908,
+        "rawTimestamp": "2026-11-16T03:45:15.7746890Z"
+      },
+      {
+        "name": "only validated legacy roster applicability can fall back after all common authority checks",
+        "milliseconds": 45.891086,
+        "line": 909,
+        "rawTimestamp": "2026-11-16T03:45:15.7747550Z"
+      },
+      {
+        "name": "both live workAllowed reads remain independent and final namespace validation refuses a late alias",
+        "milliseconds": 32.300653,
+        "line": 910,
+        "rawTimestamp": "2026-11-16T03:45:15.7748249Z"
+      },
+      {
+        "name": "closed currentness follows an original additive roster receipt without replacing an existing member",
+        "milliseconds": 23.373724,
+        "line": 911,
+        "rawTimestamp": "2026-11-16T03:45:15.7749255Z"
+      },
+      {
+        "name": "immutable provider entries and denied or unexpected aggregate results cannot enter fallback",
+        "milliseconds": 32.955596,
+        "line": 912,
+        "rawTimestamp": "2026-11-16T03:45:15.7803491Z"
+      },
+      {
+        "name": "a prepared original lifecycle command refuses currentness before its state publication",
+        "milliseconds": 31.419206,
+        "line": 913,
+        "rawTimestamp": "2026-11-16T03:45:15.7804596Z"
+      },
+      {
+        "name": "original factory stderr survives failed opening and cold read but cannot follow revoked or replaced sources",
+        "milliseconds": 53.720137,
+        "line": 914,
+        "rawTimestamp": "2026-11-16T03:45:15.7818458Z"
+      },
+      {
+        "name": "early SDK write and EOF wait for native owner installation and resume, with backpressure",
+        "milliseconds": 4.875627,
+        "line": 915,
+        "rawTimestamp": "2026-11-16T03:45:15.8821641Z"
+      },
+      {
+        "name": "abort-during-prepare never resumes native code or flushes queued input",
+        "milliseconds": 1.906986,
+        "line": 916,
+        "rawTimestamp": "2026-11-16T03:45:15.8841681Z"
+      },
+      {
+        "name": "authority-loss-during-install never resumes native code or flushes queued input",
+        "milliseconds": 0.867812,
+        "line": 917,
+        "rawTimestamp": "2026-11-16T03:45:15.8881528Z"
+      },
+      {
+        "name": "target exit before resume acknowledgement preserves its native code and final stdout/stderr",
+        "milliseconds": 3.138083,
+        "line": 918,
+        "rawTimestamp": "2026-11-16T03:45:15.8885109Z"
+      },
+      {
+        "name": "prepare/control failure requests original cleanup once and never invents target termination",
+        "milliseconds": 1.492821,
+        "line": 919,
+        "rawTimestamp": "2026-11-16T03:45:15.8893855Z"
+      },
+      {
+        "name": "conversation materialization keeps 150 distinct original replies across mixed-ring eviction without nontext or poll IO",
+        "milliseconds": 2080.164537,
+        "line": 920,
+        "rawTimestamp": "2026-11-16T03:45:18.1095707Z"
+      },
+      {
+        "name": "conversation failure never rewrites terminal facts or accepts an older publication as current",
+        "milliseconds": 16.808499,
+        "line": 921,
+        "rawTimestamp": "2026-11-16T03:45:18.1263840Z"
+      },
+      {
+        "name": "legacy conversation reads use only dated original input events and never migrate or invent timestamps",
+        "milliseconds": 11.453564,
+        "line": 922,
+        "rawTimestamp": "2026-11-16T03:45:18.1379172Z"
+      },
+      {
+        "name": "conversation corrupt, missing, oversized and foreign derived records hold under the original member read grant",
+        "milliseconds": 26.071585,
+        "line": 923,
+        "rawTimestamp": "2026-11-16T03:45:18.1639996Z"
+      },
+      {
+        "name": "conversation missing original state refuses retained observations without decoding large files or resetting authority",
+        "milliseconds": 10.250464,
+        "line": 924,
+        "rawTimestamp": "2026-11-16T03:45:18.1743429Z"
+      },
+      {
+        "name": "conversation rows require the original input, operation and delivery fingerprint after cold read",
+        "milliseconds": 9.06857,
+        "line": 925,
+        "rawTimestamp": "2026-11-16T03:45:18.1833832Z"
+      },
+      {
+        "name": "conversation finite FD read refuses symlink without adopting replacement bytes",
+        "milliseconds": 8.764259,
+        "line": 926,
+        "rawTimestamp": "2026-11-16T03:45:18.1920419Z"
+      },
+      {
+        "name": "conversation finite FD read refuses before-open without adopting replacement bytes",
+        "milliseconds": 8.09816,
+        "line": 927,
+        "rawTimestamp": "2026-11-16T03:45:18.2003303Z"
+      },
+      {
+        "name": "conversation finite FD read refuses after-open without adopting replacement bytes",
+        "milliseconds": 9.127731,
+        "line": 928,
+        "rawTimestamp": "2026-11-16T03:45:18.2094361Z"
+      },
+      {
+        "name": "conversation finite FD read refuses symlink-before-open without adopting replacement bytes",
+        "milliseconds": 8.396525,
+        "line": 929,
+        "rawTimestamp": "2026-11-16T03:45:18.2178950Z"
+      },
+      {
+        "name": "conversation finite FD read refuses disappeared-before-open without adopting replacement bytes",
+        "milliseconds": 7.965898,
+        "line": 930,
+        "rawTimestamp": "2026-11-16T03:45:18.2259486Z"
+      },
+      {
+        "name": "conversation fresh empty marker refuses a nonempty retained file instead of adopting it",
+        "milliseconds": 10.706321,
+        "line": 931,
+        "rawTimestamp": "2026-11-16T03:45:18.2367695Z"
+      },
+      {
+        "name": "conversation equal text remains input-distinct, existing blocks may clear, and 65 blocks survive count retention",
+        "milliseconds": 994.753887,
+        "line": 932,
+        "rawTimestamp": "2026-11-16T03:45:19.2319686Z"
+      },
+      {
+        "name": "conversation partial storage ports remain explicitly unsupported and cannot publish an unchecked marker",
+        "milliseconds": 8.408841,
+        "line": 933,
+        "rawTimestamp": "2026-11-16T03:45:19.2401413Z"
+      },
+      {
+        "name": "conversation exact reserved-envelope budget retains the reply and one extra byte reports loss without evicting it",
+        "milliseconds": 633.315124,
+        "line": 934,
+        "rawTimestamp": "2026-11-16T03:45:19.8764328Z"
+      },
+      {
+        "name": "snapshot and replay share a fence/cursor; persisted text/tools/usage/interaction state survives restart with explicit incarnation gap",
+        "milliseconds": 28.946981,
+        "line": 935,
+        "rawTimestamp": "2026-11-16T03:45:19.9026804Z"
+      },
+      {
+        "name": "bounded retention/paging gives explicit gap and cannot return a future or another member cursor",
+        "milliseconds": 30.105735,
+        "line": 936,
+        "rawTimestamp": "2026-11-16T03:45:19.9327698Z"
+      },
+      {
+        "name": "wrong native/session/input/operation attribution is never assigned to this member or a neighboring input",
+        "milliseconds": 15.725194,
+        "line": 937,
+        "rawTimestamp": "2026-11-16T03:45:19.9488960Z"
+      },
+      {
+        "name": "oversized/unsupported projection data cannot abort later permission and terminal/control persistence",
+        "milliseconds": 18.63207,
+        "line": 938,
+        "rawTimestamp": "2026-11-16T03:45:19.9680553Z"
+      },
+      {
+        "name": "projection write failure exposes a gap while observer continues to durable terminal and later observations",
+        "milliseconds": 10.497886,
+        "line": 939,
+        "rawTimestamp": "2026-11-16T03:45:19.9777504Z"
+      },
+      {
+        "name": "projection corrupt is HOLD rather than a reset cursor and cannot stop terminal persistence",
+        "milliseconds": 8.582253,
+        "line": 940,
+        "rawTimestamp": "2026-11-16T03:45:19.9861390Z"
+      },
+      {
+        "name": "projection digest is HOLD rather than a reset cursor and cannot stop terminal persistence",
+        "milliseconds": 8.031531,
+        "line": 941,
+        "rawTimestamp": "2026-11-16T03:45:19.9942641Z"
+      },
+      {
+        "name": "projection missing is HOLD rather than a reset cursor and cannot stop terminal persistence",
+        "milliseconds": 8.034326,
+        "line": 942,
+        "rawTimestamp": "2026-11-16T03:45:20.0023316Z"
+      },
+      {
+        "name": "projection symlink is HOLD rather than a reset cursor and cannot stop terminal persistence",
+        "milliseconds": 7.514549,
+        "line": 943,
+        "rawTimestamp": "2026-11-16T03:45:20.0098634Z"
+      },
+      {
+        "name": "projection oversize is HOLD rather than a reset cursor and cannot stop terminal persistence",
+        "milliseconds": 7.287461,
+        "line": 944,
+        "rawTimestamp": "2026-11-16T03:45:20.0173158Z"
+      },
+      {
+        "name": "current read grant gates snapshots/replay and a consumer without event storage stays explicitly unsupported",
+        "milliseconds": 8.635078,
+        "line": 945,
+        "rawTimestamp": "2026-11-16T03:45:20.0260118Z"
+      },
+      {
+        "name": "bounded feed pages replay each retained event once and snapshot marks a truncated latest view",
+        "milliseconds": 520.971273,
+        "line": 946,
+        "rawTimestamp": "2026-11-16T03:45:20.5473212Z"
+      },
+      {
+        "name": "open/checkpoint/control/seal/reconcile state mutations advance the same cursor without a second business log",
+        "milliseconds": 24.741846,
+        "line": 947,
+        "rawTimestamp": "2026-11-16T03:45:20.5718831Z"
+      },
+      {
+        "name": "event namespace symlink is rejected without touching external files or blocking terminal facts",
+        "milliseconds": 7.21176,
+        "line": 948,
+        "rawTimestamp": "2026-11-16T03:45:20.5790983Z"
+      },
+      {
+        "name": "enabling projections on an existing unprojected session preserves an explicit historical gap",
+        "milliseconds": 5.28434,
+        "line": 949,
+        "rawTimestamp": "2026-11-16T03:45:20.5843738Z"
+      },
+      {
+        "name": "private child activity shares the original Runtime input/fence and snapshot without settling root control or accepting foreign provenance",
+        "milliseconds": 11.498702,
+        "line": 950,
+        "rawTimestamp": "2026-11-16T03:45:20.5959239Z"
+      },
+      {
+        "name": "original process diagnostics keep config and incarnation fences and survive only unreleased closing",
+        "milliseconds": 13.058927,
+        "line": 951,
+        "rawTimestamp": "2026-11-16T03:45:20.6090124Z"
+      },
+      {
+        "name": "process diagnostics use the existing serialized event budget and storage degradation without changing control",
+        "milliseconds": 10.13101,
+        "line": 952,
+        "rawTimestamp": "2026-11-16T03:45:20.6191675Z"
+      },
+      {
+        "name": "distinct Thinking retains original attribution without becoming text, conversation or state",
+        "milliseconds": 10.288846,
+        "line": 953,
+        "rawTimestamp": "2026-11-16T03:45:20.6296936Z"
+      },
+      {
+        "name": "scheduled log projection is one read of original Thinking identities and unattributed stderr, including cold recovery",
+        "milliseconds": 20.585381,
+        "line": 954,
+        "rawTimestamp": "2026-11-16T03:45:20.6502522Z"
+      },
+      {
+        "name": "auxiliary log trimming shares the existing byte budget without changing original groups or their completeness",
+        "milliseconds": 75.417913,
+        "line": 955,
+        "rawTimestamp": "2026-11-16T03:45:20.7257064Z"
+      },
+      {
+        "name": "ordinary lead replies replace their original signed conversation row without inbox writes or product feed churn",
+        "milliseconds": 303.421345,
+        "line": 956,
+        "rawTimestamp": "2026-11-16T03:45:21.6535997Z"
+      },
+      {
+        "name": "never-opened lead and an original no-allocation Skip retain an empty conversation without creating Runtime state",
+        "milliseconds": 65.026942,
+        "line": 957,
+        "rawTimestamp": "2026-11-16T03:45:21.7184866Z"
+      },
+      {
+        "name": "ordinary long replies preserve 30 KiB snapshots and 300 KiB Unicode through signed fragments and cold reads",
+        "milliseconds": 519.05281,
+        "line": 958,
+        "rawTimestamp": "2026-11-16T03:45:22.2376469Z"
+      },
+      {
+        "name": "task recovery never returns a prior receipt for a changed command with unavailable attachments",
+        "milliseconds": 89.246877,
+        "line": 959,
+        "rawTimestamp": "2026-11-16T03:45:22.3318976Z"
+      },
+      {
+        "name": "mixed Host boots V2 Session SPI profile without invoking V1 management registration",
+        "milliseconds": 799.989807,
+        "line": 960,
+        "rawTimestamp": "2026-11-16T03:45:23.1352921Z"
+      },
+      {
+        "name": "two captured teams may share an original run ID without sharing launch ownership",
+        "milliseconds": 99.625737,
+        "line": 961,
+        "rawTimestamp": "2026-11-16T03:45:23.2338314Z"
+      },
+      {
+        "name": "cold unavailable Team history retains original resources while an independent Team still captures and runs",
+        "milliseconds": 496.107122,
+        "line": 962,
+        "rawTimestamp": "2026-11-16T03:45:23.7231473Z"
+      },
+      {
+        "name": "a superseded unstarted capture cannot inject its prompt into a newer launch with the same product revision",
+        "milliseconds": 113.37019,
+        "line": 963,
+        "rawTimestamp": "2026-11-16T03:45:23.8363464Z"
+      },
+      {
+        "name": "saved configuration captures fresh native identities, preserves historical launches and replays after cold restart",
+        "milliseconds": 329.449267,
+        "line": 964,
+        "rawTimestamp": "2026-11-16T03:45:24.1659323Z"
+      },
+      {
+        "name": "capture rejects stale product sources, missing recipes and protected args before native allocation",
+        "milliseconds": 39.680476,
+        "line": 965,
+        "rawTimestamp": "2026-11-16T03:45:24.2053824Z"
+      },
+      {
+        "name": "NDJSON saved roster edits preserve product APIs across stale runtime capture/restart without allocation",
+        "milliseconds": 73.919648,
+        "line": 966,
+        "rawTimestamp": "2026-11-16T03:45:24.2794345Z"
+      },
+      {
+        "name": "NDJSON roster replacement refuses live allocation, then saves only after confirmed stop",
+        "milliseconds": 2697.804576,
+        "line": 967,
+        "rawTimestamp": "2026-11-16T03:45:26.9845882Z"
+      },
+      {
+        "name": "captured-run OpenCode live Add reaches its original model probe and preserves failed-probe refusal",
+        "milliseconds": 805.222014,
+        "line": 968,
+        "rawTimestamp": "2026-11-16T03:45:27.7885193Z"
+      },
+      {
+        "name": "NDJSON unknown native cleanup keeps the saved roster and its original grants bound",
+        "milliseconds": 354.583251,
+        "line": 969,
+        "rawTimestamp": "2026-11-16T03:45:28.1371772Z"
+      },
+      {
+        "name": "stopped fresh capture admits its exact probe profile and cold replay retains the original check",
+        "milliseconds": 189.824321,
+        "line": 970,
+        "rawTimestamp": "2026-11-16T03:45:28.3273165Z"
+      },
+      {
+        "name": "Team model preflight requires current control authority and exact launch selection before any provider allocation",
+        "milliseconds": 99.669297,
+        "line": 971,
+        "rawTimestamp": "2026-11-16T03:45:28.4268037Z"
+      },
+      {
+        "name": "NDJSON human messages auto-admit once and terminal events pump the next input without dispatch RPC",
+        "milliseconds": 152.485882,
+        "line": 972,
+        "rawTimestamp": "2026-11-16T03:45:28.5789788Z"
+      },
+      {
+        "name": "member HTTP MCP and Desktop transport share canonical Tasks and enforce member/scope authority",
+        "milliseconds": 171.522147,
+        "line": 973,
+        "rawTimestamp": "2026-11-16T03:45:28.7509361Z"
+      },
+      {
+        "name": "runtime projections redact private provider identities; missing human control and revoked member grants refuse allocation",
+        "milliseconds": 156.562106,
+        "line": 974,
+        "rawTimestamp": "2026-11-16T03:45:28.9077732Z"
+      },
+      {
+        "name": "dispose seals a pending provider open before late allocation and retains unknown custody as cleanup debt",
+        "milliseconds": 53.803278,
+        "line": 975,
+        "rawTimestamp": "2026-11-16T03:45:28.9626291Z"
+      },
+      {
+        "name": "pending open cleanup precedes readiness: late-driver",
+        "milliseconds": 49.006726,
+        "line": 976,
+        "rawTimestamp": "2026-11-16T03:45:29.0104391Z"
+      },
+      {
+        "name": "pending open cleanup precedes readiness: unknown-driver",
+        "milliseconds": 49.647112,
+        "line": 977,
+        "rawTimestamp": "2026-11-16T03:45:29.0597830Z"
+      },
+      {
+        "name": "pending open cleanup precedes readiness: factory-rejection",
+        "milliseconds": 43.477252,
+        "line": 978,
+        "rawTimestamp": "2026-11-16T03:45:29.1034714Z"
+      },
+      {
+        "name": "pending provider cleanup survives stop before dispose",
+        "milliseconds": 56.135075,
+        "line": 979,
+        "rawTimestamp": "2026-11-16T03:45:29.1602401Z"
+      },
+      {
+        "name": "pending provider cleanup survives reconcile before dispose",
+        "milliseconds": 52.207621,
+        "line": 980,
+        "rawTimestamp": "2026-11-16T03:45:29.2119724Z"
+      },
+      {
+        "name": "allocated driver checkpoint and close precede captured process cleanup",
+        "milliseconds": 70.527011,
+        "line": 981,
+        "rawTimestamp": "2026-11-16T03:45:29.2835747Z"
+      },
+      {
+        "name": "expired MCP proof holds the next admitted input; disposing a never-opened profile performs no allocation",
+        "milliseconds": 161.643984,
+        "line": 982,
+        "rawTimestamp": "2026-11-16T03:45:29.4461803Z"
+      },
+      {
+        "name": "Codex Host cost reports retained usage once without native dispatch or private snapshot leakage",
+        "milliseconds": 640.77956,
+        "line": 983,
+        "rawTimestamp": "2026-11-16T03:45:30.0856229Z"
+      },
+      {
+        "name": "composed original stderr survives failed startup before Runtime installs a native session",
+        "milliseconds": 59.225907,
+        "line": 985,
+        "rawTimestamp": "2026-11-16T03:45:30.1447928Z"
+      },
+      {
+        "name": "composed original stderr accepts closing diagnostics without settling Runtime state or inputs",
+        "milliseconds": 78.224963,
+        "line": 986,
+        "rawTimestamp": "2026-11-16T03:45:30.2229789Z"
+      },
+      {
+        "name": "composed original stderr rejects changed member authority, revocation and a sealed Host",
+        "milliseconds": 78.348317,
+        "line": 987,
+        "rawTimestamp": "2026-11-16T03:45:30.3018985Z"
+      },
+      {
+        "name": "activity RPC pages normalized native observations with opaque cursor, bounded snapshots and explicit gaps",
+        "milliseconds": 361.856177,
+        "line": 988,
+        "rawTimestamp": "2026-11-16T03:45:30.6634962Z"
+      },
+      {
+        "name": "activity snapshot/feed recheck current human read grants and reject authority overrides",
+        "milliseconds": 20.621173,
+        "line": 989,
+        "rawTimestamp": "2026-11-16T03:45:30.6834922Z"
+      },
+      {
+        "name": "production aggregate launch RPC preserves configured and missing roster members and idempotent scoped progress",
+        "milliseconds": 93.048985,
+        "line": 990,
+        "rawTimestamp": "2026-11-16T03:45:30.7771610Z"
+      },
+      {
+        "name": "launch options are durably selected before provider creation and replay survives Host restart without new allocation",
+        "milliseconds": 196.237539,
+        "line": 991,
+        "rawTimestamp": "2026-11-16T03:45:30.9738797Z"
+      },
+      {
+        "name": "launch options refuse allocated state and compile every selected provider before any publication or allocation",
+        "milliseconds": 212.187034,
+        "line": 992,
+        "rawTimestamp": "2026-11-16T03:45:31.1861238Z"
+      },
+      {
+        "name": "selected checkpoint resumes through a new Host/generation, retains Team delivery ownership and fences stale controls",
+        "milliseconds": 865.065015,
+        "line": 995,
+        "rawTimestamp": "2026-11-16T03:45:32.0888237Z"
+      },
+      {
+        "name": "Runtime projection privately observes only evaluated readiness operands and preserves the original view and errors",
+        "milliseconds": 1.183483,
+        "line": 998,
+        "rawTimestamp": "2026-11-16T03:45:32.0891282Z"
+      },
+      {
+        "name": "the original passive Runtime projection receiver writes only bounded exit facts and keeps ambiguous evidence unknown",
+        "milliseconds": 16.333088,
+        "line": 999,
+        "rawTimestamp": "2026-11-16T03:45:32.0892795Z"
+      },
+      {
+        "name": "source Codex readiness refuses an expired absolute deadline before its first read after the poll handoff",
+        "milliseconds": 1.780739,
+        "line": 1000,
+        "rawTimestamp": "2026-11-16T03:45:32.0893936Z"
+      },
+      {
+        "name": "source Codex readiness refuses a ready result delivered after its original deadline despite a handoff pause",
+        "milliseconds": 1.241276,
+        "line": 1001,
+        "rawTimestamp": "2026-11-16T03:45:32.0895112Z"
+      },
+      {
+        "name": "source readiness keeps its timely success, other original budgets, 25ms cadence and exact read errors",
+        "milliseconds": 5.98347,
+        "line": 1002,
+        "rawTimestamp": "2026-11-16T03:45:32.0896376Z"
+      },
+      {
+        "name": "source standalone refuses expiry during the poll handoff after Start consumed its captured recipe budget",
+        "milliseconds": 1.889927,
+        "line": 1003,
+        "rawTimestamp": "2026-11-16T03:45:32.0897596Z"
+      },
+      {
+        "name": "source standalone refuses a completed result delivered after the captured absolute deadline",
+        "milliseconds": 1.641242,
+        "line": 1004,
+        "rawTimestamp": "2026-11-16T03:45:32.0898699Z"
+      },
+      {
+        "name": "source codex standalone preserves the original fresh capture check after successful completion",
+        "milliseconds": 1.454139,
+        "line": 1005,
+        "rawTimestamp": "2026-11-16T03:45:32.0899670Z"
+      },
+      {
+        "name": "source claude standalone preserves the original fresh capture check after successful completion",
+        "milliseconds": 1.341999,
+        "line": 1006,
+        "rawTimestamp": "2026-11-16T03:45:32.0900893Z"
+      },
+      {
+        "name": "source standalone keeps captured authority, original relative defaults, cleanup refusals and exact read errors",
+        "milliseconds": 13.739761,
+        "line": 1007,
+        "rawTimestamp": "2026-11-16T03:45:32.0959603Z"
+      },
+      {
+        "name": "actual normalized content/tool/usage/compaction facts remain scoped to original task after reassignment",
+        "milliseconds": 73.892434,
+        "line": 1008,
+        "rawTimestamp": "2026-11-16T03:45:32.5209287Z"
+      },
+      {
+        "name": "cold thinking and member stderr retain their exact scope without changing message, usage or preview counts",
+        "milliseconds": 32.534831,
+        "line": 1009,
+        "rawTimestamp": "2026-11-16T03:45:32.5211669Z"
+      },
+      {
+        "name": "unknown usage stays unknown; foreign operation/input cannot borrow task scope; finite page cap is visible",
+        "milliseconds": 21.271865,
+        "line": 1010,
+        "rawTimestamp": "2026-11-16T03:45:32.5214123Z"
+      },
+      {
+        "name": "unattributed usage cannot be added to per-input token totals",
+        "milliseconds": 0.162644,
+        "line": 1011,
+        "rawTimestamp": "2026-11-16T03:45:32.5214692Z"
+      },
+      {
+        "name": "large retained facts produce a partial bounded log rather than losing the entire selection",
+        "milliseconds": 26.550103,
+        "line": 1012,
+        "rawTimestamp": "2026-11-16T03:45:32.5215819Z"
+      },
+      {
+        "name": "snapshot cursor replays only later invalidations, with stable IDs and explicit restart/retention gaps",
+        "milliseconds": 1.839039,
+        "line": 1013,
+        "rawTimestamp": "2026-11-16T03:45:32.5996782Z"
+      },
+      {
+        "name": "a recovery publication observed before its completion hook is still ordered under the snapshot fence",
+        "milliseconds": 0.293578,
+        "line": 1014,
+        "rawTimestamp": "2026-11-16T03:45:32.5998775Z"
+      },
+      {
+        "name": "private conversation reads leave the original Team fence and recheck full grant and lead identity",
+        "milliseconds": 29.161714,
+        "line": 1015,
+        "rawTimestamp": "2026-11-16T03:46:07.6677925Z"
+      },
+      {
+        "name": "ordinary stream revisions expire only ordinary cursors while original group pages never read conversation",
+        "milliseconds": 14.579059,
+        "line": 1016,
+        "rawTimestamp": "2026-11-16T03:46:07.6681027Z"
+      },
+      {
+        "name": "the original Team read boundary refuses a sparse private conversation gap array",
+        "milliseconds": 4.424086,
+        "line": 1017,
+        "rawTimestamp": "2026-11-16T03:46:07.6687288Z"
+      },
+      {
+        "name": "snapshot reads persisted authority/roster/tasks/kanban and only permitted inboxes",
+        "milliseconds": 21.963853,
+        "line": 1018,
+        "rawTimestamp": "2026-11-16T03:46:07.6688619Z"
+      },
+      {
+        "name": "one task with large nested history retains all task parts, order and signed continuations",
+        "milliseconds": 23.758202,
+        "line": 1019,
+        "rawTimestamp": "2026-11-16T03:46:07.6689731Z"
+      },
+      {
+        "name": "a 420 KiB Unicode message remains readable through signed Desktop and MCP pages",
+        "milliseconds": 172.460391,
+        "line": 1020,
+        "rawTimestamp": "2026-11-16T03:46:07.6690760Z"
+      },
+      {
+        "name": "real committed task mutation keeps an under-1-MiB Host acknowledgement with full durable history",
+        "milliseconds": 31872.921208,
+        "line": 1021,
+        "rawTimestamp": "2026-11-16T03:46:07.6691756Z"
+      },
+      {
+        "name": "large retained task inventory stays readable through all bounded original Owner pages",
+        "milliseconds": 2253.734268,
+        "line": 1022,
+        "rawTimestamp": "2026-11-16T03:46:07.6692959Z"
+      },
+      {
+        "name": "Kanban entries and column ordering survive both Desktop and MCP page budgets",
+        "milliseconds": 69.697051,
+        "line": 1023,
+        "rawTimestamp": "2026-11-16T03:46:07.6693769Z"
+      },
+      {
+        "name": "large legitimate inbox history preserves bounded snapshots and authorized change feed",
+        "milliseconds": 45.530605,
+        "line": 1024,
+        "rawTimestamp": "2026-11-16T03:46:07.6694601Z"
+      },
+      {
+        "name": "owner-side pages retain every message beyond 512 KiB under revision and principal fences",
+        "milliseconds": 53.921768,
+        "line": 1025,
+        "rawTimestamp": "2026-11-16T03:46:07.6695448Z"
+      },
+      {
+        "name": "removed teammate inbox remains readable for admin only after a persisted owner restart",
+        "milliseconds": 6.078338,
+        "line": 1026,
+        "rawTimestamp": "2026-11-16T03:46:07.6696312Z"
+      },
+      {
+        "name": "one valid Unicode comment larger than either Owner page remains lossless and signed",
+        "milliseconds": 288.556591,
+        "line": 1027,
+        "rawTimestamp": "2026-11-16T03:46:07.6697603Z"
+      }
+    ],
+    "all24StderrCaseResults": [
+      {
+        "name": "original stderr captures startup and tail while redacting selected values across UTF-8 chunks",
+        "milliseconds": 7.402829,
+        "line": 881,
+        "rawTimestamp": "2026-11-16T03:45:14.9714212Z"
+      },
+      {
+        "name": "standalone stderr uses selected private values without a Team endpoint",
+        "milliseconds": 0.983118,
+        "line": 882,
+        "rawTimestamp": "2026-11-16T03:45:14.9720936Z"
+      },
+      {
+        "name": "invalid UTF-8 and NUL are readable diagnostics, including a final incomplete sequence",
+        "milliseconds": 0.607285,
+        "line": 883,
+        "rawTimestamp": "2026-11-16T03:45:14.9722287Z"
+      },
+      {
+        "name": "decoded UTF-8 and NUL expansion cannot exceed the retained text byte limit",
+        "milliseconds": 2.622165,
+        "line": 884,
+        "rawTimestamp": "2026-11-16T03:45:14.9723261Z"
+      },
+      {
+        "name": "oversized lines discard their complete suffix and preserve a multiline dump opener",
+        "milliseconds": 0.951567,
+        "line": 885,
+        "rawTimestamp": "2026-11-16T03:45:14.9724176Z"
+      },
+      {
+        "name": "dump continuations stay suppressed through ordinary newlines and oversized fragments",
+        "milliseconds": 0.704003,
+        "line": 886,
+        "rawTimestamp": "2026-11-16T03:45:14.9725560Z"
+      },
+      {
+        "name": "observer errors and reentrant close cannot change stream outcomes or duplicate a tail",
+        "milliseconds": 0.849394,
+        "line": 887,
+        "rawTimestamp": "2026-11-16T03:45:14.9726604Z"
+      },
+      {
+        "name": "a bounded escape-heavy line remains subject to the existing serialized journal limit",
+        "milliseconds": 1.193865,
+        "line": 888,
+        "rawTimestamp": "2026-11-16T03:45:14.9746193Z"
+      },
+      {
+        "name": "held escaped, URI and whitespace-normalized values and quoted assignments cannot leave secret suffixes",
+        "milliseconds": 1.189103,
+        "line": 889,
+        "rawTimestamp": "2026-11-16T03:45:14.9755543Z"
+      },
+      {
+        "name": "overlapping held values are masked in one pass: ABABAB",
+        "milliseconds": 0.710084,
+        "line": 890,
+        "rawTimestamp": "2026-11-16T03:45:14.9756409Z"
+      },
+      {
+        "name": "overlapping held values are masked in one pass: a",
+        "milliseconds": 0.516101,
+        "line": 891,
+        "rawTimestamp": "2026-11-16T03:45:14.9756928Z"
+      },
+      {
+        "name": "long split ANSI does not lose a dump opener before flush",
+        "milliseconds": 0.871969,
+        "line": 892,
+        "rawTimestamp": "2026-11-16T03:45:14.9757563Z"
+      },
+      {
+        "name": "long split ANSI does not lose a dump opener before discard",
+        "milliseconds": 1.201476,
+        "line": 893,
+        "rawTimestamp": "2026-11-16T03:45:14.9758272Z"
+      },
+      {
+        "name": "dump detection continues through already discarded oversized fragments",
+        "milliseconds": 0.85661,
+        "line": 894,
+        "rawTimestamp": "2026-11-16T03:45:14.9759074Z"
+      },
+      {
+        "name": "a short held value cannot destroy sensitive syntax before classification: s",
+        "milliseconds": 0.682074,
+        "line": 895,
+        "rawTimestamp": "2026-11-16T03:45:14.9759957Z"
+      },
+      {
+        "name": "a short held value cannot destroy sensitive syntax before classification: a",
+        "milliseconds": 0.413198,
+        "line": 896,
+        "rawTimestamp": "2026-11-16T03:45:14.9760744Z"
+      },
+      {
+        "name": "a short held value cannot destroy sensitive syntax before classification: h",
+        "milliseconds": 0.43113,
+        "line": 897,
+        "rawTimestamp": "2026-11-16T03:45:14.9761349Z"
+      },
+      {
+        "name": "syntax redaction cannot expose fragments of a transformed held value",
+        "milliseconds": 0.927028,
+        "line": 898,
+        "rawTimestamp": "2026-11-16T03:45:14.9762174Z"
+      },
+      {
+        "name": "an ANSI prefix larger than the line budget remains fail-closed (false)",
+        "milliseconds": 1.253206,
+        "line": 899,
+        "rawTimestamp": "2026-11-16T03:45:14.9763019Z"
+      },
+      {
+        "name": "an ANSI prefix larger than the line budget remains fail-closed (true)",
+        "milliseconds": 0.7822,
+        "line": 900,
+        "rawTimestamp": "2026-11-16T03:45:14.9763566Z"
+      },
+      {
+        "name": "held whitespace values cannot leak after contextual syntax redaction (space)",
+        "milliseconds": 0.53159,
+        "line": 901,
+        "rawTimestamp": "2026-11-16T03:45:14.9764088Z"
+      },
+      {
+        "name": "held whitespace values cannot leak after contextual syntax redaction (tab)",
+        "milliseconds": 0.366114,
+        "line": 902,
+        "rawTimestamp": "2026-11-16T03:45:14.9764791Z"
+      },
+      {
+        "name": "held whitespace values cannot leak after contextual syntax redaction (mixed)",
+        "milliseconds": 0.621435,
+        "line": 903,
+        "rawTimestamp": "2026-11-16T03:45:14.9765709Z"
+      },
+      {
+        "name": "safe diagnostics and unambiguous held-value context remain readable",
+        "milliseconds": 0.668479,
+        "line": 904,
+        "rawTimestamp": "2026-11-16T03:45:14.9766544Z"
+      }
+    ],
+    "all10TestFilesByteIdenticalToM": true,
+    "threePreviouslyFailingHeldValueCasesNowPass": true,
+    "limitedTo": "The original full ten-file contract step; no all-provider secrecy or Desktop/native/release qualification."
+  },
+  "source": {
+    "onlyNonDocsDeltaFromM": [
+      "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts"
+    ],
+    "currentHelper": {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "bytes": 8310,
+      "gitBlob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7"
+    },
+    "selectedGitPins": [
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "bytes": 101741,
+        "gitBlob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+      },
+      {
+        "path": "package.json",
+        "bytes": 26839,
+        "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "bytes": 956788,
+        "gitBlob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+        "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c"
+      },
+      {
+        "path": "pnpm-workspace.yaml",
+        "bytes": 6946,
+        "gitBlob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+        "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea"
+      },
+      {
+        "path": "scripts/ci/install-dependencies-with-retry.mjs",
+        "bytes": 5259,
+        "gitBlob": "cbf2463eb47d22c3d87d9eec001edad26dd68ff0",
+        "sha256": "c8dc0b63fc490fd5a9a1b4abf0631b66c30e1ccda2199094c86e49a6e250d01e"
+      },
+      {
+        "path": "scripts/ensure-electron-install.cjs",
+        "bytes": 4585,
+        "gitBlob": "6e82478a6347cde01cbc5d52ae71ef79cb38f290",
+        "sha256": "9bd7bd4a400eeb7ef4987189ffc9d64774677576a9198e417839989401bf4edb"
+      },
+      {
+        "path": "packages/legacy-agent-host/package.json",
+        "bytes": 12355,
+        "gitBlob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+        "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b"
+      },
+      {
+        "path": "packages/legacy-agent-host/tsconfig.json",
+        "bytes": 456,
+        "gitBlob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+        "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab"
+      },
+      {
+        "path": "packages/legacy-agent-host/tsconfig.test.json",
+        "bytes": 174,
+        "gitBlob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+        "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356"
+      },
+      {
+        "path": "packages/task-change-ledger/package.json",
+        "bytes": 2714,
+        "gitBlob": "0fac5843889e1b28d53712f353bce1b0bae855a4",
+        "sha256": "a0db21117b905b414e825862d8bc93cfe9280975c8b91e1afa6cca2e1570a132"
+      },
+      {
+        "path": "packages/task-change-ledger/tsconfig.json",
+        "bytes": 378,
+        "gitBlob": "ff7683dc99c69dbf8c884ba138382468c9c86314",
+        "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c"
+      },
+      {
+        "path": "tsconfig.legacy-agent-host-scripts.json",
+        "bytes": 646,
+        "gitBlob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+        "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306"
+      },
+      {
+        "path": "test/features/agent-backend/tsconfig.json",
+        "bytes": 379,
+        "gitBlob": "de2814ddc27524ac335f9f6c174aace1c7b1387c",
+        "sha256": "4b6372a0f31b366a07f02aa7e70d106dcc98d3cacdbad9c57bb4856a88b74f79"
+      },
+      {
+        "path": "eslint.config.js",
+        "bytes": 37840,
+        "gitBlob": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+        "sha256": "d9f0cf7c33672b9304fc524bbc028e07939bcab4583bb1e7c94b99fd773eb597"
+      },
+      {
+        "path": "eslint.fast.config.js",
+        "bytes": 7268,
+        "gitBlob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+        "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88"
+      },
+      {
+        "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+        "bytes": 8708,
+        "gitBlob": "8299f9f9589810c106c328840b2c0d3640113811",
+        "sha256": "96511a26aaf8ead7ebdaeec018d79d4f9568ff29ee85f8b4eef46adbc2a4a954"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+        "bytes": 8310,
+        "gitBlob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+        "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+        "bytes": 60689,
+        "gitBlob": "077ad7ea54675a4782984fcb5399f9964d5ec5e6",
+        "sha256": "a559b1b184c4f79f76fbcd99998d689cfc31158609051100c1f5cfdcc3b37c77"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "bytes": 207427,
+        "gitBlob": "c3f23b9a6b6bbc37668e57b94b3a26d03a2eab79",
+        "sha256": "5ecb1c76b7a3cccf205b9856f183095ef7da3fa06cd7617c2f403c37e3f41d2d"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/team-snapshot.test.ts",
+        "bytes": 35657,
+        "gitBlob": "9048d8a1756df97af82e971014cebd6329d30d1c",
+        "sha256": "ce48410be42cd171bac00af32625613cf898ff9caadd54ce1363c8c2908d60d6"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/team-product-changes.test.ts",
+        "bytes": 1837,
+        "gitBlob": "7d52ead8e9b61802392d8d0fceaed92ff5bcbf6e",
+        "sha256": "3eb9795419c88474e079d039bb531210b04827b13a030f0b55245bb59eb7e82a"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+        "bytes": 14327,
+        "gitBlob": "881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb",
+        "sha256": "56be5d699948e7142fc94bc5b0776b675683e3c16a9a68a72e9e5b148146e0c5"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+        "bytes": 17005,
+        "gitBlob": "d2b952c9e6ac2281a14a00665cf4689d9c7d4b5c",
+        "sha256": "12be8f565712c09537d99ba75b63aa6e01774708ad1967c7ee2fdd964d747712"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+        "bytes": 38315,
+        "gitBlob": "414525958b459ccb9d4c20e4b185e03d71d46867",
+        "sha256": "b328bdcfbbf8eb92e6b2215ee413fd0f723f3c85ac535e9d2cd470030dbf9905"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+        "bytes": 16103,
+        "gitBlob": "0727339627757c3a96d54da2933eb7c1b60685f7",
+        "sha256": "2a738fca4120ae3361483abd948f7746d2025f32012b189e695085845bc3e191"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+        "bytes": 33047,
+        "gitBlob": "011875b3a5bcab4d6f0775fdbc419157e0d48cba",
+        "sha256": "e535ebe42ecbc8bb1904d9b3636985c2029c17f3c109430164fb4fe4b491dae2"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+        "bytes": 9208,
+        "gitBlob": "1a202377edc9f57c62eb757e9fcdc8718479e3d1",
+        "sha256": "ee1ba17e9fd9f52dc825c067a17038a5de36af4541ede3201621e62007614dec"
+      }
+    ],
+    "host619GitInventory": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/team/git-host-source-inventory.json",
+      "bytes": 164295,
+      "gitBlob": "bebc0b8d96c8a398ef85766e2f3280bf5f999ccd",
+      "sha256": "f1f6ce40f12dc99de44e5931ccb2d1071eec714846eadc3ed5c00ed354e74c4a"
+    },
+    "noCIArtifactSourceCensusClaim": true
+  },
+  "static": {
+    "firstFailure": {
+      "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "line": 201,
+      "column": 12,
+      "rule": "@typescript-eslint/no-unnecessary-type-assertion",
+      "message": "This assertion is unnecessary since it does not change the type of the expression",
+      "originalSourceLine": "          [previousRunId!]: teamName,",
+      "sourceByteIdenticalToM": true
+    },
+    "lintSummaries": [
+      {
+        "line": 1160,
+        "raw": "2026-11-16T03:46:14.0446799Z ✖ 5 problems (0 errors, 5 warnings)"
+      },
+      {
+        "line": 8414,
+        "raw": "2026-11-16T03:49:58.5158349Z ✖ 3338 problems (0 errors, 3338 warnings)"
+      },
+      {
+        "line": 13150,
+        "raw": "2026-11-16T03:54:27.2611394Z ✖ 1417 problems (1 error, 1416 warnings)"
+      }
+    ],
+    "fast93Paths": {
+      "errors": 0,
+      "warnings": 5
+    },
+    "completeWorkspaceTypes": "Completed in the original sequential set-e block before typed lint; all explicit project commands retained in raw log and workflow.",
+    "separateBackendProject": "Original explicit --noEmit -p test/features/agent-backend/tsconfig.json returned before main lint under set-e; no local retry or missing historical-argv claim.",
+    "mainTypedLint": {
+      "errors": 0,
+      "warnings": 3338
+    },
+    "rendererTypedLint": {
+      "errors": 1,
+      "warnings": 1416,
+      "exitCode": 1
+    },
+    "notReached": [
+      "src/features typed lint",
+      "MCP typed lint",
+      "Desktop capture and Team business steps11-30"
+    ],
+    "rawErrors": [
+      {
+        "line": 13040,
+        "text": "##[error]  201:12  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion"
+      },
+      {
+        "line": 13154,
+        "text": "##[error]Process completed with exit code 1."
+      }
+    ]
+  },
+  "artifactAvailability": {
+    "teamArtifactExistsInOfficialTerminalSnapshot": false,
+    "uploaderNoFilesWarning": true,
+    "noDesktopReceiptOrScreenshot": true
+  },
+  "limits": [
+    "Actual177/24 GREEN is separate from this whole-job FAILURE at subsequent renderer typed lint.",
+    "No source repair is proposed or applied; the lint error is a distinct current-source failure.",
+    "All original steps11-30 are skipped, not passed, including input capture, Team UI and final exact-evidence verifier.",
+    "The current helper change does not repair or explain original M Installer/Cross failures; source and action histories remain separately qualified.",
+    "Source reads and evidence bookkeeping only; no project test/compiler/lint/install/native/provider/CI invocation by this author."
+  ],
+  "independentReviewPending": true
+}

@@ -1,0 +1,172 @@
+{
+  "schema": "N-renderer-one-token-assertion-fix-R1/v1",
+  "author": "/root",
+  "createdUtc": "2026-11-16T04:04:04.504691+00:00",
+  "state": "PROPOSED_NOT_APPLIED",
+  "sourceBase": "dee9448e2c8771bed2f4e403259446b1d3b4d4e0",
+  "originalCISource": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "targetRef": "fix/frontend-parity-e2e-followups-20261115",
+  "privacyPrerequisite": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/team/independent-team-privacy-green-review.json",
+    "bytes": 59866,
+    "blob": "d4fb9c542b8404a0e7fedb386f019aac08da79dc",
+    "sha256": "e6f1cb5bc292e4ca4d7e37b0e3a5c1afbb4b916424467ea28f03e338f3bdd9db",
+    "actual177Pass": true,
+    "actual24StderrPass": true,
+    "originalRunId": 43795234483,
+    "originalJobId": 133062441494
+  },
+  "problem": "Original N full typed renderer lint reaches src/renderer/store/team/teamRuntimeRunAdoption.ts:201:12 and fails exactly one no-unnecessary-type-assertion error. The same source-bound historical9e error remains retained.",
+  "scope": "Remove only the non-null assertion token from the computed previousRunId property key in the hostRevision true branch. No runtime code, condition, callback assertion, test, workflow, dependency, timeout or oracle is changed.",
+  "file": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+  "preimage": {
+    "bytes": 8708,
+    "blob": "8299f9f9589810c106c328840b2c0d3640113811",
+    "sha256": "96511a26aaf8ead7ebdaeec018d79d4f9568ff29ee85f8b4eef46adbc2a4a954"
+  },
+  "candidate": {
+    "bytes": 8707,
+    "blob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+    "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10"
+  },
+  "patch": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-n-renderer-assertion-fix-r1/candidate.patch",
+    "bytes": 324,
+    "blob": "3704dccb26289ee1e814e27ead70d3ed1ef7618e",
+    "sha256": "ab4703c7a3b29e8d2400f720854020d81fff3ab01d2ca91d5d730b2be9b9d67a"
+  },
+  "lineCountBefore": 264,
+  "lineCountAfter": 264,
+  "line201Before": "          [previousRunId!]: teamName,",
+  "line201After": "          [previousRunId]: teamName,",
+  "sourceControlFlow": [
+    {
+      "line": 179,
+      "text": "}): Partial<IncomingMemberSpawnProjectionState> {"
+    },
+    {
+      "line": 180,
+      "text": "  const { teamName, snapshot, prev } = input;"
+    },
+    {
+      "line": 181,
+      "text": "  const previousRunId = prev.currentRuntimeRunIdByTeam[teamName];"
+    },
+    {
+      "line": 182,
+      "text": "  const hostCurrent = hostMemberSpawnSnapshotCurrentness(snapshot, teamName);"
+    },
+    {
+      "line": 183,
+      "text": "  const hostRevision ="
+    },
+    {
+      "line": 184,
+      "text": "    typeof previousRunId === 'string' &&"
+    },
+    {
+      "line": 185,
+      "text": "    typeof snapshot.runId === 'string' &&"
+    },
+    {
+      "line": 186,
+      "text": "    isSameHostLaunchRevision(teamName, previousRunId, snapshot.runId);"
+    },
+    {
+      "line": 187,
+      "text": "  if (hostCurrent === false || (hostRevision && hostCurrent !== true)) return {};"
+    },
+    {
+      "line": 188,
+      "text": "  if ("
+    },
+    {
+      "line": 189,
+      "text": "    hostRevision &&"
+    },
+    {
+      "line": 190,
+      "text": "    [previousRunId, snapshot.runId].some("
+    },
+    {
+      "line": 191,
+      "text": "      (runId) =>"
+    },
+    {
+      "line": 192,
+      "text": "        prev.ignoredRuntimeRunIds[runId!] === teamName ||"
+    },
+    {
+      "line": 193,
+      "text": "        prev.ignoredProvisioningRunIds?.[runId!] === teamName"
+    },
+    {
+      "line": 194,
+      "text": "    )"
+    },
+    {
+      "line": 195,
+      "text": "  )"
+    },
+    {
+      "line": 196,
+      "text": "    return {};"
+    },
+    {
+      "line": 197,
+      "text": "  const retired = hostRevision"
+    },
+    {
+      "line": 198,
+      "text": "    ? {"
+    },
+    {
+      "line": 199,
+      "text": "        ignoredRuntimeRunIds: {"
+    },
+    {
+      "line": 200,
+      "text": "          ...prev.ignoredRuntimeRunIds,"
+    },
+    {
+      "line": 201,
+      "text": "          [previousRunId!]: teamName,"
+    },
+    {
+      "line": 202,
+      "text": "        },"
+    },
+    {
+      "line": 203,
+      "text": "      }"
+    },
+    {
+      "line": 204,
+      "text": "    : {};"
+    },
+    {
+      "line": 205,
+      "text": "  const adoption = hostRevision"
+    },
+    {
+      "line": 206,
+      "text": "    ? 'retarget'"
+    }
+  ],
+  "reasoning": [
+    "hostRevision is a const whose true condition includes typeof previousRunId === string. In the true arm of const retired = hostRevision ? ... : {}, the computed key is already narrowed; the original typed lint identifies only this assertion as redundant.",
+    "The two runId! assertions inside the .some callback at192/193 remain unchanged; this proposal does not generalize the current alias narrowing into that callback.",
+    "TypeScript non-null assertions do not add runtime operations. Deleting this one token leaves the property key expression and all original currentness, ignored-run and revision guards unchanged.",
+    "No test is weakened or newly written merely to mirror this token deletion. The exact original typed lint failure supplies actual RED, independently bound to the unchanged source leaf."
+  ],
+  "validation": {
+    "actualRED": "Current original N Team step10 renderer typed lint:1error/1416warnings after actual177/24 GREEN, fullworkspace and dedicated backend compiler flow, main lint0errors/3338warnings.",
+    "requiredGREEN": "After independent exact-source R2 and ordinary publication, use the existing original CI full workspace/dedicated backend/typed renderer lint route on the new exact source. Current fast lint success is not a typed-lint substitute. No GREEN is predicted as already observed.",
+    "localProjectExecution": false,
+    "newWorkflowOperands": false,
+    "manualDispatchRerunCancel": false
+  },
+  "compositionGuard": "A docs-only descendant of this exact base may be used only after a fresh immutable read proves the same preimage blob and all other non-documentation leaves unchanged. Final exact file/tree and ordinary expected-parent ref guards require their own review before publication.",
+  "application": "No worktree/source/ref changes in this R1. Candidate bytes are review artifacts only. Source application requires independent R2; each created commit must immediately receive an ordinary force:false expected-parent push. PR remains Draft; no Ready/defaultHost/Stage2/main merge/release action.",
+  "reviewRequest": "Independently verify exact preimage/candidate/one-byte diff, current original RED and177/24 prerequisite, alias-narrowing reason, retained callback assertions, scope and actual-CI-only validation route."
+}

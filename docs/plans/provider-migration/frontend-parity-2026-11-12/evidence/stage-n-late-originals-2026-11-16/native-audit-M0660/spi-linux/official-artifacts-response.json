@@ -1,0 +1,165 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "artifacts": [
+      {
+        "id": 14193041377,
+        "name": "opencode-v2-stage1-host-native-instructions-ubuntu",
+        "size_in_bytes": 3156,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14193041377",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14193041377/zip",
+        "expired": false,
+        "created_at": "2026-11-16T02:27:04Z",
+        "expires_at": "2026-11-23T02:27:04Z",
+        "updated_at": "2026-11-16T02:27:04Z",
+        "digest": "sha256:71a0c93dcd053cfb20e6518f30fa220675d11cb2f1c8297ba8e66fa8fa02af35",
+        "workflow_run": {
+          "id": 43780997620,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+        }
+      },
+      {
+        "id": 14192610672,
+        "name": "opencode-v1-version-host-linux",
+        "size_in_bytes": 4000,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192610672",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192610672/zip",
+        "expired": false,
+        "created_at": "2026-11-16T02:15:40Z",
+        "expires_at": "2026-11-23T02:15:40Z",
+        "updated_at": "2026-11-16T02:15:40Z",
+        "digest": "sha256:a40813439aae30d3e2042aa9b7b20e141a88e85de3f7748fc6a13c9b3c47bc53",
+        "workflow_run": {
+          "id": 43780997620,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+        }
+      },
+      {
+        "id": 14190847461,
+        "name": "opencode-v2-embedded-native-linux-x64",
+        "size_in_bytes": 23381,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14190847461",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14190847461/zip",
+        "expired": false,
+        "created_at": "2026-11-16T01:44:40Z",
+        "expires_at": "2026-11-23T01:44:39Z",
+        "updated_at": "2026-11-16T01:44:40Z",
+        "digest": "sha256:83ca24eef71341586fe1b6f4de73d5f8ae2137517b66e6055eea63d1fbd84143",
+        "workflow_run": {
+          "id": 43780997620,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+        }
+      },
+      {
+        "id": 14190093443,
+        "name": "opencode-v2-published-http-persist-ubuntu",
+        "size_in_bytes": 876,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14190093443",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14190093443/zip",
+        "expired": false,
+        "created_at": "2026-11-16T01:31:59Z",
+        "expires_at": "2026-11-23T01:31:58Z",
+        "updated_at": "2026-11-16T01:31:59Z",
+        "digest": "sha256:9ca0176f4424c0a6e789880c1d6bfa9d7a2e707c2e80105316ed4353cce4a817",
+        "workflow_run": {
+          "id": 43780997620,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+        }
+      },
+      {
+        "id": 14189670006,
+        "name": "opencode-v2-embedded-native-darwin-arm64",
+        "size_in_bytes": 10503,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14189670006",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14189670006/zip",
+        "expired": false,
+        "created_at": "2026-11-16T00:51:23Z",
+        "expires_at": "2026-11-23T00:51:22Z",
+        "updated_at": "2026-11-16T00:51:23Z",
+        "digest": "sha256:20db589280aa28c313bb56703b69441740c2c98f5fd42d58fddc13be9912fb1c",
+        "workflow_run": {
+          "id": 43780997620,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+        }
+      },
+      {
+        "id": 14189065331,
+        "name": "opencode-v2-embedded-native-win32-x64",
+        "size_in_bytes": 13300,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14189065331",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14189065331/zip",
+        "expired": false,
+        "created_at": "2026-11-16T00:44:29Z",
+        "expires_at": "2026-11-23T00:44:29Z",
+        "updated_at": "2026-11-16T00:44:29Z",
+        "digest": "sha256:bbfe178ee5502817c050d9002f9910a2a97ff7a10a408f74206cb24b29b279cf",
+        "workflow_run": {
+          "id": 43780997620,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+        }
+      },
+      {
+        "id": 14189015721,
+        "name": "opencode-v2-embedded-native-win32-arm64",
+        "size_in_bytes": 13407,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14189015721",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14189015721/zip",
+        "expired": false,
+        "created_at": "2026-11-16T00:49:10Z",
+        "expires_at": "2026-11-23T00:49:09Z",
+        "updated_at": "2026-11-16T00:49:10Z",
+        "digest": "sha256:31d780cc64556a2669f949bec301ba10bdd16e6a5bfdb6b527d05e15a73508bf",
+        "workflow_run": {
+          "id": 43780997620,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+        }
+      },
+      {
+        "id": 14188584538,
+        "name": "opencode-v2-embedded-native-darwin-x64",
+        "size_in_bytes": 10491,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14188584538",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14188584538/zip",
+        "expired": false,
+        "created_at": "2026-11-16T00:48:39Z",
+        "expires_at": "2026-11-23T00:48:38Z",
+        "updated_at": "2026-11-16T00:48:39Z",
+        "digest": "sha256:0a5ac885a88c1a32058b2b37186130318f9f2a47ea3650e258ae3d92e7f4c728",
+        "workflow_run": {
+          "id": 43780997620,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+        }
+      }
+    ]
+  },
+  "isError": false
+}

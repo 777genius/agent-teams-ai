@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "jobId": 133017916024,
+  "artifactId": 14191550438,
+  "status": "PASS",
+  "scope": "Original finite saved-archive Import only; no Team Launch Submit/native import/M16 closure/new-source qualification. Author audit; independent R2 pending.",
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/job-133017916024.log",
+      "bytes": 180591,
+      "blob": "7991c92e54c59f17b45fc4f6625a74750cea28f3",
+      "sha256": "022efe1904ad093b63305f4f1e967349f12ad4316df27bd5c39d40c09bbeefb9"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/artifact-14191550438.zip",
+      "bytes": 1158210,
+      "blob": "788cb549cc3b6c3ea12cb12dcd9494e62aa616c5",
+      "sha256": "81ea66ec213c9e75c88ebde84ed82705108bdb826ef56770d4249e83e0c77fd5"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/archive-audit.json",
+      "bytes": 9363,
+      "blob": "e4bd0d1d89e7594d4fa03f2199f0669a270c21d7",
+      "sha256": "ebb9bcc2951285b741b35df1048a60441077fc3c6a18b74fe20969e09f6a0d1d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/audit.json",
+      "bytes": 178959,
+      "blob": "b354438fb8d355c0d46d4c9e690b7c4ca7e4ae38",
+      "sha256": "f1698243fed424b078cc64fe28dd8301a6b68c8b60af5d01c35c88e8958a9e1b"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/Plan29-import-saved-archive-appendix.md",
+      "bytes": 9968,
+      "blob": "f3bde48b5bf6aa3a61047d99248bbb04f732119e",
+      "sha256": "0b303b84e5063639ad9b1ef21da3eed0c3ab35e7feeaadd44365767b6fdbf58c"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-artifacts-0215.json",
+      "bytes": 19753,
+      "blob": "699d3f9f470c9aba779664f159cefac43cbc4861",
+      "sha256": "f434f1a38fce2695c3e828119cd6424c0a986afbf95406a147c2eadfca87416e"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0300.json",
+      "bytes": 212142,
+      "blob": "aaa9e447920ba1d0e4ae3797169058bc2df43a72",
+      "sha256": "2056635c64f9372a98d560f3ceb63a025fbd92de2bef0eaa5a6a72e8f8dd4f80"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    }
+  ],
+  "nestedRecovery": {
+    "zip": "artifact-14191550438.zip",
+    "members": 31,
+    "pngHashChecked": 6,
+    "uiImagesActuallyViewed": 5,
+    "tinySourceImageHashOnly": 1
+  },
+  "execution": "Raw/source/image audit only; no project execution/source/ref/CI change."
+}

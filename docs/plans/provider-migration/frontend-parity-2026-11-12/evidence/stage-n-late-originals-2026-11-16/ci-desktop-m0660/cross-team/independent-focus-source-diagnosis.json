@@ -1,0 +1,1142 @@
+{
+  "schemaVersion": 1,
+  "kind": "read-only-independent-cross-focus-source-diagnosis",
+  "result": "ANALYSIS_COMPLETE_CAUSE_NOT_PROVEN",
+  "createdAtUtc": "2026-11-16T03:14:36.910644+00:00",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "jobId": 133017916047,
+  "originalOutcome": "FAIL",
+  "reviewScope": "Original M0660 Cross focus refusal plus exact source-supported causal candidates. This is not a new implementation R1, a code patch, an execution, or acceptance of later source.",
+  "evidenceInputs": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/extracted/TEST-desktop-backend-wUzd4r/desktop-backend-receipt.json",
+      "bytes": 905927,
+      "blob": "feb446be328b0befa1f06f2a692126886f09d7e0",
+      "sha256": "a5559c472af67b90541a598c75d94e97345db0eff84cced30c7ea34ab4f11f54"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/audit.json",
+      "bytes": 169543,
+      "blob": "f3cf04d5c7e16ddb485c897df02c0fe759f10417",
+      "sha256": "4d6390338bc261608cb364ebec744cddd0391ff0179bcbb65e2a6a84a0ce29b1"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/independent-cross-review.json",
+      "bytes": 83435,
+      "blob": "b3c17e7b936f11061f786af153eac9a610a7fe16",
+      "sha256": "5930e741d4c882344b6c4dd29f1c39ca913fc1170e048310f17a625babe6dc0c"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/taskboard/extracted/TEST-desktop-backend-okmuEL/desktop-backend-receipt.json",
+      "bytes": 1048507,
+      "blob": "cc3170d8ab394394130596bcd3bb837cffcfbd7f",
+      "sha256": "9d25d1d40258faf16700809d392840a77d778d9ca817e9c3ce5aedba06de64a9"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/taskboard/independent-taskboard-review.json",
+      "bytes": 116804,
+      "blob": "bdfa82938601f497a43f67c3a1e3c5ddc16055e1",
+      "sha256": "56c80b5ee9bc49635858e4a247742fcd246093dd50e0d3e31d100eaa8936a305"
+    }
+  ],
+  "originalFacts": {
+    "firstError": "Task board product read timed out: same original Task comment owner and empty draft settled after the one focus click; no mutation retry",
+    "originalWait": {
+      "budgetMs": 20000,
+      "clock": "Date.now()",
+      "checksBeforeRead": true,
+      "strictAfterReadDeadline": false,
+      "oneOriginalTextareaClick": true,
+      "typingAndSubmitReached": false
+    },
+    "eventClock": "Rounded renderer performance.now() values, not driver monotonicMs, wall-clock UTC or wait duration.",
+    "retainedEvents": [
+      {
+        "type": "pointerdown",
+        "timeMs": 13960,
+        "trusted": true,
+        "targetTag": "TEXTAREA",
+        "targetCategory": "same-original-textarea",
+        "targetId": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D"
+      },
+      {
+        "type": "focusout",
+        "timeMs": 13960,
+        "trusted": true,
+        "targetTag": "BUTTON",
+        "targetCategory": "dialog-DIV",
+        "targetId": ""
+      },
+      {
+        "type": "focusin",
+        "timeMs": 13961,
+        "trusted": true,
+        "targetTag": "TEXTAREA",
+        "targetCategory": "same-original-textarea",
+        "targetId": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D"
+      },
+      {
+        "type": "pointerup",
+        "timeMs": 13963,
+        "trusted": true,
+        "targetTag": "TEXTAREA",
+        "targetCategory": "same-original-textarea",
+        "targetId": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D"
+      },
+      {
+        "type": "click",
+        "timeMs": 13964,
+        "trusted": true,
+        "targetTag": "TEXTAREA",
+        "targetCategory": "same-original-textarea",
+        "targetId": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D"
+      },
+      {
+        "type": "focusout",
+        "timeMs": 14614,
+        "trusted": true,
+        "targetTag": "TEXTAREA",
+        "targetCategory": "same-original-textarea",
+        "targetId": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D"
+      },
+      {
+        "type": "focusin",
+        "timeMs": 14721,
+        "trusted": true,
+        "targetTag": "DIV",
+        "targetCategory": "dialog-DIV",
+        "targetId": "radix-_r_35_"
+      }
+    ],
+    "retainedInputEventsAfterOriginalClick": [
+      {
+        "type": "click",
+        "timeMs": 13964
+      },
+      {
+        "type": "focusout",
+        "timeMs": 14614
+      },
+      {
+        "type": "focusin",
+        "timeMs": 14721
+      }
+    ],
+    "transitionRetention": {
+      "rows": 11,
+      "cap": 12,
+      "deduplicatedBy": [
+        "ownerPresent",
+        "focused",
+        "disabled",
+        "ownerRevision",
+        "detailPhase",
+        "refreshPending"
+      ],
+      "totalPollCount": null,
+      "individualTransitionTimesRetained": false,
+      "doesNotCountEveryRead": true
+    },
+    "transitionRows": [
+      {
+        "ownerPresent": false,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": true,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": false,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": true,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": true,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": false,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": true,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": false,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": true,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": false,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": true,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": false,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      },
+      {
+        "ownerPresent": true,
+        "inputProbe": {
+          "present": true,
+          "connected": true,
+          "disabled": false,
+          "focused": false,
+          "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "ownerRevision": 3,
+          "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+          "detailPhase": "ready",
+          "refreshPending": false,
+          "taskStatus": "in_progress",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+          "activeContextId": "local",
+          "contextSwitching": false
+        }
+      }
+    ],
+    "lastObservation": {
+      "owner": {
+        "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-wUzd4r",
+        "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+        "identity": {
+          "contextId": "local",
+          "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-wUzd4r",
+          "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3"
+        },
+        "surfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+        "inputId": "task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D",
+        "commentText": "",
+        "submitPending": false,
+        "submitError": null,
+        "ownerRevision": 3,
+        "partRevisions": {
+          "commentText": 0,
+          "pendingAttachments": 0
+        },
+        "pendingPreparationCount": 0,
+        "canSubmit": true,
+        "attachmentError": null,
+        "pendingAttachmentCount": 0,
+        "canEditNow": true,
+        "canResolveClarification": false,
+        "selector": "[role=\"dialog\"] textarea[id=\"task-comment-input-%5B%223f8be47a-2c70-48ad-93d2-319daeffacc0%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-wUzd4r%5C%22%2C%5C%2292e9245e-e80d-5055-bba7-35d679a6c8d3%5C%22%5D%22%5D\"]"
+      },
+      "inputProbe": {
+        "present": true,
+        "connected": true,
+        "disabled": false,
+        "focused": false,
+        "ownerSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+        "ownerRevision": 3,
+        "expectedSurfaceId": "3f8be47a-2c70-48ad-93d2-319daeffacc0",
+        "detailPhase": "ready",
+        "refreshPending": false,
+        "taskStatus": "in_progress",
+        "taskId": "92e9245e-e80d-5055-bba7-35d679a6c8d3",
+        "activeContextId": "local",
+        "contextSwitching": false
+      },
+      "settled": true,
+      "domValue": "",
+      "inputEnabled": true,
+      "focused": false,
+      "documentFocused": true,
+      "visibility": "visible",
+      "activeElement": {
+        "tag": "DIV",
+        "id": "radix-_r_35_"
+      },
+      "timeMs": 33958
+    },
+    "sameStoredSurfaceRevisionInEveryRetainedTransition": true,
+    "allRetainedDetailPhases": "ready",
+    "allRetainedRefreshPending": false,
+    "phaseQualification": "No retained transition shows a hydrating phase. A draft-hydration cause is not an observed fact. Missing intervals are not reconstructed.",
+    "oneClickEvidence": "Actual trusted pointerdown/focusin/pointerup/click reaches the exact textarea. After the click the retained input journal has only textarea focusout then dialog DIV focusin; no second click or text insertion is retained.",
+    "focusTrustLimit": "A trusted focus event alone does not distinguish a browser/programmatic focus transition from a human click; the separate pointer/click sequence is the evidence of the original physical-style input.",
+    "probeLimit": "Each read re-queries the original selector. Stable ID/surface/revision and connected:true do not establish the same DOM Node across reads. The readiness expression awaits imports and returns a captured owner before a second current owner traversal and synchronous DOM/store continuation; it is not a single transaction or complete event history."
+  },
+  "sourceLeaves": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "bytes": 36207,
+      "blob": "3f1ce46fce847a861850ef874017f84227c62b0c",
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+      "lines": 798,
+      "rangesInspected": [
+        [
+          127,
+          139
+        ],
+        [
+          755,
+          770
+        ]
+      ],
+      "originalSelectedSourceSha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+      "originalSelectedSourceHashMatches": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-attachments-ui.ts",
+      "bytes": 25110,
+      "blob": "e128514aef972fd4f3fcf745155b8a937fbbc71e",
+      "sha256": "83b92a2f8a1f2141bf1672548d9f01402a514720783f850897bf3cd98560e656",
+      "lines": 514,
+      "rangesInspected": [
+        [
+          179,
+          205
+        ],
+        [
+          207,
+          288
+        ]
+      ],
+      "originalSelectedSourceSha256": "83b92a2f8a1f2141bf1672548d9f01402a514720783f850897bf3cd98560e656",
+      "originalSelectedSourceHashMatches": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "bytes": 6433,
+      "blob": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+      "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+      "lines": 90,
+      "rangesInspected": [
+        [
+          6,
+          48
+        ],
+        [
+          58,
+          90
+        ]
+      ],
+      "originalSelectedSourceSha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+      "originalSelectedSourceHashMatches": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+      "bytes": 8576,
+      "blob": "db4d98b333e1fb1103c82cf7851a252c0ecff3a5",
+      "sha256": "4e62a8eee6a03074e05bf75f17c8cdfb2b717cd99f923d188a0ffe7f3db54e6a",
+      "lines": 162,
+      "rangesInspected": [
+        [
+          125,
+          152
+        ]
+      ],
+      "originalSelectedSourceSha256": "4e62a8eee6a03074e05bf75f17c8cdfb2b717cd99f923d188a0ffe7f3db54e6a",
+      "originalSelectedSourceHashMatches": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 25052,
+      "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+      "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7",
+      "lines": 456,
+      "rangesInspected": [
+        [
+          39,
+          48
+        ],
+        [
+          73,
+          124
+        ],
+        [
+          126,
+          142
+        ]
+      ],
+      "originalSelectedSourceSha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7",
+      "originalSelectedSourceHashMatches": true
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
+      "bytes": 14495,
+      "blob": "c30094a87db542547a5741bb94930a7dd99e4aaf",
+      "sha256": "0b81fa8e8939959d23bbabdbdd30104dd4a9dd825304e6a4111ff536a0a03718",
+      "lines": 357,
+      "rangesInspected": [
+        [
+          48,
+          58
+        ],
+        [
+          291,
+          330
+        ]
+      ],
+      "originalSelectedSourceSha256": "0b81fa8e8939959d23bbabdbdd30104dd4a9dd825304e6a4111ff536a0a03718",
+      "originalSelectedSourceHashMatches": true
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailSession.ts",
+      "bytes": 27853,
+      "blob": "4ebf5a55d7cdcc5c29cc63e2bc9915c631222165",
+      "sha256": "cc73af4fab0ee40b4711173ed71db67776e16027009156cd373a1abcb942cb30",
+      "lines": 734,
+      "rangesInspected": [
+        [
+          106,
+          160
+        ],
+        [
+          190,
+          250
+        ]
+      ],
+      "originalSelectedSourceSha256": "cc73af4fab0ee40b4711173ed71db67776e16027009156cd373a1abcb942cb30",
+      "originalSelectedSourceHashMatches": true
+    },
+    {
+      "path": "src/features/team-task-detail/core/domain/taskDetailSession.ts",
+      "bytes": 13473,
+      "blob": "4899240d8b664c3d66fb2aadfce9f20adc630b80",
+      "sha256": "5b59e386052db8393a51ea2cde095cb83f89772ae583777d86b216ed7ac66ac7",
+      "lines": 433,
+      "rangesInspected": [
+        [
+          89,
+          106
+        ],
+        [
+          387,
+          433
+        ]
+      ],
+      "originalSelectedSourceSha256": "5b59e386052db8393a51ea2cde095cb83f89772ae583777d86b216ed7ac66ac7",
+      "originalSelectedSourceHashMatches": true
+    },
+    {
+      "path": "src/renderer/store/team/taskDetailReadAuthority.ts",
+      "bytes": 14291,
+      "blob": "ebe4226a87ccc0b58cd2a24fd45e6bbf797ea08f",
+      "sha256": "300d67066bf861099b83684df1cf2898229c950ab12044c57fddb32d893f2719",
+      "lines": 424,
+      "rangesInspected": [
+        [
+          46,
+          110
+        ],
+        [
+          166,
+          220
+        ],
+        [
+          299,
+          314
+        ],
+        [
+          333,
+          338
+        ],
+        [
+          372,
+          411
+        ]
+      ],
+      "originalSelectedSourceSha256": "300d67066bf861099b83684df1cf2898229c950ab12044c57fddb32d893f2719",
+      "originalSelectedSourceHashMatches": true
+    },
+    {
+      "path": "src/renderer/store/slices/teamTaskDetailSlice.ts",
+      "bytes": 27966,
+      "blob": "5d5da9534eeacf34d554b2df2ed5573876c3a09c",
+      "sha256": "7c1b2091311e921fc244e8d8d8814cd03451bd31327a91492fdf4f8730aa8fdf",
+      "lines": 772,
+      "rangesInspected": [
+        [
+          396,
+          437
+        ],
+        [
+          482,
+          495
+        ],
+        [
+          675,
+          717
+        ]
+      ],
+      "originalSelectedSourceSha256": "7c1b2091311e921fc244e8d8d8814cd03451bd31327a91492fdf4f8730aa8fdf",
+      "originalSelectedSourceHashMatches": true
+    },
+    {
+      "path": "src/features/team-task-detail/core/domain/taskDetailReadModel.ts",
+      "bytes": 6884,
+      "blob": "0a1ede79d40bc05af35b67fcf27ed7594d71abb2",
+      "sha256": "bdc52e3e59c1a2db72e89011afd82c5802d8ab839a8752cac2a64b47a0a78fcf",
+      "lines": 228,
+      "rangesInspected": [
+        [
+          71,
+          98
+        ]
+      ],
+      "originalSelectedSourceSha256": null,
+      "originalSelectedSourceHashMatches": null
+    },
+    {
+      "path": "src/features/agent-backend/renderer/createHostTeamChanges.ts",
+      "bytes": 9557,
+      "blob": "daf8ec603a9d0a5b5990232d7617b9a4a67b10e1",
+      "sha256": "0fb4534fbd62a0593cebfc5bc34122228f840bd2ccda19bb50bd9c9ea39b8829",
+      "lines": 236,
+      "rangesInspected": [
+        [
+          122,
+          198
+        ]
+      ],
+      "originalSelectedSourceSha256": "0fb4534fbd62a0593cebfc5bc34122228f840bd2ccda19bb50bd9c9ea39b8829",
+      "originalSelectedSourceHashMatches": true
+    },
+    {
+      "path": "src/renderer/store/index.ts",
+      "bytes": 95031,
+      "blob": "99619bb7c8645c62f8c59b4d04d428f35ae2ba93",
+      "sha256": "b77edb63afeda329c388592588cd76e1d24607375ccf49aff029fb1d8413aa80",
+      "lines": 2513,
+      "rangesInspected": [
+        [
+          1543,
+          1578
+        ]
+      ],
+      "originalSelectedSourceSha256": "b77edb63afeda329c388592588cd76e1d24607375ccf49aff029fb1d8413aa80",
+      "originalSelectedSourceHashMatches": true
+    },
+    {
+      "path": "src/renderer/components/team/TeamDetailView.tsx",
+      "bytes": 137728,
+      "blob": "e1fe249d7e5f760f80f87e93918b0ff253b3f450",
+      "sha256": "ea327a3b17e896013d88693deea9f0844ae7d52733dd9be23ffdfabe38c62f82",
+      "lines": 3749,
+      "rangesInspected": [
+        [
+          160,
+          178
+        ],
+        [
+          250,
+          380
+        ],
+        [
+          3572,
+          3582
+        ]
+      ],
+      "originalSelectedSourceSha256": "ea327a3b17e896013d88693deea9f0844ae7d52733dd9be23ffdfabe38c62f82",
+      "originalSelectedSourceHashMatches": true
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/TaskDetailDialog.tsx",
+      "bytes": 11909,
+      "blob": "003228a68f91bd3be004b8388fbb400f5b6a7aa6",
+      "sha256": "8efb9b58de0e0b41d0a1264cccef6ac6b530792698d6b7fcd3b1aadfe3fc046b",
+      "lines": 390,
+      "rangesInspected": [
+        [
+          82,
+          136
+        ],
+        [
+          248,
+          305
+        ]
+      ],
+      "originalSelectedSourceSha256": "8efb9b58de0e0b41d0a1264cccef6ac6b530792698d6b7fcd3b1aadfe3fc046b",
+      "originalSelectedSourceHashMatches": true
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/ui/TaskDetailContent.tsx",
+      "bytes": 3288,
+      "blob": "2ccca35825ba451dc71546d19fd273f1e7ca5ec2",
+      "sha256": "a6bc6a07fa69607529914c3b552c55dafa1ffa492fd650e565e0bb8e07b4e7c4",
+      "lines": 101,
+      "rangesInspected": [
+        [
+          64,
+          101
+        ]
+      ],
+      "originalSelectedSourceSha256": null,
+      "originalSelectedSourceHashMatches": null
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/ui/TaskDetailBody.tsx",
+      "bytes": 22571,
+      "blob": "d039d7b35ba3e7d5e2a7bbaf0e04f85bda72cead",
+      "sha256": "fd98561aa85b8f243e75970bfb342af47fa5b65a04fe6c7d154d54b5cbc6bfde",
+      "lines": 537,
+      "rangesInspected": [
+        [
+          492,
+          534
+        ]
+      ],
+      "originalSelectedSourceSha256": null,
+      "originalSelectedSourceHashMatches": null
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailPresentation.ts",
+      "bytes": 12402,
+      "blob": "6640fd23e9941c261612517b6d583f7d4ddc5079",
+      "sha256": "245a59c0715bb05dc9da07c7ea51745734480a9e09863a09100bdbfe40fca019",
+      "lines": 342,
+      "rangesInspected": [
+        [
+          130,
+          167
+        ]
+      ],
+      "originalSelectedSourceSha256": "245a59c0715bb05dc9da07c7ea51745734480a9e09863a09100bdbfe40fca019",
+      "originalSelectedSourceHashMatches": true
+    },
+    {
+      "path": "src/renderer/components/team/CollapsibleTeamSection.tsx",
+      "bytes": 7926,
+      "blob": "44d3fe74a1b9e6f720b8638a402f5d3721fe12eb",
+      "sha256": "db8ad2dba3b3e1e98f8a84ad88237e1156b02193e2923c168f3e9d1c4e9f000d",
+      "lines": 241,
+      "rangesInspected": [
+        [
+          72,
+          95
+        ],
+        [
+          127,
+          137
+        ],
+        [
+          215,
+          238
+        ]
+      ],
+      "originalSelectedSourceSha256": null,
+      "originalSelectedSourceHashMatches": null
+    },
+    {
+      "path": "src/renderer/components/team/composer/ComposerSurface.tsx",
+      "bytes": 1598,
+      "blob": "9e1cf3a76ef6a442c212ed806837e8f728e9e5f4",
+      "sha256": "5a65ae5d70f9193087061a9ba72750a05445c25e7e4c97c2bc95ce28539f901d",
+      "lines": 45,
+      "rangesInspected": [
+        [
+          19,
+          44
+        ]
+      ],
+      "originalSelectedSourceSha256": null,
+      "originalSelectedSourceHashMatches": null
+    },
+    {
+      "path": "src/renderer/components/ui/MentionableTextarea.tsx",
+      "bytes": 52237,
+      "blob": "3589e26ff85efb370577bd2d8b404fb62bd63fdb",
+      "sha256": "c55440246f2967ca8759102ee54be1c7832412ff2c5a453efdb3b0fa4e6e73ea",
+      "lines": 1431,
+      "rangesInspected": [
+        [
+          1333,
+          1353
+        ]
+      ],
+      "originalSelectedSourceSha256": null,
+      "originalSelectedSourceHashMatches": null
+    },
+    {
+      "path": "src/renderer/components/ui/auto-resize-textarea.tsx",
+      "bytes": 3395,
+      "blob": "53272ec42346a1ff3740bb5a7b28b0c651362390",
+      "sha256": "0abfb8c5dd3f89ef217231809d0cad6d0f134e333a7dd6c590eedb69db602784",
+      "lines": 93,
+      "rangesInspected": [
+        [
+          64,
+          87
+        ]
+      ],
+      "originalSelectedSourceSha256": null,
+      "originalSelectedSourceHashMatches": null
+    },
+    {
+      "path": "src/renderer/components/ui/dialog.tsx",
+      "bytes": 4914,
+      "blob": "046c7452239fccb9d18858c86e9d075984888031",
+      "sha256": "038c9966ee8a0047c0ab1e32f5feb61ca8a2a38ea838260139187b5f041767f2",
+      "lines": 130,
+      "rangesInspected": [
+        [
+          35,
+          69
+        ]
+      ],
+      "originalSelectedSourceSha256": null,
+      "originalSelectedSourceHashMatches": null
+    },
+    {
+      "path": "patches/@radix-ui__react-focus-scope@1.1.7.patch",
+      "bytes": 2924,
+      "blob": "9f823011726f62bcd41610241b32bf413bc02dd5",
+      "sha256": "cce5af533d09e336a548ebb15555869267a2545df720cfe228aa0a98da80e829",
+      "lines": 68,
+      "rangesInspected": [],
+      "originalSelectedSourceSha256": null,
+      "originalSelectedSourceHashMatches": null
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+      "lines": 26665,
+      "rangesInspected": [
+        [
+          100,
+          106
+        ],
+        [
+          16065,
+          16085
+        ],
+        [
+          16133,
+          16142
+        ]
+      ],
+      "originalSelectedSourceSha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+      "originalSelectedSourceHashMatches": true
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "bytes": 6946,
+      "blob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea",
+      "lines": 169,
+      "rangesInspected": [
+        [
+          151,
+          157
+        ]
+      ],
+      "originalSelectedSourceSha256": null,
+      "originalSelectedSourceHashMatches": null
+    }
+  ],
+  "sourceAnalysis": [
+    {
+      "id": "disable-expression",
+      "basis": [
+        "TaskCommentInput.tsx:50-53,291-330",
+        "useTaskDetailSession.ts:106-160"
+      ],
+      "finding": "The actual textarea receives disabled = session.submitPending || !controller.isOwner. ComposerSurface, MentionableTextarea and AutoResizeTextarea forward this prop. isOwner depends on enabled, context/switching, live Team availability, ready phase, null deletion intent, matching nondeleted current Task and exact owner surface. The captured probe omits several operands and rendered controller state when owner extraction returns null.",
+      "classification": "exact source fact; which operand changed in the original blur is unobserved"
+    },
+    {
+      "id": "owner-extractor",
+      "basis": [
+        "desktop-task-comment-input-target.ts:10-47",
+        "desktop-task-board-attachments-ui.ts:214-255"
+      ],
+      "finding": "ownerPresent=false means the strict current-fiber/controller/input expression returned null. It filters controller.isOwner, controller/task/identity equality, owner surface, visible enabled textarea and exact same controller reference in the input ancestry. It does not mean stored ownerSurfaceId became null. Current-fiber/ancestry and reference checks can refuse without exposing their reason.",
+      "classification": "exact source semantics; no claim that reflection itself caused this failure"
+    },
+    {
+      "id": "specific-authority-invalidation-candidate",
+      "basis": [
+        "createHostTeamChanges.ts:122-198",
+        "store/index.ts:1543-1578",
+        "taskDetailReadAuthority.ts:333-338,372-411",
+        "teamTaskDetailSlice.ts:396-437",
+        "taskDetailReadModel.ts:71-76",
+        "taskDetailReadAuthority.ts:192-201,299-314",
+        "useTaskDetailSession.ts:106-160"
+      ],
+      "finding": "For fresh Host product feed events, gap or resync, the existing shared loop emits config and inbox full-read invalidations. An accepted config event calls invalidateTaskDetailTeamSource, deletes the accepted live Team snapshot and marks the detail refresh pending while retaining its full object/phase. isTaskDetailTeamUnavailable can then be true and render isOwner false without changing ownerSurfaceId or ownerRevision. A later accepted scoped snapshot can permit ownership again. Ordinary polls without product/conversation change do not fabricate a config event.",
+      "classification": "concrete reachable source mechanism and strongest causal candidate; no original feed-event/authority-revision/callback timestamp joins the observed blur"
+    },
+    {
+      "id": "draft-hydration-distinction",
+      "basis": [
+        "useTaskDetailSession.ts:215-248",
+        "taskDetailSession.ts:89-106"
+      ],
+      "finding": "The ordinary persisted draft hydrate only conditionally updates comment text/chips at revision zero; it has no direct focus call and does not itself set submitPending or the owner surface. It must not be named the demonstrated reason for disabled=true.",
+      "classification": "exact source exclusion of a direct hydrate-to-disable assignment, not universal exclusion of all surrounding asynchronous work"
+    },
+    {
+      "id": "dom-retention-and-remount",
+      "basis": [
+        "TeamDetailView.tsx:250-380",
+        "TaskDetailDialog.tsx:82-136,248-305",
+        "TaskDetailContent.tsx:64-101",
+        "TaskDetailBody.tsx:492-534",
+        "CollapsibleTeamSection.tsx:72-95,215-238",
+        "ComposerSurface.tsx:19-44",
+        "MentionableTextarea.tsx:1343-1353",
+        "auto-resize-textarea.tsx:64-87"
+      ],
+      "finding": "The selected Task identity and surface are stable refs/state; loaded TaskDetailContent is keyed by the same identity, the Comments section defaults open, and the textarea has no key derived from ownerRevision or isOwner. Disabling alone does not select a different JSX textarea. Losing the full Task, closing/remounting ancestors or collapsing Comments could replace it, but no original node-continuity or component lifecycle trace proves that. Existing wrapper height work does not restore focus on re-enable.",
+      "classification": "source route analysis; a stable key is not runtime Node identity proof"
+    },
+    {
+      "id": "focus-scope-candidate",
+      "basis": [
+        "dialog.tsx:35-69",
+        "TaskDetailDialog.tsx:248-265",
+        "local @radix-ui/react-dialog 1.1.15 dist/index.mjs:130-159,204-233",
+        "local patched @radix-ui/react-focus-scope 1.1.7 dist/index.mjs:56-91,92-122"
+      ],
+      "finding": "The normal open modal traps focus. The inspected FocusScope implementation returns on focusout with relatedTarget null; its child-list MutationObserver, when document.activeElement is BODY, focuses the container if any observed mutation removed a descendant. That removal need not be the textarea. Its next focusin records the DIV as lastFocusedElement. It has no separate textarea-re-enabled restoration rule. This can explain BODY then DIV after an earlier focus loss, but the original receipt has no mutation list, relatedTarget or callback tag.",
+      "classification": "source-supported explanation; actual fallback invocation unproved"
+    },
+    {
+      "id": "existing-ref-patch",
+      "basis": [
+        "pnpm-lock.yaml:100-106,16065-16085,16133-16142",
+        "pnpm-workspace.yaml:151-157",
+        "patches/@radix-ui__react-focus-scope@1.1.7.patch"
+      ],
+      "finding": "The selected lock already declares the FocusScope 1.1.7 patch; its SHA256 is exactly the lock patch_hash. The patch stabilizes container callback refs and defers null cleanup by a guarded microtask. It does not remove the BODY/removed-descendant fallback. Reapplying a generic ref-churn patch is not a supported repair inference.",
+      "classification": "source/lock fact; no independent original CI dependency-payload byte claim"
+    }
+  ],
+  "localDependencyInspection": {
+    "files": [
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/node_modules/@radix-ui/react-dialog/package.json",
+        "bytes": 2151,
+        "blob": "bc7d43d07f8ad679c86b8bca3a234fb39c21009e",
+        "sha256": "d8abbe136c810f243dee9fa56f637b7e15d95fc1973ba47a61ae6aba39830e26",
+        "resolvedPath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/@radix-ui+react-dialog@1.1.15_@types+react-dom@19.2.3_@types+react@19.2.14__@types+reac_779045218dc2799d336e7197abef9d38/node_modules/@radix-ui/react-dialog/package.json"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/node_modules/@radix-ui/react-dialog/dist/index.mjs",
+        "bytes": 12986,
+        "blob": "13581033b5a5635796d4cf492f0828e853d011c4",
+        "sha256": "8532dcb7cc753e376c065e69ae649676cffe7274357505bc56f1f09a8ebb0fb7",
+        "resolvedPath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/@radix-ui+react-dialog@1.1.15_@types+react-dom@19.2.3_@types+react@19.2.14__@types+reac_779045218dc2799d336e7197abef9d38/node_modules/@radix-ui/react-dialog/dist/index.mjs"
+      },
+      {
+        "path": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/@radix-ui+react-dialog@1.1.15_@types+react-dom@19.2.3_@types+react@19.2.14__@types+reac_779045218dc2799d336e7197abef9d38/node_modules/@radix-ui/react-focus-scope/package.json",
+        "bytes": 1715,
+        "blob": "0dfeb68eebaa28d30a79191ab87042dcbe697b61",
+        "sha256": "ebc9fba87fe923d5c71f624268777a415ce5021e2d09b0647243bd900473ad83",
+        "resolvedPath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/@radix-ui+react-focus-scope@1.1.7_patch_hash=cce5af533d09e336a548ebb15555869267a2545df7_bc0cbf4d86e8da005ae5f6f0aa51e1fb/node_modules/@radix-ui/react-focus-scope/package.json"
+      },
+      {
+        "path": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/@radix-ui+react-dialog@1.1.15_@types+react-dom@19.2.3_@types+react@19.2.14__@types+reac_779045218dc2799d336e7197abef9d38/node_modules/@radix-ui/react-focus-scope/dist/index.mjs",
+        "bytes": 8860,
+        "blob": "e34a96c7839158ec27969d67e568d1852b3b03e4",
+        "sha256": "b367bd2c294ac461c6a9c943b7676d3732d10efe2534896bdbcd6cd5534983cf",
+        "resolvedPath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/@radix-ui+react-focus-scope@1.1.7_patch_hash=cce5af533d09e336a548ebb15555869267a2545df7_bc0cbf4d86e8da005ae5f6f0aa51e1fb/node_modules/@radix-ui/react-focus-scope/dist/index.mjs"
+      }
+    ],
+    "lockPatchSha256MatchesTrackedPatch": true,
+    "installedVersionsMatchLock": true,
+    "patchHunkPresentInLocalDist": true,
+    "runtimeCustodyLimit": "These are read-only locally installed dependency bytes at the resolved paths, with version and tracked patch semantics checked. They were not reopened from the original Cross CI ZIP as dependency files, and are not asserted byte-identical to the original runner optimized dependency payload. The original receipt separately pins the full lock; workspace/patch/UI primitive files are also freshly read at immutable 0660 but are not all separately present in the 1,757 selected array."
+  },
+  "causalConclusion": {
+    "demonstrated": "The original click focused the intended input; focus later left, a disabled input was sampled, enabled/current/empty conditions eventually recovered without focus, and the unchanged original gate failed.",
+    "candidate": "An asynchronous accepted-Team authority invalidation caused a temporary rendered disable, then the existing modal fallback selected the dialog container. The original no-replay focus gate did not subsequently regain focus.",
+    "candidateIsInference": true,
+    "specificInvalidationProven": false,
+    "sameNodeDisableProven": false,
+    "remountProven": false,
+    "focusScopeCallbackProven": false,
+    "productionRepairDemonstrated": false,
+    "whyNotARepair": "Restoring focus automatically, repeating the click, moving the original action, weakening owner/readiness predicates or extending the cutoff would select behavior not justified by the missing causal facts. None is proposed or applied."
+  },
+  "minimalPassiveEvidenceIfLaterAuthorized": {
+    "purpose": "Distinguish a still-connected original textarea being disabled from a replaced node/other focus transition, and distinguish an owner-extractor refusal from a recorded ownership predicate change. This is analysis of needed data, not an approved source design.",
+    "firstRetentionOnlyChange": {
+      "seam": "desktop-task-board-attachments-ui.ts:241-255",
+      "data": "Retain the already-returned timeMs, activeElement category, settled and inputEnabled with each existing bounded transition row. Keep the same original read, readiness predicate, 12-row cap and one last sample; report truncation separately if later selected.",
+      "additionalCost": "No additional CDP call, product/RPC read, DOM query, clock sampling, timer or business action for these already-computed values. Serialized receipt bytes grow by bounded primitive fields in the existing final write."
+    },
+    "eventSpecificMissingData": {
+      "seam": "desktop-ui-controls.ts:48,126-140 existing passive focusin/focusout row and existing microtask/after-dispatch callbacks",
+      "data": "For the target Task textarea, capture disabled and isConnected from the already-observed node, a closed relatedTarget category, and a closed rendered-owner/submitPending observation only if obtained safely at that same boundary. Preserve null/unknown on unreadable or ambiguous fibers.",
+      "additionalCost": "disabled/isConnected/relatedTarget require extra synchronous DOM property reads and bounded row bytes; rendered-controller data requires additional bounded descriptor/fiber/store reads. Those are real observer costs, not zero-cost existing facts. No extra input, focus(), event dispatch, new timer, CDP request, filesystem operation or native/authority RPC is required merely for these fields. Exact fields, caps and passivity must be reviewed in a later R1."
+    },
+    "nodeIdentityLimit": "isConnected plus a stable ID still cannot prove continuity across intervals. If continuity is required, a bounded TEST-only reference-equality witness for the already captured target is needed; it must neither replace the target nor drive readiness/actions. This report implements no reference registry or new observer.",
+    "stillUnresolved": "A later same-turn pure availability/scope observation would be necessary to name the specific missing isOwner operand; it is an extra read of renderer state/authority-map data and cannot be inferred from ready/refreshPending. The exact Radix callback would remain unproved without a callback-specific witness. Do not add a broad mutation observer or stack trace merely to relabel an inference.",
+    "sequence": "No patch, R1 publication or application here. Any later diagnostic/correction must follow the preserved N privacy 177/24 GREEN gate and fresh review of overlapping controls/test/workflow proposals. Existing business inputs, one-click sequence, original20s cutoff, ownership guards and no replay remain governing."
+  },
+  "taskboardCounterpoint": {
+    "jobId": 133017916005,
+    "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "sameOrdered1757SourceArrays": true,
+    "sameAttachmentHelperSha256": "83b92a2f8a1f2141bf1672548d9f01402a514720783f850897bf3cd98560e656",
+    "focusSamplePageClockMs": 16983,
+    "retainedFocusTransitions": 1,
+    "sample": {
+      "owner": {
+        "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-okmuEL",
+        "taskId": "be297d47-4a62-5c7c-9a62-82a42cc157af",
+        "identity": {
+          "contextId": "local",
+          "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-okmuEL",
+          "taskId": "be297d47-4a62-5c7c-9a62-82a42cc157af"
+        },
+        "surfaceId": "0d9e3518-5b9d-4b77-add6-4805e9bfde9c",
+        "inputId": "task-comment-input-%5B%220d9e3518-5b9d-4b77-add6-4805e9bfde9c%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-okmuEL%5C%22%2C%5C%22be297d47-4a62-5c7c-9a62-82a42cc157af%5C%22%5D%22%5D",
+        "commentText": "",
+        "submitPending": false,
+        "submitError": null,
+        "ownerRevision": 3,
+        "partRevisions": {
+          "commentText": 0,
+          "pendingAttachments": 0
+        },
+        "pendingPreparationCount": 0,
+        "canSubmit": true,
+        "attachmentError": null,
+        "pendingAttachmentCount": 0,
+        "canEditNow": true,
+        "canResolveClarification": false,
+        "selector": "[role=\"dialog\"] textarea[id=\"task-comment-input-%5B%220d9e3518-5b9d-4b77-add6-4805e9bfde9c%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-okmuEL%5C%22%2C%5C%22be297d47-4a62-5c7c-9a62-82a42cc157af%5C%22%5D%22%5D\"]"
+      },
+      "inputProbe": {
+        "present": true,
+        "connected": true,
+        "disabled": false,
+        "focused": true,
+        "ownerSurfaceId": "0d9e3518-5b9d-4b77-add6-4805e9bfde9c",
+        "ownerRevision": 3,
+        "expectedSurfaceId": "0d9e3518-5b9d-4b77-add6-4805e9bfde9c",
+        "detailPhase": "ready",
+        "refreshPending": false,
+        "taskStatus": "in_progress",
+        "taskId": "be297d47-4a62-5c7c-9a62-82a42cc157af",
+        "activeContextId": "local",
+        "contextSwitching": false
+      },
+      "settled": true,
+      "domValue": "",
+      "inputEnabled": true,
+      "focused": true,
+      "documentFocused": true,
+      "visibility": "visible",
+      "activeElement": {
+        "tag": "TEXTAREA",
+        "id": "task-comment-input-%5B%220d9e3518-5b9d-4b77-add6-4805e9bfde9c%22%2C%22%5B%5C%22local%5C%22%2C%5C%22host-team%3ATEST-desktop-handle-TEST-desktop-backend-okmuEL%5C%22%2C%5C%22be297d47-4a62-5c7c-9a62-82a42cc157af%5C%22%5D%22%5D"
+      },
+      "timeMs": 16983
+    },
+    "limit": "16983 is the original rounded renderer performance.now() reading, not elapsed focus-gate duration. Same-source Taskboard success demonstrates that the unchanged helper can pass in an original run. Different original lane/timing/state is not a causal control or Cross acceptance."
+  },
+  "publishedWordingCheck": {
+    "publishedHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+    "texts": [
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/Plan29-cross-team-failure-appendix.md",
+        "bytes": 6359,
+        "blob": "afbca9fed68bc56e5014d0c9cfffc86b09227752",
+        "sha256": "f7f2743ea93ce4edb787c693b2846271237ab7d19981dc22935a33b1fa266c72",
+        "publishedPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/cross-team/Plan29-cross-team-failure-appendix.md",
+        "publishedBytesExact": true
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/independent-cross-review.json",
+        "bytes": 83435,
+        "blob": "b3c17e7b936f11061f786af153eac9a610a7fe16",
+        "sha256": "5930e741d4c882344b6c4dd29f1c39ca913fc1170e048310f17a625babe6dc0c",
+        "publishedPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/cross-team/independent-cross-review.json",
+        "publishedBytesExact": true
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/taskboard/Plan29-taskboard-appendix.md",
+        "bytes": 6699,
+        "blob": "d6fcba1cd32bd8f8eb7fcca7dbb664488fc4b6a6",
+        "sha256": "3b29d6801762b3b9ffefb25258c88022dea944fb559ffda3e371c54de6a64fd9",
+        "publishedPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/taskboard/Plan29-taskboard-appendix.md",
+        "publishedBytesExact": true
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/taskboard/independent-taskboard-review.json",
+        "bytes": 116804,
+        "blob": "bdfa82938601f497a43f67c3a1e3c5ddc16055e1",
+        "sha256": "56c80b5ee9bc49635858e4a247742fcd246093dd50e0d3e31d100eaa8936a305",
+        "publishedPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-post-helper-current-ci-2026-11-16/ci-desktop-m0660/taskboard/independent-taskboard-review.json",
+        "publishedBytesExact": true
+      }
+    ],
+    "artifactCorrectionRequired": false,
+    "findings": [
+      "Cross appendix explicitly calls the 11 rows state transitions, says their individual timestamps are absent and the observations are non-atomic. Its R2 sourceSemantics explicitly says these are retained state changes, not every read.",
+      "Taskboard appendix does not claim a 16,983 ms gate duration. 16983 appears in original copied focusSample.timeMs only, without an elapsed-duration claim.",
+      "Cross prose refers to the owner expression being unavailable and preserves the same surface/revision; neither independent report asserts that ownerSurfaceId was lost. The complete transition rows show it unchanged.",
+      "No v1 text is changed; no versioned correction is necessary. This report makes the field meanings explicit without retroactive alteration."
+    ]
+  },
+  "executionBoundary": {
+    "projectTests": false,
+    "compilerOrLint": false,
+    "nodeOrProvider": false,
+    "browserInteraction": false,
+    "newCiPollOrDownload": false,
+    "trackedSourceChange": false,
+    "gitRefOrCheckoutChange": false,
+    "sourceCandidateCreated": false,
+    "onlyNewOutput": "This independent analysis JSON; immutable Git/source/artifact reads and pure byte/JSON checks only."
+  },
+  "qualificationLimits": [
+    "Original Cross FAIL remains FAIL. No cleanup result is upgraded by this focus analysis.",
+    "The source mechanism is a concrete candidate, not a demonstrated cause or approved repair.",
+    "The 11 retained transitions are not all reads; no missing transition is invented.",
+    "No same-node or lifecycle assertion is inferred solely from ID/owner stability.",
+    "No current N privacy GREEN or native/packaged qualification is claimed.",
+    "The earlier seven-PNG independent artifact review is referenced; this source-only pass does not claim a new visual review."
+  ]
+}

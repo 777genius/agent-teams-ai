@@ -1,0 +1,861 @@
+{
+  "schema": "independent-stage-n-green-docs-prepublication-review/v1",
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUtc": "2026-11-16T04:21:38.862347+00:00",
+  "result": "APPROVE",
+  "manifest": {
+    "bytes": 336753,
+    "blob": "b83f10c7379e659e65215a8effb4cdba9477fad2",
+    "sha256": "28bfd87ccb0fe4b9cf9a73f8858541adb6906e31b246f4b216d1227a2c7ee185"
+  },
+  "baseHead": "dee9448e2c8771bed2f4e403259446b1d3b4d4e0",
+  "baseTree": "3cbed68d3c8e45b2ebd88e25deb3837dcf20414c",
+  "expectedTree": "5deaa9562f4d65a9bb62c2128c55f309479f8eaa",
+  "primaryHeadRemains": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "counts": {
+    "changedPaths": 236,
+    "new": 235,
+    "modified": 1,
+    "copiedBytes": 50060275,
+    "baseLeaves": 10463,
+    "finalLeaves": 10698,
+    "unchangedParentLeaves": 10462,
+    "nonDocumentationLeavesUnchanged": 8798,
+    "inheritedPayloads": 10,
+    "planExactSuffixBlocks": 11
+  },
+  "all236PayloadBytesAndOriginalMappingsExact": true,
+  "all10InheritedPayloadsMatchActualParentGitBytes": true,
+  "all27OfficialArchivesAnd541MembersRecoverable": true,
+  "all265RepositoryReferencesResolveToExactBytes": true,
+  "fullPlanPrefixAndAll11ExactBlocks": {
+    "prefix": {
+      "bytes": 1534053,
+      "blob": "de991557a385750d4e084f3ba301d05f23d39f00",
+      "sha256": "33bab0988306387e11cd3763ae93e79667d443e2774611a863449cba68d2ce4b"
+    },
+    "result": {
+      "bytes": 1626851,
+      "blob": "ad13c9287629d650db07f322a11e8119dd2a4c15",
+      "sha256": "96816aeb5caf90cd9c8936ae1c02a4bc92cb3db2ba735d317448329cbde07769"
+    },
+    "blocks": [
+      {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/Plan29-import-saved-archive-appendix.md",
+        "retainedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-desktop-m0660/import/Plan29-import-saved-archive-appendix.md",
+        "separator": "two literal LF bytes",
+        "separatorOffset": 1534053,
+        "contentOffset": 1534055,
+        "bytes": 9968,
+        "blob": "f3bde48b5bf6aa3a61047d99248bbb04f732119e",
+        "sha256": "0b303b84e5063639ad9b1ef21da3eed0c3ab35e7feeaadd44365767b6fdbf58c"
+      },
+      {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/Plan29-extensions-appendix.md",
+        "retainedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-desktop-m0660/extensions/Plan29-extensions-appendix.md",
+        "separator": "two literal LF bytes",
+        "separatorOffset": 1544023,
+        "contentOffset": 1544025,
+        "bytes": 9117,
+        "blob": "bc5b7e00d228218d127e54dc26d80532beacfca6",
+        "sha256": "ed485eda8fceadc71d219551efb76a35dda5e8a94c14fcce2ce7b03e07e34c08"
+      },
+      {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/review/Plan29-review-synthetic-history-appendix.md",
+        "retainedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-desktop-m0660/review/Plan29-review-synthetic-history-appendix.md",
+        "separator": "two literal LF bytes",
+        "separatorOffset": 1553142,
+        "contentOffset": 1553144,
+        "bytes": 9172,
+        "blob": "d1dbfa4166c6a1b64db76557d2d0308f66b6b3fb",
+        "sha256": "9bf044f9cbb063fc772bc459a538083168f5192b79cba3b759b9f87a5a27582e"
+      },
+      {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/Plan29-codex-login-appendix.md",
+        "retainedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-desktop-m0660/codex-login/Plan29-codex-login-appendix.md",
+        "separator": "two literal LF bytes",
+        "separatorOffset": 1562316,
+        "contentOffset": 1562318,
+        "bytes": 8380,
+        "blob": "010275f826a1b9696e5dae46455ab5a067dc8562",
+        "sha256": "6283cc5f04463784c252344f3dc64655577f2cf8f7aa5d4eb89b4dfe1c99f24d"
+      },
+      {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-arm/Plan29-packaged-mac-arm-appendix.md",
+        "retainedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-desktop-m0660/packaged-mac-arm/Plan29-packaged-mac-arm-appendix.md",
+        "separator": "two literal LF bytes",
+        "separatorOffset": 1570698,
+        "contentOffset": 1570700,
+        "bytes": 8832,
+        "blob": "c5797560df868f616a63ee037923943a5313f0cb",
+        "sha256": "2d7a52ab14bd98093e080a27d671cdf0eced88b2644e820bbee11e94cde89729"
+      },
+      {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-all-platforms/Plan29-creation-three-platforms-appendix.md",
+        "retainedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-n-608efb/creation-all-platforms/Plan29-creation-three-platforms-appendix.md",
+        "separator": "two literal LF bytes",
+        "separatorOffset": 1579532,
+        "contentOffset": 1579534,
+        "bytes": 6150,
+        "blob": "a5e41666ada785b30178ed12fab15fa30989d42f",
+        "sha256": "13d7acdec617156c08ebb75a8f69e7c14909c52f4e90ec366e12604ec2479dee"
+      },
+      {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/installer/Plan29-installer-success-appendix.md",
+        "retainedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-n-608efb/installer/Plan29-installer-success-appendix.md",
+        "separator": "two literal LF bytes",
+        "separatorOffset": 1585684,
+        "contentOffset": 1585686,
+        "bytes": 11296,
+        "blob": "27b206a0216b2a011b663c32fb7220b710abe1f4",
+        "sha256": "21c0c3ff2c39e2bcf9f5b4eb398886690ea903559821af62438de11666448239"
+      },
+      {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/cross-team/Plan29-cross-team-failure-appendix.md",
+        "retainedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-n-608efb/cross-team/Plan29-cross-team-failure-appendix.md",
+        "separator": "two literal LF bytes",
+        "separatorOffset": 1596982,
+        "contentOffset": 1596984,
+        "bytes": 7719,
+        "blob": "cf08b09a9f17b87b6015a8e240351eeda0f20296",
+        "sha256": "5b2eca2d1ea7512171bb7836423639a8cdaf20a5131ca6942a10c63ac1019d41"
+      },
+      {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/team/Plan29-Team-privacy-GREEN-and-static-FAIL-appendix.md",
+        "retainedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-n-608efb/team/Plan29-Team-privacy-GREEN-and-static-FAIL-appendix.md",
+        "separator": "two literal LF bytes",
+        "separatorOffset": 1604703,
+        "contentOffset": 1604705,
+        "bytes": 5979,
+        "blob": "1a3deb0e3e867f978eefab9ab44805f3bf725bdb",
+        "sha256": "9daff99b05e0e48d63dad6d9fb2345b0d17273706b47bdda8e1214230e4e346e"
+      },
+      {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/Plan29-nine-completed-native-originals-appendix-v2.md",
+        "retainedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/native-audit-N608efb/Plan29-nine-completed-native-originals-appendix-v2.md",
+        "separator": "two literal LF bytes",
+        "separatorOffset": 1610684,
+        "contentOffset": 1610686,
+        "bytes": 8628,
+        "blob": "2f39446690ac43523d818d4cca28d4c73f69a22c",
+        "sha256": "9b70a7ac414a0e26f073dee1aa20bec02c87d577cc6c5051175191c02d331b2c"
+      },
+      {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/stage-n-green-and-completed-evidence-publication/Plan29-N-green-currentness-and-renderer-R1.md",
+        "retainedRepositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/stage-n-green-and-completed-evidence-publication/Plan29-N-green-currentness-and-renderer-R1.md",
+        "separator": "two literal LF bytes",
+        "separatorOffset": 1619314,
+        "contentOffset": 1619316,
+        "bytes": 7535,
+        "blob": "708b337ef9f9f73a03be1eb1d16715fad39e3c60",
+        "sha256": "7b22a977f84f7cdeaa382abd8e907d22f4ac5491b52fa6aae54b43c9fc1caeaf"
+      }
+    ]
+  },
+  "all8798NonDocumentationLeavesUnchanged": true,
+  "nonDocumentationMapSha256": "d3ed00695b2d09d3bcd38d41830ddde5670908c858a600bae03c757dc00bc397",
+  "sourceChangedByThisCut": false,
+  "rendererSourceApplied": false,
+  "initialByteTreeReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-n-green-and-completed-independent-initial-review.json",
+    "bytes": 142682,
+    "blob": "6b65e9515aee05ba70ec20f53b0d1bdc95e5875a",
+    "sha256": "6526e44149ba6bb416cde152f9302da32d93eed59a797717cff7a47490999cb8"
+  },
+  "archiveReferenceReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-n-green-and-completed-independent-archive-reference-review.json",
+    "bytes": 255964,
+    "blob": "bddb1b28b414f3e30a2994ac2383d566ce7f7b4d",
+    "sha256": "9ecb2dd3b2683296fb7d0cc1c250d0dee18e73b410a4c95dcdff64fa3ccceec7"
+  },
+  "reviewedGroups": [
+    {
+      "name": "Original M saved-archive Import",
+      "originalSource": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "appendix": {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/import/Plan29-import-saved-archive-appendix.md",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-desktop-m0660/import/Plan29-import-saved-archive-appendix.md",
+        "bytes": 9968,
+        "blob": "f3bde48b5bf6aa3a61047d99248bbb04f732119e",
+        "sha256": "0b303b84e5063639ad9b1ef21da3eed0c3ab35e7feeaadd44365767b6fdbf58c"
+      },
+      "independentR2": [
+        {
+          "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-desktop-m0660/import/independent-import-review.json",
+          "bytes": 131044,
+          "blob": "d9246702c908a1bdaa6decff86b993a5d5fe5aea",
+          "sha256": "dc90da3e5ab1c56be942420e15d8c1be3d47651240085c342361865ea1e1f029"
+        }
+      ],
+      "claimScope": "Exact previously independently reviewed source-specific scope, not fresh re-execution or a new universal acceptance claim."
+    },
+    {
+      "name": "Original M Extensions",
+      "originalSource": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "appendix": {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/extensions/Plan29-extensions-appendix.md",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-desktop-m0660/extensions/Plan29-extensions-appendix.md",
+        "bytes": 9117,
+        "blob": "bc5b7e00d228218d127e54dc26d80532beacfca6",
+        "sha256": "ed485eda8fceadc71d219551efb76a35dda5e8a94c14fcce2ce7b03e07e34c08"
+      },
+      "independentR2": [
+        {
+          "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-desktop-m0660/extensions/independent-extensions-review.json",
+          "bytes": 107221,
+          "blob": "bb83aa0454542564177922c2fac7eedf2e57bc0e",
+          "sha256": "559f16877a61af3bbb012894f50d1d3eb67d67d6acd59cb857b6a2d7657e34c5"
+        }
+      ],
+      "claimScope": "Exact previously independently reviewed source-specific scope, not fresh re-execution or a new universal acceptance claim."
+    },
+    {
+      "name": "Original M synthetic-history Review",
+      "originalSource": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "appendix": {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/review/Plan29-review-synthetic-history-appendix.md",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-desktop-m0660/review/Plan29-review-synthetic-history-appendix.md",
+        "bytes": 9172,
+        "blob": "d1dbfa4166c6a1b64db76557d2d0308f66b6b3fb",
+        "sha256": "9bf044f9cbb063fc772bc459a538083168f5192b79cba3b759b9f87a5a27582e"
+      },
+      "independentR2": [
+        {
+          "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-desktop-m0660/review/independent-review-ui-review.json",
+          "bytes": 141303,
+          "blob": "3f70edb8b8dae3a0f9517b1fe6e3179dad559af5",
+          "sha256": "fc34bba8f99c7824f68b02eaa0962ca3e0285ac31226eab351ffab683e1b0ff8"
+        }
+      ],
+      "claimScope": "Exact previously independently reviewed source-specific scope, not fresh re-execution or a new universal acceptance claim."
+    },
+    {
+      "name": "Original M Codex Login",
+      "originalSource": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "appendix": {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/Plan29-codex-login-appendix.md",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-desktop-m0660/codex-login/Plan29-codex-login-appendix.md",
+        "bytes": 8380,
+        "blob": "010275f826a1b9696e5dae46455ab5a067dc8562",
+        "sha256": "6283cc5f04463784c252344f3dc64655577f2cf8f7aa5d4eb89b4dfe1c99f24d"
+      },
+      "independentR2": [
+        {
+          "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-desktop-m0660/codex-login/independent-codex-login-review.json",
+          "bytes": 94752,
+          "blob": "ee4c5e9e4b1ee16e89dac9e4d0fc50fcf1316119",
+          "sha256": "28e6035972a31c2291f0fcaf1b7006cb8e256577c03e8ee87632581b46d5da36"
+        }
+      ],
+      "claimScope": "Exact previously independently reviewed source-specific scope, not fresh re-execution or a new universal acceptance claim."
+    },
+    {
+      "name": "Original M packaged macOS ARM64",
+      "originalSource": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "appendix": {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-mac-arm/Plan29-packaged-mac-arm-appendix.md",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-desktop-m0660/packaged-mac-arm/Plan29-packaged-mac-arm-appendix.md",
+        "bytes": 8832,
+        "blob": "c5797560df868f616a63ee037923943a5313f0cb",
+        "sha256": "2d7a52ab14bd98093e080a27d671cdf0eced88b2644e820bbee11e94cde89729"
+      },
+      "independentR2": [
+        {
+          "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-desktop-m0660/packaged-mac-arm/independent-native-source-review.json",
+          "bytes": 58916,
+          "blob": "70774957220bd8d2bcb5e92c5c0fd86df8c42bc5",
+          "sha256": "90af8bf6d437887e361100b85a77a832374e80f4489e7cd69d5e87e9cea8ebb0"
+        }
+      ],
+      "claimScope": "Exact previously independently reviewed source-specific scope, not fresh re-execution or a new universal acceptance claim."
+    },
+    {
+      "name": "Original N three-platform Creation canonical v2",
+      "originalSource": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "appendix": {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-all-platforms/Plan29-creation-three-platforms-appendix.md",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-n-608efb/creation-all-platforms/Plan29-creation-three-platforms-appendix.md",
+        "bytes": 6150,
+        "blob": "a5e41666ada785b30178ed12fab15fa30989d42f",
+        "sha256": "13d7acdec617156c08ebb75a8f69e7c14909c52f4e90ec366e12604ec2479dee"
+      },
+      "independentR2": [
+        {
+          "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-n-608efb/creation-all-platforms/independent-creation-three-platforms-review.json",
+          "bytes": 108248,
+          "blob": "3ebce4e58c817e74172d765341c12deae6d5734d",
+          "sha256": "7f0ec7bf2ebdc4a05d967170ecb7176717e2e8d041274342bd064686ab214cf4"
+        }
+      ],
+      "claimScope": "Exact previously independently reviewed source-specific scope, not fresh re-execution or a new universal acceptance claim."
+    },
+    {
+      "name": "Original N Installer",
+      "originalSource": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "appendix": {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/installer/Plan29-installer-success-appendix.md",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-n-608efb/installer/Plan29-installer-success-appendix.md",
+        "bytes": 11296,
+        "blob": "27b206a0216b2a011b663c32fb7220b710abe1f4",
+        "sha256": "21c0c3ff2c39e2bcf9f5b4eb398886690ea903559821af62438de11666448239"
+      },
+      "independentR2": [
+        {
+          "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-n-608efb/installer/independent-installer-review.json",
+          "bytes": 99048,
+          "blob": "36c7b6aab79d03556f5afea38ac689d3f7301a30",
+          "sha256": "0838c7333f76a8e53882b7f02aa9f2e3f3a279cb3b067fbb38beba8ef840c8fe"
+        }
+      ],
+      "claimScope": "Exact previously independently reviewed source-specific scope, not fresh re-execution or a new universal acceptance claim."
+    },
+    {
+      "name": "Original N Cross failure evidence",
+      "originalSource": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "appendix": {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/cross-team/Plan29-cross-team-failure-appendix.md",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-n-608efb/cross-team/Plan29-cross-team-failure-appendix.md",
+        "bytes": 7719,
+        "blob": "cf08b09a9f17b87b6015a8e240351eeda0f20296",
+        "sha256": "5b2eca2d1ea7512171bb7836423639a8cdaf20a5131ca6942a10c63ac1019d41"
+      },
+      "independentR2": [
+        {
+          "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-n-608efb/cross-team/independent-cross-team-review.json",
+          "bytes": 90416,
+          "blob": "b1b82bece18414c7ddadd71d4a9a669f09047172",
+          "sha256": "d08ec35917f5ebbe71a2cd61022bb717804c70da367abccde7389057fc62f9ed"
+        }
+      ],
+      "claimScope": "Exact previously independently reviewed source-specific scope, not fresh re-execution or a new universal acceptance claim."
+    },
+    {
+      "name": "Original N Team privacy GREEN and subsequent typed-renderer failure",
+      "originalSource": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "appendix": {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/team/Plan29-Team-privacy-GREEN-and-static-FAIL-appendix.md",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-n-608efb/team/Plan29-Team-privacy-GREEN-and-static-FAIL-appendix.md",
+        "bytes": 5979,
+        "blob": "1a3deb0e3e867f978eefab9ab44805f3bf725bdb",
+        "sha256": "9daff99b05e0e48d63dad6d9fb2345b0d17273706b47bdda8e1214230e4e346e"
+      },
+      "independentR2": [
+        {
+          "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-n-608efb/team/independent-team-privacy-green-review.json",
+          "bytes": 59866,
+          "blob": "d4fb9c542b8404a0e7fedb386f019aac08da79dc",
+          "sha256": "e6f1cb5bc292e4ca4d7e37b0e3a5c1afbb4b916424467ea28f03e338f3bdd9db"
+        },
+        {
+          "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-n-608efb/team/independent-team-author-packet-review.json",
+          "bytes": 75687,
+          "blob": "4d2f9deb4f1c1f9b94c08060e05eaf4166b303b6",
+          "sha256": "30cf104c330c8a86fd98f004369afca865cd930ce5913afb707391f5d7d96aeb"
+        }
+      ],
+      "claimScope": "Exact previously independently reviewed source-specific scope, not fresh re-execution or a new universal acceptance claim."
+    },
+    {
+      "name": "Original N nine completed non-Linux native/static jobs",
+      "originalSource": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "appendix": {
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/Plan29-nine-completed-native-originals-appendix-v2.md",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/native-audit-N608efb/Plan29-nine-completed-native-originals-appendix-v2.md",
+        "bytes": 8628,
+        "blob": "2f39446690ac43523d818d4cca28d4c73f69a22c",
+        "sha256": "9b70a7ac414a0e26f073dee1aa20bec02c87d577cc6c5051175191c02d331b2c"
+      },
+      "independentR2": [
+        {
+          "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/native-audit-N608efb/root-independent-x64-original-review.json",
+          "bytes": 30994,
+          "blob": "44e136b3d9e3c77c8b712ddf739841c035bb7b3a",
+          "sha256": "76263b3750d97ab798d9a4e997eec5df1e4c07058cf57547bc01da5c69fed9a7"
+        },
+        {
+          "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/native-audit-N608efb/static-windows-independent-review.json",
+          "bytes": 14595,
+          "blob": "a27b13391245b35fafdea0722eea8946bc5be39c",
+          "sha256": "644062bca0531c5481ad327af2e6af5e227d7e142c31b700ca7f89bafeac4719"
+        },
+        {
+          "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/native-audit-N608efb/darwin-process-and-p09-independent-review.json",
+          "bytes": 135309,
+          "blob": "3bbe99e08a37fddb5e376f1eca2d56ce16f97eca",
+          "sha256": "992a781667b2fef5ec1f90caad1136546d6ddf51dee408b7d111b768edc02081"
+        },
+        {
+          "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/native-audit-N608efb/independent-windows-arm64-process-v2-review.json",
+          "bytes": 60920,
+          "blob": "34dae6a5a1532bc08f70e10c10e1589003f28a1e",
+          "sha256": "3a002d9ac438229ed1911fdee794d8d3b3120169db66f0a604dcc9df93aa4804"
+        },
+        {
+          "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/native-audit-N608efb/independent-native-appendix-caption-v2-review.json",
+          "bytes": 1764,
+          "blob": "7ecc2e9475874863cc12bb40196b45d9b2c5aa32",
+          "sha256": "201b29ec37b85b55895d707df29c8bc15cdb7118548feda3713bdefdafc0e25b"
+        },
+        {
+          "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/native-audit-N608efb/tool-response-supplement/root-independent-original-response-byte-join.json",
+          "bytes": 11808,
+          "blob": "9b449efba174b9e4ceedfd93f09da33a0a4323c8",
+          "sha256": "e584ea51b9956dbfbec87b000f4a775bd7f4d7700c663585dd3f03016a364d31"
+        }
+      ],
+      "claimScope": "Exact previously independently reviewed source-specific scope, not fresh re-execution or a new universal acceptance claim."
+    }
+  ],
+  "rawGroupLogResponseJoins": [
+    {
+      "name": "claude",
+      "runId": 43795234483,
+      "jobId": 133062441515,
+      "originalSource": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "raw": {
+        "bytes": 180983,
+        "blob": "0f09318102da8b395ac9810fca22b8334de0d8fe",
+        "sha256": "739619b89c2ea34b76edfd6910f4a8914fdd4072e99e586ef4553c630d010014"
+      },
+      "response": {
+        "bytes": 190849,
+        "blob": "e97edbbca66c92b329d223f9329612051af901c7",
+        "sha256": "998a03151e6f7ef5555815fd1a9637d288e1868632c89af2c1c99326d122df36"
+      },
+      "fullOriginalMCPContentBytesMatch": true,
+      "semanticQualificationByThisCut": false
+    },
+    {
+      "name": "codex",
+      "runId": 43795234483,
+      "jobId": 133062441554,
+      "originalSource": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "raw": {
+        "bytes": 180019,
+        "blob": "7f690df97c1f44ab846ca6e2ce111f88f6be3ce2",
+        "sha256": "6fd33e8a24cb0f2c5ce649f86877d49a98ae5857df25ceee3ee924903a897013"
+      },
+      "response": {
+        "bytes": 189876,
+        "blob": "45a48cdb86f487ff0c5ba559bfb4db4668b4a837",
+        "sha256": "28590d2e59b9f95a6a6382d942b976b6837f655684784a1445162742c66dd1c5"
+      },
+      "fullOriginalMCPContentBytesMatch": true,
+      "semanticQualificationByThisCut": false
+    },
+    {
+      "name": "collaboration",
+      "runId": 43795234483,
+      "jobId": 133062441513,
+      "originalSource": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "raw": {
+        "bytes": 180094,
+        "blob": "71c65331b34a697764b6fb08c6d4f42e0b2fda1a",
+        "sha256": "de025b7189548c000c96ceff111a993f611996dad8ee79cc15483eeed8c66da5"
+      },
+      "response": {
+        "bytes": 189951,
+        "blob": "4e3b569573e137530117fcd414346d614703f8ff",
+        "sha256": "31bc83afce161e307e08f7b64c37fc29a030b375ad1c323508355ad1145a3c67"
+      },
+      "fullOriginalMCPContentBytesMatch": true,
+      "semanticQualificationByThisCut": false
+    },
+    {
+      "name": "frontend-shard1",
+      "runId": 43795234483,
+      "jobId": 133062441473,
+      "originalSource": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "raw": {
+        "bytes": 169376,
+        "blob": "ab276ff91383b9a4aa3ad72239ce1f83fe4eb9c2",
+        "sha256": "4db8868df8b8232f259a086c77f0e61e21795d58e342a55fb2334b09d44c7163"
+      },
+      "response": {
+        "bytes": 208698,
+        "blob": "b1ab9c26ad153588022375564d97e669a5c56c34",
+        "sha256": "2f1437f62ce1f26f956820825be8ca7d9ad6fded647469d759108f425d720f0c"
+      },
+      "fullOriginalMCPContentBytesMatch": true,
+      "semanticQualificationByThisCut": false
+    },
+    {
+      "name": "frontend-shard2",
+      "runId": 43795234483,
+      "jobId": 133062441445,
+      "originalSource": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "raw": {
+        "bytes": 179619,
+        "blob": "819b559bc3259f928345ddc091c2eccdf169f394",
+        "sha256": "05aecbd5f58bfeee688f580bf685df3e68c670806c3ff5de6dcb916ae0ef7376"
+      },
+      "response": {
+        "bytes": 221065,
+        "blob": "ba73cf8ad4612920eaf2f4534a725621eb7cd11d",
+        "sha256": "ec8e75fc90c2d29e8a1c0bccc47d21a886fa7492add95970ee1ad5d1f6e102e2"
+      },
+      "fullOriginalMCPContentBytesMatch": true,
+      "semanticQualificationByThisCut": false
+    },
+    {
+      "name": "opencode",
+      "runId": 43795234483,
+      "jobId": 133062441565,
+      "originalSource": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "raw": {
+        "bytes": 180796,
+        "blob": "0887944bb5a7edee554cabe4e06429b1681273f7",
+        "sha256": "e7f0c34477899afce4a8176fcc99ce2544e4aebf534e7d22bf11a9177e49d17d"
+      },
+      "response": {
+        "bytes": 190660,
+        "blob": "ea3043819d6812f729c4406eec0d8e382b7434d9",
+        "sha256": "5f90b589fca096dd04772102b3dd6c61c6fa7942950d3b0cbab16bee976ecfcf"
+      },
+      "fullOriginalMCPContentBytesMatch": true,
+      "semanticQualificationByThisCut": false
+    },
+    {
+      "name": "review",
+      "runId": 43795234483,
+      "jobId": 133062441661,
+      "originalSource": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "raw": {
+        "bytes": 187747,
+        "blob": "c5405ee0301caaad4551908c2a9d7e8cc649217b",
+        "sha256": "287d27daea169dd6a2646d2aec3fd704f20e339e16a6cc8ec0f7b36b370e347b"
+      },
+      "response": {
+        "bytes": 197984,
+        "blob": "d99d628d9c53aec6f352f403c3ae634b432ed974",
+        "sha256": "25a592d50b0773bc22dac93b4e7c4662eccc56af1cfd9b9b37026bb9e5a8a9ad"
+      },
+      "fullOriginalMCPContentBytesMatch": true,
+      "semanticQualificationByThisCut": false
+    },
+    {
+      "name": "codex-login",
+      "runId": 43795234483,
+      "jobId": 133062441602,
+      "originalSource": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+      "raw": {
+        "bytes": 182675,
+        "blob": "822b9c13cf724a2cc954d8a00f61b25b811a26e1",
+        "sha256": "ca4dbcbd627281f8d4e3c3b2f56c604d323f1604ee5f5463381319a5f6c388da"
+      },
+      "response": {
+        "bytes": 192570,
+        "blob": "dfde6aaca7bdccfd6c8469c38d7af31bb7787c0c",
+        "sha256": "9331ead7c822033165a6a4f613670e471dafcba46df9e5042b9936ad2c03b68d"
+      },
+      "fullOriginalMCPContentBytesMatch": true,
+      "semanticQualificationByThisCut": false
+    }
+  ],
+  "spiAuthorPacketSemanticIndependentApprovalNotClaimed": true,
+  "preparationRouteOriginalResponseJoins": [
+    {
+      "file": "preparation-followup.json",
+      "bytes": 2469,
+      "blob": "a5709b73af041be4d7c62dd663cbdb25723116bb",
+      "sha256": "1b8e82ccf8864c8d1f828a9d1d6de152b334f1a1274d4c656d76ad15cc893abf",
+      "observedAt": "2026-11-16T04:11:19Z",
+      "decodedResponseMatchesRetainedOriginalToolResponse": true,
+      "selected": {
+        "ref": "refs/heads/fix/frontend-parity-e2e-followups-20261115",
+        "sha": "dee9448e2c8771bed2f4e403259446b1d3b4d4e0"
+      }
+    },
+    {
+      "file": "preparation-primary.json",
+      "bytes": 2421,
+      "blob": "8b60c7a9a9824e82eeb14ff9de04575066c6e311",
+      "sha256": "77d4f4d256413c0e26dfa740711f9dff18f7ef63864791c65621f8ff0b2b7a7d",
+      "observedAt": "2026-11-16T04:11:19Z",
+      "decodedResponseMatchesRetainedOriginalToolResponse": true,
+      "selected": {
+        "ref": "refs/heads/fix/frontend-parity-completion-20261113",
+        "sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+      }
+    },
+    {
+      "file": "preparation-pr1192.json",
+      "bytes": 134474,
+      "blob": "3b09e41942e3530d0fe32d47351db58271439c2e",
+      "sha256": "17c0a7524d33053b1bccd6f1b46c2a4f1c2009aed97587c0af69907c0f9e485f",
+      "observedAt": "2026-11-16T04:11:19Z",
+      "decodedResponseMatchesRetainedOriginalToolResponse": true,
+      "selected": {
+        "number": 1192,
+        "state": "open",
+        "draft": true,
+        "merged": false,
+        "head": "fix/frontend-parity-completion-20261113",
+        "head_sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+        "base": "feat/provider-host-frontend-parity-20261112",
+        "base_sha": "def734338f13bcc3209e78079a0cedbc48f05a5b"
+      }
+    },
+    {
+      "file": "preparation-followup-open-prs.json",
+      "bytes": 909,
+      "blob": "18d0619f4a9cbb098a56a80823ea3132a5d60987",
+      "sha256": "d34033f62f9e4b6abd3003d4875e0a97b511b65f8d3b85161f0361389ed2a0d0",
+      "observedAt": "2026-11-16T04:11:19Z",
+      "decodedResponseMatchesRetainedOriginalToolResponse": true,
+      "selected": {
+        "openFollowupPullRequests": []
+      }
+    }
+  ],
+  "frozenSnapshotChecks": [
+    {
+      "file": "owned-api-jobs-0409.json",
+      "identity": {
+        "bytes": 92338,
+        "blob": "9da29cf8befc7c97ccbb75dad1157939de510308",
+        "sha256": "4569b37d23b0adccdf6b913ad913dec67c844b3ae0df68a68db7feeec87f5e43"
+      },
+      "counts": {
+        "completed:failure": 2,
+        "completed:success": 9,
+        "queued:None": 12
+      },
+      "nonterminalJobs": [
+        {
+          "id": 133062441496,
+          "run_id": 43795234483,
+          "name": "Offline Host Desktop (linux-x64, taskboard)",
+          "status": "queued",
+          "conclusion": null
+        },
+        {
+          "id": 133062441547,
+          "run_id": 43795234483,
+          "name": "Offline Host Desktop (linux-x64, extensions)",
+          "status": "queued",
+          "conclusion": null
+        },
+        {
+          "id": 133062441557,
+          "run_id": 43795234483,
+          "name": "Offline Host Desktop (linux-x64, import)",
+          "status": "queued",
+          "conclusion": null
+        },
+        {
+          "id": 133062441591,
+          "run_id": 43795234483,
+          "name": "Offline Host Desktop (linux-x64, management)",
+          "status": "queued",
+          "conclusion": null
+        },
+        {
+          "id": 133062441600,
+          "run_id": 43795234483,
+          "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+          "status": "queued",
+          "conclusion": null
+        },
+        {
+          "id": 133062441628,
+          "run_id": 43795234483,
+          "name": "Offline Host Desktop (linux-x64, processes)",
+          "status": "queued",
+          "conclusion": null
+        },
+        {
+          "id": 133062441639,
+          "run_id": 43795234483,
+          "name": "Offline Host Desktop (linux-x64, selection)",
+          "status": "queued",
+          "conclusion": null
+        },
+        {
+          "id": 133062441646,
+          "run_id": 43795234483,
+          "name": "Offline Host Desktop (linux-x64, skills)",
+          "status": "queued",
+          "conclusion": null
+        },
+        {
+          "id": 133062441650,
+          "run_id": 43795234483,
+          "name": "Offline frontend tests (3/4)",
+          "status": "queued",
+          "conclusion": null
+        },
+        {
+          "id": 133062441679,
+          "run_id": 43795234483,
+          "name": "Offline frontend tests (4/4)",
+          "status": "queued",
+          "conclusion": null
+        },
+        {
+          "id": 133062441738,
+          "run_id": 43795234483,
+          "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+          "status": "queued",
+          "conclusion": null
+        },
+        {
+          "id": 133062441795,
+          "run_id": 43795234711,
+          "name": "classify packaged smoke",
+          "status": "queued",
+          "conclusion": null
+        }
+      ]
+    },
+    {
+      "file": "process-jobs-0406.json",
+      "identity": {
+        "bytes": 23637,
+        "blob": "114560cd3b67b8a402467c30dc15b523c0476f72",
+        "sha256": "42ac50c46ddcb7230d2c51294a9d2904279453916f27af44bc4ee961d2a22077"
+      },
+      "counts": {
+        "queued:None": 1,
+        "completed:success": 4
+      },
+      "nonterminalJobs": [
+        {
+          "id": 133062439920,
+          "run_id": 43795234913,
+          "name": "Host process fixtures (linux-x64)",
+          "status": "queued",
+          "conclusion": null
+        }
+      ]
+    },
+    {
+      "file": "v2-jobs-0406.json",
+      "identity": {
+        "bytes": 34402,
+        "blob": "b5dc12d60bd1da8657b1405b7fc8f267f742598c",
+        "sha256": "3a79d198344e649e5868b4764d6c516df59b081559e1c3852d397781553ec463"
+      },
+      "counts": {
+        "completed:success": 4,
+        "queued:None": 3,
+        "completed:failure": 2
+      },
+      "nonterminalJobs": [
+        {
+          "id": 133062438856,
+          "run_id": 43795234721,
+          "name": "Published V2.0.21 durable HTTP process (TEST discovery only)",
+          "status": "queued",
+          "conclusion": null
+        },
+        {
+          "id": 133062438874,
+          "run_id": 43795234721,
+          "name": "Embedded V2.1.4 original Host (linux-x64)",
+          "status": "queued",
+          "conclusion": null
+        },
+        {
+          "id": 133062439014,
+          "run_id": 43795234721,
+          "name": "Static V01 source test (ubuntu-24.04)",
+          "status": "queued",
+          "conclusion": null
+        }
+      ]
+    },
+    {
+      "file": "general-jobs-0411.json",
+      "identity": {
+        "bytes": 1286,
+        "blob": "f36bfe5c7baccb83f2f2d94bfefd86aeb345b745",
+        "sha256": "79c1c78764cc6ae5c2a9b0c02c8813c0a2d4b7778e2354f26029e4400cdb696f"
+      },
+      "counts": {
+        "queued:None": 1,
+        "completed:skipped": 3
+      },
+      "nonterminalJobs": [
+        {
+          "id": 133062442880,
+          "run_id": 43795234688,
+          "name": "plan",
+          "status": "queued",
+          "conclusion": null
+        }
+      ]
+    },
+    {
+      "file": "general-9e-edited-jobs-0411.json",
+      "identity": {
+        "bytes": 41414,
+        "blob": "0e56bb5affe8f7242d6b4d70563be80c47d074ac",
+        "sha256": "7fc12d6b97517837a0a40b84e376b2336aa9f94ff2d3db5b0703c2196df0dc73"
+      },
+      "counts": {
+        "completed:success": 9,
+        "completed:skipped": 9,
+        "completed:failure": 1,
+        "queued:None": 1
+      },
+      "nonterminalJobs": [
+        {
+          "id": 133063049370,
+          "run_id": 43776996041,
+          "name": "Full qualification",
+          "status": "queued",
+          "conclusion": null
+        }
+      ]
+    }
+  ],
+  "bridge": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-n-green-and-completed-evidence-publication/Plan29-N-green-currentness-and-renderer-R1.md",
+    "bytes": 7535,
+    "blob": "708b337ef9f9f73a03be1eb1d16715fad39e3c60",
+    "sha256": "7b22a977f84f7cdeaa382abd8e907d22f4ac5491b52fa6aae54b43c9fc1caeaf"
+  },
+  "sourceProposal": {
+    "proposal": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/stage-n-renderer-assertion-fix-r1/proposal.json",
+      "bytes": 6750,
+      "blob": "8ec9d75f40874056eb6fb565b6ded643ca4d23b4",
+      "sha256": "50ededbf744963ebc63256723d9e1463c435af059521485691f70d25bff851b9"
+    },
+    "independentSourceR2": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/stage-n-renderer-assertion-fix-r1/independent-source-review.json",
+      "bytes": 10014,
+      "blob": "add9bc855ee894883ac7b9b9914488e6847d7ced",
+      "sha256": "244bf1a8c0d7cb95d3e56a672e8628404e15c17689f49dd3016c7b49cdeb115e"
+    },
+    "preimage": {
+      "bytes": 8708,
+      "blob": "8299f9f9589810c106c328840b2c0d3640113811",
+      "sha256": "96511a26aaf8ead7ebdaeec018d79d4f9568ff29ee85f8b4eef46adbc2a4a954"
+    },
+    "candidate": {
+      "bytes": 8707,
+      "blob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+      "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10"
+    },
+    "exactOneByteDeletion": true,
+    "allOtherLinesAndCallbackAssertionsPreserved": true,
+    "prospectiveDocumentsOnly": true
+  },
+  "qualifications": [
+    "This is an assembly/byte/identity review of exact already-reviewed semantic reports, not repeated execution or blanket acceptance.",
+    "Actual 177/24 GREEN is original N Team step9 only; original step10 renderer typed-lint failure, downstream business skips and absent Team archive remain.",
+    "All old M groups remain source0660; current N groups remain source608. No privacy/native/Desktop/whole-goal transfer is inferred.",
+    "Nine RAW/author-only groups are preserved as original bytes; independent semantic qualification is expressly outside this cut.",
+    "Four04:11:19 route records and stated CI snapshots are historical preparation observations; fresh expected-parent/primary-Draft guards remain necessary for root publication.",
+    "No source/test/dependency/workflow or runtime candidate is applied by these236 docs paths. Renderer source application follows actual published docs readback and a fresh exact preimage check; resulting-source GREEN is future work.",
+    "Queued originals are not blockers and no all-terminal gate, Ready/main/release action or CI mutation is authorized by this report."
+  ],
+  "pendingPublicationSteps": [
+    "Root may stage immutable blobs/create the exact expected tree.",
+    "Verify created immutable remote tree against this complete leaf map, then root fresh route/expected-parent guards before ordinary docs commit/push.",
+    "Independent actual published commit/parent/full-payload readback is separate; no published SHA is asserted here."
+  ],
+  "noProjectExecutionCIOrRefSourceMutation": true
+}

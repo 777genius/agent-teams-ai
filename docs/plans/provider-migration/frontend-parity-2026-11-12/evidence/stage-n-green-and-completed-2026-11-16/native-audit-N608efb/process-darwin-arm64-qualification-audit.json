@@ -1,0 +1,183 @@
+{
+  "schema": "original-darwin-process-fixtures-evidence/v1",
+  "source": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "reviewer": "/root/native_failures",
+  "officialApiSnapshot": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/process-jobs-0325.json",
+    "bytes": 22179,
+    "blob": "d3f8a5a4eeb1a064b9167a6813eb02390439785e",
+    "sha256": "b69d5d2725490a939a8cd7acb4e16baf2607a73b052a740e6931bf804361c126"
+  },
+  "officialArtifactSnapshot": {
+    "path": "process-artifacts-0325.json",
+    "bytes": 3895,
+    "blob": "f892bc34be6e5edf9efc2e4e8fddc01b345deb79",
+    "sha256": "8dc22b7214f31e852e646666f6e97801927e80584fb42c073e815803ae3872b7"
+  },
+  "sourceLeavesRead": [
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "bytes": 30399,
+      "blob": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+      "sha256": "a7e59eb17ee93d15ffad248322d79e536d9d9c0b02c83a30a31687fd6e618ce0"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "bytes": 17005,
+      "blob": "d2b952c9e6ac2281a14a00665cf4689d9c7d4b5c",
+      "sha256": "12be8f565712c09537d99ba75b63aa6e01774708ad1967c7ee2fdd964d747712"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-source-native-identity.test.ts",
+      "bytes": 42655,
+      "blob": "eaf21d42dc203d22778cfec4f02eb9bc6d62c0fa",
+      "sha256": "3cb9951ac6c712fb5911ebf83598d1c81d62a6fa6aa9bd03dc6c2df745e3a420"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts",
+      "bytes": 10051,
+      "blob": "e6861511417070c9202458253a16a3ffb20216ae",
+      "sha256": "77cb82d6c1938b3f858b4b65484c9ab123ec6b0c8e4bab2c20793b6708f51c08"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "bytes": 8310,
+      "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7"
+    }
+  ],
+  "jobs": [
+    {
+      "job": 133062439921,
+      "run": 43795234913,
+      "artifact": 14194928223,
+      "platform": "darwin-arm64",
+      "apiState": {
+        "status": "completed",
+        "conclusion": "success"
+      },
+      "rawJob": {
+        "path": "process-darwin-arm64/job-133062439921.log",
+        "bytes": 118573,
+        "blob": "6e5f285d08c5a74a3c7389891ae647e527c775cf",
+        "sha256": "2f9aaab93ff43bf4df44e3b97025a785343990b07579a9e07a2da59dece3f867"
+      },
+      "archiveAudit": {
+        "path": "process-darwin-arm64/archive-audit.json",
+        "bytes": 1910,
+        "blob": "8b00f595c3b006cf599580a2103d7c6241942186",
+        "sha256": "da9ef472e805d7ad7a1ceee4fbc842d16f6f59d81a0ec66cd535b3aa7fa2b0d9"
+      },
+      "archive": {
+        "path": "process-darwin-arm64/artifact-14194928223.zip",
+        "bytes": 12562,
+        "blob": "4673fb1bb146ed3125b51592fde2f193987f9301",
+        "sha256": "ab67b5526e19b46119c486a627086bd1c5e2b72464c1ec4a07baf0c18576fdac"
+      },
+      "members": [
+        {
+          "path": "process-darwin-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+          "bytes": 20700,
+          "blob": "a2969c53b0adfbb902e9634f83f6a831d977aa3f",
+          "sha256": "2b0ccdf79dc5cf01f3c12737394603e2893eaaf6b7b4eb788f89ecb187a66d28"
+        },
+        {
+          "path": "process-darwin-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log",
+          "bytes": 5165,
+          "blob": "229ddaa3509fad0327b09dafb63a3e7904af2651",
+          "sha256": "2cbec4a39bf30d214a05ff2293db534b71bbb938e665f52989c460875a532cb1"
+        },
+        {
+          "path": "process-darwin-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+          "bytes": 771,
+          "blob": "e6fe45e5e48b141e404aad77a79a65321a41fdb2",
+          "sha256": "db7691063f3c391cb666950cc42413cc4b59a081a7f1f5a586aaed3ddcb1ee2c"
+        },
+        {
+          "path": "process-darwin-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+          "bytes": 6776,
+          "blob": "99f279d202c3de1c621ef69b024c8f685205fbbd",
+          "sha256": "d32b1405f85a07fbda95aed3be5fa1b3744bbbe0a5f48ada9fb401492193e64a"
+        },
+        {
+          "path": "process-darwin-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+          "bytes": 495,
+          "blob": "eb737228b1b37ffe943c01c16005569564aee763",
+          "sha256": "fdd732c2146eacca9065fd2abf79d1afe20e85ed3664595b0e14cc31f687d13c"
+        },
+        {
+          "path": "process-darwin-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+          "bytes": 41,
+          "blob": "be97df2fc9507103b59b5c76c03140090125d47e",
+          "sha256": "55ebeb3ecde1ac537ee3bb8238ac10d02f5041edea9c57cea414712bd32b5487"
+        }
+      ],
+      "scope": {
+        "kind": "TEST_HOST_PROCESS_FIXTURE_ACCEPTANCE",
+        "status": "PASS",
+        "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+        "platform": "darwin-arm64",
+        "nodeVersion": "v24.21.0",
+        "controlledContracts": true,
+        "retainedMainTransport": true,
+        "posixProcessGroups": true,
+        "native": [],
+        "nativeProviderRuntimeQualified": false,
+        "darwinNativeRegistrationQualified": false,
+        "posixExecutableAdmissionQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      },
+      "contracts": {
+        "tests": 167,
+        "pass": 165,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 2
+      },
+      "protocolAndRetainedMain": [
+        {
+          "artifactMember": "protocol.log",
+          "filesPassed": 3,
+          "testsPassed": 53
+        },
+        {
+          "artifactMember": "retained-main.log",
+          "filesPassed": 8,
+          "testsPassed": 81
+        }
+      ],
+      "originalPosixLifecycle": {
+        "tests": 27,
+        "pass": 27,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      "totalPass": 326,
+      "originalSkips": 2,
+      "fail": 0,
+      "cancelled": 0,
+      "originalPosixCustodyDiagnostics": [
+        {
+          "cleanupConfirmed": true,
+          "descendantAbsent": true,
+          "neighborPreserved": true
+        },
+        {
+          "cleanupConfirmed": false,
+          "descendantAbsent": true,
+          "neighborPreserved": true
+        }
+      ],
+      "custodyInterpretation": "The second false diagnostic retains the first confirmStopped result after parent exit. The original test then releases its TEST descendant naturally, requires a later confirmStopped true, checks ESRCH and the live neighbor, and finally terminates/awaits that neighbor. It does not reinterpret the earlier false as a successful signal or a verified reused process group."
+    }
+  ],
+  "limits": [
+    "This macOS ARM64 Process success cover the original controlled contracts, retained Main transport and finite POSIX Node/shell lifecycle commands.",
+    "The scope receipts have native:[] and explicitly false native-provider, Darwin native-registration, POSIX executable-admission, desktop and release qualification flags.",
+    "No real Claude/Codex provider or native P09 executable-identity qualification is inferred from fixture names or these job successes.",
+    "Both original skips remain skipped. The deliberately false first custody result is retained, not relabeled.",
+    "This is an audit of original source608efb N CI artifacts and full job logs. No reviewer tests, compilers, native actors, provider calls, CI reruns/cancellations or source/ref changes were performed."
+  ]
+}

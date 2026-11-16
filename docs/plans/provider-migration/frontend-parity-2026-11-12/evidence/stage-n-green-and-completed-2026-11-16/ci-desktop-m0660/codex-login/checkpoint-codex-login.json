@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "jobId": 133017916174,
+  "artifactId": 14192695442,
+  "status": "PASS",
+  "scope": "Original finite Codex browser/device pending/copy/open/reopen/cancel only; no real vendor/account completion, clipboard-content readback, all-peer exit or N-source qualification. Author audit; independent R2 pending.",
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/job-133017916174.log",
+      "bytes": 182370,
+      "blob": "bd05f6df850e0297619f254753f07db65009dffe",
+      "sha256": "9c5dab9f821af249b5d7515dc08091ae360afa40b3f622ff3f1fb30cb56fe172"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/artifact-14192695442.zip",
+      "bytes": 681033,
+      "blob": "d2cc1c8910a82a2ad5435edb620d00e1134231b2",
+      "sha256": "9532212509d360d901efadd0cc306cb882df5c90673098e0391e83c9dffddd67"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/archive-audit.json",
+      "bytes": 5369,
+      "blob": "0265846c61038c2bc729e7922477facabe8b8eae",
+      "sha256": "84d99b585e9de54e91e95358ad511dc5581c515c2dd965f9fd858ec1d360def3"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/audit.json",
+      "bytes": 74522,
+      "blob": "084b871ceb469798c27cd57ee47faafbc19c2d7f",
+      "sha256": "1175b99f1977bbabcf53bfdadbb781d44a547a4beb4e8f4ee2623f5f37eadbb9"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/codex-login/Plan29-codex-login-appendix.md",
+      "bytes": 8380,
+      "blob": "010275f826a1b9696e5dae46455ab5a067dc8562",
+      "sha256": "6283cc5f04463784c252344f3dc64655577f2cf8f7aa5d4eb89b4dfe1c99f24d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-artifacts-0215.json",
+      "bytes": 19753,
+      "blob": "699d3f9f470c9aba779664f159cefac43cbc4861",
+      "sha256": "f434f1a38fce2695c3e828119cd6424c0a986afbf95406a147c2eadfca87416e"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0300.json",
+      "bytes": 212142,
+      "blob": "aaa9e447920ba1d0e4ae3797169058bc2df43a72",
+      "sha256": "2056635c64f9372a98d560f3ceb63a025fbd92de2bef0eaa5a6a72e8f8dd4f80"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    }
+  ],
+  "nestedRecovery": {
+    "zip": "artifact-14192695442.zip",
+    "members": 18,
+    "pngHashChecked": 1,
+    "uiImagesActuallyViewedIndividually": 1
+  },
+  "execution": "Raw/source/image audit only; no project execution/source/ref/CI change."
+}

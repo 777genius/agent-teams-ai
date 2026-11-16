@@ -1,0 +1,139 @@
+{
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234483,
+  "jobId": 133062441547,
+  "artifactId": 14197421492,
+  "zipBytes": 987498,
+  "zipSha256": "941eee5112740ead259044ec8c5056fa0702a2c1b35eb37312d0d8f414bc963f",
+  "safeUniquePaths": true,
+  "crcAllPassed": true,
+  "allExtractedBytesExact": true,
+  "members": [
+    {
+      "path": "TEST-desktop-backend-Mw9dwR/TEST-peer-claude-scope/effects.ndjson",
+      "bytes": 3855,
+      "sha256": "338a0c64113f57502f8ed357d52e0158e7aa01ffd222298accc1ed2ad9cb4024",
+      "crc32": "9f750143"
+    },
+    {
+      "path": "TEST-desktop-backend-Mw9dwR/desktop-app.log",
+      "bytes": 19822,
+      "sha256": "4364a5c4e12515c399e36e8d6d429a257b457ddd2b7f8c55f29a4ad9e502091e",
+      "crc32": "9efa2c51"
+    },
+    {
+      "path": "TEST-desktop-backend-Mw9dwR/desktop-backend-receipt.json",
+      "bytes": 703889,
+      "sha256": "44dde4b8e16d4afc1cb8c53943dc763443c8f48d613fad0c2033d306dec4ab40",
+      "crc32": "42873a80"
+    },
+    {
+      "path": "TEST-desktop-backend-Mw9dwR/desktop-descriptor.json",
+      "bytes": 2641,
+      "sha256": "e039470a54d578bafc5d5026fe7d43902c55ee523382c0b9d9fe34b453eae138",
+      "crc32": "1fa08529"
+    },
+    {
+      "path": "TEST-desktop-backend-Mw9dwR/host-profile.json",
+      "bytes": 7790,
+      "sha256": "557b8761827b2e68839f0a7b871b56813e9eea8ffb6dc53790baecb60798791b",
+      "crc32": "ec5f2147"
+    },
+    {
+      "path": "TEST-desktop-backend-Mw9dwR/hoststore/management-commands/aad0569f8ae9b03c3efc168290a2742a2198621416c1780208244c93405915cf.json",
+      "bytes": 881,
+      "sha256": "672a4360391336fdcbb4de381c21afc253febf09c623a13a9ce9d03e198a54a9",
+      "crc32": "38fcc80d"
+    },
+    {
+      "path": "TEST-desktop-backend-Mw9dwR/hoststore/management-commands/b56d07e80553e1c75e4c8f6e51e26919b64521cec5cee8d743218efcc6d96dfd.json",
+      "bytes": 882,
+      "sha256": "01f88161e319f9c3ba2c83a908143eeea93326e7f96a93764d83fabd5857fc81",
+      "crc32": "f524d2d8"
+    },
+    {
+      "path": "TEST-desktop-backend-Mw9dwR/hoststore/management-commands/bdc88b8a1b51d21f5c69ac9a7c07d1d288f95cd3bc838d9fc01ae9116e234368.json",
+      "bytes": 881,
+      "sha256": "3c5db97dbdac1aa583b941f367fbb6761fd1ab548df93b5a2821d17ab9ee4685",
+      "crc32": "ae193697"
+    },
+    {
+      "path": "TEST-desktop-backend-Mw9dwR/hoststore/management-commands/cab10564ac3777a89a6ef355966ee94be5fab17a0e3a472c628d3e5c5ed6d17e.json",
+      "bytes": 884,
+      "sha256": "be5cc9e70b477877ef5b5abe1549f49c4c36328851cac2d663bdf759c368b65a",
+      "crc32": "fe1dfe55"
+    },
+    {
+      "path": "TEST-desktop-backend-Mw9dwR/native-extensions-mcp-installed.png",
+      "bytes": 204031,
+      "sha256": "77c054a1b3d43ab627803afc60ddf1cdc6fe74bda3c1ace5980561b51a873f64",
+      "crc32": "157bdf85"
+    },
+    {
+      "path": "TEST-desktop-backend-Mw9dwR/native-extensions-plugin-installed.png",
+      "bytes": 117777,
+      "sha256": "ce2f81fb1a290c40b848e5ae281a4556d0b5c7293020da764b14e7656a455f27",
+      "crc32": "5dba1a9e"
+    },
+    {
+      "path": "TEST-desktop-backend-Mw9dwR/native-extensions-plugin-uninstalled.png",
+      "bytes": 106427,
+      "sha256": "7a72521b4475524cbb1c7df959425c37a8748b4bf39dec79c937887ff2ed816b",
+      "crc32": "086f5a6f"
+    },
+    {
+      "path": "TEST-desktop-backend-Mw9dwR/native-extensions-selection.json",
+      "bytes": 2221,
+      "sha256": "b277be31fe948056f13ac68a6ea3a8ddee2ba0efc9db35a3f9c5c38451abaa2e",
+      "crc32": "4cac4d41"
+    },
+    {
+      "path": "TEST-desktop-backend-Mw9dwR/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+      "crc32": "9fc3bdb4"
+    },
+    {
+      "path": "TEST-desktop-backend-Mw9dwR/ui-seed-receipt.json",
+      "bytes": 2335,
+      "sha256": "0b100d034b4909aa98e2a625fd82f7e1e39163623ced152a7465515d60050be7",
+      "crc32": "20ae9c38"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-4ILMXo/linux-child-exec/manifest.json",
+      "bytes": 2406,
+      "sha256": "4ef7cd76c1a549d6fef41c4dc7561b5433547278d59b0c2907affe2be9a646f1",
+      "crc32": "e3de74e8"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-4ILMXo/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "crc32": "ed0ca14b"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1803,
+      "sha256": "bc6eaa9f4addc1f09f97a5c49a54496bed2203f9b3bdcca87e1d98643b5dd0d7",
+      "crc32": "9d7ddb01"
+    },
+    {
+      "path": "host-emulated-emulated-extensions-ui.log",
+      "bytes": 225,
+      "sha256": "a582fd863227cbbb9f5a306552e1cb865786a388b949f14f521a26421f9d5e48",
+      "crc32": "332dd9d1"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "sha256": "b9229ebf7b8e3b881381c6a3cee0f668f97d87407ecb7de6c0219bc1c1fee521",
+      "crc32": "55027f36"
+    },
+    {
+      "path": "host-emulated-summary.json",
+      "bytes": 748,
+      "sha256": "0c8670ed774f781ec9539f9921bad92d7cc432b7cc18ceebd3f959120ff659f8",
+      "crc32": "008a35df"
+    }
+  ]
+}

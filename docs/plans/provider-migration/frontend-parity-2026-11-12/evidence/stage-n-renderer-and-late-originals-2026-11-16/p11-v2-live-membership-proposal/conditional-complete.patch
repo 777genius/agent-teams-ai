@@ -1,0 +1,949 @@
+--- a/.github/workflows/host-emulated-acceptance.yml
++++ b/.github/workflows/host-emulated-acceptance.yml
+@@ -204,7 +204,12 @@
+             test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx \
+             tools/owned-process-broker/fixtures/claudeProviderPeer.mjs \
+             tools/owned-process-broker/fixtures/providerDesktopPeer.mjs \
+-            tools/owned-process-broker/nativeDebugServiceScenario.ts
++            tools/owned-process-broker/nativeDebugServiceScenario.ts \
++            scripts/legacy-agent-host/desktop-backend-smoke.ts \
++            scripts/legacy-agent-host/desktop-live-membership-controlled.ts \
++            scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts \
++            scripts/legacy-agent-host/desktop-mixed-native-fixture.ts \
++            scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts
+           pnpm typecheck:workspace
+           node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json
+           pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main
+@@ -483,6 +488,22 @@
+       - name: Verify original OpenCode V2 UI receipts and physical cleanup
+         if: ${{ !cancelled() && steps.inputs.outcome == 'success' && matrix.lane == 'opencode-v2-management' }}
+         run: node scripts/legacy-agent-host/verify-desktop-v2-management-receipt.ts
++      - name: Exercise original V2 live Team Add Remove Restore Stop and cold history
++        if: matrix.lane == 'opencode-v2-management'
++        env:
++          LEGACY_DESKTOP_PROOF_MODE: native-mixed-create-launch-ui
++          LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI: '1'
++          LEGACY_DESKTOP_OPENCODE_GENERATION: v2
++          LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP: '1'
++        run: |
++          set -euo pipefail
++          unset LEGACY_DESKTOP_EMULATED_ONLY
++          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
++            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
++            2>&1 | tee "$RUNNER_TEMP/host-emulated-opencode-v2-live-membership-ui.log"
++      - name: Verify original V2 membership receipts and physical cleanup
++        if: ${{ !cancelled() && steps.inputs.outcome == 'success' && matrix.lane == 'opencode-v2-management' }}
++        run: node scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts
+       - name: Verify exact source, original screenshots, receipts and cleanup
+         if: ${{ !cancelled() && steps.inputs.outcome == 'success' && matrix.lane != 'opencode-v2-management' }}
+         run: |
+@@ -1177,6 +1198,7 @@
+           name: host-emulated-${{ matrix.platform || 'linux-x64' }}-${{ github.event.pull_request.head.sha || github.sha }}-${{ matrix.lane }}
+           retention-days: 14
+           if-no-files-found: warn
++          include-hidden-files: ${{ matrix.lane == 'opencode-v2-management' }}
+           path: |
+             ${{ runner.temp }}/host-emulated-*.json
+             ${{ runner.temp }}/host-emulated-*.log
+@@ -1186,6 +1208,12 @@
+             ${{ runner.temp }}/TEST-emulated-ui-inputs-*/process-custody/manifest.json
+             ${{ runner.temp }}/TEST-emulated-ui-inputs-*/process-custody/registered-process.node
+             ${{ runner.temp }}/TEST-desktop-backend-*/desktop-backend-receipt.json
++            ${{ runner.temp }}/TEST-desktop-backend-*/mixed-models.json
++            ${{ runner.temp }}/TEST-desktop-backend-*/workspace/opencode.json
++            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-created-native-mixed/.host-owner/state.json
++            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-created-native-mixed/.host-owner/launches/*.json
++            ${{ runner.temp }}/TEST-desktop-backend-*/cold-membership-epoch1-bundles/**
++            ${{ runner.temp }}/TEST-desktop-backend-*/userData/logs/app-errors*.ndjson
+             ${{ runner.temp }}/TEST-desktop-backend-*/desktop-app.log
+             ${{ runner.temp }}/TEST-desktop-backend-*/desktop-backend-app.log
+             ${{ runner.temp }}/TEST-desktop-backend-*/owner-routing-*.log
+--- a/scripts/legacy-agent-host/desktop-backend-smoke.ts
++++ b/scripts/legacy-agent-host/desktop-backend-smoke.ts
+@@ -29,6 +29,7 @@
+ import { prepareDesktopMixedNativeFixture, reserveMixedOpenCodeEndpoint } from './desktop-mixed-native-fixture.ts';
+ import { runDesktopMixedCreateLaunchUiSmoke } from './desktop-mixed-create-launch-ui-smoke.ts';
+ import { runDesktopLiveMembershipUiSmoke } from './desktop-live-membership-ui-smoke.ts';
++import { desktopFiniteV2MembershipSelected, prepareDesktopFiniteMembershipFixture, captureDesktopFiniteMembershipScope, observeDesktopFiniteMembershipCleanup } from './desktop-live-membership-controlled.ts';
+ import type { DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
+ import { desktopProofEvidence, captureDesktopProofScope, projectDesktopProofReceiptSummary, verifyDesktopProofInputsAfterCleanup, assertDesktopProofCompleted } from './desktop-proof-evidence.ts';
+ import { runDesktopNativeReview } from './desktop-native-review-compose.ts';
+@@ -109,7 +110,8 @@
+   const packedRelaunchMode = process.env.LEGACY_DESKTOP_PROOF_MODE === 'packed-app-relaunch-ui';
+   const mode = packedRelaunchMode ? 'native-launch-ui' : process.env.LEGACY_DESKTOP_PROOF_MODE ?? 'bridge-diagnostics';
+   const codexAccountMode = ['codex-account-read', 'codex-account-auth', 'codex-login-ui'].includes(mode);
+-  assertDesktopProofEnvironment(mode === 'process-cold-ui' || codexAccountMode);
++  const finiteMembership = desktopFiniteV2MembershipSelected();
++  assertDesktopProofEnvironment(mode === 'process-cold-ui' || codexAccountMode || finiteMembership);
+   const emulatedOnly = process.env.LEGACY_DESKTOP_EMULATED_ONLY === '1';
+   const emulatedManagementMode = ['emulated-management-ui', 'emulated-codex-login-ui'].includes(mode);
+   const emulatedRuntimeProvider = ['emulated-codex-runtime-ui', 'emulated-selection-ui', 'emulated-installer-ui'].includes(mode) ? 'codex' : ['emulated-claude-runtime-ui', 'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui', 'emulated-extensions-ui', 'emulated-import-ui'].includes(mode) ? 'claude' : mode === 'emulated-opencode-runtime-ui' ? 'opencode' : undefined;
+@@ -142,13 +144,14 @@
+   openCodeLifecycleModel = selectedOpenCodeModel; openCodeReviewModel = selectedOpenCodeReviewModel;
+   capturedMcpModel = selectedCapturedMcpModel;
+   const nativeInputs = codexAccountMode ? await captureDesktopCodexAccountInput(process.env.LEGACY_DESKTOP_CODEX_PATH!)
+-    : mixedMode || codexResumeMode ? await captureDesktopCodexNativeInputs(process.env.LEGACY_DESKTOP_CODEX_PATH!) : [];
++    : !finiteMembership && (mixedMode || codexResumeMode) ? await captureDesktopCodexNativeInputs(process.env.LEGACY_DESKTOP_CODEX_PATH!) : [];
+   const pnpm = await realpath(process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/bin/pnpm');
+   const emulatedManagementFixture = emulatedManagementMode ? await prepareDesktopEmulatedManagementFixture(repo, pnpm, mode === 'emulated-codex-login-ui' ? 'codex-login' : undefined) : undefined;
+   const emulatedRuntimeFixture = mode === 'emulated-extensions-ui' ? await prepareDesktopEmulatedExtensionsFixture(repo, pnpm)
+     : mode === 'emulated-import-ui' ? await prepareDesktopEmulatedImportFixture(repo, pnpm)
+     : emulatedRuntimeProvider ? await prepareDesktopEmulatedRuntimeFixture(repo, pnpm, emulatedRuntimeProvider, mode === 'emulated-collaboration-ui' ? 'collaboration' : mode === 'emulated-claude-lifecycle-ui' ? 'lifecycle' : mode === 'emulated-selection-ui' ? 'selection' : mode === 'emulated-installer-ui' ? 'installer' : undefined) : undefined;
+-  const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = emulatedRuntimeFixture ?? emulatedManagementFixture ?? (questionUiMode ? await prepareDesktopBackendFixture(repo, {
++  const finiteBase = finiteMembership ? await prepareDesktopFiniteMembershipFixture(repo, pnpm) : undefined;
++  const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = finiteBase ?? emulatedRuntimeFixture ?? emulatedManagementFixture ?? (questionUiMode ? await prepareDesktopBackendFixture(repo, {
+     seedUiTask: true, pnpmEntry: pnpm, nativeClaude: { path: process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
+       sha256: 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f', modelUrl: questionModel!.url },
+   }) : await prepareDesktopProofFixture(repo, mode, pnpm, {
+@@ -159,15 +162,16 @@
+   const processReadbackSource = processReadbackMode ? await verifyNativeProcessReadbackSource(baseFixture.root, object(JSON.parse(await readFile(join(baseFixture.root, 'desktop-backend-receipt.json'), 'utf8')))) : undefined;
+   if (mixedModels) await mixedModels.retainEvidenceAt(baseFixture.root);
+   let fixture = questionUiMode ? await prepareDesktopCodexQuestionFixture(baseFixture, { executable: process.env.LEGACY_DESKTOP_CODEX_PATH!, model: questionModel! }) : mixedMode ? await prepareDesktopMixedNativeFixture(baseFixture, {
+-    models: selectedMixedModels!, codexPath: process.env.LEGACY_DESKTOP_CODEX_PATH!, openCodePath: process.env.LEGACY_DESKTOP_OPENCODE_PATH!,
++    models: selectedMixedModels!, codexPath: finiteBase?.finiteInitialPeers.codex.executable.path ?? process.env.LEGACY_DESKTOP_CODEX_PATH!, openCodePath: process.env.LEGACY_DESKTOP_OPENCODE_PATH!,
++    ...(finiteBase ? { finiteInitialPeers: finiteBase.finiteInitialPeers } : {}),
+     ...(process.env.LEGACY_DESKTOP_OPENCODE_GENERATION === 'v2' ? {
+       openCodeV2: { bunPath: process.env.OPENCODE_V2_EMBEDDED_BUN!,
+         bunSha256: process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256!,
+         engineDirectory: process.env.OPENCODE_V2_EMBEDDED_GRAPH!,
+-        processCustody: {
++        ...(finiteMembership ? {} : { processCustody: {
+           directory: process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_DIRECTORY!,
+           manifestSha256: process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256!,
+-        } },
++        } }) },
+     } : {}),
+     openCodeEndpoint: await reserveMixedOpenCodeEndpoint(),
+     openCodeManagementEndpoint: await reserveMixedOpenCodeEndpoint(),
+@@ -237,6 +241,7 @@
+   if (scheduleUiMode) evidence.scope = 'Original Schedule controls, actual finite Claude and task-first native Bash/MCP, Stop, history and reload; localhost inference only';
+   captureDesktopProofScope(evidence, { repo, mode, emulatedOnly,
+     emulatedManagementMode: emulatedManagementMode || mode === 'skills-ui', emulatedRuntimeMode });
++  if (finiteBase) captureDesktopFiniteMembershipScope(evidence, finiteBase.finiteInitialPeers);
+   if (donorSavedOnly) evidence.scope = 'Exact donor UI saves genuine settings/roster, ordinary Quit and absence, then current original import/dialog/reload; zero native business input';
+   if (quitScenario === 'pending-open') {
+     evidence.scope = 'Actual native provider open pending, zero inputs, guarded existing Quit API and physical cleanup; explicit TEST setup';
+@@ -723,14 +728,14 @@
+         .map((line) => object(JSON.parse(line) as unknown));
+       const preQuitCount =
+         typeof evidence.preQuitSentinelCount === 'number' ? evidence.preQuitSentinelCount : null;
+-      if ((packed || emulatedOnly) && census.some(row => !permittedSentinelObservation(row))) evidence.status = 'INCOMPLETE';
++      if ((packed || emulatedOnly || finiteMembership) && census.some(row => !permittedSentinelObservation(row))) evidence.status = 'INCOMPLETE';
+       evidence.finalSentinelCensus = {
+         invocations: census,
+         preQuitCount,
+         postQuitOrCleanupInvocations: preQuitCount === null ? null : census.slice(preQuitCount),
+         refusedInvocations: census.filter((row) => row.allowed !== true),
+         qualification: packed ? 'All legacy executable calls refuse, including version discovery. Only nonessential version attempts and the isolated shell-environment fixture are admitted observations; any agent/control fallback before or after Quit makes this packed proof incomplete.' :
+-          emulatedOnly ? 'Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete.' :
++          emulatedOnly || finiteMembership ? 'Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete.' :
+           'Sentinels refuse nonversion commands without launching providers. Post-Quit/cleanup refusals are retained legacy maintenance gaps; they do not prove native execution or full fork-free/P5 qualification.',
+       };
+     } catch (error) {
+@@ -765,10 +770,12 @@
+       }
+     }
+     await verifyDesktopProofInputsAfterCleanup(nativeInputs, fixture, evidence);
++    if (finiteBase) await observeDesktopFiniteMembershipCleanup(finiteBase.finiteInitialPeers, evidence);
+     await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });
+     console.log(JSON.stringify(projectDesktopProofReceiptSummary(evidence, { receiptPath, mode, mixedMode })));
+     assertDesktopProofCompleted(evidence, { packed: Boolean(packed), emulatedOnly, controlledProcessMode,
+       mode, scheduleUiMode, capturedMcpUiMode, cleanupFailure, remaining });
++    if (finiteMembership) assert.equal(evidence.status, 'PASS', 'original finite-peer V2 membership and cleanup must both pass');
+   }
+   if (mode === 'task-board-cross-team-ui') {
+     assert.equal(evidence.status, 'PASS', 'original Taskboard proof and cleanup must finish before owner continuation');
+--- /dev/null
++++ b/scripts/legacy-agent-host/desktop-live-membership-controlled.ts
+@@ -0,0 +1,219 @@
++/** Private TEST initial peers for the original P11 OpenCode V2 membership journey. */
++import assert from 'node:assert/strict';
++import { mkdir, lstat, readFile, realpath, writeFile } from 'node:fs/promises';
++import { dirname, join } from 'node:path';
++import { pathToFileURL } from 'node:url';
++import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';
++import { runtimeMemberProfileSchema } from '../../packages/legacy-agent-host/dist/composition/runtimeProfile.js';
++import type { CodexMemberProfile } from '../../packages/legacy-agent-host/dist/composition/runtimeProfile.js';
++import { providerManagementProfileSchema } from '../../packages/legacy-agent-host/dist/management/profile.js';
++import type { CodexManagementProfile } from '../../packages/legacy-agent-host/dist/management/profile.js';
++import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
++import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
++import type { ProcessFact } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
++import { desktopNodeScriptHeader, digest, fileDigest, prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
++import { command } from './desktop-backend-observations.ts';
++
++type Row = Record<string, unknown>;
++const record = (value: unknown): Row => {
++  assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value as Row;
++};
++type Pin = { path: string; sha256: string };
++export interface DesktopFiniteMembership {
++  readonly kind: 'finite-initial-peers-native-v2';
++  readonly sources: readonly Pin[];
++  readonly peers: readonly { provider: 'claude' | 'codex'; root: string; executable: Pin }[];
++  readonly codex: CodexMemberProfile;
++  readonly codexManagement: CodexManagementProfile;
++}
++
++/** Called before any fixture/model/app work. The original emulated-only admission is unchanged. */
++export function desktopFiniteV2MembershipSelected(): boolean {
++  const selected = process.env.LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP;
++  assert.ok(selected === undefined || selected === '1');
++  if (selected === undefined) return false;
++  assert.equal(process.platform, 'linux'); assert.equal(process.arch, 'x64');
++  assert.equal(process.env.LEGACY_DESKTOP_BACKEND_GO, '1');
++  assert.equal(process.env.LEGACY_DESKTOP_PROOF_MODE, 'native-mixed-create-launch-ui');
++  assert.equal(process.env.LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI, '1');
++  assert.equal(process.env.LEGACY_DESKTOP_OPENCODE_GENERATION, 'v2');
++  assert.equal(process.env.LEGACY_DESKTOP_EMULATED_ONLY, undefined);
++  const allowed = /^LEGACY_DESKTOP_(?:BACKEND_GO|PROOF_MODE|MIXED_MEMBERSHIP_UI|OPENCODE_GENERATION|FINITE_V2_MEMBERSHIP|CDP_PORT|TEST_DISPLAY|TEST_XAUTHORITY|COREPACK_HOME|NODE_SHA256|HOST_ENTRY_SHA256|PNPM_PATH|PNPM_SHA256|COREPACK_PACKAGE_SHA256|COREPACK_LIBRARY_SHA256)$/u;
++  for (const key of Object.keys(process.env)) if (key.startsWith('LEGACY_DESKTOP_'))
++    assert.ok(allowed.test(key), 'finite V2 membership refuses ' + key);
++  for (const key of ['OPENCODE_V2_EMBEDDED_BUN', 'OPENCODE_V2_EMBEDDED_GRAPH']) assert.ok(process.env[key]);
++  assert.match(process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256 ?? '', /^[a-f0-9]{64}$/u);
++  return true;
++}
++
++/** One existing private owner; no runtime allocation, model call, task seed or saved schedule. */
++export async function prepareDesktopFiniteMembershipFixture(repo: string, pnpmEntry: string) {
++  assert.equal(desktopFiniteV2MembershipSelected(), true);
++  const base = await prepareDesktopBackendFixture(repo, { pnpmEntry, seedUiPreferences: true, creation: true });
++  const sources = await Promise.all([
++    'tools/owned-process-broker/fixtures/claudeProviderPeer.mjs',
++    'tools/owned-process-broker/fixtures/providerPeer.mjs',
++    'tools/owned-process-broker/fixtures/providerDesktopPeer.mjs',
++  ].map(async source => {
++    const path = join(repo, source); assert.equal(await realpath(path), path);
++    return { path, sha256: await fileDigest(path) };
++  }));
++  const selections = await Promise.all((['claude', 'codex'] as const).map(async provider => {
++    const root = join(base.root, `TEST-peer-${provider}-scope`);
++    for (const name of ['', 'home', 'tmp', 'config', 'data', 'cache']) await mkdir(join(root, name), { mode: 0o700 });
++    const wrapper = `${desktopNodeScriptHeader(base.node)}import assert from 'node:assert/strict';
++import {createHash} from 'node:crypto';import {readFileSync,realpathSync} from 'node:fs';
++for(const source of ${JSON.stringify(sources)}){assert.equal(realpathSync(source.path),source.path);assert.equal(createHash('sha256').update(readFileSync(source.path)).digest('hex'),source.sha256)}
++${provider === 'codex' ? "if(process.argv.length===3&&process.argv[2]==='--version')process.stdout.write('codex-cli 0.162.0\\n');else " : ''}await import(${JSON.stringify(pathToFileURL(sources[provider === 'claude' ? 0 : 1]!.path).href)});
++`;
++    const path = join(base.root, 'bin', `TEST-p11-${provider}${provider === 'claude' ? '' : '.mjs'}`);
++    await writeFile(path, wrapper, { mode: 0o700, flag: 'wx' });
++    const environment = (role: 'runtime' | 'management'): Record<string, string> => ({
++      HOME: join(root, 'home'), TMPDIR: join(root, 'tmp'), XDG_CONFIG_HOME: join(root, 'config'),
++      XDG_DATA_HOME: join(root, 'data'), XDG_CACHE_HOME: join(root, 'cache'),
++      PATH: `${dirname(base.node)}:/usr/bin:/bin`, SHELL: '/bin/sh',
++      TEST_EMULATED_DESKTOP_PROVIDER: '1', TEST_PEER_SCENARIO: 'desktop-ui-v1', TEST_PEER_PROVIDER: provider,
++      TEST_PEER_ROLE: role, TEST_DESKTOP_PEER_ROOT: root, TEST_PEER_EFFECTS: join(root, 'effects.ndjson'),
++      TEST_DESKTOP_PEER_WORKSPACE: join(base.root, 'workspace'),
++      ...(provider === 'claude' ? { CLAUDE_CONFIG_DIR: join(root, 'config') }
++        : { CODEX_HOME: join(root, 'config'), TEST_PEER_HELPER_SHA256: sources[2]!.sha256 }),
++    });
++    return { provider, root, executable: { path, sha256: digest(wrapper) }, environment };
++  }));
++  const profile = JSON.parse(await readFile(base.profilePath, 'utf8')) as TeamHostProfile;
++  assert.equal(profile.runtime, undefined); assert.equal(profile.management, undefined);
++  const team = profile.teams[0]!;
++  team.members[0]!.role = 'lead';
++  team.members[0]!.delivery = { ...team.binding, runId: team.scope.runId, memberId: 'alice-id', generation: '1' };
++  team.grants.push({ principalId: 'alice-session', memberName: 'alice', permissions: ['read', 'task.write', 'message.write'] });
++  const members = selections.map(selection => runtimeMemberProfileSchema.parse({
++    provider: selection.provider, teamId: team.scope.teamId, memberId: selection.provider === 'claude' ? 'alice-id' : 'TEST-codex-template',
++    principalId: selection.provider === 'claude' ? 'alice-session' : 'TEST-codex-template',
++    sessionId: `TEST-finite-p11-${selection.provider}`, generation: 1, configRevision: `TEST-finite-p11-${selection.provider}`,
++    cwd: join(base.root, 'workspace'), model: selection.provider === 'claude' ? 'sonnet' : 'TEST-model',
++    accountBinding: 'TEST-no-vendor-account', executable: selection.executable, environment: selection.environment('runtime'),
++    ...(selection.provider === 'claude' ? { configNamespace: 'custom-directory', nativeTools: ['Bash'], autoAllowedTools: [],
++      nativeOptions: { permissionMode: 'default', settingSources: [], effort: 'medium', fastMode: false } }
++      : { protocolRevision: '0.162.0', nativeOptions: { approvalPolicy: 'on-request', sandbox: 'read-only' } }),
++    limits: { queuedInputs: 2, inputBytes: 8192, outputBytes: 1_000_000, outputEvents: 1500,
++      pendingInteractions: 4, timeoutMs: 45_000 },
++  }));
++  const claude = members[0]!, codex = members[1]!;
++  assert.equal(claude.provider, 'claude'); assert.equal(codex.provider, 'codex');
++  if (codex.provider !== 'codex') throw new Error('Only the original finite Codex protocol peer');
++  const management = selections.map((selection, index) => providerManagementProfileSchema.parse({
++    provider: selection.provider, profileId: `TEST-finite-p11-${selection.provider}-management`,
++    configRevision: `TEST-finite-p11-${selection.provider}-management`, accountBinding: members[index]!.accountBinding,
++    cwd: members[index]!.cwd, executable: selection.executable, environment: selection.environment('management'),
++    ...(selection.provider === 'claude' ? { sdkRevision: '0.3.305', configNamespace: 'custom-directory', settingSources: [] }
++      : { protocolRevision: '0.162.0' }), timeoutMs: 15000, modelProbeTimeoutMs: 30000,
++  }));
++  const codexManagement = management[1]!;
++  if (codexManagement.provider !== 'codex') throw new Error('Only the finite Codex management selection');
++  profile.runtime = { members: [claude], providerTemplates: [structuredClone(claude)] };
++  profile.management = [management[0]!];
++  const profileBytes = JSON.stringify(profile);
++  await writeFile(base.profilePath, profileBytes, { mode: 0o600 }); base.pins.profileSha256 = digest(profileBytes);
++  readTeamHostProfile(base.profilePath, base.pins.profileSha256);
++  const descriptor = record(JSON.parse(await readFile(base.descriptorPath, 'utf8')));
++  assert.ok(Array.isArray(descriptor.owners) && descriptor.owners.length === 1);
++  const owner = record(descriptor.owners[0]); record(record(owner.profile).env).LEGACY_AGENT_HOST_PROFILE_SHA256 = base.pins.profileSha256;
++  descriptor.management = [{ runtimeId: 'claude', owner: { ownerId: owner.ownerId, revision: owner.revision },
++    contextId: 'local', projectPath: null, profileId: management[0]!.profileId, configRevision: management[0]!.configRevision }];
++  const descriptorBytes = JSON.stringify(descriptor);
++  await writeFile(base.descriptorPath, descriptorBytes, { mode: 0o600 }); base.pins.descriptorSha256 = digest(descriptorBytes);
++  base.appEnvironment.AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256 = base.pins.descriptorSha256;
++  const finiteInitialPeers: DesktopFiniteMembership = { kind: 'finite-initial-peers-native-v2', sources,
++    peers: selections.map(({ provider, root, executable }) => ({ provider, root, executable })), codex, codexManagement };
++  return { ...base, finiteInitialPeers };
++}
++
++/** Existing peer effects are evidence only; they never grant Runtime or signal authority. */
++export async function readDesktopFiniteMembershipPeers(selected: Pick<DesktopFiniteMembership, 'sources' | 'peers'>) {
++  const effects: Row[] = [];
++  for (const peer of selected.peers) {
++    for (const pin of [...selected.sources, peer.executable]) {
++      assert.equal(await realpath(pin.path), pin.path); assert.equal(await fileDigest(pin.path), pin.sha256);
++    }
++    const path = join(peer.root, 'effects.ndjson');
++    let bytes: Buffer;
++    try {
++      const stat = await lstat(path); assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 1024 * 1024);
++      bytes = await readFile(path);
++    } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue; throw error; }
++    assert.ok(bytes.length <= 1024 * 1024);
++    for (const line of bytes.toString('utf8').split('\n').filter(Boolean)) {
++      const row = record(JSON.parse(line)); assert.equal(row.provider, peer.provider);
++      assert.ok(row.role === 'management' || row.role === 'runtime');
++      assert.ok(Number.isSafeInteger(row.pid) && Number(row.pid) > 1);
++      assert.notEqual(row.event, 'failure', 'a finite peer refusal is never native V2 qualification');
++      if (row.event === 'input') {
++        assert.equal(row.role, 'management', 'the two initial Runtime peers receive no business input');
++        assert.equal(row.marker, 'TEST_MODEL_PROBE');
++      }
++      effects.push(row);
++    }
++  }
++  assert.ok(effects.length <= 4096);
++  return { effects, probeCounts: (['claude', 'codex'] as const).map(provider =>
++    effects.filter(row => row.provider === provider && row.role === 'management' && row.event === 'input').length) };
++}
++
++/** Same captured ps census plus Linux kernel identity for that Host and its direct children only. */
++export async function desktopFiniteMembershipProcesses(group: number, fixture: {
++  node: string; hostEntry: string; finiteInitialPeers: DesktopFiniteMembership;
++}): Promise<ProcessFact[]> {
++  assert.equal(process.platform, 'linux');
++  const table = processFacts(), hosts = table.filter(row => row.groupId === group && command(row.pid) === fixture.node + ' ' + fixture.hostEntry);
++  assert.ok(hosts.length <= 1);
++  if (!hosts.length) return table;
++  const host = hosts[0]!, selected = table.filter(row => row.pid === host.pid || row.parentPid === host.pid);
++  assert.ok(selected.length <= 129, 'original finite metadata bound plus its Host');
++  const readIdentity = async (pid: number) => {
++    const bytes = await readFile(`/proc/${pid}/stat`, 'utf8'); assert.ok(Buffer.byteLength(bytes) <= 4096);
++    const fields = bytes.slice(bytes.lastIndexOf(')') + 2).trim().split(/\s+/u);
++    assert.match(fields[19] ?? '', /^\d+$/u);
++    return { parentPid: Number(fields[1]), groupId: Number(fields[2]), birth: fields[19]! };
++  };
++  const replacements = new Map<number, ProcessFact>();
++  for (const row of selected) {
++    const before = await readIdentity(row.pid), executable = await realpath(`/proc/${row.pid}/exe`);
++    const bytes = await readFile(`/proc/${row.pid}/cmdline`); assert.ok(bytes.length <= 128 * 1024);
++    const args = bytes.toString('utf8').split('\0').filter(Boolean);
++    assert.deepEqual(await readIdentity(row.pid), before, 'the observed original Linux process did not change');
++    assert.equal(before.parentPid, row.parentPid); assert.equal(before.groupId, row.groupId);
++    if (row.pid === host.pid) assert.deepEqual(args, [fixture.node, fixture.hostEntry]);
++    else if (executable === fixture.node) {
++      assert.ok(fixture.finiteInitialPeers.peers.some(peer => args[1] === peer.executable.path));
++      assert.ok(args.length > 2); assert.equal(args[0], fixture.node);
++    } else {
++      assert.equal(executable, process.env.OPENCODE_V2_EMBEDDED_BUN);
++      assert.deepEqual(args, [executable, '--no-env-file', '--config=/dev/null', '--no-install',
++        join(dirname(fixture.hostEntry), 'adapters/providers/OpenCodeV2EmbeddedChild.js')]);
++    }
++    if (row.pid === host.pid) assert.equal(executable, fixture.node);
++    replacements.set(row.pid, { ...row, birth: 'linux-starttime:' + before.birth, command: executable });
++  }
++  return table.map(row => replacements.get(row.pid) ?? row);
++}
++
++export function captureDesktopFiniteMembershipScope(evidence: Row, selected: DesktopFiniteMembership) {
++  evidence.scope = 'Original P11 Add/Remove/Restore/Stop/cold with captured OpenCode V2 and finite initial Claude/Codex protocol peers';
++  evidence.excluded = ['Claude/Codex vendor execution', 'vendor authentication/inference', 'full mixed native qualification', 'release/default activation'];
++  evidence.finiteInitialPeers = { kind: selected.kind, sources: selected.sources, peers: selected.peers,
++    businessInputs: 0, linuxIdentity: 'captured ps plus exact proc executable/argv/starttime', nativeQualification: false };
++}
++
++/** Retain incomplete cleanup without replacing the original failure or skipping receipt publication. */
++export async function observeDesktopFiniteMembershipCleanup(selected: DesktopFiniteMembership, evidence: Row) {
++  try {
++    const peers = await readDesktopFiniteMembershipPeers(selected), table = processFacts();
++    const pids = [...new Set(peers.effects.filter(row => row.event === 'launch').map(row => Number(row.pid)))];
++    const remaining = table.filter(row => pids.includes(row.pid));
++    evidence.finiteInitialPeersAfterCleanup = { ...peers, originalPids: pids, remaining, absent: remaining.length === 0 };
++    if (remaining.length) evidence.status = 'INCOMPLETE';
++  } catch (error) {
++    evidence.finiteInitialPeersAfterCleanup = { absent: false, observationFailed: true };
++    evidence.status = 'INCOMPLETE';
++  }
++}
+--- a/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts
++++ b/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts
+@@ -19,6 +19,8 @@
+ import { checked, replace } from './desktop-mixed-dialog-settings.ts';
+ import { mixedDesktopTeamName, readMixedLiveMembershipIdentity } from './desktop-mixed-native-fixture.ts';
+ import type { DesktopLiveMemberSelection, DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
++import { readDesktopFiniteMembershipPeers, desktopFiniteMembershipProcesses } from './desktop-live-membership-controlled.ts';
++import type { DesktopFiniteMembership } from './desktop-live-membership-controlled.ts';
+ import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
+ import { captureDesktopSourceMetadataLineage, desktopMetadataProfileHash } from './desktop-opencode-metadata-lineage.ts';
+ import type { DesktopSourceMetadataLineage } from './desktop-opencode-metadata-lineage.ts';
+@@ -62,6 +64,7 @@
+ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
+   fixture: Awaited<ReturnType<typeof prepareDesktopBackendFixture>> & {
+     membershipProject?: { path: string; sha256: string; dev: number; ino: number };
++    finiteInitialPeers?: DesktopFiniteMembership;
+   };
+   models: DesktopMixedModels;
+   capturedGroup(): number;
+@@ -73,8 +76,11 @@
+   assert.equal(process.env.LEGACY_DESKTOP_PROOF_MODE, 'native-mixed-create-launch-ui');
+   const { fixture, models } = options, membership = models.membership, project = fixture.membershipProject;
+   assert.ok(membership && project);
++  const finite = fixture.finiteInitialPeers;
++  const physical = () => desktopFiniteMembershipProcesses(options.capturedGroup(), { ...fixture, finiteInitialPeers: finite! });
++  const peerProbeCountsNow = async () => (await readDesktopFiniteMembershipPeers(finite!)).probeCounts;
+   const steps: Row[] = [], proof: Row = { status: 'INCOMPLETE', kind: 'mixed-live-membership',
+-    openCodeGeneration: models.openCodeGeneration, steps };
++    openCodeGeneration: models.openCodeGeneration, ...(finite ? { initialPeers: finite.kind, fullMixedNativeQualification: false } : {}), steps };
+   options.evidence.liveMembershipProof = proof;
+   const modelRows = [models.claude, models.codex, models.opencode];
+   const current = () => {
+@@ -88,8 +94,10 @@
+   let ui = createDesktopUiControls(cdp, { assertOwnedRenderer: current, step });
+   const poll = async <T>(observe: () => Promise<T>, accepts: (value: T) => boolean, label: string) => {
+     const cutoff = Date.now() + 90_000; let value = await observe();
++    assert.ok(Date.now() < cutoff, label);
+     while (!accepts(value) && Date.now() < cutoff) {
+       current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();
++      assert.ok(Date.now() < cutoff, label);
+     }
+     assert.ok(accepts(value), label); return value;
+   };
+@@ -190,7 +198,7 @@
+   const v1MetadataCommand = v2 ? '' : text(openCodeExecutable.path) + ' serve --hostname 127.0.0.1 --port ' +
+     new URL(text(metadataProfile.endpoint)).port;
+   const observe = async (providers: readonly Provider[]) => {
+-    current(); await pins(); const sources = await sourceProfiles(), table = processFacts();
++    current(); await pins(); const sources = await sourceProfiles(), table = finite ? await physical() : processFacts();
+     const found = table.filter(row => row.groupId === options.capturedGroup() && command(row.pid) === fixture.node + ' ' + fixture.hostEntry);
+     assert.equal(found.length, 1); if (host) assert.deepEqual(found[0], host); else host = found[0]!;
+     const children = table.filter(row => row.parentPid === host!.pid);
+@@ -213,14 +221,21 @@
+       assert.ok(metadataBirths.length <= 128);
+     }
+     const natives = children.filter(row => !metadata.some(birth => birth.pid === row.pid));
++    const peerEffects = finite ? (await readDesktopFiniteMembershipPeers(finite)).effects : undefined;
+     assert.equal(natives.length, providers.length, 'every remaining original Host child is one expected Runtime');
+     const selected = new Map<Provider, ProcessFact>();
+     for (const provider of providers) {
+       const executable = text(record(recipe(provider).executable).path);
+-      const matches = natives.filter(row => row.command === executable);
++      const finitePeer = finite?.peers.find(row => row.provider === provider);
++      const matches = natives.filter(row => row.command === (finitePeer ? fixture.node : executable) &&
++        (!finitePeer || command(row.pid).startsWith(fixture.node + ' ' + executable + ' ')));
+       assert.equal(matches.length, 1); const birth = matches[0]!;
+       assert.equal(birth.groupId, birth.pid);
+-      assert.ok(command(birth.pid).startsWith(executable + ' '));
++      assert.ok(command(birth.pid).startsWith((finitePeer ? fixture.node + ' ' : '') + executable + ' '));
++      if (finitePeer) {
++        assert.ok(peerEffects!.some(row => row.provider === provider && row.role === 'runtime' && row.event === 'launch' && row.pid === birth.pid && row.parentPid === host!.pid));
++        assert.ok(peerEffects!.some(row => row.provider === provider && row.role === 'runtime' && row.pid === birth.pid && row.event === (provider === 'claude' ? 'mcp-connected' : 'connected')));
++      }
+       if (provider === 'opencode' && !v2) assert.equal(command(birth.pid),
+         executable + ' serve --hostname 127.0.0.1 --port ' + new URL(text(recipe(provider).endpoint)).port);
+       selected.set(provider, { ...birth });
+@@ -231,7 +246,7 @@
+     return selected;
+   };
+   const releasedEpoch = async () => {
+-    assert.ok(host); const table = processFacts(); assert.ok(!table.some(row => row.pid === host!.pid));
++    assert.ok(host); const table = finite ? await physical() : processFacts(); assert.ok(!table.some(row => row.pid === host!.pid));
+     if (v2) {
+       assert.ok(lineage);
+       lineage = captureDesktopSourceMetadataLineage({ root: fixture.root, host,
+@@ -250,8 +265,8 @@
+   await ui.scrollTo(leadToggle, 'original explicit lead model');
+   if (!await cdp.evaluate('Boolean(document.querySelector(' + literal(create + ' #lead-effort') + '))'))
+     await ui.click(leadToggle, 'expand original lead model');
+-  const opus = create + ' [data-testid="team-model-selector-model-option"][aria-label^="Opus 4.6"]';
+-  await ui.scrollTo(opus, 'original Opus4.6 choice'); await ui.click(opus, 'select original Opus4.6');
++  const opus = create + ' [data-testid="team-model-selector-model-option"][aria-label^=' + literal(finite ? 'TEST Claude Sonnet' : 'Opus 4.6') + ']';
++  await ui.scrollTo(opus, finite ? 'finite initial Sonnet choice' : 'original Opus4.6 choice'); await ui.click(opus, finite ? 'select finite initial Sonnet' : 'select original Opus4.6');
+   await ui.scrollTo(create + ' button', 'original Medium effort', 'Medium');
+   await ui.click(create + ' button', 'select original Medium effort', 'Medium');
+   await ui.scrollTo(leadToggle, 'original configured lead model');
+@@ -268,7 +283,7 @@
+   await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'a', code: 'KeyA', modifiers: 4, commands: ['selectAll'] });
+   await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'a', code: 'KeyA', modifiers: 4 });
+   await cdp.send('Input.insertText', { text: JSON.stringify([{ name: 'bob', providerId: 'codex',
+-    model: 'mock-model', role: 'developer', workflow: 'TEST mixed codex workflow: use only the supplied business input.' }], null, 2) });
++    model: finite ? 'TEST-model' : 'mock-model', role: 'developer', workflow: 'TEST mixed codex workflow: use only the supplied business input.' }], null, 2) });
+   await ui.waitRead('(() => {const rows=[...document.querySelectorAll(' +
+     literal(create + ' [data-role="member-row"] input[aria-label^="Member "]') +
+     ')];return rows.length===1&&rows[0].value==="bob"})()', 'one original Codex teammate');
+@@ -279,13 +294,13 @@
+   assert.deepEqual(rows(saved.members).map(row => [row.name, row.role]), [['team-lead', 'lead'], ['bob', 'member']]);
+   assert.equal(record(saved.savedSettings).cwd, workspace);
+   assert.equal(record(saved.savedSettings).providerId, 'anthropic');
+-  assert.equal(record(saved.savedSettings).model, 'claude-opus-4-6');
++  assert.equal(record(saved.savedSettings).model, finite ? 'sonnet' : 'claude-opus-4-6');
+   assert.equal(record(saved.savedSettings).effort, 'medium');
+   assert.equal(record(saved.savedSettings).prompt, '');
+   assert.equal(record(saved.savedSettings).skipPermissions, true);
+   assert.equal(record(saved.savedSettings).syncModelsWithLead, false);
+   assert.equal(record(rows(saved.members)[1]!.settings).providerId, 'codex');
+-  assert.equal(record(rows(saved.members)[1]!.settings).model, 'mock-model');
++  assert.equal(record(rows(saved.members)[1]!.settings).model, finite ? 'TEST-model' : 'mock-model');
+   assert.equal(rows(saved.runtimeCaptures ?? []).length, 0);
+   assert.ok(rows(saved.members).every(row => row.delivery === undefined));
+   assert.equal(models.opencode.probes.length, 0);
+@@ -322,12 +337,12 @@
+   const peerProviders = ['claude', 'codex'] as const, initialPhysical = await observe(peerProviders);
+   const peers = peerProviders.map(provider => ({ provider, identity: readMixedLiveMembershipIdentity(fixture.root, provider),
+     physical: initialPhysical.get(provider)! }));
+-  const peerProbeCounts = [models.claude.probes.length, models.codex.probes.length];
++  const peerProbeCounts = finite ? await peerProbeCountsNow() : [models.claude.probes.length, models.codex.probes.length];
+   assert.ok(peerProbeCounts[0]! >= 1 && peerProbeCounts[0]! <= 9 && peerProbeCounts[1]! >= 1 && peerProbeCounts[1]! <= 8);
+   proof.initial = { handleId, capture, sessions: initialSessions, peers, probeCounts: peerProbeCounts,
+     source: await sourceProfiles(), project: { path: project.path, sha256: project.sha256 } };
+   const assertPeers = async (physical?: Map<Provider, ProcessFact>) => {
+-    current(); assert.deepEqual([models.claude.probes.length, models.codex.probes.length], peerProbeCounts);
++    current(); assert.deepEqual(finite ? await peerProbeCountsNow() : [models.claude.probes.length, models.codex.probes.length], peerProbeCounts);
+     const selected = await sessions();
+     for (const peer of peers) {
+       assert.deepEqual(readMixedLiveMembershipIdentity(fixture.root, peer.provider), peer.identity);
+@@ -545,7 +560,7 @@
+     'both original user input histories visible without sending');
+   assert.deepEqual(readMixedLiveMembershipIdentity(fixture.root, 'opencode', restored.target), restoredReady.identity);
+   assert.deepEqual([models.opencode.probes.length, models.opencode.observations.length], [2, 4]);
+-  assert.deepEqual([models.claude.probes.length, models.codex.probes.length], peerProbeCounts);
++  assert.deepEqual(finite ? await peerProbeCountsNow() : [models.claude.probes.length, models.codex.probes.length], peerProbeCounts);
+   assert.deepEqual(await sessions(), stopped); await observe([]); await pins();
+   const screenshot = record(await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true }));
+   const screenshotPath = join(fixture.root, 'ui-original-live-membership.png');
+@@ -559,7 +574,7 @@
+     for (const model of [models.claude, models.codex]) {
+       assert.equal(model.observations.length, 0); assert.equal(model.notificationObservations?.length ?? 0, 0);
+     }
+-    assert.deepEqual([models.claude.probes.length, models.codex.probes.length], peerProbeCounts);
++    assert.deepEqual(finite ? await peerProbeCountsNow() : [models.claude.probes.length, models.codex.probes.length], peerProbeCounts);
+     assert.deepEqual([models.opencode.probes.length, models.opencode.observations.length], [2, 4]);
+     assert.deepEqual(await sessions(), stopped); assert.deepEqual(await sourceProfiles(), beforeColdSource);
+     assert.deepEqual(await probeLedger(), afterQuitProbes);
+--- a/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts
++++ b/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts
+@@ -23,6 +23,7 @@
+ import type { DesktopOpenCodeV2Selection } from './desktop-opencode-v2-fixture.ts';
+ import type { prepareDesktopBackendFixture } from './desktop-backend-fixture.ts';
+ import type { TeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/TeamHost.js';
++import type { DesktopFiniteMembership } from './desktop-live-membership-controlled.ts';
+ 
+ const record = (value: unknown): Record<string, unknown> => {
+   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
+@@ -345,6 +346,7 @@
+     openCodeV2?: Pick<DesktopOpenCodeV2Selection,
+       'bunPath' | 'bunSha256' | 'engineDirectory' | 'processCustody'>;
+     models: DesktopMixedModels;
++    finiteInitialPeers?: DesktopFiniteMembership;
+   }
+ ) {
+   assert.match(basename(base.root), /^TEST-desktop-backend-/);
+@@ -358,6 +360,12 @@
+   assert.equal(options.models.openCodeGeneration, options.openCodeV2 ? 'v2' : 'v1',
+     'the native oracle and selected engine must use the same protocol');
+   assert.equal(profile.runtime!.providerTemplates!.length, 1);
++  if (options.finiteInitialPeers) {
++    assert.equal(options.finiteInitialPeers.kind, 'finite-initial-peers-native-v2');
++    assert.ok(options.openCodeV2 && options.models.membership);
++    assert.equal(process.env.LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP, '1');
++    assert.deepEqual(claude.executable, options.finiteInitialPeers.peers.find(row => row.provider === 'claude')!.executable);
++  }
+   // Metadata-only TEST rows feed the ordinary project picker before any app exists.
+   // These are neither native history nor an imported product corpus.
+   for (const name of ['workspace', 'workspace-other']) {
+@@ -381,7 +389,7 @@
+     assert.ok(endpoint.port);
+   }
+   for (const [path, sha] of [
+-    [options.codexPath, codeXHash],
++    [options.codexPath, options.finiteInitialPeers?.codex.executable.sha256 ?? codeXHash],
+     ...(!options.openCodeV2 ? [[options.openCodePath, openCodeHash]] : []),
+   ]) {
+     assert.ok(path && sha);
+@@ -402,12 +410,12 @@
+       SHELL: '/bin/sh',
+     };
+   };
+-  const codexEnvironment = {
++  const codexEnvironment = options.finiteInitialPeers?.codex.environment ?? {
+     ...(await environment('codex')),
+     CODEX_HOME: join(base.root, 'providers/codex/config'),
+     TEST_CODEX_FIXTURE_KEY: 'TEST-LOCALHOST-ONLY',
+   };
+-  await writeFile(
++  if (!options.finiteInitialPeers) await writeFile(
+     join(codexEnvironment.CODEX_HOME, 'config.toml'),
+     `model = "mock-model"
+ model_provider = "TEST_fixture"
+@@ -457,7 +465,7 @@
+     accountBinding: `TEST-${provider}-localhost-only`,
+     limits: { ...claude.limits },
+   });
+-  const codex = {
++  const codex = options.finiteInitialPeers?.codex ?? {
+     ...common('codex'),
+     provider: 'codex' as const,
+     protocolRevision: '0.162.0' as const,
+@@ -569,7 +577,7 @@
+   assert.ok(Array.isArray(descriptor.management) && descriptor.management.length === 1);
+   const selected = record(descriptor.management[0]);
+   const management: NonNullable<TeamHostProfile['management']> = [
+-    {
++    options.finiteInitialPeers?.codexManagement ?? {
+       provider: 'codex',
+       protocolRevision: '0.162.0',
+       profileId: `${profile.owner.profileId}:codex`,
+@@ -629,17 +637,19 @@
+   return {
+     ...base,
+     ...(membershipProject ? { membershipProject } : {}),
++    ...(options.finiteInitialPeers ? { finiteInitialPeers: options.finiteInitialPeers } : {}),
+     pins: {
+       ...base.pins,
+       profileSha256: digest(profileBytes),
+       descriptorSha256: digest(descriptorBytes),
+     },
+-    appEnvironment: desktopBackendEnvironment(
++    appEnvironment: { ...desktopBackendEnvironment(
+       base.root,
+       base.node,
+       base.descriptorPath,
+-      digest(descriptorBytes)
+-    ),
++      digest(descriptorBytes),
++      options.finiteInitialPeers ? base.linuxChildExec : undefined
++    ), ...(options.finiteInitialPeers ? { CODEX_CLI_PATH: options.finiteInitialPeers.codex.executable.path } : {}) },
+   };
+ }
+ 
+--- a/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts
++++ b/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts
+@@ -270,6 +270,8 @@
+   'packages/legacy-agent-host/src/composition/scheduledRunProjection.ts',
+   'packages/legacy-agent-host/src/composition/scheduledRunCapture.ts',
+   'packages/legacy-agent-host/src/composition/scheduledRunContracts.ts',
++  'scripts/legacy-agent-host/desktop-live-membership-controlled.ts',
++  'scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts',
+ ];
+ 
+ /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */
+--- a/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
++++ b/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
+@@ -1764,3 +1764,151 @@
+   await assert.rejects(mismatch.run(true), { code: 'ERR_ASSERTION' });
+   assert.deepEqual(mismatch.values, [true], 'the original exact stopped binding assertion remains after the UI read');
+ });
++
++
++async function originalLiveMembershipPoll() {
++  const { stripTypeScriptTypes } = await import('node:module');
++  const source = (await readFile(new URL('./desktop-live-membership-ui-smoke.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
++  const begin = '  const poll = async <T>(', end = "  const workspace = join(fixture.root, 'workspace');";
++  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original P11 poll boundary');
++  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));
++  const makePoll = Function('environment', `'use strict';
++    const {assert,current,Date,setTimeout}=environment;
++    ${actual}
++    return poll;`) as (environment: Record<string, unknown>) =>
++      (observe: () => Promise<boolean>, accepts: (value: boolean) => boolean, label: string) => Promise<boolean>;
++  return (observations: { at: number; value?: boolean; error?: Error }[], guardError?: Error) => {
++    let now = 0, reads = 0;
++    const trace: string[] = [], delays: number[] = [];
++    const poll = makePoll({ assert, Date: { now: () => now },
++      current() { trace.push('guard'); if (guardError) throw guardError; },
++      setTimeout(done: () => void, delay: number) {
++        assert.equal(delay, 100); delays.push(delay); now += delay; done();
++      },
++    });
++    return { trace, delays, reads: () => reads,
++      run: (label: string) => poll(async () => {
++        const observation = observations[reads++]; assert.ok(observation, 'no unplanned observation');
++        trace.push('read'); assert.ok(observation.at >= now); now = observation.at;
++        if (observation.error) throw observation.error;
++        assert.equal(typeof observation.value, 'boolean'); return observation.value!;
++      }, value => value, label),
++    };
++  };
++}
++
++for (const scenario of [
++  { name: 'first result at the exact cutoff', values: [{ at: 90_000, value: true }], reads: 1, trace: ['read'], delays: [] },
++  { name: 'first result after the cutoff', values: [{ at: 90_001, value: true }], reads: 1, trace: ['read'], delays: [] },
++  { name: 'polled result after the cutoff', values: [{ at: 0, value: false }, { at: 90_001, value: true }], reads: 2,
++    trace: ['read', 'guard', 'read'], delays: [100] },
++]) test('P11 keeps the original 90-second cutoff for ' + scenario.name, async () => {
++  const make = await originalLiveMembershipPoll(), f = make(scenario.values), label = 'TEST original P11 deadline';
++  await assert.rejects(f.run(label), error => error instanceof assert.AssertionError && error.message.includes(label));
++  assert.equal(f.reads(), scenario.reads); assert.deepEqual(f.trace, scenario.trace); assert.deepEqual(f.delays, scenario.delays);
++});
++
++test('P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity', async () => {
++  const make = await originalLiveMembershipPoll(), label = 'TEST original P11 observation';
++  const immediate = make([{ at: 89_999, value: true }]);
++  assert.equal(await immediate.run(label), true); assert.equal(immediate.reads(), 1);
++  assert.deepEqual(immediate.trace, ['read']); assert.deepEqual(immediate.delays, []);
++  const later = make([{ at: 0, value: false }, { at: 101, value: true }]);
++  assert.equal(await later.run(label), true); assert.equal(later.reads(), 2);
++  assert.deepEqual(later.trace, ['read', 'guard', 'read']); assert.deepEqual(later.delays, [100]);
++  const refusal = new Error('TEST original observation failure'), failed = make([{ at: 90_001, error: refusal }]);
++  await assert.rejects(failed.run(label), error => error === refusal);
++  assert.equal(failed.reads(), 1); assert.deepEqual(failed.trace, ['read']); assert.deepEqual(failed.delays, []);
++  const stale = new Error('TEST original currentness failure'), guarded = make([{ at: 0, value: false }], stale);
++  await assert.rejects(guarded.run(label), error => error === stale);
++  assert.equal(guarded.reads(), 1); assert.deepEqual(guarded.trace, ['read', 'guard']); assert.deepEqual(guarded.delays, []);
++  const noReady = make([{ at: 90_000, value: false }]);
++  await assert.rejects(noReady.run(label), assert.AssertionError);
++  assert.equal(noReady.reads(), 1); assert.deepEqual(noReady.trace, ['read']); assert.deepEqual(noReady.delays, []);
++});
++
++async function finiteMembershipFunction(begin: string, end: string, name: string, environment: Record<string, unknown>) {
++  const { stripTypeScriptTypes } = await import('node:module');
++  const source = (await readFile(new URL('./desktop-live-membership-controlled.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
++  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one private finite P11 source boundary');
++  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)).replace(/^export /u, ''));
++  return Function('environment', `'use strict';const {assert,process,processFacts,command,readFile,realpath,join,dirname}=environment;
++    ${actual}
++    return ${name};`)(environment) as (...args: unknown[]) => unknown;
++}
++
++test('finite V2 P11 admission rejects mixed selectors before any fixture or process observation', async () => {
++  const allowed = { LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP: '1', LEGACY_DESKTOP_BACKEND_GO: '1',
++    LEGACY_DESKTOP_PROOF_MODE: 'native-mixed-create-launch-ui', LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI: '1',
++    LEGACY_DESKTOP_OPENCODE_GENERATION: 'v2', OPENCODE_V2_EMBEDDED_BUN: '/TEST-bun',
++    OPENCODE_V2_EMBEDDED_GRAPH: '/TEST-graph', OPENCODE_V2_EMBEDDED_BUN_SHA256: 'a'.repeat(64) };
++  const select = async (env: Record<string, string | undefined>, platform = 'linux', arch = 'x64') => {
++    const actual = await finiteMembershipFunction('export function desktopFiniteV2MembershipSelected()',
++      '/** One existing private owner;', 'desktopFiniteV2MembershipSelected', { assert, process: { env, platform, arch } });
++    return actual();
++  };
++  assert.equal(await select({}), false); assert.equal(await select(allowed), true);
++  for (const override of [{ LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP: 'yes' }, { LEGACY_DESKTOP_BACKEND_GO: '0' },
++    { LEGACY_DESKTOP_PROOF_MODE: 'team-ui' }, { LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI: undefined },
++    { LEGACY_DESKTOP_OPENCODE_GENERATION: 'v1' }, { LEGACY_DESKTOP_EMULATED_ONLY: '1' },
++    { LEGACY_DESKTOP_CLAUDE_PATH: '/TEST-unselected' }, { LEGACY_DESKTOP_CODEX_PATH: '/TEST-unselected' },
++    { LEGACY_DESKTOP_PACKED_CAPTURE_PATH: '/TEST-other.json' }, { OPENCODE_V2_EMBEDDED_GRAPH: undefined },
++    { OPENCODE_V2_EMBEDDED_BUN_SHA256: 'bad' }])
++    await assert.rejects(select({ ...allowed, ...override }), assert.AssertionError);
++  await assert.rejects(select(allowed, 'darwin'), assert.AssertionError);
++  await assert.rejects(select(allowed, 'linux', 'arm64'), assert.AssertionError);
++});
++
++test('finite V2 P11 Linux projection keeps exact kernel identity and refuses changed or foreign children', async () => {
++  const { dirname, join } = await import('node:path');
++  const host = { pid: 200, parentPid: 100, groupId: 100, birth: 'original ps host', command: 'node' };
++  const peer = { pid: 201, parentPid: 200, groupId: 201, birth: 'original ps peer', command: 'node' };
++  const native = { pid: 202, parentPid: 200, groupId: 202, birth: 'original ps V2', command: 'bun' };
++  const unrelated = { pid: 300, parentPid: 1, groupId: 300, birth: 'original other', command: 'other' };
++  const exercise = async (variant: 'ready' | 'no-host' | 'changed-birth' | 'foreign-executable' | 'foreign-wrapper' | 'wrong-parent') => {
++    const reads: string[] = [], stats = new Map<number, number>(); let censuses = 0;
++    const table = variant === 'no-host' ? [unrelated] : [host, peer, native, unrelated];
++    const fixture = { node: '/TEST/node', hostEntry: '/TEST/host/cli.js', finiteInitialPeers: {
++      peers: [{ provider: 'claude', executable: { path: '/TEST/peer' } }] } };
++    const actual = await finiteMembershipFunction('export async function desktopFiniteMembershipProcesses(',
++      'export function captureDesktopFiniteMembershipScope(', 'desktopFiniteMembershipProcesses', {
++        assert, process: { platform: 'linux', env: { OPENCODE_V2_EMBEDDED_BUN: '/TEST/bun' } }, dirname, join,
++        processFacts() { censuses++; return table; },
++        command(pid: number) { assert.equal(pid, 200); return '/TEST/node /TEST/host/cli.js'; },
++        async realpath(path: string) {
++          reads.push(path); const pid = Number(path.split('/')[2]);
++          assert.equal(path, `/proc/${pid}/exe`);
++          return variant === 'foreign-executable' && pid === 201 ? '/TEST/foreign' : pid === 202 ? '/TEST/bun' : '/TEST/node';
++        },
++        async readFile(path: string) {
++          reads.push(path); const pid = Number(path.split('/')[2]), row = table.find(value => value.pid === pid); assert.ok(row);
++          if (path.endsWith('/stat')) {
++            const count = (stats.get(pid) ?? 0) + 1; stats.set(pid, count);
++            const fields = Array<string>(20).fill('0'); fields[0] = 'S';
++            fields[1] = String(variant === 'wrong-parent' && pid === 201 ? 299 : row.parentPid);
++            fields[2] = String(row.groupId); fields[19] = String(pid * 10 + (variant === 'changed-birth' && pid === 201 && count === 2 ? 1 : 0));
++            return `${pid} (TEST name with ) bracket) ${fields.join(' ')}`;
++          }
++          assert.equal(path, `/proc/${pid}/cmdline`);
++          const args = pid === 200 ? ['/TEST/node', '/TEST/host/cli.js'] : pid === 201
++            ? ['/TEST/node', variant === 'foreign-wrapper' ? '/TEST/other' : '/TEST/peer', '--original']
++            : ['/TEST/bun', '--no-env-file', '--config=/dev/null', '--no-install', '/TEST/host/adapters/providers/OpenCodeV2EmbeddedChild.js'];
++          return Buffer.from(args.join('\0') + '\0');
++        },
++      });
++    const promise = actual(100, fixture) as Promise<unknown>;
++    if (variant !== 'ready' && variant !== 'no-host') await assert.rejects(promise, assert.AssertionError);
++    else {
++      const result = await promise;
++      assert.deepEqual(result, variant === 'no-host' ? table : [
++        { ...host, birth: 'linux-starttime:2000', command: '/TEST/node' },
++        { ...peer, birth: 'linux-starttime:2010', command: '/TEST/node' },
++        { ...native, birth: 'linux-starttime:2020', command: '/TEST/bun' }, unrelated]);
++      assert.equal(censuses, 1); assert.ok(reads.every(path => !path.includes('/300/')));
++      assert.equal(reads.length, variant === 'no-host' ? 0 : 12);
++    }
++    assert.deepEqual(table, variant === 'no-host' ? [unrelated] : [host, peer, native, unrelated]);
++  };
++  for (const variant of ['ready', 'no-host', 'changed-birth', 'foreign-executable', 'foreign-wrapper', 'wrong-parent'] as const)
++    await exercise(variant);
++});
+--- /dev/null
++++ b/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts
+@@ -0,0 +1,154 @@
++/** Read only the new original P11 receipt; never launch, replay or repair a provider. */
++import assert from 'node:assert/strict';
++import { execFileSync } from 'node:child_process';
++import { lstat, readFile, realpath, writeFile } from 'node:fs/promises';
++import { createRequire } from 'node:module';
++import { basename, dirname, join } from 'node:path';
++import { fileDigest } from './desktop-backend-fixture.ts';
++import { compiledBundleHashes } from './desktop-backend-observations.ts';
++import { readDesktopNativeProviderArtifact } from './desktop-native-stop-fixture.ts';
++import { desktopProofSources } from './desktop-proof-sources.ts';
++import { readDesktopFiniteMembershipPeers } from './desktop-live-membership-controlled.ts';
++import type { DesktopFiniteMembership } from './desktop-live-membership-controlled.ts';
++import { processFacts } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
++import { readTeamHostProfile } from '../../packages/legacy-agent-host/dist/composition/readProfile.js';
++import { verifyOpenCodeV2EmbeddedGraph } from '../../packages/legacy-agent-host/dist/adapters/providers/OpenCodeV2EmbeddedGraph.js';
++import { verifyLinuxChildExecInput } from '../../src/main/utils/linuxChildLaunchSelection.ts';
++
++type Row = Record<string, unknown>;
++const record = (value: unknown): Row => { assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value as Row; };
++const rows = (value: unknown): Row[] => { assert.ok(Array.isArray(value) && value.length <= 4096); return value.map(record); };
++const text = (value: unknown): string => { assert.equal(typeof value, 'string'); return value as string; };
++async function json(path: string, maximum = 32 * 1024 * 1024) {
++  assert.equal(await realpath(path), path);
++  const before = await lstat(path); assert.ok(before.isFile() && !before.isSymbolicLink() && before.size <= maximum);
++  const bytes = await readFile(path); assert.ok(bytes.length <= maximum); assert.equal(bytes.length, before.size);
++  return record(JSON.parse(bytes.toString('utf8')));
++}
++async function originalReceipt(temporary: string, name: string) {
++  const bytes = await readFile(join(temporary, name), 'utf8'); assert.ok(Buffer.byteLength(bytes) <= 32 * 1024 * 1024);
++  const prepared = bytes.split('\n').flatMap(line => {
++    try { const value = record(JSON.parse(line)); return value.phase === 'prepared' ? [value] : []; }
++    catch { return []; }
++  });
++  assert.equal(prepared.length, 1, 'one original case without replay');
++  const path = await realpath(text(prepared[0]!.receipt));
++  assert.equal(basename(path), 'desktop-backend-receipt.json'); assert.match(basename(dirname(path)), /^TEST-desktop-backend-[A-Za-z0-9]+$/u);
++  return { path, root: dirname(path), value: await json(path) };
++}
++const repo = await realpath(join(import.meta.dirname, '../..')), temporary = await realpath(process.env.RUNNER_TEMP!);
++const head = process.env.HOST_EMULATED_SOURCE_HEAD!;
++assert.match(head, /^[a-f0-9]{40}$/u); assert.equal(process.platform, 'linux'); assert.equal(process.arch, 'x64');
++assert.equal(execFileSync('/usr/bin/git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(), head);
++const input = await json(join(temporary, 'host-emulated-inputs.json'));
++assert.equal(input.sourceHead, head); assert.equal(input.nativeProviders, 'OpenCode V2 with finite localhost model only');
++const engine = await json(join(temporary, 'host-emulated-opencode-v2-inputs.json'));
++assert.equal(engine.kind, 'TEST_NATIVE_V2_EMBEDDED_INPUTS'); assert.equal(engine.status, 'READY');
++assert.equal(engine.sourceHead, head); assert.equal(engine.platform, 'linux-x64'); assert.equal(engine.nodeVersion, 'v24.21.0');
++assert.equal(engine.stage, 'prepared'); assert.equal(record(engine.bun).version, '1.3.11');
++const management = await originalReceipt(temporary, 'host-emulated-opencode-v2-management-ui.log');
++const current = await originalReceipt(temporary, 'host-emulated-opencode-v2-live-membership-ui.log');
++assert.notEqual(current.root, management.root, 'management retains its separate no-Runtime TEST root');
++assert.equal(management.value.mode, 'opencode-v2-management-ui'); assert.equal(management.value.status, 'PASS');
++const receipt = current.value, source = record(receipt.source), pins = record(receipt.pins), paths = record(receipt.paths);
++assert.equal(source.head, head); assert.equal(source.dirty, false); assert.equal(receipt.root, current.root);
++assert.equal(current.path, join(current.root, 'desktop-backend-receipt.json'));
++assert.equal(paths.profile, join(current.root, 'host-profile.json')); assert.equal(paths.descriptor, join(current.root, 'desktop-descriptor.json'));
++assert.equal(receipt.mode, 'native-mixed-create-launch-ui'); assert.equal(receipt.status, 'PASS');
++assert.equal(receipt.scope, 'Original P11 Add/Remove/Restore/Stop/cold with captured OpenCode V2 and finite initial Claude/Codex protocol peers');
++assert.deepEqual(receipt.excluded, ['Claude/Codex vendor execution', 'vendor authentication/inference', 'full mixed native qualification', 'release/default activation']);
++for (const key of ['failure', 'sourceFreezeFailure', 'nativeInputFreezeFailure', 'logCleanupFailure', 'sentinelCensusFailure']) assert.equal(receipt[key], undefined);
++assert.deepEqual(receipt.selectedSourceHashesAfterFlow, receipt.selectedSourceHashesBeforeApp);
++const sources = rows(receipt.selectedSourceHashesBeforeApp);
++assert.equal(sources.length, new Set(sources.map(row => row.path)).size);
++assert.deepEqual(sources.map(row => row.path).sort(), [...desktopProofSources].sort());
++for (const row of sources) assert.equal(await fileDigest(join(repo, text(row.path))), row.sha256);
++for (const [key, pin] of [['profile', 'profileSha256'], ['descriptor', 'descriptorSha256'], ['node', 'nodeSha256'], ['hostEntry', 'hostEntrySha256'], ['pnpm', 'pnpmSha256']])
++  assert.equal(await fileDigest(text(paths[key!])), pins[pin!]);
++const selectedNode = await realpath(process.execPath); assert.equal(paths.node, selectedNode); assert.equal(process.version, 'v24.21.0');
++const inputValues = record(input.values), packageManager = record(receipt.packageManager);
++for (const [pin, inputName] of [['nodeSha256', 'NODE'], ['hostEntrySha256', 'HOST_ENTRY'], ['pnpmSha256', 'PNPM'],
++  ['corepackPackageSha256', 'COREPACK_PACKAGE'], ['corepackLibrarySha256', 'COREPACK_LIBRARY']])
++  assert.equal(pins[pin!], inputValues[`LEGACY_DESKTOP_${inputName}_SHA256`]);
++assert.equal(await fileDigest(text(packageManager.packagePath)), pins.corepackPackageSha256);
++assert.equal(await fileDigest(text(packageManager.libraryPath)), pins.corepackLibrarySha256);
++const electron = await realpath(join(createRequire(import.meta.url).resolve('electron/package.json'), '../dist/electron'));
++assert.equal(await fileDigest(electron), pins.electronSha256);
++assert.equal(await fileDigest(join(repo, (await readDesktopNativeProviderArtifact(repo)).path)), pins.providerArchiveSha256);
++assert.deepEqual(await compiledBundleHashes(join(repo, 'dist-electron')), receipt.compiledBundleHashesAfterStartup);
++const linuxChildExec = verifyLinuxChildExecInput(input.linuxChildExec as Parameters<typeof verifyLinuxChildExecInput>[0]);
++assert.deepEqual(receipt.linuxChildExecInput, linuxChildExec); assert.equal(receipt.linuxChildExecInputVerifiedAfterCleanup, true);
++const profile = readTeamHostProfile(text(paths.profile), text(pins.profileSha256));
++const templates = profile.runtime?.providerTemplates; assert.ok(templates && templates.length === 3);
++const v2 = templates.find(row => row.provider === 'opencode'); assert.ok(v2?.provider === 'opencode');
++assert.equal(v2.nativeGeneration, 'v2'); assert.equal(v2.protocolRevision, '2.1.4'); assert.ok(v2.embedded);
++assert.deepEqual(v2.executable, { path: record(engine.bun).path, sha256: record(engine.bun).sha256 });
++assert.equal(v2.embedded.manifestSha256, engine.manifestSha256); await verifyOpenCodeV2EmbeddedGraph(v2.embedded);
++const selected = record(receipt.finiteInitialPeers);
++assert.equal(selected.kind, 'finite-initial-peers-native-v2'); assert.equal(selected.businessInputs, 0);
++assert.equal(selected.nativeQualification, false); assert.equal(selected.linuxIdentity, 'captured ps plus exact proc executable/argv/starttime');
++const peers = rows(selected.peers); assert.deepEqual(peers.map(row => row.provider), ['claude', 'codex']);
++for (const peer of peers) {
++  assert.equal(peer.root, join(current.root, 'TEST-peer-' + peer.provider + '-scope'));
++  const provider = templates.find(row => row.provider === peer.provider); assert.ok(provider);
++  assert.deepEqual(provider.executable, peer.executable); assert.equal(provider.environment.TEST_EMULATED_DESKTOP_PROVIDER, '1');
++  assert.equal(provider.environment.TEST_PEER_ROLE, 'runtime'); assert.equal(provider.environment.TEST_DESKTOP_COLLABORATION, undefined);
++  assert.equal(provider.environment.TEST_DESKTOP_PEER_ROOT, peer.root);
++}
++const expectedSources = ['claudeProviderPeer.mjs', 'providerPeer.mjs', 'providerDesktopPeer.mjs'].map(name => join(repo, 'tools/owned-process-broker/fixtures', name));
++assert.deepEqual(rows(selected.sources).map(row => row.path), expectedSources);
++const finite = await readDesktopFiniteMembershipPeers(selected as unknown as Pick<DesktopFiniteMembership, 'sources' | 'peers'>);
++const proof = record(receipt.liveMembershipProof), cold = record(receipt.coldMembershipBoundary);
++assert.equal(proof.kind, 'mixed-live-membership'); assert.equal(proof.status, 'PASS'); assert.equal(proof.openCodeGeneration, 'v2');
++assert.equal(proof.initialPeers, selected.kind); assert.equal(proof.fullMixedNativeQualification, false);
++assert.deepEqual(proof.counts, { ordinaryProbes: 2, businessRequests: 4, inputs: 2, runtimeGenerations: 4 });
++assert.deepEqual(proof.coldHistory, { unchanged: true, noPreparation: true, noInput: true, noRuntimeAllocation: true });
++const epochs = rows(proof.physicalEpochs); assert.equal(epochs.length, 2); assert.ok(epochs.every(row => row.released === true));
++assert.equal(record(proof.removed).released, true);
++const added = record(proof.added), restored = record(proof.restored);
++assert.equal(record(added.identity).memberId, record(restored.identity).memberId);
++for (const key of ['principalId', 'sessionId']) assert.notEqual(record(added.identity)[key], record(restored.identity)[key]);
++assert.notEqual(record(record(added.identity).binding).generation, record(record(restored.identity).binding).generation);
++assert.notEqual(record(added.physical).pid, record(restored.physical).pid);
++const stopped = rows(record(proof.beforeCold).sessions); assert.equal(stopped.length, 4);
++assert.ok(stopped.every(row => row.phase === 'closed' && row.custody === 'released'));
++assert.equal(stopped.reduce((count, row) => count + rows(row.inputs).length, 0), 2);
++const models = await json(join(current.root, 'mixed-models.json'));
++assert.equal(models.schemaVersion, 1); assert.equal(models.phase, 'before-model-close'); assert.equal(models.root, current.root);
++const providers = record(models.providers);
++for (const name of ['claude', 'codex', 'opencode']) {
++  assert.deepEqual(record(providers[name]).failures, []); assert.deepEqual(record(providers[name]).notificationObservations ?? [], []);
++}
++for (const name of ['claude', 'codex']) {
++  assert.deepEqual(record(providers[name]).observations, []); assert.deepEqual(record(providers[name]).probes, []);
++}
++assert.deepEqual(record(proof.initial).probeCounts, finite.probeCounts);
++assert.ok(finite.probeCounts[0]! >= 1 && finite.probeCounts[0]! <= 9 && finite.probeCounts[1]! >= 1 && finite.probeCounts[1]! <= 8);
++const native = record(providers.opencode);
++assert.equal(rows(native.probes).length, 2); assert.ok(rows(native.probes).every(row => row.settingsStep === undefined));
++assert.deepEqual(rows(native.observations).map(row => [row.turn, row.step]),
++  [['TEST_LIVE_MEMBERSHIP_ADD', 0], ['TEST_LIVE_MEMBERSHIP_ADD', 1], ['TEST_LIVE_MEMBERSHIP_RESTORE', 0], ['TEST_LIVE_MEMBERSHIP_RESTORE', 1]]);
++assert.equal(cold.status, 'PASS'); assert.equal(record(cold.secondEpoch).status, 'PASS');
++assert.equal(record(cold.firstQuit).attempted, true); assert.equal(record(cold.firstCleanup).writerLockReleased, true);
++assert.equal(cold.originalHistoryDigest, record(cold.secondEpoch).originalHistoryDigest);
++assert.deepEqual(rows(cold.originalSavedTeamBindings).map(row => rows(row.members).length).sort(), [1, 3]);
++for (const cleanup of [cold.firstCleanup, cold.secondCleanup, receipt.cleanup].map(record)) {
++  assert.equal(cleanup.appExitCode, 0); assert.equal(cleanup.appSignalCode, null);
++  assert.equal(cleanup.capturedHostAbsent, true); assert.deepEqual(cleanup.remaining, []); assert.equal(cleanup.cleanupFailure, undefined);
++}
++const cleanup = record(receipt.finiteInitialPeersAfterCleanup);
++assert.equal(cleanup.absent, true); assert.deepEqual(cleanup.remaining, []); assert.deepEqual(cleanup.effects, finite.effects);
++const table = processFacts(), originalPids = new Set(finite.effects.filter(row => row.event === 'launch').map(row => row.pid));
++for (const epoch of epochs) {
++  originalPids.add(record(epoch.host).pid);
++  for (const partition of rows(record(epoch.lineage).partitions)) for (const birth of rows(partition.births)) originalPids.add(birth.pid);
++}
++for (const session of rows(record(proof.beforeCold).nativeBirthsAbsent)) originalPids.add(session.pid);
++assert.ok([...originalPids].every(pid => !table.some(row => row.pid === pid)));
++assert.deepEqual(record(receipt.finalSentinelCensus).refusedInvocations, []);
++const screenshot = record(proof.screenshot); assert.equal(await fileDigest(text(screenshot.path)), screenshot.sha256);
++await writeFile(join(temporary, 'host-emulated-opencode-v2-live-membership-summary.json'), JSON.stringify({
++  status: 'PASS', sourceHead: head, managementReceipt: management.path, receipt: current.path,
++  scope: receipt.scope, counts: proof.counts, fullMixedNativeQualification: false,
++  vendorAuthQualified: false, releaseQualified: false, screenshot: screenshot.sha256,
++}, null, 2), { mode: 0o600, flag: 'wx' });

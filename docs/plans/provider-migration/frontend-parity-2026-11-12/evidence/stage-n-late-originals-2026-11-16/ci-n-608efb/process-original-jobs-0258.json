@@ -1,0 +1,63 @@
+{
+  "observedAt": "2026-11-16 02:58:21 UTC",
+  "kind": "process",
+  "runId": 43795234913,
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "jobs": [
+        {
+          "id": 133062439920,
+          "name": "Host process fixtures (linux-x64)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234913,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062439921,
+          "name": "Host process fixtures (darwin-arm64)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234913,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062439989,
+          "name": "Host process fixtures (darwin-x64)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234913,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062439990,
+          "name": "Host process fixtures (win32-x64)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234913,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062440000,
+          "name": "Host process fixtures (win32-arm64)",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234913,
+          "logs_url": null,
+          "steps": null
+        }
+      ]
+    },
+    "isError": false
+  }
+}

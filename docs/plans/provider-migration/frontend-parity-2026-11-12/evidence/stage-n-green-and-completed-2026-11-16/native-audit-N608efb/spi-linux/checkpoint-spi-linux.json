@@ -1,0 +1,119 @@
+{
+  "kind": "N608EFB_ORIGINAL_SPI_TERMINAL_AUTHOR_CHECKPOINT",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234721,
+  "jobId": 133062438603,
+  "artifactId": 14196881617,
+  "originalConclusion": "success",
+  "payloadCount": 11,
+  "payloadBytes": 410899,
+  "payloads": [
+    {
+      "path": "native-audit-N608efb/spi-linux/job-133062438603.log",
+      "bytes": 68756,
+      "blob": "381569e0fa4c375760443554c40432778fbd9562",
+      "sha256": "ce48caaab559b71709f5a56d64c7953c02baf088819257512ed42c6537f811c3"
+    },
+    {
+      "path": "native-audit-N608efb/spi-linux/original-job-log-response.json",
+      "bytes": 70070,
+      "blob": "ba9455a1b7a0aa7d37c68e37aa8afd18dc19f962",
+      "sha256": "e30d2b410fe1ba40e74b870f0290411204451aada128ea98ec550f3526a500af"
+    },
+    {
+      "path": "native-audit-N608efb/spi-linux/artifact-14196881617.zip",
+      "bytes": 3152,
+      "blob": "a5460c380fda8639edcd5f44c612a4c0ac2bc8ef",
+      "sha256": "9d4cf1e4304883f880f3bba298c1ffeb8c6ec50cf69bf2565d9cb509e141bba3"
+    },
+    {
+      "path": "native-audit-N608efb/spi-linux/official-artifact-response.json",
+      "bytes": 4663,
+      "blob": "1416488cf77a5d94f86beb58a64f7f2f53a65252",
+      "sha256": "ece6d5290dd96d9949f1858ef57602902044c59ef7cdcb5c96bef56d3d71d1ba"
+    },
+    {
+      "path": "native-audit-N608efb/spi-linux/archive-audit.json",
+      "bytes": 844,
+      "blob": "139a0b43923b55a0f4b9b9690e24346728619988",
+      "sha256": "f8dcf1e74be9306f740e4eca5df263c0f6ad94c897309918cdc052de14710b56"
+    },
+    {
+      "path": "native-audit-N608efb/spi-linux/source-and-command-audit.json",
+      "bytes": 7561,
+      "blob": "ec855b5c6fe9201b025d8ab1640aee07e947cc24",
+      "sha256": "b03c81ef8570b893c01fd46bc5de7a42111d328e00e0f3778eb075cc4adaca19"
+    },
+    {
+      "path": "native-audit-N608efb/spi-linux/audit.json",
+      "bytes": 23574,
+      "blob": "2cb4aab8c676fbb6b5e8f97c78631cd0494b8885",
+      "sha256": "d39a047de5d55d00db30a68f89f3a7798fef74be724e80169002052c266a9cc3"
+    },
+    {
+      "path": "native-audit-N608efb/spi-linux/Plan29-spi-linux-appendix.md",
+      "bytes": 4610,
+      "blob": "501a769c9a4dadc709e338d91b75d3952f690022",
+      "sha256": "ec5da124b50a29f14d7bdf814c1f25320ca47356029c6e35480d0ec0f4024223"
+    },
+    {
+      "path": "ci-n-608efb/v2-jobs-0406.json",
+      "bytes": 34402,
+      "blob": "b5dc12d60bd1da8657b1405b7fc8f267f742598c",
+      "sha256": "3a79d198344e649e5868b4764d6c516df59b081559e1c3852d397781553ec463"
+    },
+    {
+      "path": "ci-n-608efb/v2-original-run-0258.json",
+      "bytes": 30144,
+      "blob": "8087402aa25d3eb6d5a4a72d1771cb7843366b76",
+      "sha256": "2cd2b012a3155fb0a798f2b8badb7c6a033dd17407ddb71433fd979a149975c1"
+    },
+    {
+      "path": "native-audit-N608efb/host-source-N608efb-git-audit.json",
+      "bytes": 163123,
+      "blob": "9c8472f84db2ee0615314b9fd05df207e2c7d112",
+      "sha256": "30dbbf806666206c905b346f15e475646c2840d0c29f326a953fb3202d595ea0"
+    }
+  ],
+  "archiveMembers": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/opencode-v2-host-native-instructions.json",
+      "bytes": 3222,
+      "sha256": "103f9147fd72700d2e80b48749b927b04a826841562549a481041702e50ba9c9",
+      "crc32": "09cebdab"
+    },
+    {
+      "path": "_temp/opencode-v2-host-cli/package-lock.json",
+      "bytes": 6764,
+      "sha256": "8300e598ffc99a2575effe83c6fb504af9698e1effa4947feb6feed94036a550",
+      "crc32": "570e75df"
+    }
+  ],
+  "historicalSourceOnlyReferences": [
+    {
+      "path": "native-audit-M0660/spi-linux/source-and-command-audit.json",
+      "bytes": 6570,
+      "blob": "3623d99776928e418e7dcacab405ff06b1404271",
+      "sha256": "8610a2522bebec9ee51ce887f49f3a31e453b86e8fa0573bb213e40453b2abdc"
+    },
+    {
+      "path": "native-audit-M0660/spi-linux/root-independent-review.json",
+      "bytes": 22212,
+      "blob": "950c939dc506243a9f17706310ee6a9b5e33cd57",
+      "sha256": "c716b21f762db8f53283e14338fb65e8ed7508ce6c3207bc7592edf088557aaf"
+    }
+  ],
+  "qualification": {
+    "requiredSteps": 25,
+    "receiptCleanup": true,
+    "qualified": false,
+    "productQualified": false,
+    "packagedElectronQualified": false,
+    "nativeModelTurnProven": false,
+    "toolEnforcementProven": false,
+    "TeamPrivacyOrTypedLintQualificationTransferred": false
+  },
+  "authorAuditOnlyIndependentReviewPending": true,
+  "originalsFrozen": true,
+  "signedDownloadUrlRetained": false
+}

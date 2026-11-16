@@ -1,0 +1,854 @@
+{
+  "kind": "M0660_PACKAGED_WIN_ARM_ORIGINAL_FAILURE_AUDIT",
+  "reviewedAtUtc": "2026-11-16T02:47:37.723336+00:00",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997349,
+  "jobId": 133040244391,
+  "artifactId": 14192424468,
+  "qualification": {
+    "originalJob": "FAIL",
+    "step37PackagedNativeV2": "PASS within its receipt scope",
+    "step38P08": "FAIL",
+    "P08Complete": false,
+    "desktopQualified": false,
+    "vendorQualified": false,
+    "releaseQualified": false,
+    "privacyGreenQualified": false,
+    "newExecution": false
+  },
+  "originals": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-arm/job-133040244391.log",
+      "bytes": 280157,
+      "gitBlob": "5b6c4650d4350fa0359c9cfd3c1e53913bae5e93",
+      "sha256": "b3af777830444f6f766c21fc4d9b03e21c2f364bdbe956434cf22b780425efeb"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-arm/14192424468.zip",
+      "bytes": 349070,
+      "gitBlob": "d73d6d56d570bd411b9d5df0edb5db351d3fd78f",
+      "sha256": "ecbfa68ec3f1e523fce60fa05e5e0e6087135db93a63a3421b1bbcdf9cf9eb4f"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-arm/archive-audit.json",
+      "bytes": 2026,
+      "gitBlob": "c25a2f60439769ee7cd891181e3537a6056ad69f",
+      "sha256": "496700923c375ac5ef15b69e3d1a604e5076dc93226d562a98fe0a6a2a21031e"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0243.json",
+      "bytes": 211451,
+      "gitBlob": "4109a4ef7e1ef998516d0f01e3f595ee7781dfbd",
+      "sha256": "adf6674e111213ef68a67f36c5e0c503b53a1ea8e1b3da8690f5831e8a8650b9"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-packaged-artifacts-0243.json",
+      "bytes": 3880,
+      "gitBlob": "bc09c9d602037652d63b11e18c261c4f28532f91",
+      "sha256": "3ea79b8fb547a914c4b639ed3bff3555ca8b5146ded0435dc0ee5789bfebe626"
+    }
+  ],
+  "officialArtifact": {
+    "id": 14192424468,
+    "name": "packaged-v2-host-win32-arm64-0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "size_in_bytes": 349070,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192424468",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192424468/zip",
+    "expired": false,
+    "created_at": "2026-11-16T02:40:13Z",
+    "expires_at": "2026-11-23T02:40:12Z",
+    "updated_at": "2026-11-16T02:40:13Z",
+    "digest": "sha256:ecbfa68ec3f1e523fce60fa05e5e0e6087135db93a63a3421b1bbcdf9cf9eb4f",
+    "workflow_run": {
+      "id": 43780997349,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+    }
+  },
+  "originalJob": {
+    "id": 133040244391,
+    "name": "packaged smoke (win32-arm64)",
+    "status": "completed",
+    "conclusion": "failure",
+    "run_id": 43780997349,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Run actions/setup-python@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Install Linux packaging tools",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 6
+      },
+      {
+        "name": "Restore node-gyp executable bit",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Verify selected provider archives against frozen lock before install",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Install frozen dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Verify managed Git pins and archive path safety",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Validate packaged OpenCode project-path smoke syntax early",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 11
+      },
+      {
+        "name": "Typecheck packaged CI policy with pinned compiler",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 12
+      },
+      {
+        "name": "Assert Electron binary was provisioned during install",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13
+      },
+      {
+        "name": "Test bundled undici security version policy",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 14
+      },
+      {
+        "name": "Verify CI Node and Electron built-in undici versions",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15
+      },
+      {
+        "name": "Verify native rebuild",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16
+      },
+      {
+        "name": "Stage bundled runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17
+      },
+      {
+        "name": "Stage terminal platform runtime",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 18
+      },
+      {
+        "name": "Stage Windows console wrapper",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 19
+      },
+      {
+        "name": "Build app",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 20
+      },
+      {
+        "name": "Select exact Host Node for candidate staging",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 21
+      },
+      {
+        "name": "Prepare actual pinned V2 Bun, engine and admitted process custody",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 22
+      },
+      {
+        "name": "Prefill pinned macOS arm64 Host Node archive",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Stage V2 Host closure in existing candidate extraResources",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24
+      },
+      {
+        "name": "Typecheck and test packaged Host capture boundaries",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 25
+      },
+      {
+        "name": "Verify and stage original Windows scoped broker for packaged Retry",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 26
+      },
+      {
+        "name": "Package unsigned test bundle",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 27
+      },
+      {
+        "name": "Verify bundle native architecture",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 28
+      },
+      {
+        "name": "Smoke packaged SQLite and PTY modules",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 29
+      },
+      {
+        "name": "Smoke packaged Git without external installation",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 30
+      },
+      {
+        "name": "Smoke managed Git inside native Windows terminal",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Smoke packaged MCP handshake",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 32
+      },
+      {
+        "name": "Verify macOS 13 minimum",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 33
+      },
+      {
+        "name": "Smoke packaged app",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 34
+      },
+      {
+        "name": "Qualify packaged macOS OpenCode project-path status and model list",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 35
+      },
+      {
+        "name": "Smoke packaged app under Xvfb",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 36
+      },
+      {
+        "name": "Qualify actual packaged V2 Host tools, MCP, Stop and cold Resume",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 37
+      },
+      {
+        "name": "Qualify packaged Windows same-Main Retry and original Processes UI Kill with finite peers",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 38
+      },
+      {
+        "name": "Qualify original packaged macOS app relaunch with finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 39
+      },
+      {
+        "name": "Preserve exact packaged Host evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 40
+      },
+      {
+        "name": "Post Select exact Host Node for candidate staging",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 76
+      },
+      {
+        "name": "Post Run actions/setup-python@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 77
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 78
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 79
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 80
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 81
+      }
+    ]
+  },
+  "checkoutHeadOutputs": [
+    {
+      "line": 99,
+      "text": "2026-11-16T01:49:28.8123417Z 0660c748f88675063e3051fb0f8b2022e8f6f056"
+    },
+    {
+      "line": 233,
+      "text": "2026-11-16T01:49:41.4874435Z 0660c748f88675063e3051fb0f8b2022e8f6f056"
+    }
+  ],
+  "archive": {
+    "artifactId": 14192424468,
+    "runId": 43780997349,
+    "jobId": 133040244391,
+    "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "zip": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-arm/14192424468.zip",
+      "bytes": 349070,
+      "gitBlob": "d73d6d56d570bd411b9d5df0edb5db351d3fd78f",
+      "sha256": "ecbfa68ec3f1e523fce60fa05e5e0e6087135db93a63a3421b1bbcdf9cf9eb4f"
+    },
+    "rawJob": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-arm/job-133040244391.log",
+      "bytes": 280157,
+      "gitBlob": "5b6c4650d4350fa0359c9cfd3c1e53913bae5e93",
+      "sha256": "b3af777830444f6f766c21fc4d9b03e21c2f364bdbe956434cf22b780425efeb"
+    },
+    "safeUniquePaths": true,
+    "allCrcVerified": true,
+    "entries": [
+      {
+        "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+        "bytes": 1154527,
+        "sha256": "7af5e8d98e79feb39c127eba3bc4e72f164c31cc6d66eee9de6c6258366975f0",
+        "crc32": "a105def5"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-inputs.json",
+        "bytes": 782,
+        "sha256": "e5169aa2b4d53dadc4cec397b2f395bcc7b388eac5def23cb0e5a0372a8684ce",
+        "crc32": "3ccf4baf"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged-native.json",
+        "bytes": 5389,
+        "sha256": "f9764d28bf8e4270d7326314170cc202d8dbbcb5230bcd6478be989c1ce13a4a",
+        "crc32": "8d20755f"
+      },
+      {
+        "path": "_temp/opencode-v2-packaged.json",
+        "bytes": 1188,
+        "sha256": "5a8e31740f57c349e2a0e0d26e0a7585b234c1040d4b587f11dfe1ce3d4a9970",
+        "crc32": "6c0f9d50"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.app.log",
+        "bytes": 5069,
+        "sha256": "d98322a72d230ce88ab49fd95fb02c77234a789349e569a77229f5600e6bfdfc",
+        "crc32": "8049af6c"
+      },
+      {
+        "path": "_temp/windows-same-main-process-ui.controller.log",
+        "bytes": 17032,
+        "sha256": "aa8ed6f7d57b482d667a839110ff292cdafecb622604b0d2b8e402e263c872d0",
+        "crc32": "51f0e2be"
+      }
+    ]
+  },
+  "failure": {
+    "retainedRows": [
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "packaged-App-startup",
+        "atMs": 0.07899999999790452,
+        "budgetMs": 120000
+      },
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "one-initial-Runtime-Open",
+        "atMs": 14714.672400000003,
+        "budgetMs": 45000
+      },
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "one-original-business-input-and-UI",
+        "atMs": 21760.0421,
+        "budgetMs": 35000
+      },
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_FAILURE",
+        "phase": "one-original-business-input-and-UI",
+        "error": "AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: one-original-business-input-and-UI\n    at remaining (file:///"
+      },
+      {
+        "kind": "TEST_WINDOWS_PACKAGED_UI_PHASE",
+        "phase": "original-product-Quit",
+        "atMs": 57025.9165,
+        "budgetMs": 30000
+      },
+      {
+        "gateController": "emergency-fail",
+        "rootExitCode": 99,
+        "activeProcesses": 0
+      }
+    ],
+    "fullJobRows": [
+      {
+        "line": 2027,
+        "text": "2026-11-16T02:38:10.7954466Z {\"kind\":\"TEST_PACKAGED_V2_QUALIFICATION\",\"status\":\"PASS\",\"sourceHead\":\"0660c748f88675063e3051fb0f8b2022e8f6f056\",\"platform\":\"win32-arm64\",\"cleanup\":true,\"phase\":\"finished\",\"desktopJourneyQualified\":false,\"vendorAuthQualified\":false,\"releaseQualified\":false,\"cleanupObservation\":{\"originalExitObserved\":true,\"nativeReceiptParsed\":true,\"nativeReceiptBound\":true,\"nativeCleanupConfirmed\":true,\"firstFailure\":null,\"firstRestorationFailure\":null},\"appAsarSha256\":\"e64ef8b5aec569401fe4764a4f51b5bc6a08ac77cb9afe72b93680219551c02c\",\"candidateManifestSha256\":\"7af5e8d98e79feb39c127eba3bc4e72f164c31cc6d66eee9de6c6258366975f0\",\"hostEntrySha256\":\"7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add\",\"nodeSha256\":\"dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7\",\"nativeExit\":{\"code\":0,\"signal\":null},\"nativeReceiptSha256\":\"f9764d28bf8e4270d7326314170cc202d8dbbcb5230bcd6478be989c1ce13a4a\",\"sourceCheckoutUnavailable\":true,\"legacyRuntimeUnavailable\":true,\"sourceRestored\":true,\"bundleRestored\":true,\"legacyRuntimeRestored\":true}"
+      },
+      {
+        "line": 2088,
+        "text": "2026-11-16T02:38:44.6937342Z {\"kind\":\"TEST_WINDOWS_PACKAGED_UI_PHASE\",\"phase\":\"packaged-App-startup\",\"atMs\":0.07899999999790452,\"budgetMs\":120000}"
+      },
+      {
+        "line": 2137,
+        "text": "2026-11-16T02:38:59.3455656Z {\"kind\":\"TEST_WINDOWS_PACKAGED_UI_PHASE\",\"phase\":\"one-initial-Runtime-Open\",\"atMs\":14714.672400000003,\"budgetMs\":45000}"
+      },
+      {
+        "line": 2146,
+        "text": "2026-11-16T02:39:06.2345611Z {\"kind\":\"TEST_WINDOWS_PACKAGED_UI_PHASE\",\"phase\":\"one-original-business-input-and-UI\",\"atMs\":21760.0421,\"budgetMs\":35000}"
+      },
+      {
+        "line": 2267,
+        "text": "2026-11-16T02:39:41.6141511Z {\"kind\":\"TEST_WINDOWS_PACKAGED_UI_FAILURE\",\"phase\":\"one-original-business-input-and-UI\",\"error\":\"AssertionError [ERR_ASSERTION]: Original Windows UI phase expired: one-original-business-input-and-UI\\n    at remaining (file:///\"}"
+      },
+      {
+        "line": 2268,
+        "text": "2026-11-16T02:39:41.6143215Z {\"kind\":\"TEST_WINDOWS_PACKAGED_UI_PHASE\",\"phase\":\"original-product-Quit\",\"atMs\":57025.9165,\"budgetMs\":30000}"
+      },
+      {
+        "line": 2341,
+        "text": "2026-11-16T02:40:11.4842269Z {\"gateController\":\"emergency-fail\",\"rootExitCode\":99,\"activeProcesses\":0}"
+      }
+    ],
+    "firstCatchErrorCharacters": 128,
+    "phaseStartMs": 21760.0421,
+    "phaseBudgetMs": 35000,
+    "quitPhaseStartMs": 57025.9165,
+    "elapsedPhaseStartToQuitMs": 35265.8744,
+    "facts": "The protected first-catch row identifies active business-input-and-UI phase and remaining() expiry. Exact failing await, poll iteration, guard, DOM operand, peer state and cause are not retained.",
+    "sourceOrder": "Business begin follows successful original runtime.open assertions. This phase begins before increment/send, terminal read, captureOriginal, UI observer/click/owner checks and before-crash screenshot. No exact business dispatch/count or completion is recovered; later recovery/Retry/Stop path is not qualified.",
+    "missing": [
+      "final P08 JSON",
+      "P08 PNG",
+      "counts",
+      "selected source before/after arrays",
+      "input pins",
+      "writer/Main/Host identities",
+      "census history/final census",
+      "Runtime and input tuple",
+      "original HANDLE witness results",
+      "peer evidence",
+      "native cleanup",
+      "post-input/source freeze verdict"
+    ],
+    "controller": {
+      "gateController": "emergency-fail",
+      "rootExitCode": 99,
+      "activeProcesses": 0
+    },
+    "controllerCodeLimit": "Code starts at99 and is replaced only after the original signaled root exit/GetExitCodeProcess path. The row is not an independent original-root exit-code certificate. Emergency disposal plus zero Job accounting is distinct from P08 product Quit/Stop/witness completion.",
+    "controllerSourceBound": "Original120000ms root wait and3000ms quiet/10000ms emergency accounting bounds remain unchanged; no specific emergency branch is inferred.",
+    "shellXmlErrors": 33,
+    "shellXmlCauseEstablished": false,
+    "appReadObservation": "An early openCodeRuntime:getStatus Backend routing: unavailable row and repeated absent project-directory observations are retained; neither is joined to the phase-expiry cause."
+  },
+  "separateStep37": {
+    "summary": {
+      "kind": "TEST_PACKAGED_V2_QUALIFICATION",
+      "status": "PASS",
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "platform": "win32-arm64",
+      "cleanup": true,
+      "phase": "finished",
+      "desktopJourneyQualified": false,
+      "vendorAuthQualified": false,
+      "releaseQualified": false,
+      "cleanupObservation": {
+        "originalExitObserved": true,
+        "nativeReceiptParsed": true,
+        "nativeReceiptBound": true,
+        "nativeCleanupConfirmed": true,
+        "firstFailure": null,
+        "firstRestorationFailure": null
+      },
+      "appAsarSha256": "e64ef8b5aec569401fe4764a4f51b5bc6a08ac77cb9afe72b93680219551c02c",
+      "candidateManifestSha256": "7af5e8d98e79feb39c127eba3bc4e72f164c31cc6d66eee9de6c6258366975f0",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "nodeSha256": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+      "nativeExit": {
+        "code": 0,
+        "signal": null
+      },
+      "nativeReceiptSha256": "f9764d28bf8e4270d7326314170cc202d8dbbcb5230bcd6478be989c1ce13a4a",
+      "sourceCheckoutUnavailable": true,
+      "legacyRuntimeUnavailable": true,
+      "sourceRestored": true,
+      "bundleRestored": true,
+      "legacyRuntimeRestored": true
+    },
+    "native": {
+      "kind": "TEST_PACKAGED_NATIVE_V2_HOST",
+      "status": "PASS",
+      "packaged": {
+        "executionOrigin": "packaged-extraResources",
+        "appAsarSha256": "e64ef8b5aec569401fe4764a4f51b5bc6a08ac77cb9afe72b93680219551c02c",
+        "candidateManifestSha256": "7af5e8d98e79feb39c127eba3bc4e72f164c31cc6d66eee9de6c6258366975f0",
+        "harnessSha256": "dc915c015f2e62ab6c7ca5d22d11f6e10e7867f6155afed3ff1fd98235472e1b",
+        "sourceCheckoutUnavailable": true,
+        "legacyRuntimeUnavailable": true,
+        "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+        "nodeArchiveSha256": "8779b1bde1d39f8d420e3b57aa657b39891af434d3de44a919044cec06785921",
+        "providerArtifacts": [
+          {
+            "name": "@agent-teams/provider-implementations",
+            "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+          },
+          {
+            "name": "@agent-teams/provider-session-contracts",
+            "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+          }
+        ],
+        "packages": 120,
+        "files": 8131
+      },
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "platform": "win32-arm64",
+      "version": "2.1.4",
+      "approvalMode": "manual",
+      "nodeVersion": "v24.21.0",
+      "modelSelection": {
+        "providerId": "TEST-local",
+        "modelId": "TEST-model-B",
+        "variant": "high"
+      },
+      "configurationSelection": {
+        "scope": "project",
+        "original": "project-A",
+        "later": "project-B"
+      },
+      "preferencesSelection": {
+        "nativeDefault": "TEST-local/TEST-model",
+        "appDefault": "TEST-local/TEST-model-B"
+      },
+      "digests": {
+        "bun": "b662cf80f932866036fc2ef33d0d4e2efcf9e4ba282d2deb3391effdcfe0b98f",
+        "manifest": "64fb47f2378124e0fbe5564e9ffb0221272ffb4937d326756551edfa27cf76f5",
+        "node": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+        "hostSource": "1954a191a22264609ce109f1d99c014faacb2df3d3dae5fab168a21b51b19d16",
+        "hostDist": "2e9a3d32128d0659c02af024bc096dd56f1df28af8ddecb1fe5a0ad5ef1f22a0",
+        "provider": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+        "windowsShell": "6a5b945e4c27a4eb819988018d219a48ff9bb1bcbdadc56a45539ff26875c617"
+      },
+      "steps": [
+        "original_host_embedded_native_and_mcp_ready",
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+        "changed_project_config_did_not_retarget_running_native_session",
+        "original_uploaded_PNG_native_image_inference_and_public_readback",
+        "checkpoint_and_original_host_native_cleanup_confirmed",
+        "cold_host_restored_native_history_without_model_or_tool_replay"
+      ],
+      "cleanup": true,
+      "phaseElapsedMs": {
+        "original_host_embedded_native_and_mcp_ready": 73792,
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 179733,
+        "changed_project_config_did_not_retarget_running_native_session": 179733,
+        "original_uploaded_PNG_native_image_inference_and_public_readback": 179733,
+        "checkpoint_and_original_host_native_cleanup_confirmed": 180594,
+        "cold_host_restored_native_history_without_model_or_tool_replay": 233397
+      },
+      "elapsedMs": 252830,
+      "cancelled": false,
+      "inputObservation": {
+        "reads": 307,
+        "last": {
+          "phase": "allocated",
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true,
+          "sealed": false,
+          "diagnostic": null,
+          "inputs": [
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            },
+            {
+              "phase": "terminal",
+              "terminal": "succeeded"
+            }
+          ],
+          "interactions": [
+            {
+              "kind": "permission",
+              "phase": "resolved"
+            },
+            {
+              "kind": "permission",
+              "phase": "resolved"
+            }
+          ]
+        }
+      },
+      "launchObservation": {
+        "openElapsedMs": 51210,
+        "afterOpen": {
+          "available": true,
+          "status": "ready",
+          "reason": "context-applied",
+          "elapsedSinceAttemptMs": 49735,
+          "capturedTimeoutMs": 120000,
+          "claimed": true,
+          "nativeReady": true,
+          "contextApplied": true,
+          "everReady": true,
+          "usable": true,
+          "controlAvailable": true,
+          "noAllocation": false
+        }
+      },
+      "failureCode": null,
+      "hosts": [
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        },
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        }
+      ],
+      "modelOrigin": "localhost-scripted",
+      "modelRequests": 11,
+      "modelProgress": [
+        {
+          "elapsedMs": 74054,
+          "requests": 0
+        },
+        {
+          "elapsedMs": 85839,
+          "requests": 1
+        },
+        {
+          "elapsedMs": 86236,
+          "requests": 2
+        },
+        {
+          "elapsedMs": 86727,
+          "requests": 3
+        },
+        {
+          "elapsedMs": 87139,
+          "requests": 4
+        },
+        {
+          "elapsedMs": 121127,
+          "requests": 5
+        },
+        {
+          "elapsedMs": 121634,
+          "requests": 6
+        },
+        {
+          "elapsedMs": 122157,
+          "requests": 7
+        },
+        {
+          "elapsedMs": 122491,
+          "requests": 8
+        },
+        {
+          "elapsedMs": 145947,
+          "requests": 9
+        },
+        {
+          "elapsedMs": 174034,
+          "requests": 10
+        },
+        {
+          "elapsedMs": 174510,
+          "requests": 11
+        }
+      ],
+      "coordination": {
+        "status": "unqualified",
+        "cleanup": null
+      },
+      "modelFailures": [],
+      "vendorAuthQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    },
+    "inputs": {
+      "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+      "status": "READY",
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "platform": "win32-arm64",
+      "nodeVersion": "v24.21.0",
+      "productQualified": false,
+      "stage": "prepared",
+      "baseArchiveSha256": "6455e6269b41ac044357de847e07b783000a56ca7503a340739510c446ad004a",
+      "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "bun": {
+        "path": "C:\\a\\agent-teams-ai\\agent-teams-ai\\resources\\runtime\\bun\\bun.exe",
+        "sha256": "b662cf80f932866036fc2ef33d0d4e2efcf9e4ba282d2deb3391effdcfe0b98f",
+        "version": "1.4.3"
+      },
+      "supportArchiveSha256": "c52b4ba9f8ec03d40d71e5f60a37978596dc22030be3a41ca46190e766e15f2e",
+      "manifestSha256": "64fb47f2378124e0fbe5564e9ffb0221272ffb4937d326756551edfa27cf76f5"
+    },
+    "candidateManifest": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-arm/extracted/agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154527,
+      "gitBlob": "737f388cd5a9014f3300e9a935c2c2436851c3ae",
+      "sha256": "7af5e8d98e79feb39c127eba3bc4e72f164c31cc6d66eee9de6c6258366975f0"
+    },
+    "manifestPackageCount": 120,
+    "manifestAdvertisedFileCount": 8131,
+    "digestJoins": {
+      "nativeToSummary": true,
+      "manifestToSummaryAndNative": true,
+      "hostEntry": true,
+      "node": true,
+      "allRecordedSourceHeads": true,
+      "stdoutSummaryEqualsArchivedJSON": true
+    },
+    "limits": "Actual archived manual native packaged path, localhost scripted model, six steps/11 model requests/two Host exit0-null and cold-history no replay. Coordination remains unqualified. It neither proves P08 nor transfers final source-freeze/custody or real-vendor/desktop/release qualification. Packed payload files themselves are not all archived or independently rebuilt."
+  },
+  "sourceReview": {
+    "paths": [
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "gitBlob": "034d2253e0649bdeb5db0b12244656446150c31c",
+        "bytes": 34285,
+        "sha256": "a7057b647c13852fbabdebbb0d8da775a24d55382637d5947d06c733317213bc",
+        "lines": 597
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+        "gitBlob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+        "bytes": 31223,
+        "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2",
+        "lines": 485
+      },
+      {
+        "path": "tools/owned-process-broker/gateController.cpp",
+        "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+        "bytes": 5935,
+        "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+        "lines": 108
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "gitBlob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+        "bytes": 25052,
+        "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7",
+        "lines": 456
+      },
+      {
+        "path": ".github/workflows/electron-packaged-ci.yml",
+        "gitBlob": "0938e9f31bad7520fec025ebde6aad8e071cfe69",
+        "bytes": 19532,
+        "sha256": "443502b3620450fc174440d6bdf6db3777e97b7f00d56d42e2fbd624b569b73f",
+        "lines": 313
+      }
+    ],
+    "excerpts": [
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "firstLine": 117,
+        "lastLine": 135,
+        "text": "let app, cdp, appLog, main, hostA, hostB, writerA, exit, exitPromise, binding;\nlet lineage = [], startedAt, outerDeadline, activeDeadline, activePhase = 'prepare';\nlet acceptingExit = false, completed = false, primaryError;\nlet quitStarted = false, shutdownResult;\nconst remaining = () => {\n  const left = Math.floor(Math.min(outerDeadline, activeDeadline) - performance.now());\n  assert.ok(left > 0, 'Original Windows UI phase expired: ' + activePhase);\n  return left;\n};\nconst begin = (name, milliseconds) => {\n  activePhase = name;\n  activeDeadline = Math.min(outerDeadline, performance.now() + milliseconds);\n  const phase = { phase: name, atMs: performance.now() - startedAt, budgetMs: milliseconds };\n  proof.phases.push(phase);\n  try {\n    const line = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_UI_PHASE', ...phase }) + '\\n';\n    if (Buffer.byteLength(line, 'utf8') <= 512) writeSync(1, line);\n  } catch { /* The original phase admission remains authoritative. */ }\n  remaining();\n"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "firstLine": 391,
+        "lastLine": 437,
+        "text": "  begin('one-initial-Runtime-Open', 45000);\n  proof.counts.initialRuntimeOpen++;\n  const opened = await invoke('runtime.open', 'TEST-windows-one-original-open', { memberId: 'alice-id' });\n  assert.equal(opened.nativeReady, true); assert.equal(opened.attached, true);\n  proof.originalOpen = opened;\n  begin('one-original-business-input-and-UI', 35000);\n  proof.counts.businessInput++;\n  const sent = await invoke('message.send', fixture.bootstrap.commandId, fixture.bootstrap.payload);\n  assert.equal(sent.phase, 'completed'); assert.equal(sent.operation, 'message.send');\n  assert.ok(typeof sent.deliveryId === 'string' && sent.deliveryId.length > 0);\n  proof.originalMessage = sent;\n  const terminal = await poll(async () => {\n    const state = await readRuntime();\n    assert.ok(Array.isArray(state.inputs) && state.inputs.length === 1);\n    const input = state.inputs[0];\n    assert.equal(input.inputId, sent.deliveryId);\n    if (input.phase !== 'terminal') return false;\n    assert.equal(input.terminal, 'succeeded'); return state;\n  }, 'original bootstrap terminal result');\n  proof.originalRuntime = terminal;\n  const original = await within(() => fixture.captureOriginal(activeDeadline));\n  proof.originalProcesses = original;\n  const providerPid = original.registrations[0].capture.root.pid;\n  assert.ok(lineage.some(row => row.pid === providerPid &&\n    captureCensus().some(current => current.pid === row.pid && current.birth === row.birth)));\n  const ui = createDesktopUiControls(port, {\n    assertOwnedRenderer,\n    step: value => {\n      assert.ok(proof.uiSteps.length < 128);\n      const entry = { phase: activePhase, ...value };\n      try { entry.atMs = performance.now() - startedAt; } catch { /* Observation only. */ }\n      proof.uiSteps.push(entry);\n    },\n  });\n  await ui.observeInput();\n  await ui.waitRead('Boolean(document.querySelector(\"#sidebar-tasks-panel\"))', 'original sidebar', remaining());\n  await ui.clickSidebar(fixture.uiSeed.subject);\n  await ui.waitRead('Boolean(document.querySelector(\\'[data-section-id=\"processes\"]\\'))', 'original Processes rows', remaining());\n  if (await port.evaluate('Boolean(document.querySelector(\\'[data-section-id=\"processes\"] button[aria-label=\"Expand section\"]\\'))'))\n    await ui.click('[data-section-id=\"processes\"] button[aria-label=\"Expand section\"]', 'expand original Processes section');\n  for (const row of original.rows) {\n    const owner = object(await ui.waitRead(processOwner(row), 'original exact process props', remaining()));\n    assert.equal(owner.teamName, selection); assert.deepEqual(owner.process,\n      { ...row, observation: 'same-live', canTerminate: true });\n  }\n  proof.beforeCrashPublic = await readProcesses();\n  await screenshot('before-crash');\n"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+        "firstLine": 530,
+        "lastLine": 591,
+        "text": "} catch (error) {\n  primaryError = error;\n  proof.error = errorText(error);\n  try {\n    const line = JSON.stringify({ kind: 'TEST_WINDOWS_PACKAGED_UI_FAILURE', phase: activePhase,\n      error: proof.error.slice(0, 128) }) + '\\n';\n    if (Buffer.byteLength(line, 'utf8') <= 1024) writeSync(1, line);\n  } catch { /* Keep the original failure and continue original cleanup after a diagnostic write error. */ }\n} finally {\n  if (app && !quitStarted) {\n    try {\n      if (!main && app.pid) {\n        const snapshot = processes(), current = snapshot.find(row => row.pid === app.pid);\n        if (current) {\n          main = current; lineage = retainPackagedLineage([], ownedTree(snapshot, current)).records;\n        }\n      }\n      await quit();\n      proof.nativeCleanup = await within(() => fixture.afterQuit(activeDeadline));\n      proof.cleanup = true;\n    } catch (error) { proof.cleanupFailure = errorText(error); }\n  }\n  cdp?.close();\n  try { await fixture.close(activeDeadline); }\n  catch (error) { proof.fixtureCloseFailure = errorText(error); proof.cleanup = false; }\n  if (appLog) await new Promise(resolve => appLog.end(resolve));\n  try { proof.peer = fixture.peerEvidence(); }\n  catch (error) { proof.peerEvidenceFailure = errorText(error); }\n  proof.modelRequests = proof.peer?.modelRequests;\n  proof.modelProbes = proof.peer?.probes;\n  proof.realVendorExecutions = proof.peer?.realVendorExecutions;\n  proof.originalRuntimeGenerations = proof.nativeCleanup?.runtimeGenerations ?? null;\n  try { assertHostBirths(); }\n  catch (error) { proof.hostBirthFailure = errorText(error); proof.actualHostSuccessors = null; }\n  proof.lineage = lineage;\n  try {\n    fixture.assertPins();\n    assert.deepEqual(await packagedArtifact(executable), artifact);\n    assert.deepEqual(await readPackagedOpenCodeV2(packagedCapture), packaged);\n    proof.packagedAndNativeInputsUnchanged = true;\n  } catch (error) { proof.inputFreezeFailure = errorText(error); }\n  await verifyDesktopSourceFreeze(repository, sources, sourceHashes, proof);\n  if (completed && !primaryError && proof.cleanup && proof.packagedAndNativeInputsUnchanged &&\n    !proof.sourceFreezeFailure && !proof.appLogFailure && !proof.fixtureCloseFailure && !proof.peerEvidenceFailure &&\n    !proof.hostBirthFailure) {\n    try {\n      assert.deepEqual(proof.counts, { mainStarts: 1, initialRuntimeOpen: 1, businessInput: 1,\n        refreshClicks: 1, retryClicks: 1, uiStops: 2, quit: 1 });\n      assert.equal(proof.actualHostSuccessors, 1);\n      assert.deepEqual(proof.nativeCleanup, { phase: 'completed', cleanup: true, originalQueryWitnesses: 3,\n        runtimeGenerations: 1, runtimeInputs: 1, modelRequests: 0, probes: 0, realVendorExecutions: 0,\n        originalUiStops: 2, serviceExitObservations: 2 });\n      assert.equal(proof.peer.provider, 'codex');\n      assert.equal(proof.peer.connected, 1); assert.equal(proof.peer.registrations, 1);\n      assert.equal(proof.peer.serviceExitObservations, 2); assert.equal(proof.peer.failures, 0);\n      assert.equal(proof.modelRequests, 0); assert.equal(proof.modelProbes, 0);\n      assert.equal(proof.realVendorExecutions, 0);\n      proof.status = 'PASS';\n    } catch (error) { proof.qualificationFailure = errorText(error); }\n  }\n  proof.elapsedMs = startedAt === undefined ? null : performance.now() - startedAt;\n  await writeFile(receiptPath, JSON.stringify(proof, null, 2) + '\\n', { flag: 'wx' });\n"
+      },
+      {
+        "path": "tools/owned-process-broker/gateController.cpp",
+        "firstLine": 63,
+        "lastLine": 107,
+        "text": "  bool emergency=false, rootExited=false; DWORD code=99;\n  if(ResumeThread(process.hThread)!=1) emergency=true;\n  CloseHandle(process.hThread);\n  if(!emergency) {\n    auto result=WaitForSingleObject(process.hProcess,120000);\n    rootExited=result==WAIT_OBJECT_0;\n    if(!rootExited||!GetExitCodeProcess(process.hProcess,&code)) emergency=true;\n  }\n  // Drop original handle after retaining signaled exit witness, so accounting can decay.\n  if(rootExited) { CloseHandle(process.hProcess); process.hProcess=nullptr; }\n  auto quietDeadline=GetTickCount64()+3000;\n  while(!emergency&&!zero(job)&&GetTickCount64()<quietDeadline) Sleep(10);\n  if(!zero(job)) emergency=true;\n  if(emergency) {\n    if(!TerminateJobObject(job,99)) { CloseHandle(job); return 100; }\n    auto cleanupDeadline=GetTickCount64()+10000;\n    while(GetTickCount64()<cleanupDeadline) {\n      if(process.hProcess&&WaitForSingleObject(process.hProcess,0)==WAIT_OBJECT_0) {\n        CloseHandle(process.hProcess); process.hProcess=nullptr; rootExited=true;\n      }\n      if(!process.hProcess&&zero(job)) break;\n      Sleep(10);\n    }\n  }\n  if(process.hProcess||!rootExited||!zero(job)) { CloseHandle(job); return 101; }\n  if(!CloseHandle(job)) return 102;\n  // Destructive sandbox cleanup follows fresh zero membership plus original-root exit.\n  // GetTempPathW/GetTempFileNameW selected this fully qualified sandbox. Its Node\n  // descendants can exceed MAX_PATH; use the same root in the extended namespace.\n  std::wstring cleanupSandbox=sandbox;\n  if(sandbox.rfind(L\"\\\\\\\\?\\\\\",0)!=0&&sandbox.rfind(L\"\\\\\\\\.\\\\\",0)!=0)\n    cleanupSandbox=sandbox.rfind(L\"\\\\\\\\\",0)==0 ? L\"\\\\\\\\?\\\\UNC\\\\\"+sandbox.substr(2) : L\"\\\\\\\\?\\\\\"+sandbox;\n  std::error_code error;\n  std::filesystem::remove_all(cleanupSandbox,error);\n  if(error) {\n    const char* category=&error.category()==&std::system_category()?\"system\":\n      &error.category()==&std::generic_category()?\"generic\":\"other\";\n    std::printf(\"{\\\"gateController\\\":\\\"sandbox-cleanup-error\\\",\\\"rootExitCode\\\":%lu,\\\"emergency\\\":%s,\"\n      \"\\\"errorCode\\\":%d,\\\"category\\\":\\\"%s\\\"}\\n\",code,emergency?\"true\":\"false\",error.value(),category);\n    std::fflush(stdout);\n    return 103;\n  }\n  std::printf(\"{\\\"gateController\\\":\\\"%s\\\",\\\"rootExitCode\\\":%lu,\\\"activeProcesses\\\":0}\\n\",\n    emergency?\"emergency-fail\":\"drained\",code);\n  return !emergency&&code==0?0:104;\n"
+      }
+    ],
+    "joinLimit": "These are exact source-head Git bytes for interpreting original log/source order. Absent P08 receipt means no1798 pre/post array or input-freeze verification from this job; none is borrowed from x64."
+  },
+  "noActions": "Read-only originals/Git inspection and scratch evidence writing only; no project execution, provider replay, changed deadline, source/ref/CI action or repair."
+}

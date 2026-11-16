@@ -1,0 +1,402 @@
+{
+  "schemaVersion": 1,
+  "reviewer": "native_failures",
+  "status": "SOURCE_REVIEW_COMPLETE; EXACT_DRAFT_WORDING_CORRECTIONS_REQUIRED_BEFORE_FINAL_R1_APPROVAL",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "sourceTree": "e70ccffc6d55ad42c2249518bf142e2ed32ddf91",
+  "reviewedAtUtc": "2026-11-16T01:30:55Z",
+  "projectCommandsExecuted": false,
+  "trackedFilesChanged": false,
+  "ciActionsOrNativeProvidersExecuted": false,
+  "draft": {
+    "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/DESIGN-R1-draft.md",
+    "bytes": 20995,
+    "gitBlob": "0f834435fdaad97c817bfad8ce4598ef176b205a",
+    "sha256": "924aa5c6a12948642106a67b5121c39c8bc6b51201d8556e045f9a42d5b57722"
+  },
+  "metadata": {
+    "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/proposal-metadata.json",
+    "bytes": 27500,
+    "gitBlob": "1458fe354a53b6b4929fb7db4dd8f8cf5fed1e41",
+    "sha256": "b9e8fc1a3198bc9c2b45a6059270ff8a330b126e68d9b2248f972575c26d9bbc"
+  },
+  "completePatch": {
+    "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/conditional-complete.patch",
+    "bytes": 72151,
+    "gitBlob": "d342940e4f50f95aaf38f8df578698b955bfb4da",
+    "sha256": "ef0e8eabf254c3284ce1ebc7d7c56030414a307e5b47847f677f9df7a22c0b4c"
+  },
+  "pollRedPatch": {
+    "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/poll-red-test.patch",
+    "bytes": 4670,
+    "gitBlob": "5f2fe94dddd0c378f63502cefdb0f715b0ce0a75",
+    "sha256": "383e11424f6dbbdd58d9ddc03700499d23dcf0a97b083ab6b0a46bf5107d47d2"
+  },
+  "conditionalPollPatch": {
+    "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/conditional-poll-green.patch",
+    "bytes": 727,
+    "gitBlob": "8161a1b342e71ed0c46ea0f40cb70bdfdb01846d",
+    "sha256": "80fb75f384686fcabc2bf076069d3e9864204f86a4ba04f43ae15528eddc7890"
+  },
+  "candidateIdentities": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "preimage": {
+        "bytes": 101741,
+        "lines": 1312,
+        "gitBlob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+      },
+      "candidate": {
+        "bytes": 103848,
+        "lines": 1340,
+        "gitBlob": "74c5964e1b28e02df2fd5649d9d67931889cd7a8",
+        "sha256": "8fd4f1edd2473382655d1fbb0850b60be890764460bdf4fdfd158637f8594a9f"
+      },
+      "delta": {
+        "added": 29,
+        "removed": 1
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "preimage": {
+        "bytes": 54778,
+        "lines": 791,
+        "gitBlob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc"
+      },
+      "candidate": {
+        "bytes": 55759,
+        "lines": 798,
+        "gitBlob": "4eabaf832901bf3ea82bc9761f1208207343b8a0",
+        "sha256": "1ded076e942640f4306af7ee6d5f1e4c49d7b9095d6aaeba4f59826e794863bd"
+      },
+      "delta": {
+        "added": 15,
+        "removed": 8
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-controlled.ts",
+      "preimage": null,
+      "candidate": {
+        "bytes": 15874,
+        "lines": 219,
+        "gitBlob": "6205acf48ae31051ae3b4dcb4d66c47286022ba4",
+        "sha256": "1663c2db6b7229472ec45529202053023d7cb33cd1affc333547105979e6b6ca"
+      },
+      "delta": {
+        "added": 219,
+        "removed": 0
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "preimage": {
+        "bytes": 45707,
+        "lines": 570,
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+      },
+      "candidate": {
+        "bytes": 47589,
+        "lines": 585,
+        "gitBlob": "de958fcbd9c1aef20ec843904dd89a6fec62568d",
+        "sha256": "e748025e727b8b6f96e4521496907e469058603610ac7024b600d8174300faf8"
+      },
+      "delta": {
+        "added": 29,
+        "removed": 14
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-mixed-native-fixture.ts",
+      "preimage": {
+        "bytes": 33161,
+        "lines": 660,
+        "gitBlob": "426c45f6236a3aaf8b3f5e14b4cf21e4ce000c8f",
+        "sha256": "1e495ee7b244fa471f2a6a4039d7110db6ff2760260c23f89123703810d0bfad"
+      },
+      "candidate": {
+        "bytes": 34186,
+        "lines": 670,
+        "gitBlob": "3313bd7ea5f707a930f87322f8ec4fdaed86a527",
+        "sha256": "23e1e8651bdef907a525cb8918986623760444f685938942882571a3f695cbd5"
+      },
+      "delta": {
+        "added": 18,
+        "removed": 8
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "preimage": {
+        "bytes": 20996,
+        "lines": 323,
+        "gitBlob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+        "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b"
+      },
+      "candidate": {
+        "bytes": 21133,
+        "lines": 325,
+        "gitBlob": "868b7c7121cc85925b86fee641064493dc099785",
+        "sha256": "c2feed93785e08604a92db4cacb224164cd926b2b8d2826b502d408d16bdba71"
+      },
+      "delta": {
+        "added": 2,
+        "removed": 0
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "preimage": {
+        "bytes": 103573,
+        "lines": 1766,
+        "gitBlob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+      },
+      "candidate": {
+        "bytes": 114321,
+        "lines": 1914,
+        "gitBlob": "f25095fc93559fc8f84d159b946e89d729956f4c",
+        "sha256": "5ed2a20f03ef72fe2ea272bed84c4f38326f2ab0f6a90b2dc65ece615662b34f"
+      },
+      "delta": {
+        "added": 148,
+        "removed": 0
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts",
+      "preimage": null,
+      "candidate": {
+        "bytes": 13985,
+        "lines": 154,
+        "gitBlob": "d725e255682b0c092e7b05970622e732c1124580",
+        "sha256": "99f37883c6c0096ac75f7c53ee1f02680dd5a402260b067cdb136fd696287b3a"
+      },
+      "delta": {
+        "added": 154,
+        "removed": 0
+      }
+    }
+  ],
+  "independentlyVerifiedBytes": {
+    "allSixExistingPreimagesMatchExact0660Git": true,
+    "allEightCandidatesMatchMetadata": true,
+    "allDeclaredTextDeltasMatch": true,
+    "stageACompleteOriginalTestPrefixPreserved": true,
+    "stageCCompleteStageATestPrefixPreserved": true,
+    "twoRosterLinesRemovalRecoversEntireOriginal": true,
+    "entireWindowsOnlyRosterUnchanged": true,
+    "allThreeFinitePeerModulesAlreadyInCommonManagementRoster": true,
+    "newHelperAndVerifierCommonPins": true,
+    "originalLint93OrderedPrefixRetained": true,
+    "newLintUniqueCount": 98,
+    "sourceCaps": {
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts": 798,
+      "scripts/legacy-agent-host/desktop-live-membership-controlled.ts": 219,
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts": 585,
+      "scripts/legacy-agent-host/desktop-mixed-native-fixture.ts": 670,
+      "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts": 325,
+      "scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts": 154
+    }
+  },
+  "ciStageReachability": {
+    "result": "SOURCE_REACHABLE_IN_EXISTING_ORIGINAL_CI_COMMAND; NOT_EXECUTED",
+    "workflowBlob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+    "nodeVersion": "24.21.0",
+    "step": "Build existing Desktop prerequisites and verify admission",
+    "command": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "ordering": "After frozen install and original Linux launcher/Host/controller/MCP builds; before the Team ten-file privacy command and static gates. All original lanes already run this eight-file prerequisite. No new job, manual dispatch, local side venue or test command is necessary for A/B.",
+    "failureAttribution": "Any install/build/import/marker/type/setup/time-limit/cancellation failure is not the three required semantic RED failures. The complete original command output and source/toolchain must be independently reviewed before selecting B. Current privacy sequence must finish first under root explicit policy.",
+    "stageA": "Only test c4f6 -> a6c8; actual old driver bd8 remains. The test extracts the unique inline poll body, strips only TypeScript and binds finite local callbacks/clock. No driver import/entry execution or global clock mutation.",
+    "predictionsOnly": {
+      "newCases": 4,
+      "originalPoll": {
+        "pass": 1,
+        "semanticFail": 3
+      },
+      "conditionalB": {
+        "pass": 4,
+        "fail": 0
+      },
+      "actualResults": null
+    },
+    "semanticCases": [
+      "first returned true exactly at the original 90000ms cutoff",
+      "first returned true after the original cutoff",
+      "second returned true after cutoff following the original 100ms pause"
+    ],
+    "assertionsAfterExpectedRejectionAreNotReachedInRed": true,
+    "stageB": "Two checks Date.now() < cutoff after the two original awaited reads. No deadline reset, additional observer read/action/timer or budget widening. Late returned true is rejected before accepts; original observation/currentness exceptions still propagate. An in-flight read is not preempted.",
+    "stageC": "Two additional tests extract the actual new helper admission and process-projection bodies only after B. They exercise finite mocks, not kernel/native custody. Original full helper/static commands and two real resulting-source V2 cases remain mandatory. The existing scripts compiler is included by original typecheck:workspace -> typecheck:legacy-host-scripts; guards remain separate original CI duties."
+  },
+  "sourceFindings": {
+    "admissionAndVendors": "New selector is Linux-x64 only and validates its exact mode, V2, GO, membership and closed LEGACY_DESKTOP_* keys before original port/model/fixture work. The finite base bypasses real Codex input capture and old vendor-profile fixture branch. Both executable selections are private captured-Node wrappers; wrapper code rehashes the three finite sources. Fixed Codex version text is a TEST wrapper response. providerPeer desktop branch excludes its native-Windows branch; Claude and Codex selected environments are private finite roots with explicit role and peer flags. Existing app fallback paths remain TEST sentinels; no real Claude/Codex lookup/hash/version/spawn is selected by this route.",
+    "managementSeparation": "The old V2 management runner/verifier remain before the new case with unchanged no-Runtime assertions and separate TEST root. The new verifier explicitly refuses equal roots. A future result for one case cannot qualify the other.",
+    "runtimeActions": "The driver retains original save-only two-member creation, one empty Launch, Add plus one ADD input, Remove plus original confirmation, Restore same member plus one RESTORE input, one whole-Team Stop, Quit/cold history/Quit. Original two-peer sessions with zero inputs, live command/grant/readiness/reference joins, removed release/PID absence, fresh restored principal/session/runtime generation/binding generation/sessionRef/PID, unchanged initial peers, two V2 probes/four native HTTP requests, four closed/released generations, cold history/no new allocation/preparation/input and metadata-lineage/physical cleanup assertions remain. Setup model choices explicitly change to finite Sonnet/TEST-model. The new job case adds setup/process/metadata observations and does not preserve whole-job dynamic counts.",
+    "processProjection": "Only the new mode changes census projection. One original bounded ps census is followed by stat/exe/cmdline/stat for the selected Host and direct children, capped at129 rows; stat <=4096 bytes and cmdline <=128KiB. It checks parent/PGID against census, repeated starttime/parent/group equality, exact Host argv/executable, finite Node plus an exact selected wrapper at argv[1], or full expected Bun argv. The finite peer itself validates its remaining dynamic argv. Other executables/wrappers, changed/missing observations or excessive selected rows fail. It does not signal/adopt ownership or replace Runtime authority. Old modes keep original synchronous census/probe-count read branches, apart from the explicitly conditional poll correction.",
+    "processLimits": "This is a non-atomic sample, not a process/executable lease. It does not join kernel starttime back to the earlier ps lstart field, and its last stat check does not re-read executable/cmdline or prove absence of a same-PID exec transition. Subsequent exact retained ProcessFact/metadata lineage and PID-absence comparisons remain. These limits prevent calling the sample original executable byte-consumption proof or P09 qualification; they do not by themselves demonstrate a false full P11 result for the fixed controlled peers.",
+    "verifier": "The new verifier is read-only apart from one TEST summary file. It joins exact head/common source roster and toolchain/archive/output/input pins, separate management/P11 receipts, staged Bun/graph and Linux child launcher, original body counts/readiness/cold/physical cleanup and screenshot hash. Full mixed/vendor-auth/release flags remain false. Its additional git/hash/ps/filesystem work consumes actual job time.",
+    "artifactScope": "Six literal additions are private TEST-root paths. include-hidden-files is enabled only for the existing V2-management lane and affects that lane entire old allowlist too. I inspected the complete old+new patterns: they remain bounded to prepared TEST inputs/roots, test state/probes/effects, known app logs/screenshots and saved compiled bundles. This is explicit added retained evidence, not a no-change claim; no generic HOME or unrelated project upload was added."
+  },
+  "requiredDraftCorrections": [
+    {
+      "id": "P11-W1",
+      "location": "section5 cleanup sentence",
+      "finding": "Missing journals do not necessarily produce auxiliary INCOMPLETE. readDesktopFiniteMembershipPeers catches ENOENT and continues, so observeDesktopFiniteMembershipCleanup can report absent:true over an empty set. The final verifier still refuses disappearance because proof.initial.probeCounts are nonzero and must equal the later finite.probeCounts; no full-job false PASS was established.",
+      "requested": "Describe missing journals as allowed only for the shared pre-observation reader and explain the later nonzero retained count join; do not state every missing-data cleanup path writes INCOMPLETE. Source hardening would be a separately explicit choice, not silently assumed.",
+      "authorAcknowledged": true
+    },
+    {
+      "id": "P11-W2",
+      "location": "section7 venue/staging",
+      "finding": "Root requires explicit original-CI-only authority and no local fallback invitation, plus actual current privacy semantic RED and separately approved one-helper original-CI GREEN before the diagnostic/P11 stages, preserving useful cohorts.",
+      "requested": "Use root-requested exact prospective sequencing and require a fresh composition/review of overlapping Team test/workflow/roster before any application. Frozen0660 proposal is not directly composable with later diagnostic bytes.",
+      "ownerAlreadyRequested": true
+    },
+    {
+      "id": "P11-W3",
+      "location": "section5 Linux observation limits",
+      "finding": "The source has a starttime/parent/group recheck; neither an initial ps-birth join nor an executable-generation seal is present.",
+      "requested": "Retain these explicit non-atomic limits when calling the sample kernel identity. No universal native custody or byte-currentness claim.",
+      "authorAcknowledgedNoAdditionalGuarantee": true
+    }
+  ],
+  "sourceDisposition": "No further concrete source correctness, vendor-execution, original business-oracle, stage-A reachability, source-roster or bound blocker was established in this finite review. Source-only feasibility is supported, with the above missing-journal and non-atomic distinctions. Final exact R1 approval is held for corrected prose and fresh source composition; no code is approved for immediate application.",
+  "reusedSourcePins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "bytes": 33737,
+      "gitBlob": "495118ecb0d895dcc87f5782f8a4b0ccd35d3587",
+      "sha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "bytes": 33173,
+      "gitBlob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+      "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-runtime-source-fixture.ts",
+      "bytes": 17687,
+      "gitBlob": "bd1f76510d3339513ca694998fe4523aed0a6eff",
+      "sha256": "64df0ba4beb7c5d85a18637af836533430f90620e2f5072763a9dc3880351231"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-mode.ts",
+      "bytes": 26007,
+      "gitBlob": "e2e7029c56de6343eb4ad2a2395044efd009ae0b",
+      "sha256": "e96f15e68a59f991034d68ca37b0125d4c798cd06eb34d58ceeb2f3e537966de"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-evidence.ts",
+      "bytes": 26258,
+      "gitBlob": "5a537bd32e3b13bedeb415b02a09546bc5f686ed",
+      "sha256": "cb08691efb9eb422674ceb35c3f7e93ba660500f1d3ee8c8da35d611452f00e8"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-fixture.ts",
+      "bytes": 7577,
+      "gitBlob": "9d6a158fe27134c6f0559ea058f2ecfa5ad478d1",
+      "sha256": "22a46aa137e87c4f1a282aae5518e9aada69ce8b947169457d3aadde3b2ace1d"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+      "bytes": 16119,
+      "gitBlob": "31160baa614a4ecd5cc17fb2078561cad371c06c",
+      "sha256": "81d26bee6ac2f5272a4084e5594a260b775169757efa067e4a452728fd7e3bec"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "bytes": 52632,
+      "gitBlob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+      "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-management-sources.ts",
+      "bytes": 21211,
+      "gitBlob": "762570da8b4fc492065b217303a3da169bf627cf",
+      "sha256": "7b89bab88022f53fbc8470f0cbcd4acd93f8ee5412059144e3a676c0fb7466f8"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+      "bytes": 44561,
+      "gitBlob": "083522612dd93e77dbb0e79c966103b03a71fe87",
+      "sha256": "555a309f762015659a3b7a0d44522785fa7ea171aedf77392020c25dc5d70e33"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-input-capture.ts",
+      "bytes": 33875,
+      "gitBlob": "e838648de31ed141632c1d89c8544e1fa4071882",
+      "sha256": "04e2caad0483091d8f96d89b902dcc34cf8f55a8d841f021fbb2ee631f26c108"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/runtimeProfile.ts",
+      "bytes": 10369,
+      "gitBlob": "7dcaecc2d76bf568347082b5f82f0d738e0bfaa1",
+      "sha256": "8d01aa3189e83512c25b1b5f2a5fc3f0a427da7be979291127179914489b9cc8"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/profile.ts",
+      "bytes": 5699,
+      "gitBlob": "ccefb500c16a228e03b7a1e4a47e04897fbca4f1",
+      "sha256": "e4c99575480163cb5077d0768cc2a612f9f00bead9b228f3e9d56c0e2399896c"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "bytes": 32221,
+      "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+      "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+      "bytes": 9569,
+      "gitBlob": "44c8cba99e4932905da77539a59c904a39da4e36",
+      "sha256": "e34c78358e85d3e841e4f9fb7941e77ce9b5f8b757dac434c3fe5ec5dbfdccdd"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "bytes": 39026,
+      "gitBlob": "76f5d1953816fd125f576a966c42caefcfc297e2",
+      "sha256": "94cc5c1faed9d9d6d82d6db8e5fb7e36f292fa7335ff60ffc0648009a0d2b43a"
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "bytes": 646,
+      "gitBlob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306"
+    },
+    {
+      "path": "package.json",
+      "bytes": 26839,
+      "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 175238,
+      "gitBlob": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+      "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce"
+    }
+  ],
+  "primaryOsReference": {
+    "url": "https://docs.kernel.org/filesystems/proc.html",
+    "reviewedSections": [
+      "1.1 Process-Specific Subdirectories",
+      "Table1-1",
+      "Table1-4"
+    ],
+    "narrowSupport": "The documented stat layout identifies parent/group and start_time; exe and cmdline are separate proc entries. Kernel docs explicitly state an open proc descriptor does not reserve the PID. This reference is not an actual runner observation or proof of access/atomicity."
+  },
+  "limits": [
+    "No project tests/compiler/Node/provider/native invocation, installation, workflow/ref mutation or candidate application occurred.",
+    "Python/Git file hashing and textual comparisons only; no proposed JavaScript closures were executed.",
+    "No predicted count is an actual RED/GREEN result.",
+    "No current M native/desktop results transfer to proposed P11.",
+    "Current privacy and dormant navigation diagnostics retain their independent sequencing.",
+    "P08/P09, full mixed native, vendor authentication and release remain outside this source review."
+  ]
+}

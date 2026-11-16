@@ -1,0 +1,54 @@
+{
+  "observedAt": "2026-11-16 02:58:21 UTC",
+  "kind": "general",
+  "runId": 43795234688,
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "jobs": [
+        {
+          "id": 133062442880,
+          "name": "plan",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062444192,
+          "name": "Stage 1 source Desktop (${{ matrix.label }})",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062444221,
+          "name": "Stage 1 process tuple diagnostic (unqualified)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062468416,
+          "name": "Stage 1 current-tuple process and packed qualification",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": null
+        }
+      ]
+    },
+    "isError": false
+  }
+}

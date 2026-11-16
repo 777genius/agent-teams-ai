@@ -1,0 +1,143 @@
+{
+  "schema": "independent-N-renderer-actual-one-byte-source-readback/v1",
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUtc": "2026-11-16T04:32:46.782104+00:00",
+  "result": "APPROVE",
+  "independentReadbackExact": true,
+  "head": "79b3ae2928a346f06fc1840b04944d158c9feec9",
+  "tree": "3e395d54c5d9982dce16c545cfa9daf6702d99f1",
+  "parents": [
+    "67310c46b9d38f88e856ce2372d6ea10886d0dd6"
+  ],
+  "sourceManifest": {
+    "bytes": 3483,
+    "blob": "c81e36f22a121b81b8a1f3360050acba6b62d4e9",
+    "sha256": "abf153b31e24e364dff2e50c4c10fffebe5e01caf7ca2bd589f51fc8dd480aca"
+  },
+  "independentlyFetchedOriginalCommitAPI": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-n-renderer-assertion-source-publication/independent-published-commit-response.json",
+    "bytes": 3778,
+    "blob": "7bef09f4789979ddb274da8f27ad0dff089ec6aa",
+    "sha256": "dc55be98f005a424fc5aea0bb5343677f88b588f76fe4437436a72ef5a113c49"
+  },
+  "actualGitCommitSha1RecomputedExact": true,
+  "exactChangedPaths": [
+    "src/renderer/store/team/teamRuntimeRunAdoption.ts"
+  ],
+  "preimage": {
+    "bytes": 8708,
+    "blob": "8299f9f9589810c106c328840b2c0d3640113811",
+    "sha256": "96511a26aaf8ead7ebdaeec018d79d4f9568ff29ee85f8b4eef46adbc2a4a954"
+  },
+  "candidate": {
+    "bytes": 8707,
+    "blob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+    "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10"
+  },
+  "exactOneByteDeletionAtLine201": true,
+  "other263LinesIncludingBothCallbackAssertionsPreserved": true,
+  "fullLeafCount": 10698,
+  "allOther10697LeavesExactlyPreserved": true,
+  "allDocumentationLeavesPreserved": 1900,
+  "all236LatestPublishedDocsPayloadsPreserved": true,
+  "all5R1R2ProposalDocumentsReopenedFromActualSourceGit": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/stage-n-renderer-assertion-fix-r1/proposal.json",
+      "bytes": 6750,
+      "blob": "8ec9d75f40874056eb6fb565b6ded643ca4d23b4",
+      "sha256": "50ededbf744963ebc63256723d9e1463c435af059521485691f70d25bff851b9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/stage-n-renderer-assertion-fix-r1/candidate.patch",
+      "bytes": 324,
+      "blob": "3704dccb26289ee1e814e27ead70d3ed1ef7618e",
+      "sha256": "ab4703c7a3b29e8d2400f720854020d81fff3ab01d2ca91d5d730b2be9b9d67a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/stage-n-renderer-assertion-fix-r1/independent-source-review.json",
+      "bytes": 10014,
+      "blob": "add9bc855ee894883ac7b9b9914488e6847d7ced",
+      "sha256": "244bf1a8c0d7cb95d3e56a672e8628404e15c17689f49dd3016c7b49cdeb115e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/stage-n-renderer-assertion-fix-r1/preimage.ts.txt",
+      "bytes": 8708,
+      "blob": "8299f9f9589810c106c328840b2c0d3640113811",
+      "sha256": "96511a26aaf8ead7ebdaeec018d79d4f9568ff29ee85f8b4eef46adbc2a4a954"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/stage-n-renderer-assertion-fix-r1/candidate.ts.txt",
+      "bytes": 8707,
+      "blob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+      "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10"
+    }
+  ],
+  "actualPrivacyGREENAndOriginalTypedRendererREDProvenanceReopened": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-n-608efb/team/independent-team-privacy-green-review.json",
+      "bytes": 59866,
+      "blob": "d4fb9c542b8404a0e7fedb386f019aac08da79dc",
+      "sha256": "e6f1cb5bc292e4ca4d7e37b0e3a5c1afbb4b916424467ea28f03e338f3bdd9db"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-n-608efb/team/independent-team-author-packet-review.json",
+      "bytes": 75687,
+      "blob": "4d2f9deb4f1c1f9b94c08060e05eaf4166b303b6",
+      "sha256": "30cf104c330c8a86fd98f004369afca865cd930ce5913afb707391f5d7d96aeb"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-n-608efb/team/job-133062441494.log",
+      "bytes": 2205340,
+      "blob": "c5446ac9cf26e5515cf8c2b2c9f0df55f8e43795",
+      "sha256": "52b2fd9b7d2f66475e7e1818b91d3b3ca0f90636e8dee0fb1527279f68021fdd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/ci-n-608efb/team/original-job-log-response.json",
+      "bytes": 2221302,
+      "blob": "cc9ef5825d11764ba1849705815a8b408aa75be0",
+      "sha256": "c1d612ec191ea3bbc403bd38e9346d9823274a81043baf7f89aa87da2014b5c8"
+    }
+  ],
+  "nonDocumentationLeafCount": 8798,
+  "nonDocumentationBeforeSHA256": "d3ed00695b2d09d3bcd38d41830ddde5670908c858a600bae03c757dc00bc397",
+  "nonDocumentationAfterSHA256": "8a6dbb7ecf9104b2ad570c2ae2c75f333fc28a34cae493b93d4973fd9c2c11ab",
+  "actualDocsPublicationPrerequisite": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-n-green-and-completed-independent-published-readback.json",
+    "bytes": 165767,
+    "blob": "c38996a1fe8d0ee8c38d45cf2e61c1319bb36239",
+    "sha256": "1b0d2f3337fa461d274a9df0b3ca4b3f322dbe437a47a0e71570a631e29e7509",
+    "head": "67310c46b9d38f88e856ce2372d6ea10886d0dd6"
+  },
+  "prospectiveCurrentParentReview": {
+    "bytes": 4081,
+    "blob": "d831d87d143f82a14c0802795692ccfcd1937f1a",
+    "sha256": "49553bb957ed782cfc3f395e4eb320d0d3c3442a7ec7a5dead1a6abae9039e27"
+  },
+  "ordinaryExpectedParentPublicationReceipt": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-n-renderer-assertion-source-publication/published-commit-and-normal-push-receipt.json",
+    "bytes": 286511,
+    "blob": "b1e0d5666cd684074ef58caed8c0c37fd5f1fc17",
+    "sha256": "2838b82104c107c98b78bd9c06113fd8ded6bf82f95bdeefb95a2763b9447b77",
+    "freshGuardsAt": "2026-11-16 04:30:31 UTC",
+    "pushedBy": "2026-11-16 04:30:35 UTC",
+    "force": false,
+    "expectedParent": "67310c46b9d38f88e856ce2372d6ea10886d0dd6"
+  },
+  "primaryAtRetainedFreshGuardsAndPostReadback": {
+    "head": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+    "base": "def734338f13bcc3209e78079a0cedbc48f05a5b",
+    "draft": true,
+    "open": true,
+    "followupPRsAtGuard": []
+  },
+  "actualOriginalPrivacy177And24GREEN": true,
+  "actualOriginalTypedRendererRED": true,
+  "resultingSourceTypedGREENObserved": false,
+  "localWorkingTree": {
+    "head": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "clean": true,
+    "noCheckoutPerformed": true
+  },
+  "qualification": "This closes exact source publication/readback only. New-source original type/lint and other required acceptance remain pending; old N privacy GREEN is retained source-bound evidence, not a new execution. No whole-goal/Ready/main/release or queue-blocker claim.",
+  "noProjectExecutionCIQuerySourceOrRefMutation": true
+}

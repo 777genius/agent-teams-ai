@@ -1,0 +1,398 @@
+{
+  "kind": "Fresh-current-source P11 Phase-A compatibility assessment; no source or execution selection",
+  "reviewer": "/root/native_failures",
+  "reviewedAtUtc": "2026-11-16T04:39:58.082186+00:00",
+  "currentSource": {
+    "head": "79b3ae2928a346f06fc1840b04944d158c9feec9",
+    "parent": "67310c46b9d38f88e856ce2372d6ea10886d0dd6",
+    "tree": "3e395d54c5d9982dce16c545cfa9daf6702d99f1"
+  },
+  "verdict": "SOURCE COMPATIBLE; current published renderer typed-GREEN and fresh phase-selection R1/R2 remain pending prerequisites",
+  "dormantDraft": {
+    "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/DESIGN-R1-draft-v2.md",
+    "bytes": 22937,
+    "blob": "99c9c114eb6ba6b31d21550f94f617a1e377d1da",
+    "sha256": "df8e2c7e72ce93e4b1eab7a5f0a3c1827a4270e407012583681b80acfee4147f"
+  },
+  "dormantMetadata": {
+    "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/proposal-metadata.json",
+    "bytes": 27500,
+    "blob": "1458fe354a53b6b4929fb7db4dd8f8cf5fed1e41",
+    "sha256": "b9e8fc1a3198bc9c2b45a6059270ff8a330b126e68d9b2248f972575c26d9bbc"
+  },
+  "previousDetailedSourceReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/independent-source-design-review-v1.json",
+    "bytes": 22609,
+    "blob": "71d3072dffafdf4016bef204da9a42d9a0da1ee2",
+    "sha256": "9e8e090834cb1d4f228d1170bddeb13cbfcb7c37d1c48db7312b969ae7783402"
+  },
+  "previousWordingReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/independent-wording-review-v2.json",
+    "bytes": 3550,
+    "blob": "f12678c8cde90693552bef9c805e47be96fa8b41",
+    "sha256": "5b33453c918e6ac9c781a7293a5c011047486afa1e0981e4fea476de7e6aaf47"
+  },
+  "allEightPreimagesAndCandidates": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "frozen0660Preimage": {
+        "bytes": 101741,
+        "lines": 1312,
+        "gitBlob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+      },
+      "actual79Preimage": {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "mode": "100644",
+        "bytes": 101741,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+      },
+      "preimageStillExact": true,
+      "conditionalCompleteCandidate": {
+        "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/conditional-complete/.github/workflows/host-emulated-acceptance.yml",
+        "bytes": 103848,
+        "blob": "74c5964e1b28e02df2fd5649d9d67931889cd7a8",
+        "sha256": "8fd4f1edd2473382655d1fbb0850b60be890764460bdf4fdfd158637f8594a9f"
+      },
+      "futurePhaseCPreimage": {
+        "bytes": 101741,
+        "lines": 1312,
+        "gitBlob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "frozen0660Preimage": {
+        "bytes": 54778,
+        "lines": 791,
+        "gitBlob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc"
+      },
+      "actual79Preimage": {
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "mode": "100644",
+        "bytes": 54778,
+        "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc"
+      },
+      "preimageStillExact": true,
+      "conditionalCompleteCandidate": {
+        "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "bytes": 55759,
+        "blob": "4eabaf832901bf3ea82bc9761f1208207343b8a0",
+        "sha256": "1ded076e942640f4306af7ee6d5f1e4c49d7b9095d6aaeba4f59826e794863bd"
+      },
+      "futurePhaseCPreimage": {
+        "bytes": 54778,
+        "lines": 791,
+        "gitBlob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-controlled.ts",
+      "frozen0660Preimage": null,
+      "actual79Preimage": null,
+      "preimageStillExact": true,
+      "conditionalCompleteCandidate": {
+        "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts",
+        "bytes": 15874,
+        "blob": "6205acf48ae31051ae3b4dcb4d66c47286022ba4",
+        "sha256": "1663c2db6b7229472ec45529202053023d7cb33cd1affc333547105979e6b6ca"
+      },
+      "futurePhaseCPreimage": null
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "frozen0660Preimage": {
+        "bytes": 45707,
+        "lines": 570,
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+      },
+      "actual79Preimage": {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "mode": "100644",
+        "bytes": 45707,
+        "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+      },
+      "preimageStillExact": true,
+      "conditionalCompleteCandidate": {
+        "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "bytes": 47589,
+        "blob": "de958fcbd9c1aef20ec843904dd89a6fec62568d",
+        "sha256": "e748025e727b8b6f96e4521496907e469058603610ac7024b600d8174300faf8"
+      },
+      "futurePhaseCPreimage": {
+        "bytes": 45795,
+        "lines": 572,
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-mixed-native-fixture.ts",
+      "frozen0660Preimage": {
+        "bytes": 33161,
+        "lines": 660,
+        "gitBlob": "426c45f6236a3aaf8b3f5e14b4cf21e4ce000c8f",
+        "sha256": "1e495ee7b244fa471f2a6a4039d7110db6ff2760260c23f89123703810d0bfad"
+      },
+      "actual79Preimage": {
+        "path": "scripts/legacy-agent-host/desktop-mixed-native-fixture.ts",
+        "mode": "100644",
+        "bytes": 33161,
+        "blob": "426c45f6236a3aaf8b3f5e14b4cf21e4ce000c8f",
+        "sha256": "1e495ee7b244fa471f2a6a4039d7110db6ff2760260c23f89123703810d0bfad"
+      },
+      "preimageStillExact": true,
+      "conditionalCompleteCandidate": {
+        "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts",
+        "bytes": 34186,
+        "blob": "3313bd7ea5f707a930f87322f8ec4fdaed86a527",
+        "sha256": "23e1e8651bdef907a525cb8918986623760444f685938942882571a3f695cbd5"
+      },
+      "futurePhaseCPreimage": {
+        "bytes": 33161,
+        "lines": 660,
+        "gitBlob": "426c45f6236a3aaf8b3f5e14b4cf21e4ce000c8f",
+        "sha256": "1e495ee7b244fa471f2a6a4039d7110db6ff2760260c23f89123703810d0bfad"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "frozen0660Preimage": {
+        "bytes": 20996,
+        "lines": 323,
+        "gitBlob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+        "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b"
+      },
+      "actual79Preimage": {
+        "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "mode": "100644",
+        "bytes": 20996,
+        "blob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+        "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b"
+      },
+      "preimageStillExact": true,
+      "conditionalCompleteCandidate": {
+        "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "bytes": 21133,
+        "blob": "868b7c7121cc85925b86fee641064493dc099785",
+        "sha256": "c2feed93785e08604a92db4cacb224164cd926b2b8d2826b502d408d16bdba71"
+      },
+      "futurePhaseCPreimage": {
+        "bytes": 20996,
+        "lines": 323,
+        "gitBlob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+        "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "frozen0660Preimage": {
+        "bytes": 103573,
+        "lines": 1766,
+        "gitBlob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+      },
+      "actual79Preimage": {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 103573,
+        "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+      },
+      "preimageStillExact": true,
+      "conditionalCompleteCandidate": {
+        "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "bytes": 114321,
+        "blob": "f25095fc93559fc8f84d159b946e89d729956f4c",
+        "sha256": "5ed2a20f03ef72fe2ea272bed84c4f38326f2ab0f6a90b2dc65ece615662b34f"
+      },
+      "futurePhaseCPreimage": {
+        "bytes": 107837,
+        "lines": 1828,
+        "gitBlob": "a6c8df59b6fabc013b3570762d6b19a396e32c9e",
+        "sha256": "d8bfcea3677773bb7d9fd800f958728719f292c7e01a9e4a0ead4fd746276cf9"
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts",
+      "frozen0660Preimage": null,
+      "actual79Preimage": null,
+      "preimageStillExact": true,
+      "conditionalCompleteCandidate": {
+        "path": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts",
+        "bytes": 13985,
+        "blob": "d725e255682b0c092e7b05970622e732c1124580",
+        "sha256": "99f37883c6c0096ac75f7c53ee1f02680dd5a402260b067cdb136fd696287b3a"
+      },
+      "futurePhaseCPreimage": null
+    }
+  ],
+  "exactCurrentComparison": {
+    "sixExistingPreimagesByteEqual": true,
+    "twoNewPathsStillAbsent": true,
+    "allEightCandidateBytesUnchanged": true,
+    "nonDocumentationChangeSince608": [
+      "src/renderer/store/team/teamRuntimeRunAdoption.ts"
+    ],
+    "rendererCurrentLeaf": {
+      "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "bytes": 8707,
+      "blob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+      "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10"
+    },
+    "privacyHelper": {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "bytes": 8310,
+      "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7"
+    },
+    "noDormantNavigationDiagnosticsApplied": true
+  },
+  "phaseA": {
+    "onlyChangedPath": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "current": {
+      "bytes": 103573,
+      "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+      "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+    },
+    "candidate": {
+      "bytes": 107837,
+      "blob": "a6c8df59b6fabc013b3570762d6b19a396e32c9e",
+      "sha256": "d8bfcea3677773bb7d9fd800f958728719f292c7e01a9e4a0ead4fd746276cf9"
+    },
+    "delta": {
+      "addedLines": 62,
+      "removedLines": 0,
+      "addedBytes": 4264
+    },
+    "completeOriginalPrefixPreserved": true,
+    "unchangedDriver": {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "bytes": 45707,
+      "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+    },
+    "uniqueMarkers": [
+      "  const poll = async <T>(",
+      "  const workspace = join(fixture.root, 'workspace');"
+    ],
+    "actualInlineClosure": "  const poll = async <T>(observe: () => Promise<T>, accepts: (value: T) => boolean, label: string) => {\n    const cutoff = Date.now() + 90_000; let value = await observe();\n    while (!accepts(value) && Date.now() < cutoff) {\n      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();\n    }\n    assert.ok(accepts(value), label); return value;\n  };\n",
+    "newCases": 4,
+    "predictionsOnly": {
+      "semanticRedFailures": 3,
+      "controlPass": 1,
+      "actualResults": null
+    },
+    "threeSpecificFailures": [
+      "first returned true exactly at original90000ms cutoff",
+      "first returned true after original90000ms cutoff",
+      "second returned true after original100ms pause and after cutoff"
+    ],
+    "control": "Timely first/second acceptance; original read/currentness/pause order; false at cutoff refusal; exact observation/currentness Error identity. Assertions after missing expected rejection remain unexecuted in RED.",
+    "mechanism": "Actual inline poll read from source, stripped with existing Node facility and evaluated with finite local clock/observer/currentness/timer callbacks. No copied loop, driver import/entry execution, global clock mutation or native process.",
+    "excluded": [
+      "Both B assertions",
+      "Both new private source files",
+      "P11 route/model/observation/verifier/workflow changes",
+      "Both C admission/projection tests"
+    ]
+  },
+  "originalCiVenue": {
+    "workflow": {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+    },
+    "trigger": "Original same-repository pull_request source-path match scripts/legacy-agent-host/**; Draft allowed",
+    "node": "24.21.0",
+    "jobTimeoutMinutes": 45,
+    "step": "Build existing Desktop prerequisites and verify admission",
+    "commandLine": 103,
+    "wholeOriginalCommand": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "beforeCommand": [
+      "Frozen workspace/Electron install",
+      "Original Linux launcher where applicable, Host, controller and MCP builds"
+    ],
+    "afterCommand": [
+      "Original install-dependency suite",
+      "Team-only177/24",
+      "Team-only93-path fast lint, workspace/dedicated backend types and original typed lint"
+    ],
+    "all93OrderedLintOperandsRemainCurrent": true,
+    "venueLimit": "Existing automatic original CI only; no local test/compiler/lint/install/bootstrap or alternative venue, no manual dispatch/rerun/cancel, no replacement selector.",
+    "redGate": "Only actual three specific missing-expected-rejection failures qualify; prerequisite/import/marker/setup/type/timeouts/cancelled/skipped failures do not."
+  },
+  "orderedStages": {
+    "A": "Fresh exact current79 R1/root selection/independent review and publication before onlyc4f6\u2192a6c8; preserve original driver/workflow and useful cohort.",
+    "actualRed": "Retain complete original8-file log/MCP/source/toolchain and allcase outcomes; independent actual R2 must accept three specific semantic failures beforeB.",
+    "B": {
+      "candidate": {
+        "bytes": 45795,
+        "blob": "5026f0ec6165bb092717ddc989043848a25081dc",
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b"
+      },
+      "addedLines": 2,
+      "removedLines": 0,
+      "exactInverse": true,
+      "meaning": "One Date.now()<cutoff check after each existing awaited observation; no extra read/action/timer or deadline reset, same90s/100ms. Late value refused before accepts; original observation/currentness errors preserved; in-flight read not preempted."
+    },
+    "actualGreen": "Same complete original8-file command on exactB with alloriginal and fournew cases; independent actual review beforeC. Original full source/static gates remain required separately.",
+    "C": "Separate exact root approval/current lease only after reviewed B GREEN; eight-path route composition and two extra finite helper tests, then actual separate V2 job case/verifier. Unit/source review is not native/browser/cold/cleanup qualification."
+  },
+  "prerequisites": {
+    "established": {
+      "actualPrivacyRed": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/team-contracts/root-independent-RED-review.json",
+        "bytes": 68631,
+        "blob": "1de904e8979598412383012fb3468c2be0b90ec5",
+        "sha256": "8373abbaf6e027e563e5b08df9c1cb102ea1a26142325eaa5a0251caa36b607e"
+      },
+      "actualPrivacy177And24Green": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/team/independent-team-privacy-green-review.json",
+        "bytes": 59866,
+        "blob": "d4fb9c542b8404a0e7fedb386f019aac08da79dc",
+        "sha256": "e6f1cb5bc292e4ca4d7e37b0e3a5c1afbb4b916424467ea28f03e338f3bdd9db"
+      },
+      "rendererSourceR2": {
+        "path": "/workspace/scratch/82d3f9ba6b85/stage-n-renderer-assertion-fix-r1/independent-source-review.json",
+        "bytes": 10014,
+        "blob": "add9bc855ee894883ac7b9b9914488e6847d7ced",
+        "sha256": "244bf1a8c0d7cb95d3e56a672e8628404e15c17689f49dd3016c7b49cdeb115e"
+      },
+      "rendererOneTokenSourcePresentAt79": true
+    },
+    "remainingBeforeA": [
+      "Resulting-source full-types/typed-renderer GREEN from existing original CI, still expressly required by current published Plan29; source R2 is not GREEN.",
+      "Fresh current79-bound root phase/order selection, exact published R1 and independent R2; preserve useful cohort and use fresh source/ref guards. Dormant0660 metadata remains truthful history, not current automatic authority.",
+      "If dormant navigation diagnostics are selected first, freshly compose/review the shared test/workflow paths beforeA; neither overlap has been applied at79."
+    ],
+    "specificOrderingReason": "Intentional A failure is in the shared eight-file prerequisite before the Host Team typed-lint step, so that job cannot use A semantic RED to prove the still-pending renderer GREEN. This does not introduce an all-jobs-terminal requirement.",
+    "publishedPlan": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 1626851,
+      "blob": "ad13c9287629d650db07f322a11e8119dd2a4c15",
+      "sha256": "96816aeb5caf90cd9c8936ae1c02a4bc92cb3db2ba735d317448329cbde07769"
+    },
+    "publishedRequirement": "The existing automatic original CI must establish resulting-source full-types and typed-renderer GREEN; this cut does not claim that result."
+  },
+  "preservedLimits": [
+    "Linux proc observation remains non-atomic: no firststarttime to earlierps-lstart join and no finalexe reread. No original-image/custody/P09 promotion.",
+    "Missing finite journals may yield auxiliary empty absent:true, while final verifier still requires matching nonzero original preparation counts. No implicit source hardening.",
+    "Finite initial Claude/Codex TEST wrappers only; no real vendor discovery/version/spawn. Existing management noRuntime assertions remain separate.",
+    "Original fixed P11 business sequence,90s/100ms, negative/currentness/cleanup rules and source caps remain. Full actual resulting-source V2/native acceptance is future evidence.",
+    "No source candidate, tracked file, dependency, Git object/ref or CI state was modified; no local project/provider/native execution occurred."
+  ],
+  "actions": [
+    "Immutable Git/source/plan reads",
+    "Existing scratch/evidence byte/hash comparisons",
+    "Write separate current-source assessment only"
+  ]
+}

@@ -1,0 +1,200 @@
+{
+  "observedAt": "2026-11-16T04:34:21Z",
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "jobs": [
+        {
+          "id": 133062442880,
+          "name": "plan",
+          "status": "completed",
+          "conclusion": "success",
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": [
+            {
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 1
+            },
+            {
+              "name": "Checkout",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 2
+            },
+            {
+              "name": "Setup Node.js",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 3
+            },
+            {
+              "name": "CI source proof: PR=1192 | base=def734338f13bcc3209e78079a0cedbc48f05a5b | head=608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 4
+            },
+            {
+              "name": "Plan feedback and verify reusable evidence",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 5
+            },
+            {
+              "name": "Post Setup Node.js",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 9
+            },
+            {
+              "name": "Post Checkout",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 10
+            },
+            {
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success",
+              "number": 11
+            }
+          ]
+        },
+        {
+          "id": 133062444192,
+          "name": "Stage 1 source Desktop (${{ matrix.label }})",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062444221,
+          "name": "Stage 1 process tuple diagnostic (unqualified)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133062468416,
+          "name": "Stage 1 current-tuple process and packed qualification",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133089945107,
+          "name": "Fast feedback",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133089945987,
+          "name": "Full qualification",
+          "status": "queued",
+          "conclusion": null,
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133089946394,
+          "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata validate' || 'validate'",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133089946451,
+          "name": "Focused documentation and asset validation",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133089946525,
+          "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke'",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133089946591,
+          "name": "Renderer source validation",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133089946592,
+          "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata test') || 'test') }} (${{ matrix.shard }}/4)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133089946781,
+          "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata lint') || 'lint') }} (${{ matrix.scope }})",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133089946901,
+          "name": "Codex login Desktop (Linux x64)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133089946924,
+          "name": "macOS DMG artwork end-to-end",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": null
+        },
+        {
+          "id": 133089947129,
+          "name": "Retained OpenCode V1 and Host V2 original Desktop",
+          "status": "completed",
+          "conclusion": "skipped",
+          "run_id": 43795234688,
+          "logs_url": null,
+          "steps": null
+        }
+      ]
+    },
+    "isError": false
+  }
+}
