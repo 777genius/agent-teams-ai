@@ -4038,14 +4038,31 @@ export class TeamDataService {
       return;
     }
 
-    if (patch.op === 'request_changes' &&
-        (getReviewStateFromTask(taskBoard.getTask(taskId) as TeamTask) === 'reviewed' ||
-          (taskBoard.getKanbanState?.() as KanbanState | null)?.humanOnlyApproval === true)) {
-      taskBoard.requestChangesAsHuman(taskId, {
-        comment: patch.comment?.trim() || 'User requested changes.',
-        ...(patch.taskRefs?.length ? { taskRefs: patch.taskRefs } : {}),
-      });
-      return;
+    if (patch.op === 'request_changes') {
+      const task = taskBoard.getTask(taskId) as TeamTask;
+      const reviewState = getReviewStateFromTask(task);
+      const latestDecision = [...(task.historyEvents ?? [])].reverse().find(
+        (event) =>
+          event.type === 'review_requested' ||
+          event.type === 'review_changes_requested' ||
+          event.type === 'review_completed' ||
+          event.type === 'review_approved' ||
+          event.type === 'human_approved'
+      );
+      const retryHumanRejection =
+        (task.status === 'completed' || task.status === 'pending') &&
+        reviewState === 'needsFix' &&
+        latestDecision?.type === 'review_changes_requested' &&
+        latestDecision.actor === 'user';
+      if (reviewState === 'reviewed' ||
+          (taskBoard.getKanbanState?.() as KanbanState | null)?.humanOnlyApproval === true ||
+          retryHumanRejection) {
+        taskBoard.requestChangesAsHuman(taskId, {
+          comment: patch.comment?.trim() || 'User requested changes.',
+          ...(patch.taskRefs?.length ? { taskRefs: patch.taskRefs } : {}),
+        });
+        return;
+      }
     }
     const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
     taskBoard.requestChanges(taskId, {
