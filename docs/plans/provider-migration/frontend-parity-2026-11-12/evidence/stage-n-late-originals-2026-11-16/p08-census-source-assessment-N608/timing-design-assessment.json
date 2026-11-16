@@ -1,0 +1,90 @@
+{
+  "kind": "PROSPECTIVE_P08_EXISTING_QUERY_TIMING_DESIGN_ASSESSMENT",
+  "generatedAt": "2026-11-16T03:12:55.732681+00:00",
+  "status": "SOURCE_ONLY_DESIGN; no implementation, candidate source, R1 publication or execution",
+  "basis": {
+    "path": "/workspace/scratch/82d3f9ba6b85/p08-census-source-assessment-N608/assessment.json",
+    "bytes": 14930,
+    "blob": "8015ff5d1acca7b6679e7d97ebf74ea63bd401c2",
+    "sha256": "1c6cf3ca593f6efc93de0552cbd33b33101cc7bcbb156c7c2e3b94f8cc4ecb57"
+  },
+  "selectedDirection": "A private opt-in timing projection from the same existing combined PowerShell invocation into the same invocation's existing bounded censusReads row. This is diagnostic evidence for choosing a later repair, not a performance repair itself.",
+  "unchangedOriginalWork": [
+    "One fresh existing system PowerShell interpreter, then one original four-property Win32_Process command and one original Get-NetTCPConnection command in the same sequence.",
+    "Both complete original query strings, CreationDate/UTC/integer/executable projection, listener selection, original two data strings and their existing parsers remain byte-exact.",
+    "No new process, native query, CDP/RPC read, census, observation reuse, persistent interpreter, native handle, action, signal, timer, polling iteration or deadline is introduced.",
+    "Every original controller/driver/Main identity, lineage/orphan/listener/renderer guard, full census cap, three original HANDLE witnesses, two UI Stops, Quit and cleanup remains authoritative."
+  ],
+  "prospectiveSchema": {
+    "defaultWire": "The existing no-diagnostic callers retain exactly {processes:string,listeners:string}. processes(), listeners(), cleanup evidence and every unrelated caller remain unchanged.",
+    "optInWire": "The P08-only opt-in permits exactly the original two string keys plus processPipelineMs and listenerPipelineMs. Each new key is null or an integer0..30000; no PID/path/command text/credentials or arbitrary object is copied.",
+    "clock": "Use protected System.Diagnostics.Stopwatch.GetTimestamp/Frequency arithmetic immediately before and after each unchanged whole pipeline. Clock/type/conversion failures produce null only; keep the query statements outside all diagnostic catches.",
+    "powerShellSerialization": "Insert the two nullable primitive fields into the already existing outer envelope serialization. No second original query or second process-data serialization is needed; the process pipeline already contains its original projection/ConvertTo-Json.",
+    "unknownBehavior": "Missing, malformed, nonfinite, negative, out-of-range, fractional or otherwise refused diagnostic fields become unknown. Do not coerce or clamp them into valid durations. Preserve original rejection of malformed data strings and all unrecognized extra data-envelope keys. The exact opt-in closed-key compatibility requires a separately published R1.",
+    "publicReturn": "windowsProcessListenerSnapshot still returns only its existing {processes,listeners} data shape. A private protected observer may receive only the validated primitive timing pair after the original data parsing succeeds.",
+    "callerJoin": "The Gate holds timing primitives only in the same synchronous read closure. observeCensus projects them into the row already appended for that invocation; do not correlate by PID/time heuristic, mutate an earlier row, use a global last-value cache or replay a read.",
+    "trace": "Keep the existing512-row cap, truncated flag and original startMs/endMs/returned fields. Timing values are passive; no validator, remaining(), action or pass/fail branch may consume them.",
+    "maxTimingObjectAsciiBytes": 54,
+    "boundsLimit": "This bound is for the proposed fixed timing object alone, not the complete receipt. Added clock, arithmetic, allocation and output bytes consume the original budgets and transport capacity."
+  },
+  "distinguishableAndUnknown": {
+    "processPipelineMs": "Elapsed time for Get-CimInstance plus its original CreationDate filtering, per-row projection, UTC conversion, inner ConvertTo-Json and pipeline/materialization work. It is not a pure native CIM timer.",
+    "listenerPipelineMs": "Elapsed time for the original Get-NetTCPConnection plus its original port filter and OwningProcess projection. It includes any module/adapter work performed in that pipeline; no narrower share is proved.",
+    "wholeRead": "Retain the existing Node observeCensus interval for the complete synchronous read, which also includes interpreter startup/teardown, outer JSON formatting, transport, decoding and parsing.",
+    "unmeasuredResidual": "Subtracting the two child intervals from the overall Node interval gives only an approximate remainder across distinct clocks and boundaries. Do not call it startup, formatting or provider time; do not clamp a negative remainder or promote it into authority.",
+    "separatingMore": "A pure-CIM-versus-projection split would require splitting/interposing into the original pipeline and reviewing its materialization/error ordering. An outer-format-only measurement would require another output/protocol arrangement. Neither expansion is selected for this bounded design.",
+    "failedRead": "If a query fails, times out or output is partial, the original read still throws and existing returned=false is retained. Metadata may be absent; no recovery, query retry or new output sink is proposed."
+  },
+  "errorAndOutputLimits": [
+    "Diagnostic publisher/getter/projection failures must not replace the original result or the same thrown executor/parser object. Instrumented PowerShell line locations may change diagnostic stack text; byte-identical script error formatting is not claimed.",
+    "Protect only clock and timing projection work, never the original queries or data parser. The existing PowerShell ErrorActionPreference=Stop and original executor timeout remain unchanged.",
+    "Do not add a stderr line: pinned Node24.21 execFileSync forwards captured child stderr through process.stderr before returning/throwing. A new line would introduce another output/outer-PowerShell interaction and would need a separate reviewed correlation/partial-write contract.",
+    "No promise that diagnostic output survives a process timeout, hard kill, transport failure or final-receipt failure. Added work can consume the same remaining budget."
+  ],
+  "sameCimClassQuestion": {
+    "documented": "Microsoft Get-NetTCPConnection documentation names its output as root\\StandardCimv2\\MSFT_NetTCPConnection; the class documentation describes LocalPort uint16, OwningProcess uint32 and State2 Listen, with Windows8/Server2012 minimum. Get-CimInstance supports that namespace/class and filters.",
+    "notDocumentedByTheseSources": "These references do not establish complete equivalence of the exact installed cmdlet's no-match/provider-error/adapter behavior, permissions, enumeration or timing when bypassed with direct Get-CimInstance. The installed NetTCPIP CDXML implementation was not retained in this artifact.",
+    "disposition": "No direct-CIM replacement is selected. Same class identity alone is insufficient to claim unchanged original negative oracles or a performance gain."
+  },
+  "primarySources": [
+    {
+      "url": "https://raw.githubusercontent.com/nodejs/node/v24.21.0/lib/child_process.js",
+      "local": {
+        "path": "/workspace/scratch/82d3f9ba6b85/p08-census-source-assessment-N608/primary/node-v24.21.0-child_process.js",
+        "bytes": 29162,
+        "blob": "779aebab83183153fea6f5fcbc3ccc339492ee80",
+        "sha256": "df028ee287a6adad4bb69bd5daf4975311ceffe19c95c18fdc9f0662ea32ef68"
+      },
+      "scope": "Original execFileSync return/throw and inherited stderr forwarding implementation; no Node code executed."
+    },
+    {
+      "url": "https://raw.githubusercontent.com/MicrosoftDocs/windows-powershell-docs/main/docset/winserver2025-ps/NetTCPIP/Get-NetTCPConnection.md",
+      "local": {
+        "path": "/workspace/scratch/82d3f9ba6b85/p08-census-source-assessment-N608/primary/Get-NetTCPConnection-primary.md",
+        "bytes": 7034,
+        "blob": "4227ecb09fddc9073e4afb818f319cf93211c873",
+        "sha256": "a47961fb0a81b2cac9b7dfa702c14b5788eab73b3d1857b22130ecd84212018e"
+      },
+      "scope": "Official cmdlet signature/output class; bytes bound to this read, not a pinned runner module."
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/fwp/wmi/nettcpipprov/msft-nettcpconnection",
+      "scope": "Official class schema/Listen value/support; not implementation or timing equivalence."
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/powershell/module/cimcmdlets/get-ciminstance?view=powershell-5.1",
+      "scope": "Official namespace/class/filter capability only."
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.stopwatch.gettimestamp?view=netframework-4.8.1",
+      "scope": "Counter primitive definition; no local/runtime measurement."
+    }
+  ],
+  "prospectiveValidationBoundary": [
+    "Current privacy original177/24 GREEN must be retained before any separately authorized diagnostic source publication/application.",
+    "A future exact source/R1/R2 must cover platform, Gate and their original existing helper tests/source pins. Static tests must execute the actual helper/observer seams, preserve all existing malformed-envelope/foreign/stale/cap/deadline assertions, and distinguish diagnostic unknown from acceptance.",
+    "Only the existing original CI route is available. No local test/compiler/lint/install/native venue, extra benchmark, side workflow or retry is authorized.",
+    "Any future diagnostic-only RED demonstrates absent timing retention, not the native timeout or a performance correction. Only the original resulting-source Windows journeys can provide actual timing and all original acceptance/cleanup evidence.",
+    "This assessment creates no source file or test candidate and does not authorize implementation."
+  ]
+}

@@ -1,0 +1,1484 @@
+{
+  "schemaVersion": 1,
+  "result": "APPROVE",
+  "reviewer": "migration_scope",
+  "reviewedAtUtc": "2026-11-16T03:23:06.802185+00:00",
+  "scope": "Independent original M0660 Linux-x64 Management/V1 finite HTTP peer evidence and exact author wording review. No qualification transfer to the newer privacy source.",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "sourceTree": "e70ccffc6d55ad42c2249518bf142e2ed32ddf91",
+  "runId": 43780997237,
+  "jobId": 133017916110,
+  "artifactId": 14191864712,
+  "originalConclusion": "success",
+  "originalReceiptStatus": "PASS",
+  "authorFiles": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/audit.json",
+      "bytes": 81080,
+      "blob": "3d1a823ada559de6fd03d0c7e1d27b6e531e3d2c",
+      "sha256": "e371f79af59879abd7269ff629ccd9047c150263201cd76901a36eb04eff3580"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/Plan29-management-v1-oauth-appendix.md",
+      "bytes": 8431,
+      "blob": "0e363558b85297ef5442bc02c1c2c7d85e2b3d26",
+      "sha256": "a0c3c139e1a42286c53ffda462e8d6ed961fedab476b1138f33152ff81ceef29"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/checkpoint-management-v1.json",
+      "bytes": 11388,
+      "blob": "a599a6acca342c738ef92ea1ac00e987405bd905",
+      "sha256": "2795f6e1172aa05c00a719b6e522f8c48857843f4d25ded22c4fdf1b01b9d533"
+    }
+  ],
+  "findings": [],
+  "correctionRequired": false,
+  "rawIntegrity": {
+    "payloads": [
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/job-133017916110.log",
+        "bytes": 180552,
+        "blob": "a1dfd46eaf44fcf4e0815ce606f3291d8d5cd129",
+        "sha256": "58543bd8808ba08289529c74e7c87e1e4d10dd867272c9c28409ba15c2c99328"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/artifact-14191864712.zip",
+        "bytes": 1131454,
+        "blob": "d715c6b7c907ea460a8f7de552251855b0f2098b",
+        "sha256": "8651bf15434f4acce89efbd1a1130cfbc8fc7864645df5e6a4806ede6ee01d5b"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/archive-audit.json",
+        "bytes": 7184,
+        "blob": "9bc5901c9ca9a253d79a54684353141867a814dd",
+        "sha256": "c640ddd0639f15cb21b2eab61d483e2af1f3340aaeb53c1cda2982251b0c9d46"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-artifacts-0215.json",
+        "bytes": 19753,
+        "blob": "699d3f9f470c9aba779664f159cefac43cbc4861",
+        "sha256": "f434f1a38fce2695c3e828119cd6424c0a986afbf95406a147c2eadfca87416e"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0300.json",
+        "bytes": 212142,
+        "blob": "aaa9e447920ba1d0e4ae3797169058bc2df43a72",
+        "sha256": "2056635c64f9372a98d560f3ceb63a025fbd92de2bef0eaa5a6a72e8f8dd4f80"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+        "bytes": 583301,
+        "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+        "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/audit.json",
+        "bytes": 81080,
+        "blob": "3d1a823ada559de6fd03d0c7e1d27b6e531e3d2c",
+        "sha256": "e371f79af59879abd7269ff629ccd9047c150263201cd76901a36eb04eff3580"
+      },
+      {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/Plan29-management-v1-oauth-appendix.md",
+        "bytes": 8431,
+        "blob": "0e363558b85297ef5442bc02c1c2c7d85e2b3d26",
+        "sha256": "a0c3c139e1a42286c53ffda462e8d6ed961fedab476b1138f33152ff81ceef29"
+      }
+    ],
+    "payloadCount": 8,
+    "payloadBytes": 2223897,
+    "allPayloadBytesBlobSha256Exact": true,
+    "officialArtifact": {
+      "id": 14191864712,
+      "name": "host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-management",
+      "size_in_bytes": 1131454,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14191864712",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14191864712/zip",
+      "expired": false,
+      "created_at": "2026-11-16T02:13:18Z",
+      "expires_at": "2026-11-30T02:13:17Z",
+      "updated_at": "2026-11-16T02:13:18Z",
+      "digest": "sha256:8651bf15434f4acce89efbd1a1130cfbc8fc7864645df5e6a4806ede6ee01d5b",
+      "workflow_run": {
+        "id": 43780997237,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+      }
+    },
+    "terminalJob": {
+      "id": 133017916110,
+      "name": "Offline Host Desktop (linux-x64, management)",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 43780997237,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Verify original checkout and runner tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Prepare private Linux display",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Install frozen workspace and Electron",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Build existing Desktop prerequisites and verify admission",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Verify original Runtime and Team conversation contracts",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 9
+        },
+        {
+          "name": "Verify complete workspace types and original typed lint scopes",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10
+        },
+        {
+          "name": "Capture package-manager and Host inputs without vendor executables",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Capture original controlled Linux process input without a provider",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12
+        },
+        {
+          "name": "Exercise ordinary Team controls and renderer reload",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13
+        },
+        {
+          "name": "Exercise ordinary Taskboard controls and persistence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14
+        },
+        {
+          "name": "Exercise original Skills and cross-Team controls",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 15
+        },
+        {
+          "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16
+        },
+        {
+          "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 17
+        },
+        {
+          "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 18
+        },
+        {
+          "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19
+        },
+        {
+          "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20
+        },
+        {
+          "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21
+        },
+        {
+          "name": "Exercise original Review after a cold Host and app restart",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22
+        },
+        {
+          "name": "Exercise saved next-launch selection while the original Team remains live",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 23
+        },
+        {
+          "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 24
+        },
+        {
+          "name": "Exercise stock Codex Update while the original Team retains its captured source",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 25
+        },
+        {
+          "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 26
+        },
+        {
+          "name": "Prepare exact OpenCode V2 Bun and engine graph",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 27
+        },
+        {
+          "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 28
+        },
+        {
+          "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 29
+        },
+        {
+          "name": "Verify exact source, original screenshots, receipts and cleanup",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 30
+        },
+        {
+          "name": "Preserve original Desktop evidence, including failures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 31
+        },
+        {
+          "name": "Post Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 60
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 61
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 62
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 63
+        }
+      ]
+    },
+    "retainedApiOnly": true,
+    "zip": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/artifact-14191864712.zip",
+      "bytes": 1131454,
+      "blob": "d715c6b7c907ea460a8f7de552251855b0f2098b",
+      "sha256": "8651bf15434f4acce89efbd1a1130cfbc8fc7864645df5e6a4806ede6ee01d5b"
+    },
+    "members": [
+      {
+        "path": "TEST-desktop-backend-wOKJYu/TEST-oauth-host-management/native-effects.ndjson",
+        "crc32": "8c5eb6de",
+        "bytes": 421,
+        "blob": "e75005403941ddaf8677272d883301c8720e2837",
+        "sha256": "7ebe4555771db782bd1d7e41deddc4ca0ed26a03eaf4e1ee609940a5d30f82c0",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-desktop-backend-wOKJYu/desktop-app.log",
+        "crc32": "1e259ec3",
+        "bytes": 23676,
+        "blob": "8b82c13c75c9d2282fe5c9c8de193422a8bfcb96",
+        "sha256": "a5da6690e3b3494e7826a933b99df54a55a589ee2e082f7a42caea4ff0c3bfa1",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-desktop-backend-wOKJYu/desktop-backend-receipt.json",
+        "crc32": "c769359b",
+        "bytes": 695841,
+        "blob": "48fb64aa5eaf29a0033bd6cbceeffe801e2d8aec",
+        "sha256": "5babcfc413c64cad139e798c1b0780e703d902ae0c772bc716ad1c88610ade36",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-desktop-backend-wOKJYu/desktop-descriptor.json",
+        "crc32": "315bcf1e",
+        "bytes": 2609,
+        "blob": "a62083d34c9167a27eae2d68c3520a36fac804f4",
+        "sha256": "2f6a068a9c1a79429ad30e72416a246b2f70a85ed147a71de4e537f29eecad5c",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-desktop-backend-wOKJYu/host-profile.json",
+        "crc32": "83e77d8e",
+        "bytes": 2773,
+        "blob": "e0bea575ababe609d3fa90c563fcea02490a82da",
+        "sha256": "a78be5da1ad6cadf75b33aa2476767b573c0f0c4d0f07c2a2132505f8a423a1c",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-desktop-backend-wOKJYu/hoststore/management-commands/3b8579f42248604c8bcbf3c2d574526770a16cdf85a34cba6a270021ae80a9c6.json",
+        "crc32": "db3bd243",
+        "bytes": 894,
+        "blob": "fbf91c8910fb4de3cc9016f58ca135ab7011e9d5",
+        "sha256": "f160bd852fa3fc89c58e5279b4cd385798ccc096370ee3425b9d431fd8a16d4a",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-desktop-backend-wOKJYu/hoststore/management-commands/60d17345228b9538808dd2b3478b8ad2df7a66c740c4f4d959003b8faf3ecc80.json",
+        "crc32": "1ac15a75",
+        "bytes": 645,
+        "blob": "700e02bb492901d990e4dba518222538218efda1",
+        "sha256": "e1b0e0c396f45e1c8ace89c476432699fccfb9b3d3b668e538f8c15e16f674fc",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-desktop-backend-wOKJYu/hoststore/management-commands/a435487874785a86f4aa3c78a3d4dce3a4dfa69d819410605b66504512531dea.json",
+        "crc32": "bbb38430",
+        "bytes": 729,
+        "blob": "bfdeb942174ac526e2bca9494110aa0828c6e4f7",
+        "sha256": "d9709474b08956e864e96422f0513a2f4b943b22672801ca1dd231a1b87317ab",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-desktop-backend-wOKJYu/hoststore/management-commands/ef1b233097d5b4b6719838acde96d4f4409ae8224075bb6a9410afa5e67c075b.json",
+        "crc32": "d4e39ea1",
+        "bytes": 642,
+        "blob": "1de8c7d16f3129a21eacbc4ed49a53e01c34a32f",
+        "sha256": "7b4adae29a84695890f679ac0b02f62d783549a3aae63b161cebf8b362ec40e8",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-desktop-backend-wOKJYu/sentinel-invocations.ndjson",
+        "crc32": "c585d03d",
+        "bytes": 194,
+        "blob": "0efac897d88cb9c13cbe984603f1abd535327351",
+        "sha256": "a947db1d1a9368a9741a79d871cf8c5c755f5cbac26a239431371e54cb5aaf3b",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-desktop-backend-wOKJYu/ui-emulated-management-effects.json",
+        "crc32": "2272f6dd",
+        "bytes": 2438,
+        "blob": "9096b5ad9a13801a411d105ba493b4fda00bedad",
+        "sha256": "e6573b6c61841e2e0edf24555c07400f6b0c55c82c3e26e3fd7f38d89bde412b",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-desktop-backend-wOKJYu/ui-emulated-management-final.png",
+        "crc32": "bf6d868a",
+        "bytes": 107244,
+        "blob": "8697f1eef80bedccb5bf669f6315848b18b54711",
+        "sha256": "1174a49314985fe7d76736f241659e41eac9b83d6739795c31eee9307de88c87",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-desktop-backend-wOKJYu/ui-emulated-model-effort-reloaded.png",
+        "crc32": "a3dac511",
+        "bytes": 44709,
+        "blob": "64aeb639c1a905654557648cae8935687701dbe2",
+        "sha256": "e90bf6cfbdb6f66c43a3fb3fa92d71cbddcbfd4e79d6587e674a46b9ad2ba28a",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-desktop-backend-wOKJYu/ui-emulated-model-effort-selected.png",
+        "crc32": "ddde5feb",
+        "bytes": 63570,
+        "blob": "b866653e390aea27887bd27c684a6c9d62097674",
+        "sha256": "fbc02b6b860bcda95e07ae1317eea1012e2177647469d0cd51babe0a1f7787a9",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-desktop-backend-wOKJYu/ui-emulated-oauth-device-waiting.png",
+        "crc32": "b00fbc43",
+        "bytes": 149705,
+        "blob": "b640f145070923021476e6e85db2f05a46ed26dc",
+        "sha256": "1848fef4c18478f6cfaec74f8a4932927840e6f9fee7d4b0a01784f2f54d9009",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-desktop-backend-wOKJYu/ui-emulated-oauth-waiting.png",
+        "crc32": "046e043a",
+        "bytes": 105098,
+        "blob": "2c477d0d93fe3b9e331031acc9372c40f157aa79",
+        "sha256": "c8be3a37779c4f244252680634df7a3bb3ea31caa5ce843d2ca9f8eac46f57b5",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-desktop-backend-wOKJYu/ui-emulated-provider-connected.png",
+        "crc32": "fffae81e",
+        "bytes": 127253,
+        "blob": "0233d7d5c2cc9d46428c38c7e76e2075064a8cef",
+        "sha256": "37d6cb9629b22e4364703b1e9abd3d7ab1d92ce0bab52a48d7d2ece17d74e077",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-desktop-backend-wOKJYu/ui-seed-receipt.json",
+        "crc32": "5e3449d9",
+        "bytes": 2037,
+        "blob": "ad7438c4d8e4cba9ff7bc70a6416c3fd59e756d0",
+        "sha256": "ca071f4ba88dc8399eb07bfd7b77eaf20f1885bd75479835ea813333c598a6ed",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-Cq9Z9A/linux-child-exec/linux-child-exec",
+        "crc32": "ed0ca14b",
+        "bytes": 790608,
+        "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+        "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "host-emulated-emulated-management-ui.log",
+        "crc32": "5ab1512f",
+        "bytes": 225,
+        "blob": "f06c9f4d5ffe68e6dc09cfcd467372902da57456",
+        "sha256": "0ac2946c69a74e90f448dabdf444812fa3e26d93ac12c0da2bf29f14c2981403",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "TEST-emulated-ui-inputs-Cq9Z9A/linux-child-exec/manifest.json",
+        "crc32": "e06f2443",
+        "bytes": 2408,
+        "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+        "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "host-emulated-inputs.json",
+        "crc32": "8def4bae",
+        "bytes": 1803,
+        "blob": "76650507912f6582e2be9078c3f27f6abdc33b7f",
+        "sha256": "45a9548c800022c6bd8ea095093a252bb5f6aef5c5509ba7f4201da7e212b535",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "host-emulated-linux-child-exec-selection.json",
+        "crc32": "63a94172",
+        "bytes": 271,
+        "blob": "2370caf81e7409f4bc1c977de38312601019eacb",
+        "sha256": "1018f7c5caccad9de0e2bc8440964234f998231186d08bd707aaf69323e00ca0",
+        "extractedBytesEqual": true
+      },
+      {
+        "path": "host-emulated-summary.json",
+        "crc32": "abb5893f",
+        "bytes": 976,
+        "blob": "b82a2db3563bf7524cd8a5f2eba23c4c97584f50",
+        "sha256": "76055a583dee1ed71fda95351cd350671ee456fbe06d050e2378a9872ebeda8e",
+        "extractedBytesEqual": true
+      }
+    ],
+    "memberCount": 24,
+    "safeUniquePaths": true,
+    "noSymlinks": true,
+    "allCrcExact": true,
+    "allExtractedBytesExact": true,
+    "originalReceipt": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/extracted/TEST-desktop-backend-wOKJYu/desktop-backend-receipt.json",
+      "bytes": 695841,
+      "blob": "48fb64aa5eaf29a0033bd6cbceeffe801e2d8aec",
+      "sha256": "5babcfc413c64cad139e798c1b0780e703d902ae0c772bc716ad1c88610ade36"
+    },
+    "fullOriginalLogRead": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/job-133017916110.log",
+      "bytes": 180552,
+      "blob": "a1dfd46eaf44fcf4e0815ce606f3291d8d5cd129",
+      "sha256": "58543bd8808ba08289529c74e7c87e1e4d10dd867272c9c28409ba15c2c99328"
+    },
+    "originalLogLines": 1758,
+    "uploadCountSizeDigestRunHeadExact": true
+  },
+  "sourceReview": {
+    "freshGitAllSelectedInputsRead": true,
+    "count": 1757,
+    "totalBytes": 20308016,
+    "allUnique": true,
+    "orderedBeforeAfterEqual": true,
+    "allReceiptHashesMatchActualGit": true,
+    "allRowsMatchExistingSourceCensus": true,
+    "orderedCompactRowsSha256": "7ea0d2b4074eaab92703709af2c95d7cebe50b59f8593f265956c329b1346fa4",
+    "rowSerialization": "UTF-8 JSON compact array; each row keys path,bytes,blob,sha256 in that order. Existing source basis contains the same full mapping, with gitBytes/gitBlob names.",
+    "existingFullMapping": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    },
+    "freshClaimBearingSources": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-management-ui.ts",
+        "blob": "974279d277e8f9dbac84cf0c41e5978ffad2914d",
+        "bytes": 22331,
+        "sha256": "3416d9cfb5e9320bda70f94e5ebab3f1aa7a16bcc6cc44320c96256392a898a9",
+        "lines": 283
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-management-fixture.ts",
+        "blob": "444632e731eeaf8d6cd652dd9e42309e10952d8e",
+        "bytes": 9606,
+        "sha256": "18744741dbd4c6cd2b5ecbc0374198f9f0920b59fbe14e5b55c4537cff64017d",
+        "lines": 147
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-create-config-ui-smoke.ts",
+        "blob": "64907147154ac556d9936585b6745a85738deb86",
+        "bytes": 9597,
+        "sha256": "d5d3c2ce06d8ad5f41434a20a5cb4592a8ccc2dcc1da20175bbb966dbac68e30",
+        "lines": 263
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "blob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+        "bytes": 49613,
+        "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+        "lines": 787
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "bytes": 54778,
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+        "lines": 791
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+        "bytes": 25052,
+        "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7",
+        "lines": 456
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/management-opencode-process.ts",
+        "blob": "496a36328075db9540116bf2a37bef1c42b20d20",
+        "bytes": 10836,
+        "sha256": "ab59330054c01a929bc3c7e0e3afe00081068efe19b58cd0865d8efd2786bff2",
+        "lines": 265
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/FileManagementCommandStore.ts",
+        "blob": "d3068dcabf3ea7334a252967b43931f8751f7d58",
+        "bytes": 7965,
+        "sha256": "58bb413b06a3d442f1916cba3d7afcf0e44679f679810459409a53881900f1da",
+        "lines": 212
+      },
+      {
+        "path": "packages/legacy-agent-host/src/management/identity.ts",
+        "blob": "d4e5631330f08ccc4138353f6e2b5f49f7cac01f",
+        "bytes": 709,
+        "sha256": "a795125fbf639552833eb3730d971b9de16437ed3507be303a5b42d541ba8bb7",
+        "lines": 19
+      },
+      {
+        "path": "src/main/utils/testChildProcessTrace.ts",
+        "blob": "b3d2ec4b410de5df6d63075955fa8f89fc7c9b88",
+        "bytes": 9633,
+        "sha256": "bff51a48a14cc0d77f8c7233c034c1bbe0eb79b0f5f5270c9540faf70e6472eb",
+        "lines": 185
+      },
+      {
+        "path": "packages/legacy-agent-host/native/linux-child-exec.c",
+        "blob": "5f094bf61ae831f4b84339eaabb29d6f46c06a2e",
+        "bytes": 1674,
+        "sha256": "29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337",
+        "lines": 42
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "bytes": 101741,
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+        "lines": 1312
+      }
+    ],
+    "semanticAnchors": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-management-ui.ts",
+        "ranges": [
+          "48-65",
+          "66-121",
+          "123-199",
+          "200-283"
+        ],
+        "reason": "Bounded original observation loop; save-only creation/no Runtime and real reload assertions; credential set/remove; one manual and one automatic OAuth start/cancel; copy acknowledgement and known-field checks."
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-management-fixture.ts",
+        "ranges": [
+          "18-29",
+          "31-105",
+          "108-147"
+        ],
+        "reason": "Captured finite peer, profile without Runtime, restricted TEST opener/version sentinels and original-PID absence cleanup."
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/management-opencode-process.ts",
+        "ranges": [
+          "1-265"
+        ],
+        "reason": "Full finite HTTP behavior read; raw effect emission and blocked automatic callback before cancellation; no arbitrary model/auth claim."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/FileManagementCommandStore.ts",
+        "ranges": [
+          "79-93",
+          "155-193"
+        ],
+        "reason": "Canonical body digest excluding digest property; hashed command-ID filename and receipt parsing."
+      },
+      {
+        "path": "packages/legacy-agent-host/src/management/identity.ts",
+        "ranges": [
+          "1-19"
+        ],
+        "reason": "Independent sorted JSON SHA256 reproduction on original journal bytes."
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+        "ranges": [
+          "384-508"
+        ],
+        "reason": "Natural original-child exit and fresh group/Host absence can settle prior orphan row; numeric PGID alone never authorizes signaling."
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "ranges": [
+          "610-628",
+          "677-734"
+        ],
+        "reason": "Original guarded app Quit, source freeze, group and finite-management peer observations, final sentinel census."
+      },
+      {
+        "path": "src/main/utils/testChildProcessTrace.ts",
+        "ranges": [
+          "66-148"
+        ],
+        "reason": "Protected bounded diagnostic child callback, birth observation non-atomic, original exit event and summary limits."
+      },
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "ranges": [
+          "96-104",
+          "343-351",
+          "486-590",
+          "900-919",
+          "1139-1156"
+        ],
+        "reason": "Original prerequisite commands, selected Management invocation, final exact source/receipt/cleanup and screenshot verification."
+      }
+    ],
+    "profile": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/extracted/TEST-desktop-backend-wOKJYu/host-profile.json",
+      "bytes": 2773,
+      "blob": "e0bea575ababe609d3fa90c563fcea02490a82da",
+      "sha256": "a78be5da1ad6cadf75b33aa2476767b573c0f0c4d0f07c2a2132505f8a423a1c"
+    },
+    "descriptor": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/extracted/TEST-desktop-backend-wOKJYu/desktop-descriptor.json",
+      "bytes": 2609,
+      "blob": "a62083d34c9167a27eae2d68c3520a36fac804f4",
+      "sha256": "2f6a068a9c1a79429ad30e72416a246b2f70a85ed147a71de4e537f29eecad5c"
+    },
+    "profileHasRuntime": false,
+    "managementEntries": 1,
+    "profileDescriptorReceiptPinsExact": true,
+    "compiledHashesRecordedCount": 14,
+    "compiledOutputCopiesInThisZip": 0,
+    "compiledQualification": "Original after-startup hash roster retained. No independent rebuild or complete installed-dependency inventory. Captured peer/opener/version executable hashes are retained and original source rechecks them; those scripts are not separately archived here."
+  },
+  "originalExecution": {
+    "nodeVersion": "24.21.0",
+    "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "pnpmVersionInOriginalLog": "11.22.0",
+    "prerequisiteCommands": [
+      {
+        "originalLine": 667,
+        "argv": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts"
+      },
+      {
+        "originalLine": 668,
+        "argv": "node --test test/scripts/installDependenciesWithRetry.test.mjs"
+      }
+    ],
+    "reporterBlocks": {
+      "tests": [
+        115,
+        7
+      ],
+      "pass": [
+        115,
+        7
+      ],
+      "fail": [
+        0,
+        0
+      ],
+      "cancelled": [
+        0,
+        0
+      ],
+      "skipped": [
+        0,
+        0
+      ],
+      "todo": [
+        0,
+        0
+      ],
+      "duration_ms": [
+        8461.035629,
+        170.795861
+      ]
+    },
+    "modeOutput": [
+      "{\"phase\":\"prepared\",\"receipt\":\"/home/runner/work/_temp/TEST-desktop-backend-wOKJYu/desktop-backend-receipt.json\"}",
+      "{\"status\":\"PASS\",\"receipt\":\"/home/runner/work/_temp/TEST-desktop-backend-wOKJYu/desktop-backend-receipt.json\"}"
+    ],
+    "modeOutputVerbatimInFullLog": true,
+    "summary": {
+      "status": "PASS",
+      "scope": "selected lane only",
+      "lane": "management",
+      "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "completed": [
+        {
+          "mode": "emulated-management-ui",
+          "receipt": "/home/runner/work/_temp/TEST-desktop-backend-wOKJYu/desktop-backend-receipt.json",
+          "screenshots": [
+            "fbc02b6b860bcda95e07ae1317eea1012e2177647469d0cd51babe0a1f7787a9",
+            "e90bf6cfbdb6f66c43a3fb3fa92d71cbddcbfd4e79d6587e674a46b9ad2ba28a",
+            "37d6cb9629b22e4364703b1e9abd3d7ab1d92ce0bab52a48d7d2ece17d74e077",
+            "c8be3a37779c4f244252680634df7a3bb3ea31caa5ce843d2ca9f8eac46f57b5",
+            "1848fef4c18478f6cfaec74f8a4932927840e6f9fee7d4b0a01784f2f54d9009",
+            "1174a49314985fe7d76736f241659e41eac9b83d6739795c31eee9307de88c87"
+          ]
+        }
+      ],
+      "nativeProviders": "not executed",
+      "vendorAuthQualified": false,
+      "releaseQualified": false,
+      "visualReview": "original screenshots retained for independent inspection"
+    },
+    "completeSummaryJsonPrintedInFullLog": false,
+    "selectedMode": "emulated-management-ui",
+    "originalApiStepsSuccess": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      11,
+      16,
+      30,
+      31,
+      60,
+      61,
+      62,
+      63
+    ],
+    "originalApiStepsSkipped": [
+      9,
+      10,
+      12,
+      13,
+      14,
+      15,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29
+    ],
+    "teamPrivacyAndFullTypesSteps": "9 and 10 skipped in this lane; 115+7 prerequisites do not qualify either."
+  },
+  "managementProof": {
+    "originalProofEqualsAuthorCopy": true,
+    "uiJournalRows": 65,
+    "journalActionCounts": {
+      "mouseMoved": 31,
+      "mouseClick": 31,
+      "mouseWheel": 3
+    },
+    "journalMeaning": "65 original mouse/scroll journal entries, not 65 business mutations or total observation reads; click rows use original attempted state and subsequent original assertions establish outcomes.",
+    "savedSelection": {
+      "providerId": "opencode",
+      "model": "local/TEST-model",
+      "effort": "high"
+    },
+    "creationReceipt": {
+      "schemaVersion": 1,
+      "ownerId": "TEST-desktop-owner-TEST-desktop-backend-wOKJYu",
+      "profileId": "TEST-desktop-profile-TEST-desktop-backend-wOKJYu",
+      "principalId": "TEST-human",
+      "commandId": "1f8a6ab4-71f1-4163-a3b5-559bcd1a7564",
+      "fingerprint": "4f992170ac6ec354346f3f1a9c4afc3e5fc60ef10f69072c036b9dd8df7ebda5",
+      "intent": {
+        "contextId": "local",
+        "teamName": "test-emulated-model-effort",
+        "savedSettings": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-wOKJYu/workspace",
+          "providerId": "opencode",
+          "model": "local/TEST-model",
+          "effort": "high",
+          "syncModelsWithLead": true,
+          "limitContext": false,
+          "skipPermissions": true
+        },
+        "members": []
+      },
+      "definition": {
+        "scope": {
+          "projectId": "local",
+          "workspaceId": "local",
+          "teamId": "68d8e3ac-ae73-52bf-8102-22b02d7cd422",
+          "runId": "7d3d20d9-65ec-585b-b850-ffdd1ae98398",
+          "memberId": "user",
+          "generation": "1"
+        },
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-wOKJYu",
+          "teamId": "68d8e3ac-ae73-52bf-8102-22b02d7cd422",
+          "teamName": "test-emulated-model-effort"
+        },
+        "savedSettings": {
+          "cwd": "/home/runner/work/_temp/TEST-desktop-backend-wOKJYu/workspace",
+          "providerId": "opencode",
+          "model": "local/TEST-model",
+          "effort": "high",
+          "syncModelsWithLead": true,
+          "limitContext": false,
+          "skipPermissions": true
+        },
+        "members": [
+          {
+            "memberId": "4e71e4c2-1cdd-5d31-8740-b4a2830db45c",
+            "name": "team-lead",
+            "role": "lead"
+          }
+        ],
+        "grants": [
+          {
+            "principalId": "TEST-human",
+            "memberName": "user",
+            "permissions": [
+              "read",
+              "task.write",
+              "message.write",
+              "process.write",
+              "admin"
+            ]
+          }
+        ]
+      },
+      "record": {
+        "contextId": "local",
+        "teamId": "68d8e3ac-ae73-52bf-8102-22b02d7cd422",
+        "teamName": "test-emulated-model-effort",
+        "members": [
+          {
+            "memberId": "4e71e4c2-1cdd-5d31-8740-b4a2830db45c",
+            "label": "team-lead"
+          }
+        ],
+        "binding": {
+          "schemaVersion": 1,
+          "handleId": "ab9b612d-481c-5d61-a0a8-f9f0fe5b8591",
+          "scope": {
+            "projectId": "local",
+            "workspaceId": "local",
+            "teamId": "68d8e3ac-ae73-52bf-8102-22b02d7cd422",
+            "runId": "7d3d20d9-65ec-585b-b850-ffdd1ae98398",
+            "memberId": "user",
+            "generation": "1"
+          }
+        }
+      },
+      "phase": "published",
+      "bootstrapPublished": true
+    },
+    "selectionRetainedAfterReload": true,
+    "saveOnlyNoRuntimeBoundary": "Source asserts owner.runtimeCaptures empty and unchanged saved owner state after real Page.reload with new timeOrigin. Owner/registry files not independently archived; only original asserted/embedded data.",
+    "credentialEffects": [
+      {
+        "event": "credential-written",
+        "providerId": "TEST-api",
+        "pid": 5271
+      },
+      {
+        "event": "credential-forgotten",
+        "providerId": "TEST-api",
+        "pid": 5271
+      },
+      {
+        "event": "authorize",
+        "providerId": "TEST-oauth-code",
+        "pid": 5271
+      }
+    ],
+    "manualOAuth": {
+      "phase": "cancelled",
+      "resourceHeld": false,
+      "credentialAbsent": true,
+      "testOpenerCount": 1
+    },
+    "automaticOAuth": {
+      "phaseBeforeCancel": "completing",
+      "phase": "cancelled",
+      "resourceHeld": false,
+      "credentialAbsent": true,
+      "deviceCodeRendered": true,
+      "copyAcknowledged": true,
+      "privateTextAbsent": true,
+      "privateLinkAbsent": true,
+      "cancelEnabled": true,
+      "testOpenerCount": 2,
+      "authorizeCount": 1,
+      "callbackCount": 1
+    },
+    "sameOriginalCommandIdentifiers": {
+      "manual": "7b03143a-8584-459b-a0be-e75c7918b379",
+      "automatic": "2b6d216c-d016-4423-90fd-56b2168c3578"
+    },
+    "journalFiles": [
+      {
+        "file": {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/extracted/TEST-desktop-backend-wOKJYu/hoststore/management-commands/3b8579f42248604c8bcbf3c2d574526770a16cdf85a34cba6a270021ae80a9c6.json",
+          "bytes": 894,
+          "blob": "fbf91c8910fb4de3cc9016f58ca135ab7011e9d5",
+          "sha256": "f160bd852fa3fc89c58e5279b4cd385798ccc096370ee3425b9d431fd8a16d4a"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "2b6d216c-d016-4423-90fd-56b2168c3578",
+          "profileId": "TEST-emulated-management",
+          "configRevision": "TEST-emulated-config",
+          "providerId": "TEST-oauth-auto",
+          "fingerprint": "0fb786fd577fe92be76ff0abe80cebccdb82783953298c4b4ec0ab4d6834e743",
+          "selectionDigest": "a190443fe4d448a48d06f936a19dbe95df02316a3f3c5befeca8fd769131faf7",
+          "resourceId": "aa70655dce7cdb93ca257b76548027e0974e151b0b9274952d7d22c48b8938e7",
+          "resourceHeld": false,
+          "kind": "oauth",
+          "methodIndex": 0,
+          "phase": "cancelled",
+          "completionMethod": "auto",
+          "completionCommandId": "2b6d216c-d016-4423-90fd-56b2168c3578:auto",
+          "completionFingerprint": "87de8395c1c8f1be3415705b0853827ec3fb75e00e6f03998d4077efa082e482",
+          "sequence": 5,
+          "expiresAt": 1794795223838,
+          "reason": "cancelled",
+          "digest": "97a0b2d3229ce1ea897ab1f10d0539779f72870b7348c9d5083777915aeeb89f"
+        },
+        "canonicalDigestExact": true,
+        "commandFilenameExact": true
+      },
+      {
+        "file": {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/extracted/TEST-desktop-backend-wOKJYu/hoststore/management-commands/60d17345228b9538808dd2b3478b8ad2df7a66c740c4f4d959003b8faf3ecc80.json",
+          "bytes": 645,
+          "blob": "700e02bb492901d990e4dba518222538218efda1",
+          "sha256": "e1b0e0c396f45e1c8ace89c476432699fccfb9b3d3b668e538f8c15e16f674fc"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "f2b8c0e3-e51b-4af5-b12f-07de54c7e8d1",
+          "profileId": "TEST-emulated-management",
+          "configRevision": "TEST-emulated-config",
+          "providerId": "TEST-api",
+          "fingerprint": "c900b16cfb5c6e6048502121f4c66a08a94a8fd3a8e802a7e645ff26351d4839",
+          "selectionDigest": "a190443fe4d448a48d06f936a19dbe95df02316a3f3c5befeca8fd769131faf7",
+          "resourceId": "aa70655dce7cdb93ca257b76548027e0974e151b0b9274952d7d22c48b8938e7",
+          "resourceHeld": false,
+          "kind": "credential.forget",
+          "phase": "completed",
+          "finishedAtMs": 1794795189887,
+          "digest": "5c37ae669338e925a122f6d94c75e149e56077be10114151f86ad2662c950fd8"
+        },
+        "canonicalDigestExact": true,
+        "commandFilenameExact": true
+      },
+      {
+        "file": {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/extracted/TEST-desktop-backend-wOKJYu/hoststore/management-commands/a435487874785a86f4aa3c78a3d4dce3a4dfa69d819410605b66504512531dea.json",
+          "bytes": 729,
+          "blob": "bfdeb942174ac526e2bca9494110aa0828c6e4f7",
+          "sha256": "d9709474b08956e864e96422f0513a2f4b943b22672801ca1dd231a1b87317ab"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "7b03143a-8584-459b-a0be-e75c7918b379",
+          "profileId": "TEST-emulated-management",
+          "configRevision": "TEST-emulated-config",
+          "providerId": "TEST-oauth-code",
+          "fingerprint": "de827a45c07be6cbd9e115612ded361de9dc67f769be4ca158ba76c2b9732d75",
+          "selectionDigest": "a190443fe4d448a48d06f936a19dbe95df02316a3f3c5befeca8fd769131faf7",
+          "resourceId": "aa70655dce7cdb93ca257b76548027e0974e151b0b9274952d7d22c48b8938e7",
+          "resourceHeld": false,
+          "kind": "oauth",
+          "methodIndex": 0,
+          "phase": "cancelled",
+          "completionMethod": "code",
+          "sequence": 4,
+          "expiresAt": 1794795221438,
+          "reason": "cancelled",
+          "digest": "8e551980ad77945943f2967426d1f5ffa26f46c1e1180de020378100db1fd5b0"
+        },
+        "canonicalDigestExact": true,
+        "commandFilenameExact": true
+      },
+      {
+        "file": {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/extracted/TEST-desktop-backend-wOKJYu/hoststore/management-commands/ef1b233097d5b4b6719838acde96d4f4409ae8224075bb6a9410afa5e67c075b.json",
+          "bytes": 642,
+          "blob": "1de8c7d16f3129a21eacbc4ed49a53e01c34a32f",
+          "sha256": "7b4adae29a84695890f679ac0b02f62d783549a3aae63b161cebf8b362ec40e8"
+        },
+        "record": {
+          "schemaVersion": 1,
+          "commandId": "f7b8a28f-0931-4a8c-87d7-373a7c63613d",
+          "profileId": "TEST-emulated-management",
+          "configRevision": "TEST-emulated-config",
+          "providerId": "TEST-api",
+          "fingerprint": "eb6bd744484ade15b50b5aceefaa2bceca0573bab88b8bbf98787ebff8392635",
+          "selectionDigest": "a190443fe4d448a48d06f936a19dbe95df02316a3f3c5befeca8fd769131faf7",
+          "resourceId": "aa70655dce7cdb93ca257b76548027e0974e151b0b9274952d7d22c48b8938e7",
+          "resourceHeld": false,
+          "kind": "credential.set",
+          "phase": "completed",
+          "finishedAtMs": 1794795188941,
+          "digest": "c30124c65340e75c2999152ec4b4ea205bdff66519d5c8a86f394da853ef5c13"
+        },
+        "canonicalDigestExact": true,
+        "commandFilenameExact": true
+      }
+    ],
+    "allJournalCanonicalDigestsAndFilenamesVerified": true,
+    "finalOAuthCopiesEqualRawJournals": true,
+    "knownPrivateValuesAbsentFromJournals": true,
+    "copyScope": "One original copy click, original UI write-acknowledgement checkmark. No independent clipboard byte readback.",
+    "missingRawOriginals": [
+      "saved owner state",
+      "creation registry file",
+      "TEST auth.json",
+      "ui-emulated-external-open.ndjson"
+    ],
+    "missingRawInterpretation": "These original paths are asserted/read during the flow and partly embedded in receipt; no bytes are reconstructed or claimed independently audited."
+  },
+  "effectsAndCleanup": {
+    "uiEffects": [
+      {
+        "event": "launch",
+        "pid": 5271
+      },
+      {
+        "event": "credential-written",
+        "providerId": "TEST-api",
+        "pid": 5271
+      },
+      {
+        "event": "credential-forgotten",
+        "providerId": "TEST-api",
+        "pid": 5271
+      },
+      {
+        "event": "authorize",
+        "providerId": "TEST-oauth-code",
+        "pid": 5271
+      },
+      {
+        "event": "launch",
+        "pid": 6365
+      },
+      {
+        "event": "authorize",
+        "providerId": "TEST-oauth-auto",
+        "pid": 6365
+      },
+      {
+        "event": "callback-start",
+        "providerId": "TEST-oauth-auto",
+        "pid": 6365
+      }
+    ],
+    "rawEffects": [
+      {
+        "event": "launch",
+        "pid": 5271
+      },
+      {
+        "event": "credential-written",
+        "providerId": "TEST-api",
+        "pid": 5271
+      },
+      {
+        "event": "credential-forgotten",
+        "providerId": "TEST-api",
+        "pid": 5271
+      },
+      {
+        "event": "authorize",
+        "providerId": "TEST-oauth-code",
+        "pid": 5271
+      },
+      {
+        "event": "launch",
+        "pid": 6365
+      },
+      {
+        "event": "authorize",
+        "providerId": "TEST-oauth-auto",
+        "pid": 6365
+      },
+      {
+        "event": "callback-start",
+        "providerId": "TEST-oauth-auto",
+        "pid": 6365
+      },
+      {
+        "event": "launch",
+        "pid": 6533
+      }
+    ],
+    "counts": {
+      "launch": 3,
+      "credential-written": 1,
+      "credential-forgotten": 1,
+      "authorize": 2,
+      "callback-start": 1
+    },
+    "uiSevenEqualsRawPrefix": true,
+    "solePostUiEffect": {
+      "event": "launch",
+      "pid": 6533
+    },
+    "postUiCaller": "not retained; no implicit retry/cause attribution",
+    "peerExitCodeRows": 0,
+    "peerCleanup": {
+      "originalPeerPids": [
+        6533,
+        5271,
+        6365
+      ],
+      "observedDirectChildPids": [
+        6533
+      ],
+      "launchPids": [
+        5271,
+        6365,
+        6533
+      ],
+      "remaining": [],
+      "absent": true,
+      "logSha256": "7ebe4555771db782bd1d7e41deddc4ca0ed26a03eaf4e1ee609940a5d30f82c0"
+    },
+    "cleanupLogHashExact": true,
+    "app": {
+      "pid": 4381,
+      "processGroup": 4381,
+      "identity": "Mon Nov 16 02:12:01 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-Cq9Z9A/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox",
+      "invocation": [
+        "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+        "/home/runner/work/_temp/TEST-emulated-ui-inputs-Cq9Z9A/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "dev:mcp",
+        "--remoteDebuggingPort",
+        "9222",
+        "--noSandbox"
+      ]
+    },
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "initialRemaining": [
+      {
+        "pid": 4454,
+        "ppid": 1,
+        "pgid": 4381
+      }
+    ],
+    "originalExitedGroup": {
+      "settled": true,
+      "reason": "original-natural-exit-and-fresh-absence",
+      "initialMembers": [
+        {
+          "pid": 4454,
+          "ppid": 1,
+          "pgid": 4381
+        }
+      ],
+      "remaining": [],
+      "capturedHostAbsent": true,
+      "capturedDescendantsAbsent": true,
+      "appExitCode": 0,
+      "appSignalCode": null
+    },
+    "cleanup": {
+      "processGroup": 4381,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "hostChild": {
+      "pid": 4715,
+      "ppid": 4505,
+      "pgid": 4381,
+      "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+      "observedBeforeShutdown": true
+    },
+    "passiveAppLog": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/extracted/TEST-desktop-backend-wOKJYu/desktop-app.log",
+      "bytes": 23676,
+      "blob": "8b82c13c75c9d2282fe5c9c8de193422a8bfcb96",
+      "sha256": "a5da6690e3b3494e7826a933b99df54a55a589ee2e082f7a42caea4ff0c3bfa1"
+    },
+    "passiveOriginalHostCallbacks": [
+      {
+        "originalLine": 89,
+        "record": {
+          "mainPid": 4505,
+          "event": "async-spawn",
+          "pid": 4715,
+          "requestedCommand": "linux-child-exec",
+          "linuxChildExecTarget": "node",
+          "versionOnly": false,
+          "observedBirth": {
+            "startTicks": "33361",
+            "parentPid": 4505,
+            "processGroupId": 4381
+          },
+          "atomic": false,
+          "observedAtMs": 1794795142911
+        }
+      },
+      {
+        "originalLine": 194,
+        "record": {
+          "mainPid": 4505,
+          "event": "async-exit",
+          "pid": 4715,
+          "status": 0,
+          "signal": null,
+          "observedAtMs": 1794795196233
+        }
+      }
+    ],
+    "passiveTraceRecordCountIncludingActiveAndSummary": 31,
+    "passiveSummary": {
+      "originalLine": 200,
+      "record": {
+        "mainPid": 4505,
+        "event": "trace-summary",
+        "rows": 29,
+        "droppedObservations": 0,
+        "observedChildren": 13,
+        "unobservedChildren": 0,
+        "observationFailures": 0,
+        "limited": false,
+        "coverage": "node-async-and-unix-process-table-only"
+      }
+    },
+    "traceMeaning": "Separate original Main4505 child callback joins Host4715 spawn/exit0/null. Summary operational rows29/observed children13/drop0/failures0, non-atomic Node async + Unix census only. Dedicated cleanup hostExitCode remains its literal unexposed string. No peer exit codes or native custody invented.",
+    "rawLogObservations": "App log preserves DBus, missing TEST project directories, and Codex management unavailable/not-dispatched messages outside this selected V1 management scope; no clean-log/all-provider claim.",
+    "finalSentinelCensus": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        },
+        {
+          "executable": "opencode",
+          "allowed": true,
+          "argc": 1,
+          "flags": [
+            "--version"
+          ],
+          "emulated": "version-only"
+        }
+      ],
+      "preQuitCount": 2,
+      "postQuitOrCleanupInvocations": [],
+      "refusedInvocations": [],
+      "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+    }
+  },
+  "linuxChildExec": {
+    "manifest": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/extracted/TEST-emulated-ui-inputs-Cq9Z9A/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+    },
+    "binary": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/extracted/TEST-emulated-ui-inputs-Cq9Z9A/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    "sourceSha256MatchesFreshGit": true,
+    "receiptInputsAndAfterCleanupFlagExact": true,
+    "afterCleanupFlag": true,
+    "compilerAndLinkInputs": "Original manifest records hashes only; no local compiler/toolchain re-execution or independent binary rebuild."
+  },
+  "imagesActuallyViewed": [
+    {
+      "proofField": "selectionScreenshot",
+      "file": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/extracted/TEST-desktop-backend-wOKJYu/ui-emulated-model-effort-selected.png",
+        "bytes": 63570,
+        "blob": "b866653e390aea27887bd27c684a6c9d62097674",
+        "sha256": "fbc02b6b860bcda95e07ae1317eea1012e2177647469d0cd51babe0a1f7787a9"
+      },
+      "actuallyViewed": true,
+      "observation": "Actually viewed: original Create Team local TEST-model selected, High selected, local context fields 4096/1024 and Apply & verify visible. No exercised Apply/model-execution result inferred."
+    },
+    {
+      "proofField": "reloadedScreenshot",
+      "file": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/extracted/TEST-desktop-backend-wOKJYu/ui-emulated-model-effort-reloaded.png",
+        "bytes": 44709,
+        "blob": "64aeb639c1a905654557648cae8935687701dbe2",
+        "sha256": "e90bf6cfbdb6f66c43a3fb3fa92d71cbddcbfd4e79d6587e674a46b9ad2ba28a"
+      },
+      "actuallyViewed": true,
+      "observation": "Actually viewed: test-emulated-model-effort and TEST private backend cards both Offline. Saved model/effort persistence is the original readback assertion, not card text."
+    },
+    {
+      "proofField": "connectedScreenshot",
+      "file": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/extracted/TEST-desktop-backend-wOKJYu/ui-emulated-provider-connected.png",
+        "bytes": 127253,
+        "blob": "0233d7d5c2cc9d46428c38c7e76e2075064a8cef",
+        "sha256": "37d6cb9629b22e4364703b1e9abd3d7ab1d92ce0bab52a48d7d2ece17d74e077"
+      },
+      "actuallyViewed": true,
+      "observation": "Actually viewed: TEST-api Connected; explicit banner says model execution was not verified during setup. Other provider rows are present; no native authentication claim."
+    },
+    {
+      "proofField": "oauthWaitingScreenshot",
+      "file": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/extracted/TEST-desktop-backend-wOKJYu/ui-emulated-oauth-waiting.png",
+        "bytes": 105098,
+        "blob": "2c477d0d93fe3b9e331031acc9372c40f157aa79",
+        "sha256": "c8be3a37779c4f244252680634df7a3bb3ea31caa5ce843d2ca9f8eac46f57b5"
+      },
+      "actuallyViewed": true,
+      "observation": "Actually viewed: TEST-oauth-code pending form, Preparing secure browser authorization, redacted instruction suffix, code input, Continue and Cancel. Not a successful authentication frame."
+    },
+    {
+      "proofField": "oauthDeviceWaitingScreenshot",
+      "file": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/extracted/TEST-desktop-backend-wOKJYu/ui-emulated-oauth-device-waiting.png",
+        "bytes": 149705,
+        "blob": "b640f145070923021476e6e85db2f05a46ed26dc",
+        "sha256": "1848fef4c18478f6cfaec74f8a4932927840e6f9fee7d4b0a01784f2f54d9009"
+      },
+      "actuallyViewed": true,
+      "observation": "Actually viewed: TEST-oauth-auto pending device code A7F0-835A, waiting-for-confirmation text, copy checkmark, Cancel. Checkmark is the original acknowledgement, not audited clipboard content."
+    },
+    {
+      "proofField": "finalScreenshot",
+      "file": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/management/extracted/TEST-desktop-backend-wOKJYu/ui-emulated-management-final.png",
+        "bytes": 107244,
+        "blob": "8697f1eef80bedccb5bf669f6315848b18b54711",
+        "sha256": "1174a49314985fe7d76736f241659e41eac9b83d6739795c31eee9307de88c87"
+      },
+      "actuallyViewed": true,
+      "observation": "Actually viewed: both OAuth forms closed; model skeletons and dimmed controls persist; TEST-api Configured. Final idle/catalog-ready/auth-success not proved."
+    }
+  ],
+  "allSixImagesViewed": true,
+  "limits": [
+    "Original finite V1 HTTP/TEST peer only; profile runtime is absent, save-only allocates no Runtime, and native providers/vendor authentication/Team launch/release are excluded. Version-only sentinels do not change that scope.",
+    "The saved owner/registry and auth.json/external-open NDJSON are not separate archive members. The original source asserts their exact readback and the receipt retains creation/model/effort and opener/credential outcomes; no independent reconstruction of missing raw files is claimed.",
+    "Manual OAuth stayed waiting-for-code until its Cancel. Automatic OAuth was completing with one callback-start, then cancelled and released. No returned code, successful OAuth completion or credential issuance is inferred.",
+    "Copy is the original write-acknowledgment checkmark only; no clipboard bytes were read back independently. Privacy assertions cover the known TEST DOM/receipt fields, not arbitrary unknown secrets.",
+    "Final PNG retains loading/skeleton state. Closed forms, cancelled journals and released resources do not prove all provider controls idle or final catalog readiness.",
+    "Final raw peer ledger has8 rows; UI effects JSON is the exact first7. The sole later row is launch6533, with no retained caller identity. Three captured peer PIDs are absent; no peer exit codes are in this log.",
+    "Original app exit0/null and fresh group/Host/descendant absence are separate from the passive Main original-child Host4715 exit0/null callback. No new native custody or atomic executable certificate follows.",
+    "The common1757 source census is reused by exact ordered equality and selected fresh Git reads. Fourteen compiled input hashes are retained but the compiled files are not archived here; no audit-time rebuild or complete installed-dependency census.",
+    "This old0660 result does not qualify608efb privacy GREEN, another Desktop/provider mode, packaged/native gates, merge readiness or release.",
+    "This review freshly rehashed all1757 original source leaves; no installed dependency/runtime qualification is created by source equality.",
+    "API response/currentness is only the retained original source/run/job metadata. No fresh CI query or claim that this is latest-source acceptance.",
+    "No original project/test/compiler/install/provider/native command was executed in this independent audit. No source, refs, publication, UI action, or CI mutation."
+  ],
+  "approvalMeaning": "Exact old-source finite management proof and the current author appendix are approved with their explicit visual, missing-raw, cleanup and qualification limits. No product/source repair or newer privacy177/24 GREEN asserted."
+}
