@@ -1894,3 +1894,65 @@ test('the existing passive click recorder distinguishes the actual Team from lat
   assert.equal(bounded.rows().length, 96); assert.equal(bounded.rows('__TEST_desktopDragEvents').length, 32);
   assert.deepEqual(bounded.calls, { send: 1, evaluate: 2, stateReads: 0, microtasks: 135, timers: 135, business: 0 });
 });
+
+
+async function originalLiveMembershipPoll() {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = (await readFile(new URL('./desktop-live-membership-ui-smoke.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = '  const poll = async <T>(', end = "  const workspace = join(fixture.root, 'workspace');";
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original P11 poll boundary');
+  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));
+  const makePoll = Function('environment', `'use strict';
+    const {assert,current,Date,setTimeout}=environment;
+    ${actual}
+    return poll;`) as (environment: Record<string, unknown>) =>
+      (observe: () => Promise<boolean>, accepts: (value: boolean) => boolean, label: string) => Promise<boolean>;
+  return (observations: { at: number; value?: boolean; error?: Error }[], guardError?: Error) => {
+    let now = 0, reads = 0;
+    const trace: string[] = [], delays: number[] = [];
+    const poll = makePoll({ assert, Date: { now: () => now },
+      current() { trace.push('guard'); if (guardError) throw guardError; },
+      setTimeout(done: () => void, delay: number) {
+        assert.equal(delay, 100); delays.push(delay); now += delay; done();
+      },
+    });
+    return { trace, delays, reads: () => reads,
+      run: (label: string) => poll(async () => {
+        const observation = observations[reads++]; assert.ok(observation, 'no unplanned observation');
+        trace.push('read'); assert.ok(observation.at >= now); now = observation.at;
+        if (observation.error) throw observation.error;
+        assert.equal(typeof observation.value, 'boolean'); return observation.value!;
+      }, value => value, label),
+    };
+  };
+}
+
+for (const scenario of [
+  { name: 'first result at the exact cutoff', values: [{ at: 90_000, value: true }], reads: 1, trace: ['read'], delays: [] },
+  { name: 'first result after the cutoff', values: [{ at: 90_001, value: true }], reads: 1, trace: ['read'], delays: [] },
+  { name: 'polled result after the cutoff', values: [{ at: 0, value: false }, { at: 90_001, value: true }], reads: 2,
+    trace: ['read', 'guard', 'read'], delays: [100] },
+]) test('P11 keeps the original 90-second cutoff for ' + scenario.name, async () => {
+  const make = await originalLiveMembershipPoll(), f = make(scenario.values), label = 'TEST original P11 deadline';
+  await assert.rejects(f.run(label), error => error instanceof assert.AssertionError && error.message.includes(label));
+  assert.equal(f.reads(), scenario.reads); assert.deepEqual(f.trace, scenario.trace); assert.deepEqual(f.delays, scenario.delays);
+});
+
+test('P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity', async () => {
+  const make = await originalLiveMembershipPoll(), label = 'TEST original P11 observation';
+  const immediate = make([{ at: 89_999, value: true }]);
+  assert.equal(await immediate.run(label), true); assert.equal(immediate.reads(), 1);
+  assert.deepEqual(immediate.trace, ['read']); assert.deepEqual(immediate.delays, []);
+  const later = make([{ at: 0, value: false }, { at: 101, value: true }]);
+  assert.equal(await later.run(label), true); assert.equal(later.reads(), 2);
+  assert.deepEqual(later.trace, ['read', 'guard', 'read']); assert.deepEqual(later.delays, [100]);
+  const refusal = new Error('TEST original observation failure'), failed = make([{ at: 90_001, error: refusal }]);
+  await assert.rejects(failed.run(label), error => error === refusal);
+  assert.equal(failed.reads(), 1); assert.deepEqual(failed.trace, ['read']); assert.deepEqual(failed.delays, []);
+  const stale = new Error('TEST original currentness failure'), guarded = make([{ at: 0, value: false }], stale);
+  await assert.rejects(guarded.run(label), error => error === stale);
+  assert.equal(guarded.reads(), 1); assert.deepEqual(guarded.trace, ['read', 'guard']); assert.deepEqual(guarded.delays, []);
+  const noReady = make([{ at: 90_000, value: false }]);
+  await assert.rejects(noReady.run(label), assert.AssertionError);
+  assert.equal(noReady.reads(), 1); assert.deepEqual(noReady.trace, ['read']); assert.deepEqual(noReady.delays, []);
+});
