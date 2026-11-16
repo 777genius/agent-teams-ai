@@ -1,0 +1,708 @@
+{
+  "schema": "root-independent-M-four-frontend-shards-original-review/v1",
+  "reviewedUtc": "2026-11-16T01:44:42.313182+00:00",
+  "verdict": "APPROVE original four-shard evidence with all38 skips preserved",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "runAttempt": 1,
+  "checkpoint": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/frontend-all-shards/checkpoint.json",
+    "bytes": 8638,
+    "blob": "b9c78e7cd03c476398692d8e2792c49bc68f817d",
+    "sha256": "d03a533732c255c769b7321969847340e4e3134f6a44dd0e45730b695f393b00"
+  },
+  "payloads": [
+    {
+      "path": "full-api-jobs-0135.json",
+      "bytes": 80872,
+      "blob": "183b3edd9c69a111e634a8405da05240b0f80916",
+      "sha256": "11c3dc036cbd05c520845a7546fef711a8f0672ee47ae76ad96ec0ab9695c0e5"
+    },
+    {
+      "path": "terminal-artifacts-0135.json",
+      "bytes": 8035,
+      "blob": "0643c77ab28f7b587a3238c565b5c82a2106a10d",
+      "sha256": "60c2bbadcdb5376f7ff468cc7533f58b3caf362b00661f9e3c562ac44ff94c97"
+    },
+    {
+      "path": "initial-api-runs-jobs-0038.json",
+      "bytes": 58753,
+      "blob": "8689e935e0ae5041a5bdc3c2d4e6b2169b529f5b",
+      "sha256": "6ed2698023541fec692ef81f93ee4bd4cd12a44f3decdde234284c4a1b4e6d4a"
+    },
+    {
+      "path": "frontend-shard1/source-identities.json",
+      "bytes": 1921,
+      "blob": "024dd0edb59966e87031e8e9808ccfd014622967",
+      "sha256": "153bdd1170a80538ec07656b9a6c2350b0f2bdc6047b9987a0072fb261ccf59c"
+    },
+    {
+      "path": "frontend-shard1/artifact-14190745426.zip",
+      "bytes": 295485,
+      "blob": "5ff6dad00241cbc8318d65def521bde3f4ba69e9",
+      "sha256": "b310349827f441e893c1a01b8dc8e08f48117c34ab3bc054e03ed75a612ad836"
+    },
+    {
+      "path": "frontend-shard1/job-133017915679.log",
+      "bytes": 170100,
+      "blob": "abace879b7e556e4896c9d56dc401a668d950bdc",
+      "sha256": "33a9b8f1e2d98b91c674706d3531264c9588cb4f3cc97958de7b1ce41251bc45"
+    },
+    {
+      "path": "frontend-shard1/archive-audit.json",
+      "bytes": 811,
+      "blob": "3e3c11679dbb75c5e4b257ddc448bb85a496ccdb",
+      "sha256": "ca3adff69fe03d16f6c106b949b0fc2879e94b0552e5a6bdb7523bb07ede25b7"
+    },
+    {
+      "path": "frontend-shard2/artifact-14190518295.zip",
+      "bytes": 312130,
+      "blob": "03cdaed16c1a6ce12be53e703d0b4c9a8b3207a6",
+      "sha256": "e8fdc6a88b5bcb5074ea5514ff7bdf1bfc6d0d6ae451cbd45c4452bc3a4a9941"
+    },
+    {
+      "path": "frontend-shard2/job-133017915909.log",
+      "bytes": 180180,
+      "blob": "be68dbe956fb04582ecf2ecb7422a91b059cd2ea",
+      "sha256": "e33202ccdd0eebd46129fa353a2e40192e040e0fe457ab4457fcfe6ebc1788cb"
+    },
+    {
+      "path": "frontend-shard2/archive-audit.json",
+      "bytes": 812,
+      "blob": "fe1769beab4870be2f5aa8437e2d47ac8a6ec5fe",
+      "sha256": "5391062d5ebbbf23e5954461525a5010a0df2e80f841112b98e8da415f833e28"
+    },
+    {
+      "path": "frontend-shard3/artifact-14191090316.zip",
+      "bytes": 296995,
+      "blob": "44ee292e19dc38d2d12458fe0bd865182668b27c",
+      "sha256": "777dedd9ef4ba8d66b6bb8be585a4e9e5ce23946e34fe6f7d83e48e7c7908193"
+    },
+    {
+      "path": "frontend-shard3/job-133017915890.log",
+      "bytes": 162556,
+      "blob": "b701d82da57a7537f4c2912bf96c71281b2ebb70",
+      "sha256": "95ea3de3360be310e1f00ed5734f245c59b1b8a0604cde1a881126edad8d9086"
+    },
+    {
+      "path": "frontend-shard3/archive-audit.json",
+      "bytes": 811,
+      "blob": "ca3e26c515ad75d312486a71d8d174b7b84679e5",
+      "sha256": "52724a58da0ab60852e9f177f91136d7ed43b1e5999e0e47b077beb445554f18"
+    },
+    {
+      "path": "frontend-shard4/artifact-14191065996.zip",
+      "bytes": 317929,
+      "blob": "a532edf74714fb354e2799aa104fbdeb1fe7e397",
+      "sha256": "5757d302b9f90918ab6f7d4e2a521fba6a92afaa99cdf7713f59fd6c3d788fff"
+    },
+    {
+      "path": "frontend-shard4/job-133017915894.log",
+      "bytes": 190645,
+      "blob": "68d1d51b510dacaf1ac8c363de598a1c0bf6470c",
+      "sha256": "f590a01d1e62ee122ca7ba9dd730a89e653876bf85c9a95d7366be5d857ffb84"
+    },
+    {
+      "path": "frontend-shard4/archive-audit.json",
+      "bytes": 812,
+      "blob": "100ccc0b1c41d94cdc0c741ba6bd8d5b36e0341c",
+      "sha256": "d01907119498776a40a1f4ada6545dca68038ea822e1219bc42610c5bcce7016"
+    },
+    {
+      "path": "frontend-all-shards/audit.json",
+      "bytes": 33685,
+      "blob": "e99488334fb7968d89ad084784b603906a2522ef",
+      "sha256": "986a8925c93b94bbf4fcbf0d5af95aa5e0b6eb3dc2f242faa062747c67b517f2"
+    },
+    {
+      "path": "frontend-all-shards/Plan29-frontend-all-shards-appendix.md",
+      "bytes": 4319,
+      "blob": "bea0a19cec3e4b83469c9b830c3ed64f29db1328",
+      "sha256": "7e7af98d0505c7fb0ed69ba301ea53c938886b5e5ba9cd6b8f1684d830f227bb"
+    }
+  ],
+  "payloadCount": 18,
+  "payloadBytes": 2116851,
+  "recoverableOriginalArchiveMembers": [
+    {
+      "shard": 1,
+      "archive": "frontend-shard1/artifact-14190745426.zip",
+      "member": "host-offline-tests-1.json",
+      "bytes": 2167252,
+      "blob": "cd9b794837702c216c77b04497b59426842f9f7e",
+      "sha256": "54fc14e8564883df77038e79ea91fc3779244aae8ce25fd1e68b03e47de9612c"
+    },
+    {
+      "shard": 1,
+      "archive": "frontend-shard1/artifact-14190745426.zip",
+      "member": "host-offline-tests-1.log",
+      "bytes": 99629,
+      "blob": "c79d23415d24e557b0bd944872bb260e05fac9be",
+      "sha256": "3ac1e92b6e11b2b0e310a78faad99b7f1bc3e6ca9a46c4cca38f6ebcf22e6472"
+    },
+    {
+      "shard": 2,
+      "archive": "frontend-shard2/artifact-14190518295.zip",
+      "member": "host-offline-tests-2.json",
+      "bytes": 2385119,
+      "blob": "39c3c0294ad1060136bcff7de3cf998ec774ddaa",
+      "sha256": "bb0b7bc28cbb68f59e6878f5a5f73d7206aa05a1ef91d0036c8b946672524c76"
+    },
+    {
+      "shard": 2,
+      "archive": "frontend-shard2/artifact-14190518295.zip",
+      "member": "host-offline-tests-2.log",
+      "bytes": 107616,
+      "blob": "39b018d536b69db9c7d8a1060393dc721a95ce76",
+      "sha256": "59c7edbb4df9da5414f8d0ddb81ba1d8570e78ed6ee7449700ae87e12dd63cd9"
+    },
+    {
+      "shard": 3,
+      "archive": "frontend-shard3/artifact-14191090316.zip",
+      "member": "host-offline-tests-3.json",
+      "bytes": 2189244,
+      "blob": "9f242b417c58e5defe256a3d693894e3439fdb17",
+      "sha256": "7e3eec85e0d8f9745c137d04276d8f1729019a0c6120756ee2bf567a2ffbc495"
+    },
+    {
+      "shard": 3,
+      "archive": "frontend-shard3/artifact-14191090316.zip",
+      "member": "host-offline-tests-3.log",
+      "bytes": 93238,
+      "blob": "10ecfe833f4f8c12add91e45bf72f8e666e6c9d6",
+      "sha256": "c5f9dcb99b015961ce1a60c44d281fb2aa32bd2912b2b50c565ca78e3fe91b2d"
+    },
+    {
+      "shard": 4,
+      "archive": "frontend-shard4/artifact-14191065996.zip",
+      "member": "host-offline-tests-4.json",
+      "bytes": 2329337,
+      "blob": "90a3e6ecf054189ae6f2e66f6eeaf5eeea5b59f0",
+      "sha256": "081c8e3a2421f3762e7c77905ba7edabfc32ae24f50b8984686d33ec0a922a9d"
+    },
+    {
+      "shard": 4,
+      "archive": "frontend-shard4/artifact-14191065996.zip",
+      "member": "host-offline-tests-4.log",
+      "bytes": 116652,
+      "blob": "01d99f1e22916e0477747d48b99bb75c30d4bd6f",
+      "sha256": "5ecdab1e6ef28180801b4a82a26d61864a70ba543fcc74423f6c9d484eb7f9d1"
+    }
+  ],
+  "originalArchiveCount": 4,
+  "safeUniqueMembers": 8,
+  "allCRCsGood": true,
+  "sourceAndWorkflowLeaves": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+    },
+    {
+      "path": "vitest.config.ts",
+      "bytes": 1187,
+      "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc"
+    },
+    {
+      "path": ".node-version",
+      "bytes": 8,
+      "blob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5"
+    },
+    {
+      "path": "package.json",
+      "bytes": 26839,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+    },
+    {
+      "path": "test/scripts/opencodeNativeTestNode.test.ts",
+      "bytes": 8953,
+      "blob": "96a33e0e0d68480ab3359baa06a2b9ae3a9f44ab",
+      "sha256": "b2e3f6c83342b6b72230f19eafe50a2c3ee0ab1595c5f64734619d00963d5514"
+    },
+    {
+      "path": "test/main/ipc/review.test.ts",
+      "bytes": 220074,
+      "blob": "3d8a88c573fbb5e773379d8cc593de98eb0d32f6",
+      "sha256": "bca6e5bc6d30e0747cac57d9e15d8efc9c92c13228b022f00d33ad01c8cf9c28"
+    },
+    {
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "bytes": 20452,
+      "blob": "57083b1e030958ff4279ea15fffd3a0e7deecad0",
+      "sha256": "b2d86e9ce908930fa1f0da0662d31c9eb6354a578ef69c94a9e581f414d3efbf"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeTaskLogStreamSource.fixture-e2e.test.ts",
+      "bytes": 54209,
+      "blob": "11258da72033129867e19e6d9e70d67cb9e8c749",
+      "sha256": "1d874ebb370b98f9fdfa640425548b206bbb3a3c8b8841497cc13b2606be1f2d"
+    }
+  ],
+  "shards": [
+    {
+      "shard": 1,
+      "jobId": 133017915679,
+      "jobConclusion": "success",
+      "allJobStepsSuccess": true,
+      "artifactId": 14190745426,
+      "artifactDigest": "sha256:b310349827f441e893c1a01b8dc8e08f48117c34ab3bc054e03ed75a612ad836",
+      "fileResults": 541,
+      "filesPassed": 541,
+      "filesSkipped": 0,
+      "assertionCounts": {
+        "passed": 6222,
+        "skipped": 6
+      },
+      "jsonNestedSuiteCountNotFileCount": 1356,
+      "originalTeeExactlyContainedAfterOnlyTimestampRemoval": true,
+      "defaultFileSummary": "Test Files  541 passed (541)",
+      "defaultAssertionSummary": "Tests  6222 passed | 6 skipped (6228)",
+      "defaultSummaryParsingOnlyRemovesANSI": true,
+      "runtime": {
+        "frontendNode": "26.12.1",
+        "capturedHostNode": "24.21.0",
+        "pnpm": "11.22.0",
+        "vitest": "3.2.6"
+      },
+      "wholeOriginalArchiveValidated": true
+    },
+    {
+      "shard": 2,
+      "jobId": 133017915909,
+      "jobConclusion": "success",
+      "allJobStepsSuccess": true,
+      "artifactId": 14190518295,
+      "artifactDigest": "sha256:e8fdc6a88b5bcb5074ea5514ff7bdf1bfc6d0d6ae451cbd45c4452bc3a4a9941",
+      "fileResults": 541,
+      "filesPassed": 539,
+      "filesSkipped": 2,
+      "assertionCounts": {
+        "passed": 6730,
+        "skipped": 18
+      },
+      "jsonNestedSuiteCountNotFileCount": 1292,
+      "originalTeeExactlyContainedAfterOnlyTimestampRemoval": true,
+      "defaultFileSummary": "Test Files  539 passed | 2 skipped (541)",
+      "defaultAssertionSummary": "Tests  6730 passed | 18 skipped (6748)",
+      "defaultSummaryParsingOnlyRemovesANSI": true,
+      "runtime": {
+        "frontendNode": "26.12.1",
+        "capturedHostNode": "24.21.0",
+        "pnpm": "11.22.0",
+        "vitest": "3.2.6"
+      },
+      "wholeOriginalArchiveValidated": true
+    },
+    {
+      "shard": 3,
+      "jobId": 133017915890,
+      "jobConclusion": "success",
+      "allJobStepsSuccess": true,
+      "artifactId": 14191090316,
+      "artifactDigest": "sha256:777dedd9ef4ba8d66b6bb8be585a4e9e5ce23946e34fe6f7d83e48e7c7908193",
+      "fileResults": 541,
+      "filesPassed": 538,
+      "filesSkipped": 3,
+      "assertionCounts": {
+        "passed": 6256,
+        "skipped": 7
+      },
+      "jsonNestedSuiteCountNotFileCount": 1316,
+      "originalTeeExactlyContainedAfterOnlyTimestampRemoval": true,
+      "defaultFileSummary": "Test Files  538 passed | 3 skipped (541)",
+      "defaultAssertionSummary": "Tests  6256 passed | 7 skipped (6263)",
+      "defaultSummaryParsingOnlyRemovesANSI": true,
+      "runtime": {
+        "frontendNode": "26.12.1",
+        "capturedHostNode": "24.21.0",
+        "pnpm": "11.22.0",
+        "vitest": "3.2.6"
+      },
+      "wholeOriginalArchiveValidated": true
+    },
+    {
+      "shard": 4,
+      "jobId": 133017915894,
+      "jobConclusion": "success",
+      "allJobStepsSuccess": true,
+      "artifactId": 14191065996,
+      "artifactDigest": "sha256:5757d302b9f90918ab6f7d4e2a521fba6a92afaa99cdf7713f59fd6c3d788fff",
+      "fileResults": 539,
+      "filesPassed": 537,
+      "filesSkipped": 2,
+      "assertionCounts": {
+        "passed": 6614,
+        "skipped": 7
+      },
+      "jsonNestedSuiteCountNotFileCount": 1349,
+      "originalTeeExactlyContainedAfterOnlyTimestampRemoval": true,
+      "defaultFileSummary": "Test Files  537 passed | 2 skipped (539)",
+      "defaultAssertionSummary": "Tests  6614 passed | 7 skipped (6621)",
+      "defaultSummaryParsingOnlyRemovesANSI": true,
+      "runtime": {
+        "frontendNode": "26.12.1",
+        "capturedHostNode": "24.21.0",
+        "pnpm": "11.22.0",
+        "vitest": "3.2.6"
+      },
+      "wholeOriginalArchiveValidated": true
+    }
+  ],
+  "totals": {
+    "uniqueFiles": 2162,
+    "defaultPassedFiles": 2155,
+    "defaultSkippedFiles": 7,
+    "assertionsPassed": 25822,
+    "assertionsSkipped": 38,
+    "assertionsFailed": 0,
+    "assertionsTodo": 0,
+    "assertionsTotal": 25860
+  },
+  "allAssertionArraysRecounted": true,
+  "allFilePathsPresentInSourceGitAndLiteralIncludeScope": true,
+  "noFileOverlapAcrossShards": true,
+  "normalizedFileInventory": {
+    "encoding": "UTF8 compact sort_keys JSON of path to shard and gitBlob; reproducible from original arrays and source Git tree",
+    "sha256": "39dac1efeaafadf2f919fba172e79ae5ab6e3427cff91c6dbc6d61463a5b1544",
+    "bytes": 294029
+  },
+  "wholeSkippedFiles": [
+    {
+      "shard": 2,
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "assertionsSkipped": 5,
+      "gitBlob": "1ac15d2da663de52b3ff6f7a300fec99fb7570ff",
+      "jsonFileStatus": "passed"
+    },
+    {
+      "shard": 2,
+      "path": "test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+      "assertionsSkipped": 2,
+      "gitBlob": "de39bc8dadaa1b641446df676b4be51651ec69f1",
+      "jsonFileStatus": "passed"
+    },
+    {
+      "shard": 3,
+      "path": "test/main/utils/windowsProcessProbe.integration.test.ts",
+      "assertionsSkipped": 1,
+      "gitBlob": "802cee3658310ab29b473d098b02f3e6b3ed9857",
+      "jsonFileStatus": "passed"
+    },
+    {
+      "shard": 3,
+      "path": "test/main/services/team/OpenCodeReviewPickup.live.tmp.test.ts",
+      "assertionsSkipped": 1,
+      "gitBlob": "0ddcdc4a76f2a479eb8794fdecd462ba3d1642be",
+      "jsonFileStatus": "passed"
+    },
+    {
+      "shard": 3,
+      "path": "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.ollama-live.test.ts",
+      "assertionsSkipped": 1,
+      "gitBlob": "39141ae707e6d2b7032563ca466ac29eb79bc9e1",
+      "jsonFileStatus": "passed"
+    },
+    {
+      "shard": 4,
+      "path": "test/scripts/fixtures/opencodeProofBoundary.test.ts",
+      "assertionsSkipped": 1,
+      "gitBlob": "f38bf3ce8d0da096d6f57dd011af71e696345618",
+      "jsonFileStatus": "passed"
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "assertionsSkipped": 6,
+      "gitBlob": "3568c399d93a9a7231899845f373f33ee91c1577",
+      "jsonFileStatus": "passed"
+    }
+  ],
+  "all38SkippedAssertions": [
+    {
+      "shard": 1,
+      "path": "test/scripts/opencodeNativeTestNode.test.ts",
+      "fullName": "TEST Node dependency staging without execution accepts a real inherited-ACL-style Windows metadata transition on the owned fake copy",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 1,
+      "path": "test/main/ipc/review.test.ts",
+      "fullName": "review IPC path confinement authorizes a saved case-only rename path through its published transaction target",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 1,
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "fullName": "actual app client / packaged Windows runtime (Unavailable: actual Windows execution is required) backfills empty, attributed history, and duplicate replay: ascii",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 1,
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "fullName": "actual app client / packaged Windows runtime (Unavailable: actual Windows execution is required) backfills empty, attributed history, and duplicate replay: spaces",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 1,
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "fullName": "actual app client / packaged Windows runtime (Unavailable: actual Windows execution is required) backfills empty, attributed history, and duplicate replay: unicode",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 1,
+      "path": "test/main/services/team/OpenCodeTaskLogStreamSource.fixture-e2e.test.ts",
+      "fullName": "OpenCodeTaskLogStreamSource real OpenCode fixture e2e reads native persistence through the actual SDK read-only reader and projector without preparing a profile",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/scripts/opencodeNativeRealTaskPrompt.test.ts",
+      "fullName": "cross-shell Windows verifier invocation executes the unchanged verifier in PowerShell and cmd",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "fullName": "applyElectronDevPathOverrides uses absolute APPDATA when Electron cannot return appData before ready on Windows",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "fullName": "applyElectronDevPathOverrides uses regular APPDATA when userData is unavailable before Windows Electron ready",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "fullName": "applyElectronDevPathOverrides rejects a case-only alias of a nonexistent legacy profile",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/ReviewFileTransaction.safe-e2e.test.ts",
+      "fullName": "review file transaction safe E2E classifies a published equal-content case-only Undo using its owned inode",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "fullName": "Windows CLI shell fallback round trip preserves adversarial argv through execCli for a spaced non-ASCII executable path",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "fullName": "Windows CLI shell fallback round trip preserves adversarial argv through spawnCli for a spaced non-ASCII executable path",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "fullName": "Windows CLI shell fallback round trip preserves adversarial argv through a batch launcher that forwards %*",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "fullName": "Windows CLI shell fallback round trip preserves safe argv through batch parameter modifiers",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "fullName": "Windows CLI shell fallback round trip rejects shell syntax before a batch launcher can reparse positional arguments",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "fullName": "shellEnv actual installed shells zsh reads real login and interactive startup exports with exact edge values",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "fullName": "shellEnv actual installed shells zsh ignores startup banners and accepts a completed dump before a failing real logout",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "fullName": "shellEnv actual installed shells zsh falls back from a failing real login profile to the real interactive rc",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "fullName": "shellEnv actual installed shells zsh keeps its framing independent of an rc-defined printf function",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "fullName": "shellEnv actual installed shells zsh keeps its framing independent of an rc-defined printf alias",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts",
+      "fullName": "OpenCode nvm-windows runtime resolution safe e2e selects the native OpenCode executable behind an nvm cmd shim",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+      "fullName": "Team runtime memory safe e2e reports RSS for a bootstrap-confirmed Anthropic teammate discovered from the real process table",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 2,
+      "path": "test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+      "fullName": "Team runtime memory safe e2e reports RSS for a real Anthropic teammate CLI process",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "test/main/utils/windowsProcessProbe.integration.test.ts",
+      "fullName": "real Windows process identity readers observes this Node process through both table transports and its birth reader",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "test/features/member-work-sync/main/JsonMemberWorkSyncReportJournal.test.ts",
+      "fullName": "strict JSON report journal returns commit_unknown if a Windows retry cannot sync the existing journal file",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "test/main/services/runtime/AnthropicAutoShellEnv.safe-e2e.test.ts",
+      "fullName": "Anthropic Auto GUI shell safe e2e uses the native runtime to authenticate a cold shell configuration and infer with both models",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "test/main/services/team/OpenCodeReviewPickup.live.tmp.test.ts",
+      "fullName": "OpenCode review pickup live e2e delivers review pickup when the current unread review request is still in the foreground inbox",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "test/main/services/team/ReviewApplierService.test.ts",
+      "fullName": "ReviewApplierService ledger canonical-equivalent rename keeps the sole inode on a real temporary filesystem",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.ollama-live.test.ts",
+      "fullName": "OpenCodeLocalProviderConnector live Ollama probes, configures into a sandbox, and keeps the catalog model after an empty overlay",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 3,
+      "path": "src/main/services/infrastructure/codexAppServer/__tests__/CodexBinaryResolver.real.test.ts",
+      "fullName": "CodexBinaryResolver live local Codex smoke resolves and versions the current local Codex binary",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/scripts/fixtures/opencodeProofBoundary.test.ts",
+      "fullName": "preserves wrapper ownership across real Vitest setup",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e resolves the current host as native macOS",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e chooses Homebrew as the macOS install strategy on this machine",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e finds the real tmux binary on this macOS host",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e reports tmux as runtime-ready for the live macOS host path",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e keeps the current platform on the tmux runtime path",
+      "status": "skipped",
+      "failureMessages": []
+    },
+    {
+      "shard": 4,
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "fullName": "tmux installer macOS host e2e runs a real isolated tmux session on macOS and executes a shell command in it",
+      "status": "skipped",
+      "failureMessages": []
+    }
+  ],
+  "unchangedTestTimeoutMs": 15000,
+  "originalExclusions": [
+    "**/*.live.test.*",
+    "**/*.live-e2e.test.*",
+    "**/*.native.test.*"
+  ],
+  "readerCorrection": "Initial scratch reader compared plain summaries against ANSI-colored tee output; this reader strips ANSI only for summary parsing. Raw tee-versus-job byte comparison still removes only runner timestamp prefixes. No original evidence or project command changed.",
+  "limits": [
+    "JSON passed labels for seven wholly skipped files and nested suite counters are not execution proof; default output and assertion statuses govern.",
+    "Source joins use exact original checkout/source guard and selected configuration files, not an archived full installed/output census.",
+    "All38 original skips and3 exclusion patterns remain unqualified; separate source guard review is owned by native_failures.",
+    "The four successful root Vitest frontend shards do not establish Team ten-file Node contracts, stderr privacy RED/GREEN, Desktop/native/provider cleanup or other outstanding gates."
+  ],
+  "projectCodeExecuted": false,
+  "sourceChanged": false,
+  "ciStateChanged": false
+}

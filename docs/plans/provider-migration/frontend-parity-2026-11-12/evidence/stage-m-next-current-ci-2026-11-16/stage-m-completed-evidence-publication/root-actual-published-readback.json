@@ -1,0 +1,486 @@
+{
+  "schema": "root-actual-published-docs-readback/v1",
+  "observedUtc": "2026-11-16T01:39:46.026821+00:00",
+  "commit": "85355e11fcd08ffe87f96be5003675305458a354",
+  "parents": [
+    "0660c748f88675063e3051fb0f8b2022e8f6f056"
+  ],
+  "tree": "7c9757f1b13378f9f9a3a55ce317b19f757799c4",
+  "frozenManifestBlob": "b67979f0a9f8af84d4bf9088f33894d14e95d61c",
+  "frozenManifestSha256": "afb437c9048b9bc162bc6527c56bbb6a413e7eb394c2fc8ee9570184ad54b570",
+  "changedPaths": 65,
+  "newPaths": 64,
+  "modifiedPaths": 1,
+  "deletedPaths": 0,
+  "all65ActualBytesCompared": true,
+  "publishedPayloadBytes": 11731338,
+  "baseLeaves": 10056,
+  "publishedLeaves": 10120,
+  "unchangedParentLeaves": 10055,
+  "exactFullExpectedLeafMap": true,
+  "allNonDocumentationLeavesUnchanged": true,
+  "plan29FullParentPrefixBytes": 1278823,
+  "plan29ExactAppendixBlocks": 9,
+  "plan29ActualBlob": "dc27882b04fd71cf571eee863031e1c7c562653a",
+  "localHeadStillM": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "localWorktreeClean": true,
+  "sourceCandidatesApplied": false,
+  "projectCodeExecuted": false,
+  "files": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 1339928,
+      "gitBlob": "dc27882b04fd71cf571eee863031e1c7c562653a",
+      "sha256": "b6775c3a0f17b2489182554522ade7db385f8aa0b1a88ce999bba8e2476f59b0",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/appendices/Plan29-completed-native-appendix.md",
+      "bytes": 12041,
+      "gitBlob": "38c566d461715ca2dedab07502a1fe9af227e071",
+      "sha256": "b9e0c6789fdcefcee25d8aa9b0466e83adf281ad10ef10349d921796f5ae03f7",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/appendices/Plan29-creation-macos-appendix.md",
+      "bytes": 3819,
+      "gitBlob": "174bd6bfa667eceeda26c8e02cab2fc2f74de996",
+      "sha256": "3192cefe953fefa54d9ab7a19a09c67389153116de0de69750866277fe1d09b7",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/appendices/Plan29-creation-windows-appendix.md",
+      "bytes": 3503,
+      "gitBlob": "4a032d9650e6478b2acef5e309d820e5af3c11ab",
+      "sha256": "35144b4c4e98ee16dfa79899f13e53c7f5a15d5e0c73824b7c854cec2f15fafe",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/appendices/Plan29-creation-ubuntu-appendix.md",
+      "bytes": 3955,
+      "gitBlob": "4fba3738842ae7c34a76ddcc99bcf1b5623a2646",
+      "sha256": "e28b8b12d9b503a90efb80d168dfe901b74563743a05af7d0e9d5566725ff2a5",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/appendices/Plan29-installer-failure-appendix.md",
+      "bytes": 8427,
+      "gitBlob": "8b82c7acf00b9642438d3dbf7e9a8c481c463fef",
+      "sha256": "0508a64db94abb5268bc2b34b26b0e08151fbd8a3ab12b40e2fd90e418560e2c",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/appendices/Plan29-terminal-status-addendum-0033.md",
+      "bytes": 1481,
+      "gitBlob": "daca171c83d6d6abc66e6d2c371fb843b80656ac",
+      "sha256": "d9de4bbffc914820d24f72e8da9ca602f107978137d07c8985691e7996bdbe68",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/appendices/Plan29-terminal-ui-status-addendum.md",
+      "bytes": 2512,
+      "gitBlob": "4e568b8d9295e0c07011441d06fd556cc65aaa80",
+      "sha256": "d9a5dc7d8ca4e8598e95b5bdbea8a3e2bf5cefc517f3f6716ae695e3daef8e79",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/appendices/Plan29-M-completed-evidence-and-dormant-R1.md",
+      "bytes": 10370,
+      "gitBlob": "a4a0583e183891d0b019a8c54d91f25d649f14d2",
+      "sha256": "25a4782c1d091f4bab0ba56a0cebc6358b2deb5f2740bf23deab5be2d6c2bea5",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/appendices/R1-appendix.md",
+      "bytes": 14979,
+      "gitBlob": "bf13222c0ee519945db20b9e027b2942ebac3d8e",
+      "sha256": "29c763c29cccaeb6e7368a80357ab89469a67fd25caa8c5518e357f4272978eb",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/native/M0660-native-evidence.zip",
+      "bytes": 664690,
+      "gitBlob": "04a9ee0dbf3364352cf9af2fa7b4d77b882ed284",
+      "sha256": "f8c4afcd9ca7137022f103eb8474af319c214fec2b9ec2e82d8987ba3e65c801",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/native/M0660-inventory.json",
+      "bytes": 20880,
+      "gitBlob": "a61ec4204807982864575588113ac3302948ce17",
+      "sha256": "1931797646e79076c3e0525e7a9c6a6a7fe5ed9e0399a38376ab627c3f484937",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/native/M0660-README.md",
+      "bytes": 1071,
+      "gitBlob": "8246cb6e3140bbb8b19f0c99fedfed7f6dbf6909",
+      "sha256": "874044b2da4a3aa4dd455415e1670551945e5054097597cb1b7e2bf074947968",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/native/M0660-bundle-metadata.json",
+      "bytes": 1197,
+      "gitBlob": "089ef0c469404b51b7ab8897086d91dfa8425233",
+      "sha256": "a2b388e9ffce11ec7bb920995314015165ddb28f55b0d2602d2bae1d505ab764",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/native/static-windows-independent-review.json",
+      "bytes": 5839,
+      "gitBlob": "73baf23a2193095bc538988632ac8c1a11545aef",
+      "sha256": "bc3d1d83f235e97529766cca9fbe7c628fb1c2ba821b4eb869200fa52a326843",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/native/root-independent-x64-original-review.json",
+      "bytes": 30887,
+      "gitBlob": "864a98ae2a9361ce08865c09d565463b9fe3cbe6",
+      "sha256": "62e92a8f016b9e0985f3307215de5ad1fadc1c5cf63663895af53b0c33786146",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/native/root-independent-arm64-original-review.json",
+      "bytes": 30913,
+      "gitBlob": "aa91caffe01c961a082fea7da2748a3c748113d6",
+      "sha256": "2dace61893b65d7002226e0c93c9a345a864a2f15f3d690a95d0455efe7f02e4",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/native/root-independent-darwin-and-bundle-review.json",
+      "bytes": 69844,
+      "gitBlob": "4f2c6860b20ec730bf855759e1758afb4ad8a4dd",
+      "sha256": "5f751e0357b5541cebcfaeb27598df9ddce0af510cbb2fd7ecdff11e49f05544",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/ui/M0660-Creation-win-mac-and-Installer/M0660-Creation-win-mac-and-Installer.zip",
+      "bytes": 5321791,
+      "gitBlob": "a7dba022626f8afb3d4204efca0e9d4ef120b24b",
+      "sha256": "74f140ea0a6e0e492dd3b996ec865309f1a96e2edc8a092a6e973005bb212e1d",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/ui/M0660-Creation-win-mac-and-Installer/inventory.json",
+      "bytes": 11140,
+      "gitBlob": "1fb62127d67bd0b6bbb4f2de040887197d48b41d",
+      "sha256": "0219c5833a925cb117789cf048c264f34673e2bb1c916b4ac4ce68113666ae4a",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/ui/M0660-Creation-win-mac-and-Installer/README.md",
+      "bytes": 674,
+      "gitBlob": "de12e8b273bf2de110193908deed4cccd40918ea",
+      "sha256": "2cac9e73e0723587c57440b170d2fae7b59683b6e7eae603d8de110406b8fa37",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/ui/M0660-Creation-win-mac-and-Installer/bundle-metadata.json",
+      "bytes": 1308,
+      "gitBlob": "a788ddc4a06d02f154845a04e8f5889909069380",
+      "sha256": "0f4020e8d2eeda57b67e314a319bf3c3e4a6ce207c14f8861bea0414cb61fa24",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/ui/M0660-Creation-Ubuntu/M0660-Creation-Ubuntu.zip",
+      "bytes": 2895943,
+      "gitBlob": "2ded5e0e20ec60084e99adee5926dfeeb35eaa70",
+      "sha256": "ab4dad326c916d0e9f2a94d494da2ad9e977fe61db918f6372e811b35287a667",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/ui/M0660-Creation-Ubuntu/inventory.json",
+      "bytes": 4128,
+      "gitBlob": "a17934ed64fcccc02050205f3da97153d6d78009",
+      "sha256": "06fc715ba73e4ae2c00ea8a19bcd769ebad0bf512ae9492fb97a7a5b90631be2",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/ui/M0660-Creation-Ubuntu/README.md",
+      "bytes": 656,
+      "gitBlob": "09674f7509c43935be085c3a876aa24d27bcd5df",
+      "sha256": "e7231032e4b30b26ec09fdb0dc054c74bc129ce0edefd7f5314fbf44a13eb3db",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/ui/M0660-Creation-Ubuntu/bundle-metadata.json",
+      "bytes": 1229,
+      "gitBlob": "19bcce308866648164f15d97a97e2d363c330f21",
+      "sha256": "b2b63fd9be6e5e64707f9bad167572813e172b65f871c5d799c56a5f4b92bf28",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/ui/independent-bundles-review.json",
+      "bytes": 81778,
+      "gitBlob": "a230f2e164395fcdc3efdc57bbd973f9c93e6c5a",
+      "sha256": "2e428f012d06aa6f84e86d65ba38585a6d69c567297148abd46b4f557bbbf371",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/dormant-installer-observer/R1-appendix.md",
+      "bytes": 14979,
+      "gitBlob": "bf13222c0ee519945db20b9e027b2942ebac3d8e",
+      "sha256": "29c763c29cccaeb6e7368a80357ab89469a67fd25caa8c5518e357f4272978eb",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/dormant-installer-observer/candidate-metadata.json",
+      "bytes": 2592,
+      "gitBlob": "120d7ab45405bf79ae148725a4b2b27b14b38b7d",
+      "sha256": "5ecdcec93a52b18eefdff23944ae46711eb5a1389305a218aaff94674f561504",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/dormant-installer-observer/candidate.patch",
+      "bytes": 14029,
+      "gitBlob": "00d54a32d0fb5669f2201c4f842ca6296609e74e",
+      "sha256": "32ccae9c3a75e6a9c1f488777b94d960dd5421ad351648ef318276c42f5e4af2",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/dormant-installer-observer/independent-source-r1-review.json",
+      "bytes": 9519,
+      "gitBlob": "9c17dfb278ad94c6e7ec22a4d40f6d2e4179b6e8",
+      "sha256": "7e03f322edcbde3453398bc136e2c9025599bf7ada95d057ee17fc2b94ee327a",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/dormant-installer-observer/candidate/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 26553,
+      "gitBlob": "3e1ed4b3671f55b013067d932296b69163416481",
+      "sha256": "de783eb70fcef27364e0e2d2b8c0eb065b8a21b5c77471801a992c58e433dd34",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/dormant-installer-observer/candidate/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 113222,
+      "gitBlob": "24f14355aabbcf72274256a18a33331e9fcc9296",
+      "sha256": "0358780b7c4778e9332e6b4aeff072026a3798075fcc8aa1bac78033023759f9",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/dormant-installer-observer/candidate/.github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101804,
+      "gitBlob": "db3508eb2b853d7b2bfba565145507758c47aaf4",
+      "sha256": "0b47c07069e5d5f8388b1a3ed039b8103526c15be920544089c16323d903f027",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/remaining-goal/acceptance-ledger-v2.md",
+      "bytes": 19979,
+      "gitBlob": "fe4a7062e4406103f4b6260e83bd19c6c72149c4",
+      "sha256": "b1d52282a4e300bebf024f32919b6274f2af75132e1d3bffab9f50a87b777b88",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/remaining-goal/acceptance-ledger-v2.json",
+      "bytes": 21923,
+      "gitBlob": "3613696fefb2fec089db10b04ab3e49d70667db8",
+      "sha256": "6edbcdb827a348d96a6e0aaca09c5ebc29fe91136c65aaa8cbb6ae6599a40e71",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/remaining-goal/p11-v2-feasibility.md",
+      "bytes": 12842,
+      "gitBlob": "fca0b81170b65db1ec123eda0cb61a47cc35aad4",
+      "sha256": "5129b35f53e97bbf1e3d5f37a597832088a6ce136cd7a1b97e92bd064a61385a",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/remaining-goal/p11-v2-feasibility.json",
+      "bytes": 11140,
+      "gitBlob": "cea8477925f9f35332bf7ce8fea8ea9e934b3dd7",
+      "sha256": "5e7278520cb3e6ca7b80a074f25e78fd42363d0b59c68b45b0bcf5aa070dadbd",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/native/process-run-api-terminal-0033.json",
+      "bytes": 13831,
+      "gitBlob": "69b740c9ec2279451f2a4b8455fd1cbb57e5ab68",
+      "sha256": "6aaeea47b09b0c791b60b4dfee3186b04095925e39facd8802cd9d0f07b5b36a",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/native/v2-run-api-terminal-0033.json",
+      "bytes": 13853,
+      "gitBlob": "315dbea21ac505eb5b54b92ba19ae955b38a2268",
+      "sha256": "c4ec313ffcc7afe275afbe3beaff03650fef918be5e103db769f3fb911f46adf",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/native/process-jobs-api-terminal-0033.json",
+      "bytes": 25267,
+      "gitBlob": "1dc403153665cbd80c4bc81688269144527366fa",
+      "sha256": "b3b3bce3537ad80df8dfdcfd57cb3da42696b685273591222035e7f5d653e604",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/native/v2-jobs-api-terminal-0033.json",
+      "bytes": 34940,
+      "gitBlob": "b22d392e3338263a50aabd4a99522195d3281e7f",
+      "sha256": "7b8d430056670f075d44ae1906f44625fdda4f2769613d4db76ae7a53e9e6502",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/native/terminal-checkpoint-20261116-0033.json",
+      "bytes": 4260,
+      "gitBlob": "333a1ace249f57aa705a7c7586fd479900d669ff",
+      "sha256": "03a580adf902da40a35472a28b7b89215f69c272f53398f363467fe9bc1accd0",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/ui/full-api-jobs-final-0036.json",
+      "bytes": 23076,
+      "gitBlob": "0bd588b324966e9ed29429eba41b2be8e622b900",
+      "sha256": "b7dd2759aed700e398b41aab1104c19adef6012d632770cbe62b734e7aea00ba",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/run-43776922765-terminal-0036.json",
+      "bytes": 30535,
+      "gitBlob": "5742994c7d22e191a94c656e6cb81fbbdee83241",
+      "sha256": "1717a8049d3bbb065ee5395ca8b05ab5d4e166b5f964d6755d47845ed9d8f7b5",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/sync9e-terminal-0036-record.json",
+      "bytes": 1005,
+      "gitBlob": "5af97c239b9ceb09ae02d227d1a0d56941990cb2",
+      "sha256": "86913fba6c6d7cc7018a0e201313100b06154ebb8bb7f0a7ec986acb7ec0de0f",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/jobs-0035.json",
+      "bytes": 6945,
+      "gitBlob": "4155e95ae82769586a1180034deb6409a0e919e9",
+      "sha256": "7d79374d3cab4d75fd0b5bd68294e12101dd1106d524aeab563a218f930f01d3",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/general-edited9e-plan-original-log-response.json",
+      "bytes": 118835,
+      "gitBlob": "9353fdabfb829c4b1dbaf04ce0b84444706bc232",
+      "sha256": "5e6c2db2ee034130ca01129d59a0ebd109edbd2c9d7f528fdc6d9832d234816a",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/general-edited9e-plan-original.log",
+      "bytes": 117646,
+      "gitBlob": "a97b54613c6c95bcf4b9d663a81ea8029a2ed4f9",
+      "sha256": "c60aef2d978d1d1def2b4107783b50bb5ea501b9bf07204fc1f3fb62dc631f71",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/general-edited9e-ledger-windows-original-log-response.json",
+      "bytes": 98479,
+      "gitBlob": "229e9a72a3be355d7e1d7649451dcf813fa0a06e",
+      "sha256": "94d0eb6aac2f50adb39fc3ada21ccf375474ae8dc2bd0355c5b77fe11d758f41",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/general-edited9e-ledger-windows-original.log",
+      "bytes": 91159,
+      "gitBlob": "db49cdd2027e66acde0fa94690d692b26009a15c",
+      "sha256": "20ae41133ea277499b557f611bdd930e4a2e55c9d19275fe0c0ab31ae869da7c",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/general-edited9e-merge-commit-original.json",
+      "bytes": 2653,
+      "gitBlob": "ef866594aca5b5e1508c45eac8372ecb09f93cdd",
+      "sha256": "fca04f15e204a0dfde01b6896c97b26f093fbca514b8fbe0370f80cc379a97f6",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/general-edited9e-ledger-windows-independent-review.json",
+      "bytes": 35520,
+      "gitBlob": "8d2a638a3f7deccf6d57170fdced769dde770928",
+      "sha256": "e3c3539608bdc46c0640bae6cde9c96fc86ab77b962b5e9862b9b5dfc1bf6ca8",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/general-edited9e-jobs-0112.json",
+      "bytes": 9718,
+      "gitBlob": "f45dbbe11dcdb25fd961ef496faa3c7b384d93ca",
+      "sha256": "9f8603e367fdf8a95d787392069923726b17aef33911610a9dc9ceb62174ccb6",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/late-original9e/general/general-edited9e-jobs-0122.json",
+      "bytes": 9718,
+      "gitBlob": "f45dbbe11dcdb25fd961ef496faa3c7b384d93ca",
+      "sha256": "9f8603e367fdf8a95d787392069923726b17aef33911610a9dc9ceb62174ccb6",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/publication-route-observation.json",
+      "bytes": 5169,
+      "gitBlob": "6e58277ca9f1bbd40e31ab6ee9e4591c8a56525b",
+      "sha256": "8cec590c18768854112921fa469e8f012b1d2fe66b3da6711f1b473868d10c5b",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/followup-open-prs-original-0119.json",
+      "bytes": 779,
+      "gitBlob": "577ca9e51429944b1e9b35c7a3af20059348ce36",
+      "sha256": "34ade56c9c95bec9246093851d646b47284d188f0136b8b82c4a8a1bd1d61991",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/native-process-jobs-0121.json",
+      "bytes": 36050,
+      "gitBlob": "902dd691dd342eeca8a55757ce7bd501fb3a2996",
+      "sha256": "fb10ca8a1b8cf01282672f749099137af63158a25135724d3ae5d745c460a7de",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/native-v2-jobs-0121.json",
+      "bytes": 49096,
+      "gitBlob": "540e96350ce15aac7021ff954c72c137be892f34",
+      "sha256": "0cacbc871c1e1906fff9a1814d95e075b27b0d279cef8acff2caddb2a92a7aab",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/ui-full-api-jobs-0121.json",
+      "bytes": 19848,
+      "gitBlob": "cc418d6ba5ccfa6e3c734ac34f1357b49785d297",
+      "sha256": "7bfffe503b96e8fe0fa4781a0d62f7c9d1102d4a29ab3864f8d01d7b9cbe08ce",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/general-jobs-0122.json",
+      "bytes": 1132,
+      "gitBlob": "928a5f0582702686c3f512affe3119e4c6775254",
+      "sha256": "2a16b7455d78af2ea99e0c2d1f1296022581824753bdd3f061f85444ec9bb739",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/prior-M-docs-root-readback.json",
+      "bytes": 13686,
+      "gitBlob": "bfb7521a52c761a7b6cb8d76641cfdfff83c486d",
+      "sha256": "77c368bf636516ed5b64dbbcb43aa85a979d897841b90a73fa108b34409e7d39",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/prior-M-docs-independent-readback.json",
+      "bytes": 12190,
+      "gitBlob": "29ec4562eb82e492cf7303b856ce3a3b0a38de35",
+      "sha256": "e1fd49aa3943f9516541225701d4adcf5ae24aeeb10103e683c96c56826023b2",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/currentness/prior-M-primary-fast-forward-receipt.json",
+      "bytes": 608,
+      "gitBlob": "f98793509cb0380df2b7d5dda95434d349f626ab",
+      "sha256": "f4e22b01dc637943c25e7dee220523ec4ec7c3018e94310bc66a0eb8eb8646d7",
+      "actualCommitBytesEqualFrozenCandidate": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-m-completed-and-dormant-installer-2026-11-16/inventory.json",
+      "bytes": 61775,
+      "gitBlob": "d4ad29f07c626bfc7ff78997dbf85a3a6a675447",
+      "sha256": "47c73a66e71da4da9d4a50b9f94fc1239d5d545250772aa00ee6ba933d1d5b28",
+      "actualCommitBytesEqualFrozenCandidate": true
+    }
+  ]
+}

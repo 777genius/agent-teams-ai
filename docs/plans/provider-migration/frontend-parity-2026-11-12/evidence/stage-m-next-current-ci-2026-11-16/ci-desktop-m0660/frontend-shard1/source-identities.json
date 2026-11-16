@@ -1,0 +1,53 @@
+{
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "files": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+    },
+    {
+      "path": "vitest.config.ts",
+      "bytes": 1187,
+      "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc"
+    },
+    {
+      "path": ".node-version",
+      "bytes": 8,
+      "blob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5"
+    },
+    {
+      "path": "package.json",
+      "bytes": 26839,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+    },
+    {
+      "path": "test/scripts/opencodeNativeTestNode.test.ts",
+      "bytes": 8953,
+      "blob": "96a33e0e0d68480ab3359baa06a2b9ae3a9f44ab",
+      "sha256": "b2e3f6c83342b6b72230f19eafe50a2c3ee0ab1595c5f64734619d00963d5514"
+    },
+    {
+      "path": "test/main/ipc/review.test.ts",
+      "bytes": 220074,
+      "blob": "3d8a88c573fbb5e773379d8cc593de98eb0d32f6",
+      "sha256": "bca6e5bc6d30e0747cac57d9e15d8efc9c92c13228b022f00d33ad01c8cf9c28"
+    },
+    {
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "bytes": 20452,
+      "blob": "57083b1e030958ff4279ea15fffd3a0e7deecad0",
+      "sha256": "b2d86e9ce908930fa1f0da0662d31c9eb6354a578ef69c94a9e581f414d3efbf"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeTaskLogStreamSource.fixture-e2e.test.ts",
+      "bytes": 54209,
+      "blob": "11258da72033129867e19e6d9e70d67cb9e8c749",
+      "sha256": "1d874ebb370b98f9fdfa640425548b206bbb3a3c8b8841497cc13b2606be1f2d"
+    }
+  ]
+}

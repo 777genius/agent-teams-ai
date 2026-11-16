@@ -1,0 +1,187 @@
+{
+  "schema": "root-original-M-General-plan-source-review/v1",
+  "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "reviewer": "/root",
+  "runId": 43780997502,
+  "jobId": 133017912464,
+  "conclusion": "success",
+  "runtime": "Node26.12.1",
+  "originalCommands": [
+    "actions/checkout@v6",
+    "actions/setup-node@v6",
+    "echo 'Source event identity recorded in job metadata'",
+    "node --test test/scripts/ciOptionalWorkflows.test.mts"
+  ],
+  "counts": {
+    "tests": [
+      17
+    ],
+    "pass": [
+      17
+    ],
+    "fail": [
+      0
+    ],
+    "cancelled": [
+      0
+    ],
+    "skipped": [
+      0
+    ]
+  },
+  "decision": "Draft feedback",
+  "merge": {
+    "sha": "a0e9dd786b88abdbe72e6c0e2bdf2a1ca1d83cbe",
+    "tree": "e70ccffc6d55ad42c2249518bf142e2ed32ddf91",
+    "parents": [
+      "def734338f13bcc3209e78079a0cedbc48f05a5b",
+      "0660c748f88675063e3051fb0f8b2022e8f6f056"
+    ],
+    "wholeTreeEqualsM": true
+  },
+  "inputs": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-M-plan-original.log",
+      "bytes": 117532,
+      "blob": "c134edada4731379f114fc07515ad096ddbb3d1d",
+      "sha256": "d1b155f0b23d7bbb1039ab8c71a5e5bdbd1e69abc693f3e89ce2feea61ada8dc"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-M-plan-original-log-response.json",
+      "bytes": 118721,
+      "blob": "91324302591f97a4c3959f3c9ed3ee5c218f91e1",
+      "sha256": "1b2efd4c5c1d79c867404a6b2703cb403bb4583b0bda271bae915db0ee11b2c6"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-M-merge-commit-original.json",
+      "bytes": 6362,
+      "blob": "897d1de9f2e0df346d594b545ab5f244e0c1f82e",
+      "sha256": "654b3856c88aa84bd54f78cfcf888ec918fa8f1ea1879323a969f5cf65f555f9"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-M-jobs-0129.json",
+      "bytes": 5864,
+      "blob": "2f6a910085fc8e620236470843beab7309e9d7ae",
+      "sha256": "d757e5972f83f5d4781771237dbf48167c1a5a272155a6d0aacb3e17ad2e3654"
+    }
+  ],
+  "sourceLeaves": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 175238,
+      "blob": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+      "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce"
+    },
+    {
+      "path": "scripts/ci/ci-feedback.mts",
+      "bytes": 19265,
+      "blob": "9d734783b4e273a4e4fbad27d4e51984646d436d",
+      "sha256": "c89f9b195d5efb183db154f87f3fee0c4e30345e4f24c6797b9a99e09311e40e"
+    },
+    {
+      "path": "test/scripts/ciOptionalWorkflows.test.mts",
+      "bytes": 8284,
+      "blob": "20fcd7ae72fc5ca98d4693a2ddf59326ff8afd4d",
+      "sha256": "477e9b4bf56104f868874d6ea2e8e81dfa8318566f98895a25e24af0d33c92b6"
+    },
+    {
+      "path": ".node-version",
+      "bytes": 8,
+      "blob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5"
+    }
+  ],
+  "observedDependentJobs": [
+    {
+      "id": 133017913491,
+      "name": "Stage 1 source Desktop (${{ matrix.label }})",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 133017913830,
+      "name": "Stage 1 current-tuple process and packed qualification",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 133017913863,
+      "name": "Stage 1 process tuple diagnostic (unqualified)",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 133033794740,
+      "name": "Fast feedback",
+      "status": "queued",
+      "conclusion": null
+    },
+    {
+      "id": 133033795297,
+      "name": "Full qualification",
+      "status": "queued",
+      "conclusion": null
+    },
+    {
+      "id": 133033796167,
+      "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata test') || 'test') }} (${{ matrix.shard }}/4)",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 133033796272,
+      "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata lint') || 'lint') }} (${{ matrix.scope }})",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 133033796518,
+      "name": "Renderer source validation",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 133033796520,
+      "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke'",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 133033796685,
+      "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata validate' || 'validate'",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 133033796875,
+      "name": "Codex login Desktop (Linux x64)",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 133033796876,
+      "name": "Retained OpenCode V1 and Host V2 original Desktop",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 133033797144,
+      "name": "Focused documentation and asset validation",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 133033797270,
+      "name": "macOS DMG artwork end-to-end",
+      "status": "completed",
+      "conclusion": "skipped"
+    }
+  ],
+  "limits": [
+    "Seventeen original source/policy tests only; not frontend/Host runtime or privacy semantic RED.",
+    "Fast feedback and Full qualification were still queued in the exact01:29 snapshot; twelve other jobs skipped. No skipped check is a pass.",
+    "Draft-only source routing is distinct from the old9e EDITED current-input-mismatch fallback.",
+    "No Ready transition, gate bypass, manual CI action, local project command, source or ref mutation authorized or performed by this review.",
+    "This later original result is separate from the frozen65-file documentation publication; original M source remains active."
+  ]
+}

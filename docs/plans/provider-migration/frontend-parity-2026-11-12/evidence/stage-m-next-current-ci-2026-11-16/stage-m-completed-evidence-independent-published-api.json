@@ -1,0 +1,22 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "content": "{\"sha\":\"85355e11fcd08ffe87f96be5003675305458a354\",\"node_id\":\"C_kwDORVTEtNoAKDg1MzU1ZTExZmNkMDhmZmU4N2Y5NmJlNTAwMzY3NTMwNTQ1OGEzNTQ\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/85355e11fcd08ffe87f96be5003675305458a354\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/85355e11fcd08ffe87f96be5003675305458a354\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T01:35:16Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T01:35:16Z\"},\"tree\":{\"sha\":\"7c9757f1b13378f9f9a3a55ce317b19f757799c4\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/7c9757f1b13378f9f9a3a55ce317b19f757799c4\"},\"message\":\"docs: preserve completed M evidence and stage dormant Installer observation plan\",\"parents\":[{\"sha\":\"0660c748f88675063e3051fb0f8b2022e8f6f056\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/0660c748f88675063e3051fb0f8b2022e8f6f056\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/0660c748f88675063e3051fb0f8b2022e8f6f056\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+    "title": "85355e11fcd08ffe87f96be5003675305458a354",
+    "modified_date": null,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/85355e11fcd08ffe87f96be5003675305458a354",
+    "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/85355e11fcd08ffe87f96be5003675305458a354",
+    "display_title": "85355e11fcd08ffe87f96be5003675305458a354",
+    "structuredContent": {
+      "title": "85355e11fcd08ffe87f96be5003675305458a354",
+      "content": "{\"sha\":\"85355e11fcd08ffe87f96be5003675305458a354\",\"node_id\":\"C_kwDORVTEtNoAKDg1MzU1ZTExZmNkMDhmZmU4N2Y5NmJlNTAwMzY3NTMwNTQ1OGEzNTQ\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/85355e11fcd08ffe87f96be5003675305458a354\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/85355e11fcd08ffe87f96be5003675305458a354\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T01:35:16Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T01:35:16Z\"},\"tree\":{\"sha\":\"7c9757f1b13378f9f9a3a55ce317b19f757799c4\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/7c9757f1b13378f9f9a3a55ce317b19f757799c4\"},\"message\":\"docs: preserve completed M evidence and stage dormant Installer observation plan\",\"parents\":[{\"sha\":\"0660c748f88675063e3051fb0f8b2022e8f6f056\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/0660c748f88675063e3051fb0f8b2022e8f6f056\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/0660c748f88675063e3051fb0f8b2022e8f6f056\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+      "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/85355e11fcd08ffe87f96be5003675305458a354"
+    }
+  },
+  "isError": false
+}
