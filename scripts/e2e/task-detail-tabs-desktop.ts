@@ -433,14 +433,29 @@ try {
     await until(() => cdp!.evaluate(
       "!!document.querySelector('[data-testid=\"kanban-review-flow-panel\"]')"
     ), `${layout} review flow panel opened`);
-    // The panel always starts from the persisted flow; pick the requested one.
+    // The panel starts from the persisted flow. Toggle its unchecked preset
+    // and use a static CDP expression so fixture text cannot become executable code.
+    assert.equal(
+      reviewFlowPrompt,
+      reviewFlow === 'human_approval' ? 'Run the e2e suite before deciding.' : '',
+      'review-flow fixture instructions must match the static CDP program'
+    );
     await cdp!.evaluate(
-      `(()=>{const flow=${JSON.stringify(reviewFlow)};const radio=document.querySelector('[data-testid="kanban-review-flow-'+flow+'"]');if(!(radio instanceof HTMLInputElement))throw Error('Review flow option missing');radio.click();
-        const area=document.querySelector('[data-testid="kanban-review-flow-prompt"]');
-        if(!(area instanceof HTMLTextAreaElement))throw Error('Review flow prompt missing');
-        const setter=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value')?.set;
-        setter?.call(area,${JSON.stringify(reviewFlowPrompt)});
-        area.dispatchEvent(new Event('input',{bubbles:true}));})()`
+      `(()=>{
+        const radio = document.querySelector(
+          'input[type="radio"][data-testid^="kanban-review-flow-"]:not(:checked)'
+        );
+        if (!(radio instanceof HTMLInputElement)) throw Error('Review flow option missing');
+        radio.click();
+        const area = document.querySelector('[data-testid="kanban-review-flow-prompt"]');
+        if (!(area instanceof HTMLTextAreaElement)) throw Error('Review flow prompt missing');
+        const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+        setter?.call(
+          area,
+          radio.value === 'human_approval' ? 'Run the e2e suite before deciding.' : ''
+        );
+        area.dispatchEvent(new Event('input', { bubbles: true }));
+      })()`
     );
     await until(() => cdp!.evaluate(
       "(()=>{const b=document.querySelector('[data-testid=\"kanban-review-flow-save\"]');return b instanceof HTMLButtonElement&&!b.disabled;})()"
