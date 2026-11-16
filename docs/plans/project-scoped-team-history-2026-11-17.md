@@ -1,0 +1,123 @@
+# Project-scoped team history (desktop) — implementation plan
+
+> **Status:** design only; no production implementation in this PR. **Baseline:** `main`, inspected 2026-11-17. **Related request:** [#205](https://github.com/777genius/agent-teams-ai/issues/205).  
+> **Owner decision:** existing teams retain shared history; newly created teams default to project-isolated history, with an explicit per-team Shared / Per project option.  
+> **Target:** one visible reusable *team definition*; independent *work history* (tasks, chats, sessions) per project, without introducing reusable individual agents.
+
+## 1. Outcome and invariants
+
+- **Legacy:** a team created before this feature, with *no mode field*, behaves byte-for-byte as today (`shared`). Merely listing/opening a legacy team MUST NOT rewrite its config, tasks, sessions, or messages.
+- **New team:** all creation entry points (blank, copy, template, organization, supported HTTP/API) persist `per_project` unless the user explicitly selects `shared`. Distinguish **new copy** from **restore/import of an existing team**; a restore preserves its saved mode.
+- **Per project:** switching the selected project changes the team's visible task board and chat history to that project's durable workspace. Returning to the prior project restores that workspace, including its task IDs, messages, groups, and sessions. The roster, roles and team-level preferences remain shared.
+- **Shared:** retains current project-switch behavior and existing storage. No hidden change to existing team runtime semantics.
+- **Scope of isolation:** work history, not a security sandbox. It does not restrict filesystem visibility, shared provider memory, MCP roots, credentials, or access to other project folders.
+- **At most one live work context per logical team in v1.** Browsing project B while A runs is allowed; launching B while A is alive/degraded/stopping is rejected with an actionable Stop A message. Do not silently stop, migrate, reuse, or attach A's runtime to B.
+- **No mixed reads/writes:** a task/message/notification/review/queued send belongs to the context captured at admission. Never retarget a delayed result using the renderer's current project.
+- **Fail closed:** missing/corrupt context mapping, unknown explicit mode, foreign-profile ownership or ambiguous runtime lifecycle cannot silently fall back to `shared` or another project.
+
+## 2. Evidence from current code
+
+| Area | Observed existing behavior | Implication |
+| --- | --- | --- |
+| `src/shared/types/team.ts` | `TeamConfig` has `projectPath`, `projectPathHistory`, `leadSessionId`, `sessionHistory`; `TeamTask` has optional `projectPath` | A task field/UI filter is *not* authoritative isolation; team session histories can span projects |
+| `src/main/services/team/TeamTaskReader.ts` / `TeamTaskWriter.ts` | Tasks at `getTasksBasePath()/teamName`; IDs and caches are team-scoped | Give each work context an isolated runtime task namespace; task ID alone is not globally unique |
+| `agent-teams-controller/src/internal/runtimeHelpers.js` | Controller derives team, task, Kanban, process paths solely from `teamName` | A project-specific internal **execution team name** can reuse existing runtime-compatible storage rather than forking the controller |
+| `TeamInboxReader` / `TeamSentMessagesStore` / `GroupChatStorage` | Inbox, sent, group registry/reactions live under `~/.claude/teams/<teamName>` | Project filtering in the renderer is insufficient; direct and group messages must route to their own physical context |
+| `TeamMessageFeedService` | Merges inbox + lead-session messages + sent messages + synthetic bootstrap; caches per team | Context-safe feed needs isolated sources and context-fenced pagination/cache |
+| `TeamProvisioningConfigMaintenance` / `TeamProvisioningLaunchTeamFlow` | Launch changes `config.projectPath`, stores session history, reads existing tasks into the bootstrap prompt | Launch/recovery must resolve context *before* snapshot, prompt hydration, session attribution or process spawn |
+| `TeamConfigReader` / `team-fs-worker` | Both can list physical team directories, including draft teams | List must present one logical team; don't leak internal instances or hide unverified foreign teams |
+| `TeamMetaStore` | `team.meta.json` is app-owned but reads/serializes an allowlist; unknown fields are dropped | Extend validated metadata read/write atomically; absence means legacy shared, invalid explicit value means error |
+| `TeamProfileOwnership` / backups | `~/.claude/teams` is shared across app profiles and native CLI; marker checks gate mutations; backup enumeration is explicit | Preserve profile fences and include logical/context mapping in restore/delete; never clean an unknown directory |
+| `teamSlice` / `teamDataRequestKeys` / token usage / schedules | Requests, UI caches, token runs, and scheduled runs are keyed mainly by `teamName`; schedules contain `cwd` | Distinguish logical team, selected work context and physical execution team in projections and background actions |
+
+Runtime paths, overview: [controller](../../agent-teams-controller/src/internal/runtimeHelpers.js), [service](../../src/main/services/team/TeamDataService.ts), [group storage](../../src/features/team-group-chats/main/infrastructure/GroupChatStorage.ts), [ownership](../../src/main/services/team/provisioning/TeamProvisioningProfileOwnership.ts).
+
+## 3. Minimal architecture (decision)
+
+**Prefer a thin logical-team → physical-execution-team resolver at the application boundary**, not a new task/chat database and not a project parameter threaded through every native CLI operation. Existing lower-level services continue accepting a physical `teamName`.
+
+- **Logical team:** the user-visible team (stable logical identity, name, shared roster and preferences, isolation mode). Legacy physical names remain unchanged. Keep this definition distinct from each native runtime instance.
+- **Work context:** immutable `workContextId`, owning `logicalTeamId`, canonical `projectKey`, display `projectPath`, physical `executionTeamName`, lifecycle and schema version. One context per logical team/project. Store in small, app-owned, versioned durable index with atomic/idempotent create; no universal entity framework.
+- **Physical execution team:** a normal, existing-format CLI-compatible team directory + task directory named by a collision-safe, opaque, short internal ID. Source of truth for that context's tasks, Kanban, direct/group messages, member/runtime evidence, session history and attachments. An internal name is never user-input, never just a hash of an untrusted path, and never inferred as ours from a prefix alone.
+- **Ownership:** persistent mapping and existing profile ownership markers *both* must validate before resolve, mutate, restore, stop or delete. Reserve/check namespace against all actual team directories. Fail rather than overwrite a collision or claim another profile's team.
+- **Project identity:** derive a validated absolute/canonical project key using existing project-selection helpers and explicit worktree identity where available. Two user-selected distinct worktrees count as separate projects; a member's automatically created worktree does not. Handle Windows case/path separators, aliases and missing paths deliberately; use a stored stable work-context ID so moving/renaming folders cannot silently reassign history. Never rely on path hash alone for authorization.
+- **Context binding:** an admitted IPC/HTTP/MCP/scheduler command carries or resolves an explicit, verified work-context identity. Context is bound once at admission and checked against runtime run/generation for deferred callbacks. Main owns resolution; renderer never supplies a privileged physical name.
+- **Read projections:** map physical records back to `logicalTeamId + workContextId` (plus task or message ID) at presentation boundaries. Render one team row. Global All Tasks may aggregate contexts **with explicit project labels**; a specific team/project board must never aggregate. Unverified physical directories are not automatically hidden or deleted.
+- **Config authority:** shared roster/role/prompt edits belong to the logical definition. A stopped context gets a validated projection of current shared configuration at the next launch; **never copy** old tasks/sessions/inboxes when materializing a context. Runtime-originated roster edits must be reconciled through the existing team management contract rather than silently overwritten.
+- **Creation authority:** extend the existing creation + metadata serialization paths, not an extra UI-only setting. A new team may be a draft without a selected valid project, but a per-project runtime launch/task or message write requires one.
+
+### Avoid
+
+- No independent copies of the same team shown as user-created teams.
+- No speculative per-provider storage adapters or cross-feature generic repository/router abstractions.
+- No automatic moving/splitting existing JSONL by timestamp, guessed `cwd`, or content.
+- No path-based rewrite of all native Claude/Codex/OpenCode task/chat internals; reuse the known team-name boundary unless a targeted sandbox proof falsifies compatibility.
+
+## 4. Durable product behavior
+
+| Operation | `shared` / existing | New `per_project` |
+| --- | --- | --- |
+| Create blank / from template / copy | New team mode only if explicitly selected | **Default** for any new team; clear control in Create screen |
+| Select project A, then B, then A | Current combined history | Switch to B's independent history; revisit A restores it |
+| No selected or valid project | Current behavior | Draft readable; do not dispatch task/message/launch without explicit project |
+| Open team while A is running, selected B | Current behavior | Show B history + prominent 'Running in A' status; Stop A before launching B |
+| Create / update / comment / review a task | Existing team task namespace | Target current *captured* context; references include work-context identity |
+| Direct, group, lead, cross-team messages | Current address and feed | Separate durable inbox/sent/group/session sources; no last-selected-project routing |
+| View All Tasks / notifications | Existing aggregate | Aggregate only where already supported, annotated with source project; opening routes to exact context |
+| New schedule | Existing team and `cwd` | Bind target context at creation; never infer project from last active tab at execution |
+| Restart app, resume/restore | Existing behavior | Rebuild the same mapping and context history; no duplicate workspace or cross-project resume |
+| Delete/restore/backup | Existing team | Treat logical team and all *owned* contexts coherently, preserve index and per-context artifacts |
+
+**Mode switching:** allow only after confirmed stop of all contexts and no unresolved sends/writes. Changing mode **changes the destination for future work**, not stored history. Preserve the old shared workspace and all prior project workspaces; do not auto-merge or delete. Switching back restores each original view. Show a confirmation describing where old history remains. Unknown/degraded runtime → refuse switch, never trust a stale 'stopped' UI flag.
+
+**Teams from old data:** absence of `projectContextMode` means `shared` forever unless explicitly changed. Invalid present value fails validation; **not** the legacy fallback. Copying creates a **new** team and defaults to per-project (regardless of source mode) unless explicitly overridden; importing/restoring an existing saved team preserves its recorded mode.
+
+**Cross-team messaging:** existing shared teams keep unchanged addressing. For per-project recipients, route to a verified context for the same explicit project (or a user-selected target context when supported); otherwise return an actionable ambiguous/unavailable-target error. Never create a context or silently select its most-recent project just to deliver.
+
+## 5. Work breakdown (future implementation PRs; NOT this docs PR)
+
+1. **Contracts / persistence:** add two-mode policy, legacy-safe parser, logical/context identifiers, collision-safe mapping, atomic create/reconciliation and profile validation. Extend `TeamMetaStore` read/serializer, API contracts and both list paths. First tests: legacy no mutation, double-create idempotency, foreign-profile rejection, worktree identities.
+2. **Launch / runtime routing:** add one resolver at the existing team use-case/composition boundary; materialize native-compatible physical team with shared roster but clean history. Bind run ID to work-context identity; fail closed on A-running/B-launch, app restart, cancellation and degraded runtime. Confirm controller, orchestrator and OpenCode primary/secondary use the intended context, not just renderer tasks.
+3. **History routing:** task board, comments, references, attachments, Kanban, direct/group/lead messages, paging, revisions, read/unread, queued sends and log/session resolution. Preserve original context on async work and cache invalidation; test A/B same numeric task ID or member name.
+4. **UI / background / lifecycle:** mode selector in shared creation and team settings, project switch with truthful active-run indicator, per-context UI request keys, global projections, notifications, schedules, cross-team, auto-resume, member work sync, token usage and safe delete/backup/restore. Integrate in narrow seams; avoid editing unrelated provider internals.
+5. **Qualification / release:** run unit + integration + sandbox Electron E2E on real IPC/storage/rendering for A→B→A + restart; provider compatibility (Claude, Codex, OpenCode and mixed lanes), multi-OS path identity and old-profile preservation. Only activate default after all required checks pass on the exact current HEAD.
+
+Implementation may be split into smaller stacked PRs with a hidden opt-in behind the composition layer until all data paths are complete. Do **not** ship a partial UI-only 'isolated' mode.
+
+## 6. Acceptance matrix / evidence required
+
+- [ ] Fresh new team defaults `per_project` in UI *and* backend API; explicit `shared` persists across restart. Existing no-field teams remain shared, including after list/read/backup; copying an old team defaults per-project.
+- [ ] A→B→A: independent tasks (including deleted, comments, dependencies, task references and Kanban), chats (DM, group, lead, sent), read state and session provenance; same task ID across contexts never cross-links.
+- [ ] Native agent-originated task creation and message delivery are isolated, not merely manual UI inputs. Launch bootstrap reads only target context's tasks/session state and not A while starting B.
+- [ ] Switch project mid-flight: A completion/message stays A, B's view remains unchanged; unresolved writes/queued items cannot be rerouted by changing UI selection.
+- [ ] One active context per logical team, including stopping, degraded/recovery and app restart; no implicit stop/resume of another project or duplicate process launch.
+- [ ] Group reactions, message revision/forward/reply provenance, attachments and alerts stay with source context; notifications open exact project and task.
+- [ ] Scheduler, cross-team targeting, auto-resume and work-sync have explicit target context or fail closed; old shared routes remain unaffected.
+- [ ] Same project via equivalent normalized path resolves same context; two explicit worktrees remain distinct; deleted/moved/relinked paths do not auto-merge histories.
+- [ ] Profile ownership: malformed mapping, unowned alias and foreign-profile team never get mutated, hidden as 'ours', backed up or deleted. Crash during first context create and retry is idempotent.
+- [ ] Backup/restore and soft/permanent team deletion preserve/release *only owned* context artifacts and manifest; restore does not create orphan visible teams.
+- [ ] Electron `pnpm dev:mcp` sandbox E2E with isolated app data/Claude root and no real user projects; packaged smoke where necessary. Windows + macOS + Linux evidence; `pnpm typecheck`, focused test suites, lint, architecture/source-size guards, full qualification on exact implementation HEAD.
+- [ ] UI review: Create/Edit toggle, one team row, project context switch and active-context banner visually checked, keyboard-accessible and translated; no misleading claims of filesystem/security isolation.
+
+**Stop/go verification gate:** before production code, implement a *disposable sandbox-only proof* that the targeted current runtime/controller accept an internal physical team name across launch, tasks, inbox, OpenCode lanes, cleanup and restart. If this fails, revise the plan through a new design review (do not patch third-party runtime semantics opportunistically). Do not count proposed tests as passed evidence.
+
+## 7. Risks, estimate and explicit non-goals
+
+| Risk | Why high | Minimal mitigation |
+| --- | --- | --- |
+| Hidden native team aliases leaking into normal team lists | Worker and main both enumerate physical directories | Explicit verified logical projection in both readers; never hide foreign/native teams based solely on name |
+| Context split only in UI | Agents still read physical inbox and task files | Use actual isolated CLI-compatible storage namespace + sandbox agent-originated E2E |
+| Racing project switches / late events | Async callbacks and caches key by team name | Capture context/run generation at admission and fence every state update |
+| App/profile crash and unexpected ownership | Shared `~/.claude` path and recovery sweeps | Atomic manifest, existing ownership checks, idempotent reconciliation and evidence-based deletion |
+| Shared team roster drift among contexts | Each runtime instance has separate native config | Logical source of truth + stopped-only, validated one-way projection at next launch |
+| Background routing to wrong project | Schedules, cross-team messages, queues and auto-resume are asynchronous | Explicit durable target, no implicit last-project fallback |
+
+**Rough incremental implementation estimate:** ~6k–10k modified/added LOC including tests and transport/OS evidence; confidence 6/10 pending the runtime alias proof; difficulty **8/10** (model ~5/10, cross-runtime integration ~8/10). Counts exclude generated files and unrelated refactors.
+
+**Out of scope:** implementation in this PR; reusable independent agents / agent marketplace; custom template library PR #920; concurrent live project contexts for the same logical team; project filesystem or MCP security isolation; multi-user/cloud synchronization; cross-machine context sharing; auto-merging or time-splitting old history; automated project-folder relinking; changing provider authentication/models; Host migration (#982 and related); reworking Organizations, schedules or global task UX beyond necessary context routing; dependency upgrades, broad formatting, CI/workflow redesign or release/merge.
+
+**Delivery discipline:** a dedicated Draft PR with this Markdown file only. Future implementation needs its own scoped PRs, code review, exact-HEAD checks and real sandbox desktop E2E. Draft ≠ approved design, CI queued/skipped ≠ PASS.
+
+## 8. Review log
+
+Five ordered **author review-and-revision** rounds will be recorded here as updates are committed and immediately pushed to this same Draft PR. These are not independent external model or human approvals.
