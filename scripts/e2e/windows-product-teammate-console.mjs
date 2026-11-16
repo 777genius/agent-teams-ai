@@ -59,6 +59,7 @@ let originalMember;
 let initialMember;
 let appManagedRosterAttachConfirmed = false;
 let teamAliveBeforeAttach = null;
+let attachLivenessDiagnostics = null;
 let addMemberIpcReceipt = null;
 let forceExitMember;
 let hwndObserver;
@@ -282,6 +283,36 @@ async function run() {
   mainBirth = await getProcess(actualMainPid);
   assert(mainBirth?.command?.toLowerCase().includes('electron.exe'),
     'Owned Electron Main Windows process birth/identity unavailable');
+  // Start the original Win32 observer before product team creation. This avoids
+  // adding its cold-start delay after Alice is provisioned, when a synthetic
+  // idle lead may retire before the real addMember IPC. Keep one unbroken
+  // foreground/HWND observation through Bob and native tools.
+  const focusReady = await mainInspector.evaluate(`(() => {
+    const req = typeof require === 'function' ? require : process.mainModule?.require?.bind(process.mainModule);
+    const win = req('electron').BrowserWindow.getAllWindows()
+      .find(w => w.webContents.getURL().startsWith('http://localhost:'));
+    if (!win) return false;
+    if (!win.isFocused()) win.focus();
+    globalThis.__winProductFocus.before = win.isFocused();
+    globalThis.__winProductFocus.blur = 0;
+    return win.isFocused();
+  })()`);
+  assert(focusReady, 'Could not establish focused owned Electron window before tool E2E');
+  phase = 'native-window-observer';
+  hwndObserver = spawn('powershell.exe', [
+    '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+    '-File', path.join(repoRoot, 'scripts/e2e/windows-product-console-hwnd.ps1'),
+    '-ReadyPath', hwndReady, '-StopPath', hwndStop,
+    '-EvidencePath', hwndProof, '-MainPid', String(mainBirth.pid),
+  ], { windowsHide: true, cwd: repoRoot, stdio: ['ignore', 'pipe', 'pipe'] });
+  for (const stream of [hwndObserver.stdout, hwndObserver.stderr]) stream.on('data', chunk => {
+    hwndObserverLog = (hwndObserverLog + chunk.toString()).slice(-4000);
+  });
+  await wait('owned native HWND observer ready', async () => {
+    if (hwndObserver.exitCode !== null)
+      throw new Error('Native HWND observer failed: ' + hwndObserverLog);
+    return (await readFile(hwndReady, 'utf8').catch(() => '')) === 'ready';
+  }, 45_000);
   phase = 'real-product-team-create';
   const request = {
     teamName, cwd: projectPath, providerId: 'anthropic', model: 'claude-sonnet-4-6',
@@ -316,42 +347,30 @@ async function run() {
   // manual restart. Attach a NEW teammate through ordinary product IPC: a
   // restarted existing member would be refused while its PID is unverified.
   // Never downgrade the production PID safety guard to pass this test.
-  // Establish and pin a focused Electron foreground baseline immediately
-  // before app-managed roster attachment; watch the member spawn, tool calls,
-  // and token-usage importers in the same native HWND/focus interval.
-  const focusReady = await mainInspector.evaluate(`(() => {
-    const req = typeof require === 'function' ? require : process.mainModule?.require?.bind(process.mainModule);
-    const win = req('electron').BrowserWindow.getAllWindows()
-      .find(w => w.webContents.getURL().startsWith('http://localhost:'));
-    if (!win) return false;
-    if (!win.isFocused()) win.focus();
-    globalThis.__winProductFocus.before = win.isFocused();
-    globalThis.__winProductFocus.blur = 0;
-    return win.isFocused();
-  })()`);
-  assert(focusReady, 'Could not establish focused owned Electron window before tool E2E');
-  phase = 'native-window-observer';
-  hwndObserver = spawn('powershell.exe', [
-    '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-    '-File', path.join(repoRoot, 'scripts/e2e/windows-product-console-hwnd.ps1'),
-    '-ReadyPath', hwndReady, '-StopPath', hwndStop,
-    '-EvidencePath', hwndProof, '-MainPid', String(mainBirth.pid),
-  ], { windowsHide: true, cwd: repoRoot, stdio: ['ignore', 'pipe', 'pipe'] });
-  for (const stream of [hwndObserver.stdout, hwndObserver.stderr]) stream.on('data', chunk => {
-    hwndObserverLog = (hwndObserverLog + chunk.toString()).slice(-4000);
-  });
-  await wait('owned native HWND observer ready', async () => {
-    if (hwndObserver.exitCode !== null)
-      throw new Error('Native HWND observer failed: ' + hwndObserverLog);
-    return (await readFile(hwndReady, 'utf8').catch(() => '')) === 'ready';
-  }, 45_000);
   phase = 'app-managed-teammate-attach';
   initialMember = originalMember;
   // The product IPC treats an inactive team as a config-only add. Verify the
   // same runtime liveness gate before expecting a genuine member spawn event.
   teamAliveBeforeAttach = await api(`window.electronAPI.teams.processAlive(${literal(teamName)})`);
+  if (!teamAliveBeforeAttach) {
+    // Fail closed, but retain just enough original process/runtime facts to
+    // distinguish an exited lead from a stale runtime projection on Windows.
+    const snapshot = await api(
+      `window.electronAPI.teams.getTeamAgentRuntime(${literal(teamName)})`
+    ).catch(error => ({ error: String(error) }));
+    attachLivenessDiagnostics = {
+      initialAlicePid: initialMember.pid,
+      initialAliceStillAlive: await ownedStillAlive(initialMember),
+      runtimeRunId: snapshot?.runId ?? null,
+      aliceRuntimePid: snapshot?.members?.alice?.runtimePid ??
+        snapshot?.members?.alice?.pid ?? null,
+      aliceRuntimeAlive: snapshot?.members?.alice?.alive ?? null,
+      runtimeSnapshotError: snapshot?.error ?? null,
+    };
+  }
   assert.equal(teamAliveBeforeAttach, true,
-    'Product runtime became inactive before app-managed member attachment');
+    'Product runtime became inactive before app-managed member attachment: ' +
+      JSON.stringify(attachLivenessDiagnostics));
   const attachedName = 'bob';
   const attachedSpec = {
     name: attachedName, providerId: 'anthropic', model: 'claude-sonnet-4-6',
@@ -585,6 +604,7 @@ try {
     realProductTeammateLaunch: Boolean(originalMember),
     appManagedRosterAttachConfirmed,
     teamAliveBeforeAttach,
+    attachLivenessDiagnostics,
     addMemberIpcReceipt,
     toolResults: [...proofs.values()], usageImporterProcesses,
     heldPowerShellToolPid: heldTool?.pid ?? null,
