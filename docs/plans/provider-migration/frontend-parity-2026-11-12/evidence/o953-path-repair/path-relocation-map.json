@@ -1,0 +1,418 @@
+{
+  "schema": "immutable-evidence-path-relocation/v1",
+  "originalCommit": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "originalTree": "6080d832338dd7f0cf0e7e6522b2413e70f26668",
+  "oldPrefix": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/",
+  "newPrefix": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/",
+  "moves": [
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/DESIGN-R1-draft-v2.md",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/DESIGN-R1-draft-v2.md",
+      "mode": "100644",
+      "oldRelativeCharacters": 166,
+      "newRelativeCharacters": 114,
+      "bytes": 22937,
+      "blob": "99c9c114eb6ba6b31d21550f94f617a1e377d1da",
+      "sha256": "df8e2c7e72ce93e4b1eab7a5f0a3c1827a4270e407012583681b80acfee4147f"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/DESIGN-R1-draft.md",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/DESIGN-R1-draft.md",
+      "mode": "100644",
+      "oldRelativeCharacters": 163,
+      "newRelativeCharacters": 111,
+      "bytes": 20995,
+      "blob": "0f834435fdaad97c817bfad8ce4598ef176b205a",
+      "sha256": "924aa5c6a12948642106a67b5121c39c8bc6b51201d8556e045f9a42d5b57722"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/R1-v2-wording-only-metadata.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/R1-v2-wording-only-metadata.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 177,
+      "newRelativeCharacters": 125,
+      "bytes": 5746,
+      "blob": "6e8f4cb7adb58d22deb4f82e9f4994699b06b8e8",
+      "sha256": "943e4b4bff70f79112825c0057cb74086fb9e67679b6aa7030156cf4e7448c0e"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/R1-v2-wording-only.patch",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/R1-v2-wording-only.patch",
+      "mode": "100644",
+      "oldRelativeCharacters": 169,
+      "newRelativeCharacters": 117,
+      "bytes": 12870,
+      "blob": "1cf30db5a7bc1dd5b9d376005512ab0f3c55c5d8",
+      "sha256": "921178599daf32cfe625517c2dc15ea243c5bf934bcc636080c0d401fed95aba"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete.patch",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete.patch",
+      "mode": "100644",
+      "oldRelativeCharacters": 171,
+      "newRelativeCharacters": 119,
+      "bytes": 72151,
+      "blob": "d342940e4f50f95aaf38f8df578698b955bfb4da",
+      "sha256": "ef0e8eabf254c3284ce1ebc7d7c56030414a307e5b47847f677f9df7a22c0b4c"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/.github/workflows/host-emulated-acceptance.yml.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/.github/workflows/host-emulated-acceptance.yml.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 216,
+      "newRelativeCharacters": 164,
+      "bytes": 103848,
+      "blob": "74c5964e1b28e02df2fd5649d9d67931889cd7a8",
+      "sha256": "8fd4f1edd2473382655d1fbb0850b60be890764460bdf4fdfd158637f8594a9f"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-backend-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/desktop-backend-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 220,
+      "newRelativeCharacters": 168,
+      "bytes": 55759,
+      "blob": "4eabaf832901bf3ea82bc9761f1208207343b8a0",
+      "sha256": "1ded076e942640f4306af7ee6d5f1e4c49d7b9095d6aaeba4f59826e794863bd"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 233,
+      "newRelativeCharacters": 181,
+      "bytes": 15874,
+      "blob": "6205acf48ae31051ae3b4dcb4d66c47286022ba4",
+      "sha256": "1663c2db6b7229472ec45529202053023d7cb33cd1affc333547105979e6b6ca"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 231,
+      "newRelativeCharacters": 179,
+      "bytes": 47589,
+      "blob": "de958fcbd9c1aef20ec843904dd89a6fec62568d",
+      "sha256": "e748025e727b8b6f96e4521496907e469058603610ac7024b600d8174300faf8"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 227,
+      "newRelativeCharacters": 175,
+      "bytes": 34186,
+      "blob": "3313bd7ea5f707a930f87322f8ec4fdaed86a527",
+      "sha256": "23e1e8651bdef907a525cb8918986623760444f685938942882571a3f695cbd5"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 234,
+      "newRelativeCharacters": 182,
+      "bytes": 21133,
+      "blob": "868b7c7121cc85925b86fee641064493dc099785",
+      "sha256": "c2feed93785e08604a92db4cacb224164cd926b2b8d2826b502d408d16bdba71"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 225,
+      "newRelativeCharacters": 173,
+      "bytes": 114321,
+      "blob": "f25095fc93559fc8f84d159b946e89d729956f4c",
+      "sha256": "5ed2a20f03ef72fe2ea272bed84c4f38326f2ab0f6a90b2dc65ece615662b34f"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 232,
+      "newRelativeCharacters": 180,
+      "bytes": 13985,
+      "blob": "d725e255682b0c092e7b05970622e732c1124580",
+      "sha256": "99f37883c6c0096ac75f7c53ee1f02680dd5a402260b067cdb136fd696287b3a"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green.patch",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-poll-green.patch",
+      "mode": "100644",
+      "oldRelativeCharacters": 173,
+      "newRelativeCharacters": 121,
+      "bytes": 727,
+      "blob": "8161a1b342e71ed0c46ea0f40cb70bdfdb01846d",
+      "sha256": "80fb75f384686fcabc2bf076069d3e9864204f86a4ba04f43ae15528eddc7890"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 233,
+      "newRelativeCharacters": 181,
+      "bytes": 45795,
+      "blob": "5026f0ec6165bb092717ddc989043848a25081dc",
+      "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 244,
+      "newRelativeCharacters": 192,
+      "bytes": 47589,
+      "blob": "de958fcbd9c1aef20ec843904dd89a6fec62568d",
+      "sha256": "e748025e727b8b6f96e4521496907e469058603610ac7024b600d8174300faf8"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/current-79-phase-a-compatibility-review.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/current-79-phase-a-compatibility-review.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 189,
+      "newRelativeCharacters": 137,
+      "bytes": 20696,
+      "blob": "ee5e06447f5bd0bed01dcba64443369b64e41e07",
+      "sha256": "06d3da72ab7b9d6311925b4b28860015e59befc95cddc4b59f30ee1c19c5ed6e"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/independent-source-design-review-v1.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/independent-source-design-review-v1.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 185,
+      "newRelativeCharacters": 133,
+      "bytes": 22609,
+      "blob": "71d3072dffafdf4016bef204da9a42d9a0da1ee2",
+      "sha256": "9e8e090834cb1d4f228d1170bddeb13cbfcb7c37d1c48db7312b969ae7783402"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/independent-wording-review-v2.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/independent-wording-review-v2.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 179,
+      "newRelativeCharacters": 127,
+      "bytes": 3550,
+      "blob": "f12678c8cde90693552bef9c805e47be96fa8b41",
+      "sha256": "5b33453c918e6ac9c781a7293a5c011047486afa1e0981e4fea476de7e6aaf47"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/phase-c-after-reviewed-poll-green.patch",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/phase-c-after-reviewed-poll-green.patch",
+      "mode": "100644",
+      "oldRelativeCharacters": 184,
+      "newRelativeCharacters": 132,
+      "bytes": 67227,
+      "blob": "205f56d04b6d565cd95dd49f782dfe06dd926eac",
+      "sha256": "6c59741c42728b4883b9d42f277f19a4c2faf30d6e06ee0ca11fc8f107b7323e"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/poll-candidate-metadata.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/poll-candidate-metadata.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 173,
+      "newRelativeCharacters": 121,
+      "bytes": 2250,
+      "blob": "9f16dddff316a2479cc614fd796e22e7a92ed9c9",
+      "sha256": "70b8e86daa5112a7d071ed411d9d4f5bb609e4d7964f0f72bfe41e7726101b18"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/poll-red-test.patch",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/poll-red-test.patch",
+      "mode": "100644",
+      "oldRelativeCharacters": 164,
+      "newRelativeCharacters": 112,
+      "bytes": 4670,
+      "blob": "5f2fe94dddd0c378f63502cefdb0f715b0ce0a75",
+      "sha256": "383e11424f6dbbdd58d9ddc03700499d23dcf0a97b083ab6b0a46bf5107d47d2"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preimage/.github/workflows/host-emulated-acceptance.yml.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preimage/.github/workflows/host-emulated-acceptance.yml.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 204,
+      "newRelativeCharacters": 152,
+      "bytes": 101741,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preimage/scripts/legacy-agent-host/desktop-backend-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preimage/scripts/legacy-agent-host/desktop-backend-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 208,
+      "newRelativeCharacters": 156,
+      "bytes": 54778,
+      "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preimage/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preimage/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 219,
+      "newRelativeCharacters": 167,
+      "bytes": 45707,
+      "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preimage/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preimage/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 215,
+      "newRelativeCharacters": 163,
+      "bytes": 33161,
+      "blob": "426c45f6236a3aaf8b3f5e14b4cf21e4ce000c8f",
+      "sha256": "1e495ee7b244fa471f2a6a4039d7110db6ff2760260c23f89123703810d0bfad"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preimage/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preimage/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 222,
+      "newRelativeCharacters": 170,
+      "bytes": 20996,
+      "blob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+      "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preimage/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preimage/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 213,
+      "newRelativeCharacters": 161,
+      "bytes": 103573,
+      "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+      "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/.github/workflows/host-emulated-acceptance.yml.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/.github/workflows/host-emulated-acceptance.yml.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 203,
+      "newRelativeCharacters": 151,
+      "bytes": 103848,
+      "blob": "74c5964e1b28e02df2fd5649d9d67931889cd7a8",
+      "sha256": "8fd4f1edd2473382655d1fbb0850b60be890764460bdf4fdfd158637f8594a9f"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/desktop-backend-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/desktop-backend-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 207,
+      "newRelativeCharacters": 155,
+      "bytes": 55759,
+      "blob": "4eabaf832901bf3ea82bc9761f1208207343b8a0",
+      "sha256": "1ded076e942640f4306af7ee6d5f1e4c49d7b9095d6aaeba4f59826e794863bd"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 220,
+      "newRelativeCharacters": 168,
+      "bytes": 15874,
+      "blob": "6205acf48ae31051ae3b4dcb4d66c47286022ba4",
+      "sha256": "1663c2db6b7229472ec45529202053023d7cb33cd1affc333547105979e6b6ca"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 218,
+      "newRelativeCharacters": 166,
+      "bytes": 47501,
+      "blob": "3fafe379fa85edf20aef44eeb4f544ca691d05d4",
+      "sha256": "0ec44f25649005b961bb7b5b81545de23953e2b055b1ee762cae30bc899cf9d3"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 214,
+      "newRelativeCharacters": 162,
+      "bytes": 34186,
+      "blob": "3313bd7ea5f707a930f87322f8ec4fdaed86a527",
+      "sha256": "23e1e8651bdef907a525cb8918986623760444f685938942882571a3f695cbd5"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 221,
+      "newRelativeCharacters": 169,
+      "bytes": 21133,
+      "blob": "868b7c7121cc85925b86fee641064493dc099785",
+      "sha256": "c2feed93785e08604a92db4cacb224164cd926b2b8d2826b502d408d16bdba71"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 212,
+      "newRelativeCharacters": 160,
+      "bytes": 114321,
+      "blob": "f25095fc93559fc8f84d159b946e89d729956f4c",
+      "sha256": "5ed2a20f03ef72fe2ea272bed84c4f38326f2ab0f6a90b2dc65ece615662b34f"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/preview/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/preview/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 219,
+      "newRelativeCharacters": 167,
+      "bytes": 13985,
+      "blob": "d725e255682b0c092e7b05970622e732c1124580",
+      "sha256": "99f37883c6c0096ac75f7c53ee1f02680dd5a402260b067cdb136fd696287b3a"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/proposal-metadata.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/proposal-metadata.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 167,
+      "newRelativeCharacters": 115,
+      "bytes": 27500,
+      "blob": "1458fe354a53b6b4929fb7db4dd8f8cf5fed1e41",
+      "sha256": "b9e8fc1a3198bc9c2b45a6059270ff8a330b126e68d9b2248f972575c26d9bbc"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/red/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/red/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 208,
+      "newRelativeCharacters": 156,
+      "bytes": 107837,
+      "blob": "a6c8df59b6fabc013b3570762d6b19a396e32c9e",
+      "sha256": "d8bfcea3677773bb7d9fd800f958728719f292c7e01a9e4a0ead4fd746276cf9"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/route-test-suffix.txt",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/route-test-suffix.txt",
+      "mode": "100644",
+      "oldRelativeCharacters": 166,
+      "newRelativeCharacters": 114,
+      "bytes": 6484,
+      "blob": "556be3495f497c3a01326823a242d8d4874fe4d3",
+      "sha256": "c1edda7303a2af84c1ce1a6586693074ab08adc2d41dfd8a779cc533efe56a56"
+    },
+    {
+      "from": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/workflow-design-metadata.json",
+      "to": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/p11-v2-proposal-2026-11-16/workflow-design-metadata.json",
+      "mode": "100644",
+      "oldRelativeCharacters": 174,
+      "newRelativeCharacters": 122,
+      "bytes": 14057,
+      "blob": "cda62462d31540d9c4407083e519909b96917c10",
+      "sha256": "d66117c42c3a45772b6e209d8dac06e98563dd245a25be7edb0150bcc051ef23"
+    }
+  ],
+  "preservedBlobCount": 40,
+  "preservedInternalRelativePaths": true,
+  "oldMaximumRelativePathCharacters": 244,
+  "movedMaximumRelativePathCharacters": 192,
+  "otherMaximumRelativePathCharacters": 216,
+  "originalWindowsCheckoutPrefixCharacters": 35,
+  "originalMaximumWithCheckoutPrefix": 279,
+  "resultMaximumWithCheckoutPrefix": 251,
+  "historicalReferences": "Frozen953 inventories and reviews describe original953 repository paths. Their bytes remain unchanged. Resolve those paths through this one-to-one map on descendants or through original commit953. All40 content blobs and every internal relative suffix remain identical."
+}

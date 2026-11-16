@@ -1,0 +1,285 @@
+{
+  "schema": "original-O953-Windows-checkout-failure-review/v1",
+  "sourceHead": "953fd8a94dc97bcfe89a7a808043dc11843e19d8",
+  "jobs": [
+    {
+      "jobId": 133102585293,
+      "runId": 43807841917,
+      "name": "Host process fixtures (win32-x64)",
+      "originalConclusion": "failure",
+      "checkoutStep": {
+        "name": "Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 2
+      },
+      "workingDirectory": "D:\\a\\agent-teams-ai\\agent-teams-ai",
+      "workingDirectoryPrefixCharacters": 35,
+      "log": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585293.log",
+        "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-o-path-repair-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585293.log",
+        "mode": "100644",
+        "bytes": 26695,
+        "blob": "e1e06100399ec6bbb352812c19dca69c8443c4e1",
+        "sha256": "eddc5edd47ca82d9588bfe9fd3c2b8b2baec143bd64f7d2daf4f4b73f076c6ec",
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/job-133102585293.log"
+      },
+      "fullOriginalMcpResponse": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585293-original-response.json",
+        "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-o-path-repair-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585293-original-response.json",
+        "mode": "100644",
+        "bytes": 27893,
+        "blob": "c728fec27537e84337a56aa4711806a3447176d5",
+        "sha256": "b76ae3341c585ef9b59ef9c4746fc2f73b901f3b631b6f22d919fe6c59b72bc3",
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/job-133102585293-original-response.json"
+      },
+      "exactMcpUtf8EqualsLog": true,
+      "observedFailedPaths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt"
+      ],
+      "executionLimit": "Checkout failed before project/install/build/native/Desktop execution; later skips and evidence-upload outcomes remain separate."
+    },
+    {
+      "jobId": 133102585672,
+      "runId": 43807841917,
+      "name": "Host process fixtures (win32-arm64)",
+      "originalConclusion": "failure",
+      "checkoutStep": {
+        "name": "Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 2
+      },
+      "workingDirectory": "C:\\a\\agent-teams-ai\\agent-teams-ai",
+      "workingDirectoryPrefixCharacters": 35,
+      "log": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585672.log",
+        "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-o-path-repair-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585672.log",
+        "mode": "100644",
+        "bytes": 28154,
+        "blob": "bd0e537e23cdfe3d8e05c21edfb5af753f7eb6e3",
+        "sha256": "4029ebe542160e589ca4f43d4fb89c46f79424ee6d0895b8a78627bb90db9ed0",
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/job-133102585672.log"
+      },
+      "fullOriginalMcpResponse": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585672-original-response.json",
+        "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-o-path-repair-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585672-original-response.json",
+        "mode": "100644",
+        "bytes": 29396,
+        "blob": "a9ee51742b2f86fd73bbef516d451fae3312f63b",
+        "sha256": "ca3e6fcb42c61f35ee582a4076427e971f4c4038184dad80fd8241885a7c0b85",
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/job-133102585672-original-response.json"
+      },
+      "exactMcpUtf8EqualsLog": true,
+      "observedFailedPaths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt"
+      ],
+      "executionLimit": "Checkout failed before project/install/build/native/Desktop execution; later skips and evidence-upload outcomes remain separate."
+    },
+    {
+      "jobId": 133102585222,
+      "runId": 43807841826,
+      "name": "Embedded V2.1.4 original Host (win32-x64)",
+      "originalConclusion": "failure",
+      "checkoutStep": {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 2
+      },
+      "workingDirectory": "D:\\a\\agent-teams-ai\\agent-teams-ai",
+      "workingDirectoryPrefixCharacters": 35,
+      "log": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585222.log",
+        "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-o-path-repair-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585222.log",
+        "mode": "100644",
+        "bytes": 30284,
+        "blob": "6e468c8d39355d62ec00f4206a57f9834eda3659",
+        "sha256": "45bb9636f74ac5085edad897c276f9c8d27fce971348c6ab7ef2483dbfb5cadc",
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/job-133102585222.log"
+      },
+      "fullOriginalMcpResponse": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585222-original-response.json",
+        "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-o-path-repair-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585222-original-response.json",
+        "mode": "100644",
+        "bytes": 31563,
+        "blob": "d6e2337b809b0c26df175738d465ed975c5c421f",
+        "sha256": "49e915a49bcfb665e771ee0448a313c6d7886300264f704c392cf42354fd09e5",
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/job-133102585222-original-response.json"
+      },
+      "exactMcpUtf8EqualsLog": true,
+      "observedFailedPaths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt"
+      ],
+      "executionLimit": "Checkout failed before project/install/build/native/Desktop execution; later skips and evidence-upload outcomes remain separate."
+    },
+    {
+      "jobId": 133102585195,
+      "runId": 43807841826,
+      "name": "Embedded V2.1.4 original Host (win32-arm64)",
+      "originalConclusion": "failure",
+      "checkoutStep": {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 2
+      },
+      "workingDirectory": "C:\\a\\agent-teams-ai\\agent-teams-ai",
+      "workingDirectoryPrefixCharacters": 35,
+      "log": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585195.log",
+        "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-o-path-repair-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585195.log",
+        "mode": "100644",
+        "bytes": 31546,
+        "blob": "7bb6c4cad0f6de5859c0c7d5bf9fe2c176e2ec39",
+        "sha256": "c2c9d4873e7097de5fd5a474f515c28c9f1734defc837b735b172b850e8b4206",
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/job-133102585195.log"
+      },
+      "fullOriginalMcpResponse": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585195-original-response.json",
+        "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-o-path-repair-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585195-original-response.json",
+        "mode": "100644",
+        "bytes": 32863,
+        "blob": "10bc8fc9416ae2de502d1560cc3259252e885118",
+        "sha256": "3930e803f17eb50c5500d61f38229089840ce80fc8a45360825dbec5f06bf5a9",
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/job-133102585195-original-response.json"
+      },
+      "exactMcpUtf8EqualsLog": true,
+      "observedFailedPaths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt"
+      ],
+      "executionLimit": "Checkout failed before project/install/build/native/Desktop execution; later skips and evidence-upload outcomes remain separate."
+    },
+    {
+      "jobId": 133102585065,
+      "runId": 43807841826,
+      "name": "Static V01 source test (windows-2022)",
+      "originalConclusion": "failure",
+      "checkoutStep": {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 2
+      },
+      "workingDirectory": "D:\\a\\agent-teams-ai\\agent-teams-ai",
+      "workingDirectoryPrefixCharacters": 35,
+      "log": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585065.log",
+        "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-o-path-repair-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585065.log",
+        "mode": "100644",
+        "bytes": 26109,
+        "blob": "571cd137a403a2ea53984da3c8e2b6181c64abce",
+        "sha256": "a3c8574504ef6eb9b42ec356ac243b4d9afc87204842874e5680a4d941002e21",
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/job-133102585065.log"
+      },
+      "fullOriginalMcpResponse": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585065-original-response.json",
+        "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-o-path-repair-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102585065-original-response.json",
+        "mode": "100644",
+        "bytes": 27268,
+        "blob": "f2d7eb73acd4ff8aea9c2d38777b927a40289780",
+        "sha256": "55f86cb73f091b4a8be28d2c64df506f8e9e48d3f1417dd4144efe38c118106f",
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/job-133102585065-original-response.json"
+      },
+      "exactMcpUtf8EqualsLog": true,
+      "observedFailedPaths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt"
+      ],
+      "executionLimit": "Checkout failed before project/install/build/native/Desktop execution; later skips and evidence-upload outcomes remain separate."
+    },
+    {
+      "jobId": 133102584969,
+      "runId": 43807841767,
+      "name": "Creation page (windows-latest)",
+      "originalConclusion": "failure",
+      "checkoutStep": {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 2
+      },
+      "workingDirectory": "D:\\a\\agent-teams-ai\\agent-teams-ai",
+      "workingDirectoryPrefixCharacters": 35,
+      "log": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102584969.log",
+        "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-o-path-repair-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/job-133102584969.log",
+        "mode": "100644",
+        "bytes": 27675,
+        "blob": "19bc94a3e446f40f2438fa7e9eb7fa368f35f795",
+        "sha256": "15308a1546197c1d88fb2aed73e6a45025d13de79ecd42061ad86953656ccaba",
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/creation-windows/job-133102584969.log"
+      },
+      "fullOriginalMcpResponse": {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/original-job-133102584969-response.json",
+        "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-o-path-repair-publication/files/docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/o953-path-repair/original-job-133102584969-response.json",
+        "mode": "100644",
+        "bytes": 28879,
+        "blob": "34acd96ec58477cf18a7cda74cc83bf812d09191",
+        "sha256": "feb8440f42a7c72ef92fcaa1dcdbc5b6c72dd27e9c686da759ce9199efb76745",
+        "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-o-953fd8/creation-windows/original-job-133102584969-response.json"
+      },
+      "exactMcpUtf8EqualsLog": true,
+      "observedFailedPaths": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt"
+      ],
+      "executionLimit": "Checkout failed before project/install/build/native/Desktop execution; later skips and evidence-upload outcomes remain separate."
+    }
+  ],
+  "jobCount": 6,
+  "sameEightObservedFailurePaths": [
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts.txt",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts.txt",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts.txt",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts.txt",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts.txt",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-renderer-and-late-originals-2026-11-16/p11-v2-live-membership-proposal/conditional-route-with-poll-green/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts.txt"
+  ],
+  "rootReadOnlyReview": true,
+  "originalTestResults": "No new-source test or native result is inferred from these failed checkouts.",
+  "remedy": "Relocate the complete dormant P11 documentation subtree uniformly, retaining exact blobs. No production/test/workflow/compiler/CI setting changes.",
+  "actualResultingCheckoutGreen": false
+}
