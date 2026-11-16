@@ -1,4 +1,5 @@
 import { channel } from 'node:diagnostics_channel';
+import { performance } from 'node:perf_hooks';
 import { z } from 'zod';
 import { replaceRosterPayloadSchema } from '../team/rosterSchema.js';
 import { teamModelProbeSelectionSchema } from './teamLaunchModelProbe.js';
@@ -338,9 +339,18 @@ export function inspectMemberModelReadiness(options: {
     phase: options.phase ?? 'preclaim' });
   const observedAccount: { value?: NonNullable<ReturnType<typeof captureOpenCodeProbeAccount>> } = {};
   let refusalObserved = false;
+  const currentCalls = { count: 0, totalMs: 0, maxMs: 0, lastMs: null as number | null, truncated: false };
   const current = () => {
     let phase = 'initial-authority', reason: 'held' | 'threw' = 'threw';
     let cutoff: number | null = null, observedAt: number | null = null;
+    let started: number | undefined, failed = false;
+    try {
+      if (readinessRefusal.hasSubscribers && !refusalObserved) {
+        currentCalls.lastMs = null;
+        if (currentCalls.count < 4096) { currentCalls.count++; started = performance.now(); }
+        else currentCalls.truncated = true;
+      }
+    } catch { currentCalls.truncated = true; }
     try {
       options.assertCurrent(); phase = 'read-consumer';
       const current = launch.readModelReadiness(selected), consumer = current.consumer;
@@ -368,16 +378,23 @@ export function inspectMemberModelReadiness(options: {
       if (runtimeDigest(observed) !== runtimeDigest(current.reference)) { reason = 'held'; held(); }
       phase = 'final-authority'; options.assertCurrent();
     } catch (error) {
-      if (!refusalObserved) {
+      failed = true; throw error;
+    } finally {
+      if (started !== undefined) try {
+        const elapsed = Math.round(performance.now() - started);
+        if (!Number.isSafeInteger(elapsed) || elapsed < 0 || !Number.isSafeInteger(currentCalls.totalMs + elapsed))
+          currentCalls.truncated = true;
+        else { currentCalls.totalMs += elapsed; currentCalls.maxMs = Math.max(currentCalls.maxMs, elapsed); currentCalls.lastMs = elapsed; }
+      } catch { currentCalls.truncated = true; }
+      if (failed && !refusalObserved) {
         refusalObserved = true;
         try { if (readinessRefusal.hasSubscribers) readinessRefusal.publish({
           kind: 'consumer', actionDigest: runtimeDigest(original.consumer.actionId),
           groupDigest: runtimeDigest({ commandDigest: runtimeDigest(original.consumer.groupCommandId ?? null),
             contextDigest: runtimeDigest(original.reference?.context ?? null) }), bindingDigest: managementDigest(selected.binding),
-          consumerId: original.consumer.consumerId, phase, reason, cutoff, observedAt,
-        }); } catch { /* Passive TEST observation cannot replace the original refusal. */ }
+          consumerId: original.consumer.consumerId, phase, reason, cutoff, observedAt, currentCalls: { ...currentCalls },
+        }); } catch { /* Original TEST subscriber handles its own errors; preserve this refusal. */ }
       }
-      throw error;
     }
   };
   current();

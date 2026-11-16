@@ -142,7 +142,7 @@ if(argv.length===1&&argv[0]==='--version'){
   });
   const cli = realpathSync(fileURLToPath(new URL('../../packages/legacy-agent-host/dist/cli.js', import.meta.url)));
   const hostEntry = join(root, 'TEST-source-host.mjs');
-  const diagnosticPins = ['owned-process/HostWindowsLaunch', 'composition/prepareTeamModelReadiness', 'management/ModelProbeOwner', 'composition/projectRuntimeMember']
+  const diagnosticPins = ['owned-process/HostWindowsLaunch', 'composition/prepareTeamModelReadiness', 'management/ModelProbeOwner', 'composition/projectRuntimeMember', 'adapters/providers/OpenCodeMemberProvider']
     .flatMap(name => (['src', 'dist'] as const).map(directory => {
       const path = fileURLToPath(new URL(`../../packages/legacy-agent-host/${directory}/${name}${directory === 'src' ? '.ts' : '.js'}`, import.meta.url));
       assert.equal(realpathSync(path), path); return { path, sha256: fileHash(path) };
@@ -158,7 +158,8 @@ function validateSourceRefusal(value, persisted) {
   assert.ok(Object.getOwnPropertySymbols(value).length === 0 && Object.values(Object.getOwnPropertyDescriptors(value)).every(row => 'value' in row));
   const hash = raw => typeof raw === 'string' && /^[a-f0-9]{64}$/.test(raw), clock = raw => typeof raw === 'number' && Number.isSafeInteger(raw) && raw >= 0;
   const fields = { native: 'capability phase reason dispatched staged rootCaptured deadlineExpired',
-    consumer: 'actionDigest groupDigest bindingDigest consumerId phase reason cutoff observedAt',
+    consumer: 'actionDigest groupDigest bindingDigest consumerId phase reason cutoff observedAt currentCalls',
+    'opencode-open': 'bindingDigest phase reason',
     reference: 'commandDigest contextDigest phase reason probeCutoff probeNow scopeCutoff scopeNow preparationCutoff preparationNow', limit: '' };
   assert.ok(typeof value.kind === 'string' && Object.hasOwn(fields, value.kind));
   const keys = fields[value.kind]; assert.ok(typeof keys === 'string'); assert.deepEqual(Object.keys(value).sort(), ['kind', ...keys.split(' ').filter(Boolean), ...(persisted ? ['ordinal'] : [])].sort());
@@ -170,8 +171,22 @@ function validateSourceRefusal(value, persisted) {
     assert.ok('sealed current-false current-threw launch-deadline refused unknown result-mismatch preparation-failed'.split(' ').includes(value.reason));
     assert.ok(['dispatched', 'staged', 'rootCaptured'].every(key => typeof value[key] === 'boolean'));
     assert.equal(value.deadlineExpired, value.reason === 'launch-deadline' ? true : null);
+  } else if (value.kind === 'opencode-open') {
+    assert.ok(hash(value.bindingDigest)); assert.equal(value.reason, 'threw');
+    assert.ok('configuration server-launch native-ready startup-authority startup-configuration startup-delay session-authority session-create driver-readiness'.split(' ').includes(value.phase));
   } else {
     assert.ok(value.reason === 'held' || value.reason === 'threw'); const consumer = value.kind === 'consumer';
+    if (consumer) {
+      const timing = value.currentCalls;
+      assert.ok(timing && typeof timing === 'object' && !Array.isArray(timing) && [Object.prototype, null].includes(Object.getPrototypeOf(timing)));
+      assert.ok(Object.getOwnPropertySymbols(timing).length === 0 && Object.values(Object.getOwnPropertyDescriptors(timing)).every(row => 'value' in row));
+      assert.deepEqual(Object.keys(timing).sort(), ['count', 'lastMs', 'maxMs', 'totalMs', 'truncated']);
+      assert.ok(clock(timing.count) && timing.count <= 4096 && clock(timing.totalMs) && clock(timing.maxMs) && timing.maxMs <= timing.totalMs);
+      assert.equal(typeof timing.truncated, 'boolean');
+      assert.ok(timing.lastMs === null || clock(timing.lastMs) && timing.lastMs <= timing.maxMs);
+      if (timing.count === 0) assert.ok(timing.totalMs === 0 && timing.maxMs === 0 && timing.lastMs === null);
+      else if (!timing.truncated) assert.notEqual(timing.lastMs, null);
+    }
     assert.ok((consumer ? ['actionDigest', 'groupDigest', 'bindingDigest', 'consumerId'] : ['commandDigest', 'contextDigest']).every(key => hash(value[key])));
     assert.ok((consumer ? 'initial-authority read-consumer identity continuation requirements cutoff reference equality final-authority' :
       'read inspect admission target scope retired completion probe-expiry scope-cutoff preparation-expiry origin purpose readiness account projection').split(' ').includes(value.phase));
@@ -243,9 +258,7 @@ await import(${JSON.stringify(pathToFileURL(cli).href)});
     cwd: root, env: { HOME: join(root, 'host-home'), TMPDIR: join(root, 'host-tmp'), TEMP: join(root, 'host-tmp'),
       TMP: join(root, 'host-tmp'), SystemRoot: systemRoot, PATH: [dirname(node), join(systemRoot, 'System32')].join(';'),
       LEGACY_AGENT_HOST_PROFILE_PATH: profilePath, LEGACY_AGENT_HOST_PROFILE_SHA256: fileHash(profilePath) },
-    // Match the existing non-V2 Desktop caller for aggregate OpenCode preparation.
-    startupTimeoutMs: 10000, requestTimeoutMs: provider === 'opencode' ? 60000 : 15000,
-    writeTimeoutMs: 5000, shutdownTimeoutMs: 1000 };
+    startupTimeoutMs: 10000, requestTimeoutMs: 15000, writeTimeoutMs: 5000, shutdownTimeoutMs: 1000 };
   const owner = { ownerId, revision: profile.owner.revision };
   const descriptor: DesktopBackendDescriptor = { schemaVersion: 1, defaultOwner: owner,
     owners: [{ ...owner, storageRoot: profile.owner.storageRoot, profile: host }],

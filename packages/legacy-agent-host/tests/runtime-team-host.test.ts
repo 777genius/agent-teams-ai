@@ -3807,7 +3807,7 @@ async function sourceStandaloneDeadlineFixture(input: {
 }) {
   const clock = await sourceReadinessDeadlineFixture({ now: input.now ?? 0 });
   const { stripTypeScriptTypes } = await import('node:module');
-  const begin = '      const before = first.jobs.length;\n      const standaloneStarted = performance.now();';
+  const begin = '      const before = first.jobs.length;';
   const end = "\n      const jobs = first.jobs.slice(before); assertSourceJobs(jobs, b.source, 'B', 'runtime', fixture.profile.teams[1]!.binding.teamId);";
   for (const marker of [begin, end]) assert.equal(clock.source.split(marker).length, 2);
   const body = stripTypeScriptTypes(clock.source.slice(clock.source.indexOf(begin), clock.source.indexOf(end)));
@@ -3873,22 +3873,22 @@ async function sourceStandaloneDeadlineFixture(input: {
   };
 }
 
-test('source standalone refuses expiry during the poll handoff after Start consumed its captured recipe budget', async () => {
-  const f = await sourceStandaloneDeadlineFixture({ ackMs: 89_990, handoffPause: 20 });
+test('source standalone refuses expiry during the poll handoff after its original post-ACK 15s budget', async () => {
+  const f = await sourceStandaloneDeadlineFixture({ ackMs: 100, handoffPause: 15_020 });
   await assert.rejects(f.run(), /Original standalone completion/);
-  assert.deepEqual(f.counts(), { now: 90_010, starts: 1, reads: 0 });
+  assert.deepEqual(f.counts(), { now: 15_120, starts: 1, reads: 0 });
   assert.deepEqual(f.delays, []); assert.deepEqual(f.trace, ['start', 'capture', 'recipe']);
-  assert.deepEqual(f.argumentsSeen, [[undefined, 90_000]]);
+  assert.deepEqual(f.argumentsSeen, [[undefined, 15_100]]);
   assert.equal((f.evidence.lastStandaloneCompletion as Record<string, unknown>).readCount, 0);
 });
 
-test('source standalone refuses a completed result delivered after the captured absolute deadline', async () => {
-  const f = await sourceStandaloneDeadlineFixture({ ackMs: 89_900, handoffPause: 50, readCost: 60 });
+test('source standalone refuses a completed result delivered after its original post-ACK absolute deadline', async () => {
+  const f = await sourceStandaloneDeadlineFixture({ ackMs: 100, handoffPause: 14_950, readCost: 60 });
   await assert.rejects(f.run(), /Original standalone completion/);
-  assert.deepEqual(f.counts(), { now: 90_010, starts: 1, reads: 1 }); assert.deepEqual(f.delays, []);
-  assert.deepEqual(f.argumentsSeen, [[undefined, 90_000]]);
+  assert.deepEqual(f.counts(), { now: 15_110, starts: 1, reads: 1 }); assert.deepEqual(f.delays, []);
+  assert.deepEqual(f.argumentsSeen, [[undefined, 15_100]]);
   const completion = f.evidence.lastStandaloneCompletion as Record<string, unknown>;
-  assert.equal(completion.readCount, 1); assert.equal(completion.elapsedMs, 110);
+  assert.equal(completion.readCount, 1); assert.equal(completion.elapsedMs, 15_010);
   assert.equal((completion.lastRunRead as Record<string, unknown>).phase, 'completed');
 });
 

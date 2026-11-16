@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { channel } from 'node:diagnostics_channel';
 import { ChildProcess } from 'node:child_process';
 import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -31,6 +32,8 @@ const { runtimeProfileSchema }: typeof import('../src/composition/runtimeProfile
   );
 const { OwnedProcessFacade }: typeof import('../src/owned-process/processFacade.ts') =
   await import(sourceMode ? '../src/owned-process/processFacade.ts' : '../dist/owned-process/processFacade.js');
+const { managementDigest }: typeof import('../src/management/identity.ts') =
+  await import(sourceMode ? '../src/management/identity.ts' : '../dist/management/identity.js');
 const record = (value: unknown): Record<string, unknown> => {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value));
   return value as Record<string, unknown>;
@@ -1006,6 +1009,9 @@ for (const mode of ['prepare-rejected', 'owner-revoked', 'seal', 'pending-deadli
       if (delayedAck) t.mock.method(Date, 'now', () => now);
       const native = suspendedNativeFixture();
       const f = fixture({ suspendedNative: native, unknownCleanup: mode === 'unknown-cleanup' });
+      const diagnostic = channel('agent-teams.legacy-host.first-refusal'), observations: unknown[] = [];
+      const observe = (value: unknown) => { observations.push(value); };
+      diagnostic.subscribe(observe); t.after(() => { diagnostic.unsubscribe(observe); });
       const opening = f.provider.factory.open(f.context.request);
       const outcome = opening.then(value => ({ kind: 'opened' as const, value }),
         (error: unknown) => ({ kind: 'failed' as const, error }));
@@ -1037,6 +1043,10 @@ for (const mode of ['prepare-rejected', 'owner-revoked', 'seal', 'pending-deadli
         assert.equal(readySettled, false, 'abort/cutoff does not await unresolved native preparation');
       assert.deepEqual(f.reads, []); assert.deepEqual(f.writes, []);
       assert.equal(f.launches.length, 1); assert.equal(f.cleanup(), 1);
+      const { backendId, teamId, runId, memberId, generation } = f.context.endpoint.binding;
+      assert.deepEqual(observations, [{ kind: 'opencode-open',
+        bindingDigest: managementDigest({ backendId, teamId, runId, memberId, generation }),
+        phase: 'native-ready', reason: 'threw' }]);
       assert.equal(f.running(), false); assert.equal(f.provider.isReady(), false);
       native.finish();
       if (delayedAck) assert.equal(await native.child().ready, native.native);
@@ -1047,5 +1057,26 @@ for (const mode of ['prepare-rejected', 'owner-revoked', 'seal', 'pending-deadli
       assert.equal(native.calls.includes('resume-ack'), delayedAck);
       assert.equal(native.child().exitCode, null, 'refusal does not invent native root exit');
       assert.equal(await f.provider.cleanup(), mode !== 'unknown-cleanup');
+      assert.equal(observations.length, 1, 'late completion/cleanup does not invent another opening refusal');
     });
 }
+
+test('OpenCode first opening refusal distinguishes the original post-ready allocation guard', async t => {
+  const f = fixture(), diagnostic = channel('agent-teams.legacy-host.first-refusal'), observations: unknown[] = [];
+  const observe = (value: unknown) => { observations.push(value); };
+  diagnostic.subscribe(observe);
+  t.after(async () => { diagnostic.unsubscribe(observe); f.provider.seal(); assert.equal(await f.provider.cleanup(), true); });
+  f.beforeCatalogReply(() => f.forbid());
+  await assert.rejects(f.provider.factory.open(f.context.request), { message: 'OpenCode member unavailable' });
+  assert.deepEqual(f.reads, ['/config', '/agent', '/config/providers']);
+  assert.deepEqual(f.writes, []); assert.equal(f.launches.length, 1); assert.equal(f.cleanup(), 1);
+  assert.equal(f.running(), false); assert.equal(f.provider.isReady(), false);
+  const { backendId, teamId, runId, memberId, generation } = f.context.endpoint.binding;
+  assert.deepEqual(observations, [{ kind: 'opencode-open',
+    bindingDigest: managementDigest({ backendId, teamId, runId, memberId, generation }),
+    phase: 'session-authority', reason: 'threw' }]);
+  await assert.rejects(f.provider.factory.open(f.context.request), { message: 'OpenCode member unavailable' });
+  assert.equal(observations.length, 1, 'a repeated open cannot replace the first original refusal');
+  assert.equal(f.cleanup(), 2); assert.equal(f.launches.length, 1);
+  assert.deepEqual(f.reads, ['/config', '/agent', '/config/providers']); assert.deepEqual(f.writes, []);
+});
