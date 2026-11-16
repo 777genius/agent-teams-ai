@@ -119,6 +119,27 @@ internal static class OpenCodeConsoleWrapper
 
     private static string ResolveTarget()
     {
+        // Separate teammate.exe entrypoint: no OpenCode target/sidecar fallback.
+        // Reuse the existing restricted handles and no-breakaway owned Job.
+        string self = Path.GetFullPath(
+            System.Reflection.Assembly.GetExecutingAssembly().Location);
+        if (string.Equals(Path.GetFileName(self), "teammate.exe",
+            StringComparison.OrdinalIgnoreCase))
+        {
+            string configured = Environment.GetEnvironmentVariable(
+                "AGENT_TEAMS_TEAMMATE_WRAPPER_TARGET");
+            if (!string.IsNullOrEmpty(configured) && Path.IsPathRooted(configured) &&
+                string.Equals(Path.GetExtension(configured), ".exe",
+                    StringComparison.OrdinalIgnoreCase) &&
+                File.Exists(configured))
+            {
+                string target = Path.GetFullPath(configured);
+                if (!string.Equals(self, target, StringComparison.OrdinalIgnoreCase))
+                    return target;
+            }
+            Fail("teammate wrapper requires another existing absolute .exe target");
+            return null;
+        }
         string fromEnv = Environment.GetEnvironmentVariable("OPENCODE_CONSOLE_WRAPPER_TARGET");
         if (!string.IsNullOrEmpty(fromEnv) && File.Exists(fromEnv)) return Path.GetFullPath(fromEnv);
         string here = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);

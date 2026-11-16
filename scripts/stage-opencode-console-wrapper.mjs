@@ -29,6 +29,8 @@ const sourcePath = path.join(
 );
 const outputDir = path.join(repoRoot, 'resources', 'runtime', 'opencode-console');
 const outputPath = path.join(outputDir, 'opencode.exe');
+const teammateOutputDir = path.join(repoRoot, 'resources', 'runtime', 'teammate-console');
+const teammateOutputPath = path.join(teammateOutputDir, 'teammate.exe');
 
 function printUsage() {
   process.stdout.write(`Usage: node scripts/stage-opencode-console-wrapper.mjs [options]
@@ -132,6 +134,7 @@ function main() {
 
   if (args.clean) {
     fs.rmSync(outputDir, { recursive: true, force: true });
+    fs.rmSync(teammateOutputDir, { recursive: true, force: true });
     process.stdout.write('stage-opencode-console-wrapper: cleaned.\n');
     return;
   }
@@ -160,30 +163,27 @@ function main() {
     return;
   }
 
-  fs.mkdirSync(outputDir, { recursive: true });
-  // No /platform: the wrapper is pure IL over kernel32 P/Invokes, so one AnyCPU
-  // build serves every Windows architecture. The .NET Framework compiler cannot
-  // emit arm64 anyway ("must be anycpu, anycpu32bitpreferred, x86, Itanium, x64
-  // or arm"), and an AnyCPU image carries the legacy i386 machine stamp, which
-  // is why scripts/electron-builder/afterPack.cjs allows this one path.
-  const result = spawnSync(
-    compiler,
-    ['/nologo', '/target:winexe', '/optimize', `/out:${outputPath}`, sourcePath],
-    { stdio: 'inherit' }
-  );
-
-  if (result.error) {
-    skipOrFail(`compiler failed to start: ${result.error.message}`, args.require);
-    return;
+  // One qualified native Job implementation; isolated executable contracts.
+  // Managed AnyCPU PE headers report ia32, including on Windows ARM64.
+  for (const target of [outputPath, teammateOutputPath]) {
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    const result = spawnSync(
+      compiler,
+      ['/nologo', '/target:winexe', '/optimize', `/out:${target}`, sourcePath],
+      { stdio: 'inherit' }
+    );
+    if (result.error) {
+      skipOrFail(`compiler failed to start: ${result.error.message}`, args.require);
+      return;
+    }
+    if (result.status !== 0) {
+      skipOrFail(`compiler exited with ${result.status}`, args.require);
+      return;
+    }
+    process.stdout.write(
+      `stage-opencode-console-wrapper: built ${path.relative(repoRoot, target)}.\n`
+    );
   }
-  if (result.status !== 0) {
-    skipOrFail(`compiler exited with ${result.status}`, args.require);
-    return;
-  }
-
-  process.stdout.write(
-    `stage-opencode-console-wrapper: built ${path.relative(repoRoot, outputPath)}.\n`
-  );
 }
 
 main();
