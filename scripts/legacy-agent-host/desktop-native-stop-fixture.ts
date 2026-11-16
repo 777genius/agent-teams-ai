@@ -11,6 +11,7 @@ import { desktopActiveMetadata, desktopMetadataProcess, desktopMetadataProfileHa
 import type { DesktopNativeHostSnapshot } from './desktop-opencode-metadata-lineage.ts';
 import type { ProcessFact } from '../../packages/legacy-agent-host/tests/fixtures/native-input-capture.ts';
 import type { UiCdpPort } from './desktop-team-ui-smoke.ts';
+import type { DesktopCdpPort } from './desktop-captured-app.ts';
 import type { ConfiguredOpenCodeLaunchPreparation } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model-probe.ts';
 export {
   readNativeProviderArtifact as readDesktopNativeProviderArtifact,
@@ -23,7 +24,7 @@ const object = (value: unknown): Record<string, unknown> => {
 const tick = () => new Promise<void>((done) => setTimeout(done, 100));
 
 export async function prepareDesktopNativeStop(options: {
-  cdp: UiCdpPort;
+  cdp: Pick<DesktopCdpPort, 'evaluate' | 'send'>;
   fixture: { handleId: string; node: string; hostEntry: string; root?: string };
   group: number;
   evidence: Record<string, unknown>;
@@ -37,11 +38,20 @@ export async function prepareDesktopNativeStop(options: {
   assert.ok(executable);
   const openCodeModel = options.openCode?.model, preparation = openCodeModel?.configuredLaunchPreparation;
   if (options.openCode) assert.ok(preparation, 'the selected OpenCode setup requires its original preparation port');
-  const invokeSetup = async (operation: string, commandId: string, payload: unknown) => {
+  let setupDeadline: number | undefined;
+  const remainingSetupMs = () => {
+    if (setupDeadline === undefined) return undefined;
+    const remaining = setupDeadline - Date.now();
+    assert.ok(remaining > 0, 'Original OpenCode setup observation deadline expired');
+    return remaining;
+  };
+  const invokeSetup = async (operation: string, commandId: string, payload: unknown, useSetupTimeout = false) => {
     assertOwnedCdpListener(group);
+    const remaining = remainingSetupMs();
     return object(
       await cdp!.evaluate(
-        `window.electronAPI.agentBackend.invoke(${JSON.stringify({ handle: { handleId: fixture.handleId }, commandId, operation, payload })})`
+        `window.electronAPI.agentBackend.invoke(${JSON.stringify({ handle: { handleId: fixture.handleId }, commandId, operation, payload })})`,
+        useSetupTimeout ? remaining : undefined
       )
     );
   };
@@ -138,11 +148,13 @@ export async function prepareDesktopNativeStop(options: {
   }
   let start: Record<string, unknown>;
   try {
+    if (options.openCode) setupDeadline = Date.now() + readinessMs;
     start = await invokeSetup('team.launch.start', commandId, {
       launchId: selection.launchId,
       rosterRevision: selection.rosterRevision,
       configuration,
-    });
+    }, true);
+    remainingSetupMs();
     evidence.nativeLaunchResponse = start;
     assert.equal(start.ok, true, `TEST configured launch response: ${JSON.stringify(start)}`);
     if (preparation) {
@@ -156,14 +168,16 @@ export async function prepareDesktopNativeStop(options: {
   } finally { disarm?.(); }
   if (options.returnAt === 'opening') {
     assert.ok(fixture.root, 'exact TEST Runtime store for pending-open observation');
-    const deadline = Date.now() + readinessMs;
+    const deadline = setupDeadline ?? Date.now() + readinessMs;
     do {
+      remainingSetupMs();
       const sessions: Record<string, unknown>[] = await readDesktopNativeStopSessions(
         fixture.root
       ).catch((error) => {
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
         throw error;
       });
+      remainingSetupMs();
       assert.ok(sessions.length <= 1, 'one exact pending native Runtime');
       const session: Record<string, unknown> | undefined = sessions[0];
       if (session) {
@@ -174,6 +188,7 @@ export async function prepareDesktopNativeStop(options: {
         assert.equal(session.sealed, false);
         assert.deepEqual(session.inputs, []);
         const { hostPid, nativeChildren } = await observeNative();
+        remainingSetupMs();
         if (nativeChildren.length) {
           assert.equal(nativeChildren.length, 1);
           evidence.nativeSetup = {
@@ -193,15 +208,18 @@ export async function prepareDesktopNativeStop(options: {
     } while (Date.now() < deadline);
     throw new Error('No actual pending native open observed; no launch or Quit retry');
   }
-  const readyDeadline = Date.now() + readinessMs;
+  const readyDeadline = setupDeadline ?? Date.now() + readinessMs;
   let ready = object(start.value);
   while (ready.status !== 'ready' && Date.now() < readyDeadline) {
     await tick();
+    remainingSetupMs();
     const progress = await invokeSetup('team.launch.read', 'TEST-setup-progress', {});
+    remainingSetupMs();
     evidence.nativeLaunchProgressResponse = progress;
     assert.equal(progress.ok, true, `TEST launch progress refused: ${JSON.stringify(progress)}`);
     ready = object(progress.value);
   }
+  remainingSetupMs();
   assert.equal(ready.status, 'ready');
   assert.equal(ready.ready, expectedMembers);
   const { hostPid, nativeChildren } = await observeNative();

@@ -290,6 +290,9 @@ export const desktopProofSupplementarySources = [
   'src/features/runtime-provider-management/renderer/hooks/refreshRuntimeProviderConnection.ts',
   'src/shared/utils/logger.ts',
   'test/renderer/components/cli/CliStatusVisibility.test.ts',
+  'scripts/legacy-agent-host/desktop-oversized-comment-ui-smoke.ts',
+  'scripts/legacy-agent-host/desktop-owner-routing-product-census.ts',
+  'scripts/e2e/comment-notification/cdp.mjs',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */
