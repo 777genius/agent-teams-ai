@@ -1,0 +1,918 @@
+{
+  "schema": "root-original-E1-Darwin-x64-retained-Main-failure-author-audit/v1",
+  "reviewedAtUTC": "2026-11-16T06:49:45.324138+00:00",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "runId": 43813731530,
+  "jobId": 133120929324,
+  "job": {
+    "id": 133120929324,
+    "name": "Host process fixtures (darwin-x64)",
+    "status": "completed",
+    "conclusion": "failure",
+    "run_id": 43813731530,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 2
+      },
+      {
+        "name": "Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Select the pinned package manager with bundled Corepack",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Bind exact source and actual process tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Install frozen workspace without Desktop postinstall",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Build existing controller and Host",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Verify process contracts and retained Main Host transport",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 10
+      },
+      {
+        "name": "Verify original POSIX Node and shell lifecycle fixtures",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 11
+      },
+      {
+        "name": "Prepare pinned Electron for native process fixtures",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Verify Linux Node exec descriptor closure under both original parents",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15
+      },
+      {
+        "name": "Build original Windows product broker and C++ fixtures",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Qualify original Windows Job and control under Host Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Qualify original Windows Job and control under Electron Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Qualify original codex source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Qualify original claude source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Qualify original opencode source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Require completed original platform receipts and unchanged source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Preserve original process evidence including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24
+      },
+      {
+        "name": "Post Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 46
+      },
+      {
+        "name": "Post Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 47
+      },
+      {
+        "name": "Post Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 48
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 49
+      }
+    ]
+  },
+  "terminalJobsResponse": {
+    "path": "ci-e1d14b/owned-process-jobs-response-0623.json",
+    "bytes": 22566,
+    "blob": "5fa927cc20de9b03ea5c3dba15bf8c1c096d57a4",
+    "sha256": "189273a1f1fce97683d00afc7b0252b39ebcf18d62fca7c9e8df0801131d1a5f"
+  },
+  "fullLog": {
+    "path": "native-audit-E1e1d14b/job-133120929324.log",
+    "bytes": 99531,
+    "blob": "0a1daaf057b77571deaac25dffdbe70f86475744",
+    "sha256": "27e6fa59194a32898ca1761ccf4358e4f4ef1d1c14b1bc7f4e5806b9e0fc0eb1"
+  },
+  "fullLogLines": 1013,
+  "originalLogResponse": {
+    "path": "native-audit-E1e1d14b/job-133120929324-original-response.json",
+    "bytes": 104782,
+    "blob": "655b182d2a0d1ee449ef8184ffbb94ae989e7013",
+    "sha256": "1a632d2cf5e110466c603ed09c335b0dd14a90a90955f4d7c14bc803e8479730"
+  },
+  "completeOriginalResponseContentByteJoin": true,
+  "officialArtifactsResponse": {
+    "path": "native-audit-E1e1d14b/process-artifacts-response-0623.json",
+    "bytes": 2961,
+    "blob": "075a3efb3b36e51ef0eae543b6d2ed65b874099a",
+    "sha256": "4608a345218b7e8989001ac1847a9b1da9041399c16f8b44f786296405d0f880"
+  },
+  "officialArtifact": {
+    "id": 14202660278,
+    "name": "host-process-fixtures-darwin-x64-e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "size_in_bytes": 11052,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14202660278",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14202660278/zip",
+    "expired": false,
+    "created_at": "2026-11-16T06:17:07Z",
+    "expires_at": "2026-11-30T06:17:05Z",
+    "updated_at": "2026-11-16T06:17:07Z",
+    "digest": "sha256:2960ac3be2e4b1241d78a74a52600b55ff2fd42b2e3eddb0c7766b3a171df039",
+    "workflow_run": {
+      "id": 43813731530,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940"
+    }
+  },
+  "archive": {
+    "path": "native-audit-E1e1d14b/artifact-14202660278.zip",
+    "bytes": 11052,
+    "blob": "b85149194d6ac77e819ef97ec216b12a4ed9862f",
+    "sha256": "2960ac3be2e4b1241d78a74a52600b55ff2fd42b2e3eddb0c7766b3a171df039"
+  },
+  "archiveAudit": {
+    "path": "native-audit-E1e1d14b/process-darwin-x64-archive-audit.json",
+    "bytes": 1465,
+    "blob": "57446cc55810771e542ac236766fd8424c6195b4",
+    "sha256": "f6c4e446bc24ccea3f8ab911c2ff9534396a54b1261966fc6333fab572d872f3"
+  },
+  "members": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "bytes": 20799,
+      "blob": "2a6e7df8e767ea97c7989415e0ec7d43ba68fa02",
+      "sha256": "fb385c2bcee56a31ede4bde2bd0d315deb9e38fb52ad3f4677cfcc70c585a20c",
+      "crc32": "70f642d3",
+      "existingExtractionExact": true
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "bytes": 772,
+      "blob": "9ff3a45e91cb855f0aab059687b0210f174ebcc2",
+      "sha256": "c15f61fc7d9a55696f91eb9129b17eeff7f8fe7cc4a6f870b140b4ffa920c48a",
+      "crc32": "b248c9c7",
+      "existingExtractionExact": true
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "bytes": 12202,
+      "blob": "91c26284ce8066bcff47b789072912e94636c2a0",
+      "sha256": "ee75fec9a697cb348ad7207b23322bf5f5f65562680b2b2bb42b4e34d2ffeb07",
+      "crc32": "d9e7977c",
+      "existingExtractionExact": true
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "bytes": 41,
+      "blob": "64df2ac36d2400af7b971319a2274577c225275a",
+      "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681",
+      "crc32": "4b15b81c",
+      "existingExtractionExact": true
+    }
+  ],
+  "allMemberCRCAndExtractionJoinsExact": true,
+  "allThreeTeeJoins": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "bytes": 20799,
+      "blob": "2a6e7df8e767ea97c7989415e0ec7d43ba68fa02",
+      "sha256": "fb385c2bcee56a31ede4bde2bd0d315deb9e38fb52ad3f4677cfcc70c585a20c",
+      "lines": 181,
+      "fullLogStartLine": 679,
+      "equalAfterOnlyTimestampAndAnsiRemoval": true
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "bytes": 772,
+      "blob": "9ff3a45e91cb855f0aab059687b0210f174ebcc2",
+      "sha256": "c15f61fc7d9a55696f91eb9129b17eeff7f8fe7cc4a6f870b140b4ffa920c48a",
+      "lines": 12,
+      "fullLogStartLine": 860,
+      "equalAfterOnlyTimestampAndAnsiRemoval": true
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "bytes": 12202,
+      "blob": "91c26284ce8066bcff47b789072912e94636c2a0",
+      "sha256": "ee75fec9a697cb348ad7207b23322bf5f5f65562680b2b2bb42b4e34d2ffeb07",
+      "lines": 85,
+      "fullLogStartLine": 872,
+      "equalAfterOnlyTimestampAndAnsiRemoval": false,
+      "ordinaryPrefixLinesExact": 84,
+      "lastWorkflowCommand": "::error file=/Users/runner/work/agent-teams-ai/agent-teams-ai/test/features/agent-backend/capturedHostClient.test.ts,title=test/features/agent-backend/capturedHostClient.test.ts > captured legacy host client over real subprocess stdio > holds Main reply bytes before native effect%2C expiry=true,line=356,column=67::Error: TEST native call never reached Main admission%0A ❯ test/features/agent-backend/capturedHostClient.test.ts:356:67%0A ❯ test/features/agent-backend/capturedHostClient.test.ts:356:7%0A%0A",
+      "lastWorkflowCommandPayloadExactAfterErrorMarkerAndPercentNewlineRendering": true,
+      "renderedRawStartLine": 956,
+      "renderedRawEndLine": 960,
+      "annotationHeaderPreservedInZipButNotRepeatedAsHeaderInRaw": true
+    }
+  ],
+  "sourceAndCommands": {
+    "sourceHeadFileExact": true,
+    "actualNode": "v24.21.0",
+    "actualTuple": "darwin-x64",
+    "steps": [
+      {
+        "name": "Bind exact source and actual process tuple",
+        "startLine": 102,
+        "literalBody": "      - name: Bind exact source and actual process tuple\n        run: |\n          set -euo pipefail\n          test \"$(git rev-parse HEAD)\" = \"$HOST_PROCESS_SOURCE_HEAD\"\n          node --input-type=module -e \"import assert from 'node:assert/strict'; assert.equal(process.version,'v24.21.0'); assert.equal(process.platform+'-'+process.arch,process.env.HOST_PROCESS_PLATFORM)\"\n          mkdir process-acceptance-evidence\n          git rev-parse HEAD > process-acceptance-evidence/source-head.txt\n",
+        "literalCommandsObserved": [
+          "test \"$(git rev-parse HEAD)\" = \"$HOST_PROCESS_SOURCE_HEAD\"",
+          "node --input-type=module -e \"import assert from 'node:assert/strict'; assert.equal(process.version,'v24.21.0'); assert.equal(process.platform+'-'+process.arch,process.env.HOST_PROCESS_PLATFORM)\"",
+          "git rev-parse HEAD > process-acceptance-evidence/source-head.txt"
+        ]
+      },
+      {
+        "name": "Build existing controller and Host",
+        "startLine": 111,
+        "literalBody": "      - name: Build existing controller and Host\n        run: |\n          set -euo pipefail\n          node node_modules/@typescript/native/bin/tsc -p packages/task-change-ledger/tsconfig.json\n          node agent-teams-controller/scripts/build.mjs\n          node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.json\n          node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json\n          node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json\n          node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json\n",
+        "literalCommandsObserved": [
+          "node node_modules/@typescript/native/bin/tsc -p packages/task-change-ledger/tsconfig.json",
+          "node agent-teams-controller/scripts/build.mjs",
+          "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.json",
+          "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json",
+          "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json",
+          "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json"
+        ]
+      },
+      {
+        "name": "Verify process contracts and retained Main Host transport",
+        "startLine": 120,
+        "literalBody": "      - name: Verify process contracts and retained Main Host transport\n        run: |\n          set -euo pipefail\n          node --test packages/legacy-agent-host/tests/claude-management-host.test.ts packages/legacy-agent-host/tests/scheduled-run-host.test.ts packages/legacy-agent-host/tests/management-command-store.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-linux-warm-lifetime.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/lifecycle-process-release.test.ts packages/legacy-agent-host/tests/windows-provider-routing.test.ts packages/legacy-agent-host/tests/windows-launcher-recipe.test.ts packages/legacy-agent-host/tests/windows-finite-process-routing.test.ts packages/legacy-agent-host/tests/runtime-source-process-selections.test.ts packages/legacy-agent-host/tests/runtime-source-probe-origins.test.ts packages/legacy-agent-host/tests/management-model-probe.test.ts packages/legacy-agent-host/tests/saved-team-model-probe.test.ts 2>&1 | tee process-acceptance-evidence/host-contracts.log\n          node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts 2>&1 | tee process-acceptance-evidence/protocol.log\n          node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/features/agent-backend/capturedHostClient.test.ts test/features/agent-backend/capturedWindowsSelection.test.ts test/features/agent-backend/desktopBackendFeature.test.ts test/features/agent-backend/fileTeamModelProbeIntents.test.ts test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts test/features/agent-backend/capturedWindowsSourceHistory.test.ts test/features/agent-backend/capturedWindowsSourcePending.test.ts test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts 2>&1 | tee process-acceptance-evidence/retained-main.log\n",
+        "literalCommandsObserved": [
+          "node --test packages/legacy-agent-host/tests/claude-management-host.test.ts packages/legacy-agent-host/tests/scheduled-run-host.test.ts packages/legacy-agent-host/tests/management-command-store.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-linux-warm-lifetime.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/lifecycle-process-release.test.ts packages/legacy-agent-host/tests/windows-provider-routing.test.ts packages/legacy-agent-host/tests/windows-launcher-recipe.test.ts packages/legacy-agent-host/tests/windows-finite-process-routing.test.ts packages/legacy-agent-host/tests/runtime-source-process-selections.test.ts packages/legacy-agent-host/tests/runtime-source-probe-origins.test.ts packages/legacy-agent-host/tests/management-model-probe.test.ts packages/legacy-agent-host/tests/saved-team-model-probe.test.ts 2>&1 | tee process-acceptance-evidence/host-contracts.log",
+          "node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts 2>&1 | tee process-acceptance-evidence/protocol.log",
+          "node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/features/agent-backend/capturedHostClient.test.ts test/features/agent-backend/capturedWindowsSelection.test.ts test/features/agent-backend/desktopBackendFeature.test.ts test/features/agent-backend/fileTeamModelProbeIntents.test.ts test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts test/features/agent-backend/capturedWindowsSourceHistory.test.ts test/features/agent-backend/capturedWindowsSourcePending.test.ts test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts 2>&1 | tee process-acceptance-evidence/retained-main.log"
+        ]
+      }
+    ],
+    "sourcePins": [
+      {
+        "path": ".github/workflows/host-process-acceptance.yml",
+        "bytes": 32248,
+        "blob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+        "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c",
+        "lines": 418,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "package.json",
+        "bytes": 26839,
+        "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+        "lines": 580,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/index.ts",
+        "bytes": 11111,
+        "blob": "755158699496506a62132c540f19b225c5a6222d",
+        "sha256": "5710013cfeac12d61f6f93ba995df696395c583803b2226be79195dff7dff095",
+        "lines": 330,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/owned-process/hostCustody.ts",
+        "bytes": 21129,
+        "blob": "af69d8430ffd473d471a5e663606fcaea640d2e5",
+        "sha256": "ae2bc6fe45b4dded8cff67b13daf01e8a5f5c4fc3e835ce7eb98a8c58adaf435",
+        "lines": 472,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/claude-management-host.test.ts",
+        "bytes": 13620,
+        "blob": "7f7ee01121e64f0ab55c127f62c796bf20b3fc70",
+        "sha256": "0c90e1992310021a746897425e4440dff4116dcb8a7a19651def8a47563925be",
+        "lines": 223,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/lifecycle-process-release.test.ts",
+        "bytes": 11844,
+        "blob": "6e620f1fdc12a4752b19e8ec2a8757ee2ad0d368",
+        "sha256": "d635cffd30e479172d6febdfa1de71d2c518c310a72aadfd6cd0f63c9e2deca1",
+        "lines": 169,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/management-command-store.test.ts",
+        "bytes": 6631,
+        "blob": "b5788fd14518fde0dff0c58071cf8f9722d87e72",
+        "sha256": "c49a82c5f6626f17228c929077d849f74bf53f8837c6b11d6ed759e7280f3b60",
+        "lines": 120,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+        "bytes": 47440,
+        "blob": "d13aa0c846dbf97aff99786e1165aa214aab93c7",
+        "sha256": "5a1e781f3d910b97cb3e4bfdc8592897bce69861b6200421355ed9f047f85f89",
+        "lines": 850,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+        "bytes": 9208,
+        "blob": "1a202377edc9f57c62eb757e9fcdc8718479e3d1",
+        "sha256": "ee1ba17e9fd9f52dc825c067a17038a5de36af4541ede3201621e62007614dec",
+        "lines": 164,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-build-selection.test.ts",
+        "bytes": 15547,
+        "blob": "d88797a15f80482027c990a1fdd75ff42264aa41",
+        "sha256": "26dd3e24a21b33fbe50067f2f73a925db82d3ae7e907cd93b2a9f0bd8fe08322",
+        "lines": 258,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-capture-records.test.ts",
+        "bytes": 4201,
+        "blob": "c7e75d4252407448804d52f80de69e64014645af",
+        "sha256": "c25580f9eac0ecfaf67d0319e75db263b3f06126a1891ffb23697594f711ec16",
+        "lines": 57,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-commands.test.ts",
+        "bytes": 48150,
+        "blob": "5fedca0326ab0bc92a124af9c39d1df1e4bb90cd",
+        "sha256": "052e701e1f0942215caeae3e6d2a92e900a03dcede46a3707682cf651122e68f",
+        "lines": 844,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-linux-warm-lifetime.test.ts",
+        "bytes": 18173,
+        "blob": "06472ff88775f547e4b49fd1521109623d2d220f",
+        "sha256": "98050d0259dd0ab0b061f23e8d8e313811dc21ba59e0238e67a3269269b00c3e",
+        "lines": 290,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-owner.test.ts",
+        "bytes": 12404,
+        "blob": "f1737e1a21a0447d43b84d3d839a5ffa6f385e2b",
+        "sha256": "44641e49e37d6c7bc9106aa18c98b399f9697128b7fdc4b341185c0835a8c0ef",
+        "lines": 314,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-source-probe-origins.test.ts",
+        "bytes": 12854,
+        "blob": "e757868741c2f4dd63f811a76232f95d6c7d6ba1",
+        "sha256": "33987a7fadfa6254175e64d9a743931c34684192e787a236a5b43dc247d82011",
+        "lines": 212,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/runtime-source-process-selections.test.ts",
+        "bytes": 21765,
+        "blob": "126e66a45224121719b7b33c333692ee147b664d",
+        "sha256": "21ba6dea161737fee65834714cc9c4fb252e148f3d778f52d5e004fcfd18b757",
+        "lines": 294,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+        "bytes": 90081,
+        "blob": "6a668daeaf47a920aeddfb87c4d2658a35754f11",
+        "sha256": "63b8db91450898514af1b2bd474faf4c0b5fe4eae29d3b6f986ee636f0f505a8",
+        "lines": 1672,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+        "bytes": 41863,
+        "blob": "dbbd17b11db24a9dc3fb989e0266101847f0a778",
+        "sha256": "f3f9147184700663c24d85a2a81ff6ab54724b7883a9e6fcc9bf9c324f473ab5",
+        "lines": 598,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/windows-finite-process-routing.test.ts",
+        "bytes": 10746,
+        "blob": "00eaa6c453a9d53c31dfc29f0dc0d83a610f5b85",
+        "sha256": "194703f2e57d73a0a4db026b41e9c64071bdc956d08dcdf9cb4ef2c238d8462b",
+        "lines": 165,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/windows-job-custody.test.ts",
+        "bytes": 19542,
+        "blob": "1ca246fe30e71394783be13dc49ccc1d9b864dbb",
+        "sha256": "1ff30c2a0b092456040fe2779a2f71325d261cccc71fd81d527722105dced469",
+        "lines": 349,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/windows-launcher-recipe.test.ts",
+        "bytes": 22044,
+        "blob": "af3b9078b2fa9ee565ccc406a50852ccb600b4bb",
+        "sha256": "7a7dfa5edfa12536d692aa1d5db0df4db992092a33094c965918ce8fbbc0e0af",
+        "lines": 357,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/windows-provider-routing.test.ts",
+        "bytes": 5368,
+        "blob": "7ec8646c9dd6f375f77c999fb33d1963a259298e",
+        "sha256": "d3ea92a25c8f1b837f7f08a8196a1ce6eb02dd6de51601a382906601b8f14596",
+        "lines": 92,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tsconfig.json",
+        "bytes": 456,
+        "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+        "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab",
+        "lines": 19,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tsconfig.test.json",
+        "bytes": 174,
+        "blob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+        "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356",
+        "lines": 9,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "bytes": 956788,
+        "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+        "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+        "lines": 26665,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+        "bytes": 32767,
+        "blob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+        "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138",
+        "lines": 800,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "test/features/agent-backend/capturedHostClient.test.ts",
+        "bytes": 51981,
+        "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+        "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f",
+        "lines": 1040,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts",
+        "bytes": 4592,
+        "blob": "4a7801a5260ad0c25a07485003d4e99ac5b4633f",
+        "sha256": "a979a7e7a32e952067237fc3d04f3b4b19a97328dacf55db65c606dae4211287",
+        "lines": 67,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "test/features/agent-backend/capturedWindowsSelection.test.ts",
+        "bytes": 10861,
+        "blob": "e6379e4ace2cc874f660c6bb1377592bba52ebb9",
+        "sha256": "3f972d99f44c514d3f06875a7c8a094b63998aa5daf17abf68db13a7b4cc9025",
+        "lines": 186,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+        "bytes": 12515,
+        "blob": "b6ce74003e2dc27a8e4527bd07298fc2bff2a586",
+        "sha256": "0c411315405fd6a572dddb385e3735ca43b78141d729f932a27087adf48480c7",
+        "lines": 166,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "test/features/agent-backend/capturedWindowsSourcePending.test.ts",
+        "bytes": 6457,
+        "blob": "1ff48096cf52cde91cd82ac55eddf99f4458896e",
+        "sha256": "b18822ad82a51a00100184148043032822fcfa2df80c47e1d38a4dbdc6e71e56",
+        "lines": 86,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "test/features/agent-backend/desktopBackendFeature.test.ts",
+        "bytes": 56748,
+        "blob": "1bd21c24852ebfade85b23b425342e6665f447e7",
+        "sha256": "a6540bd6c68165b7b0d782768cc7303d00cb609083df4baacdaad81d51e3f810",
+        "lines": 1121,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "test/features/agent-backend/fileTeamModelProbeIntents.test.ts",
+        "bytes": 10028,
+        "blob": "a596613b900598a51d446d7c959b1ea7c1c95b64",
+        "sha256": "0fd030d5cdfb4473b32991b6b62befa9ecd888236423419df9a48f9e599cc119",
+        "lines": 194,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "test/features/agent-backend/fixtures/retainedNativeCustody.ts",
+        "bytes": 29798,
+        "blob": "c2a23405f8e90face1927707d741cd8f462e35b8",
+        "sha256": "84d8b7cb8ce39b73d713c5d819ebd3c3ae854fe6917257333809328106c474e7",
+        "lines": 603,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+        "bytes": 15667,
+        "blob": "bc0820f51820e4cf66f37404395fee4c536b5311",
+        "sha256": "1f20a7ab1e2f8e35abd2123a962884054f00b0a48deb7bf2617502bc8d960b46",
+        "lines": 294,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGateContext.test.ts",
+        "bytes": 4745,
+        "blob": "48d1c9752dddb3e5fa91c6c564912b0474312168",
+        "sha256": "4ad0525d402aac610a867e7011da52a4f85dc7d6055fb048d9c78995187f4778",
+        "lines": 95,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+        "bytes": 7387,
+        "blob": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+        "sha256": "40a1d7107607b3d1e6fcbdd0018d452e830622a5d3ba8256d302a2a42ac7633a",
+        "lines": 124,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "tools/owned-process-broker/protocol.test.ts",
+        "bytes": 54514,
+        "blob": "89fe7152198d4eac2772e21222cd3b7b7be381d7",
+        "sha256": "c726cbfe75eb1b9acee02a51b7828068b14ac7d953c75ee092a5f4f3bf1f6438",
+        "lines": 1239,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "tools/owned-process-broker/tsconfig.json",
+        "bytes": 557,
+        "blob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+        "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+        "lines": 6,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+        "bytes": 393,
+        "blob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+        "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+        "lines": 6,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "tools/owned-process-broker/vitest.config.ts",
+        "bytes": 342,
+        "blob": "cd03a73404a7b2548c15234743c24c1093b554af",
+        "sha256": "d7af296db40661045f6402af15eeb6072781919fd8c8145e554dada03e0de88e",
+        "lines": 13,
+        "preservationMergeBytesExact": true
+      },
+      {
+        "path": "vitest.config.ts",
+        "bytes": 1187,
+        "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+        "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+        "lines": 34,
+        "preservationMergeBytesExact": true
+      }
+    ],
+    "fullCurrentSourcePinCount": 42,
+    "sourceExcerpts": [
+      {
+        "path": "test/features/agent-backend/capturedHostClient.test.ts",
+        "startLine": 339,
+        "endLine": 372,
+        "literal": "  it.each([false, true])('holds Main reply bytes before native effect, expiry=%s', async expire => {\n    const profile = { ...await fixture(retainedNativeInputPressureHostSource(serverUrl), 'raw'),\n      requestTimeoutMs:3000 };\n    let effects = 0, controls = 0, binding: HostCustodyBinding | undefined;\n    const owner: HostCustodyOwner = { mainEpoch:'TEST-main-input', attach(context) {\n      binding = context.binding;\n      return { onReadable:()=>()=>{}, handle(call) {\n        if (call.operation === 'write') { effects++; return {operation:'write',state:'completed'}; }\n        if (call.operation === 'observe') { controls++; return {operation:'observe',root:'running'}; }\n        throw new Error('TEST unexpected native effect');\n      } };\n    } };\n    const transport = client(profile, owner); await transport.start();\n    const gate = retainedNativeInputCompletionGate(transport);\n    try {\n      const requested = transport.request('TEST.blocked-native', {expire,payload:'x'.repeat(1024*1024-2048)});\n      await Promise.race([gate.blocked, requested.then(()=>{ throw new Error('TEST missing original write barrier'); })]);\n      await Promise.race([gate.queued, requested.then(()=>{ throw new Error('TEST native call never reached Main admission'); })]);\n      if (expire) expect(await requested).toMatchObject({status:expect.stringMatching(/^(unknown|refused)$/u)});\n      expect(effects).toBe(0);\n      expect(await transport.request('TEST.control', undefined, {control:true}))\n        .toMatchObject({status:'completed',value:{operation:'observe'}});\n      expect(controls).toBe(1); expect(effects).toBe(0);\n      gate.release();\n      if (!expire) expect(await requested).toEqual({status:'completed',value:{operation:'write',state:'completed'}});\n      expect(effects).toBe(expire?0:1);\n      if (!expire) {\n        if (!binding) throw new Error('TEST original binding missing');\n        await expect(transport.request('TEST.missing-budget', {binding}, {control:true}))\n          .rejects.toMatchObject({code:'protocol-error',outcome:'unknown'});\n        expect(effects, 'An incompatible private envelope cannot start another effect').toBe(1);\n      }\n    } finally { gate.restore(); await transport.shutdown(); }\n  });\n"
+      },
+      {
+        "path": "test/features/agent-backend/fixtures/retainedNativeCustody.ts",
+        "startLine": 295,
+        "endLine": 367,
+        "literal": "/** Hold only the original Main callback, after its real child stdin write completes. */\nexport function retainedNativeInputCompletionGate(client: object) {\n  const captured: unknown = Object.getOwnPropertyDescriptor(client, 'child')?.value;\n  if (!(captured instanceof ChildProcess) || !captured.stdin) throw new Error('TEST original Host missing');\n  const pending: unknown = Object.getOwnPropertyDescriptor(client, 'nativePending')?.value;\n  if (!(pending instanceof Map)) throw new Error('TEST original reverse request map missing');\n  const entries: Map<unknown, unknown> = pending, originalSet = entries.set;\n  let admitted!: () => void;\n  const queued = new Promise<void>(resolve => { admitted = resolve; });\n  const trackedSet: typeof entries.set = (key, value) => {\n    const result = originalSet.call(entries, key, value); admitted(); return result;\n  };\n  entries.set = trackedSet;\n  const stream = captured.stdin, original = stream.write, write = original.bind(stream);\n  let releaseCallback: (() => void) | undefined, released = false, intercepted = false;\n  let complete!: () => void, fail!: (error: Error) => void;\n  const blocked = new Promise<void>((resolve, reject) => { complete = resolve; fail = reject; });\n  const gate = (chunk: unknown, encodingOrCallback?: BufferEncoding | ((error?: Error | null) => void),\n    callback?: (error?: Error | null) => void): boolean => {\n    const done = typeof encodingOrCallback === 'function' ? encodingOrCallback : callback;\n    const encoding = typeof encodingOrCallback === 'string' ? encodingOrCallback : undefined;\n    let target = false;\n    if (Buffer.isBuffer(chunk) && !intercepted) {\n      const value: unknown = JSON.parse(chunk.toString('utf8'));\n      target = typeof value === 'object' && value !== null && 'method' in value &&\n        value.method === 'TEST.blocked-native';\n    }\n    if (!target) return encoding ? write(chunk, encoding, done) : write(chunk, done);\n    if (!done) throw new Error('TEST original Main write callback missing');\n    intercepted = true;\n    const observed = (error?: Error | null) => {\n      if (error) { done(error); fail(error); return; }\n      releaseCallback = () => done();\n      complete();\n      if (released) { const release = releaseCallback; releaseCallback = undefined; release(); }\n    };\n    return encoding ? write(chunk, encoding, observed) : write(chunk, observed);\n  };\n  stream.write = gate;\n  const release = () => {\n    released = true;\n    const callback = releaseCallback; releaseCallback = undefined; callback?.();\n  };\n  return {\n    blocked, queued, release,\n    restore() {\n      release();\n      if (stream.write === gate) stream.write = original;\n      if (entries.set === trackedSet) entries.set = originalSet;\n    },\n  };\n}\n\nexport function retainedNativeInputPressureHostSource(serverUrl: string): string {\n  return `\n    import { createHostServer } from ${JSON.stringify(serverUrl)};\n    const server=createHostServer({input:process.stdin,output:process.stdout,buildId:'TEST-host-v1',\n      nativeCustody:{timeoutMs:2000},methods:{\n        'TEST.blocked-native':{lane:'work',handle:params=>server.nativeCustody.request(\n          {operation:'write',capability:'TEST-original',bytes:'YQ=='},\n          params.expire?performance.now()+20:undefined)},\n        'TEST.control':{lane:'control',handle:()=>server.nativeCustody.request(\n          {operation:'observe',capability:'TEST-original'})},\n        'TEST.missing-budget':{lane:'control',handle:params=>{\n          process.stdout.write(JSON.stringify({jsonrpc:'2.0',\n            id:'custody:'+server.handshake.hostIncarnation+':work:99',method:'host.native-custody',\n            params:{binding:params.binding,call:{operation:'write',capability:'TEST-original',bytes:'Yg=='}}})+'\\\\n');\n          return 'sent';\n        }}\n      }});\n    void server.closed.then(()=>process.exit(0));\n  `;\n}\n"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/owned-process/hostCustody.ts",
+        "startLine": 282,
+        "endLine": 405,
+        "literal": "  request(value: HostCustodyCall, deadlineMs?: number): Promise<HostCustodyReply> {\n    const parsed = callSchema.safeParse(value);\n    return parsed.success\n      ? this.requestWhenReady(parsed.data.operation, () => parsed.data, deadlineMs)\n      : Promise.resolve({ status: 'refused' });\n  }\n\n  /** Only references wait here. The builder receives the fixed deadline after queueing and timeout clamping. */\n  requestWhenReady(\n    operation: HostCustodyCall['operation'],\n    build: (deadlineMs: number) => HostCustodyCall,\n    deadlineMs?: number\n  ): Promise<HostCustodyReply> {\n    const now = performance.now();\n    const deadline = Math.min(deadlineMs ?? now + this.options.timeoutMs, now + this.options.timeoutMs);\n    const queued = this.admissions.control.length + this.admissions.work.length;\n    if (this.sealed || !this.binding || this.next > MAX_SEQUENCE ||\n      (this.inputSealed && !hostCustodyCleanup({ operation })) ||\n      !Number.isFinite(deadline) || deadline <= now || queued + this.pending.size >= 6 * 256)\n      return Promise.resolve({ status: 'refused' });\n    const lane = hostCustodyControl({ operation }) ? this.admissions.control : this.admissions.work;\n    return new Promise((resolve) => {\n      let settled = false;\n      const admission: NativeAdmission = {\n        operation, build, deadline,\n        timer: setTimeout(() => admission.finish({ status: 'refused' }), deadline - now),\n        finish: (reply) => {\n          if (settled) return;\n          settled = true;\n          clearTimeout(admission.timer);\n          const index = lane.indexOf(admission);\n          if (index >= 0) lane.splice(index, 1);\n          resolve(reply);\n          this.resumeAdmission();\n        },\n      };\n      lane.push(admission);\n      this.resumeAdmission();\n    });\n  }\n\n  /** Called when the original output write frees shared bytes, or a reply frees a request slot. */\n  resumeAdmission(): void {\n    if (this.admitting || this.sealed) return;\n    this.admitting = true;\n    try {\n      for (;;) {\n        const lane = this.admissions.control.length ? this.admissions.control : this.admissions.work;\n        const admission = lane[0];\n        if (!admission) return;\n        const control = hostCustodyControl(admission);\n        const capacity = this.options.limits.maxPendingRequests -\n          (control ? 0 : this.options.limits.reservedControlRequests);\n        if (admission.deadline <= performance.now() ||\n          (this.inputSealed && !hostCustodyCleanup(admission))) {\n          admission.finish({ status: 'refused' });\n          continue;\n        }\n        if (this.pending.size >= capacity || this.options.canSend?.(control) === false) return;\n        lane.shift();\n        clearTimeout(admission.timer);\n        let parsed: ReturnType<typeof callSchema.safeParse>;\n        try { parsed = callSchema.safeParse(admission.build(admission.deadline)); }\n        catch { admission.finish({ status: 'refused' }); continue; }\n        if (!parsed.success || parsed.data.operation !== admission.operation) {\n          admission.finish({ status: 'refused' }); continue;\n        }\n        // dispatch rechecks the original deadline after the lazy builder, without extending it.\n        void this.dispatch(parsed.data, admission.deadline).then(admission.finish);\n      }\n    } finally { this.admitting = false; }\n  }\n\n  private dispatch(call: HostCustodyCall, deadline: number): Promise<HostCustodyReply> {\n    if (this.sealed || !this.binding || this.next > MAX_SEQUENCE ||\n      (this.inputSealed && !hostCustodyCleanup(call)))\n      return Promise.resolve({ status: 'refused' });\n    const remaining = Math.floor(deadline - performance.now());\n    if (!Number.isFinite(remaining) || remaining <= 0) return Promise.resolve({ status: 'refused' });\n    const control = hostCustodyControl(call);\n    if (call.operation === 'read' && [...this.pending.values()].some(({ call: other }) =>\n      other.operation === 'read' && other.capability === call.capability && other.stream === call.stream))\n      return Promise.resolve({ status: 'refused' });\n    const id = `custody:${this.binding.hostIncarnation}:${control ? 'control' : 'work'}:${this.next++}`;\n    const hintKey = hostCustodyHintKey(call);\n    const admittedHint = hintKey ? this.hints.get(hintKey) : undefined;\n    const wireCall = call.operation === 'allocate' ? (() => {\n      const { runtimeSourceOrigin, ...original } = call;\n      return runtimeSourceOrigin === undefined ? original : { ...original, runtimeSourceOrigin };\n    })() : call;\n    const frame: RpcRequest = {\n      jsonrpc: '2.0', id, method: HOST_CUSTODY_METHOD, params: { binding: this.binding, call: wireCall, remainingMs: remaining },\n    };\n    return new Promise((resolve) => {\n      let returned = false;\n      const settle = (reply: HostCustodyReply) => {\n        if (!returned) { returned = true; resolve(reply); }\n      };\n      const finish = (reply: HostCustodyReply) => {\n        const pending = this.pending.get(id);\n        if (!pending) return;\n        clearTimeout(pending.timer);\n        this.pending.delete(id);\n        if (reply.status === 'completed' && hintKey) {\n          const current = this.hints.get(hintKey);\n          if (current === admittedHint) this.hints.delete(hintKey);\n          else if (current) for (const observer of this.observers) observer(current);\n        }\n        if (reply.status === 'completed' && reply.value.operation === 'release' && reply.value.state === 'released')\n          for (const key of this.hints.keys()) if (key.startsWith(`${call.capability}:`)) this.hints.delete(key);\n        settle(reply);\n        this.resumeAdmission();\n      };\n      // A caller timeout is not an ACK: retain its slot, ID and marker until the original reply.\n      const expire = () => settle({ status: 'unknown' });\n      const timer = setTimeout(expire, remaining);\n      this.pending.set(id, { call, finish, timer });\n      try { if (!this.options.send(frame, control)) finish({ status: 'refused' }); }\n      catch { expire(); }\n    });\n  }\n\n  onReadable(observer: (hint: HostCustodyHint) => void): () => void {\n    if (this.sealed || this.observers.size >= this.options.limits.maxPendingRequests)\n"
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+        "startLine": 490,
+        "endLine": 579,
+        "literal": "  private receiveNative(value: unknown, frameBytes: number): void {\n    const receivedAt = performance.now(), parsed = hostCustodyRequestSchema.safeParse(value);\n    const binding = this.nativeBinding, port = this.nativePort;\n    if (!parsed.success || frameBytes > HOST_CUSTODY_FRAME_BYTES || !binding || !port ||\n      !sameHostCustodyBinding(parsed.data.params.binding, binding)) throw new Error('Native request');\n    const { id, params: { call, remainingMs } } = parsed.data;\n    const control = hostCustodyControl(call);\n    const sequence = hostCustodySequence(id, binding.hostIncarnation, control);\n    if (sequence === undefined) throw new Error('Native request ID');\n    const lane = control ? 'control' : 'work';\n    if (sequence <= this.nativeHighWatermark[lane]) { this.replyNative(id, { status: 'unknown' }); return; }\n    this.nativeHighWatermark[lane] = sequence;\n    const capacity = this.limits.maxPendingRequests - (control ? 0 : this.limits.reservedControlRequests);\n    if (this.nativePending.size >= capacity || (call.operation === 'read' &&\n      [...this.nativePending.values()].some(({ call: other }) =>\n        other.operation === 'read' && other.capability === call.capability && other.stream === call.stream))) {\n      this.replyNative(id, { status: 'refused' }); return;\n    }\n    const entry: NativeRequest = { call, deadline: receivedAt + remainingMs, reserved: false };\n    this.nativePending.set(id, entry);\n    entry.timer = setTimeout(() => {\n      if (this.nativePending.get(id) === entry && !entry.reserved && !entry.reply) {\n        entry.reply = { status: 'refused' }; this.pumpNative();\n      }\n    }, Math.max(0, entry.deadline - performance.now()));\n    this.pumpNative();\n  }\n\n  /** One bounded original request map; replies own their reservation until actual output exchange. */\n  private pumpNative(): void {\n    if (this.sealed || this.nativePumping) return;\n    this.nativePumping = true;\n    try {\n      for (;;) {\n        let progress = false;\n        for (const [id, entry] of this.nativePending) {\n          if (!entry.reserved && !entry.reply &&\n            (entry.deadline <= performance.now() || (this.quiescing && !hostCustodyCleanup(entry.call))))\n            entry.reply = { status: 'refused' };\n          if (!entry.reply) continue;\n          const frame = Buffer.from(JSON.stringify({ jsonrpc: '2.0', id,\n            result: { binding: this.nativeBinding, reply: entry.reply } }) + '\\n');\n          if (frame.length - 1 > HOST_CUSTODY_FRAME_BYTES) throw new Error('Native reply frame');\n          if (!this.canWrite(frame.length, true, entry.reserved)) continue;\n          this.nativePending.delete(id); if (entry.timer) clearTimeout(entry.timer);\n          this.finishNativeHint(entry);\n          if (!this.writeFrame(frame, true)) throw new Error('Native reply unavailable');\n          const read = entry.reply.status === 'completed' && entry.reply.value.operation === 'read'\n            ? entry.reply.value : undefined;\n          if (entry.call.operation === 'read' && read?.more)\n            this.queueNativeHint({ capability: entry.call.capability, stream: entry.call.stream });\n          progress = true;\n        }\n        for (const control of [true, false]) {\n          for (const [id, entry] of this.nativePending) {\n            if (entry.reserved || entry.reply || hostCustodyControl(entry.call) !== control) continue;\n            if (!this.canWrite(HOST_CUSTODY_FRAME_BYTES + 1, control)) break;\n            const reserved = [...this.nativePending.values()].filter(value => value.reserved).length;\n            if (reserved >= this.limits.maxPendingRequests - (control ? 0 : this.limits.reservedControlRequests)) break;\n            if (entry.deadline <= performance.now() || (this.quiescing && !hostCustodyCleanup(entry.call))) {\n              entry.reply = { status: 'refused' }; progress = true; continue;\n            }\n            entry.reserved = true; if (entry.timer) clearTimeout(entry.timer);\n            const key = hostCustodyHintKey(entry.call);\n            entry.admittedHint = key ? this.nativeHints.get(key) : undefined;\n            void this.executeNative(id, entry, this.nativePort!);\n            progress = true;\n          }\n        }\n        if (!progress) break;\n      }\n    } catch { this.fail(new HostClientError('transport-closed', 'unknown')); }\n    finally {\n      this.nativePumping = false;\n      if (!this.sealed) { this.pumpNativeHints(); this.nativePort?.resumeReadable?.(); }\n    }\n  }\n\n  private async executeNative(id: string, entry: NativeRequest, port: HostCustodyPort): Promise<void> {\n    const remaining = Math.floor(entry.deadline - performance.now());\n    if (remaining <= 0) { entry.reply = { status: 'refused' }; this.pumpNative(); return; }\n    const original = entry.call;\n    const call: HostCustodyCall = 'budgetMs' in original ? { ...original,\n      budgetMs: Math.min(original.budgetMs, remaining) } : original;\n    let reply: HostCustodyReply;\n    try { reply = { status: 'completed', value: validateHostCustodyResult(call, await port.handle(call)) }; }\n    catch { reply = { status: 'unknown' }; }\n    if (this.sealed || this.nativePending.get(id) !== entry) return;\n    entry.reply = reply;\n    this.pumpNative();\n"
+      }
+    ],
+    "bothFailingTestAndFixtureUnchangedFrom953": true
+  },
+  "reporters": [
+    {
+      "command": "complete18-file Host contract command",
+      "tests": 167,
+      "pass": 165,
+      "fail": 0,
+      "skip": 2,
+      "cancel": 0
+    },
+    {
+      "command": "complete3-file configured broker finite Vitest command",
+      "files": 3,
+      "tests": 54,
+      "pass": 54,
+      "fail": 0,
+      "skip": 0
+    },
+    {
+      "command": "complete8-file retained-Main Vitest command",
+      "files": 8,
+      "filesPass": 7,
+      "filesFail": 1,
+      "tests": 81,
+      "pass": 80,
+      "fail": 1,
+      "skip": 0,
+      "reportedDurationSeconds": 126.71
+    }
+  ],
+  "aggregateWithinOnlyTheseThreeActualCommands": {
+    "tests": 302,
+    "pass": 299,
+    "fail": 1,
+    "skip": 2
+  },
+  "failure": {
+    "firstFailedStep": 10,
+    "firstFailingCase": "holds Main reply bytes before native effect, expiry=true",
+    "location": "test/features/agent-backend/capturedHostClient.test.ts:356:67",
+    "literalError": "TEST native call never reached Main admission",
+    "rawFailureExcerpt": [
+      {
+        "line": 934,
+        "text": "2026-11-16T06:17:04.5884570Z \u001b[31m⎯⎯⎯⎯⎯⎯⎯\u001b[39m\u001b[1m\u001b[41m Failed Tests 1 \u001b[49m\u001b[22m\u001b[31m⎯⎯⎯⎯⎯⎯⎯\u001b[39m"
+      },
+      {
+        "line": 935,
+        "text": "2026-11-16T06:17:04.5885640Z "
+      },
+      {
+        "line": 936,
+        "text": "2026-11-16T06:17:04.5889680Z \u001b[41m\u001b[1m FAIL \u001b[22m\u001b[49m test/features/agent-backend/capturedHostClient.test.ts\u001b[2m > \u001b[22mcaptured legacy host client over real subprocess stdio\u001b[2m > \u001b[22mholds Main reply bytes before native effect, expiry=true"
+      },
+      {
+        "line": 937,
+        "text": "2026-11-16T06:17:04.5921540Z \u001b[31m\u001b[1mError\u001b[22m: TEST native call never reached Main admission\u001b[39m"
+      },
+      {
+        "line": 938,
+        "text": "2026-11-16T06:17:04.5924280Z \u001b[36m \u001b[2m❯\u001b[22m test/features/agent-backend/capturedHostClient.test.ts:\u001b[2m356:67\u001b[22m\u001b[39m"
+      },
+      {
+        "line": 939,
+        "text": "2026-11-16T06:17:04.6154690Z     \u001b[90m354| \u001b[39m      const requested = transport.request('TEST.blocked-native', {expi…"
+      },
+      {
+        "line": 940,
+        "text": "2026-11-16T06:17:04.6159280Z     \u001b[90m355| \u001b[39m      await Promise.race([gate.blocked, requested.then(()=>{ throw new…"
+      },
+      {
+        "line": 941,
+        "text": "2026-11-16T06:17:04.6163450Z     \u001b[90m356| \u001b[39m      await Promise.race([gate.queued, requested.then(()=>{ throw new …"
+      },
+      {
+        "line": 942,
+        "text": "2026-11-16T06:17:04.6166710Z     \u001b[90m   | \u001b[39m                                                                  \u001b[31m^\u001b[39m"
+      },
+      {
+        "line": 943,
+        "text": "2026-11-16T06:17:04.6169670Z     \u001b[90m357| \u001b[39m      if (expire) expect(await requested).toMatchObject({status:expect…"
+      },
+      {
+        "line": 944,
+        "text": "2026-11-16T06:17:04.6173540Z     \u001b[90m358| \u001b[39m      \u001b[34mexpect\u001b[39m(effects)\u001b[33m.\u001b[39m\u001b[34mtoBe\u001b[39m(\u001b[34m0\u001b[39m)\u001b[33m;\u001b[39m"
+      },
+      {
+        "line": 945,
+        "text": "2026-11-16T06:17:04.6180240Z \u001b[90m \u001b[2m❯\u001b[22m test/features/agent-backend/capturedHostClient.test.ts:\u001b[2m356:7\u001b[22m\u001b[39m"
+      },
+      {
+        "line": 946,
+        "text": "2026-11-16T06:17:04.6184380Z "
+      },
+      {
+        "line": 947,
+        "text": "2026-11-16T06:17:04.6186830Z \u001b[31m\u001b[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\u001b[22m\u001b[39m"
+      },
+      {
+        "line": 948,
+        "text": "2026-11-16T06:17:04.6190110Z "
+      },
+      {
+        "line": 949,
+        "text": "2026-11-16T06:17:04.6191980Z "
+      },
+      {
+        "line": 950,
+        "text": "2026-11-16T06:17:04.6196580Z \u001b[2m Test Files \u001b[22m \u001b[1m\u001b[31m1 failed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[1m\u001b[32m7 passed\u001b[39m\u001b[22m\u001b[90m (8)\u001b[39m"
+      },
+      {
+        "line": 951,
+        "text": "2026-11-16T06:17:04.6201470Z \u001b[2m      Tests \u001b[22m \u001b[1m\u001b[31m1 failed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[1m\u001b[32m80 passed\u001b[39m\u001b[22m\u001b[90m (81)\u001b[39m"
+      },
+      {
+        "line": 952,
+        "text": "2026-11-16T06:17:04.6205850Z \u001b[2m   Start at \u001b[22m 06:14:57"
+      },
+      {
+        "line": 953,
+        "text": "2026-11-16T06:17:04.6210580Z \u001b[2m   Duration \u001b[22m 126.71s\u001b[2m (transform 8.62s, setup 5.63s, collect 29.97s, tests 86.64s, environment 3ms, prepare 1.16s)\u001b[22m"
+      },
+      {
+        "line": 954,
+        "text": "2026-11-16T06:17:04.6218330Z "
+      },
+      {
+        "line": 955,
+        "text": "2026-11-16T06:17:04.6219890Z "
+      },
+      {
+        "line": 956,
+        "text": "2026-11-16T06:17:04.6281400Z ##[error]Error: TEST native call never reached Main admission"
+      },
+      {
+        "line": 957,
+        "text": " ❯ test/features/agent-backend/capturedHostClient.test.ts:356:67"
+      },
+      {
+        "line": 958,
+        "text": " ❯ test/features/agent-backend/capturedHostClient.test.ts:356:7"
+      },
+      {
+        "line": 959,
+        "text": ""
+      },
+      {
+        "line": 960,
+        "text": ""
+      },
+      {
+        "line": 961,
+        "text": "2026-11-16T06:17:05.0304990Z ##[error]Process completed with exit code 1."
+      }
+    ],
+    "ordinaryNonExpiryCase": {
+      "conclusion": "pass",
+      "reportedWholeCaseMs": 1344
+    },
+    "expiryCaseReportedWholeCaseMs": 1570,
+    "observedOrder": "The original write barrier race at355 completed. The requested promise fulfilled before the mandatory Main queued race at356, whose then-handler threw. No value or status of that fulfilled reply was printed.",
+    "notObserved": [
+      "The precise Host deadline branch",
+      "Whether the native frame had been queued or transmitted in the Host when its local reply settled",
+      "The actual returned unknown/refused status",
+      "Per-stage elapsed times",
+      "CPU/scheduling cause",
+      "A production defect or incoming35-path regression"
+    ]
+  },
+  "sourceCounterexample": {
+    "scope": "Code-permitted earlier expiry, not an identification of this original historical branch",
+    "fixtureDeadline": "The fixture computes performance.now()+20 before HostCustody.request first schema parse.",
+    "hostRefusalSites": [
+      "requestWhenReady295-301 computes clamped absolute deadline and can fulfill refused before admission",
+      "resumeAdmission335-337 refuses an expired queued admission before its lazy builder/schema parse",
+      "dispatch359-360 refuses after lazy parsing if floor(deadline-now)<=0",
+      "dispatch395-400 can settle unknown at its original pending timer before a delayed Main observation"
+    ],
+    "mainWitness": "CapturedHostClient.receiveNative installs the original entry in nativePending at509 before its existing timer and pump. The TEST map wrapper resolves queued only from that actual insertion.",
+    "scopeLimit": "A legitimate pre-Main refusal/timeout can fulfill requested without the assumed earlier queued witness. Neither source order nor this aggregate proves which site occurred."
+  },
+  "cleanup": {
+    "sourceFinally": "The failing test reaches its existing finally, which restores the original callback/map and awaits transport.shutdown. The reported356 error is consistent with no replacing finally exception.",
+    "physicalOriginalChildIdentityRetained": false,
+    "shutdownReceiptValueAssertedInThisCase": false,
+    "positivePhysicalCleanupQualification": false,
+    "noGlobalCleanupClaim": true
+  },
+  "unreached": [
+    "Original POSIX lifecycle step11",
+    "Pinned Electron/native preparation step12",
+    "Any platform native fixture invocation",
+    "Final complete-platform receipt check23"
+  ],
+  "limits": [
+    "Author audit only; independent R2 remains pending.",
+    "Full original log/MCP/ZIP retained once; no rerun, local project execution, dispatch or cancellation.",
+    "Host contract and finite protocol successes are scoped to their exact original commands; they do not qualify the failed retained-Main command, native platform, Desktop or release.",
+    "The impending TEST-only anchor amendment is a separate prospective source decision; this record makes no source change or futureGREEN claim."
+  ]
+}

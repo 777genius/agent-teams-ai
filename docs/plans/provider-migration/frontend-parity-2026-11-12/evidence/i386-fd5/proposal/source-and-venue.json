@@ -1,0 +1,212 @@
+{
+  "kind": "Exact prospective one-header source and original CI venue pins; read-only Git/byte inspection only",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "sources": [
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "bytes": 9009,
+      "lines": 186,
+      "blob": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+      "sha256": "f3c3fdcb5f6eaa729ff071574deb894078e15d9d5b7e786789b270b1c7d996c8"
+    },
+    {
+      "path": "tools/owned-process-broker/serviceScopes.h",
+      "bytes": 16379,
+      "lines": 386,
+      "blob": "b3fbd2949a5b015bf36c56eb19ca8ef43ec42329",
+      "sha256": "88aea669b33d0bb1e60cf80ed5b3c11f6c1ce5f9a14499f421be9d563daadcf9"
+    },
+    {
+      "path": "tools/owned-process-broker/serviceDebugLoop.h",
+      "bytes": 4891,
+      "lines": 93,
+      "blob": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298",
+      "sha256": "b31ecf2118e467b07bb973736920b10109a03c831a2cc72364c1abdb8973a8d3"
+    },
+    {
+      "path": "tools/owned-process-broker/broker.cpp",
+      "bytes": 25929,
+      "lines": 530,
+      "blob": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e",
+      "sha256": "c9b35397e4beb534a9a4298b6a6b7c8c8745571381b69b3301ab3b60fccd6dc3"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "bytes": 25009,
+      "lines": 390,
+      "blob": "e002d7fc688cac9e2db38abbd1c1c9e851f975dd",
+      "sha256": "a11c6fcc322cd240bf396ee7e7bf0fc9d009869fe9e2b94cc9c969a4f7bbb1b1"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "bytes": 19357,
+      "lines": 355,
+      "blob": "dd14a6cbdc9976bbeaf2ae48efda560623fa72c5",
+      "sha256": "a509a625e9e1ab1ccb96040b81d2c2fd1f00c0c23e74677e7002b7c8a4b7b84f"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGate.ts",
+      "bytes": 22330,
+      "lines": 586,
+      "blob": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d",
+      "sha256": "3b549e313e3ca43b76232282b7dbe9e7a1dfcec594ad93bc81c047f740851197"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.ts",
+      "bytes": 1367,
+      "lines": 39,
+      "blob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+      "sha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+      "bytes": 7387,
+      "lines": 124,
+      "blob": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+      "sha256": "40a1d7107607b3d1e6fcbdd0018d452e830622a5d3ba8256d302a2a42ac7633a"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "bytes": 7278,
+      "lines": 192,
+      "blob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+      "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200"
+    },
+    {
+      "path": "tools/owned-process-broker/CMakeLists.txt",
+      "bytes": 2160,
+      "lines": 27,
+      "blob": "cf158110832d24afd7f97b6e9ef2dbf7472b0410",
+      "sha256": "c58f71f7f341fd6f77fce721db77a4ae843a719e744a227757268b8eb6778e2e"
+    },
+    {
+      "path": "tools/owned-process-broker/vitest.config.ts",
+      "bytes": 342,
+      "lines": 13,
+      "blob": "cd03a73404a7b2548c15234743c24c1093b554af",
+      "sha256": "d7af296db40661045f6402af15eeb6072781919fd8c8145e554dada03e0de88e"
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "bytes": 557,
+      "lines": 6,
+      "blob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+      "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef"
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+      "bytes": 393,
+      "lines": 6,
+      "blob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+      "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7"
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "bytes": 32248,
+      "lines": 418,
+      "blob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+      "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c"
+    },
+    {
+      "path": "scripts/build/buildOwnedProcessBroker.ts",
+      "bytes": 3476,
+      "lines": 58,
+      "blob": "90499776e145f9ffaba230b280d5d9da9e15a8e0",
+      "sha256": "4db8137541af5f78d821d55f70b1f3a497b79a3e82bfa700e09d4237b3d97682"
+    }
+  ],
+  "steps": [
+    {
+      "name": "Bind exact source and actual process tuple",
+      "startLine": 102,
+      "literalBody": "      - name: Bind exact source and actual process tuple\n        run: |\n          set -euo pipefail\n          test \"$(git rev-parse HEAD)\" = \"$HOST_PROCESS_SOURCE_HEAD\"\n          node --input-type=module -e \"import assert from 'node:assert/strict'; assert.equal(process.version,'v24.21.0'); assert.equal(process.platform+'-'+process.arch,process.env.HOST_PROCESS_PLATFORM)\"\n          mkdir process-acceptance-evidence\n          git rev-parse HEAD > process-acceptance-evidence/source-head.txt\n",
+      "bytes": 493,
+      "lines": 7,
+      "blob": "60953471b0809d2735b6bfc02489a47bc718d4e3",
+      "sha256": "86b9023736218721b73a7e829cd339a0b8f50d132c7736b50a840f05dbf5a2f6"
+    },
+    {
+      "name": "Build existing controller and Host",
+      "startLine": 111,
+      "literalBody": "      - name: Build existing controller and Host\n        run: |\n          set -euo pipefail\n          node node_modules/@typescript/native/bin/tsc -p packages/task-change-ledger/tsconfig.json\n          node agent-teams-controller/scripts/build.mjs\n          node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.json\n          node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json\n          node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json\n          node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json\n",
+      "bytes": 681,
+      "lines": 9,
+      "blob": "2c5bddf0e4cefa0e5d3f876783a708fd1140977f",
+      "sha256": "200582c778070eb91d18f3ce607062c95ad2f54dd350e3acf6123f108cb73036"
+    },
+    {
+      "name": "Verify process contracts and retained Main Host transport",
+      "startLine": 120,
+      "literalBody": "      - name: Verify process contracts and retained Main Host transport\n        run: |\n          set -euo pipefail\n          node --test packages/legacy-agent-host/tests/claude-management-host.test.ts packages/legacy-agent-host/tests/scheduled-run-host.test.ts packages/legacy-agent-host/tests/management-command-store.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-linux-warm-lifetime.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/lifecycle-process-release.test.ts packages/legacy-agent-host/tests/windows-provider-routing.test.ts packages/legacy-agent-host/tests/windows-launcher-recipe.test.ts packages/legacy-agent-host/tests/windows-finite-process-routing.test.ts packages/legacy-agent-host/tests/runtime-source-process-selections.test.ts packages/legacy-agent-host/tests/runtime-source-probe-origins.test.ts packages/legacy-agent-host/tests/management-model-probe.test.ts packages/legacy-agent-host/tests/saved-team-model-probe.test.ts 2>&1 | tee process-acceptance-evidence/host-contracts.log\n          node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts 2>&1 | tee process-acceptance-evidence/protocol.log\n          node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/features/agent-backend/capturedHostClient.test.ts test/features/agent-backend/capturedWindowsSelection.test.ts test/features/agent-backend/desktopBackendFeature.test.ts test/features/agent-backend/fileTeamModelProbeIntents.test.ts test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts test/features/agent-backend/capturedWindowsSourceHistory.test.ts test/features/agent-backend/capturedWindowsSourcePending.test.ts test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts 2>&1 | tee process-acceptance-evidence/retained-main.log\n",
+      "bytes": 2219,
+      "lines": 6,
+      "blob": "6667204e9306c3e8ab026fbf7c37201ee29333da",
+      "sha256": "8289037519d11949a94780446693e7508f32fcc04e695fc461e1dd1e7f605294"
+    },
+    {
+      "name": "Build original Windows product broker and C++ fixtures",
+      "startLine": 163,
+      "literalBody": "      - name: Build original Windows product broker and C++ fixtures\n        if: runner.os == 'Windows'\n        shell: pwsh\n        run: |\n          $build = Join-Path $env:RUNNER_TEMP 'TEST-process-build-${{ matrix.arch }}'\n          $stage = Join-Path $env:RUNNER_TEMP 'TEST-process-stage-${{ matrix.arch }}'\n          $scoped = Join-Path $env:RUNNER_TEMP 'TEST-process-scoped-stage-${{ matrix.arch }}'\n          $cmake = (Get-Command cmake.exe -ErrorAction Stop).Source\n          node node_modules/tsx/dist/cli.mjs scripts/build/buildOwnedProcessBroker.ts '${{ matrix.arch }}' $build $stage $cmake\n          if ($LASTEXITCODE -ne 0) { throw 'Native fixture build or product staging failed' }\n          $staged = @(Get-ChildItem -File $stage | Select-Object -ExpandProperty Name)\n          if ((($staged | Sort-Object) -join ',') -ne 'manifest.json,owned-process-broker.exe') { throw 'Unexpected staged fixture' }\n          \"HOST_PROCESS_NATIVE_BUILD=$build\" >> $env:GITHUB_ENV\n          \"HOST_PROCESS_NATIVE_STAGE=$stage\" >> $env:GITHUB_ENV\n          Copy-Item \"$stage\\manifest.json\" process-acceptance-evidence/windows-manifest.json\n          node node_modules/tsx/dist/cli.mjs scripts/build/buildOwnedProcessBroker.ts '${{ matrix.arch }}' $build $scoped $cmake service-scopes-v1\n          if ($LASTEXITCODE -ne 0) { throw 'Scoped native fixture build or product staging failed' }\n          $scopedFiles = @(Get-ChildItem -File $scoped | Select-Object -ExpandProperty Name)\n          if ((($scopedFiles | Sort-Object) -join ',') -ne 'manifest.json,owned-process-broker.exe') { throw 'Unexpected scoped stage fixture' }\n          \"HOST_PROCESS_SCOPED_STAGE=$scoped\" >> $env:GITHUB_ENV\n          Copy-Item \"$scoped\\manifest.json\" process-acceptance-evidence/windows-scoped-manifest.json\n          $i386Build = \"$build-i386\"\n          $i386Target = Join-Path $build 'Release\\owned-process-fixture-i386.exe'\n          if (Test-Path -LiteralPath $i386Target) { throw 'I386 TEST target must be fresh' }\n          $compileI386 = @'\n          import { spawnSync } from 'node:child_process';\n          const [cmake, source, build] = process.argv.slice(1);\n          for (const args of [['-S', source, '-B', build, '-A', 'Win32'],\n            ['--build', build, '--config', 'Release', '--target', 'owned-process-fixture']]) {\n            const result = spawnSync(cmake, args, { stdio: 'inherit', timeout: 120000 });\n            if (result.error || result.status !== 0) throw new Error('Same-source TEST Win32 fixture build failed');\n          }\n          '@\n          node --input-type=module -e $compileI386 $cmake (Join-Path $PWD 'tools\\owned-process-broker') $i386Build\n          if ($LASTEXITCODE -ne 0) { throw 'Same-source TEST Win32 fixture build failed' }\n          $i386Built = Join-Path $i386Build 'Release\\owned-process-fixture.exe'\n          Copy-Item -LiteralPath $i386Built -Destination $i386Target -ErrorAction Stop\n          if ((Get-FileHash -LiteralPath $i386Built -Algorithm SHA256).Hash -cne (Get-FileHash -LiteralPath $i386Target -Algorithm SHA256).Hash) {\n            throw 'I386 TEST fixture copy changed bytes'\n          }\n          \"HOST_PROCESS_NATIVE_I386_FIXTURE=$i386Target\" >> $env:GITHUB_ENV\n          Get-ChildItem -File \"$build\\Release\\*.exe\" | Get-FileHash -Algorithm SHA256 | Format-List | Out-File process-acceptance-evidence/windows-binary-sha256.txt\n          New-Item -ItemType Directory -Path native-evidence | Out-Null\n          Copy-Item process-acceptance-evidence/windows-binary-sha256.txt native-evidence/binary-sha256.txt\n",
+      "bytes": 3562,
+      "lines": 44,
+      "blob": "c140d451d0a9835d584b9792e1beea36fff7f05a",
+      "sha256": "5fde6039005c98026db0578335f6aa47770c20366f36a1aca71046f90e7bd8c2"
+    },
+    {
+      "name": "Qualify original Windows Job and control under Host Node",
+      "startLine": 207,
+      "literalBody": "      - name: Qualify original Windows Job and control under Host Node\n        if: runner.os == 'Windows'\n        shell: pwsh\n        run: |\n          if (-not $env:HOST_PROCESS_NATIVE_I386_FIXTURE) { throw 'Original Windows fixture gate requires its built I386 TEST target' }\n          $build = $env:HOST_PROCESS_NATIVE_BUILD\n          $controller = \"$build\\Release\\owned-process-gate-controller.exe\"\n          $node = (Get-Command node.exe -ErrorAction Stop).Source\n          $runner = Join-Path $PWD 'node_modules\\tsx\\dist\\cli.mjs'\n          $gate = Join-Path $PWD 'tools\\owned-process-broker\\nativeGate.ts'\n          & $controller $node $runner $gate \"$env:HOST_PROCESS_NATIVE_STAGE\\owned-process-broker.exe\" \"$build\\Release\\owned-process-fixture.exe\" \"$build\\Release\\owned-process-broker-birth-failure.exe\" \"$build\\Release\\owned-process-broker-accounting-failure.exe\" \"$build\\Release\\owned-process-broker-release-delay.exe\" \"$build\\Release\\owned-process-broker-debug-service.exe\" 2>&1 | Tee-Object process-acceptance-evidence/windows-node24.log\n          if ($LASTEXITCODE -ne 0) { throw 'Original Node fixture controller did not confirm cleanup' }\n",
+      "bytes": 1154,
+      "lines": 12,
+      "blob": "3bb385edaf8bd39b00102fa95522a01bb3df3e2a",
+      "sha256": "d1d10312f6d08801eef8729b2aa8e1167dadd034c570718bc75547dbf57a8eb7"
+    },
+    {
+      "name": "Qualify original Windows Job and control under Electron Node",
+      "startLine": 219,
+      "literalBody": "      - name: Qualify original Windows Job and control under Electron Node\n        if: runner.os == 'Windows'\n        shell: pwsh\n        env:\n          ELECTRON_RUN_AS_NODE: '1'\n        run: |\n          if (-not $env:HOST_PROCESS_NATIVE_I386_FIXTURE) { throw 'Original Electron fixture gate requires its built I386 TEST target' }\n          $build = $env:HOST_PROCESS_NATIVE_BUILD\n          $controller = \"$build\\Release\\owned-process-gate-controller.exe\"\n          $electron = Join-Path $PWD 'node_modules\\electron\\dist\\electron.exe'\n          $runner = Join-Path $PWD 'node_modules\\tsx\\dist\\cli.mjs'\n          $gate = Join-Path $PWD 'tools\\owned-process-broker\\nativeGate.ts'\n          & $controller $electron $runner $gate \"$env:HOST_PROCESS_NATIVE_STAGE\\owned-process-broker.exe\" \"$build\\Release\\owned-process-fixture.exe\" \"$build\\Release\\owned-process-broker-birth-failure.exe\" \"$build\\Release\\owned-process-broker-accounting-failure.exe\" \"$build\\Release\\owned-process-broker-release-delay.exe\" \"$build\\Release\\owned-process-broker-debug-service.exe\" 2>&1 | Tee-Object process-acceptance-evidence/windows-electron.log\n          if ($LASTEXITCODE -ne 0) { throw 'Original Electron fixture controller did not confirm cleanup' }\n",
+      "bytes": 1231,
+      "lines": 14,
+      "blob": "49ae6e578696711c84e93cea20d93fa0586f1b82",
+      "sha256": "6d9640249c8aa3f1ad0927bcb18c88e5d8d28219202e8b99a3e2418e7785bebb"
+    },
+    {
+      "name": "Require completed original platform receipts and unchanged source",
+      "startLine": 291,
+      "literalBody": "      - name: Require completed original platform receipts and unchanged source\n        run: |\n          set -euo pipefail\n          test \"$(git rev-parse HEAD)\" = \"$HOST_PROCESS_SOURCE_HEAD\"\n          git diff --exit-code\n          node --input-type=module <<'NODE'\n          import assert from 'node:assert/strict';\n          import { readFileSync, writeFileSync } from 'node:fs';\n          import { join } from 'node:path';\n          const directory = 'process-acceptance-evidence';\n          const rows = name => readFileSync(join(directory, name), 'utf8').split('\\n')\n            .filter(line => line.startsWith('{')).map(line => JSON.parse(line));\n          const native = [];\n          if (process.platform === 'linux') {\n            for (const name of ['linux-node24.log', 'linux-electron.log']) {\n              const completed = rows(name).filter(row => row.automaticAndWarm === true);\n              assert.equal(completed.length, 1, 'one original complete Linux invocation');\n              const receipt = completed[0];\n              assert.equal(receipt.completed, true); assert.equal(receipt.cleaned, true);\n              assert.match(receipt.binarySha256, /^[a-f0-9]{64}$/);\n              assert.match(receipt.manifestSha256, /^[a-f0-9]{64}$/);\n              native.push({ log: name, scope: 'original Linux pidfs and retained pidfd', receipt });\n            }\n          } else if (process.platform === 'win32') {\n            for (const name of ['windows-node24.log', 'windows-electron.log']) {\n              const facts = rows(name);\n              const gates = facts.filter(row => row.gate === 'owned-process-native-scenarios-only');\n              const controllers = facts.filter(row => row.gateController);\n              assert.equal(gates.length, 1); assert.equal(controllers.length, 1);\n              assert.equal(gates[0].platform, 'win32'); assert.equal(gates[0].arch, process.arch);\n              assert.ok(gates[0].results.includes('captured-provider-native-argv-env-cwd-and-stop'));\n              assert.ok(gates[0].results.includes('TEST-only-debug-service-prebirth-nested-job-feasibility'));\n              assert.deepEqual(controllers[0], { gateController: 'drained', rootExitCode: 0, activeProcesses: 0 });\n              native.push({ log: name, scope: 'original Windows Job, control and C++ fixture',\n                scenarios: gates[0].results, cleanup: controllers[0] });\n            }\n            const emulated = JSON.parse(readFileSync(join(directory, 'windows-emulated-provider-receipt.json'), 'utf8'));\n            assert.equal(emulated.kind, 'TEST_WINDOWS_EMULATED_PROVIDER_PARITY');\n            assert.equal(emulated.status, 'PASS'); assert.equal(emulated.cleanup, true);\n            assert.equal(emulated.sourceHead, process.env.HOST_PROCESS_SOURCE_HEAD);\n            assert.equal(emulated.platform, 'win32-' + process.arch); assert.equal(emulated.nodeVersion, 'v24.21.0');\n            assert.equal(emulated.realProviderExecuted, false); assert.equal(emulated.desktopQualified, false);\n            assert.equal(emulated.releaseQualified, false);\n            assert.deepEqual(emulated.wrappers, ['npm-node', 'generated-bun', 'opaque-cmd', 'positional-bat', 'npm-native']);\n            assert.deepEqual(emulated.providers.map(row => row.provider), ['codex', 'opencode']);\n            for (const row of emulated.providers) {\n              for (const field of ['nativeReady', 'inputCompleted', 'neighborSurvivedPrimary', 'providerSurvivedScopedStops', 'cleanup']) assert.equal(row[field], true);\n              assert.equal(row.registeredServices, 2); assert.equal(row.scopedStops, 2);\n              for (const field of ['allocate', 'prepare', 'resume', 'release']) assert.equal(row.counts[field], 1);\n              for (const field of ['serviceCapture', 'serviceStop', 'serviceSettle']) assert.equal(row.counts[field], 2);\n              assert.ok(row.counts.stop >= 1 && row.counts.stop <= 4);\n            }\n            const controllers = rows('windows-emulated-provider.log').filter(row => row.gateController);\n            assert.deepEqual(controllers, [{ gateController: 'drained', rootExitCode: 0, activeProcesses: 0 }]);\n            native.push({ log: 'windows-emulated-provider.log', scope: 'captured Windows wrappers and Main Host Codex/V1 adapters with Node peers', receipt: emulated });\n            const sourceReceipts = [\n              ['codex', 'windows-source-codex-receipt.json', 'windows-source-codex.log'],\n              ['claude', 'windows-source-claude-receipt.json', 'windows-source-claude.log'],\n              ['opencode', 'windows-source-opencode-receipt.json', 'windows-source-opencode.log'],\n            ];\n            for (const [provider, receiptFile, log] of sourceReceipts) {\n              const proof = JSON.parse(readFileSync(join(directory, receiptFile), 'utf8'));\n              assert.equal(proof.kind, 'TEST_WINDOWS_EMULATED_SOURCE_PARITY'); assert.equal(proof.provider, provider);\n              assert.equal(proof.sourceHead, process.env.HOST_PROCESS_SOURCE_HEAD);\n              assert.equal(proof.platform, 'win32-' + process.arch); assert.equal(proof.nodeVersion, 'v24.21.0');\n              assert.equal(proof.status, 'PASS'); assert.equal(proof.cleanup, true);\n              assert.equal(proof.realProviderExecuted, false); assert.equal(proof.desktopQualified, false); assert.equal(proof.releaseQualified, false);\n              assert.equal(Object.hasOwn(proof, 'providers'), false); assert.equal(Object.hasOwn(proof, 'wrappers'), false);\n              assert.equal(proof.sourceScenarios.length, 1);\n              const row = proof.sourceScenarios[0]; assert.equal(row.provider, provider);\n              assert.equal(row.status, 'PASS'); assert.equal(row.stage, 'complete'); assert.equal(row.cleanup, true);\n              assert.equal(row.realProviderExecuted, false); assert.equal(row.desktopQualified, false); assert.equal(row.releaseQualified, false);\n              assert.equal(row.foreignScopeGrantRefusedBeforeAllocation, true);\n              assert.notEqual(row.selections.A.revision, row.selections.B.revision);\n              assert.equal(row.management.metadataRead, true); assert.equal(row.management.modelProbeCompleted, true);\n              assert.equal(row.management.modelProbeInputs, 1); assert.equal(row.management.modelProbeReplayAllocated, false);\n              assert.equal(row.management.metadataHostRetained, row.provider === 'opencode');\n              assert.equal(row.teams.length, 2);\n              assert.deepEqual(row.teams.map(team => team.source.revision), [row.selections.A.revision, row.selections.B.revision]);\n              for (const field of ['currentB', 'retainedA', 'lookup']) assert.equal(row.cold[field], true);\n              assert.equal(row.cold.physicalReplayAllocations, 0); assert.equal(row.cold.originalInputsReplayed, false);\n              assert.deepEqual(row.cold.sourcePublishPendingAdmission, { admitted: 1, revoked: 1 });\n              assert.equal(row.cold.sdkPeerCheckpointRestored, row.provider === 'claude');\n              if (row.provider === 'claude') {\n                assert.equal(row.cold.originalNativeSessionRetained, true);\n                assert.equal(row.cold.source.revision, row.selections.A.revision);\n              }\n              if (row.provider === 'opencode') assert.equal(row.standalone.supported, false);\n              else {\n                assert.equal(row.standalone.phase, 'completed'); assert.equal(row.standalone.ephemeral, true);\n                assert.equal(row.standalone.replayAllocated, false); assert.equal(row.standalone.source.revision, row.selections.B.revision);\n              }\n              assert.equal(row.epochs.length, 2); assert.ok(row.epochs[0].jobs.length > 0);\n              for (const epoch of row.epochs) {\n                assert.equal(epoch.serviceOperations, 0);\n                for (const job of epoch.jobs) for (const field of ['resumed', 'stopped', 'drained', 'released', 'originalHandleAbsent']) assert.equal(job[field], true);\n              }\n              const originalController = rows(log).filter(value => value.gateController);\n              assert.deepEqual(originalController, [{ gateController: 'drained', rootExitCode: 0, activeProcesses: 0 }]);\n              native.push({ log, scope: 'captured Main Host source A/B with finite ' + provider + ' peer', receipt: proof });\n            }\n          } else assert.equal(process.platform, 'darwin');\n          writeFileSync(join(directory, 'scope.json'), JSON.stringify({\n            kind: 'TEST_HOST_PROCESS_FIXTURE_ACCEPTANCE', status: 'PASS',\n            sourceHead: process.env.HOST_PROCESS_SOURCE_HEAD, platform: process.env.HOST_PROCESS_PLATFORM,\n            nodeVersion: process.version, controlledContracts: true, retainedMainTransport: true,\n            posixProcessGroups: process.platform !== 'win32', native,\n            nativeProviderRuntimeQualified: false, darwinNativeRegistrationQualified: false,\n            posixExecutableAdmissionQualified: false, desktopQualified: false, releaseQualified: false,\n          }, null, 2) + '\\n');\n          NODE\n",
+      "bytes": 9096,
+      "lines": 111,
+      "blob": "48eab87aa2e8daf6e127115b0943b24078031cd3",
+      "sha256": "7047a59800af6b587f34f9e460338391fc585c073db5b809bfb5560007315b9b"
+    }
+  ],
+  "finiteConfigLiteral": "import { defineConfig } from 'vitest/config';\n\nexport default defineConfig({\n  test: {\n    environment: 'node',\n    include: [\n      'tools/owned-process-broker/protocol.test.ts',\n      'tools/owned-process-broker/nativeGateEvents.test.ts',\n      'tools/owned-process-broker/nativeGateContext.test.ts',\n    ],\n    testTimeout: 5000,\n  },\n});\n",
+  "sourceInverseExact": true,
+  "newTestOrWorkflowSource": false,
+  "localProjectCommandsExecuted": false,
+  "candidate": {
+    "bytes": 8822,
+    "lines": 182,
+    "blob": "952ed2d3436708addf656109dc513270ea33ce22",
+    "sha256": "cb3ed3eaebb0f59aa968a285ddd85522181292a289a9bed7c59a6adf0feabf65"
+  },
+  "previousR1": {
+    "commit": "732998cfa741393bec65f0d812f777f5f5778b5b",
+    "plan29Blob": "9b9e64e0dc240a1b56181663de04bdf553d388ed",
+    "sourceCommit": "eba491c50fda418f8fc96fb743089b5b1532c1eb"
+  },
+  "primaryOSReferences": [
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-exitprocess",
+      "claim": "ExitProcess terminates the process and other threads; no implied observer-thread join"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-waitfordebugevent",
+      "claim": "Original creating debug thread waits using the given timeout"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-continuedebugevent",
+      "claim": "Original continuation resumes the debug event; call and selected status unchanged"
+    }
+  ]
+}

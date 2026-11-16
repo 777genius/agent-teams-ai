@@ -1,0 +1,3005 @@
+{
+  "kind": "FROZEN_E1_NINE_TERMINAL_AUTHOR_EVIDENCE_CHECKPOINT",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "repository": "777genius/agent-teams-ai",
+  "createdAt": "2026-11-16T06:45:14.805727+00:00",
+  "cutoffObservedAt": "2026-11-16T06:41:53Z",
+  "purpose": "Recoverable references to existing original bytes only. No copied ZIP or extracted binary, no source application, no publication, no synthetic aggregate qualification.",
+  "counts": {
+    "terminalJobs": 9,
+    "apiSuccessLeaves": 4,
+    "apiFailureLeaves": 5,
+    "queuedJobs": 5,
+    "officialZipFiles": 8,
+    "zipMembers": 44,
+    "payloadFiles": 57,
+    "payloadBytes": 5114716,
+    "uniqueBlobObjects": 55
+  },
+  "payloads": [
+    {
+      "path": "native-audit-E1e1d14b/job-133120929105-original-response.json",
+      "bytes": 108967,
+      "gitBlob": "e88bf45a79794a2864dc996a97cff8bd3989fdcb",
+      "sha256": "d5cd8c8eb58bd3b081fd85ba7e1c313ad619e5fd1eca83f8a479c6bdccebf2a1",
+      "role": "original-full-tool-response"
+    },
+    {
+      "path": "native-audit-E1e1d14b/job-133120929105.log",
+      "bytes": 105062,
+      "gitBlob": "b2e35a364b357a09cbde6bd8a5998d930684bbab",
+      "sha256": "2be17c99501fc1a105d04018ed556203eddc63162a0085ba24dd4b5f36c05c99",
+      "role": "original-raw-log"
+    },
+    {
+      "path": "native-audit-E1e1d14b/static-windows-qualification-audit.json",
+      "bytes": 66310,
+      "gitBlob": "7ab8c76f5c3677a2e1e45d3f3defddf0171a018c",
+      "sha256": "78c6dc712dfedbcab05eb5c0e2a18f7a233e56ed7f66a90258b970de83598609",
+      "role": "author-evidence-audit"
+    },
+    {
+      "path": "native-audit-E1e1d14b/job-133120929324-original-response.json",
+      "bytes": 104782,
+      "gitBlob": "655b182d2a0d1ee449ef8184ffbb94ae989e7013",
+      "sha256": "1a632d2cf5e110466c603ed09c335b0dd14a90a90955f4d7c14bc803e8479730",
+      "role": "original-full-tool-response"
+    },
+    {
+      "path": "native-audit-E1e1d14b/job-133120929324.log",
+      "bytes": 99531,
+      "gitBlob": "0a1daaf057b77571deaac25dffdbe70f86475744",
+      "sha256": "27e6fa59194a32898ca1761ccf4358e4f4ef1d1c14b1bc7f4e5806b9e0fc0eb1",
+      "role": "original-raw-log"
+    },
+    {
+      "path": "native-audit-E1e1d14b/artifact-14202660278.zip",
+      "bytes": 11052,
+      "gitBlob": "b85149194d6ac77e819ef97ec216b12a4ed9862f",
+      "sha256": "2960ac3be2e4b1241d78a74a52600b55ff2fd42b2e3eddb0c7766b3a171df039",
+      "role": "original-official-zip"
+    },
+    {
+      "path": "native-audit-E1e1d14b/process-darwin-x64-archive-audit.json",
+      "bytes": 1465,
+      "gitBlob": "57446cc55810771e542ac236766fd8424c6195b4",
+      "sha256": "f6c4e446bc24ccea3f8ab911c2ff9534396a54b1261966fc6333fab572d872f3",
+      "role": "original-member-audit"
+    },
+    {
+      "path": "native-audit-E1e1d14b/job-133120929386-original-response.json",
+      "bytes": 111288,
+      "gitBlob": "2537e228865e35549438d92188b21bb18f3742f4",
+      "sha256": "84677de1e30993060c4cb1fa44607943e0f3ff52ffd4096e7eb48496e6f177b1",
+      "role": "original-full-tool-response"
+    },
+    {
+      "path": "native-audit-E1e1d14b/job-133120929386.log",
+      "bytes": 107051,
+      "gitBlob": "b163e6a3a31a42ad258af2955601b0452cdec80a",
+      "sha256": "0fe4c57169b3d6e8efc8106fd42736cb686e3a69788e16f2ec7ad0a95449a186",
+      "role": "original-raw-log"
+    },
+    {
+      "path": "native-audit-E1e1d14b/v2-windows-arm64-qualification-audit.json",
+      "bytes": 44040,
+      "gitBlob": "f19b2e9e451e48d1e67dd303cf46b9d4ad096a25",
+      "sha256": "bf92118312405025e609d29d73f44c94c59a865f319ce121f529b45307abf095",
+      "role": "author-evidence-audit"
+    },
+    {
+      "path": "native-audit-E1e1d14b/artifact-14201989395.zip",
+      "bytes": 13456,
+      "gitBlob": "be67c1142b8a6a3176d1f2e5419c3d30687bb9ee",
+      "sha256": "583f2900f6ba0764a4243e5b32dbaa98085769f2c7f47ee5e7d2440b87cfeeb2",
+      "role": "original-official-zip"
+    },
+    {
+      "path": "native-audit-E1e1d14b/v2-windows-arm64-archive-audit.json",
+      "bytes": 1301,
+      "gitBlob": "bb31ddcdfbd8fcf3f50e1293a6292350efdf9d7c",
+      "sha256": "c16ac2c7055a609b0c0b1423a19d3fb5bf4ccca3bd701bdbe2385f3f9a20fe74",
+      "role": "original-member-audit"
+    },
+    {
+      "path": "native-audit-E1e1d14b/job-133120929407-original-response.json",
+      "bytes": 96209,
+      "gitBlob": "a9ad1aa77b28284f102168f5b832cf5f21557757",
+      "sha256": "0c66d2e97e3e6280b4d59218f8d3783b746fb065b50925bc3e13b16f4270eb80",
+      "role": "original-full-tool-response"
+    },
+    {
+      "path": "native-audit-E1e1d14b/job-133120929407.log",
+      "bytes": 92290,
+      "gitBlob": "51a9f01e90c63e44b7765b94d02c8fadf115c474",
+      "sha256": "6feb2e5b3ad4680f48afb6ca70878fde1b5e1a72236a52ec1634e80ccb4f564d",
+      "role": "original-raw-log"
+    },
+    {
+      "path": "native-audit-E1e1d14b/v2-windows-x64-qualification-audit.json",
+      "bytes": 43978,
+      "gitBlob": "d587841055f2ce5d495190fc4dd7ba3f632cfbc5",
+      "sha256": "0e4f70368f04cc4cdda266d60284aef820eba1dfd379737ea8195b47224a5df7",
+      "role": "author-evidence-audit"
+    },
+    {
+      "path": "native-audit-E1e1d14b/artifact-14201408897.zip",
+      "bytes": 13339,
+      "gitBlob": "c1cdb716a330d1d12ff140619efeb0272f60dff1",
+      "sha256": "38ef268f1e40f88299f91faf38a7087c6281efbf5305a492962049f00acb3450",
+      "role": "original-official-zip"
+    },
+    {
+      "path": "native-audit-E1e1d14b/v2-windows-x64-archive-audit.json",
+      "bytes": 1270,
+      "gitBlob": "99b5d6e114d58cfaba0c4c01f66a278e311657ad",
+      "sha256": "5fbe261c3800a7334507608c6d625ab32dfee5d9522036e5d71628d25c19df89",
+      "role": "original-member-audit"
+    },
+    {
+      "path": "native-audit-E1e1d14b/job-133120929424-original-response.json",
+      "bytes": 114456,
+      "gitBlob": "4a86f9d413da622834f8bb41e617c59f20c11ded",
+      "sha256": "9be71d431e01116faaa9768869b16b4da5de052c070ac99dea9e8fcb10fe2127",
+      "role": "original-full-tool-response"
+    },
+    {
+      "path": "native-audit-E1e1d14b/job-133120929424.log",
+      "bytes": 112091,
+      "gitBlob": "907a8263b7d72aace814479a1b01214f4024499e",
+      "sha256": "de953965a05ae16adbc9b3934bc2ba5b0bb604be4256616ce353b3aedbaad2c6",
+      "role": "original-raw-log"
+    },
+    {
+      "path": "native-audit-E1e1d14b/darwin-p09-original-failures-audit.json",
+      "bytes": 59752,
+      "gitBlob": "899e1b07bd2f38b1cbfc18cacea5b7032634b9be",
+      "sha256": "b02005b3837a97db51b88daff23aa075203bdd8d57dcf291aa45cabb946f3d69",
+      "role": "author-evidence-audit"
+    },
+    {
+      "path": "native-audit-E1e1d14b/artifact-14202625921.zip",
+      "bytes": 10631,
+      "gitBlob": "76dd5204a9636d80be1c4d10762c200e3c3083f5",
+      "sha256": "a3b3b0269ebd620138d5756959fd4dd9b8a9c4a287fd2db63db9e061f13d9171",
+      "role": "original-official-zip"
+    },
+    {
+      "path": "native-audit-E1e1d14b/p09-darwin-x64-archive-audit.json",
+      "bytes": 1294,
+      "gitBlob": "5f7e1fec4c9af86bf43114201a89a7af55783d93",
+      "sha256": "881ac4af974d17de151ea3dc9736f2ff2b629710f93e18949f7b4192624b5ac4",
+      "role": "original-member-audit"
+    },
+    {
+      "path": "native-audit-E1e1d14b/job-133120929495-original-response.json",
+      "bytes": 108689,
+      "gitBlob": "09284e01816d65f136e3d9160d8a944ffdaadd58",
+      "sha256": "e5126198422cf28762db190d8923fc1b71dd5508e70c8394990f3ddc78b07d98",
+      "role": "original-full-tool-response"
+    },
+    {
+      "path": "native-audit-E1e1d14b/job-133120929495.log",
+      "bytes": 106404,
+      "gitBlob": "59ecf6ca7fd558fb8d4021834ada5e4ca9b972ee",
+      "sha256": "5d1703477fb76b2f1f84fa1bc716e16d9ba233a49fe4413be459719d2a60224e",
+      "role": "original-raw-log"
+    },
+    {
+      "path": "native-audit-E1e1d14b/artifact-14203040330.zip",
+      "bytes": 10422,
+      "gitBlob": "cb466c5c68c174d9b19e5ce7d4f75c01a224a91b",
+      "sha256": "946e50f7b3dfd44c12ee6df665b4b6ecce1d5c6c1b957d9f5f99e88563bf3b30",
+      "role": "original-official-zip"
+    },
+    {
+      "path": "native-audit-E1e1d14b/p09-darwin-arm64-archive-audit.json",
+      "bytes": 1294,
+      "gitBlob": "43844455525b24443aa3d5654438670bf6f898e3",
+      "sha256": "c973b404499c5988a6c0691aa9d2f5856e2ad70e97e6a54ccf5e2a4eff5cea81",
+      "role": "original-member-audit"
+    },
+    {
+      "path": "native-audit-E1e1d14b/job-133120929510-original-response.json",
+      "bytes": 154758,
+      "gitBlob": "c344b7eead9203cc997439a4d211842d18b992d7",
+      "sha256": "0dd2df0b7d18402dae29a93525fe1da35cf4fcd83527cca130321827c1653450",
+      "role": "original-full-tool-response"
+    },
+    {
+      "path": "native-audit-E1e1d14b/job-133120929510.log",
+      "bytes": 143153,
+      "gitBlob": "e8c536e76fd86896858f74a4b471a9057a20f08f",
+      "sha256": "0d6e66f963303d739a75fe2d39110fc04ad7b61bdf78376d4ba77f7f0e7639ee",
+      "role": "original-raw-log"
+    },
+    {
+      "path": "native-audit-E1e1d14b/process-windows-x64-failure-audit.json",
+      "bytes": 51476,
+      "gitBlob": "9757a1c800fe11b3805cc664ca85f7fe84563a80",
+      "sha256": "4af53a5903e056055192ca34572ba364738f193521de81318de40d92f65edd92",
+      "role": "author-evidence-audit"
+    },
+    {
+      "path": "native-audit-E1e1d14b/artifact-14201916494.zip",
+      "bytes": 15043,
+      "gitBlob": "adf76542bf8ec1f143f3ddf9c26736490fe28fec",
+      "sha256": "b5d26672269fc6bbf7ab6e13adddf62b65bd5295de28590df44ebdc547d74e86",
+      "role": "original-official-zip"
+    },
+    {
+      "path": "native-audit-E1e1d14b/process-windows-x64-archive-audit.json",
+      "bytes": 2946,
+      "gitBlob": "8f0d482f8f688a45e993a728114ed4a7d093c105",
+      "sha256": "47c31f72b53331b4bfbe800023302ff67aae277268ed7ff22fa93b1f067b97c2",
+      "role": "original-member-audit"
+    },
+    {
+      "path": "native-audit-E1e1d14b/independent-process-windows-x64-review.json",
+      "bytes": 19746,
+      "gitBlob": "aa06b828ff406a3adac11c313d8bcf5b2bf8ce52",
+      "sha256": "2f645d88c90c47d8e022c5327d01b594fec9b381325bab69f4eb4dc154294000",
+      "role": "independent-actual-evidence-review"
+    },
+    {
+      "path": "native-audit-E1e1d14b/independent-process-windows-x64-byte-source-proof.json",
+      "bytes": 56525,
+      "gitBlob": "1c549757914dc64ea61a85ba283f4374059ee9aa",
+      "sha256": "430d1d68569042b397d8728aa520f7e7ffd150184bed2fde8d9ba44e03ee341d",
+      "role": "independent-actual-byte-source-proof"
+    },
+    {
+      "path": "native-audit-E1e1d14b/job-133120929614-original-response.json",
+      "bytes": 115060,
+      "gitBlob": "4bb41a146fa2634661d10710996382869afc9bdd",
+      "sha256": "6f15fce4f8b4b0e8ba73b4c760ded73566659925e2720746eadd4a267d6bc281",
+      "role": "original-full-tool-response"
+    },
+    {
+      "path": "native-audit-E1e1d14b/job-133120929614.log",
+      "bytes": 109620,
+      "gitBlob": "91da7b6d3da2338c07be6f845ad96c2e6513dbcf",
+      "sha256": "9efb8720e211458046131cf1a2a76d1aa05c872f1011c1345044eb09b4b66e15",
+      "role": "original-raw-log"
+    },
+    {
+      "path": "native-audit-E1e1d14b/process-darwin-arm64-qualification-audit.json",
+      "bytes": 18428,
+      "gitBlob": "718324db2a0cee7b868e575f391644aaf630aa4a",
+      "sha256": "89006964a4915daecf8c098645a2c7bac39ef25f8228fde387833590ad9fc7d7",
+      "role": "author-evidence-audit"
+    },
+    {
+      "path": "native-audit-E1e1d14b/artifact-14202289527.zip",
+      "bytes": 12690,
+      "gitBlob": "de661aa46ff3fd55284e1a709375a5caa484fa34",
+      "sha256": "6f78cdc0f3429f4473288330221cb1f7df969d1da7853ddee0d0bd9883f24286",
+      "role": "original-official-zip"
+    },
+    {
+      "path": "native-audit-E1e1d14b/process-darwin-arm64-archive-audit.json",
+      "bytes": 2104,
+      "gitBlob": "64ea1bfc9156b3c7ab1d38e8ae4489a51ba5445a",
+      "sha256": "589c5f2225fd1818119177b2288188c743dabbb8757120be26ef252a2dfc90c0",
+      "role": "original-member-audit"
+    },
+    {
+      "path": "native-audit-E1e1d14b/job-133120929619-original-response.json",
+      "bytes": 187583,
+      "gitBlob": "5d3b3d7d5718bc32ff80197be2e2ea37d48bac88",
+      "sha256": "1269fcd6fa771f612a09b1b3226063a658737b17ababaf1f63c42422172a254d",
+      "role": "original-full-tool-response"
+    },
+    {
+      "path": "native-audit-E1e1d14b/job-133120929619.log",
+      "bytes": 174851,
+      "gitBlob": "2a599f79761d88b41ef9e21b7269d4ed42c7e004",
+      "sha256": "f411924081a9dfde45ccbf57944a78761fd24fe9bc7d0f7c5f8acb7d7d458814",
+      "role": "original-raw-log"
+    },
+    {
+      "path": "native-audit-E1e1d14b/process-windows-arm64-failure-audit.json",
+      "bytes": 52740,
+      "gitBlob": "bdef1a0e8295e7439534d3eaabeafc78f37dcb9d",
+      "sha256": "2fbb7243b5804bd15fcd5debdd6d0e656d6582b3f39ea9321fc4219a53d96d7f",
+      "role": "author-evidence-audit"
+    },
+    {
+      "path": "native-audit-E1e1d14b/artifact-14202148789.zip",
+      "bytes": 15113,
+      "gitBlob": "d0d30e9eb6849d03b2b091171c3e4f28e8808f27",
+      "sha256": "15e8fae1f1c5e3cbd86de1c54bc4b7c54528b25463cd3b28df00f794545fc82b",
+      "role": "original-official-zip"
+    },
+    {
+      "path": "native-audit-E1e1d14b/process-windows-arm64-archive-audit.json",
+      "bytes": 2950,
+      "gitBlob": "086cc70aaa7ddd26c0dd25a2d94ac62918e31e4a",
+      "sha256": "400273f83b6426974f9eefe3d4f0e23fd79f2fe7904a9869671c5d35c6c0cff1",
+      "role": "original-member-audit"
+    },
+    {
+      "path": "ci-e1d14b/owned-process-jobs-response-0641.json",
+      "bytes": 22863,
+      "gitBlob": "d49337529412d41ccfa1e2e6f5e4d4007f555634",
+      "sha256": "ec9a97f0f35e8aae6ca7467d2a78646acf4cbbcbfb1b5d2698f18e5078b69501",
+      "role": "original-job-status-response"
+    },
+    {
+      "path": "ci-e1d14b/owned-v2-jobs-response-0641.json",
+      "bytes": 29824,
+      "gitBlob": "27a2612a00d53fb9f7ab75078c6b6a1f10a9723e",
+      "sha256": "1de993ac02abf93a55ef2430188701e62be1a98845e542b1055a465ee3f819ab",
+      "role": "original-job-status-response"
+    },
+    {
+      "path": "ci-e1d14b/owned-process-jobs-response-0611.json",
+      "bytes": 16872,
+      "gitBlob": "82f169e12e3c7542356a7a6d164dbb9f9ffbdf24",
+      "sha256": "b383c9e25e95abc2169cf2ce1d5816d4337797b2256284df77c25515955d2036",
+      "role": "original-job-status-response"
+    },
+    {
+      "path": "ci-e1d14b/owned-process-jobs-response-0623.json",
+      "bytes": 22566,
+      "gitBlob": "5fa927cc20de9b03ea5c3dba15bf8c1c096d57a4",
+      "sha256": "189273a1f1fce97683d00afc7b0252b39ebcf18d62fca7c9e8df0801131d1a5f",
+      "role": "original-job-status-response"
+    },
+    {
+      "path": "ci-e1d14b/owned-process-jobs-response-0629.json",
+      "bytes": 22863,
+      "gitBlob": "d49337529412d41ccfa1e2e6f5e4d4007f555634",
+      "sha256": "ec9a97f0f35e8aae6ca7467d2a78646acf4cbbcbfb1b5d2698f18e5078b69501",
+      "role": "original-job-status-response"
+    },
+    {
+      "path": "ci-e1d14b/owned-v2-jobs-response-0616.json",
+      "bytes": 23421,
+      "gitBlob": "89f079d23395a0d2906ee0b39c83a64ae8bf6636",
+      "sha256": "f2fbd7a8bf546a88972ceab78a043be9955a2255b5f8676740f2cb8839275a47",
+      "role": "original-job-status-response"
+    },
+    {
+      "path": "ci-e1d14b/owned-v2-jobs-response-0623.json",
+      "bytes": 29824,
+      "gitBlob": "27a2612a00d53fb9f7ab75078c6b6a1f10a9723e",
+      "sha256": "1de993ac02abf93a55ef2430188701e62be1a98845e542b1055a465ee3f819ab",
+      "role": "original-job-status-response"
+    },
+    {
+      "path": "native-audit-E1e1d14b/process-artifacts-response-0611.json",
+      "bytes": 1096,
+      "gitBlob": "7e5ef4493296f49c0ebc4784ec5ac312df78ae33",
+      "sha256": "28f7ba1f022b2e5d381f6a54963afe8be1c9f50d13fb5fa0232bec1466785210",
+      "role": "original-official-artifact-metadata-response"
+    },
+    {
+      "path": "native-audit-E1e1d14b/process-artifacts-response-0623.json",
+      "bytes": 2961,
+      "gitBlob": "075a3efb3b36e51ef0eae543b6d2ed65b874099a",
+      "sha256": "4608a345218b7e8989001ac1847a9b1da9041399c16f8b44f786296405d0f880",
+      "role": "original-official-artifact-metadata-response"
+    },
+    {
+      "path": "native-audit-E1e1d14b/process-artifacts-response-0630.json",
+      "bytes": 3895,
+      "gitBlob": "1fe2a5550642439e9e087db4b57838558114b3c5",
+      "sha256": "a08d9c068b4d4893db613095bf16b23edf4ad640a6e26966e2cafc35ca0cf467",
+      "role": "original-official-artifact-metadata-response"
+    },
+    {
+      "path": "native-audit-E1e1d14b/v2-artifacts-response-0616.json",
+      "bytes": 1061,
+      "gitBlob": "fbeb1a14ee8fdf9eb0cbe1da7abda8bd402ecc42",
+      "sha256": "7dbec1c19103b158f885d6d89576c85880110e7f1cf2242653c38dbd205fd788",
+      "role": "original-official-artifact-metadata-response"
+    },
+    {
+      "path": "native-audit-E1e1d14b/v2-artifacts-response-0623.json",
+      "bytes": 3755,
+      "gitBlob": "985f72706445b6e368b221add62dbeb3711f2c56",
+      "sha256": "7e12932e32992cf93d0bb2dc21f9bf9197cf0d29b46472266053cedf1831efe4",
+      "role": "original-official-artifact-metadata-response"
+    },
+    {
+      "path": "external-e1d-integration/initial-api-responses.json",
+      "bytes": 2088356,
+      "gitBlob": "0b4a4b435bfa0d1968961c29694ff740871917b4",
+      "sha256": "d9e448811262792814becd020fdde0dbf0622d4750462e5c45a34026c8790bda",
+      "role": "original-initial-run-discovery-response"
+    },
+    {
+      "path": "native-audit-E1e1d14b/host-source-E1e1d14b-git-audit.json",
+      "bytes": 164149,
+      "gitBlob": "f1b1e521612e44bf88d5d43ffe1039eda3ed094e",
+      "sha256": "d2c7c51237fc1d435035d2e70383215270accdf8534660dadbf52e9fd6c7691f",
+      "role": "fresh-619-Host-Git-source-census"
+    }
+  ],
+  "terminalLeaves": [
+    {
+      "jobId": 133120929105,
+      "runId": 43813731517,
+      "label": "Windows static",
+      "status": "completed",
+      "conclusion": "success",
+      "terminalJob": {
+        "id": 133120929105,
+        "name": "Static V01 source test (windows-2022)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43813731517,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Enable Windows long paths",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Require immutable PR source HEAD",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Record exact current product commit",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Prove retry classification on the exact source HEAD",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Install pinned workspace dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Build Stage1 Host without launching providers",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Typecheck Host TEST contracts",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Verify captured and native model variants through Host SPI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          },
+          {
+            "name": "Verify generation-preserving install and update policy",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14
+          },
+          {
+            "name": "Execute V2 static preflight, current-main lock and FIFO negatives",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Native V1 baseline and latest Host compatibility (Linux TEST)",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 16
+          },
+          {
+            "name": "Preserve native V1 version evidence",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 17
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 31
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 32
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 33
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 34
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 35
+          }
+        ]
+      },
+      "reviewState": "author-only; independent R2 pending",
+      "fullOriginalMcpResponse": {
+        "path": "native-audit-E1e1d14b/job-133120929105-original-response.json",
+        "bytes": 108967,
+        "gitBlob": "e88bf45a79794a2864dc996a97cff8bd3989fdcb",
+        "sha256": "d5cd8c8eb58bd3b081fd85ba7e1c313ad619e5fd1eca83f8a479c6bdccebf2a1"
+      },
+      "fullOriginalDecodedLog": {
+        "path": "native-audit-E1e1d14b/job-133120929105.log",
+        "bytes": 105062,
+        "gitBlob": "b2e35a364b357a09cbde6bd8a5998d930684bbab",
+        "sha256": "2be17c99501fc1a105d04018ed556203eddc63162a0085ba24dd4b5f36c05c99"
+      },
+      "fullUtf8ToolContentEqualsRaw": true,
+      "authorAudit": {
+        "path": "native-audit-E1e1d14b/static-windows-qualification-audit.json",
+        "bytes": 66310,
+        "gitBlob": "7ab8c76f5c3677a2e1e45d3f3defddf0171a018c",
+        "sha256": "78c6dc712dfedbcab05eb5c0e2a18f7a233e56ed7f66a90258b970de83598609"
+      }
+    },
+    {
+      "jobId": 133120929324,
+      "runId": 43813731530,
+      "label": "Darwin x64 Process",
+      "status": "completed",
+      "conclusion": "failure",
+      "terminalJob": {
+        "id": 133120929324,
+        "name": "Host process fixtures (darwin-x64)",
+        "status": "completed",
+        "conclusion": "failure",
+        "run_id": 43813731530,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Enable Windows long paths",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 2
+          },
+          {
+            "name": "Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Select the pinned package manager with bundled Corepack",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Bind exact source and actual process tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Install frozen workspace without Desktop postinstall",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Build existing controller and Host",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Verify process contracts and retained Main Host transport",
+            "status": "completed",
+            "conclusion": "failure",
+            "number": 10
+          },
+          {
+            "name": "Verify original POSIX Node and shell lifecycle fixtures",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 11
+          },
+          {
+            "name": "Prepare pinned Electron for native process fixtures",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 12
+          },
+          {
+            "name": "Verify Linux Node exec descriptor closure under both original parents",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 13
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 14
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 15
+          },
+          {
+            "name": "Build original Windows product broker and C++ fixtures",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 16
+          },
+          {
+            "name": "Qualify original Windows Job and control under Host Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 17
+          },
+          {
+            "name": "Qualify original Windows Job and control under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 18
+          },
+          {
+            "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 19
+          },
+          {
+            "name": "Qualify original codex source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20
+          },
+          {
+            "name": "Qualify original claude source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21
+          },
+          {
+            "name": "Qualify original opencode source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 22
+          },
+          {
+            "name": "Require completed original platform receipts and unchanged source",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 23
+          },
+          {
+            "name": "Preserve original process evidence including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 24
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 46
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 47
+          },
+          {
+            "name": "Post Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 48
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 49
+          }
+        ]
+      },
+      "reviewState": "raw/archive retained; interpretation assigned to root and pending here",
+      "fullOriginalMcpResponse": {
+        "path": "native-audit-E1e1d14b/job-133120929324-original-response.json",
+        "bytes": 104782,
+        "gitBlob": "655b182d2a0d1ee449ef8184ffbb94ae989e7013",
+        "sha256": "1a632d2cf5e110466c603ed09c335b0dd14a90a90955f4d7c14bc803e8479730"
+      },
+      "fullOriginalDecodedLog": {
+        "path": "native-audit-E1e1d14b/job-133120929324.log",
+        "bytes": 99531,
+        "gitBlob": "0a1daaf057b77571deaac25dffdbe70f86475744",
+        "sha256": "27e6fa59194a32898ca1761ccf4358e4f4ef1d1c14b1bc7f4e5806b9e0fc0eb1"
+      },
+      "fullUtf8ToolContentEqualsRaw": true,
+      "archive": {
+        "path": "native-audit-E1e1d14b/artifact-14202660278.zip",
+        "bytes": 11052,
+        "gitBlob": "b85149194d6ac77e819ef97ec216b12a4ed9862f",
+        "sha256": "2960ac3be2e4b1241d78a74a52600b55ff2fd42b2e3eddb0c7766b3a171df039"
+      },
+      "artifactId": 14202660278,
+      "archiveMemberAudit": {
+        "path": "native-audit-E1e1d14b/process-darwin-x64-archive-audit.json",
+        "bytes": 1465,
+        "gitBlob": "57446cc55810771e542ac236766fd8424c6195b4",
+        "sha256": "f6c4e446bc24ccea3f8ab911c2ff9534396a54b1261966fc6333fab572d872f3"
+      }
+    },
+    {
+      "jobId": 133120929386,
+      "runId": 43813731517,
+      "label": "Windows ARM64 embedded V2",
+      "status": "completed",
+      "conclusion": "success",
+      "terminalJob": {
+        "id": 133120929386,
+        "name": "Embedded V2.1.4 original Host (win32-arm64)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43813731517,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Enable Windows long paths",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Require immutable source HEAD and record actual runner tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Install exact source workspace dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Build original Host and its pinned provider implementation",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Check original graph and custody boundaries",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Prepare exact Bun, engine graph and original-process artifact",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Prove actual Darwin executable custody and adversarial cleanup",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 12
+          },
+          {
+            "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 13
+          },
+          {
+            "name": "Prove original Windows Job custody and surviving descendant cleanup",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14
+          },
+          {
+            "name": "Require exact Windows original-process evidence",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Check original Desktop private recipe composition",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 16
+          },
+          {
+            "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Exercise Windows automatic approval and cold Host Resume",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18
+          },
+          {
+            "name": "Exercise native catalog and model probe without tool allocation",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 19
+          },
+          {
+            "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20
+          },
+          {
+            "name": "Exercise effective permissions and active Stop with a surviving sibling",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21
+          },
+          {
+            "name": "Exercise captured external MCP and app-only through the native Host",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 22
+          },
+          {
+            "name": "Require complete native management and permission evidence",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 23
+          },
+          {
+            "name": "Require product-path Host proof after exact candidate qualification",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 24
+          },
+          {
+            "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 25
+          },
+          {
+            "name": "Preserve exact native evidence or candidate HOLD",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 26
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 50
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 51
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 52
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 53
+          }
+        ]
+      },
+      "reviewState": "author-only; independent R2 pending",
+      "fullOriginalMcpResponse": {
+        "path": "native-audit-E1e1d14b/job-133120929386-original-response.json",
+        "bytes": 111288,
+        "gitBlob": "2537e228865e35549438d92188b21bb18f3742f4",
+        "sha256": "84677de1e30993060c4cb1fa44607943e0f3ff52ffd4096e7eb48496e6f177b1"
+      },
+      "fullOriginalDecodedLog": {
+        "path": "native-audit-E1e1d14b/job-133120929386.log",
+        "bytes": 107051,
+        "gitBlob": "b163e6a3a31a42ad258af2955601b0452cdec80a",
+        "sha256": "0fe4c57169b3d6e8efc8106fd42736cb686e3a69788e16f2ec7ad0a95449a186"
+      },
+      "fullUtf8ToolContentEqualsRaw": true,
+      "authorAudit": {
+        "path": "native-audit-E1e1d14b/v2-windows-arm64-qualification-audit.json",
+        "bytes": 44040,
+        "gitBlob": "f19b2e9e451e48d1e67dd303cf46b9d4ad096a25",
+        "sha256": "bf92118312405025e609d29d73f44c94c59a865f319ce121f529b45307abf095"
+      },
+      "archive": {
+        "path": "native-audit-E1e1d14b/artifact-14201989395.zip",
+        "bytes": 13456,
+        "gitBlob": "be67c1142b8a6a3176d1f2e5419c3d30687bb9ee",
+        "sha256": "583f2900f6ba0764a4243e5b32dbaa98085769f2c7f47ee5e7d2440b87cfeeb2"
+      },
+      "artifactId": 14201989395,
+      "archiveMemberAudit": {
+        "path": "native-audit-E1e1d14b/v2-windows-arm64-archive-audit.json",
+        "bytes": 1301,
+        "gitBlob": "bb31ddcdfbd8fcf3f50e1293a6292350efdf9d7c",
+        "sha256": "c16ac2c7055a609b0c0b1423a19d3fb5bf4ccca3bd701bdbe2385f3f9a20fe74"
+      }
+    },
+    {
+      "jobId": 133120929407,
+      "runId": 43813731517,
+      "label": "Windows x64 embedded V2",
+      "status": "completed",
+      "conclusion": "success",
+      "terminalJob": {
+        "id": 133120929407,
+        "name": "Embedded V2.1.4 original Host (win32-x64)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43813731517,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Enable Windows long paths",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Require immutable source HEAD and record actual runner tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Install exact source workspace dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Build original Host and its pinned provider implementation",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Check original graph and custody boundaries",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Prepare exact Bun, engine graph and original-process artifact",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Prove actual Darwin executable custody and adversarial cleanup",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 12
+          },
+          {
+            "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 13
+          },
+          {
+            "name": "Prove original Windows Job custody and surviving descendant cleanup",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14
+          },
+          {
+            "name": "Require exact Windows original-process evidence",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Check original Desktop private recipe composition",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 16
+          },
+          {
+            "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Exercise Windows automatic approval and cold Host Resume",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18
+          },
+          {
+            "name": "Exercise native catalog and model probe without tool allocation",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 19
+          },
+          {
+            "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20
+          },
+          {
+            "name": "Exercise effective permissions and active Stop with a surviving sibling",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21
+          },
+          {
+            "name": "Exercise captured external MCP and app-only through the native Host",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 22
+          },
+          {
+            "name": "Require complete native management and permission evidence",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 23
+          },
+          {
+            "name": "Require product-path Host proof after exact candidate qualification",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 24
+          },
+          {
+            "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 25
+          },
+          {
+            "name": "Preserve exact native evidence or candidate HOLD",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 26
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 50
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 51
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 52
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 53
+          }
+        ]
+      },
+      "reviewState": "author-only; independent R2 pending",
+      "fullOriginalMcpResponse": {
+        "path": "native-audit-E1e1d14b/job-133120929407-original-response.json",
+        "bytes": 96209,
+        "gitBlob": "a9ad1aa77b28284f102168f5b832cf5f21557757",
+        "sha256": "0c66d2e97e3e6280b4d59218f8d3783b746fb065b50925bc3e13b16f4270eb80"
+      },
+      "fullOriginalDecodedLog": {
+        "path": "native-audit-E1e1d14b/job-133120929407.log",
+        "bytes": 92290,
+        "gitBlob": "51a9f01e90c63e44b7765b94d02c8fadf115c474",
+        "sha256": "6feb2e5b3ad4680f48afb6ca70878fde1b5e1a72236a52ec1634e80ccb4f564d"
+      },
+      "fullUtf8ToolContentEqualsRaw": true,
+      "authorAudit": {
+        "path": "native-audit-E1e1d14b/v2-windows-x64-qualification-audit.json",
+        "bytes": 43978,
+        "gitBlob": "d587841055f2ce5d495190fc4dd7ba3f632cfbc5",
+        "sha256": "0e4f70368f04cc4cdda266d60284aef820eba1dfd379737ea8195b47224a5df7"
+      },
+      "archive": {
+        "path": "native-audit-E1e1d14b/artifact-14201408897.zip",
+        "bytes": 13339,
+        "gitBlob": "c1cdb716a330d1d12ff140619efeb0272f60dff1",
+        "sha256": "38ef268f1e40f88299f91faf38a7087c6281efbf5305a492962049f00acb3450"
+      },
+      "artifactId": 14201408897,
+      "archiveMemberAudit": {
+        "path": "native-audit-E1e1d14b/v2-windows-x64-archive-audit.json",
+        "bytes": 1270,
+        "gitBlob": "99b5d6e114d58cfaba0c4c01f66a278e311657ad",
+        "sha256": "5fbe261c3800a7334507608c6d625ab32dfee5d9522036e5d71628d25c19df89"
+      }
+    },
+    {
+      "jobId": 133120929424,
+      "runId": 43813731517,
+      "label": "Darwin x64 P09",
+      "status": "completed",
+      "conclusion": "failure",
+      "terminalJob": {
+        "id": 133120929424,
+        "name": "Embedded V2.1.4 original Host (darwin-x64)",
+        "status": "completed",
+        "conclusion": "failure",
+        "run_id": 43813731517,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Enable Windows long paths",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 2
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Require immutable source HEAD and record actual runner tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Install exact source workspace dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Build original Host and its pinned provider implementation",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Check original graph and custody boundaries",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Prepare exact Bun, engine graph and original-process artifact",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Prove actual Darwin executable custody and adversarial cleanup",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          },
+          {
+            "name": "Prove original Windows Job custody and surviving descendant cleanup",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 14
+          },
+          {
+            "name": "Require exact Windows original-process evidence",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 15
+          },
+          {
+            "name": "Check original Desktop private recipe composition",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Exercise Windows automatic approval and cold Host Resume",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 18
+          },
+          {
+            "name": "Exercise native catalog and model probe without tool allocation",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 19
+          },
+          {
+            "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20
+          },
+          {
+            "name": "Exercise effective permissions and active Stop with a surviving sibling",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21
+          },
+          {
+            "name": "Exercise captured external MCP and app-only through the native Host",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 22
+          },
+          {
+            "name": "Require complete native management and permission evidence",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 23
+          },
+          {
+            "name": "Require product-path Host proof after exact candidate qualification",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 24
+          },
+          {
+            "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+            "status": "completed",
+            "conclusion": "failure",
+            "number": 25
+          },
+          {
+            "name": "Preserve exact native evidence or candidate HOLD",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 26
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 50
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 51
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 52
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 53
+          }
+        ]
+      },
+      "reviewState": "author-only; independent R2 pending",
+      "fullOriginalMcpResponse": {
+        "path": "native-audit-E1e1d14b/job-133120929424-original-response.json",
+        "bytes": 114456,
+        "gitBlob": "4a86f9d413da622834f8bb41e617c59f20c11ded",
+        "sha256": "9be71d431e01116faaa9768869b16b4da5de052c070ac99dea9e8fcb10fe2127"
+      },
+      "fullOriginalDecodedLog": {
+        "path": "native-audit-E1e1d14b/job-133120929424.log",
+        "bytes": 112091,
+        "gitBlob": "907a8263b7d72aace814479a1b01214f4024499e",
+        "sha256": "de953965a05ae16adbc9b3934bc2ba5b0bb604be4256616ce353b3aedbaad2c6"
+      },
+      "fullUtf8ToolContentEqualsRaw": true,
+      "authorAudit": {
+        "path": "native-audit-E1e1d14b/darwin-p09-original-failures-audit.json",
+        "bytes": 59752,
+        "gitBlob": "899e1b07bd2f38b1cbfc18cacea5b7032634b9be",
+        "sha256": "b02005b3837a97db51b88daff23aa075203bdd8d57dcf291aa45cabb946f3d69"
+      },
+      "archive": {
+        "path": "native-audit-E1e1d14b/artifact-14202625921.zip",
+        "bytes": 10631,
+        "gitBlob": "76dd5204a9636d80be1c4d10762c200e3c3083f5",
+        "sha256": "a3b3b0269ebd620138d5756959fd4dd9b8a9c4a287fd2db63db9e061f13d9171"
+      },
+      "artifactId": 14202625921,
+      "archiveMemberAudit": {
+        "path": "native-audit-E1e1d14b/p09-darwin-x64-archive-audit.json",
+        "bytes": 1294,
+        "gitBlob": "5f7e1fec4c9af86bf43114201a89a7af55783d93",
+        "sha256": "881ac4af974d17de151ea3dc9736f2ff2b629710f93e18949f7b4192624b5ac4"
+      }
+    },
+    {
+      "jobId": 133120929495,
+      "runId": 43813731517,
+      "label": "Darwin ARM64 P09",
+      "status": "completed",
+      "conclusion": "failure",
+      "terminalJob": {
+        "id": 133120929495,
+        "name": "Embedded V2.1.4 original Host (darwin-arm64)",
+        "status": "completed",
+        "conclusion": "failure",
+        "run_id": 43813731517,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Enable Windows long paths",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 2
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Require immutable source HEAD and record actual runner tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Install exact source workspace dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Build original Host and its pinned provider implementation",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Check original graph and custody boundaries",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Prepare exact Bun, engine graph and original-process artifact",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Prove actual Darwin executable custody and adversarial cleanup",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          },
+          {
+            "name": "Prove original Windows Job custody and surviving descendant cleanup",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 14
+          },
+          {
+            "name": "Require exact Windows original-process evidence",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 15
+          },
+          {
+            "name": "Check original Desktop private recipe composition",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Exercise Windows automatic approval and cold Host Resume",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 18
+          },
+          {
+            "name": "Exercise native catalog and model probe without tool allocation",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 19
+          },
+          {
+            "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20
+          },
+          {
+            "name": "Exercise effective permissions and active Stop with a surviving sibling",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21
+          },
+          {
+            "name": "Exercise captured external MCP and app-only through the native Host",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 22
+          },
+          {
+            "name": "Require complete native management and permission evidence",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 23
+          },
+          {
+            "name": "Require product-path Host proof after exact candidate qualification",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 24
+          },
+          {
+            "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+            "status": "completed",
+            "conclusion": "failure",
+            "number": 25
+          },
+          {
+            "name": "Preserve exact native evidence or candidate HOLD",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 26
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 50
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 51
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 52
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 53
+          }
+        ]
+      },
+      "reviewState": "author-only; independent R2 pending",
+      "fullOriginalMcpResponse": {
+        "path": "native-audit-E1e1d14b/job-133120929495-original-response.json",
+        "bytes": 108689,
+        "gitBlob": "09284e01816d65f136e3d9160d8a944ffdaadd58",
+        "sha256": "e5126198422cf28762db190d8923fc1b71dd5508e70c8394990f3ddc78b07d98"
+      },
+      "fullOriginalDecodedLog": {
+        "path": "native-audit-E1e1d14b/job-133120929495.log",
+        "bytes": 106404,
+        "gitBlob": "59ecf6ca7fd558fb8d4021834ada5e4ca9b972ee",
+        "sha256": "5d1703477fb76b2f1f84fa1bc716e16d9ba233a49fe4413be459719d2a60224e"
+      },
+      "fullUtf8ToolContentEqualsRaw": true,
+      "authorAudit": {
+        "path": "native-audit-E1e1d14b/darwin-p09-original-failures-audit.json",
+        "bytes": 59752,
+        "gitBlob": "899e1b07bd2f38b1cbfc18cacea5b7032634b9be",
+        "sha256": "b02005b3837a97db51b88daff23aa075203bdd8d57dcf291aa45cabb946f3d69"
+      },
+      "archive": {
+        "path": "native-audit-E1e1d14b/artifact-14203040330.zip",
+        "bytes": 10422,
+        "gitBlob": "cb466c5c68c174d9b19e5ce7d4f75c01a224a91b",
+        "sha256": "946e50f7b3dfd44c12ee6df665b4b6ecce1d5c6c1b957d9f5f99e88563bf3b30"
+      },
+      "artifactId": 14203040330,
+      "archiveMemberAudit": {
+        "path": "native-audit-E1e1d14b/p09-darwin-arm64-archive-audit.json",
+        "bytes": 1294,
+        "gitBlob": "43844455525b24443aa3d5654438670bf6f898e3",
+        "sha256": "c973b404499c5988a6c0691aa9d2f5856e2ad70e97e6a54ccf5e2a4eff5cea81"
+      }
+    },
+    {
+      "jobId": 133120929510,
+      "runId": 43813731530,
+      "label": "Windows x64 Process",
+      "status": "completed",
+      "conclusion": "failure",
+      "terminalJob": {
+        "id": 133120929510,
+        "name": "Host process fixtures (win32-x64)",
+        "status": "completed",
+        "conclusion": "failure",
+        "run_id": 43813731530,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Enable Windows long paths",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Select the pinned package manager with bundled Corepack",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Bind exact source and actual process tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Install frozen workspace without Desktop postinstall",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Build existing controller and Host",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Verify process contracts and retained Main Host transport",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Verify original POSIX Node and shell lifecycle fixtures",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 11
+          },
+          {
+            "name": "Prepare pinned Electron for native process fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Verify Linux Node exec descriptor closure under both original parents",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 13
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 14
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 15
+          },
+          {
+            "name": "Build original Windows product broker and C++ fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Qualify original Windows Job and control under Host Node",
+            "status": "completed",
+            "conclusion": "failure",
+            "number": 17
+          },
+          {
+            "name": "Qualify original Windows Job and control under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 18
+          },
+          {
+            "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 19
+          },
+          {
+            "name": "Qualify original codex source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20
+          },
+          {
+            "name": "Qualify original claude source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21
+          },
+          {
+            "name": "Qualify original opencode source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 22
+          },
+          {
+            "name": "Require completed original platform receipts and unchanged source",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 23
+          },
+          {
+            "name": "Preserve original process evidence including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 24
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 46
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 47
+          },
+          {
+            "name": "Post Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 48
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 49
+          }
+        ]
+      },
+      "reviewState": "independent actual R2 approved, failure remains failure",
+      "fullOriginalMcpResponse": {
+        "path": "native-audit-E1e1d14b/job-133120929510-original-response.json",
+        "bytes": 154758,
+        "gitBlob": "c344b7eead9203cc997439a4d211842d18b992d7",
+        "sha256": "0dd2df0b7d18402dae29a93525fe1da35cf4fcd83527cca130321827c1653450"
+      },
+      "fullOriginalDecodedLog": {
+        "path": "native-audit-E1e1d14b/job-133120929510.log",
+        "bytes": 143153,
+        "gitBlob": "e8c536e76fd86896858f74a4b471a9057a20f08f",
+        "sha256": "0d6e66f963303d739a75fe2d39110fc04ad7b61bdf78376d4ba77f7f0e7639ee"
+      },
+      "fullUtf8ToolContentEqualsRaw": true,
+      "authorAudit": {
+        "path": "native-audit-E1e1d14b/process-windows-x64-failure-audit.json",
+        "bytes": 51476,
+        "gitBlob": "9757a1c800fe11b3805cc664ca85f7fe84563a80",
+        "sha256": "4af53a5903e056055192ca34572ba364738f193521de81318de40d92f65edd92"
+      },
+      "archive": {
+        "path": "native-audit-E1e1d14b/artifact-14201916494.zip",
+        "bytes": 15043,
+        "gitBlob": "adf76542bf8ec1f143f3ddf9c26736490fe28fec",
+        "sha256": "b5d26672269fc6bbf7ab6e13adddf62b65bd5295de28590df44ebdc547d74e86"
+      },
+      "artifactId": 14201916494,
+      "archiveMemberAudit": {
+        "path": "native-audit-E1e1d14b/process-windows-x64-archive-audit.json",
+        "bytes": 2946,
+        "gitBlob": "8f0d482f8f688a45e993a728114ed4a7d093c105",
+        "sha256": "47c31f72b53331b4bfbe800023302ff67aae277268ed7ff22fa93b1f067b97c2"
+      },
+      "independentReview": {
+        "path": "native-audit-E1e1d14b/independent-process-windows-x64-review.json",
+        "bytes": 19746,
+        "gitBlob": "aa06b828ff406a3adac11c313d8bcf5b2bf8ce52",
+        "sha256": "2f645d88c90c47d8e022c5327d01b594fec9b381325bab69f4eb4dc154294000"
+      },
+      "independentByteSourceProof": {
+        "path": "native-audit-E1e1d14b/independent-process-windows-x64-byte-source-proof.json",
+        "bytes": 56525,
+        "gitBlob": "1c549757914dc64ea61a85ba283f4374059ee9aa",
+        "sha256": "430d1d68569042b397d8728aa520f7e7ffd150184bed2fde8d9ba44e03ee341d"
+      }
+    },
+    {
+      "jobId": 133120929614,
+      "runId": 43813731530,
+      "label": "Darwin ARM64 Process",
+      "status": "completed",
+      "conclusion": "success",
+      "terminalJob": {
+        "id": 133120929614,
+        "name": "Host process fixtures (darwin-arm64)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43813731530,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Enable Windows long paths",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 2
+          },
+          {
+            "name": "Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Select the pinned package manager with bundled Corepack",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Bind exact source and actual process tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Install frozen workspace without Desktop postinstall",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Build existing controller and Host",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Verify process contracts and retained Main Host transport",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Verify original POSIX Node and shell lifecycle fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Prepare pinned Electron for native process fixtures",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 12
+          },
+          {
+            "name": "Verify Linux Node exec descriptor closure under both original parents",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 13
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 14
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 15
+          },
+          {
+            "name": "Build original Windows product broker and C++ fixtures",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 16
+          },
+          {
+            "name": "Qualify original Windows Job and control under Host Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 17
+          },
+          {
+            "name": "Qualify original Windows Job and control under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 18
+          },
+          {
+            "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 19
+          },
+          {
+            "name": "Qualify original codex source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20
+          },
+          {
+            "name": "Qualify original claude source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21
+          },
+          {
+            "name": "Qualify original opencode source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 22
+          },
+          {
+            "name": "Require completed original platform receipts and unchanged source",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 23
+          },
+          {
+            "name": "Preserve original process evidence including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 24
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 46
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 47
+          },
+          {
+            "name": "Post Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 48
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 49
+          }
+        ]
+      },
+      "reviewState": "author-only; independent R2 pending",
+      "fullOriginalMcpResponse": {
+        "path": "native-audit-E1e1d14b/job-133120929614-original-response.json",
+        "bytes": 115060,
+        "gitBlob": "4bb41a146fa2634661d10710996382869afc9bdd",
+        "sha256": "6f15fce4f8b4b0e8ba73b4c760ded73566659925e2720746eadd4a267d6bc281"
+      },
+      "fullOriginalDecodedLog": {
+        "path": "native-audit-E1e1d14b/job-133120929614.log",
+        "bytes": 109620,
+        "gitBlob": "91da7b6d3da2338c07be6f845ad96c2e6513dbcf",
+        "sha256": "9efb8720e211458046131cf1a2a76d1aa05c872f1011c1345044eb09b4b66e15"
+      },
+      "fullUtf8ToolContentEqualsRaw": true,
+      "authorAudit": {
+        "path": "native-audit-E1e1d14b/process-darwin-arm64-qualification-audit.json",
+        "bytes": 18428,
+        "gitBlob": "718324db2a0cee7b868e575f391644aaf630aa4a",
+        "sha256": "89006964a4915daecf8c098645a2c7bac39ef25f8228fde387833590ad9fc7d7"
+      },
+      "archive": {
+        "path": "native-audit-E1e1d14b/artifact-14202289527.zip",
+        "bytes": 12690,
+        "gitBlob": "de661aa46ff3fd55284e1a709375a5caa484fa34",
+        "sha256": "6f78cdc0f3429f4473288330221cb1f7df969d1da7853ddee0d0bd9883f24286"
+      },
+      "artifactId": 14202289527,
+      "archiveMemberAudit": {
+        "path": "native-audit-E1e1d14b/process-darwin-arm64-archive-audit.json",
+        "bytes": 2104,
+        "gitBlob": "64ea1bfc9156b3c7ab1d38e8ae4489a51ba5445a",
+        "sha256": "589c5f2225fd1818119177b2288188c743dabbb8757120be26ef252a2dfc90c0"
+      }
+    },
+    {
+      "jobId": 133120929619,
+      "runId": 43813731530,
+      "label": "Windows ARM64 Process",
+      "status": "completed",
+      "conclusion": "failure",
+      "terminalJob": {
+        "id": 133120929619,
+        "name": "Host process fixtures (win32-arm64)",
+        "status": "completed",
+        "conclusion": "failure",
+        "run_id": 43813731530,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Enable Windows long paths",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Select the pinned package manager with bundled Corepack",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Bind exact source and actual process tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Install frozen workspace without Desktop postinstall",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Build existing controller and Host",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Verify process contracts and retained Main Host transport",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Verify original POSIX Node and shell lifecycle fixtures",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 11
+          },
+          {
+            "name": "Prepare pinned Electron for native process fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Verify Linux Node exec descriptor closure under both original parents",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 13
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 14
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 15
+          },
+          {
+            "name": "Build original Windows product broker and C++ fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Qualify original Windows Job and control under Host Node",
+            "status": "completed",
+            "conclusion": "failure",
+            "number": 17
+          },
+          {
+            "name": "Qualify original Windows Job and control under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 18
+          },
+          {
+            "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 19
+          },
+          {
+            "name": "Qualify original codex source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20
+          },
+          {
+            "name": "Qualify original claude source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21
+          },
+          {
+            "name": "Qualify original opencode source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 22
+          },
+          {
+            "name": "Require completed original platform receipts and unchanged source",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 23
+          },
+          {
+            "name": "Preserve original process evidence including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 24
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 46
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 47
+          },
+          {
+            "name": "Post Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 48
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 49
+          }
+        ]
+      },
+      "reviewState": "author-only; independent R2 pending",
+      "fullOriginalMcpResponse": {
+        "path": "native-audit-E1e1d14b/job-133120929619-original-response.json",
+        "bytes": 187583,
+        "gitBlob": "5d3b3d7d5718bc32ff80197be2e2ea37d48bac88",
+        "sha256": "1269fcd6fa771f612a09b1b3226063a658737b17ababaf1f63c42422172a254d"
+      },
+      "fullOriginalDecodedLog": {
+        "path": "native-audit-E1e1d14b/job-133120929619.log",
+        "bytes": 174851,
+        "gitBlob": "2a599f79761d88b41ef9e21b7269d4ed42c7e004",
+        "sha256": "f411924081a9dfde45ccbf57944a78761fd24fe9bc7d0f7c5f8acb7d7d458814"
+      },
+      "fullUtf8ToolContentEqualsRaw": true,
+      "authorAudit": {
+        "path": "native-audit-E1e1d14b/process-windows-arm64-failure-audit.json",
+        "bytes": 52740,
+        "gitBlob": "bdef1a0e8295e7439534d3eaabeafc78f37dcb9d",
+        "sha256": "2fbb7243b5804bd15fcd5debdd6d0e656d6582b3f39ea9321fc4219a53d96d7f"
+      },
+      "archive": {
+        "path": "native-audit-E1e1d14b/artifact-14202148789.zip",
+        "bytes": 15113,
+        "gitBlob": "d0d30e9eb6849d03b2b091171c3e4f28e8808f27",
+        "sha256": "15e8fae1f1c5e3cbd86de1c54bc4b7c54528b25463cd3b28df00f794545fc82b"
+      },
+      "artifactId": 14202148789,
+      "archiveMemberAudit": {
+        "path": "native-audit-E1e1d14b/process-windows-arm64-archive-audit.json",
+        "bytes": 2950,
+        "gitBlob": "086cc70aaa7ddd26c0dd25a2d94ac62918e31e4a",
+        "sha256": "400273f83b6426974f9eefe3d4f0e23fd79f2fe7904a9869671c5d35c6c0cff1"
+      }
+    }
+  ],
+  "queuedAtCutoff": [
+    {
+      "id": 133120929504,
+      "runId": 43813731530,
+      "name": "Host process fixtures (linux-x64)",
+      "status": "queued",
+      "conclusion": null
+    },
+    {
+      "id": 133120929447,
+      "runId": 43813731517,
+      "name": "Embedded V2.1.4 original Host (linux-x64)",
+      "status": "queued",
+      "conclusion": null
+    },
+    {
+      "id": 133120929556,
+      "runId": 43813731517,
+      "name": "Published V2.0.21 durable HTTP process (TEST discovery only)",
+      "status": "queued",
+      "conclusion": null
+    },
+    {
+      "id": 133120929806,
+      "runId": 43813731517,
+      "name": "Native V2.0.21 Host SPI instructions (Ubuntu TEST only)",
+      "status": "queued",
+      "conclusion": null
+    },
+    {
+      "id": 133120930108,
+      "runId": 43813731517,
+      "name": "Static V01 source test (ubuntu-24.04)",
+      "status": "queued",
+      "conclusion": null
+    }
+  ],
+  "zipRecovery": [
+    {
+      "artifactId": 14202660278,
+      "archive": {
+        "path": "native-audit-E1e1d14b/artifact-14202660278.zip",
+        "bytes": 11052,
+        "gitBlob": "b85149194d6ac77e819ef97ec216b12a4ed9862f",
+        "sha256": "2960ac3be2e4b1241d78a74a52600b55ff2fd42b2e3eddb0c7766b3a171df039"
+      },
+      "existingMemberAudit": {
+        "path": "native-audit-E1e1d14b/process-darwin-x64-archive-audit.json",
+        "bytes": 1465,
+        "gitBlob": "57446cc55810771e542ac236766fd8424c6195b4",
+        "sha256": "f6c4e446bc24ccea3f8ab911c2ff9534396a54b1261966fc6333fab572d872f3"
+      },
+      "safeUniqueNames": true,
+      "noSymlinks": true,
+      "allCrcPass": true,
+      "allMemberHashesAndExistingExtractionsExact": true,
+      "members": [
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+          "bytes": 20799,
+          "sha256": "fb385c2bcee56a31ede4bde2bd0d315deb9e38fb52ad3f4677cfcc70c585a20c",
+          "gitBlob": "2a6e7df8e767ea97c7989415e0ec7d43ba68fa02",
+          "crc32": "70f642d3",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-darwin-x64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+          "bytes": 772,
+          "sha256": "c15f61fc7d9a55696f91eb9129b17eeff7f8fe7cc4a6f870b140b4ffa920c48a",
+          "gitBlob": "9ff3a45e91cb855f0aab059687b0210f174ebcc2",
+          "crc32": "b248c9c7",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-darwin-x64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+          "bytes": 12202,
+          "sha256": "ee75fec9a697cb348ad7207b23322bf5f5f65562680b2b2bb42b4e34d2ffeb07",
+          "gitBlob": "91c26284ce8066bcff47b789072912e94636c2a0",
+          "crc32": "d9e7977c",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-darwin-x64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+          "bytes": 41,
+          "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681",
+          "gitBlob": "64df2ac36d2400af7b971319a2274577c225275a",
+          "crc32": "4b15b81c",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-darwin-x64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt"
+        }
+      ]
+    },
+    {
+      "artifactId": 14201989395,
+      "archive": {
+        "path": "native-audit-E1e1d14b/artifact-14201989395.zip",
+        "bytes": 13456,
+        "gitBlob": "be67c1142b8a6a3176d1f2e5419c3d30687bb9ee",
+        "sha256": "583f2900f6ba0764a4243e5b32dbaa98085769f2c7f47ee5e7d2440b87cfeeb2"
+      },
+      "existingMemberAudit": {
+        "path": "native-audit-E1e1d14b/v2-windows-arm64-archive-audit.json",
+        "bytes": 1301,
+        "gitBlob": "bb31ddcdfbd8fcf3f50e1293a6292350efdf9d7c",
+        "sha256": "c16ac2c7055a609b0c0b1423a19d3fb5bf4ccca3bd701bdbe2385f3f9a20fe74"
+      },
+      "safeUniqueNames": true,
+      "noSymlinks": true,
+      "allCrcPass": true,
+      "allMemberHashesAndExistingExtractionsExact": true,
+      "members": [
+        {
+          "name": "opencode-v2-embedded-inputs.json",
+          "bytes": 782,
+          "sha256": "2c159e52fdbfb5159371f5f025beb010529abf8c9532fd67b7f5eac782e278d5",
+          "gitBlob": "924d5d56da7e59817dd46dad35c3b8e3c8e0b803",
+          "crc32": "7ddf23b5",
+          "existingExtractedPath": "native-audit-E1e1d14b/v2-windows-arm64-extracted/opencode-v2-embedded-inputs.json"
+        },
+        {
+          "name": "opencode-v2-windows-custody.json",
+          "bytes": 909,
+          "sha256": "f16bd878ee2dfc7848998053ec5b7c611b66877d3f39fc0319c294f43681daa2",
+          "gitBlob": "a7ddb5b34449b65ce24a64364eef06e13e6cb108",
+          "crc32": "c85c3643",
+          "existingExtractedPath": "native-audit-E1e1d14b/v2-windows-arm64-extracted/opencode-v2-windows-custody.json"
+        },
+        {
+          "name": "opencode-v2-embedded-host.json",
+          "bytes": 95124,
+          "sha256": "756fa0e5a9b3c2e458529d4e0edb5cdee9de961067ec632f3bf60158bba02247",
+          "gitBlob": "193cd0e724d88b841689a1e611f9344f6295d9f3",
+          "crc32": "348a8dbd",
+          "existingExtractedPath": "native-audit-E1e1d14b/v2-windows-arm64-extracted/opencode-v2-embedded-host.json"
+        },
+        {
+          "name": "opencode-v2-embedded-host-auto.json",
+          "bytes": 94929,
+          "sha256": "168f4fe3a200097ce39ae134f17b723e4f79543bdcbf2f46883d06bf5ed8f4bc",
+          "gitBlob": "d989b8d0cbe7605e4b500006d8ed098c125d0779",
+          "crc32": "3760d410",
+          "existingExtractedPath": "native-audit-E1e1d14b/v2-windows-arm64-extracted/opencode-v2-embedded-host-auto.json"
+        }
+      ]
+    },
+    {
+      "artifactId": 14201408897,
+      "archive": {
+        "path": "native-audit-E1e1d14b/artifact-14201408897.zip",
+        "bytes": 13339,
+        "gitBlob": "c1cdb716a330d1d12ff140619efeb0272f60dff1",
+        "sha256": "38ef268f1e40f88299f91faf38a7087c6281efbf5305a492962049f00acb3450"
+      },
+      "existingMemberAudit": {
+        "path": "native-audit-E1e1d14b/v2-windows-x64-archive-audit.json",
+        "bytes": 1270,
+        "gitBlob": "99b5d6e114d58cfaba0c4c01f66a278e311657ad",
+        "sha256": "5fbe261c3800a7334507608c6d625ab32dfee5d9522036e5d71628d25c19df89"
+      },
+      "safeUniqueNames": true,
+      "noSymlinks": true,
+      "allCrcPass": true,
+      "allMemberHashesAndExistingExtractionsExact": true,
+      "members": [
+        {
+          "name": "opencode-v2-embedded-inputs.json",
+          "bytes": 780,
+          "sha256": "97555f26595e7138397d9e19dfa13397ac863fadfbd887461dd892a56341bbb2",
+          "gitBlob": "bd3a423621f126cdca8d589f6106f88de4cc390b",
+          "crc32": "3d63b8b6",
+          "existingExtractedPath": "native-audit-E1e1d14b/v2-windows-x64-extracted/opencode-v2-embedded-inputs.json"
+        },
+        {
+          "name": "opencode-v2-windows-custody.json",
+          "bytes": 907,
+          "sha256": "13da1994d1a044109b88ee7a13d6fb9d7f24c591a7233e9c15cbb70db61da714",
+          "gitBlob": "6620a55e7b66425ebfbebb530ffca5975a1fe2dd",
+          "crc32": "b5325740",
+          "existingExtractedPath": "native-audit-E1e1d14b/v2-windows-x64-extracted/opencode-v2-windows-custody.json"
+        },
+        {
+          "name": "opencode-v2-embedded-host-auto.json",
+          "bytes": 94918,
+          "sha256": "807f273753eae50d50f26f6d13df61150f1a8c4c62f685cc028a9356e2347727",
+          "gitBlob": "3ef12d3985c85e898e7aadcfb4638eaa731a1053",
+          "crc32": "9d86cb89",
+          "existingExtractedPath": "native-audit-E1e1d14b/v2-windows-x64-extracted/opencode-v2-embedded-host-auto.json"
+        },
+        {
+          "name": "opencode-v2-embedded-host.json",
+          "bytes": 95115,
+          "sha256": "b7cfbbb033a75f4143dac94ab836cd7184fed480e526ead49adc8ac0f43121f7",
+          "gitBlob": "17e7897b4af1d7860f17685bd7744903b14866e3",
+          "crc32": "840badfa",
+          "existingExtractedPath": "native-audit-E1e1d14b/v2-windows-x64-extracted/opencode-v2-embedded-host.json"
+        }
+      ]
+    },
+    {
+      "artifactId": 14202625921,
+      "archive": {
+        "path": "native-audit-E1e1d14b/artifact-14202625921.zip",
+        "bytes": 10631,
+        "gitBlob": "76dd5204a9636d80be1c4d10762c200e3c3083f5",
+        "sha256": "a3b3b0269ebd620138d5756959fd4dd9b8a9c4a287fd2db63db9e061f13d9171"
+      },
+      "existingMemberAudit": {
+        "path": "native-audit-E1e1d14b/p09-darwin-x64-archive-audit.json",
+        "bytes": 1294,
+        "gitBlob": "5f7e1fec4c9af86bf43114201a89a7af55783d93",
+        "sha256": "881ac4af974d17de151ea3dc9736f2ff2b629710f93e18949f7b4192624b5ac4"
+      },
+      "safeUniqueNames": true,
+      "noSymlinks": true,
+      "allCrcPass": true,
+      "allMemberHashesAndExistingExtractionsExact": true,
+      "members": [
+        {
+          "name": "opencode-v2-embedded-inputs.json",
+          "bytes": 2370,
+          "sha256": "cba125252076fa3b7620584299580c0525d1b08d834754e99747a55f506f8f7e",
+          "gitBlob": "1c8e17d09d09b5cc8048d837e04df73b2b00d1f1",
+          "crc32": "03d9b550",
+          "existingExtractedPath": "native-audit-E1e1d14b/p09-darwin-x64-extracted/opencode-v2-embedded-inputs.json"
+        },
+        {
+          "name": "opencode-v2-darwin-custody.json",
+          "bytes": 1448,
+          "sha256": "0a58f5cb17f62f697b4ebb2227629f196d4cc5df09e771c8b05707e06a070c2c",
+          "gitBlob": "89beac1748eee15588061bc879bc573d2ad6303f",
+          "crc32": "57f3c22c",
+          "existingExtractedPath": "native-audit-E1e1d14b/p09-darwin-x64-extracted/opencode-v2-darwin-custody.json"
+        },
+        {
+          "name": "opencode-v2-embedded-host.json",
+          "bytes": 95143,
+          "sha256": "71d12e9da861791dccd514d93a6af098d423ef312913aa0598d619934a4df865",
+          "gitBlob": "81e6976b79813b998b0f318cf6425c68d1c6837f",
+          "crc32": "c55181eb",
+          "existingExtractedPath": "native-audit-E1e1d14b/p09-darwin-x64-extracted/opencode-v2-embedded-host.json"
+        },
+        {
+          "name": "opencode-v2-posix-exec.json",
+          "bytes": 14545,
+          "sha256": "9040ddc4913643ee862dfa14eb590c413b3c2d1b379253a2f6a620fc0d27512e",
+          "gitBlob": "7f22a16ee02deecfbffbd4ea2f794ac0cbfb3b1a",
+          "crc32": "d54e8fc6",
+          "existingExtractedPath": "native-audit-E1e1d14b/p09-darwin-x64-extracted/opencode-v2-posix-exec.json"
+        }
+      ]
+    },
+    {
+      "artifactId": 14203040330,
+      "archive": {
+        "path": "native-audit-E1e1d14b/artifact-14203040330.zip",
+        "bytes": 10422,
+        "gitBlob": "cb466c5c68c174d9b19e5ce7d4f75c01a224a91b",
+        "sha256": "946e50f7b3dfd44c12ee6df665b4b6ecce1d5c6c1b957d9f5f99e88563bf3b30"
+      },
+      "existingMemberAudit": {
+        "path": "native-audit-E1e1d14b/p09-darwin-arm64-archive-audit.json",
+        "bytes": 1294,
+        "gitBlob": "43844455525b24443aa3d5654438670bf6f898e3",
+        "sha256": "c973b404499c5988a6c0691aa9d2f5856e2ad70e97e6a54ccf5e2a4eff5cea81"
+      },
+      "safeUniqueNames": true,
+      "noSymlinks": true,
+      "allCrcPass": true,
+      "allMemberHashesAndExistingExtractionsExact": true,
+      "members": [
+        {
+          "name": "opencode-v2-embedded-inputs.json",
+          "bytes": 2374,
+          "sha256": "5460b395e84138baa74bc581f31ebc5fc7c7826984c31e808ab22965be6d9473",
+          "gitBlob": "921a509cb8404b0b5be6ce47e7b19140afe5c708",
+          "crc32": "fa528b4b",
+          "existingExtractedPath": "native-audit-E1e1d14b/p09-darwin-arm64-extracted/opencode-v2-embedded-inputs.json"
+        },
+        {
+          "name": "opencode-v2-darwin-custody.json",
+          "bytes": 1442,
+          "sha256": "4818b6b49ee0fbe5d3e23400bf2cb6228f63fae683ddc831e0089f056384030a",
+          "gitBlob": "88e426d2e07f18b7fbb8480a636bbedd3a6650d7",
+          "crc32": "a6a020c9",
+          "existingExtractedPath": "native-audit-E1e1d14b/p09-darwin-arm64-extracted/opencode-v2-darwin-custody.json"
+        },
+        {
+          "name": "opencode-v2-embedded-host.json",
+          "bytes": 94948,
+          "sha256": "3d5c2d418aaac42395d98bf47279d7d96e78c8803a7f56d8eb238854d009f5ca",
+          "gitBlob": "dc3ee7ef2d6e82f7a7ca1ff11744c1d336dcac7c",
+          "crc32": "9b06f97c",
+          "existingExtractedPath": "native-audit-E1e1d14b/p09-darwin-arm64-extracted/opencode-v2-embedded-host.json"
+        },
+        {
+          "name": "opencode-v2-posix-exec.json",
+          "bytes": 14566,
+          "sha256": "531eac476be1e4246c01da2ffd31493c3820baebbc3d6f7e4bdb594dd37ba27f",
+          "gitBlob": "022a2b5d92add95c229dbf770c3772d8fdbdddc1",
+          "crc32": "cd8eff7d",
+          "existingExtractedPath": "native-audit-E1e1d14b/p09-darwin-arm64-extracted/opencode-v2-posix-exec.json"
+        }
+      ]
+    },
+    {
+      "artifactId": 14201916494,
+      "archive": {
+        "path": "native-audit-E1e1d14b/artifact-14201916494.zip",
+        "bytes": 15043,
+        "gitBlob": "adf76542bf8ec1f143f3ddf9c26736490fe28fec",
+        "sha256": "b5d26672269fc6bbf7ab6e13adddf62b65bd5295de28590df44ebdc547d74e86"
+      },
+      "existingMemberAudit": {
+        "path": "native-audit-E1e1d14b/process-windows-x64-archive-audit.json",
+        "bytes": 2946,
+        "gitBlob": "8f0d482f8f688a45e993a728114ed4a7d093c105",
+        "sha256": "47c31f72b53331b4bfbe800023302ff67aae277268ed7ff22fa93b1f067b97c2"
+      },
+      "safeUniqueNames": true,
+      "noSymlinks": true,
+      "allCrcPass": true,
+      "allMemberHashesAndExistingExtractionsExact": true,
+      "members": [
+        {
+          "name": "agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt",
+          "bytes": 1909,
+          "sha256": "06e3fbe05bf444c076486dc7576a057cd4d251caa5410bc3f426492635082d4d",
+          "gitBlob": "6c9515cc0e2d12ab2cb7f4c1cae6304bbc31474d",
+          "crc32": "0a43f014",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-windows-x64-extracted/agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+          "bytes": 20525,
+          "sha256": "2c0bca7203d6019469ad3a49bf588aa9f1cab59fa498d23601619f4f4663e7ef",
+          "gitBlob": "f137d9c192d0a5ecb4a8bf5d6d72e445f1ff7690",
+          "crc32": "e5494f7c",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-windows-x64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+          "bytes": 758,
+          "sha256": "72e03a94114673a19f536f016b8473f0fc06029e4990d09887a3ee6868671f9d",
+          "gitBlob": "60a6ae01fed0b0bb9e26f7db1c29aaa0d6bd01a9",
+          "crc32": "626ebf31",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-windows-x64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+          "bytes": 9498,
+          "sha256": "d8585bcc20f005bd1b38c790754960d338360261ba83275004143b7784c655bf",
+          "gitBlob": "677a5a8cce9beb834861d232a8920bd231967ae5",
+          "crc32": "81c53bff",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-windows-x64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+          "bytes": 41,
+          "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681",
+          "gitBlob": "64df2ac36d2400af7b971319a2274577c225275a",
+          "crc32": "4b15b81c",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-windows-x64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt",
+          "bytes": 1909,
+          "sha256": "06e3fbe05bf444c076486dc7576a057cd4d251caa5410bc3f426492635082d4d",
+          "gitBlob": "6c9515cc0e2d12ab2cb7f4c1cae6304bbc31474d",
+          "crc32": "0a43f014",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-windows-x64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json",
+          "bytes": 193,
+          "sha256": "235bb5b98a928f1c66b573e03ece5a6b9a86ae41b87ed6e3078b15d211494d3f",
+          "gitBlob": "72994084531d3afd617b4f0950e43a5c6c7079db",
+          "crc32": "c189ec05",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-windows-x64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+          "bytes": 28803,
+          "sha256": "71524349dcdcff0209f8984017bd6aa283c52cd4a17f66247b8e75b0237088be",
+          "gitBlob": "5f61a8de7b6f9e72922fcbdc2af1df92188bd37c",
+          "crc32": "80ddb500",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-windows-x64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json",
+          "bytes": 230,
+          "sha256": "00f6f0b3e8c92e1551595636de99387d382960b0e512d279a182b78992711657",
+          "gitBlob": "7ae7279a1b8f37c4b813b18fc2ca1e537cd9e1e1",
+          "crc32": "a40945b9",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-windows-x64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json"
+        }
+      ]
+    },
+    {
+      "artifactId": 14202289527,
+      "archive": {
+        "path": "native-audit-E1e1d14b/artifact-14202289527.zip",
+        "bytes": 12690,
+        "gitBlob": "de661aa46ff3fd55284e1a709375a5caa484fa34",
+        "sha256": "6f78cdc0f3429f4473288330221cb1f7df969d1da7853ddee0d0bd9883f24286"
+      },
+      "existingMemberAudit": {
+        "path": "native-audit-E1e1d14b/process-darwin-arm64-archive-audit.json",
+        "bytes": 2104,
+        "gitBlob": "64ea1bfc9156b3c7ab1d38e8ae4489a51ba5445a",
+        "sha256": "589c5f2225fd1818119177b2288188c743dabbb8757120be26ef252a2dfc90c0"
+      },
+      "safeUniqueNames": true,
+      "noSymlinks": true,
+      "allCrcPass": true,
+      "allMemberHashesAndExistingExtractionsExact": true,
+      "members": [
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+          "bytes": 20688,
+          "sha256": "5bf826eebf53024d4ceb2533dbea6b93ac9e9b51e97f22cbe711e4d2b9ce5c51",
+          "gitBlob": "a58fc15c463e4140e2e82a8aabb2be2c6b6dbeb5",
+          "crc32": "92e726c8",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-darwin-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log",
+          "bytes": 5168,
+          "sha256": "2e04794d4d82ce8e2d4611cef97b5e682ee4e488cf2cf8196aba08a6541faeb2",
+          "gitBlob": "304b795e0868c0d18588870ba503a4a7b8bc8174",
+          "crc32": "07313693",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-darwin-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+          "bytes": 772,
+          "sha256": "5525078150a6549d2e655f338ddec986f8c311f3f8353fa58050cf46f688a865",
+          "gitBlob": "fd0f15a96cdf45afca4d7efa9d82f31c5ac6ec89",
+          "crc32": "d7bbeb11",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-darwin-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+          "bytes": 7504,
+          "sha256": "d4751444d7ae0d363eb1c07e632207a6c63cb22b90167c82f584723279eb1bd4",
+          "gitBlob": "68561f50adc0872a3d1d70c9a9b90cb61f5b5f8b",
+          "crc32": "b7b66930",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-darwin-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+          "bytes": 495,
+          "sha256": "3b6fab27352121f440b5d6221a59c002e01fd42699b77d9afbff29de786abc33",
+          "gitBlob": "4e82a5650e32001b417d307096ab489cad85b8fa",
+          "crc32": "4a3bd520",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-darwin-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+          "bytes": 41,
+          "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681",
+          "gitBlob": "64df2ac36d2400af7b971319a2274577c225275a",
+          "crc32": "4b15b81c",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-darwin-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt"
+        }
+      ]
+    },
+    {
+      "artifactId": 14202148789,
+      "archive": {
+        "path": "native-audit-E1e1d14b/artifact-14202148789.zip",
+        "bytes": 15113,
+        "gitBlob": "d0d30e9eb6849d03b2b091171c3e4f28e8808f27",
+        "sha256": "15e8fae1f1c5e3cbd86de1c54bc4b7c54528b25463cd3b28df00f794545fc82b"
+      },
+      "existingMemberAudit": {
+        "path": "native-audit-E1e1d14b/process-windows-arm64-archive-audit.json",
+        "bytes": 2950,
+        "gitBlob": "086cc70aaa7ddd26c0dd25a2d94ac62918e31e4a",
+        "sha256": "400273f83b6426974f9eefe3d4f0e23fd79f2fe7904a9869671c5d35c6c0cff1"
+      },
+      "safeUniqueNames": true,
+      "noSymlinks": true,
+      "allCrcPass": true,
+      "allMemberHashesAndExistingExtractionsExact": true,
+      "members": [
+        {
+          "name": "agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt",
+          "bytes": 1929,
+          "sha256": "9db5a13ddaa8924b7763643ab90e2e32a3db3e7ea30b9ab5ddaac33476be8149",
+          "gitBlob": "da560bcbb4d82918dae8b7c2aebe28fff442a1c3",
+          "crc32": "47b0dd13",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-windows-arm64-extracted/agent-teams-ai/agent-teams-ai/native-evidence/binary-sha256.txt"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+          "bytes": 20517,
+          "sha256": "d63aace2bdadfbe6afd413af6820bf1697ecd505513cdfaca5e275d1a0ff7834",
+          "gitBlob": "a073b14b75f2a221ae5b8431ea22aae59cc81a92",
+          "crc32": "1ed8b5de",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-windows-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+          "bytes": 758,
+          "sha256": "d8583af225f7e006c058ced73bfe0d3f84991e20411318610707ecaf23b6a7f0",
+          "gitBlob": "28da6615ba6014a342c36d976ea38565b20febd2",
+          "crc32": "b4d81fff",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-windows-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+          "bytes": 9885,
+          "sha256": "fa600c8da94637cba533d6cbbeb533dc2f595d52908a2fb5d2e2c39eceaccf19",
+          "gitBlob": "7a3d5d98e2d79fa7ab7b146df439274b2381d655",
+          "crc32": "25bd6dea",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-windows-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+          "bytes": 41,
+          "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681",
+          "gitBlob": "64df2ac36d2400af7b971319a2274577c225275a",
+          "crc32": "4b15b81c",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-windows-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt",
+          "bytes": 1929,
+          "sha256": "9db5a13ddaa8924b7763643ab90e2e32a3db3e7ea30b9ab5ddaac33476be8149",
+          "gitBlob": "da560bcbb4d82918dae8b7c2aebe28fff442a1c3",
+          "crc32": "47b0dd13",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-windows-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-binary-sha256.txt"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json",
+          "bytes": 195,
+          "sha256": "f2f343e12e47d15a0d28ede10289bed66fa3d80fa5772f53ac85e20f600874a5",
+          "gitBlob": "dde8566a1d1043310d768c0f330a02de770ebd03",
+          "crc32": "d7e26c54",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-windows-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-manifest.json"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+          "bytes": 28805,
+          "sha256": "6b4d7918c834ba9b81b671ee12abcb519ebb62e4498b86c093c4cf4418a342d1",
+          "gitBlob": "bb01510e798e4065c48c6d16692ef4463d76d18a",
+          "crc32": "7021b095",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-windows-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log"
+        },
+        {
+          "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json",
+          "bytes": 232,
+          "sha256": "09a50c88e3bb29d6a050f1b6f0fcea53b1baef543d83247a98fd867b82e0fc90",
+          "gitBlob": "bc4f192339839229df9e3893b900329c3893cc8b",
+          "crc32": "4305adc6",
+          "existingExtractedPath": "native-audit-E1e1d14b/process-windows-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-scoped-manifest.json"
+        }
+      ]
+    }
+  ],
+  "hostSourceCensus": {
+    "path": "native-audit-E1e1d14b/host-source-E1e1d14b-git-audit.json",
+    "bytes": 164149,
+    "gitBlob": "f1b1e521612e44bf88d5d43ffe1039eda3ed094e",
+    "sha256": "d2c7c51237fc1d435035d2e70383215270accdf8534660dadbf52e9fd6c7691f"
+  },
+  "sourceProposalExistingReferencesOnly": {
+    "selectedForExecution": false,
+    "files": [
+      {
+        "path": "i386-observation-publication-r1/R1-appendix.md",
+        "bytes": 14109,
+        "gitBlob": "2766f9aa1f592ec37e35f087f8e8244a53b9d84b",
+        "sha256": "91878159be7560edf466ec345c2ec51b521f9616912708d6b2494d493ec8b95a"
+      },
+      {
+        "path": "i386-observation-publication-r1/candidate-metadata.json",
+        "bytes": 1814,
+        "gitBlob": "06168117ca966ff3cee01dfc1adc01dd6e45bfbb",
+        "sha256": "3a180d92d87081f6a6bc6f48200906bf3cb1e8806de67c5281584352ee65e880"
+      },
+      {
+        "path": "i386-observation-publication-r1/candidate.patch",
+        "bytes": 1543,
+        "gitBlob": "58e02dcf66ad9a641ed9d33f16a8623114389fe4",
+        "sha256": "1e04a2ca9e1ef195873a79ee3574ed427a043f8c7c49a860abed66da6eff370c"
+      },
+      {
+        "path": "i386-observation-publication-r1/source-and-venue.json",
+        "bytes": 26838,
+        "gitBlob": "43beabcac07f6640c6b61c9daf31544ec58f02fd",
+        "sha256": "5a5406ff3141d5537980c54d54f2894ea06495e203be39d7fcc8bb1a91cd019a"
+      },
+      {
+        "path": "i386-observation-publication-r1/independent-source-r1-review.json",
+        "bytes": 19474,
+        "gitBlob": "bbbd3ea7374c89a57e8fed2ed75071b9a692db85",
+        "sha256": "e4316ff8fc70d101957c40be52d5117267b5ef22906524b8565f6fa605ffc8e3"
+      }
+    ],
+    "incomingSixPathPreservationReview": {
+      "path": "external-e1d-integration/independent-six-i386-preservation-review.json",
+      "bytes": 9067,
+      "gitBlob": "d557fa7cfb8797b15820d473fd9d209730a3fdcb",
+      "sha256": "22621b6becd89edcdbc53d96fc203816ee2318456c005938fd8210d629c31e6a"
+    },
+    "qualification": "The separate one-header I386 publication-order proposal has source R2 approval but no application or original resulting-source execution. Its source publication-gap finding does not establish the missing historical FD5 bytes or a historical fix."
+  },
+  "reviewLimits": [
+    "Only the Windows x64 Process actual packet has the included independent /root/ui_failures review. Other authored packet semantics still await independent R2; this manifest does not re-label self-review as independent.",
+    "Darwin x64 Process raw/MCP/API/ZIP/member joins are retained. Its failed capturedHostClient prerequisite interpretation remains assigned to root; no semantic author report is manufactured here.",
+    "Each full original MCP structured content string encodes exactly to its retained UTF-8 raw log. Every ZIP member is recoverable and matches the already-extracted bytes, CRC and stored hash.",
+    "The 619 Host source census binds the exact E1 tracked source; receipt-specific qualifiers and EOL transformations remain those of each author audit. It does not certify a full emitted-output/dependency census.",
+    "The independent I386 prospective R1 review, original six-path preservation review and all source/venue metadata are listed by exact existing identity without adding them to native-execution evidence.",
+    "Queued Linux jobs are neither failures nor passes. Old terminal cohorts were not re-polled, and no native/provider/project execution, retry, workflow mutation or source/ref mutation was performed for this checkpoint.",
+    "Original files remain unchanged; no signed download URL is stored in the selected textual payloads. Tool result delivery and test execution remain distinct."
+  ]
+}

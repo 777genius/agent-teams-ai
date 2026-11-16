@@ -1,0 +1,21 @@
+{
+  "guardObservedAtUTC": "2026-11-16 06:35:01 UTC",
+  "request": {
+    "repository_full_name": "777genius/agent-teams-ai",
+    "parent_sha": "b0528bb50e05379030eb72c20d4f8eb998098cbf",
+    "tree_sha": "8f33ca564819972beec058e09074d629e159ebe6",
+    "message": "docs(parity): bind lossless e1d reconciliation and current regression scope\n\nPreserve incoming Plan history and evidence, all reviewed source boundaries, the original I386 refusal, and the conditional current-source test proposal. Keep primary unchanged while its original CI runs."
+  },
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "sha": "9ff8aa67e3747988b5b7516cf94f709b46af3d68"
+    },
+    "isError": false
+  }
+}

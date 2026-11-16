@@ -1,0 +1,137 @@
+{
+  "schema": "root-current-I386-source-preimage-rebind/v1",
+  "observedAtUTC": "2026-11-16T06:45:16.312328+00:00",
+  "base": "c761567d3a7912ef9255532d1f296d66e8c52b91",
+  "baseTree": "ea02729b2e0a242b784f9db7943a106e50bd2718",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "exactSourceAndVenuePinCount": 16,
+  "sources": [
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "bytes": 9009,
+      "blob": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+      "sha256": "f3c3fdcb5f6eaa729ff071574deb894078e15d9d5b7e786789b270b1c7d996c8",
+      "allPriorSourceAndVenuePinsExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/serviceScopes.h",
+      "bytes": 16379,
+      "blob": "b3fbd2949a5b015bf36c56eb19ca8ef43ec42329",
+      "sha256": "88aea669b33d0bb1e60cf80ed5b3c11f6c1ce5f9a14499f421be9d563daadcf9",
+      "allPriorSourceAndVenuePinsExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/serviceDebugLoop.h",
+      "bytes": 4891,
+      "blob": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298",
+      "sha256": "b31ecf2118e467b07bb973736920b10109a03c831a2cc72364c1abdb8973a8d3",
+      "allPriorSourceAndVenuePinsExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/broker.cpp",
+      "bytes": 25929,
+      "blob": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e",
+      "sha256": "c9b35397e4beb534a9a4298b6a6b7c8c8745571381b69b3301ab3b60fccd6dc3",
+      "allPriorSourceAndVenuePinsExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "bytes": 25009,
+      "blob": "e002d7fc688cac9e2db38abbd1c1c9e851f975dd",
+      "sha256": "a11c6fcc322cd240bf396ee7e7bf0fc9d009869fe9e2b94cc9c969a4f7bbb1b1",
+      "allPriorSourceAndVenuePinsExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "bytes": 19357,
+      "blob": "dd14a6cbdc9976bbeaf2ae48efda560623fa72c5",
+      "sha256": "a509a625e9e1ab1ccb96040b81d2c2fd1f00c0c23e74677e7002b7c8a4b7b84f",
+      "allPriorSourceAndVenuePinsExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGate.ts",
+      "bytes": 22330,
+      "blob": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d",
+      "sha256": "3b549e313e3ca43b76232282b7dbe9e7a1dfcec594ad93bc81c047f740851197",
+      "allPriorSourceAndVenuePinsExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.ts",
+      "bytes": 1367,
+      "blob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+      "sha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+      "allPriorSourceAndVenuePinsExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+      "bytes": 7387,
+      "blob": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+      "sha256": "40a1d7107607b3d1e6fcbdd0018d452e830622a5d3ba8256d302a2a42ac7633a",
+      "allPriorSourceAndVenuePinsExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "bytes": 7278,
+      "blob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+      "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+      "allPriorSourceAndVenuePinsExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/CMakeLists.txt",
+      "bytes": 2160,
+      "blob": "cf158110832d24afd7f97b6e9ef2dbf7472b0410",
+      "sha256": "c58f71f7f341fd6f77fce721db77a4ae843a719e744a227757268b8eb6778e2e",
+      "allPriorSourceAndVenuePinsExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/vitest.config.ts",
+      "bytes": 342,
+      "blob": "cd03a73404a7b2548c15234743c24c1093b554af",
+      "sha256": "d7af296db40661045f6402af15eeb6072781919fd8c8145e554dada03e0de88e",
+      "allPriorSourceAndVenuePinsExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "bytes": 557,
+      "blob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+      "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+      "allPriorSourceAndVenuePinsExact": true
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+      "bytes": 393,
+      "blob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+      "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+      "allPriorSourceAndVenuePinsExact": true
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "bytes": 32248,
+      "blob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+      "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c",
+      "allPriorSourceAndVenuePinsExact": true
+    },
+    {
+      "path": "scripts/build/buildOwnedProcessBroker.ts",
+      "bytes": 3476,
+      "blob": "90499776e145f9ffaba230b280d5d9da9e15a8e0",
+      "sha256": "4db8137541af5f78d821d55f70b1f3a497b79a3e82bfa700e09d4237b3d97682",
+      "allPriorSourceAndVenuePinsExact": true
+    }
+  ],
+  "selectedSingleSourcePath": "tools/owned-process-broker/debugServiceTest.h",
+  "preimage": {
+    "bytes": 9009,
+    "blob": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+    "sha256": "f3c3fdcb5f6eaa729ff071574deb894078e15d9d5b7e786789b270b1c7d996c8"
+  },
+  "candidate": {
+    "bytes": 8822,
+    "blob": "952ed2d3436708addf656109dc513270ea33ce22",
+    "sha256": "cb3ed3eaebb0f59aa968a285ddd85522181292a289a9bed7c59a6adf0feabf65"
+  },
+  "phaseAApplied": false,
+  "sourceApplied": false,
+  "projectExecution": false,
+  "scope": "Fresh immutable source reading only. Prospective one-header selection requires separate published R1/readback and resulting-source original CI."
+}

@@ -1,0 +1,336 @@
+{
+  "kind": "Independent exact prospective I386 TEST FD5 publication-order source/R1 R2",
+  "reviewer": "/root/ui_failures",
+  "observedAtUTC": "2026-11-16T06:35:27.150175+00:00",
+  "verdict": "APPROVE_EXACT_ONE_HEADER_R1_AND_SOURCE_ONLY; NO_APPLICATION_OR_EXECUTION_QUALIFICATION",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "references": [
+    {
+      "path": "i386-observation-publication-r1/R1-appendix.md",
+      "bytes": 14109,
+      "lines": 54,
+      "blob": "2766f9aa1f592ec37e35f087f8e8244a53b9d84b",
+      "sha256": "91878159be7560edf466ec345c2ec51b521f9616912708d6b2494d493ec8b95a"
+    },
+    {
+      "path": "i386-observation-publication-r1/candidate-metadata.json",
+      "bytes": 1814,
+      "lines": 43,
+      "blob": "06168117ca966ff3cee01dfc1adc01dd6e45bfbb",
+      "sha256": "3a180d92d87081f6a6bc6f48200906bf3cb1e8806de67c5281584352ee65e880"
+    },
+    {
+      "path": "i386-observation-publication-r1/candidate.patch",
+      "bytes": 1543,
+      "lines": 33,
+      "blob": "58e02dcf66ad9a641ed9d33f16a8623114389fe4",
+      "sha256": "1e04a2ca9e1ef195873a79ee3574ed427a043f8c7c49a860abed66da6eff370c"
+    },
+    {
+      "path": "i386-observation-publication-r1/source-and-venue.json",
+      "bytes": 26838,
+      "lines": 212,
+      "blob": "43beabcac07f6640c6b61c9daf31544ec58f02fd",
+      "sha256": "5a5406ff3141d5537980c54d54f2894ea06495e203be39d7fcc8bb1a91cd019a"
+    },
+    {
+      "path": "i386-observation-publication-r1/preimage/tools/owned-process-broker/debugServiceTest.h",
+      "bytes": 9009,
+      "lines": 186,
+      "blob": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+      "sha256": "f3c3fdcb5f6eaa729ff071574deb894078e15d9d5b7e786789b270b1c7d996c8"
+    },
+    {
+      "path": "i386-observation-publication-r1/candidate/tools/owned-process-broker/debugServiceTest.h",
+      "bytes": 8822,
+      "lines": 182,
+      "blob": "952ed2d3436708addf656109dc513270ea33ce22",
+      "sha256": "cb3ed3eaebb0f59aa968a285ddd85522181292a289a9bed7c59a6adf0feabf65"
+    },
+    {
+      "path": "native-audit-E1e1d14b/independent-process-windows-x64-review.json",
+      "bytes": 19746,
+      "lines": 315,
+      "blob": "aa06b828ff406a3adac11c313d8bcf5b2bf8ce52",
+      "sha256": "2f645d88c90c47d8e022c5327d01b594fec9b381325bab69f4eb4dc154294000"
+    },
+    {
+      "path": "native-audit-E1e1d14b/independent-process-windows-x64-byte-source-proof.json",
+      "bytes": 56525,
+      "lines": 2013,
+      "blob": "1c549757914dc64ea61a85ba283f4374059ee9aa",
+      "sha256": "430d1d68569042b397d8728aa520f7e7ffd150184bed2fde8d9ba44e03ee341d"
+    }
+  ],
+  "independence": "Native authored the frozen one-header proposal and actual failure audit; UI independently read the complete R1/header/patch and relevant actual source, rebuilt the exact delta and inverse in memory, rehashed the source and command records, and separately reviewed the original x64 failure.",
+  "exactBytes": {
+    "singlePath": "tools/owned-process-broker/debugServiceTest.h",
+    "preimageBlob": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+    "candidateBlob": "952ed2d3436708addf656109dc513270ea33ce22",
+    "preimageBytes": 9009,
+    "candidateBytes": 8822,
+    "delta": {
+      "added": 3,
+      "removed": 7
+    },
+    "preimageLines": 186,
+    "candidateLines": 182,
+    "freshPreimageGitEquality": true,
+    "fullDiffEquality": true,
+    "fullIndependentInverseEquality": true,
+    "derivation": "Insert exactly three lines after the sole existing ordinal increment; delete the complete old six-line flush function and the sole post-loop call. Removing that insertion and restoring those two exact removed fragments reproduces all9009 preimage bytes. No other byte changes.",
+    "candidateMetadataHashAndR1HashVerified": true,
+    "all16SourceVenuePinsFreshGitVerified": true,
+    "allSevenOriginalWorkflowStepBodiesExact": true,
+    "finiteConfigLiteralExact": true,
+    "sourceBound": "182-line candidate remains under existing800 bound; no rule or exclusion changed."
+  },
+  "currentSourceAndHistory": {
+    "priorR1Commit": "732998cfa741393bec65f0d812f777f5f5778b5b",
+    "priorR1PlanBlob": "9b9e64e0dc240a1b56181663de04bdf553d388ed",
+    "priorSourceCommit": "eba491c50fda418f8fc96fb743089b5b1532c1eb",
+    "ancestryFreshVerified": true,
+    "explicitAuthorityAmendment": "Prior Plan29 expressly promised a memory-only observer with no I/O. New R1 explicitly replaces that promise with bounded same-FD5 per-row publication before original continuation; it does not treat earlier authority as permitting changed I/O timing.",
+    "integrationBoundary": "The preservation composition must keep all35 incoming non-doc leaves and their actual failures. This separately reviewed header may be selected only after exact R1 publication/readback and fresh current preimage/source proof; no silent substitution into the preservation stage.",
+    "oldPlatformOrCrossCandidates": "Unrelated old candidates remain unapplied; this cut cannot authorize their integration."
+  },
+  "sourceCounterexample": {
+    "actualFailure": "Original x64 at Scenario105, explicit unknown aggregate and source-implied completed-child marker; actual cause is unresolved. ARM is a separate retained observation whose full audit is not replaced here.",
+    "independentActualReview": "aa06b828ff406a3adac11c313d8bcf5b2bf8ce52",
+    "oldSourceOrdering": "The TEST observer copies memory only; the old single WriteFile runs after runDebugLoop returns. Original Stop/Release/writer/main exitReleased has no dependency on that later flush; ExitProcess may terminate the still-waiting admission/debug thread.",
+    "candidateOrdering": "The same already-copied row is passed to WriteFile before the observer returns. firstBreakpoint returns its unchanged accepted decision and the original debugger loop then executes its existing ContinueDebugEvent. Thus the write attempt for each admitted row precedes that row’s continuation in source order.",
+    "closureLimit": "This proves ordering of a write attempt, not successful/durable delivery, the exact historical interleaving or a complete native result. Original native Windows evidence remains required."
+  },
+  "nativeMechanism": {
+    "rowReference": "auto& row refers to DWORD[8]; sizeof(row) is the array size,32 bytes on Windows, not a pointer size. No dynamic allocation or copied string is introduced.",
+    "threadAndSynchronization": "Original creating/admission thread; original Scopes mutex held by firstBreakpoint; no additional mutex, thread, event, listener, timer, clock, currentness read, native query or suspension.",
+    "decision": "Original startup.accept executes once before the observer. Existing selected identity and returned Boolean are copied unchanged; observer returns void/noexcept, ignores WriteFile status and does not retry, throw or reinterpret the exception decision. ContinueDebugEvent and DBG_CONTINUE/DBG_EXCEPTION_NOT_HANDLED choice are unchanged.",
+    "fd": "Same already-created exclusive FD5 disk handle and TEST environment/descriptor checks; no new handle, file, path, provider, process, OpenProcess/reopen or registration.",
+    "compileAndStagingFence": "broker.cpp includes debugServiceTest.h only under OWNED_PROCESS_TEST_DEBUG_SERVICE; compile-time exclusion rejects simultaneous product-scopes/TEST flags. CMake assigns the TEST definition only to owned-process-broker-debug-service. Existing staging selects only the ordinary or service-scopes product target and manifest; no TEST artifact is newly staged.",
+    "outputData": "Existing fixed binary fields only: kind, ordinal, retained PID/birth, exception code, first-chance bit and accepted bit. No added command/environment/token/model/DOM content.",
+    "bounds": {
+      "ordinaryRows": 15,
+      "reservedOverflowRows": 1,
+      "maxWriteAttempts": 16,
+      "previousMaxWriteAttempts": 1,
+      "requestedBytesPerCall": 32,
+      "maximumTotalRequestedPayloadBytes": 512
+    },
+    "overflow": "The existing count>=16 refusal-to-record and kind2 reserved row remain. A retained overflow row still fails the unchanged decoder. No extra completeness/terminal-count certificate is claimed.",
+    "deletedPostLoopCall": "Old flush function and call are removed, so successfully written rows are not duplicated at loop exit."
+  },
+  "refusalAndErrorSemantics": {
+    "parserAndQualifierUnchanged": "Scenario file remains e002d7fc. Decoder enforces positive length<=512, multiple32, kind1, contiguous ordinal, positive identity, permitted codes, closed bits. Qualifier filters exact original PID/birth, requires exactlyfour rows with two handled startup rows and two forwarded first-chance late rows. Existing image rehash and broker0/emptyFD4 guards remain.",
+    "mandatoryUnknownRefusal": "Missing or invalid mandatory child rows still cannot satisfy the unchanged parser/qualifier. File/decoder exceptions retain the closed unknown row and refusal; no fallback/repair/read replay is introduced.",
+    "prefixLimit": "As explicitly disclosed in R1, neither old nor candidate format independently certifies that every possible debugger row was durably emitted. A valid retained prefix is assessed only by the existing parser/qualifier. Review does not infer that every WriteFile returned32 or that every unretained non-required observation necessarily causes refusal.",
+    "callbackAndCleanup": "No edits to events.guard, firstFailure precedence, scenario catch/finally, helper exit waits, capabilities, controller or sandbox cleanup.",
+    "noPerformanceGuarantee": "New synchronous writes happen under the existing scope mutex and can delay original debug continuations and other scope work. Payload bound is not an I/O latency bound. CPU/filesystem/scheduling/lock costs consume unchanged five-second child wait, ten-second child-lines and other original deadlines; no release join or deadline extension is added.",
+    "failedWrite": "Failure/partial writes are not retried or raised as an alternate error. The source still accepts or refuses only through the retained bytes and original mandatory guards. No hard-kill flush, disk durability, zero cost or universal partial-output diagnosis is claimed."
+  },
+  "validationAuthority": {
+    "venue": "Original automatic resulting-source Windows x64 and ARM64 Process jobs; original Host Node24.21 and Electron Node invocations, same-source CMake/MSVC and Win32 fixture build/copy/hash checks.",
+    "workflowBlob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+    "triggerScopeAlreadyIncludesSource": true,
+    "unchangedFiniteCommand": "node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts 2>&1 | tee process-acceptance-evidence/protocol.log",
+    "finiteScope": "Complete original protocol/nativeGateEvents/nativeGateContext files, original5000ms. Existing four events cases cover actual private decoder/qualifier and three async error/cleanup modes. No new test or fabricated missing-export/extraction RED selected.",
+    "finiteActualBoundary": "Historical e1 x64 records54PASS across3files, including4 events cases. They do not execute C++ or qualify future native publication.",
+    "nativeRequired": "Both original Windows architectures must run both complete original Node and Electron gates. All subsequent original provider/source and final full receipt/source checks remain; no four-row synthetic trace or single successful row/platform substitutes.",
+    "resultingSourceEvidence": "Require exact new source/binary digest, actual original child identity and qualified rows, original image rehash/application-handler result, all remaining scenario results and cleanup/controller facts. Preserve any new failure without rerun or weakening unknown.",
+    "orderedGate": "Exact R1 publication/readback and independent scope approval precede root-selected one-header application; only ordinary existing automatic CI follows. No local project/compiler/native/install/bootstrap authority or manualCI granted.",
+    "noNativeGreenClaim": true
+  },
+  "sourceVenuePins": [
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "bytes": 9009,
+      "lines": 186,
+      "blob": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+      "sha256": "f3c3fdcb5f6eaa729ff071574deb894078e15d9d5b7e786789b270b1c7d996c8"
+    },
+    {
+      "path": "tools/owned-process-broker/serviceScopes.h",
+      "bytes": 16379,
+      "lines": 386,
+      "blob": "b3fbd2949a5b015bf36c56eb19ca8ef43ec42329",
+      "sha256": "88aea669b33d0bb1e60cf80ed5b3c11f6c1ce5f9a14499f421be9d563daadcf9"
+    },
+    {
+      "path": "tools/owned-process-broker/serviceDebugLoop.h",
+      "bytes": 4891,
+      "lines": 93,
+      "blob": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298",
+      "sha256": "b31ecf2118e467b07bb973736920b10109a03c831a2cc72364c1abdb8973a8d3"
+    },
+    {
+      "path": "tools/owned-process-broker/broker.cpp",
+      "bytes": 25929,
+      "lines": 530,
+      "blob": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e",
+      "sha256": "c9b35397e4beb534a9a4298b6a6b7c8c8745571381b69b3301ab3b60fccd6dc3"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "bytes": 25009,
+      "lines": 390,
+      "blob": "e002d7fc688cac9e2db38abbd1c1c9e851f975dd",
+      "sha256": "a11c6fcc322cd240bf396ee7e7bf0fc9d009869fe9e2b94cc9c969a4f7bbb1b1"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "bytes": 19357,
+      "lines": 355,
+      "blob": "dd14a6cbdc9976bbeaf2ae48efda560623fa72c5",
+      "sha256": "a509a625e9e1ab1ccb96040b81d2c2fd1f00c0c23e74677e7002b7c8a4b7b84f"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGate.ts",
+      "bytes": 22330,
+      "lines": 586,
+      "blob": "17f5e7b66605bd4d28cf3935b7fa73ea2933a21d",
+      "sha256": "3b549e313e3ca43b76232282b7dbe9e7a1dfcec594ad93bc81c047f740851197"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.ts",
+      "bytes": 1367,
+      "lines": 39,
+      "blob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+      "sha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+      "bytes": 7387,
+      "lines": 124,
+      "blob": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+      "sha256": "40a1d7107607b3d1e6fcbdd0018d452e830622a5d3ba8256d302a2a42ac7633a"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "bytes": 7278,
+      "lines": 192,
+      "blob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+      "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200"
+    },
+    {
+      "path": "tools/owned-process-broker/CMakeLists.txt",
+      "bytes": 2160,
+      "lines": 27,
+      "blob": "cf158110832d24afd7f97b6e9ef2dbf7472b0410",
+      "sha256": "c58f71f7f341fd6f77fce721db77a4ae843a719e744a227757268b8eb6778e2e"
+    },
+    {
+      "path": "tools/owned-process-broker/vitest.config.ts",
+      "bytes": 342,
+      "lines": 13,
+      "blob": "cd03a73404a7b2548c15234743c24c1093b554af",
+      "sha256": "d7af296db40661045f6402af15eeb6072781919fd8c8145e554dada03e0de88e"
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "bytes": 557,
+      "lines": 6,
+      "blob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+      "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef"
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+      "bytes": 393,
+      "lines": 6,
+      "blob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+      "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7"
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "bytes": 32248,
+      "lines": 418,
+      "blob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+      "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c"
+    },
+    {
+      "path": "scripts/build/buildOwnedProcessBroker.ts",
+      "bytes": 3476,
+      "lines": 58,
+      "blob": "90499776e145f9ffaba230b280d5d9da9e15a8e0",
+      "sha256": "4db8137541af5f78d821d55f70b1f3a497b79a3e82bfa700e09d4237b3d97682"
+    }
+  ],
+  "commandProofs": [
+    {
+      "name": "Bind exact source and actual process tuple",
+      "startLine": 102,
+      "bytes": 493,
+      "blob": "60953471b0809d2735b6bfc02489a47bc718d4e3",
+      "sha256": "86b9023736218721b73a7e829cd339a0b8f50d132c7736b50a840f05dbf5a2f6",
+      "literalVerifiedAgainstPinnedWorkflow": true
+    },
+    {
+      "name": "Build existing controller and Host",
+      "startLine": 111,
+      "bytes": 681,
+      "blob": "2c5bddf0e4cefa0e5d3f876783a708fd1140977f",
+      "sha256": "200582c778070eb91d18f3ce607062c95ad2f54dd350e3acf6123f108cb73036",
+      "literalVerifiedAgainstPinnedWorkflow": true
+    },
+    {
+      "name": "Verify process contracts and retained Main Host transport",
+      "startLine": 120,
+      "bytes": 2219,
+      "blob": "6667204e9306c3e8ab026fbf7c37201ee29333da",
+      "sha256": "8289037519d11949a94780446693e7508f32fcc04e695fc461e1dd1e7f605294",
+      "literalVerifiedAgainstPinnedWorkflow": true
+    },
+    {
+      "name": "Build original Windows product broker and C++ fixtures",
+      "startLine": 163,
+      "bytes": 3562,
+      "blob": "c140d451d0a9835d584b9792e1beea36fff7f05a",
+      "sha256": "5fde6039005c98026db0578335f6aa47770c20366f36a1aca71046f90e7bd8c2",
+      "literalVerifiedAgainstPinnedWorkflow": true
+    },
+    {
+      "name": "Qualify original Windows Job and control under Host Node",
+      "startLine": 207,
+      "bytes": 1154,
+      "blob": "3bb385edaf8bd39b00102fa95522a01bb3df3e2a",
+      "sha256": "d1d10312f6d08801eef8729b2aa8e1167dadd034c570718bc75547dbf57a8eb7",
+      "literalVerifiedAgainstPinnedWorkflow": true
+    },
+    {
+      "name": "Qualify original Windows Job and control under Electron Node",
+      "startLine": 219,
+      "bytes": 1231,
+      "blob": "49ae6e578696711c84e93cea20d93fa0586f1b82",
+      "sha256": "6d9640249c8aa3f1ad0927bcb18c88e5d8d28219202e8b99a3e2418e7785bebb",
+      "literalVerifiedAgainstPinnedWorkflow": true
+    },
+    {
+      "name": "Require completed original platform receipts and unchanged source",
+      "startLine": 291,
+      "bytes": 9096,
+      "blob": "48eab87aa2e8daf6e127115b0943b24078031cd3",
+      "sha256": "7047a59800af6b587f34f9e460338391fc585c073db5b809bfb5560007315b9b",
+      "literalVerifiedAgainstPinnedWorkflow": true
+    }
+  ],
+  "requiredCorrections": [],
+  "scopeExclusions": [
+    "No ARM actual-evidence R2 in this report",
+    "No direct I386 debugger-root late-handler qualification",
+    "No complete native policy/vendor/platform/P08/P09/Desktop/release promotion",
+    "No project execution or source/ref/CI change by reviewer",
+    "No generic diagnostic framework or API expansion"
+  ],
+  "primaryReferences": [
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-exitprocess",
+      "claim": "ExitProcess terminates the process and other threads; no implied observer-thread join"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-waitfordebugevent",
+      "claim": "Original creating debug thread waits using the given timeout"
+    },
+    {
+      "url": "https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-continuedebugevent",
+      "claim": "Original continuation resumes the debug event; call and selected status unchanged"
+    }
+  ]
+}

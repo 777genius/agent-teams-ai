@@ -1,0 +1,734 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "jobs": [
+      {
+        "id": 133120929324,
+        "name": "Host process fixtures (darwin-x64)",
+        "status": "completed",
+        "conclusion": "failure",
+        "run_id": 43813731530,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Enable Windows long paths",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 2
+          },
+          {
+            "name": "Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Select the pinned package manager with bundled Corepack",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Bind exact source and actual process tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Install frozen workspace without Desktop postinstall",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Build existing controller and Host",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Verify process contracts and retained Main Host transport",
+            "status": "completed",
+            "conclusion": "failure",
+            "number": 10
+          },
+          {
+            "name": "Verify original POSIX Node and shell lifecycle fixtures",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 11
+          },
+          {
+            "name": "Prepare pinned Electron for native process fixtures",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 12
+          },
+          {
+            "name": "Verify Linux Node exec descriptor closure under both original parents",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 13
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 14
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 15
+          },
+          {
+            "name": "Build original Windows product broker and C++ fixtures",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 16
+          },
+          {
+            "name": "Qualify original Windows Job and control under Host Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 17
+          },
+          {
+            "name": "Qualify original Windows Job and control under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 18
+          },
+          {
+            "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 19
+          },
+          {
+            "name": "Qualify original codex source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20
+          },
+          {
+            "name": "Qualify original claude source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21
+          },
+          {
+            "name": "Qualify original opencode source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 22
+          },
+          {
+            "name": "Require completed original platform receipts and unchanged source",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 23
+          },
+          {
+            "name": "Preserve original process evidence including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 24
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 46
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 47
+          },
+          {
+            "name": "Post Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 48
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 49
+          }
+        ]
+      },
+      {
+        "id": 133120929504,
+        "name": "Host process fixtures (linux-x64)",
+        "status": "queued",
+        "conclusion": null,
+        "run_id": 43813731530,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 133120929510,
+        "name": "Host process fixtures (win32-x64)",
+        "status": "completed",
+        "conclusion": "failure",
+        "run_id": 43813731530,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Enable Windows long paths",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Select the pinned package manager with bundled Corepack",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Bind exact source and actual process tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Install frozen workspace without Desktop postinstall",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Build existing controller and Host",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Verify process contracts and retained Main Host transport",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Verify original POSIX Node and shell lifecycle fixtures",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 11
+          },
+          {
+            "name": "Prepare pinned Electron for native process fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Verify Linux Node exec descriptor closure under both original parents",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 13
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 14
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 15
+          },
+          {
+            "name": "Build original Windows product broker and C++ fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Qualify original Windows Job and control under Host Node",
+            "status": "completed",
+            "conclusion": "failure",
+            "number": 17
+          },
+          {
+            "name": "Qualify original Windows Job and control under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 18
+          },
+          {
+            "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 19
+          },
+          {
+            "name": "Qualify original codex source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20
+          },
+          {
+            "name": "Qualify original claude source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21
+          },
+          {
+            "name": "Qualify original opencode source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 22
+          },
+          {
+            "name": "Require completed original platform receipts and unchanged source",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 23
+          },
+          {
+            "name": "Preserve original process evidence including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 24
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 46
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 47
+          },
+          {
+            "name": "Post Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 48
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 49
+          }
+        ]
+      },
+      {
+        "id": 133120929614,
+        "name": "Host process fixtures (darwin-arm64)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43813731530,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Enable Windows long paths",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 2
+          },
+          {
+            "name": "Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Select the pinned package manager with bundled Corepack",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Bind exact source and actual process tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Install frozen workspace without Desktop postinstall",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Build existing controller and Host",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Verify process contracts and retained Main Host transport",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Verify original POSIX Node and shell lifecycle fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Prepare pinned Electron for native process fixtures",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 12
+          },
+          {
+            "name": "Verify Linux Node exec descriptor closure under both original parents",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 13
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 14
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 15
+          },
+          {
+            "name": "Build original Windows product broker and C++ fixtures",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 16
+          },
+          {
+            "name": "Qualify original Windows Job and control under Host Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 17
+          },
+          {
+            "name": "Qualify original Windows Job and control under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 18
+          },
+          {
+            "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 19
+          },
+          {
+            "name": "Qualify original codex source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20
+          },
+          {
+            "name": "Qualify original claude source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21
+          },
+          {
+            "name": "Qualify original opencode source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 22
+          },
+          {
+            "name": "Require completed original platform receipts and unchanged source",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 23
+          },
+          {
+            "name": "Preserve original process evidence including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 24
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 46
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 47
+          },
+          {
+            "name": "Post Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 48
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 49
+          }
+        ]
+      },
+      {
+        "id": 133120929619,
+        "name": "Host process fixtures (win32-arm64)",
+        "status": "completed",
+        "conclusion": "failure",
+        "run_id": 43813731530,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Enable Windows long paths",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Select the pinned package manager with bundled Corepack",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Bind exact source and actual process tuple",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Install frozen workspace without Desktop postinstall",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Build existing controller and Host",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Verify process contracts and retained Main Host transport",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Verify original POSIX Node and shell lifecycle fixtures",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 11
+          },
+          {
+            "name": "Prepare pinned Electron for native process fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Verify Linux Node exec descriptor closure under both original parents",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 13
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 14
+          },
+          {
+            "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 15
+          },
+          {
+            "name": "Build original Windows product broker and C++ fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Qualify original Windows Job and control under Host Node",
+            "status": "completed",
+            "conclusion": "failure",
+            "number": 17
+          },
+          {
+            "name": "Qualify original Windows Job and control under Electron Node",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 18
+          },
+          {
+            "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 19
+          },
+          {
+            "name": "Qualify original codex source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 20
+          },
+          {
+            "name": "Qualify original claude source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21
+          },
+          {
+            "name": "Qualify original opencode source A B with TEST peer",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 22
+          },
+          {
+            "name": "Require completed original platform receipts and unchanged source",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 23
+          },
+          {
+            "name": "Preserve original process evidence including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 24
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 46
+          },
+          {
+            "name": "Post Run actions/setup-node@v7.0.0",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 47
+          },
+          {
+            "name": "Post Run actions/checkout@v7.0.1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 48
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 49
+          }
+        ]
+      }
+    ]
+  },
+  "isError": false
+}

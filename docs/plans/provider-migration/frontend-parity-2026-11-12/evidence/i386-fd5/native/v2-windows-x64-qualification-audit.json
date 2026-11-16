@@ -1,0 +1,1284 @@
+{
+  "kind": "Author exact original E1 Windows V2 manual/automatic and Job custody audit; independent R2 pending",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "runId": 43813731517,
+  "jobId": 133120929407,
+  "originalJobsResponse": {
+    "path": "ci-e1d14b/owned-v2-jobs-response-0635.json",
+    "bytes": 29824,
+    "blob": "27a2612a00d53fb9f7ab75078c6b6a1f10a9723e",
+    "sha256": "1de993ac02abf93a55ef2430188701e62be1a98845e542b1055a465ee3f819ab"
+  },
+  "job": {
+    "id": 133120929407,
+    "name": "Embedded V2.1.4 original Host (win32-x64)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43813731517,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Require immutable source HEAD and record actual runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Install exact source workspace dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build original Host and its pinned provider implementation",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Check original graph and custody boundaries",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Prepare exact Bun, engine graph and original-process artifact",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Prove actual Darwin executable custody and adversarial cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Prove original Windows Job custody and surviving descendant cleanup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 14
+      },
+      {
+        "name": "Require exact Windows original-process evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15
+      },
+      {
+        "name": "Check original Desktop private recipe composition",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17
+      },
+      {
+        "name": "Exercise Windows automatic approval and cold Host Resume",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 18
+      },
+      {
+        "name": "Exercise native catalog and model probe without tool allocation",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Exercise effective permissions and active Stop with a surviving sibling",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Exercise captured external MCP and app-only through the native Host",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Require complete native management and permission evidence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Require product-path Host proof after exact candidate qualification",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24
+      },
+      {
+        "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 25
+      },
+      {
+        "name": "Preserve exact native evidence or candidate HOLD",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 26
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 50
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 51
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 52
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 53
+      }
+    ]
+  },
+  "officialArtifactsResponse": {
+    "path": "native-audit-E1e1d14b/v2-artifacts-response-0623.json",
+    "bytes": 3755,
+    "blob": "985f72706445b6e368b221add62dbeb3711f2c56",
+    "sha256": "7e12932e32992cf93d0bb2dc21f9bf9197cf0d29b46472266053cedf1831efe4"
+  },
+  "officialArtifact": {
+    "id": 14201408897,
+    "name": "opencode-v2-embedded-native-win32-x64",
+    "size_in_bytes": 13339,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14201408897",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14201408897/zip",
+    "expired": false,
+    "created_at": "2026-11-16T06:13:02Z",
+    "expires_at": "2026-11-23T06:13:01Z",
+    "updated_at": "2026-11-16T06:13:02Z",
+    "digest": "sha256:38ef268f1e40f88299f91faf38a7087c6281efbf5305a492962049f00acb3450",
+    "workflow_run": {
+      "id": 43813731517,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940"
+    }
+  },
+  "fullLog": {
+    "path": "native-audit-E1e1d14b/job-133120929407.log",
+    "bytes": 92290,
+    "blob": "51a9f01e90c63e44b7765b94d02c8fadf115c474",
+    "sha256": "6feb2e5b3ad4680f48afb6ca70878fde1b5e1a72236a52ec1634e80ccb4f564d"
+  },
+  "originalResponse": {
+    "path": "native-audit-E1e1d14b/job-133120929407-original-response.json",
+    "bytes": 96209,
+    "blob": "a9ad1aa77b28284f102168f5b832cf5f21557757",
+    "sha256": "0c66d2e97e3e6280b4d59218f8d3783b746fb065b50925bc3e13b16f4270eb80"
+  },
+  "entireUtf8ContentEquals": true,
+  "archiveAudit": {
+    "path": "native-audit-E1e1d14b/v2-windows-x64-archive-audit.json",
+    "bytes": 1270,
+    "blob": "99b5d6e114d58cfaba0c4c01f66a278e311657ad",
+    "sha256": "5fbe261c3800a7334507608c6d625ab32dfee5d9522036e5d71628d25c19df89"
+  },
+  "archive": {
+    "archive": {
+      "path": "native-audit-E1e1d14b/artifact-14201408897.zip",
+      "bytes": 13339,
+      "sha256": "38ef268f1e40f88299f91faf38a7087c6281efbf5305a492962049f00acb3450"
+    },
+    "safeUniqueMemberNames": true,
+    "allCRCValid": true,
+    "members": [
+      {
+        "path": "opencode-v2-embedded-inputs.json",
+        "bytes": 780,
+        "blob": "bd3a423621f126cdca8d589f6106f88de4cc390b",
+        "sha256": "97555f26595e7138397d9e19dfa13397ac863fadfbd887461dd892a56341bbb2",
+        "crc32": "3d63b8b6"
+      },
+      {
+        "path": "opencode-v2-windows-custody.json",
+        "bytes": 907,
+        "blob": "6620a55e7b66425ebfbebb530ffca5975a1fe2dd",
+        "sha256": "13da1994d1a044109b88ee7a13d6fb9d7f24c591a7233e9c15cbb70db61da714",
+        "crc32": "b5325740"
+      },
+      {
+        "path": "opencode-v2-embedded-host-auto.json",
+        "bytes": 94918,
+        "blob": "3ef12d3985c85e898e7aadcfb4638eaa731a1053",
+        "sha256": "807f273753eae50d50f26f6d13df61150f1a8c4c62f685cc028a9356e2347727",
+        "crc32": "9d86cb89"
+      },
+      {
+        "path": "opencode-v2-embedded-host.json",
+        "bytes": 95115,
+        "blob": "17e7897b4af1d7860f17685bd7744903b14866e3",
+        "sha256": "b7cfbbb033a75f4143dac94ab836cd7184fed480e526ead49adc8ac0f43121f7",
+        "crc32": "840badfa"
+      }
+    ]
+  },
+  "originalCommands": [
+    {
+      "fullLogLine": 662,
+      "literal": "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/opencode-v2-native-paths.test.ts packages/legacy-agent-host/tests/owner-scoped-backup.test.ts packages/legacy-agent-host/tests/member-attachment-delivery.test.ts"
+    },
+    {
+      "fullLogLine": 785,
+      "literal": "node --test packages/legacy-agent-host/tests/windows-job-custody.native.ts"
+    },
+    {
+      "fullLogLine": 856,
+      "literal": "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts"
+    },
+    {
+      "fullLogLine": 888,
+      "literal": "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts"
+    }
+  ],
+  "actualReporterBlocks": [
+    {
+      "tests": 58,
+      "suites": 0,
+      "pass": 57,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 1,
+      "todo": 0
+    },
+    {
+      "tests": 1,
+      "suites": 0,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "tests": 1,
+      "suites": 0,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    {
+      "tests": 1,
+      "suites": 0,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    }
+  ],
+  "totals": {
+    "pass": 60,
+    "skip": 1,
+    "fail": 0,
+    "cancel": 0
+  },
+  "hostSourceAudit": {
+    "path": "native-audit-E1e1d14b/host-source-E1e1d14b-git-audit.json",
+    "bytes": 164149,
+    "blob": "f1b1e521612e44bf88d5d43ffe1039eda3ed094e",
+    "sha256": "d2c7c51237fc1d435035d2e70383215270accdf8534660dadbf52e9fd6c7691f"
+  },
+  "freshHostSourceFiles": 619,
+  "interpretationSourceLeaves": [
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36309,
+      "blob": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+      "sha256": "6db4370dc3ee5521847cef9c039f21bddfcfc412b6dabba49dda73585985996a"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "bytes": 33259,
+      "blob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+      "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/windows-job-custody.native.ts",
+      "bytes": 9536,
+      "blob": "a224b47e942a337e823135d0cfca0fa11cd475bd",
+      "sha256": "88ee29496c076870605d2e2c6849c92e9286a06809f00cb10444b033757f4687"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v1-version-source.ts",
+      "bytes": 9765,
+      "blob": "78cb6f0026821785b1d0c0c1ad21ddfe76cdaee4",
+      "sha256": "0ff252732bedb1807cf428370e41628922a4d719090f479a41f25117d7227979"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "bytes": 15303,
+      "blob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5",
+      "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "bytes": 37181,
+      "blob": "625c6ddd74357abbdf565bf386388274cebd4068",
+      "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "bytes": 38584,
+      "blob": "ff0aeba42e3a4e845428146969360dff91c25de8",
+      "sha256": "f25659fe4c89e30072e9c2bc923fcdf6f1a3dd2efdca81387659e485170c74c3"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-message-image.ts",
+      "bytes": 5377,
+      "blob": "1eeab2d4ba765c683b37a3d0cf5790b21aef919b",
+      "sha256": "e8cbeabf1968baabbeedbccad60f17c281e2f5aa64a444c3f5245f6ac04421e1"
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "bytes": 12355,
+      "blob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c"
+    },
+    {
+      "path": "runtime.lock.json",
+      "bytes": 6127,
+      "blob": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+      "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87"
+    }
+  ],
+  "selectedProviderPairGitBytes": [
+    {
+      "name": "@agent-teams/provider-implementations",
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+      "bytes": 185996,
+      "blob": "7130609dd29851148c9e2106e2764b75982739b1",
+      "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+    },
+    {
+      "name": "@agent-teams/provider-session-contracts",
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "bytes": 6230,
+      "blob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+      "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+    }
+  ],
+  "inputReceipt": {
+    "path": "native-audit-E1e1d14b/v2-windows-x64-extracted/opencode-v2-embedded-inputs.json",
+    "bytes": 780,
+    "blob": "bd3a423621f126cdca8d589f6106f88de4cc390b",
+    "sha256": "97555f26595e7138397d9e19dfa13397ac863fadfbd887461dd892a56341bbb2"
+  },
+  "inputs": {
+    "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+    "status": "READY",
+    "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "platform": "win32-x64",
+    "nodeVersion": "v24.21.0",
+    "productQualified": false,
+    "stage": "prepared",
+    "baseArchiveSha256": "fafa3d891922cb3a5df6d1bd7dec80cc105352c619b39e298761657add677f49",
+    "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+    "bun": {
+      "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\resources\\runtime\\bun\\bun.exe",
+      "sha256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+      "version": "1.4.3"
+    },
+    "supportArchiveSha256": "9cea106d78a0482a0ea8bd05b0a7cb44c604fcf4f6de3fdac5549a5ba552787c",
+    "manifestSha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628"
+  },
+  "custodyReceipt": {
+    "path": "native-audit-E1e1d14b/v2-windows-x64-extracted/opencode-v2-windows-custody.json",
+    "bytes": 907,
+    "blob": "6620a55e7b66425ebfbebb530ffca5975a1fe2dd",
+    "sha256": "13da1994d1a044109b88ee7a13d6fb9d7f24c591a7233e9c15cbb70db61da714"
+  },
+  "custody": {
+    "kind": "TEST_WINDOWS_ORIGINAL_JOB_CUSTODY",
+    "status": "PASS",
+    "cleanup": true,
+    "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "platform": "win32-x64",
+    "nodeVersion": "v24.21.0",
+    "bunSha256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+    "manifestSha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+    "hostBuild": {
+      "hostSourceDigest": "95d196f87beb284995d5518b0eafc0da5e92aaac4af21d1c465e6c54d2d0d474",
+      "hostDistDigest": "7bbbd0a4afa5c633562aa8f44fdf74ae1b1035fd0764b8a5b8ee7100e32bb602",
+      "providerDigest": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+    },
+    "productQualified": false,
+    "desktopQualified": false,
+    "captureBeforeInput": true,
+    "descendantSurvivedRootExit": true,
+    "originalJobCleanup": "confirmed",
+    "neighborSurvivedTargetStop": true,
+    "neighborJobCleanup": "confirmed"
+  },
+  "manualAndAuto": [
+    {
+      "receipt": {
+        "path": "native-audit-E1e1d14b/v2-windows-x64-extracted/opencode-v2-embedded-host.json",
+        "bytes": 95115,
+        "blob": "17e7897b4af1d7860f17685bd7744903b14866e3",
+        "sha256": "b7cfbbb033a75f4143dac94ab836cd7184fed480e526ead49adc8ac0f43121f7"
+      },
+      "selectedFacts": {
+        "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+        "status": "PASS",
+        "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+        "platform": "win32-x64",
+        "version": "2.1.4",
+        "approvalMode": "manual",
+        "nodeVersion": "v24.21.0",
+        "modelSelection": {
+          "providerId": "TEST-local",
+          "modelId": "TEST-model-B",
+          "variant": "high"
+        },
+        "configurationSelection": {
+          "scope": "project",
+          "original": "project-A",
+          "later": "project-B"
+        },
+        "preferencesSelection": {
+          "nativeDefault": "TEST-local/TEST-model",
+          "appDefault": "TEST-local/TEST-model-B"
+        },
+        "digests": {
+          "bun": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+          "manifest": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+          "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+          "hostSource": "95d196f87beb284995d5518b0eafc0da5e92aaac4af21d1c465e6c54d2d0d474",
+          "hostDist": "7bbbd0a4afa5c633562aa8f44fdf74ae1b1035fd0764b8a5b8ee7100e32bb602",
+          "provider": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+          "windowsShell": "38f4384643b3fa0de714d2367b712c2e0fa1c89e2cfd131ae6b831ad962b1033"
+        },
+        "steps": [
+          "original_host_embedded_native_and_mcp_ready",
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+          "changed_project_config_did_not_retarget_running_native_session",
+          "original_uploaded_PNG_native_image_inference_and_public_readback",
+          "checkpoint_and_original_host_native_cleanup_confirmed",
+          "cold_host_restored_native_history_without_model_or_tool_replay"
+        ],
+        "cleanup": true,
+        "phaseElapsedMs": {
+          "original_host_embedded_native_and_mcp_ready": 52109,
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 164460,
+          "changed_project_config_did_not_retarget_running_native_session": 164460,
+          "original_uploaded_PNG_native_image_inference_and_public_readback": 164460,
+          "checkpoint_and_original_host_native_cleanup_confirmed": 165445,
+          "cold_host_restored_native_history_without_model_or_tool_replay": 207875
+        },
+        "elapsedMs": 209757,
+        "cancelled": false,
+        "inputObservation": {
+          "reads": 395,
+          "last": {
+            "phase": "allocated",
+            "custody": "owned",
+            "nativeReady": true,
+            "attached": true,
+            "sealed": false,
+            "diagnostic": null,
+            "inputs": [
+              {
+                "phase": "terminal",
+                "terminal": "succeeded"
+              },
+              {
+                "phase": "terminal",
+                "terminal": "succeeded"
+              }
+            ],
+            "interactions": [
+              {
+                "kind": "permission",
+                "phase": "resolved"
+              },
+              {
+                "kind": "permission",
+                "phase": "resolved"
+              }
+            ]
+          }
+        },
+        "launchObservation": {
+          "openElapsedMs": 44077,
+          "afterOpen": {
+            "available": true,
+            "status": "ready",
+            "reason": "context-applied",
+            "elapsedSinceAttemptMs": 42778,
+            "capturedTimeoutMs": 120000,
+            "claimed": true,
+            "nativeReady": true,
+            "contextApplied": true,
+            "everReady": true,
+            "usable": true,
+            "controlAvailable": true,
+            "noAllocation": false
+          }
+        },
+        "originalHostCpu": {
+          "epoch": 1,
+          "scope": "original-source-host-including-cleanup",
+          "status": "available",
+          "rawDiscarded": true,
+          "samplingIntervalUs": 10000,
+          "profileDurationUs": 159251249,
+          "sampledUs": 159250978,
+          "unsampledUs": 271,
+          "nodeCount": 27552,
+          "sampleCount": 15061,
+          "attribution": "nearest-allowlisted-stack-frame",
+          "categories": [
+            {
+              "category": "configuration-read",
+              "exclusiveSamples": 280,
+              "exclusiveSampledUs": 2883568,
+              "inclusiveSamples": 7865,
+              "inclusiveSampledUs": 82049662
+            },
+            {
+              "category": "credential-read",
+              "exclusiveSamples": 2324,
+              "exclusiveSampledUs": 23947611,
+              "inclusiveSamples": 8674,
+              "inclusiveSampledUs": 90334656
+            },
+            {
+              "category": "team-writer-authority",
+              "exclusiveSamples": 7361,
+              "exclusiveSampledUs": 76875028,
+              "inclusiveSamples": 7361,
+              "inclusiveSampledUs": 76875028
+            },
+            {
+              "category": "custody-image",
+              "exclusiveSamples": 1007,
+              "exclusiveSampledUs": 11320187,
+              "inclusiveSamples": 1283,
+              "inclusiveSampledUs": 14270651
+            },
+            {
+              "category": "provider-transport",
+              "exclusiveSamples": 126,
+              "exclusiveSampledUs": 1236322,
+              "inclusiveSamples": 3379,
+              "inclusiveSampledUs": 34881541
+            },
+            {
+              "category": "other",
+              "exclusiveSamples": 2950,
+              "exclusiveSampledUs": 32523753,
+              "inclusiveSamples": 2950,
+              "inclusiveSampledUs": 32523753
+            },
+            {
+              "category": "idle",
+              "exclusiveSamples": 1013,
+              "exclusiveSampledUs": 10464509,
+              "inclusiveSamples": 1013,
+              "inclusiveSampledUs": 10464509
+            }
+          ],
+          "teamWriterDetails": [
+            {
+              "family": "namespace-fence",
+              "exclusiveSamples": 6224,
+              "exclusiveSampledUs": 65222506
+            },
+            {
+              "family": "team-state",
+              "exclusiveSamples": 112,
+              "exclusiveSampledUs": 1143431
+            },
+            {
+              "family": "team-state-validation",
+              "exclusiveSamples": 19,
+              "exclusiveSampledUs": 184631
+            },
+            {
+              "family": "launch-binding-read",
+              "exclusiveSamples": 256,
+              "exclusiveSampledUs": 2601581
+            },
+            {
+              "family": "launch-binding-current",
+              "exclusiveSamples": 27,
+              "exclusiveSampledUs": 276721
+            },
+            {
+              "family": "launch-binding-clone",
+              "exclusiveSamples": 38,
+              "exclusiveSampledUs": 390135
+            },
+            {
+              "family": "other-writer",
+              "exclusiveSamples": 685,
+              "exclusiveSampledUs": 7056023
+            }
+          ],
+          "namespaceFenceDetails": [
+            {
+              "family": "directoryPath",
+              "exclusiveSamples": 1360,
+              "exclusiveSampledUs": 14181449
+            },
+            {
+              "family": "tree",
+              "exclusiveSamples": 1455,
+              "exclusiveSampledUs": 15206525
+            },
+            {
+              "family": "controller-lock",
+              "exclusiveSamples": 2745,
+              "exclusiveSampledUs": 29049827
+            },
+            {
+              "family": "residual",
+              "exclusiveSamples": 664,
+              "exclusiveSampledUs": 6784705
+            }
+          ],
+          "teamWriterCallers": {
+            "attribution": "outermost-allowlisted-caller-on-sampled-stack",
+            "rows": [
+              {
+                "caller": "node-timer",
+                "exclusiveSamples": 706,
+                "exclusiveSampledUs": 7774785,
+                "namespaceSamples": 609,
+                "namespaceSampledUs": 6778567
+              },
+              {
+                "caller": "v2-request-admission",
+                "exclusiveSamples": 396,
+                "exclusiveSampledUs": 4165826,
+                "namespaceSamples": 333,
+                "namespaceSampledUs": 3529343
+              },
+              {
+                "caller": "v2-request-password",
+                "exclusiveSamples": 1525,
+                "exclusiveSampledUs": 15808530,
+                "namespaceSamples": 1297,
+                "namespaceSampledUs": 13475676
+              },
+              {
+                "caller": "v2-read-snapshot",
+                "exclusiveSamples": 479,
+                "exclusiveSampledUs": 5042048,
+                "namespaceSamples": 396,
+                "namespaceSampledUs": 4190368
+              },
+              {
+                "caller": "runtime-session-read",
+                "exclusiveSamples": 21,
+                "exclusiveSampledUs": 214792,
+                "namespaceSamples": 0,
+                "namespaceSampledUs": 0
+              },
+              {
+                "caller": "provider-attestation-wait",
+                "exclusiveSamples": 87,
+                "exclusiveSampledUs": 894723,
+                "namespaceSamples": 77,
+                "namespaceSampledUs": 789965
+              },
+              {
+                "caller": "unclassified",
+                "exclusiveSamples": 4147,
+                "exclusiveSampledUs": 42974324,
+                "namespaceSamples": 3512,
+                "namespaceSampledUs": 36458587
+              }
+            ]
+          },
+          "fileBytes": 6419634,
+          "fileOverLimit": false
+        },
+        "failureCode": null,
+        "hosts": [
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          },
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          }
+        ],
+        "modelOrigin": "localhost-scripted",
+        "modelRequests": 11,
+        "modelProgress": [
+          {
+            "elapsedMs": 52393,
+            "requests": 0
+          },
+          {
+            "elapsedMs": 61971,
+            "requests": 1
+          },
+          {
+            "elapsedMs": 63006,
+            "requests": 2
+          },
+          {
+            "elapsedMs": 63516,
+            "requests": 3
+          },
+          {
+            "elapsedMs": 63946,
+            "requests": 4
+          },
+          {
+            "elapsedMs": 106222,
+            "requests": 5
+          },
+          {
+            "elapsedMs": 106761,
+            "requests": 6
+          },
+          {
+            "elapsedMs": 107359,
+            "requests": 7
+          },
+          {
+            "elapsedMs": 107794,
+            "requests": 8
+          },
+          {
+            "elapsedMs": 127745,
+            "requests": 9
+          },
+          {
+            "elapsedMs": 159746,
+            "requests": 10
+          },
+          {
+            "elapsedMs": 160260,
+            "requests": 11
+          }
+        ],
+        "coordination": {
+          "status": "unqualified",
+          "cleanup": null
+        },
+        "modelFailures": [],
+        "vendorAuthQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false,
+        "passiveNativeDiagnosticsSummary": {
+          "rows": 254,
+          "counts": {
+            "child-spawn": 1,
+            "child-ready": 1,
+            "request": 105,
+            "response": 104,
+            "request-send-headers": 15,
+            "request-body-sent": 15,
+            "response-end": 12,
+            "trace-limit": 1
+          },
+          "epochs": [
+            1
+          ],
+          "last": {
+            "epoch": 1,
+            "event": "trace-limit",
+            "atMs": 73197,
+            "child": null,
+            "request": null,
+            "route": null,
+            "method": null,
+            "durationMs": null,
+            "status": null,
+            "contentEncoding": null,
+            "stage": null,
+            "code": null,
+            "exitCode": null,
+            "signal": null
+          },
+          "complete": false,
+          "meaning": "trace-limit reached in epoch1; no full native lifecycle/epoch2/child-exit absence inference from retained trace"
+        }
+      },
+      "allReceiptBytesRecoverableFromOfficialZip": true,
+      "CPUArithmeticJoins": true
+    },
+    {
+      "receipt": {
+        "path": "native-audit-E1e1d14b/v2-windows-x64-extracted/opencode-v2-embedded-host-auto.json",
+        "bytes": 94918,
+        "blob": "3ef12d3985c85e898e7aadcfb4638eaa731a1053",
+        "sha256": "807f273753eae50d50f26f6d13df61150f1a8c4c62f685cc028a9356e2347727"
+      },
+      "selectedFacts": {
+        "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+        "status": "PASS",
+        "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+        "platform": "win32-x64",
+        "version": "2.1.4",
+        "approvalMode": "auto",
+        "nodeVersion": "v24.21.0",
+        "modelSelection": {
+          "providerId": "TEST-local",
+          "modelId": "TEST-model-B",
+          "variant": "high"
+        },
+        "configurationSelection": {
+          "scope": "project",
+          "original": "project-A",
+          "later": "project-B"
+        },
+        "preferencesSelection": {
+          "nativeDefault": "TEST-local/TEST-model",
+          "appDefault": "TEST-local/TEST-model-B"
+        },
+        "digests": {
+          "bun": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+          "manifest": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+          "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+          "hostSource": "95d196f87beb284995d5518b0eafc0da5e92aaac4af21d1c465e6c54d2d0d474",
+          "hostDist": "7bbbd0a4afa5c633562aa8f44fdf74ae1b1035fd0764b8a5b8ee7100e32bb602",
+          "provider": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+          "windowsShell": "38f4384643b3fa0de714d2367b712c2e0fa1c89e2cfd131ae6b831ad962b1033"
+        },
+        "steps": [
+          "original_host_embedded_native_and_mcp_ready",
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+          "changed_project_config_did_not_retarget_running_native_session",
+          "original_uploaded_PNG_native_image_inference_and_public_readback",
+          "checkpoint_and_original_host_native_cleanup_confirmed",
+          "cold_host_restored_native_history_without_model_or_tool_replay"
+        ],
+        "cleanup": true,
+        "phaseElapsedMs": {
+          "original_host_embedded_native_and_mcp_ready": 51832,
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 143402,
+          "changed_project_config_did_not_retarget_running_native_session": 143402,
+          "original_uploaded_PNG_native_image_inference_and_public_readback": 143402,
+          "checkpoint_and_original_host_native_cleanup_confirmed": 144381,
+          "cold_host_restored_native_history_without_model_or_tool_replay": 188557
+        },
+        "elapsedMs": 189990,
+        "cancelled": false,
+        "inputObservation": {
+          "reads": 309,
+          "last": {
+            "phase": "allocated",
+            "custody": "owned",
+            "nativeReady": true,
+            "attached": true,
+            "sealed": false,
+            "diagnostic": null,
+            "inputs": [
+              {
+                "phase": "terminal",
+                "terminal": "succeeded"
+              },
+              {
+                "phase": "terminal",
+                "terminal": "succeeded"
+              }
+            ],
+            "interactions": []
+          }
+        },
+        "launchObservation": {
+          "openElapsedMs": 43392,
+          "afterOpen": {
+            "available": true,
+            "status": "ready",
+            "reason": "context-applied",
+            "elapsedSinceAttemptMs": 42145,
+            "capturedTimeoutMs": 120000,
+            "claimed": true,
+            "nativeReady": true,
+            "contextApplied": true,
+            "everReady": true,
+            "usable": true,
+            "controlAvailable": true,
+            "noAllocation": false
+          }
+        },
+        "originalHostCpu": {
+          "epoch": 1,
+          "scope": "original-source-host-including-cleanup",
+          "status": "available",
+          "rawDiscarded": true,
+          "samplingIntervalUs": 10000,
+          "profileDurationUs": 137767117,
+          "sampledUs": 137766822,
+          "unsampledUs": 295,
+          "nodeCount": 26991,
+          "sampleCount": 13107,
+          "attribution": "nearest-allowlisted-stack-frame",
+          "categories": [
+            {
+              "category": "configuration-read",
+              "exclusiveSamples": 291,
+              "exclusiveSampledUs": 2960009,
+              "inclusiveSamples": 6700,
+              "inclusiveSampledUs": 69674328
+            },
+            {
+              "category": "credential-read",
+              "exclusiveSamples": 1983,
+              "exclusiveSampledUs": 20389191,
+              "inclusiveSamples": 7335,
+              "inclusiveSampledUs": 76191592
+            },
+            {
+              "category": "team-writer-authority",
+              "exclusiveSamples": 6242,
+              "exclusiveSampledUs": 65000680,
+              "inclusiveSamples": 6242,
+              "inclusiveSampledUs": 65000680
+            },
+            {
+              "category": "custody-image",
+              "exclusiveSamples": 1034,
+              "exclusiveSampledUs": 11532893,
+              "inclusiveSamples": 1316,
+              "inclusiveSampledUs": 14590666
+            },
+            {
+              "category": "provider-transport",
+              "exclusiveSamples": 91,
+              "exclusiveSampledUs": 878632,
+              "inclusiveSamples": 2847,
+              "inclusiveSampledUs": 29420452
+            },
+            {
+              "category": "other",
+              "exclusiveSamples": 2533,
+              "exclusiveSampledUs": 27325115,
+              "inclusiveSamples": 2533,
+              "inclusiveSampledUs": 27325115
+            },
+            {
+              "category": "idle",
+              "exclusiveSamples": 933,
+              "exclusiveSampledUs": 9680302,
+              "inclusiveSamples": 933,
+              "inclusiveSampledUs": 9680302
+            }
+          ],
+          "teamWriterDetails": [
+            {
+              "family": "namespace-fence",
+              "exclusiveSamples": 5173,
+              "exclusiveSampledUs": 53933919
+            },
+            {
+              "family": "team-state",
+              "exclusiveSamples": 83,
+              "exclusiveSampledUs": 842455
+            },
+            {
+              "family": "team-state-validation",
+              "exclusiveSamples": 30,
+              "exclusiveSampledUs": 309134
+            },
+            {
+              "family": "launch-binding-read",
+              "exclusiveSamples": 244,
+              "exclusiveSampledUs": 2494694
+            },
+            {
+              "family": "launch-binding-current",
+              "exclusiveSamples": 40,
+              "exclusiveSampledUs": 413246
+            },
+            {
+              "family": "launch-binding-clone",
+              "exclusiveSamples": 39,
+              "exclusiveSampledUs": 400885
+            },
+            {
+              "family": "other-writer",
+              "exclusiveSamples": 633,
+              "exclusiveSampledUs": 6606347
+            }
+          ],
+          "namespaceFenceDetails": [
+            {
+              "family": "directoryPath",
+              "exclusiveSamples": 1211,
+              "exclusiveSampledUs": 12584023
+            },
+            {
+              "family": "tree",
+              "exclusiveSamples": 1188,
+              "exclusiveSampledUs": 12252296
+            },
+            {
+              "family": "controller-lock",
+              "exclusiveSamples": 2248,
+              "exclusiveSampledUs": 23688423
+            },
+            {
+              "family": "residual",
+              "exclusiveSamples": 526,
+              "exclusiveSampledUs": 5409177
+            }
+          ],
+          "teamWriterCallers": {
+            "attribution": "outermost-allowlisted-caller-on-sampled-stack",
+            "rows": [
+              {
+                "caller": "node-timer",
+                "exclusiveSamples": 561,
+                "exclusiveSampledUs": 6049710,
+                "namespaceSamples": 477,
+                "namespaceSampledUs": 5183030
+              },
+              {
+                "caller": "v2-request-admission",
+                "exclusiveSamples": 314,
+                "exclusiveSampledUs": 3404630,
+                "namespaceSamples": 268,
+                "namespaceSampledUs": 2871379
+              },
+              {
+                "caller": "v2-request-password",
+                "exclusiveSamples": 1261,
+                "exclusiveSampledUs": 13009593,
+                "namespaceSamples": 1041,
+                "namespaceSampledUs": 10750369
+              },
+              {
+                "caller": "v2-read-snapshot",
+                "exclusiveSamples": 475,
+                "exclusiveSampledUs": 4910369,
+                "namespaceSamples": 388,
+                "namespaceSampledUs": 4014230
+              },
+              {
+                "caller": "runtime-session-read",
+                "exclusiveSamples": 25,
+                "exclusiveSampledUs": 282015,
+                "namespaceSamples": 0,
+                "namespaceSampledUs": 0
+              },
+              {
+                "caller": "provider-attestation-wait",
+                "exclusiveSamples": 85,
+                "exclusiveSampledUs": 872622,
+                "namespaceSamples": 69,
+                "namespaceSampledUs": 708189
+              },
+              {
+                "caller": "unclassified",
+                "exclusiveSamples": 3521,
+                "exclusiveSampledUs": 36471741,
+                "namespaceSamples": 2930,
+                "namespaceSampledUs": 30406722
+              }
+            ]
+          },
+          "fileBytes": 6279490,
+          "fileOverLimit": false
+        },
+        "failureCode": null,
+        "hosts": [
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          },
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          }
+        ],
+        "modelOrigin": "localhost-scripted",
+        "modelRequests": 11,
+        "modelProgress": [
+          {
+            "elapsedMs": 52141,
+            "requests": 0
+          },
+          {
+            "elapsedMs": 62092,
+            "requests": 1
+          },
+          {
+            "elapsedMs": 62516,
+            "requests": 2
+          },
+          {
+            "elapsedMs": 63011,
+            "requests": 3
+          },
+          {
+            "elapsedMs": 63476,
+            "requests": 4
+          },
+          {
+            "elapsedMs": 89675,
+            "requests": 5
+          },
+          {
+            "elapsedMs": 90097,
+            "requests": 6
+          },
+          {
+            "elapsedMs": 90622,
+            "requests": 7
+          },
+          {
+            "elapsedMs": 90954,
+            "requests": 8
+          },
+          {
+            "elapsedMs": 111693,
+            "requests": 9
+          },
+          {
+            "elapsedMs": 138521,
+            "requests": 10
+          },
+          {
+            "elapsedMs": 138913,
+            "requests": 11
+          }
+        ],
+        "coordination": {
+          "status": "unqualified",
+          "cleanup": null
+        },
+        "modelFailures": [],
+        "vendorAuthQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false,
+        "passiveNativeDiagnosticsSummary": {
+          "rows": 254,
+          "counts": {
+            "child-spawn": 1,
+            "child-ready": 1,
+            "request": 105,
+            "response": 104,
+            "request-send-headers": 15,
+            "request-body-sent": 15,
+            "response-end": 12,
+            "trace-limit": 1
+          },
+          "epochs": [
+            1
+          ],
+          "last": {
+            "epoch": 1,
+            "event": "trace-limit",
+            "atMs": 72781,
+            "child": null,
+            "request": null,
+            "route": null,
+            "method": null,
+            "durationMs": null,
+            "status": null,
+            "contentEncoding": null,
+            "stage": null,
+            "code": null,
+            "exitCode": null,
+            "signal": null
+          },
+          "complete": false,
+          "meaning": "trace-limit reached in epoch1; no full native lifecycle/epoch2/child-exit absence inference from retained trace"
+        }
+      },
+      "allReceiptBytesRecoverableFromOfficialZip": true,
+      "CPUArithmeticJoins": true
+    }
+  ],
+  "sourceAndScopeLimits": [
+    "Complete original source Host V2.1.4 flows with Bun1.4.3 and local scripted model endpoint, separately for manual and automatic approval. No real vendor authentication/model qualification.",
+    "Original custody receipt is a separate actual original Job/capture-before-input/descendant/neighbor test, not I386/debug-service native Process qualification.",
+    "Host source digest recomputed from all619 tracked TypeScript Git blobs with exact Windows CRLF conversion. Host dist and Node/Bun executable digests are retained original receipt facts; those executable/output bytes are not archived for an independent rebuild.",
+    "Provider tarball digest independently joins selected Git archive. SPI archive source pin and source verifyInstalledArchive checks are retained, but no separate SPI receipt digest is invented.",
+    "Each 254-row passive trace reached trace-limit in firstHostepoch; final cleanup comes from original scenario assertions and two Host exit records, not a claimed complete trace.",
+    "CPU aggregates cover only the first original Host, including cleanup; they classify sampled stacks, not per-call latency or Bun CPU. Raw profile is discarded; only bounded aggregate arithmetic is rechecked here. No historical cause or speedup inferred.",
+    "Launch open/read durations belong to this original V2 scenario with captured120s member budget; no transfer to15s Teamobserver, P08ten-second census, or other source cutoff.",
+    "No product/Desktop/release/P09/fullmigration or current source-preservation composition qualification transfer.",
+    "No new project/compiler/provider/native/test/install/CI/ref operation by auditor."
+  ]
+}

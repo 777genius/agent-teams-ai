@@ -1,0 +1,23 @@
+{
+  "request": {
+    "repository_full_name": "777genius/agent-teams-ai",
+    "branch_name": "fix/frontend-parity-e2e-followups-20261115",
+    "expected_sha": "9ff8aa67e3747988b5b7516cf94f709b46af3d68",
+    "sha": "c761567d3a7912ef9255532d1f296d66e8c52b91",
+    "force": false
+  },
+  "response": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "success": true
+    },
+    "isError": false
+  },
+  "primaryAdvanced": false,
+  "phaseAApplied": false
+}

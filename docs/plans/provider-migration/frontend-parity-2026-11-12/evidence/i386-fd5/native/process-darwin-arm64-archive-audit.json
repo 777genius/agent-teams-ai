@@ -1,0 +1,55 @@
+{
+  "archive": {
+    "path": "native-audit-E1e1d14b/artifact-14202289527.zip",
+    "artifactId": 14202289527,
+    "bytes": 12690,
+    "blob": "de661aa46ff3fd55284e1a709375a5caa484fa34",
+    "sha256": "6f78cdc0f3429f4473288330221cb1f7df969d1da7853ddee0d0bd9883f24286"
+  },
+  "safeUniqueMemberNames": true,
+  "allCRCValid": true,
+  "members": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "bytes": 20688,
+      "blob": "a58fc15c463e4140e2e82a8aabb2be2c6b6dbeb5",
+      "sha256": "5bf826eebf53024d4ceb2533dbea6b93ac9e9b51e97f22cbe711e4d2b9ce5c51",
+      "crc32": "92e726c8"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log",
+      "bytes": 5168,
+      "blob": "304b795e0868c0d18588870ba503a4a7b8bc8174",
+      "sha256": "2e04794d4d82ce8e2d4611cef97b5e682ee4e488cf2cf8196aba08a6541faeb2",
+      "crc32": "07313693"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "bytes": 772,
+      "blob": "fd0f15a96cdf45afca4d7efa9d82f31c5ac6ec89",
+      "sha256": "5525078150a6549d2e655f338ddec986f8c311f3f8353fa58050cf46f688a865",
+      "crc32": "d7bbeb11"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "bytes": 7504,
+      "blob": "68561f50adc0872a3d1d70c9a9b90cb61f5b5f8b",
+      "sha256": "d4751444d7ae0d363eb1c07e632207a6c63cb22b90167c82f584723279eb1bd4",
+      "crc32": "b7b66930"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+      "bytes": 495,
+      "blob": "4e82a5650e32001b417d307096ab489cad85b8fa",
+      "sha256": "3b6fab27352121f440b5d6221a59c002e01fd42699b77d9afbff29de786abc33",
+      "crc32": "4a3bd520"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "bytes": 41,
+      "blob": "64df2ac36d2400af7b971319a2274577c225275a",
+      "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681",
+      "crc32": "4b15b81c"
+    }
+  ]
+}

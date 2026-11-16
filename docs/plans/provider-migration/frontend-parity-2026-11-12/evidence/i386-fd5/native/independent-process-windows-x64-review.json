@@ -1,0 +1,315 @@
+{
+  "kind": "Independent actual original E1 Windows x64 Process failure R2",
+  "reviewer": "/root/ui_failures",
+  "observedAtUTC": "2026-11-16T06:32:25.165536+00:00",
+  "verdict": "APPROVE_AUTHOR_FAILURE_AUDIT_WITH_NO_REQUIRED_CORRECTION; ACTUAL_GATE_FAIL_RETAINED",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "runId": 43813731530,
+  "jobId": 133120929510,
+  "authorAudit": {
+    "path": "native-audit-E1e1d14b/process-windows-x64-failure-audit.json",
+    "bytes": 51476,
+    "blob": "9757a1c800fe11b3805cc664ca85f7fe84563a80",
+    "sha256": "4af53a5903e056055192ca34572ba364738f193521de81318de40d92f65edd92"
+  },
+  "independentByteAndSourceProof": {
+    "path": "native-audit-E1e1d14b/independent-process-windows-x64-byte-source-proof.json",
+    "bytes": 56525,
+    "blob": "1c549757914dc64ea61a85ba283f4374059ee9aa",
+    "sha256": "430d1d68569042b397d8728aa520f7e7ffd150184bed2fde8d9ba44e03ee341d"
+  },
+  "independence": {
+    "author": "/root/native_failures",
+    "reviewerAuthoredAuditOrIncomingI386Source": false,
+    "reviewMethod": "Existing original files and pinned Git objects only; independent full byte/hash/CRC/API/tee joins, source control-flow interpretation and existing recorded results. No project/native invocation, artifact refetch, source edit or Git/ref mutation.",
+    "prospectiveOneHeaderProposalReviewedHere": false
+  },
+  "actualIdentityAndRuntime": {
+    "run": {
+      "id": 43813731530,
+      "name": "Host process fixture acceptance",
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "head_sha": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "event": "pull_request",
+      "run_attempt": 1,
+      "created_at": "2026-11-16T05:59:11Z",
+      "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/43813731530"
+    },
+    "originalTerminalJobByteValueEqualsAuthorCopy": true,
+    "event": "pull_request",
+    "attempt": 1,
+    "headJoin": "Initial official run head e1d; official artifact head/run ID; source-head.txt exact e1d plus newline; original checkout HEAD and actual platform/Node verification step; literal current workflow and original command/build output.",
+    "node": "24.21.0",
+    "platform": "win32-x64",
+    "workflowBlob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+    "sourceProofLimit": "17 independently rehashed pinned Git objects joined to exact CI checkout/source-head/workflow/build record; this is not a runner-emitted per-leaf before/after physical census or an independent executable rebuild.",
+    "freshBuild": "Original prerequisite step9 and Windows C++ step16 SUCCESS. The original Win32 configure/build uses the same tracked fixture target, checks target freshness, copies its EXE to the original x64 build directory and checks SHA256 equality. Original body and produced Win32 path appear in the complete log. No independent build or archived executable bytes.",
+    "binaryListingAndManifests": "Both archived product manifests reference hashes present in the original complete ten-binary SHA256 listing; native-evidence and process-acceptance copies are byte-identical. The I386 EXE hash is a runner-reported build/copy artifact, not a separately rehashed executable."
+  },
+  "rawRecovery": {
+    "fullResponse": {
+      "path": "native-audit-E1e1d14b/job-133120929510-original-response.json",
+      "bytes": 154758,
+      "blob": "c344b7eead9203cc997439a4d211842d18b992d7",
+      "sha256": "0dd2df0b7d18402dae29a93525fe1da35cf4fcd83527cca130321827c1653450"
+    },
+    "rawLog": {
+      "path": "native-audit-E1e1d14b/job-133120929510.log",
+      "bytes": 143153,
+      "blob": "e8c536e76fd86896858f74a4b471a9057a20f08f",
+      "sha256": "0d6e66f963303d739a75fe2d39110fc04ad7b61bdf78376d4ba77f7f0e7639ee"
+    },
+    "rawIsExactUtf8ContentOfRetainedMcpResponse": true,
+    "officialArchive": {
+      "path": "native-audit-E1e1d14b/artifact-14201916494.zip",
+      "bytes": 15043,
+      "blob": "adf76542bf8ec1f143f3ddf9c26736490fe28fec",
+      "sha256": "b5d26672269fc6bbf7ab6e13adddf62b65bd5295de28590df44ebdc547d74e86"
+    },
+    "memberCount": 9,
+    "expandedBytes": 63866,
+    "checks": "All unique relative names, no traversal/backslash/absolute/symlink entries; ZIP CRC; exact advertised official ZIP digest/size/head/run; all expanded bytes equal existing extracted files and author member identities.",
+    "fullTeeJoins": [
+      {
+        "name": "host-contracts.log",
+        "path": "native-audit-E1e1d14b/process-windows-x64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+        "bytes": 20525,
+        "blob": "f137d9c192d0a5ecb4a8bf5d6d72e445f1ff7690",
+        "sha256": "2c0bca7203d6019469ad3a49bf588aa9f1cab59fa498d23601619f4f4663e7ef",
+        "lineCount": 181,
+        "fullJobFirstLine1Based": 616,
+        "transformation": "Remove only GitHub timestamp prefix from full job and ANSI CSI sequences from both; splitlines for sequence comparison. Original bytes unchanged.",
+        "entireLineSequenceEqual": true
+      },
+      {
+        "name": "protocol.log",
+        "path": "native-audit-E1e1d14b/process-windows-x64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+        "bytes": 758,
+        "blob": "60a6ae01fed0b0bb9e26f7db1c29aaa0d6bd01a9",
+        "sha256": "72e03a94114673a19f536f016b8473f0fc06029e4990d09887a3ee6868671f9d",
+        "lineCount": 12,
+        "fullJobFirstLine1Based": 797,
+        "transformation": "Remove only GitHub timestamp prefix from full job and ANSI CSI sequences from both; splitlines for sequence comparison. Original bytes unchanged.",
+        "entireLineSequenceEqual": true
+      },
+      {
+        "name": "retained-main.log",
+        "path": "native-audit-E1e1d14b/process-windows-x64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+        "bytes": 9498,
+        "blob": "677a5a8cce9beb834861d232a8920bd231967ae5",
+        "sha256": "d8585bcc20f005bd1b38c790754960d338360261ba83275004143b7784c655bf",
+        "lineCount": 62,
+        "fullJobFirstLine1Based": 809,
+        "transformation": "Remove only GitHub timestamp prefix from full job and ANSI CSI sequences from both; splitlines for sequence comparison. Original bytes unchanged.",
+        "entireLineSequenceEqual": true
+      },
+      {
+        "name": "windows-node24.log",
+        "path": "native-audit-E1e1d14b/process-windows-x64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+        "bytes": 28803,
+        "blob": "5f61a8de7b6f9e72922fcbdc2af1df92188bd37c",
+        "sha256": "71524349dcdcff0209f8984017bd6aa283c52cd4a17f66247b8e75b0237088be",
+        "lineCount": 143,
+        "fullJobFirstLine1Based": 1032,
+        "transformation": "Remove only GitHub timestamp prefix from full job and ANSI CSI sequences from both; splitlines for sequence comparison. Original bytes unchanged.",
+        "entireLineSequenceEqual": true
+      }
+    ],
+    "images": 0,
+    "privateTraceFilesArchived": false,
+    "originalsUnchanged": true
+  },
+  "prerequisiteResults": {
+    "node": {
+      "tests": 167,
+      "pass": 164,
+      "fail": 0,
+      "skip": 3,
+      "cancel": 0
+    },
+    "protocol": {
+      "files": 3,
+      "tests": 54,
+      "pass": 54,
+      "nativeGateEventsCases": 4
+    },
+    "retainedMain": {
+      "files": 8,
+      "tests": 81,
+      "pass": 81
+    },
+    "total": 302,
+    "pass": 299,
+    "skip": 3,
+    "fail": 0,
+    "notNativeQualification": true,
+    "interpretation": "These are separate complete finite prerequisites, not native I386 success. The four nativeGateEvents cases include the actual private decoder/qualifier extraction and negative rows, but cannot prove native event publication or original OS execution.",
+    "literalThreeCommands": [
+      "node --test packages/legacy-agent-host/tests/claude-management-host.test.ts packages/legacy-agent-host/tests/scheduled-run-host.test.ts packages/legacy-agent-host/tests/management-command-store.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/registered-process-owner.test.ts packages/legacy-agent-host/tests/registered-process-capture-records.test.ts packages/legacy-agent-host/tests/registered-process-commands.test.ts packages/legacy-agent-host/tests/registered-process-linux-warm-lifetime.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/lifecycle-process-release.test.ts packages/legacy-agent-host/tests/windows-provider-routing.test.ts packages/legacy-agent-host/tests/windows-launcher-recipe.test.ts packages/legacy-agent-host/tests/windows-finite-process-routing.test.ts packages/legacy-agent-host/tests/runtime-source-process-selections.test.ts packages/legacy-agent-host/tests/runtime-source-probe-origins.test.ts packages/legacy-agent-host/tests/management-model-probe.test.ts packages/legacy-agent-host/tests/saved-team-model-probe.test.ts 2>&1 | tee process-acceptance-evidence/host-contracts.log",
+      "node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts 2>&1 | tee process-acceptance-evidence/protocol.log",
+      "node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/features/agent-backend/capturedHostClient.test.ts test/features/agent-backend/capturedWindowsSelection.test.ts test/features/agent-backend/desktopBackendFeature.test.ts test/features/agent-backend/fileTeamModelProbeIntents.test.ts test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts test/features/agent-backend/capturedWindowsSourceHistory.test.ts test/features/agent-backend/capturedWindowsSourcePending.test.ts test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts 2>&1 | tee process-acceptance-evidence/retained-main.log"
+    ]
+  },
+  "firstFailure": {
+    "step": 17,
+    "stepName": "Qualify original Windows Job and control under Host Node",
+    "result": "failure",
+    "actualMessage": "Actual I386 child completion and observations must precede broker cleanup",
+    "actualStack": [
+      "tools/owned-process-broker/nativeDebugServiceScenario.ts:105:14",
+      "tools/owned-process-broker/nativeGateEvents.ts:22:11"
+    ],
+    "actualAssertion": {
+      "actual": "undefined",
+      "expected": true,
+      "operator": "=="
+    },
+    "actualClosedRow": {
+      "nativeI386ChildObservation": {
+        "status": "unknown"
+      }
+    },
+    "actualPhase": {
+      "scenario": "debug-service",
+      "phase": "broker-exit",
+      "elapsedMs": 1630
+    },
+    "sourceScenarioMode": "nativeGate.ts466 binds debug-service to nativeDebugServiceScenario(service-pair).",
+    "observedProgress": [
+      "child-lines at717ms",
+      "capture-descendants at1228ms",
+      "service-capture1274ms",
+      "service-query-lifetime1276ms",
+      "service-effect-retirement1561ms",
+      "expired-service-stop1579ms",
+      "first service stop1580ms",
+      "service witness-exits1594ms",
+      "whole-root stop1610ms",
+      "root/neighbor witness-exits1626ms",
+      "target-drain and release-ack1630ms",
+      "broker-exit1630ms",
+      "guarded failure leads cleanup1638ms"
+    ],
+    "sourceOrderInferences": [
+      "The original service-pair passed canonical same-directory I386 fixture/PE-machine admission. Its child-lines and completed marker checks precede capture-descendants; that recorded later phase establishes the unique completed TEST_I386_CHILD parser assignment ran. The original producer only emits that marker after its original PROCESS_INFORMATION handle confirms I386 architecture, signaled wait, exitCode0 and successful handle close. This is source-order evidence; the marker bytes, PID/birth and executable are not retained in this archive.",
+      "In the original exit callback, the diagnostic read and closed I386 row are followed by broker code0 and empty FD4 assertions at102/103, then the observed105 refusal. Their successful prior return is source-implied; no FD4 byte artifact is present.",
+      "The unknown row is printed only when readI386ChildObservations(readFileSync(...)) did not produce a value. The exact105 error then enters the unchanged events.guard first-error retention and awaited cleanup path.",
+      "The later qualifyI386ChildObservations call106 and fixture rehash107 are unreached. Exactly-four child rows, startup pair and later forwarded pair therefore remain unqualified even though the original child marker checks passed."
+    ],
+    "unknownCategories": [
+      "The FD5 read may have thrown.",
+      "The trace may have been empty, over512 bytes, or incomplete relative to32-byte records.",
+      "A read record may have unknown/overflow kind, nonconsecutive ordinal, zero PID/birth, out-of-domain exception code or non-Boolean firstChance/handled values."
+    ],
+    "notUnknownDecoderCategories": "A valid decoded foreign child, wrong count or wrong startup/late sequence would reach the observed branch and fail the separate qualifier106; the actual row does not retain decoded observations, so no such subcase is asserted.",
+    "missingData": [
+      "FD5 original byte length/content",
+      "read failure versus parser refusal discriminator",
+      "completed marker PID/birth/fixture digest in the unknown branch",
+      "observer thread position at Release/ExitProcess",
+      "whether original post-loop WriteFile ran/its result or byte count"
+    ],
+    "notEstablished": [
+      "nonzero I386 child exit",
+      "a decoder implementation bug",
+      "a specific missing/partial/overflow trace reason",
+      "a proven scheduling-race cause for this original failure",
+      "the old service-race activeProcesses refusal or any prior cohort cause"
+    ]
+  },
+  "cleanup": {
+    "before": {
+      "helperCount": 17,
+      "retainedCount": 3,
+      "sentinelClosed": false,
+      "sentinelCleanupRequested": false,
+      "other16ClosedExit0": true
+    },
+    "after": {
+      "helperCount": 17,
+      "retainedCount": 3,
+      "allClosed": true,
+      "allStdoutStderrEnded": true,
+      "allBufferedBytes": 0,
+      "allErrorObservedFalse": true,
+      "slots1Through16": {
+        "exitCode": 0,
+        "signal": null,
+        "cleanupRequested": false
+      },
+      "slot0Sentinel": {
+        "exitCode": null,
+        "signal": "SIGTERM",
+        "cleanupRequested": true
+      }
+    },
+    "retainedCapabilities": {
+      "count": 3,
+      "allWriteCompleted": true,
+      "allBrokerExit": {
+        "code": 0,
+        "signal": null
+      }
+    },
+    "outerController": {
+      "gateController": "drained",
+      "rootExitCode": 1,
+      "activeProcesses": 0
+    },
+    "sourceJoin": "nativeGate536–558 preserves the callback failure, observes owned cleanup, waits original helper closes, then rethrows the retained event failure. gateController67–107 retains original Node exit, checks the outer Job at zero, closes it, removes only its original sandbox, emits drained and returns104 because rootExitCode is1.",
+    "wrapperMessage": "Original Node fixture controller did not confirm cleanup",
+    "wrapperMessageInterpretation": "The literal wrapper message follows any nonzero controller code. The stronger retained controller facts here are drained/root1/zero; this does not erase the failed mandatory gate or turn cleanup SIGTERM into natural sentinel exit.",
+    "scopeLimit": "Only the original controller Job and registered helper/capability records; no global OS process census, independent full native-success receipt or posthumous FD5 recovery is claimed."
+  },
+  "sourcePublicationGap": {
+    "independentlyConfirmedPermittedOrdering": true,
+    "actualHistoricalCauseProved": false,
+    "unchangedOrdinarySources": "broker.cpp e975eb78 and serviceDebugLoop.h77fb69ac equal old953; incoming TEST observer e17c33ba/serviceScopesb3fbd change is the relevant publication dependency.",
+    "chain": [
+      "Scopes.firstBreakpoint holds its original mutex, obtains the original selected record, calls startup.accept once, then the TEST-only observer copies a bounded row for WOW64 children and returns the same accepted decision.",
+      "debugServiceTest.h23–32 only copies rows in memory; the sole WriteFile is flushBreakpointObservations43–48 called after runDebugLoop returns152–153.",
+      "serviceDebugLoop returns only after its next original debug-event/timeout processing and original-root/Job observations; WaitForDebugEvent is called with100ms. No after-loop flush dependency is part of original release acceptance.",
+      "broker writer and main release success paths can call ExitProcess(0) after whole-frame Released success. The admission/debug thread is detached; neither Release acceptance nor exitReleased joins this TEST post-loop flush.",
+      "A permitted ordering can therefore end the observer thread after completed child work and before the only FD5 file publication. Missing or failed publication still refuses at the original parser/gate; the current raw unknown does not select this ordering from the other decoder/read possibilities."
+    ],
+    "primaryDocumentationIndependentlyOpened": [
+      {
+        "url": "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-exitprocess",
+        "claim": "ExitProcess terminates the process threads; it is not a join that completes unfinished application observer work."
+      },
+      {
+        "url": "https://learn.microsoft.com/en-us/windows/win32/api/debugapi/nf-debugapi-waitfordebugevent",
+        "claim": "The wait argument specifies the debugger-event wait interval; this existing call is made on the creating thread."
+      }
+    ],
+    "prospectiveScope": "A separately reviewed one-header publication proposal may address this source ordering. This actual-evidence R2 neither approves an unread candidate nor claims its success."
+  },
+  "unreachedAndQualificationLimits": {
+    "afterFailure": "No complete debug-service scenario receipt and no overall25-scenario native PASS. Later wow64-root, service-first, admission-race and remaining native scenarios are not reached.",
+    "ciSteps": "Electron native step18, Windows wrapper/Main step19, finite Codex/Claude/OpenCode source20–22 and complete-original-source verifier23 are skipped. Platform-inapplicable POSIX/Linux skips remain separate.",
+    "noPromotion": [
+      "No actual vendor execution",
+      "No direct I386 debugger-root late-handler qualification",
+      "No P08 or P09 qualification",
+      "No full migration/native/renderer/source completion",
+      "No current ARM outcome transfer",
+      "No retrospective proof from author-reported older finite RED/GREEN records"
+    ],
+    "authorSourceReviewLimits": "The incoming six-leaf historical plan/commit references are source-only context here; original archived current prerequisites were independently read, but earlier local author execution reports were not requalified."
+  },
+  "requiredCorrections": [],
+  "actionsPerformed": [
+    "Read saved originals and pinned Git objects",
+    "Independent hash/CRC/serialization/source/tee comparison",
+    "Read exact source callback, decoder/qualifier, helper cleanup, controller, observer/release ordering and original workflow",
+    "Read two primary Win32 documentation pages",
+    "Wrote only this separate independent review and a separate byte/source proof"
+  ],
+  "actionsNotPerformed": [
+    "No project tests, Node, compiler, lint, install, native provider or query execution",
+    "No source/candidate/workflow/ref/CI mutation",
+    "No original data rewrite",
+    "No duplicate artifact/log fetch"
+  ]
+}

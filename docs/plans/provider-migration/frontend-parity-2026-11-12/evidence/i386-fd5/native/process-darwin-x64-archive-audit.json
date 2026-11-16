@@ -1,0 +1,40 @@
+{
+  "archive": {
+    "path": "native-audit-E1e1d14b/artifact-14202660278.zip",
+    "artifactId": 14202660278,
+    "bytes": 11052,
+    "sha256": "2960ac3be2e4b1241d78a74a52600b55ff2fd42b2e3eddb0c7766b3a171df039"
+  },
+  "safeUniqueMemberNames": true,
+  "allCRCValid": true,
+  "members": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+      "bytes": 20799,
+      "blob": "2a6e7df8e767ea97c7989415e0ec7d43ba68fa02",
+      "sha256": "fb385c2bcee56a31ede4bde2bd0d315deb9e38fb52ad3f4677cfcc70c585a20c",
+      "crc32": "70f642d3"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+      "bytes": 772,
+      "blob": "9ff3a45e91cb855f0aab059687b0210f174ebcc2",
+      "sha256": "c15f61fc7d9a55696f91eb9129b17eeff7f8fe7cc4a6f870b140b4ffa920c48a",
+      "crc32": "b248c9c7"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+      "bytes": 12202,
+      "blob": "91c26284ce8066bcff47b789072912e94636c2a0",
+      "sha256": "ee75fec9a697cb348ad7207b23322bf5f5f65562680b2b2bb42b4e34d2ffeb07",
+      "crc32": "d9e7977c"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+      "bytes": 41,
+      "blob": "64df2ac36d2400af7b971319a2274577c225275a",
+      "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681",
+      "crc32": "4b15b81c"
+    }
+  ]
+}

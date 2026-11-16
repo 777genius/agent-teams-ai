@@ -1,0 +1,22 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "content": "{\"sha\":\"9ff8aa67e3747988b5b7516cf94f709b46af3d68\",\"node_id\":\"C_kwDORVTEtNoAKDlmZjhhYTY3ZTM3NDc5ODhiNWI3NTE2Y2Y5NGY3MDliNDZhZjNkNjg\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/9ff8aa67e3747988b5b7516cf94f709b46af3d68\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/9ff8aa67e3747988b5b7516cf94f709b46af3d68\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T06:35:02Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T06:35:02Z\"},\"tree\":{\"sha\":\"8f33ca564819972beec058e09074d629e159ebe6\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/8f33ca564819972beec058e09074d629e159ebe6\"},\"message\":\"docs(parity): bind lossless e1d reconciliation and current regression scope\\n\\nPreserve incoming Plan history and evidence, all reviewed source boundaries, the original I386 refusal, and the conditional current-source test proposal. Keep primary unchanged while its original CI runs.\",\"parents\":[{\"sha\":\"b0528bb50e05379030eb72c20d4f8eb998098cbf\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/b0528bb50e05379030eb72c20d4f8eb998098cbf\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/b0528bb50e05379030eb72c20d4f8eb998098cbf\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+    "title": "9ff8aa67e3747988b5b7516cf94f709b46af3d68",
+    "modified_date": null,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/9ff8aa67e3747988b5b7516cf94f709b46af3d68",
+    "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/9ff8aa67e3747988b5b7516cf94f709b46af3d68",
+    "display_title": "9ff8aa67e3747988b5b7516cf94f709b46af3d68",
+    "structuredContent": {
+      "title": "9ff8aa67e3747988b5b7516cf94f709b46af3d68",
+      "content": "{\"sha\":\"9ff8aa67e3747988b5b7516cf94f709b46af3d68\",\"node_id\":\"C_kwDORVTEtNoAKDlmZjhhYTY3ZTM3NDc5ODhiNWI3NTE2Y2Y5NGY3MDliNDZhZjNkNjg\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/9ff8aa67e3747988b5b7516cf94f709b46af3d68\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/9ff8aa67e3747988b5b7516cf94f709b46af3d68\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T06:35:02Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T06:35:02Z\"},\"tree\":{\"sha\":\"8f33ca564819972beec058e09074d629e159ebe6\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/8f33ca564819972beec058e09074d629e159ebe6\"},\"message\":\"docs(parity): bind lossless e1d reconciliation and current regression scope\\n\\nPreserve incoming Plan history and evidence, all reviewed source boundaries, the original I386 refusal, and the conditional current-source test proposal. Keep primary unchanged while its original CI runs.\",\"parents\":[{\"sha\":\"b0528bb50e05379030eb72c20d4f8eb998098cbf\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/b0528bb50e05379030eb72c20d4f8eb998098cbf\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/b0528bb50e05379030eb72c20d4f8eb998098cbf\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+      "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/9ff8aa67e3747988b5b7516cf94f709b46af3d68"
+    }
+  },
+  "isError": false
+}

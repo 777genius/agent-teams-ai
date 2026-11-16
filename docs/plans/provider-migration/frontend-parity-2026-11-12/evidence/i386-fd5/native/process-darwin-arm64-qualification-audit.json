@@ -1,0 +1,506 @@
+{
+  "kind": "Author original E1 Darwin ARM Process fixture-only audit; independent review pending",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "runId": 43813731530,
+  "jobId": 133120929614,
+  "terminalJobsResponse": {
+    "path": "ci-e1d14b/owned-process-jobs-response-0629.json",
+    "bytes": 22863,
+    "blob": "d49337529412d41ccfa1e2e6f5e4d4007f555634",
+    "sha256": "ec9a97f0f35e8aae6ca7467d2a78646acf4cbbcbfb1b5d2698f18e5078b69501"
+  },
+  "job": {
+    "id": 133120929614,
+    "name": "Host process fixtures (darwin-arm64)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43813731530,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 2
+      },
+      {
+        "name": "Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Select the pinned package manager with bundled Corepack",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Bind exact source and actual process tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Install frozen workspace without Desktop postinstall",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Build existing controller and Host",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Verify process contracts and retained Main Host transport",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Verify original POSIX Node and shell lifecycle fixtures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Prepare pinned Electron for native process fixtures",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Verify Linux Node exec descriptor closure under both original parents",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15
+      },
+      {
+        "name": "Build original Windows product broker and C++ fixtures",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Qualify original Windows Job and control under Host Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Qualify original Windows Job and control under Electron Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Qualify original codex source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Qualify original claude source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Qualify original opencode source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Require completed original platform receipts and unchanged source",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 23
+      },
+      {
+        "name": "Preserve original process evidence including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24
+      },
+      {
+        "name": "Post Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 46
+      },
+      {
+        "name": "Post Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 47
+      },
+      {
+        "name": "Post Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 48
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 49
+      }
+    ]
+  },
+  "fullLog": {
+    "path": "native-audit-E1e1d14b/job-133120929614.log",
+    "bytes": 109620,
+    "blob": "91da7b6d3da2338c07be6f845ad96c2e6513dbcf",
+    "sha256": "9efb8720e211458046131cf1a2a76d1aa05c872f1011c1345044eb09b4b66e15"
+  },
+  "originalLogResponse": {
+    "path": "native-audit-E1e1d14b/job-133120929614-original-response.json",
+    "bytes": 115060,
+    "blob": "4bb41a146fa2634661d10710996382869afc9bdd",
+    "sha256": "6f15fce4f8b4b0e8ba73b4c760ded73566659925e2720746eadd4a267d6bc281"
+  },
+  "originalContentByteJoin": true,
+  "officialArtifactsResponse": {
+    "path": "native-audit-E1e1d14b/process-artifacts-response-0630.json",
+    "bytes": 3895,
+    "blob": "1fe2a5550642439e9e087db4b57838558114b3c5",
+    "sha256": "a08d9c068b4d4893db613095bf16b23edf4ad640a6e26966e2cafc35ca0cf467"
+  },
+  "officialArtifact": {
+    "id": 14202289527,
+    "name": "host-process-fixtures-darwin-arm64-e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "size_in_bytes": 12690,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14202289527",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14202289527/zip",
+    "expired": false,
+    "created_at": "2026-11-16T06:25:21Z",
+    "expires_at": "2026-11-30T06:25:20Z",
+    "updated_at": "2026-11-16T06:25:21Z",
+    "digest": "sha256:6f78cdc0f3429f4473288330221cb1f7df969d1da7853ddee0d0bd9883f24286",
+    "workflow_run": {
+      "id": 43813731530,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940"
+    }
+  },
+  "archive": {
+    "archive": {
+      "path": "native-audit-E1e1d14b/artifact-14202289527.zip",
+      "artifactId": 14202289527,
+      "bytes": 12690,
+      "blob": "de661aa46ff3fd55284e1a709375a5caa484fa34",
+      "sha256": "6f78cdc0f3429f4473288330221cb1f7df969d1da7853ddee0d0bd9883f24286"
+    },
+    "safeUniqueMemberNames": true,
+    "allCRCValid": true,
+    "members": [
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+        "bytes": 20688,
+        "blob": "a58fc15c463e4140e2e82a8aabb2be2c6b6dbeb5",
+        "sha256": "5bf826eebf53024d4ceb2533dbea6b93ac9e9b51e97f22cbe711e4d2b9ce5c51",
+        "crc32": "92e726c8"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log",
+        "bytes": 5168,
+        "blob": "304b795e0868c0d18588870ba503a4a7b8bc8174",
+        "sha256": "2e04794d4d82ce8e2d4611cef97b5e682ee4e488cf2cf8196aba08a6541faeb2",
+        "crc32": "07313693"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+        "bytes": 772,
+        "blob": "fd0f15a96cdf45afca4d7efa9d82f31c5ac6ec89",
+        "sha256": "5525078150a6549d2e655f338ddec986f8c311f3f8353fa58050cf46f688a865",
+        "crc32": "d7bbeb11"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+        "bytes": 7504,
+        "blob": "68561f50adc0872a3d1d70c9a9b90cb61f5b5f8b",
+        "sha256": "d4751444d7ae0d363eb1c07e632207a6c63cb22b90167c82f584723279eb1bd4",
+        "crc32": "b7b66930"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+        "bytes": 495,
+        "blob": "4e82a5650e32001b417d307096ab489cad85b8fa",
+        "sha256": "3b6fab27352121f440b5d6221a59c002e01fd42699b77d9afbff29de786abc33",
+        "crc32": "4a3bd520"
+      },
+      {
+        "path": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+        "bytes": 41,
+        "blob": "64df2ac36d2400af7b971319a2274577c225275a",
+        "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681",
+        "crc32": "4b15b81c"
+      }
+    ]
+  },
+  "archiveAudit": {
+    "path": "native-audit-E1e1d14b/process-darwin-arm64-archive-audit.json",
+    "bytes": 2104,
+    "blob": "64ea1bfc9156b3c7ab1d38e8ae4489a51ba5445a",
+    "sha256": "589c5f2225fd1818119177b2288188c743dabbb8757120be26ef252a2dfc90c0"
+  },
+  "allFourTeeJoins": [
+    {
+      "file": {
+        "path": "native-audit-E1e1d14b/process-darwin-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+        "bytes": 20688,
+        "blob": "a58fc15c463e4140e2e82a8aabb2be2c6b6dbeb5",
+        "sha256": "5bf826eebf53024d4ceb2533dbea6b93ac9e9b51e97f22cbe711e4d2b9ce5c51"
+      },
+      "lines": 181,
+      "fullLogStartLine": 623,
+      "equalAfterOnlyTimestampAndAnsiRemoval": true
+    },
+    {
+      "file": {
+        "path": "native-audit-E1e1d14b/process-darwin-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+        "bytes": 772,
+        "blob": "fd0f15a96cdf45afca4d7efa9d82f31c5ac6ec89",
+        "sha256": "5525078150a6549d2e655f338ddec986f8c311f3f8353fa58050cf46f688a865"
+      },
+      "lines": 12,
+      "fullLogStartLine": 804,
+      "equalAfterOnlyTimestampAndAnsiRemoval": true
+    },
+    {
+      "file": {
+        "path": "native-audit-E1e1d14b/process-darwin-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+        "bytes": 7504,
+        "blob": "68561f50adc0872a3d1d70c9a9b90cb61f5b5f8b",
+        "sha256": "d4751444d7ae0d363eb1c07e632207a6c63cb22b90167c82f584723279eb1bd4"
+      },
+      "lines": 51,
+      "fullLogStartLine": 816,
+      "equalAfterOnlyTimestampAndAnsiRemoval": true
+    },
+    {
+      "file": {
+        "path": "native-audit-E1e1d14b/process-darwin-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/posix-lifecycle.log",
+        "bytes": 5168,
+        "blob": "304b795e0868c0d18588870ba503a4a7b8bc8174",
+        "sha256": "2e04794d4d82ce8e2d4611cef97b5e682ee4e488cf2cf8196aba08a6541faeb2"
+      },
+      "lines": 42,
+      "fullLogStartLine": 876,
+      "equalAfterOnlyTimestampAndAnsiRemoval": true
+    }
+  ],
+  "sourceHeadFile": {
+    "path": "native-audit-E1e1d14b/process-darwin-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+    "bytes": 41,
+    "blob": "64df2ac36d2400af7b971319a2274577c225275a",
+    "sha256": "c73000b98cdb677612d78d15004760cad6a40759828a813ff653fc6f8f8f3681"
+  },
+  "scopeFile": {
+    "path": "native-audit-E1e1d14b/process-darwin-arm64-extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/scope.json",
+    "bytes": 495,
+    "blob": "4e82a5650e32001b417d307096ab489cad85b8fa",
+    "sha256": "3b6fab27352121f440b5d6221a59c002e01fd42699b77d9afbff29de786abc33"
+  },
+  "scope": {
+    "kind": "TEST_HOST_PROCESS_FIXTURE_ACCEPTANCE",
+    "status": "PASS",
+    "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+    "platform": "darwin-arm64",
+    "nodeVersion": "v24.21.0",
+    "controlledContracts": true,
+    "retainedMainTransport": true,
+    "posixProcessGroups": true,
+    "native": [],
+    "nativeProviderRuntimeQualified": false,
+    "darwinNativeRegistrationQualified": false,
+    "posixExecutableAdmissionQualified": false,
+    "desktopQualified": false,
+    "releaseQualified": false
+  },
+  "selectedInterpretationGitSources": [
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "bytes": 32248,
+      "blob": "3228b9978cf5064c103ec486468b2e5c5a36956e",
+      "sha256": "bebf92db494bd9134e6edb209e41b434951006d7b35b992b1f1758efa0aa630c"
+    },
+    {
+      "path": "tools/owned-process-broker/vitest.config.ts",
+      "bytes": 342,
+      "blob": "cd03a73404a7b2548c15234743c24c1093b554af",
+      "sha256": "d7af296db40661045f6402af15eeb6072781919fd8c8145e554dada03e0de88e"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+      "bytes": 7387,
+      "blob": "b930a01a0af87cb5c6a5356f6dc9948bf6c06a94",
+      "sha256": "40a1d7107607b3d1e6fcbdd0018d452e830622a5d3ba8256d302a2a42ac7633a"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "bytes": 17005,
+      "blob": "d2b952c9e6ac2281a14a00665cf4689d9c7d4b5c",
+      "sha256": "12be8f565712c09537d99ba75b63aa6e01774708ad1967c7ee2fdd964d747712"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-source-native-identity.test.ts",
+      "bytes": 42655,
+      "blob": "eaf21d42dc203d22778cfec4f02eb9bc6d62c0fa",
+      "sha256": "3cb9951ac6c712fb5911ebf83598d1c81d62a6fa6aa9bd03dc6c2df745e3a420"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CapturedProcess.ts",
+      "bytes": 11502,
+      "blob": "c3670e3828e2b9470a2997d29d6cad225107d8fc",
+      "sha256": "ccf4bd25cb828b6ea08b437337552f7a8d662dd49fb6aeabb2d7af4d9c29897f"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+      "bytes": 9039,
+      "blob": "a2158e62d439c0ee0b29ffd28df64cf848cee99f",
+      "sha256": "5a7e5ab19c9f486c21e518c117c2637e0125b38f7ef2850ee6e1295bbad2123d"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts",
+      "bytes": 10051,
+      "blob": "e6861511417070c9202458253a16a3ffb20216ae",
+      "sha256": "77cb82d6c1938b3f858b4b65484c9ab123ec6b0c8e4bab2c20793b6708f51c08"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "bytes": 8310,
+      "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/RuntimeSourceNativeVersion.ts",
+      "bytes": 6458,
+      "blob": "5c3e39fa4f77c9534625396204df6cc68e108170",
+      "sha256": "3d5172989237fdf15827d2116af71e395de0ca58d0d95070c5d258dd25d99e04"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "bytes": 456,
+      "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.test.json",
+      "bytes": 174,
+      "blob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+      "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356"
+    },
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "bytes": 51981,
+      "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+      "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f"
+    }
+  ],
+  "selectedSourceLimit": "13 exact immutable interpretation/command/test leaves, not a claimed full Host source census or archived source freeze. Original workflow HEAD and final source assertions bind the actual run.",
+  "reporters": [
+    {
+      "name": "host-contracts",
+      "tests": 167,
+      "pass": 165,
+      "skip": 2,
+      "fail": 0,
+      "cancel": 0
+    },
+    {
+      "name": "protocol",
+      "files": 3,
+      "tests": 54,
+      "pass": 54,
+      "skip": 0,
+      "fail": 0
+    },
+    {
+      "name": "retained-main",
+      "files": 8,
+      "tests": 81,
+      "pass": 81,
+      "skip": 0,
+      "fail": 0
+    },
+    {
+      "name": "posix-lifecycle",
+      "tests": 27,
+      "pass": 27,
+      "skip": 0,
+      "fail": 0,
+      "cancel": 0
+    }
+  ],
+  "totalAssertions": {
+    "tests": 329,
+    "pass": 327,
+    "skip": 2,
+    "fail": 0,
+    "cancel": 0
+  },
+  "physicalNegativeDiagnostics": [
+    {
+      "cleanupConfirmed": true,
+      "descendantAbsent": true,
+      "neighborPreserved": true
+    },
+    {
+      "cleanupConfirmed": false,
+      "descendantAbsent": true,
+      "neighborPreserved": true
+    }
+  ],
+  "physicalSemantics": "Ordered initial cleanupConfirmed true/false are intentional distinct original cases. In the parent-exited case, source requires descendant still present, creates its original release marker, then waits same custody true and asserts fresh ESRCH before publishing the earlier false diagnostic. Original neighbor stays alive until its finally cleanup. The separately mocked replacement-PGID case refuses TERM/KILL for reaped root; no forced PID reuse is claimed.",
+  "providerNameLimits": "The actual new standalone Claude/Codex rows use source-defined finite Node executables ending7 with TEST stderr/stdout, expect native session startup rejection and exact cleanup. Runtime-version cases use generated TEST shell executables; no real vendor/version qualification is inferred from case names or SDK warning.",
+  "sourceBuild": "Original build/types step9 SUCCESS and complete prerequisite step10 SUCCESS on exact head; no independent rebuild performed. Native Windows/Linux-specific gates are skipped here.",
+  "limits": [
+    "Receipt native is empty and all five broad qualification flags remain false",
+    "No Darwin registered-token/native executable admission/P09 qualification",
+    "No Desktop/packaged/real Claude/Codex/OpenCode or full migration PASS",
+    "No local project/native/provider/test/compiler/install/CI/ref operation by auditor"
+  ]
+}

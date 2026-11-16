@@ -1,0 +1,1800 @@
+{
+  "kind": "AUTHOR_ORIGINAL_E1_WINDOWS_STATIC_EVIDENCE_AUDIT",
+  "createdAt": "2026-11-16T06:43:10.110310+00:00",
+  "author": "/root/native_failures",
+  "independentR2": false,
+  "repository": "777genius/agent-teams-ai",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "runId": 43813731517,
+  "job": {
+    "id": 133120929105,
+    "name": "Static V01 source test (windows-2022)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43813731517,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Require immutable PR source HEAD",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Record exact current product commit",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Prove retry classification on the exact source HEAD",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Install pinned workspace dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Build Stage1 Host without launching providers",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Typecheck Host TEST contracts",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 12
+      },
+      {
+        "name": "Verify captured and native model variants through Host SPI",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13
+      },
+      {
+        "name": "Verify generation-preserving install and update policy",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 14
+      },
+      {
+        "name": "Execute V2 static preflight, current-main lock and FIFO negatives",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15
+      },
+      {
+        "name": "Native V1 baseline and latest Host compatibility (Linux TEST)",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Preserve native V1 version evidence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 32
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 33
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 34
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 35
+      }
+    ]
+  },
+  "originals": {
+    "fullRawLog": {
+      "path": "native-audit-E1e1d14b/job-133120929105.log",
+      "bytes": 105062,
+      "gitBlob": "b2e35a364b357a09cbde6bd8a5998d930684bbab",
+      "sha256": "2be17c99501fc1a105d04018ed556203eddc63162a0085ba24dd4b5f36c05c99"
+    },
+    "fullOriginalMcpResponse": {
+      "path": "native-audit-E1e1d14b/job-133120929105-original-response.json",
+      "bytes": 108967,
+      "gitBlob": "e88bf45a79794a2864dc996a97cff8bd3989fdcb",
+      "sha256": "d5cd8c8eb58bd3b081fd85ba7e1c313ad619e5fd1eca83f8a479c6bdccebf2a1"
+    },
+    "terminalJobsResponse": {
+      "path": "ci-e1d14b/owned-v2-jobs-response-0641.json",
+      "bytes": 29824,
+      "gitBlob": "27a2612a00d53fb9f7ab75078c6b6a1f10a9723e",
+      "sha256": "1de993ac02abf93a55ef2430188701e62be1a98845e542b1055a465ee3f819ab"
+    },
+    "mcpStructuredUtf8ExactlyEqualsRaw": true,
+    "rawLines": 1131
+  },
+  "sourceAndRuntime": {
+    "mainCheckoutHeadRows": [
+      {
+        "line": 45,
+        "text": "  ref: e1d14b9cd0fa1d7896b58e513f9040639e9e4940"
+      },
+      {
+        "line": 102,
+        "text": "[command]\"C:\\Program Files\\Git\\bin\\git.exe\" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin e1d14b9cd0fa1d7896b58e513f9040639e9e4940"
+      },
+      {
+        "line": 104,
+        "text": " * branch            e1d14b9cd0fa1d7896b58e513f9040639e9e4940 -> FETCH_HEAD"
+      },
+      {
+        "line": 105,
+        "text": "[command]\"C:\\Program Files\\Git\\bin\\git.exe\" rev-parse --verify --quiet e1d14b9cd0fa1d7896b58e513f9040639e9e4940^{object}"
+      },
+      {
+        "line": 106,
+        "text": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940"
+      },
+      {
+        "line": 113,
+        "text": "[command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force e1d14b9cd0fa1d7896b58e513f9040639e9e4940"
+      },
+      {
+        "line": 204,
+        "text": "Note: switching to 'e1d14b9cd0fa1d7896b58e513f9040639e9e4940'."
+      },
+      {
+        "line": 224,
+        "text": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940"
+      },
+      {
+        "line": 260,
+        "text": "  EXPECTED_PR_HEAD: e1d14b9cd0fa1d7896b58e513f9040639e9e4940"
+      }
+    ],
+    "immutableHeadCheck": [
+      {
+        "line": 255,
+        "text": "test \"$(git rev-parse HEAD)\" = \"$EXPECTED_PR_HEAD\""
+      }
+    ],
+    "node": {
+      "line": 427,
+      "text": "node: v24.21.0"
+    },
+    "pnpm": {
+      "line": 723,
+      "text": "Done in 36s using pnpm v11.22.0"
+    },
+    "profile": "node-ci",
+    "electronSkipBinaryDownload": "1",
+    "observedInstall": "Original install wrapper completed with frozen-lockfile source contract and reported lockfile already up to date. No install or project execution was performed by this reviewer.",
+    "currentProductLock": {
+      "separateCheckout": ".current-product-lock",
+      "requestedRef": "main",
+      "observedCommit": "d9ac4a9b0bc652c813761e5e14fdb78e949b94aa",
+      "observedRawRows": [
+        {
+          "line": 341,
+          "text": "d9ac4a9b0bc652c813761e5e14fdb78e949b94aa"
+        },
+        {
+          "line": 377,
+          "text": "d9ac4a9b0bc652c813761e5e14fdb78e949b94aa"
+        }
+      ],
+      "actualCurrentMainCase": {
+        "line": 1046,
+        "text": "✔ V2 current-main live checkout never inherits a TEST-only historical candidate (0.5048ms)"
+      },
+      "byteQualification": "The original log records the independent current-main checkout and the original case PASS. This report does not reconstruct or independently hash that moving checkout runtime.lock.json; it is not the primary source HEAD."
+    }
+  },
+  "exactOriginalCommands": [
+    {
+      "name": "retry-policy",
+      "jobStep": 9,
+      "command": "node --test test/scripts/installDependenciesWithRetry.test.mjs",
+      "rawCommandLine": 441,
+      "rawEndLineExclusive": 464,
+      "workflowLiteralExact": true,
+      "apiConclusion": "success",
+      "reporterSummary": [
+        {
+          "line": 456,
+          "text": "ℹ tests 7"
+        },
+        {
+          "line": 457,
+          "text": "ℹ suites 0"
+        },
+        {
+          "line": 458,
+          "text": "ℹ pass 7"
+        },
+        {
+          "line": 459,
+          "text": "ℹ fail 0"
+        },
+        {
+          "line": 460,
+          "text": "ℹ cancelled 0"
+        },
+        {
+          "line": 461,
+          "text": "ℹ skipped 0"
+        },
+        {
+          "line": 462,
+          "text": "ℹ todo 0"
+        },
+        {
+          "line": 463,
+          "text": "ℹ duration_ms 401.1544"
+        }
+      ],
+      "reportedCases": [
+        {
+          "line": 449,
+          "text": "✔ original frozen install retains its lockfile and selects only the explicit serial lifecycle option (211.7788ms)"
+        },
+        {
+          "line": 450,
+          "text": "✔ unknown or duplicate frozen-install options refuse before any TEST installer is allocated (92.493ms)"
+        },
+        {
+          "line": 451,
+          "text": "✔ long unfinished engine warning does not turn a transient 503 into a terminal failure (1.1725ms)"
+        },
+        {
+          "line": 452,
+          "text": "✔ next fatal engine line is not masked by a prior long warning (0.2182ms)"
+        },
+        {
+          "line": 453,
+          "text": "✔ 404 marker fragmented across chunks within one stream is terminal (0.179ms)"
+        },
+        {
+          "line": 454,
+          "text": "✔ separate output streams cannot fabricate a 404 marker (0.2136ms)"
+        },
+        {
+          "line": 455,
+          "text": "✔ whole-output classifier distinguishes long warning from fatal engine (0.2789ms)"
+        }
+      ],
+      "result": {
+        "total": 7,
+        "pass": 7,
+        "fail": 0,
+        "skip": 0,
+        "cancel": 0
+      }
+    },
+    {
+      "name": "install",
+      "jobStep": 10,
+      "command": "node ./scripts/ci/install-dependencies-with-retry.mjs",
+      "rawCommandLine": 464,
+      "rawEndLineExclusive": 724,
+      "workflowLiteralExact": true,
+      "apiConclusion": "success"
+    },
+    {
+      "name": "Host-build",
+      "jobStep": 11,
+      "command": "pnpm --filter @agent-teams/legacy-agent-host build",
+      "rawCommandLine": 724,
+      "rawEndLineExclusive": 735,
+      "workflowLiteralExact": true,
+      "apiConclusion": "success"
+    },
+    {
+      "name": "Host-test-types",
+      "jobStep": 12,
+      "command": "pnpm --filter @agent-teams/legacy-agent-host typecheck:test",
+      "rawCommandLine": 735,
+      "rawEndLineExclusive": 744,
+      "workflowLiteralExact": true,
+      "apiConclusion": "success"
+    },
+    {
+      "name": "model-variants",
+      "jobStep": 13,
+      "command": "node --test packages/legacy-agent-host/tests/opencode-v2-model-variant.test.ts packages/legacy-agent-host/tests/opencode-v2-model-variant-spi.test.ts",
+      "rawCommandLine": 744,
+      "rawEndLineExclusive": 803,
+      "workflowLiteralExact": true,
+      "apiConclusion": "success",
+      "reporterSummary": [
+        {
+          "line": 795,
+          "text": "ℹ tests 41"
+        },
+        {
+          "line": 796,
+          "text": "ℹ suites 0"
+        },
+        {
+          "line": 797,
+          "text": "ℹ pass 41"
+        },
+        {
+          "line": 798,
+          "text": "ℹ fail 0"
+        },
+        {
+          "line": 799,
+          "text": "ℹ cancelled 0"
+        },
+        {
+          "line": 800,
+          "text": "ℹ skipped 0"
+        },
+        {
+          "line": 801,
+          "text": "ℹ todo 0"
+        },
+        {
+          "line": 802,
+          "text": "ℹ duration_ms 701.486"
+        }
+      ],
+      "reportedCases": [
+        {
+          "line": 752,
+          "text": "✔ 2.0.0 Host accepts equivalent variant undefined / default without replay (28.812ms)"
+        },
+        {
+          "line": 753,
+          "text": "✔ 2.0.0 Host accepts equivalent variant default / null without replay (19.9061ms)"
+        },
+        {
+          "line": 754,
+          "text": "✔ 2.0.0 Host accepts equivalent variant high / high without replay (20.0785ms)"
+        },
+        {
+          "line": 755,
+          "text": "✔ 2.0.21 Host accepts equivalent variant undefined / default without replay (19.346ms)"
+        },
+        {
+          "line": 756,
+          "text": "✔ 2.0.21 Host accepts equivalent variant default / null without replay (19.3371ms)"
+        },
+        {
+          "line": 757,
+          "text": "✔ 2.0.21 Host accepts equivalent variant high / high without replay (20.2083ms)"
+        },
+        {
+          "line": 758,
+          "text": "✔ Host rejects non-default or malformed owner variant undefined before context mutation (5.2402ms)"
+        },
+        {
+          "line": 759,
+          "text": "✔ Host rejects non-default or malformed owner variant  before context mutation (4.1303ms)"
+        },
+        {
+          "line": 760,
+          "text": "✔ Host rejects non-default or malformed owner variant [object Object] before context mutation (4.5962ms)"
+        },
+        {
+          "line": 761,
+          "text": "✔ Host rejects non-default or malformed owner variant default before context mutation (5.178ms)"
+        },
+        {
+          "line": 762,
+          "text": "✔ Host rejects non-default or malformed owner variant high before context mutation (4.1395ms)"
+        },
+        {
+          "line": 763,
+          "text": "✔ Host rejects variant change during initial context PUT (undefined -> high) (6.7386ms)"
+        },
+        {
+          "line": 764,
+          "text": "✔ Host revokes an admitted variant change on re-attestation (undefined -> high) (12.0262ms)"
+        },
+        {
+          "line": 765,
+          "text": "✔ Host rejects variant change during initial context PUT (high -> default) (7.1054ms)"
+        },
+        {
+          "line": 766,
+          "text": "✔ Host revokes an admitted variant change on re-attestation (high -> default) (12.2008ms)"
+        },
+        {
+          "line": 767,
+          "text": "✔ Host rejects variant change during initial context PUT (high -> low) (7.1821ms)"
+        },
+        {
+          "line": 768,
+          "text": "✔ Host revokes an admitted variant change on re-attestation (high -> low) (12.1929ms)"
+        },
+        {
+          "line": 769,
+          "text": "✔ V2 variant readback accepts undefined / default (1.9048ms)"
+        },
+        {
+          "line": 770,
+          "text": "✔ V2 variant readback accepts undefined / null (1.0414ms)"
+        },
+        {
+          "line": 771,
+          "text": "✔ V2 variant readback accepts default / default (0.2152ms)"
+        },
+        {
+          "line": 772,
+          "text": "✔ V2 variant readback accepts default / null (0.1815ms)"
+        },
+        {
+          "line": 773,
+          "text": "✔ V2 variant readback accepts high / high (0.2679ms)"
+        },
+        {
+          "line": 774,
+          "text": "✔ V2 variant readback accepts low / low (0.159ms)"
+        },
+        {
+          "line": 775,
+          "text": "✔ V2 variant readback refuses undefined / undefined (0.1941ms)"
+        },
+        {
+          "line": 776,
+          "text": "✔ V2 variant readback refuses undefined / high (0.1547ms)"
+        },
+        {
+          "line": 777,
+          "text": "✔ V2 variant readback refuses high / null (0.1899ms)"
+        },
+        {
+          "line": 778,
+          "text": "✔ V2 variant readback refuses high / default (0.3664ms)"
+        },
+        {
+          "line": 779,
+          "text": "✔ V2 variant readback refuses high / low (0.2042ms)"
+        },
+        {
+          "line": 780,
+          "text": "✔ V2 variant readback refuses default / high (0.1702ms)"
+        },
+        {
+          "line": 781,
+          "text": "✔ V2 variant readback refuses high / HIGH (0.1442ms)"
+        },
+        {
+          "line": 782,
+          "text": "✔ V2 variant readback refuses undefined /  (0.1267ms)"
+        },
+        {
+          "line": 783,
+          "text": "✔ V2 variant readback refuses undefined /  default (0.141ms)"
+        },
+        {
+          "line": 784,
+          "text": "✔ V2 variant readback refuses undefined / 0 (0.1021ms)"
+        },
+        {
+          "line": 785,
+          "text": "✔ V2 variant readback refuses undefined / false (0.1241ms)"
+        },
+        {
+          "line": 786,
+          "text": "✔ V2 variant readback refuses undefined / [object Object] (0.1087ms)"
+        },
+        {
+          "line": 787,
+          "text": "✔ V2 variant readback refuses undefined /  (0.107ms)"
+        },
+        {
+          "line": 788,
+          "text": "✔ V2 variant readback refuses undefined / default (0.1032ms)"
+        },
+        {
+          "line": 789,
+          "text": "✔ V2 variant readback refuses high / high (0.0962ms)"
+        },
+        {
+          "line": 790,
+          "text": "✔ V2 variant readback refuses undefined / aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa (0.0677ms)"
+        },
+        {
+          "line": 791,
+          "text": "✔ V2 variant readback refuses bad"
+        },
+        {
+          "line": 794,
+          "text": "✔ V2 comparison neither coerces native values nor treats malformed capture as default (0.1599ms)"
+        }
+      ],
+      "result": {
+        "total": 41,
+        "pass": 41,
+        "fail": 0,
+        "skip": 0,
+        "cancel": 0
+      }
+    },
+    {
+      "name": "installer-policy",
+      "jobStep": 14,
+      "command": "pnpm exec vitest run test/features/opencode-runtime-installer/installPolicy.test.ts test/main/services/infrastructure/OpenCodeRuntimeInstallerService.test.ts",
+      "rawCommandLine": 803,
+      "rawEndLineExclusive": 825,
+      "workflowLiteralExact": true,
+      "apiConclusion": "success",
+      "reporterSummary": [
+        {
+          "line": 820,
+          "text": " Test Files  2 passed (2)"
+        },
+        {
+          "line": 821,
+          "text": "      Tests  189 passed (189)"
+        }
+      ],
+      "result": {
+        "files": 2,
+        "total": 189,
+        "pass": 189,
+        "fail": 0,
+        "skip": 0,
+        "cancel": 0
+      }
+    },
+    {
+      "name": "static-preflight",
+      "jobStep": 15,
+      "command": "node --test packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts",
+      "rawCommandLine": 825,
+      "rawEndLineExclusive": 1132,
+      "workflowLiteralExact": true,
+      "apiConclusion": "success",
+      "reporterSummary": [
+        {
+          "line": 1069,
+          "text": "ℹ tests 225"
+        },
+        {
+          "line": 1070,
+          "text": "ℹ suites 0"
+        },
+        {
+          "line": 1071,
+          "text": "ℹ pass 224"
+        },
+        {
+          "line": 1072,
+          "text": "ℹ fail 0"
+        },
+        {
+          "line": 1073,
+          "text": "ℹ cancelled 0"
+        },
+        {
+          "line": 1074,
+          "text": "ℹ skipped 1"
+        },
+        {
+          "line": 1075,
+          "text": "ℹ todo 0"
+        },
+        {
+          "line": 1076,
+          "text": "ℹ duration_ms 8748.4337"
+        }
+      ],
+      "reportedCases": [
+        {
+          "line": 834,
+          "text": "✔ receipt validator accepts a complete scoped TEST shape, not a vendor certificate (4.0566ms)"
+        },
+        {
+          "line": 835,
+          "text": "✔ receipt validator refuses missing or mismatched sourceHead (2.8811ms)"
+        },
+        {
+          "line": 836,
+          "text": "✔ receipt validator refuses missing or mismatched selectedCliVersion (0.7794ms)"
+        },
+        {
+          "line": 837,
+          "text": "✔ receipt validator refuses missing or mismatched nativeVersion (0.6835ms)"
+        },
+        {
+          "line": 838,
+          "text": "✔ receipt validator refuses missing or mismatched platform (0.7589ms)"
+        },
+        {
+          "line": 839,
+          "text": "✔ receipt validator refuses missing or mismatched status (0.7323ms)"
+        },
+        {
+          "line": 840,
+          "text": "✔ receipt validator refuses missing or mismatched cleanup (0.6103ms)"
+        },
+        {
+          "line": 841,
+          "text": "✔ receipt validator refuses missing or mismatched nativeDigest (0.6412ms)"
+        },
+        {
+          "line": 842,
+          "text": "✔ receipt validator refuses missing or mismatched nodeVersion (0.648ms)"
+        },
+        {
+          "line": 843,
+          "text": "✔ receipt validator refuses missing or mismatched wireProtocolRevision (0.8749ms)"
+        },
+        {
+          "line": 844,
+          "text": "✔ receipt validator refuses missing or mismatched modelRequests (0.8473ms)"
+        },
+        {
+          "line": 845,
+          "text": "✔ receipt validator refuses missing or mismatched coordination (0.853ms)"
+        },
+        {
+          "line": 846,
+          "text": "✔ receipt validator refuses missing or mismatched preferencesSelection (0.7848ms)"
+        },
+        {
+          "line": 847,
+          "text": "✔ receipt validator refuses missing or mismatched nativeIntegrity (0.666ms)"
+        },
+        {
+          "line": 848,
+          "text": "✔ receipt validator refuses missing or mismatched modelOrigin (0.6572ms)"
+        },
+        {
+          "line": 849,
+          "text": "✔ receipt validator refuses missing or mismatched releaseQualified (0.7473ms)"
+        },
+        {
+          "line": 850,
+          "text": "✔ receipt validator refuses missing or mismatched vendorAuthQualified (0.6254ms)"
+        },
+        {
+          "line": 851,
+          "text": "✔ receipt validator refuses missing or mismatched desktopQualified (0.631ms)"
+        },
+        {
+          "line": 852,
+          "text": "✔ receipt validator refuses missing or mismatched steps (0.6691ms)"
+        },
+        {
+          "line": 853,
+          "text": "✔ receipt validator refuses missing or mismatched hostSourceDigest (0.6291ms)"
+        },
+        {
+          "line": 854,
+          "text": "✔ receipt validator refuses missing or mismatched hostDistDigest (0.5854ms)"
+        },
+        {
+          "line": 855,
+          "text": "✔ receipt validator refuses missing or mismatched providerDigest (0.5912ms)"
+        },
+        {
+          "line": 856,
+          "text": "✔ receipt validator refuses missing or mismatched hosts (1.6209ms)"
+        },
+        {
+          "line": 857,
+          "text": "✔ receipt validator refuses reordered stages and unknown diagnostic data (1.049ms)"
+        },
+        {
+          "line": 858,
+          "text": "✔ baseline receipt requires actual managed-update evidence and the exact Electron binary (2.1264ms)"
+        },
+        {
+          "line": 859,
+          "text": "✔ managed update cannot conceal changed original pid (0.6021ms)"
+        },
+        {
+          "line": 860,
+          "text": "✔ managed update cannot conceal changed original birth (0.466ms)"
+        },
+        {
+          "line": 861,
+          "text": "✔ managed update cannot conceal changed original inode (0.4443ms)"
+        },
+        {
+          "line": 862,
+          "text": "✔ managed update cannot conceal changed original binarySha256 (0.5375ms)"
+        },
+        {
+          "line": 863,
+          "text": "✔ managed update cannot conceal changed original sessionSha256 (0.4271ms)"
+        },
+        {
+          "line": 864,
+          "text": "✔ managed update cannot conceal changed original runtimeStateSha256 (0.428ms)"
+        },
+        {
+          "line": 865,
+          "text": "✔ managed update cannot conceal changed original checkpointSha256 (0.4536ms)"
+        },
+        {
+          "line": 866,
+          "text": "✔ managed update cannot conceal changed original projectionSha256 (0.5888ms)"
+        },
+        {
+          "line": 867,
+          "text": "✔ managed update refuses unproved source (1.7606ms)"
+        },
+        {
+          "line": 868,
+          "text": "✔ managed update refuses unproved toVersion (0.354ms)"
+        },
+        {
+          "line": 869,
+          "text": "✔ managed update refuses unproved updatedBinarySha256 (0.4093ms)"
+        },
+        {
+          "line": 870,
+          "text": "✔ managed update refuses unproved newManifestSha256 (0.3977ms)"
+        },
+        {
+          "line": 871,
+          "text": "✔ managed update refuses unproved installerSourceSha256 (0.3743ms)"
+        },
+        {
+          "line": 872,
+          "text": "✔ managed update refuses unproved electronVersion (1.6969ms)"
+        },
+        {
+          "line": 873,
+          "text": "✔ managed update refuses unproved installerProcesses (0.4409ms)"
+        },
+        {
+          "line": 878,
+          "text": "✔ native V1 source admission rejects changed, staged and untracked relevant inputs (2013.3525ms)"
+        },
+        {
+          "line": 882,
+          "text": "✔ native source admission verifies local archives with colon-containing parents and installed bytes before and after execution (1740.2323ms)"
+        },
+        {
+          "line": 886,
+          "text": "✔ native V1 rebuild removes stale outputs and binds later execution to the emitted bytes (1202.7673ms)"
+        },
+        {
+          "line": 887,
+          "text": "✔ V2 refuses uninstalled captured role and workflow instructions before native access (6.6202ms)"
+        },
+        {
+          "line": 888,
+          "text": "✔ V2 rejects accessor-backed native owner methods before getter can forge policy (6.5891ms)"
+        },
+        {
+          "line": 889,
+          "text": "✔ V2 rejects Proxy native owner receivers and prototype chains before descriptor traps (1.2786ms)"
+        },
+        {
+          "line": 890,
+          "text": "✔ V2 rejects Proxy-wrapped Host and native owner callbacks before invoking their apply traps (0.8253ms)"
+        },
+        {
+          "line": 891,
+          "text": "✔ V2 accepts prototype data methods while retaining the original owner receiver (21.0797ms)"
+        },
+        {
+          "line": 892,
+          "text": "✔ V2 policy getter cannot swap native permission or cleanup callbacks before capture (8.187ms)"
+        },
+        {
+          "line": 893,
+          "text": "✔ V2 rejects forged per-function bind even when a fake reader reports DENY (9.0267ms)"
+        },
+        {
+          "line": 894,
+          "text": "✔ V2 owner callback metadata cannot mutate permissions or physical stop during capture (110.0516ms)"
+        },
+        {
+          "line": 895,
+          "text": "✔ V2 Host authority function metadata cannot substitute a revoked allocation lease (6.0311ms)"
+        },
+        {
+          "line": 896,
+          "text": "✔ V2 Host refuses truthy non-boolean lease results before any native admission (9.9789ms)"
+        },
+        {
+          "line": 897,
+          "text": "✔ V2 rejects accessor-backed Host authority without executing the getter (0.339ms)"
+        },
+        {
+          "line": 898,
+          "text": "✔ V2 owner policy getter cannot replace captured Host authority callbacks (1.7614ms)"
+        },
+        {
+          "line": 899,
+          "text": "✔ V2 admission cannot accept forged permission readback swapped during owner probe (8.2043ms)"
+        },
+        {
+          "line": 900,
+          "text": "✔ V2 owner method binding retains receiver but cannot launder mutable helper policy (8.9417ms)"
+        },
+        {
+          "line": 901,
+          "text": "✔ V2 admission never follows a replaced native credential callback (104.8163ms)"
+        },
+        {
+          "line": 902,
+          "text": "✔ V2 never coerces an untrusted native credential into HTTP Basic authorization (30.6066ms)"
+        },
+        {
+          "line": 903,
+          "text": "✔ V2 profile is explicit and cannot inherit V1 plugin, auto-permission, argv or version (14.8866ms)"
+        },
+        {
+          "line": 904,
+          "text": "✔ native profiles use their own OS while V2 keeps canonical path checks (2.4109ms)"
+        },
+        {
+          "line": 905,
+          "text": "✔ corrected private V2 driver accepts canonical Windows TEST profile after captured owner proof (19.1153ms)"
+        },
+        {
+          "line": 906,
+          "text": "✔ V2 team capture preserves implicit recipe model but rejects unqualified explicit choice (4.8566ms)"
+        },
+        {
+          "line": 907,
+          "text": "✔ V2 launch rejects unproven model/variant changes and V1 permission modes (4.7012ms)"
+        },
+        {
+          "line": 908,
+          "text": "✔ V1 factory refuses a generation-selected V2 member before starting a server (0.8546ms)"
+        },
+        {
+          "line": 909,
+          "text": "✔ V2 adapter rejects V1, unsupported versions and V1 plugin before owner access (1.1954ms)"
+        },
+        {
+          "line": 910,
+          "text": "✔ V2 rejects foreign Host request and MCP endpoint capture before native owner access (0.6013ms)"
+        },
+        {
+          "line": 911,
+          "text": "✔ V2 owner policy getter cannot replace validated Host request and profile (0.7635ms)"
+        },
+        {
+          "line": 912,
+          "text": "✔ ready V2 Host revokes on selected profile or initial instructions drift (37.2693ms)"
+        },
+        {
+          "line": 913,
+          "text": "✔ inherited OPENCODE_BIN_PATH refuses V2 admission before owner access (1.6379ms)"
+        },
+        {
+          "line": 914,
+          "text": "✔ lowercase inherited V2 executable override refuses admission before owner access (1.4995ms)"
+        },
+        {
+          "line": 915,
+          "text": "✔ inherited OPENCODE_BIN_PATH appearing after readiness permanently revokes V2 owner (20.0263ms)"
+        },
+        {
+          "line": 916,
+          "text": "✔ lowercase inherited override appearing after readiness permanently retires V2 custody (18.0118ms)"
+        },
+        {
+          "line": 917,
+          "text": "✔ native V2 credentials cannot authorize a request after synchronous owner environment drift (41.4499ms)"
+        },
+        {
+          "line": 918,
+          "text": "✔ V2 refuses blank and control-bearing native credentials before any HTTP request (151.8133ms)"
+        },
+        {
+          "line": 919,
+          "text": "✔ V2 private SPI refuses mismatched request before native probe and credentials (2.9173ms)"
+        },
+        {
+          "line": 920,
+          "text": "✔ V2 native probe failure HOLDs without submission and physically stops its owner (10.2796ms)"
+        },
+        {
+          "line": 921,
+          "text": "✔ V2 rejects truthy non-boolean native probe receipts without credentials or mutation (14.0585ms)"
+        },
+        {
+          "line": 922,
+          "text": "✔ V2 TEST-owned probe uses existing Session SPI; stop is idempotent and revokes readiness (40.5584ms)"
+        },
+        {
+          "line": 923,
+          "text": "✔ V2 read-only native instruction drift revokes readiness without replaying the initial PUT (77.8197ms)"
+        },
+        {
+          "line": 924,
+          "text": "✔ V2 rejects mutually matching malformed custody digests before native owner access (0.6635ms)"
+        },
+        {
+          "line": 925,
+          "text": "✔ V2 rejects array-coerced SHA256 before touching owner policy (0.3357ms)"
+        },
+        {
+          "line": 926,
+          "text": "✔ actual native custody must match captured executable, digest, protocol and physical PID (72.3164ms)"
+        },
+        {
+          "line": 927,
+          "text": "✔ a reused mutable custody readback cannot hide a native PID or binary swap (36.8559ms)"
+        },
+        {
+          "line": 928,
+          "text": "✔ post-instruction custody getter cannot hide transient Host lease revocation (15.2078ms)"
+        },
+        {
+          "line": 929,
+          "text": "✔ V2 rejects getter-backed native executable digests before the first mutation (7.1043ms)"
+        },
+        {
+          "line": 930,
+          "text": "✔ V2 permission readbacks must bind to the captured session and process before and after context PUT (124.9693ms)"
+        },
+        {
+          "line": 931,
+          "text": "✔ V2 readmission rejects a changed native workspace without replaying context (16.915ms)"
+        },
+        {
+          "line": 932,
+          "text": "✔ V2 Host revokes a ready capture when the actual PID/start identity changes (15.9977ms)"
+        },
+        {
+          "line": 933,
+          "text": "✔ native permission drift revokes an already ready V2 SPI member, with no replay (15.0432ms)"
+        },
+        {
+          "line": 934,
+          "text": "✔ V2 Host snapshots request and endpoint identity across native admission callbacks (9.5459ms)"
+        },
+        {
+          "line": 935,
+          "text": "✔ V2 Host detects endpoint binding mutation even when native ACK echoes original capture (6.2533ms)"
+        },
+        {
+          "line": 936,
+          "text": "✔ native probe loss after initial Host readiness revokes the capture permanently (12.4543ms)"
+        },
+        {
+          "line": 937,
+          "text": "✔ lost Host lifetime authority during recheck cannot resurrect cached V2 readiness (10.5826ms)"
+        },
+        {
+          "line": 938,
+          "text": "✔ throwing Host lifetime guard permanently revokes a ready V2 native owner (12.6145ms)"
+        },
+        {
+          "line": 939,
+          "text": "✔ transient authority loss observed without native recheck cannot revive V2 readiness (10.2661ms)"
+        },
+        {
+          "line": 940,
+          "text": "✔ admitted V2 readiness and rechecks never reacquire the Runtime allocation fence (24.1542ms)"
+        },
+        {
+          "line": 941,
+          "text": "✔ V2 Host re-attests native provider, model and variant without replaying context (44.8344ms)"
+        },
+        {
+          "line": 942,
+          "text": "✔ V2 Host admits only the explicitly captured native variant (24.9323ms)"
+        },
+        {
+          "line": 943,
+          "text": "✔ policy relaxed during native instructions cannot pass final Host admission (6.9671ms)"
+        },
+        {
+          "line": 944,
+          "text": "✔ PID changed during native instructions cannot inherit initial-context authority (16.2591ms)"
+        },
+        {
+          "line": 945,
+          "text": "✔ V2 native-effective allow cannot satisfy captured deny, even after a successful native probe (8.0009ms)"
+        },
+        {
+          "line": 946,
+          "text": "✔ V2 revoked Host lease cannot read a checkpoint after async configuration selection (2.4182ms)"
+        },
+        {
+          "line": 947,
+          "text": "✔ V2 cold restore retains the original Host checkpoint reader across native policy mutation (25.1989ms)"
+        },
+        {
+          "line": 948,
+          "text": "✔ V2 native probe cannot replace the captured Host progress revocation callback (14.3082ms)"
+        },
+        {
+          "line": 949,
+          "text": "✔ V2 cold checkpoint compatibility survives a new generation but never a foreign member (30.5163ms)"
+        },
+        {
+          "line": 950,
+          "text": "✔ V2 cold checkpoint rejects foreign tenant, project, account, workspace, backend and endpoint (26.2971ms)"
+        },
+        {
+          "line": 951,
+          "text": "✔ V1 checkpoint identity is rejected before V2 native probe or permission readback (2.91ms)"
+        },
+        {
+          "line": 952,
+          "text": "✔ native V2 submit preflight failure revokes Host readiness without replay or second owner stop (21.5294ms)"
+        },
+        {
+          "line": 953,
+          "text": "✔ pinned PR2 V2 driver refuses sync-only native log before prompt (HOLD) (75.0881ms)"
+        },
+        {
+          "line": 954,
+          "text": "✔ unknown physical stop after a failed V2 submit cannot claim safe reuse (36.8497ms)"
+        },
+        {
+          "line": 955,
+          "text": "✔ unknown physical cleanup on failed V2 open does not become a retryable success (3.0828ms)"
+        },
+        {
+          "line": 956,
+          "text": "✔ mutable owner cannot downgrade an already captured deny to ask (6.687ms)"
+        },
+        {
+          "line": 957,
+          "text": "✔ V2 ASK admission holds when persisted project grants are not attested (5.1553ms)"
+        },
+        {
+          "line": 958,
+          "text": "✔ V2 product ASK admits a stricter attested native DENY without a saved-grant bypass (9.5386ms)"
+        },
+        {
+          "line": 959,
+          "text": "✔ native instructions are not treated as installed when identity attestation is wrong (6.3828ms)"
+        },
+        {
+          "line": 960,
+          "text": "✔ lost native V2 initial-context ACK cannot replay a write or conceal UNKNOWN cleanup (13.1752ms)"
+        },
+        {
+          "line": 961,
+          "text": "✔ hung native stop ACK is bounded, never re-signalled or treated as clean (2011.4297ms)"
+        },
+        {
+          "line": 962,
+          "text": "✔ a stuck native physical readback cannot fabricate cleanup success (2010.452ms)"
+        },
+        {
+          "line": 963,
+          "text": "✔ cleanup retries only read-only physical confirmation after uncertain stop ACK (1.9536ms)"
+        },
+        {
+          "line": 964,
+          "text": "✔ V2 refuses truthy non-boolean physical stop evidence after failed admission (2.665ms)"
+        },
+        {
+          "line": 965,
+          "text": "✔ sealing a ready V2 capture initiates its own physical stop before explicit cleanup (11.401ms)"
+        },
+        {
+          "line": 966,
+          "text": "✔ initial native probe ignoring abort cannot strand Host open (5.2874ms)"
+        },
+        {
+          "line": 967,
+          "text": "✔ native re-attestation ignoring abort releases the readiness fence (1018.621ms)"
+        },
+        {
+          "line": 968,
+          "text": "✔ sealing aborts an in-flight V2 native probe before permission or context installation (3.4134ms)"
+        },
+        {
+          "line": 969,
+          "text": "✔ initial native V2 readiness cannot ACK after progress revokes Host authority (8.5524ms)"
+        },
+        {
+          "line": 970,
+          "text": "✔ late native readiness ACK cannot restore revoked Host authority or hide UNKNOWN cleanup (31.6056ms)"
+        },
+        {
+          "line": 971,
+          "text": "✔ retained V2 driver handle cannot mutate or checkpoint after Host seal (9.6264ms)"
+        },
+        {
+          "line": 972,
+          "text": "✔ trusted closing capability retains one settled checkpoint after public V2 handles are sealed (9.4363ms)"
+        },
+        {
+          "line": 973,
+          "text": "✔ a revoked V2 capture cannot retain a closing checkpoint for a later lease (8.6849ms)"
+        },
+        {
+          "line": 974,
+          "text": "✔ V2 owner cleanup never follows replaced process-stop or confirmation callbacks (9.3506ms)"
+        },
+        {
+          "line": 975,
+          "text": "✔ V2 owner cleanup callbacks remain pinned when swapped during native admission (9.7385ms)"
+        },
+        {
+          "line": 976,
+          "text": "✔ retained V2 controls surface UNKNOWN process custody, never re-signal (9.7669ms)"
+        },
+        {
+          "line": 977,
+          "text": "✔ buffered private V2 terminal never escapes a revoked Host observer (18.7751ms)"
+        },
+        {
+          "line": 978,
+          "text": "✔ direct V2 SPI close retires its TEST owner without a separate Host cleanup call (18.336ms)"
+        },
+        {
+          "line": 979,
+          "text": "✔ consumer cancel before first V2 observation retires the unclaimable native session (8.5337ms)"
+        },
+        {
+          "line": 980,
+          "text": "✔ consumer cancel wakes a suspended native V2 next without Host seal (17.3331ms)"
+        },
+        {
+          "line": 981,
+          "text": "✔ consumer observer cancel reports uncertain physical native cleanup (9.086ms)"
+        },
+        {
+          "line": 982,
+          "text": "✔ consumer throw before first V2 observation retires its single-claim native owner (8.7286ms)"
+        },
+        {
+          "line": 983,
+          "text": "✔ consumer throw wakes pending V2 observation without leaking native ownership (10.6849ms)"
+        },
+        {
+          "line": 984,
+          "text": "✔ consumer throw cannot mask UNKNOWN physical native owner custody (8.8162ms)"
+        },
+        {
+          "line": 985,
+          "text": "✔ Host seal wakes a suspended native V2 observer without delivering a late event (10.5519ms)"
+        },
+        {
+          "line": 986,
+          "text": "✔ idle observer revokes an expired native V2 lease without seal or native events (273.1196ms)"
+        },
+        {
+          "line": 987,
+          "text": "✔ late executable alias during a suspended V2 native probe cannot renew authority (24.2865ms)"
+        },
+        {
+          "line": 988,
+          "text": "✔ native progress callback cannot expose a V2 lease before its own admission fence settles (18.5246ms)"
+        },
+        {
+          "line": 989,
+          "text": "✔ pending native V2 re-attestation fences concurrent controls without retiring owner (22.4887ms)"
+        },
+        {
+          "line": 990,
+          "text": "✔ active native V2 polling drains before re-attestation and close preserves known cleanup (174.0605ms)"
+        },
+        {
+          "line": 991,
+          "text": "✔ active native V2 polling drains before re-attestation and revoked preserves known cleanup (155.6008ms)"
+        },
+        {
+          "line": 992,
+          "text": "✔ active native V2 polling drains before re-attestation and observer-return preserves known cleanup (140.2641ms)"
+        },
+        {
+          "line": 993,
+          "text": "✔ private V2 driver refuses drive-relative Windows cwd before network access (1.6074ms)"
+        },
+        {
+          "line": 994,
+          "text": "✔ late native prompt ACK stays UNKNOWN when re-attestation waits for its request or Host seals (65.9874ms)"
+        },
+        {
+          "line": 995,
+          "text": "✔ V2 observer abandonment finalizes after rejected private close for return and throw (0.5264ms)"
+        },
+        {
+          "line": 996,
+          "text": "✔ revoked V2 inner native observer finalizes despite rejected feed close (0.2475ms)"
+        },
+        {
+          "line": 997,
+          "text": "✔ V2 rejects forged native permission envelopes before and after initial context PUT (21.4102ms)"
+        },
+        {
+          "line": 998,
+          "text": "✔ V2 refuses forged native custody envelopes before and after context installation (20.9669ms)"
+        },
+        {
+          "line": 999,
+          "text": "✔ V2 rejects forged native initial-context ACK before final policy readback (23.7153ms)"
+        },
+        {
+          "line": 1000,
+          "text": "✔ V2 observation revocation waits detach listeners on repeated native events (4.1774ms)"
+        },
+        {
+          "line": 1001,
+          "text": "✔ V2 observation revocation waits consume errors and detach on failure (0.3529ms)"
+        },
+        {
+          "line": 1002,
+          "text": "✔ missing capture and leader with surviving group preserves the native process signal boundary (2.4945ms)"
+        },
+        {
+          "line": 1003,
+          "text": "✔ missing capture and live leader preserves the native process signal boundary (0.1931ms)"
+        },
+        {
+          "line": 1004,
+          "text": "✔ reused PID preserves the native process signal boundary (0.2198ms)"
+        },
+        {
+          "line": 1005,
+          "text": "✔ exited leader with surviving group preserves the native process signal boundary (0.2441ms)"
+        },
+        {
+          "line": 1006,
+          "text": "✔ absent leader and group without capture preserves the native process signal boundary (0.1789ms)"
+        },
+        {
+          "line": 1007,
+          "text": "✔ absent leader and group after capture preserves the native process signal boundary (0.1719ms)"
+        },
+        {
+          "line": 1008,
+          "text": "✔ captured live isolated process preserves the native process signal boundary (0.3518ms)"
+        },
+        {
+          "line": 1009,
+          "text": "✔ unreadable process identity never authorizes a signal (0.7559ms)"
+        },
+        {
+          "line": 1010,
+          "text": "✔ a failed native Host proof publishes only sanitized diagnostics and no raw paths (529.2439ms)"
+        },
+        {
+          "line": 1011,
+          "text": "✔ native receipt gate rejects forged digest, incomplete stages and cold restart uncertainty (3.0515ms)"
+        },
+        {
+          "line": 1012,
+          "text": "✔ receipt verifier CLI refuses lockfile-only artifacts with sanitized diagnostics (312.8567ms)"
+        },
+        {
+          "line": 1013,
+          "text": "✔ native V2 captured session readback cannot drift workspace or ordered permissions (0.5228ms)"
+        },
+        {
+          "line": 1014,
+          "text": "✔ native durable SSE proof accepts a bounded, owned and ordered history prefix (1.9184ms)"
+        },
+        {
+          "line": 1015,
+          "text": "✔ native durable SSE proof enforces frame-count budget with a distinct error (4.2505ms)"
+        },
+        {
+          "line": 1016,
+          "text": "✔ native durable SSE proof rejects foreign, incomplete and reordered events (1.3856ms)"
+        },
+        {
+          "line": 1017,
+          "text": "✔ cold native log proof compares retained event content, not only counts and watermark (1.9746ms)"
+        },
+        {
+          "line": 1018,
+          "text": "✔ raw native V2 variant readback cannot attest a missing or inherited default (0.5664ms)"
+        },
+        {
+          "line": 1019,
+          "text": "✔ request reservation survives await gap and prevents a probe from invalidating in-flight credentials (6.3637ms)"
+        },
+        {
+          "line": 1020,
+          "text": "✔ revocation cancels queued native requests and draining without renewing admission (1.8368ms)"
+        },
+        {
+          "line": 1021,
+          "text": "✔ normal close rejects queued admission and waits only for the original admitted body (0.9468ms)"
+        },
+        {
+          "line": 1022,
+          "text": "✔ normal close deadline cannot certify outstanding native request custody (0.7382ms)"
+        },
+        {
+          "line": 1023,
+          "text": "✔ selection: canonical JSON data remains a static candidate only (3.8903ms)"
+        },
+        {
+          "line": 1024,
+          "text": "✔ selection: required fields reject accessors without invoking them (0.7534ms)"
+        },
+        {
+          "line": 1025,
+          "text": "✔ selection: inherited fields and hidden fields are not JSON captures (0.3004ms)"
+        },
+        {
+          "line": 1026,
+          "text": "✔ selection: Proxy capture cannot counterfeit own data descriptors (0.2667ms)"
+        },
+        {
+          "line": 1027,
+          "text": "✔ current-product: canonical JSON data remains a static candidate only (0.93ms)"
+        },
+        {
+          "line": 1028,
+          "text": "✔ current-product: required fields reject accessors without invoking them (0.6991ms)"
+        },
+        {
+          "line": 1029,
+          "text": "✔ current-product: inherited fields and hidden fields are not JSON captures (0.3218ms)"
+        },
+        {
+          "line": 1030,
+          "text": "✔ current-product: Proxy capture cannot counterfeit own data descriptors (0.2647ms)"
+        },
+        {
+          "line": 1031,
+          "text": "✔ one captured selection survives source mutation during both manifest evaluations (0.6203ms)"
+        },
+        {
+          "line": 1032,
+          "text": "✔ selection: validates and returns one captured sourceCommit witness (0.5811ms)"
+        },
+        {
+          "line": 1033,
+          "text": "✔ selection: validates and returns one captured archive witness (0.3207ms)"
+        },
+        {
+          "line": 1034,
+          "text": "✔ selection: validates and returns one captured sha256 witness (0.2485ms)"
+        },
+        {
+          "line": 1035,
+          "text": "✔ selection: an invalid first witness is not replaced by a later valid read (0.413ms)"
+        },
+        {
+          "line": 1036,
+          "text": "✔ current-product: validates and returns one captured sourceCommit witness (0.2904ms)"
+        },
+        {
+          "line": 1037,
+          "text": "✔ current-product: validates and returns one captured archive witness (0.3527ms)"
+        },
+        {
+          "line": 1038,
+          "text": "✔ current-product: validates and returns one captured sha256 witness (0.3404ms)"
+        },
+        {
+          "line": 1039,
+          "text": "✔ current-product: an invalid first witness is not replaced by a later valid read (0.2711ms)"
+        },
+        {
+          "line": 1040,
+          "text": "✔ V2.0 creates a static candidate, never a native readiness/launch receipt (3.3956ms)"
+        },
+        {
+          "line": 1041,
+          "text": "✔ malformed top-level JSON captures HOLD without throwing or starting native work (0.4982ms)"
+        },
+        {
+          "line": 1042,
+          "text": "✔ V2 native session binding matches pinned private driver alphabet, not merely URL-safe IDs (1.1336ms)"
+        },
+        {
+          "line": 1043,
+          "text": "✔ driver version and runtime manifest qualification are separate gates (0.4384ms)"
+        },
+        {
+          "line": 1044,
+          "text": "✔ a current-main 2.1.4-only runtime lock cannot activate an older private V2 driver (0.5747ms)"
+        },
+        {
+          "line": 1045,
+          "text": "✔ V2 static candidate must match the current product release and exact delivery (0.9472ms)"
+        },
+        {
+          "line": 1046,
+          "text": "✔ V2 current-main live checkout never inherits a TEST-only historical candidate (0.5048ms)"
+        },
+        {
+          "line": 1047,
+          "text": "✔ the actual checkout keeps unqualified product engines behind the private driver gate (0.66ms)"
+        },
+        {
+          "line": 1048,
+          "text": "✔ no implicit V1 promotion, forged binary, endpoint, identity or missing native proof (0.8612ms)"
+        },
+        {
+          "line": 1049,
+          "text": "✔ V2 loopback endpoint validation accepts the top IANA TCP port without a verbose regex (0.4512ms)"
+        },
+        {
+          "line": 1050,
+          "text": "✔ missing or damaged platform delivery cannot be promoted to V2 candidate (0.3062ms)"
+        },
+        {
+          "line": 1051,
+          "text": "✔ V2 workspace bindings are lexically canonical on their selected host OS (1.0529ms)"
+        },
+        {
+          "line": 1052,
+          "text": "✔ V2 Windows workspace capture refuses device aliases and stream syntax (0.6038ms)"
+        },
+        {
+          "line": 1053,
+          "text": "✔ V2 static preflight refuses malformed JSON version lists and non-string binding captures (0.5838ms)"
+        },
+        {
+          "line": 1054,
+          "text": "✔ V2 delivery release and OS identity cannot be borrowed from another tuple (0.5752ms)"
+        },
+        {
+          "line": 1055,
+          "text": "✔ V2 preflight rejects one-element JSON arrays masquerading as trusted witnesses (0.3929ms)"
+        },
+        {
+          "line": 1056,
+          "text": "✔ V01 TEST-owned executable measurement hashes actual file bytes (not a caller-supplied observed string) (31.3606ms)"
+        },
+        {
+          "line": 1057,
+          "text": "﹣ V01 read-only measurement rejects a TEST-owned FIFO without blocking native preflight (0.3495ms) # POSIX FIFO only"
+        },
+        {
+          "line": 1058,
+          "text": "✔ V2.2 effective external-directory permission requires a FINAL universal guard (0.5393ms)"
+        },
+        {
+          "line": 1059,
+          "text": "✔ V2.2 later agent/wildcard rules cannot override captured external-directory ask/deny (0.3061ms)"
+        },
+        {
+          "line": 1060,
+          "text": "✔ V2.2 rejects unnormalized and V1-shaped permission captures without native effects (0.6582ms)"
+        },
+        {
+          "line": 1061,
+          "text": "✔ V2.2 rejects hidden and symbol rule fields absent from native JSON (0.2727ms)"
+        },
+        {
+          "line": 1062,
+          "text": "✔ V2.2 rejects non-enumerable required rule fields omitted by native JSON (0.2345ms)"
+        },
+        {
+          "line": 1063,
+          "text": "✔ V2.2 rejects accessor-backed native permission rules without executing getters (0.2369ms)"
+        },
+        {
+          "line": 1064,
+          "text": "✔ V2.2 throwing native permission envelopes fail closed without a Host exception (0.2554ms)"
+        },
+        {
+          "line": 1065,
+          "text": "✔ V2.2 untrusted Proxy cannot hide a trailing native ALLOW via a forged length descriptor (0.2415ms)"
+        },
+        {
+          "line": 1066,
+          "text": "✔ V2.2 native permission arrays cannot hide a later ALLOW with an iterator (0.3903ms)"
+        },
+        {
+          "line": 1067,
+          "text": "✔ V2.2 refuses inherited iterator and rule serialization overrides outside native JSON (0.5514ms)"
+        },
+        {
+          "line": 1068,
+          "text": "✔ V2 static preflight rejects throwing capture envelopes without crashing Host admission (0.5345ms)"
+        }
+      ],
+      "result": {
+        "total": 225,
+        "pass": 224,
+        "fail": 0,
+        "skip": 1,
+        "cancel": 0
+      }
+    }
+  ],
+  "aggregateReporterCounts": {
+    "total": 462,
+    "pass": 461,
+    "fail": 0,
+    "skip": 1,
+    "cancel": 0
+  },
+  "skip": {
+    "actual": {
+      "line": 1057,
+      "text": "﹣ V01 read-only measurement rejects a TEST-owned FIFO without blocking native preflight (0.3495ms) # POSIX FIFO only"
+    },
+    "sourcePath": "packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts",
+    "guard": "if (process.platform === 'win32') { t.skip('POSIX FIFO only'); return; }",
+    "scope": "POSIX FIFO negative unexecuted on this Windows lane; current-main live-lock case did execute."
+  },
+  "buildAndTypes": {
+    "actualApiSteps": [
+      11,
+      12
+    ],
+    "HostBuildBody": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json",
+    "ledgerPrebuildBody": "pnpm --filter @agent-teams/task-change-ledger build",
+    "HostTestTypecheckBody": "node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json",
+    "HostBuildInclude": [
+      "src/**/*.ts"
+    ],
+    "HostTestInclude": [
+      "tests/**/*.ts"
+    ],
+    "HostTestNoEmit": true,
+    "sourceTypeScriptDependency": "npm:typescript@7.0.2",
+    "freshSourceClosureReference": {
+      "path": "native-audit-E1e1d14b/host-source-E1e1d14b-git-audit.json",
+      "bytes": 164149,
+      "gitBlob": "f1b1e521612e44bf88d5d43ffe1039eda3ed094e",
+      "sha256": "d2c7c51237fc1d435035d2e70383215270accdf8534660dadbf52e9fd6c7691f"
+    },
+    "limits": "Observed original CI build/typecheck success. The separate 619-source Git census is a source inventory, not a complete emitted-output or installed-dependency byte census for this job."
+  },
+  "freshGitClaimInputs": [
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+      "bytes": 36309,
+      "sha256": "6db4370dc3ee5521847cef9c039f21bddfcfc412b6dabba49dda73585985996a"
+    },
+    {
+      "path": "package.json",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "bytes": 26839,
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "bytes": 956788,
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "bytes": 6946,
+      "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea"
+    },
+    {
+      "path": "runtime.lock.json",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+      "bytes": 6127,
+      "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87"
+    },
+    {
+      "path": "scripts/ci/install-dependencies-with-retry.mjs",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "cbf2463eb47d22c3d87d9eec001edad26dd68ff0",
+      "bytes": 5259,
+      "sha256": "c8dc0b63fc490fd5a9a1b4abf0631b66c30e1ccda2199094c86e49a6e250d01e"
+    },
+    {
+      "path": "test/scripts/installDependenciesWithRetry.test.mjs",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "c1c0232d09e5cd898d7acabcc48b87bab58f3c82",
+      "bytes": 4939,
+      "sha256": "3aab9d6568157c883993c43b8057193175e69c16c31129ce3867a14e686a8f00"
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "bytes": 12355,
+      "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "bytes": 456,
+      "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.test.json",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+      "bytes": 174,
+      "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356"
+    },
+    {
+      "path": "packages/task-change-ledger/package.json",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "0fac5843889e1b28d53712f353bce1b0bae855a4",
+      "bytes": 2714,
+      "sha256": "a0db21117b905b414e825862d8bc93cfe9280975c8b91e1afa6cca2e1570a132"
+    },
+    {
+      "path": "packages/task-change-ledger/tsconfig.json",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "ff7683dc99c69dbf8c884ba138382468c9c86314",
+      "bytes": 378,
+      "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c"
+    },
+    {
+      "path": "vitest.config.ts",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "bytes": 1187,
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-model-variant.test.ts",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "7d7b7bbb086db9ceafdbaf335d17a108c0d71248",
+      "bytes": 1610,
+      "sha256": "a2ee1cedc9025a4a0bb4a1219c497ff309ed1483e18a49af6a02e2c67cc85050"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-model-variant-spi.test.ts",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "88d5566ac11ac22a44148c531b71f38301ccb2b7",
+      "bytes": 7526,
+      "sha256": "a76782b2232e5d075a5030a1b7e81d615480d0b9f7ec4253d346442ff1255ecd"
+    },
+    {
+      "path": "test/features/opencode-runtime-installer/installPolicy.test.ts",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "d8ed1c1f27f2eb15ff9db5ad626d46644bbd8e3e",
+      "bytes": 19945,
+      "sha256": "ed3586db3673cd452ecb0b6c51db540ab6210a743aba295f5ab3e58de2130818"
+    },
+    {
+      "path": "test/main/services/infrastructure/OpenCodeRuntimeInstallerService.test.ts",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "06e69833aaf06daefd474aaeb93c6233f91f3c1f",
+      "bytes": 114010,
+      "sha256": "693db7ca0471e5143b45390500450ea2e809c9da1fd706ee681937e8a64a7481"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-static-preflight.test.ts",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "a346d346c617b8fb79192cd19970e7cde2e98854",
+      "bytes": 37133,
+      "sha256": "d0c5c343bb732f7c6d3063bc55edf2ad7e2431a14eb7c57dc99694e61d38844f"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-static-capture.test.ts",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "a30a60d6de1b6474e1d83333543c270533aaeadf",
+      "bytes": 7511,
+      "sha256": "04b83469c258cd180dc016a62d3e56216b7fcec170c2d6afa25557296a61f80c"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-host-spi.test.ts",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "de09aac5ead356339b87fcc568798f930067f1cc",
+      "bytes": 182299,
+      "sha256": "c3c736d96b9df0808b7841a593205afc2648a41f70e202b359244e756e9750da"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-receipt.test.mjs",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "f274129ad8a77bed3094e48e31cc50f37ba4d478",
+      "bytes": 19696,
+      "sha256": "c88b9eac003164e9ad2cbc5c8ef93e1b466dec295fe14c64062777975b449a09"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-native-process-guard.test.mjs",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "bc9914a072c9e8594e0b9c39fb6d8b4ab5c1c2fd",
+      "bytes": 1531,
+      "sha256": "70e3c228531051e6ed6f70b0a3a30ed2f796f3ba011dd4747de0d47e65333fb6"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-request-admission.test.ts",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "1fa5a98e0e05c1ea599a53dee39491d2c0d767ea",
+      "bytes": 4592,
+      "sha256": "5e8fd85821f44ccc16c40976ca1c9e7a1ff7f69a9e1acbdfe57618db34e4d988"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v1-version-receipt.test.ts",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "1983b2b0f01d772e6123d31af3561612fd16fe92",
+      "bytes": 6371,
+      "sha256": "e0a5c8ff31efcdbce6d8eb6cac62244ef8c1aef17af892c777efc63b1a08e761"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v1-version-source.test.ts",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "feba72a8eb93750884cadac1c85b50f2f52f7fc9",
+      "bytes": 8182,
+      "sha256": "01bd31f6654cfc338f689bc6b5023f960d33a691d44465eb91cbe11976027900"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/openCodeV2StaticPreflight.ts",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "e4ef669047f308bcb4378283d92a4064b3e3e062",
+      "bytes": 19050,
+      "sha256": "ce2b40432a29553b322e9e2b40b05a43ca620515e60d060194df72c7e5ccedff"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v1-version-source.ts",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "78cb6f0026821785b1d0c0c1ad21ddfe76cdaee4",
+      "bytes": 9765,
+      "sha256": "0ff252732bedb1807cf428370e41628922a4d719090f479a41f25117d7227979"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v1-version-runner.ts",
+      "commit": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+      "gitBlob": "27d0ce8d8972cee4b23030b4173108c37460f322",
+      "bytes": 7414,
+      "sha256": "37970ed47f71395a4ca39da840eda56559e68f5514134d900441ce272ed02e1e"
+    }
+  ],
+  "freshGitClaimInputCount": 28,
+  "qualificationLimits": [
+    "The two model-variant suites include synthetic owner callbacks through actual Host SPI; their native-named values do not constitute a native vendor invocation or native process custody certificate.",
+    "The V1 source-admission tests use finite TEST-owned repositories, tarballs and compiler fixtures. The Linux-only native V1 baseline/latest runner and its artifact-upload step were both skipped here.",
+    "No native V1 runner, embedded V2 manual/automatic job, HTTP/SPI Linux job, product Desktop journey, Windows P08, Darwin P09, Team 177/stderr 24, root dedicated-backend types, full renderer/main typed lint or release qualification transfers from this static leaf.",
+    "This Windows static workflow has no archive upload for its successful static results. Full original MCP response, raw log, terminal API and exact Git source definitions are the retained evidence.",
+    "No local project, compiler, provider, native executable, install or CI mutation was performed during this audit; all execution facts refer to the original GitHub job."
+  ]
+}

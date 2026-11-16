@@ -1,0 +1,43 @@
+{
+  "status": "prospective scratch only; no application or execution",
+  "sourceHead": "e1d14b9cd0fa1d7896b58e513f9040639e9e4940",
+  "path": "tools/owned-process-broker/debugServiceTest.h",
+  "preimage": {
+    "bytes": 9009,
+    "lines": 186,
+    "blob": "e17c33ba6a45d8a6471439907e50519af8d7338b",
+    "sha256": "f3c3fdcb5f6eaa729ff071574deb894078e15d9d5b7e786789b270b1c7d996c8"
+  },
+  "candidate": {
+    "bytes": 8822,
+    "lines": 182,
+    "blob": "952ed2d3436708addf656109dc513270ea33ce22",
+    "sha256": "cb3ed3eaebb0f59aa968a285ddd85522181292a289a9bed7c59a6adf0feabf65"
+  },
+  "patch": {
+    "bytes": 1543,
+    "lines": 33,
+    "blob": "58e02dcf66ad9a641ed9d33f16a8623114389fe4",
+    "sha256": "1e04a2ca9e1ef195873a79ee3574ed427a043f8c7c49a860abed66da6eff370c"
+  },
+  "delta": {
+    "added": 3,
+    "removed": 7
+  },
+  "scope": "Only TEST FD5 publication ordering. Existing same-thread memory row copied and ordinal retained, then one32-byte best-effort write before original ContinueDebugEvent. Old post-loop flush deleted.",
+  "outputBound": {
+    "maxOriginalRowsIncludingOverflow": 16,
+    "bytesPerRow": 32,
+    "maxPayloadBytes": 512,
+    "maxWriteAttempts": 16,
+    "previousMaxWriteAttempts": 1,
+    "newFiles": 0,
+    "newNativeProcessQueries": 0,
+    "newProcessActions": 0,
+    "newHandles": 0,
+    "newReleaseWaitsOrJoins": 0,
+    "newRetries": 0
+  },
+  "preserved": "All parser/qualifier/overflow/currentness/custody/exception decisions/FD4/cleanup/deadlines and other source/test/workflow bytes. No fixture correctness or performance result inferred.",
+  "validation": "Original resulting-source Windows x64 and ARM Process CI, complete existing Node and Electron gates; existing unchanged3-file protocol/context/events finite prerequisites. No local execution or manufactured portable RED."
+}
