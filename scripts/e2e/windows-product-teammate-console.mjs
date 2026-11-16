@@ -177,7 +177,9 @@ async function ownedStillAlive(before) {
   if (!before) return false;
   const now = await getProcess(before.pid);
   if (!now) return false;
-  if (now.creation !== before.creation) throw new Error('Original process PID was reused');
+  // A recycled numeric PID belongs to a different process: the original has exited.
+  // Never signal or wait for that unrelated successor.
+  if (now.creation !== before.creation) return false;
   return true;
 }
 
@@ -566,7 +568,10 @@ async function run() {
   });
   assert.equal(killedMain.status, 0, 'Actual Electron Main force-exit failed');
   let forceExitDescendantsRetired = false;
-  for (let attempt = 0; attempt < 100; attempt++) {
+  // Each Windows process lookup can itself take 15s. Bound elapsed time, not
+  // just retries, so a surviving descendant cannot consume the whole CI job.
+  const forceExitDeadline = Date.now() + 45_000;
+  while (Date.now() < forceExitDeadline) {
     if (!(await ownedStillAlive(forceExitMember)) &&
         !(await ownedStillAlive(forceExitHeldTool))) {
       forceExitDescendantsRetired = true;
