@@ -1,0 +1,118 @@
+{
+  "kind": "Original-N-terminal-raw-retention-only",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "observedAt": "2026-11-16 04:13:40 UTC",
+  "jobs": [
+    {
+      "runId": 43795234913,
+      "jobId": 133062439920,
+      "conclusion": "success",
+      "artifactId": 14196613192
+    },
+    {
+      "runId": 43795234721,
+      "jobId": 133062438856,
+      "conclusion": "success",
+      "artifactId": 14197046657
+    }
+  ],
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/new-terminal-0413/artifact-14196613192.zip",
+      "bytes": 1522684,
+      "gitBlob": "d9c2b646e9f49540e7779a1605db2ac5cac4e09b",
+      "sha256": "ebe2edcfa0ce9b684408155d9348cf6d83d7c3c0a7c47e2a4963a404bae99065"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/new-terminal-0413/v2Artifacts-original-response.json",
+      "bytes": 5853,
+      "gitBlob": "53550ed4522464e3ccf84d45a643b22540e93e9b",
+      "sha256": "dc45d647ab7bc278680061e2bedcb6d6b94fdcc2e24fffa1ee37cb13e2efd6e0"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/new-terminal-0413/processLinuxLog-original-response.json",
+      "bytes": 140903,
+      "gitBlob": "80778e952838e666c64c675656ee33ab6b677bc5",
+      "sha256": "f5e768f7fa38322334351eb0321a6d7f88d074c9699f5e6ae1bf035fc4206f7e"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/new-terminal-0413/httpLog-original-response.json",
+      "bytes": 76191,
+      "gitBlob": "4a41e3363705112e9da434f6f64ae284f6208167",
+      "sha256": "e66b23b06b23324aa2d35e051368d0a0eeb9294b989cea92b17ffff6e587f0e5"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/new-terminal-0413/job-133062439920.log",
+      "bytes": 133872,
+      "gitBlob": "b048300df3438322dde9746378079704671affd8",
+      "sha256": "81dfd53ed34af94a997eb5446e5229ff71ef8dd2fd9928f612e164e9c6781b4b"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/new-terminal-0413/processArtifacts-original-response.json",
+      "bytes": 5082,
+      "gitBlob": "32d23ea81740742a842d5aacac2d2f7ac162a6e2",
+      "sha256": "60926a9aed41484cff76dd1c270e90b5d4709327a7022432ca4532b3772f518d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/new-terminal-0413/archive-14197046657-retention.json",
+      "bytes": 1473,
+      "gitBlob": "9bd2bcd9b43ff1008b209b088fb04c84844dd189",
+      "sha256": "00dd6f87ba89605f51c7f5804be5da5071a4861b9fa3b1c02b0085a82557a90d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/new-terminal-0413/job-133062438856.log",
+      "bytes": 74401,
+      "gitBlob": "5da07bc32f31201dd69b2719f6a1e84ed7e30895",
+      "sha256": "77b98faad35766a9d7d2cd018fe625c2b35018ae6ff6259c5a14a8ff56247fa5"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/new-terminal-0413/archive-14196613192-retention.json",
+      "bytes": 13483,
+      "gitBlob": "955ddc27f5551a5e6f02db89fa79266c63978584",
+      "sha256": "11b193fc52c00822fd896422661963225abcb9993ab54692c8aa0afe610929ad"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/new-terminal-0413/artifact-14197046657.zip",
+      "bytes": 874,
+      "gitBlob": "2f0e418c73873c15659dcc3138f0d9868d426821",
+      "sha256": "56495f2b66647e2e9bfdfb538260e7b700086842c803427ee566d1e1d294b2ef"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/process-jobs-0413.json",
+      "bytes": 31010,
+      "gitBlob": "1dbdc22f813006883dbcf3db4277de5ad53ed17f",
+      "sha256": "21ab6297e9699f7a01b85531964c995aee9dbeb43f411b56b72c436ffa3b25de"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/v2-jobs-0413.json",
+      "bytes": 46992,
+      "gitBlob": "edffef5ea961b05e9abacff05c45fca2d9ef87ae",
+      "sha256": "3d6ac715cec8575e1d8a4c1390e8a19ff9a598f053603982bbe580415ff896d2"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/process-original-run-0258.json",
+      "bytes": 30100,
+      "gitBlob": "5df818f7e9483a282a981409714e07334dc11b67",
+      "sha256": "430697b8e7e520788d7ae2c8f0d43e0b6ab3354f44155a4ce482d8df509dc92d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/v2-original-run-0258.json",
+      "bytes": 30144,
+      "gitBlob": "8087402aa25d3eb6d5a4a72d1771cb7843366b76",
+      "sha256": "2cd2b012a3155fb0a798f2b8badb7c6a033dd17407ddb71433fd979a149975c1"
+    }
+  ],
+  "payloadCount": 14,
+  "totalBytes": 2113062,
+  "originalMcpDecodedContentEqualsRawLog": true,
+  "archives": {
+    "count": 2,
+    "members": 52,
+    "crcSafeUniqueNonsymlink": true
+  },
+  "limits": [
+    "This checkpoint retains official metadata, original MCP responses, exact decoded logs and CRC-checked archives; it is not a completed source/case/cleanup qualification audit.",
+    "No original command was replayed and no CI mutation was performed.",
+    "Process run is now all-terminal and will not be polled again; V2 Linux runtime and Linux Static remain separately pending."
+  ]
+}

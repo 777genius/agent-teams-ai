@@ -1,0 +1,192 @@
+{
+  "kind": "N608_ORIGINAL_CODEX_LOGIN_FINITE_PEER_CHECKPOINT",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234483,
+  "jobId": 133062441602,
+  "payloadCount": 10,
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/codex-login/job-133062441602.log",
+      "bytes": 182675,
+      "gitBlob": "822b9c13cf724a2cc954d8a00f61b25b811a26e1",
+      "sha256": "ca4dbcbd627281f8d4e3c3b2f56c604d323f1604ee5f5463381319a5f6c388da"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/codex-login/original-job-log-response.json",
+      "bytes": 192570,
+      "gitBlob": "dfde6aaca7bdccfd6c8469c38d7af31bb7787c0c",
+      "sha256": "9331ead7c822033165a6a4f613670e471dafcba46df9e5042b9936ad2c03b68d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/codex-login/artifact-14196866785.zip",
+      "bytes": 679796,
+      "gitBlob": "a8c03bb74ff8af7cf4f957af8737183121082d16",
+      "sha256": "eef3c95bc7fab484304af1d66d9b818c2f70bde171e4154dffc5cd7f4cad4c09"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/codex-login/archive-retention.json",
+      "bytes": 4357,
+      "gitBlob": "8109c483483f130af729263972d035c25f142445",
+      "sha256": "23157b663186fe359f13a19ddab8bbbae17c11703db901817da2c91546210985"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/official-host-artifacts-0410.json",
+      "bytes": 9484,
+      "gitBlob": "f34ca6154c2b6e7016dcde8480bdd086e0f442e1",
+      "sha256": "badac9e3b213551e9b4ed59e9236c657320b8f834d2c9120b0009092d8feb670"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/owned-api-jobs-0409.json",
+      "bytes": 92338,
+      "gitBlob": "9da29cf8befc7c97ccbb75dad1157939de510308",
+      "sha256": "4569b37d23b0adccdf6b913ad913dec67c844b3ae0df68a68db7feeec87f5e43"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/host-original-run-0258.json",
+      "bytes": 30088,
+      "gitBlob": "ea302039d9efa1062aad0a3c3c062fb462c39774",
+      "sha256": "c1cefe9db820bb9a40b1e371d99d4aa628bd66d1826a35bd8787c99d5e7a9a10"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/cross-team/source-pin-audit.json",
+      "bytes": 461936,
+      "gitBlob": "bc23e5da6e447ed75d4d17adcc4fe1d5de5dbf64",
+      "sha256": "b3a5a97d7b4ba5406ef566cc61351eca3f04b7bbd2f7a6e3d673f56f8a85558a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/codex-login/audit.json",
+      "bytes": 73809,
+      "gitBlob": "dfde0334afc64797aa430575d85552d979baae9d",
+      "sha256": "daa413175393115aa9f6b678c06d9874dfe10468384964d63cc055e62187d899"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/codex-login/Plan29-codex-login-appendix.md",
+      "bytes": 6623,
+      "gitBlob": "1c44084323ebc8793d28544a52da809164f6a929",
+      "sha256": "fefdad1f6550aa9a9c567a1ddfce349ce567e240895ef8f5f0f2bea0e42db721"
+    }
+  ],
+  "archiveMembers": [
+    {
+      "path": "TEST-desktop-backend-40IXuf/desktop-app.log",
+      "bytes": 14037,
+      "sha256": "83cb1c5681dd9744d84c1d552e9828a1c013af6ce563046b6cb32c0d84d29b69",
+      "crc32": "0c319502"
+    },
+    {
+      "path": "TEST-desktop-backend-40IXuf/TEST-codex-login-management/home/TEST-wire.ndjson",
+      "bytes": 7697,
+      "sha256": "38ca29e7892ec7b65d9fd6249d26761901765ea6ecc1964f218b5b011cbfd74d",
+      "crc32": "048da00c"
+    },
+    {
+      "path": "TEST-desktop-backend-40IXuf/desktop-backend-receipt.json",
+      "bytes": 687348,
+      "sha256": "53fa310fb69afac2babe85acb075b51a101076fe4d3ec908231da70294ece526",
+      "crc32": "bacc2d32"
+    },
+    {
+      "path": "TEST-desktop-backend-40IXuf/TEST-codex-login-management/home/TEST-login-processes.ndjson",
+      "bytes": 1140,
+      "sha256": "2e9e26c68aa29212d5dd968550a8c8ad9818cecc2af657bc1b68242cd8f5ee10",
+      "crc32": "6f392b27"
+    },
+    {
+      "path": "TEST-desktop-backend-40IXuf/desktop-descriptor.json",
+      "bytes": 2487,
+      "sha256": "667aee0aa9ee5e96759b9609a8a0a1a6ed51c86e616ffebc3112ab54ecf9f85e",
+      "crc32": "a0e94fe5"
+    },
+    {
+      "path": "TEST-desktop-backend-40IXuf/external-open.jsonl",
+      "bytes": 156,
+      "sha256": "c9bfde977c7fcac68ec3d1458f335f74f8f1640231ffaf87bbce5c8130cd2dad",
+      "crc32": "2dfaf991"
+    },
+    {
+      "path": "TEST-desktop-backend-40IXuf/host-profile.json",
+      "bytes": 2310,
+      "sha256": "e2c51088e70bc4bc5fa091c122178bfe32366677684c00ec655284aee41a2d7a",
+      "crc32": "cc41052f"
+    },
+    {
+      "path": "TEST-desktop-backend-40IXuf/hoststore/management-commands/5171e54a25db40263f070827102754efb54cde732b6753d29da214a7fbe82832.json",
+      "bytes": 743,
+      "sha256": "b4092ab7e7a5dd9dc8e29b5edf89cd40608af3710964c297455030e259d9183d",
+      "crc32": "bc2f1526"
+    },
+    {
+      "path": "TEST-desktop-backend-40IXuf/hoststore/management-commands/93c8ea1c63ccfa6933d02f5031fbed1eda87720d4af19a1cb5cb8b4d5376696a.json",
+      "bytes": 743,
+      "sha256": "fb861261cfa6767657aa35048571388d8533ba93ec994ec20d64388218149a85",
+      "crc32": "e1331abc"
+    },
+    {
+      "path": "TEST-desktop-backend-40IXuf/sentinel-invocations.ndjson",
+      "bytes": 180,
+      "sha256": "b73cef9015c8a1577c44ab27bec7f3e29312ed3458f526b76cd95ba93b69d323",
+      "crc32": "4d60c26c"
+    },
+    {
+      "path": "TEST-desktop-backend-40IXuf/ui-emulated-codex-login-cancelled.png",
+      "bytes": 120224,
+      "sha256": "d5bd1ff00b1dc3a1f742649264d78e4c1ed68b7a14bc06db13ca39433b72f21b",
+      "crc32": "f1753b34"
+    },
+    {
+      "path": "TEST-desktop-backend-40IXuf/ui-seed-receipt.json",
+      "bytes": 2037,
+      "sha256": "87a5b17cb81628a62d39761285c757dee5cd51b0a142cd161f12803b63f441c4",
+      "crc32": "9c172ace"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-hRhvE1/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "crc32": "ed0ca14b"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-hRhvE1/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734",
+      "crc32": "e06f2443"
+    },
+    {
+      "path": "host-emulated-emulated-codex-login-ui.log",
+      "bytes": 225,
+      "sha256": "7a50ed085f45e15448d2803463fb3b9d95a8852f2ad573b1e4760e714beda555",
+      "crc32": "0fb0eab0"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1803,
+      "sha256": "429c332bef960ace195d791bc9e14acd5318c5f36501f6ec9b8b0110490af3df",
+      "crc32": "e0a5c965"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "sha256": "ab3132d32e19fd074caeecd874e7612bdf55a4d4b7b36812d90356e07fc6c37f",
+      "crc32": "6017b2b5"
+    },
+    {
+      "path": "host-emulated-summary.json",
+      "bytes": 598,
+      "sha256": "004d9b7f4e769648558c0c4376858def469119b4c11d0434a7bc38e5708bae91",
+      "crc32": "724f25c4"
+    }
+  ],
+  "actuallyViewedPngCount": 1,
+  "limits": [
+    "Original finite protocol revision0.162.0 peer only, vendorExecutable:false. No real Codex binary/account/browser credential reuse/provider inference/native tool qualification; nativeStatus and other historical native names are not native qualification.",
+    "Two explicit starts, copy acknowledgments, TEST OS opener dispatches, dialog reopens and cancellations are source-bound UI observations. Clipboard contents are not independently read back; private authorization URL/code equality is an original in-process assertion, not a retained secret value.",
+    "Two original opener digest rows independently match the fixed source-only TEST URLs; no personal browser is opened. Known TEST URL/code strings are absent from inspected public receipts/journals/wire/opener/job text; this is not a generic unknown-secret guarantee.",
+    "Final public journals are cancelled/released, not successful authentication; no account file was present according to original cleanup. No authenticated-account bytes or successful vendor completion are retained.",
+    "Twenty distinct finite app-server PID rows are absent after cleanup, but observedDirectChildPids is empty and peer exit/birth callbacks are not archived. No all-natural-exit or native custody proof follows.",
+    "App0/null and fresh originalExitedGroup/Host/descendant absence are separate from passive Main original-child Host5232 callback0/null. Neither is an atomic executable/native certificate.",
+    "Final actual PNG shows Not connected, App-server healthy, API-key notconfigured and an account-required warning; background Loading models remains. No all-provider-idle/readiness or successful login claim.",
+    "Common1757 source census is reused by exact ordered equality;15selected paths freshly read. Peer/opener generated bytes are source-reconstructed for hash agreement only, not independently recovered runtime files;14compiled hash records have no separate compiled payload/rebuild here.",
+    "Original608efb lane PASS does not itself qualify separately executed Team/privacyGREEN, vendor authorization, allDesktop/release/merge acceptance."
+  ],
+  "independentReviewPending": true
+}

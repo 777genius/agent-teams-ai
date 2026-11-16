@@ -1,0 +1,102 @@
+{
+  "schema": "root-actual-N-renderer-one-byte-readback/v1",
+  "reviewedAtUTC": "2026-11-16T04:32:44.010567+00:00",
+  "result": "APPROVE_ACTUAL_EXACT_SOURCE",
+  "publishedHead": "79b3ae2928a346f06fc1840b04944d158c9feec9",
+  "soleParent": "67310c46b9d38f88e856ce2372d6ea10886d0dd6",
+  "tree": "3e395d54c5d9982dce16c545cfa9daf6702d99f1",
+  "manifest": {
+    "bytes": 3483,
+    "blob": "c81e36f22a121b81b8a1f3360050acba6b62d4e9",
+    "sha256": "abf153b31e24e364dff2e50c4c10fffebe5e01caf7ca2bd589f51fc8dd480aca"
+  },
+  "publicationReceipt": {
+    "bytes": 286511,
+    "blob": "b1e0d5666cd684074ef58caed8c0c37fd5f1fc17",
+    "sha256": "2838b82104c107c98b78bd9c06113fd8ded6bf82f95bdeefb95a2763b9447b77"
+  },
+  "actualGitCommitObjectRehashed": true,
+  "actualSource": {
+    "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+    "before": {
+      "bytes": 8708,
+      "blob": "8299f9f9589810c106c328840b2c0d3640113811",
+      "sha256": "96511a26aaf8ead7ebdaeec018d79d4f9568ff29ee85f8b4eef46adbc2a4a954"
+    },
+    "after": {
+      "bytes": 8707,
+      "blob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+      "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10"
+    },
+    "exactDeletedByte": "!",
+    "zeroBasedOffset": 6669,
+    "changedLine": 201,
+    "lineBefore": "          [previousRunId!]: teamName,",
+    "lineAfter": "          [previousRunId]: teamName,",
+    "allOther263LinesExact": true,
+    "bothCallbackAssertionsRetained": true
+  },
+  "leafCount": 10698,
+  "allOther10697LeavesExact": true,
+  "allDocumentationLeavesUnchanged": true,
+  "allTestWorkflowDependencyLeavesUnchanged": true,
+  "nonDocumentationLeaves": 8798,
+  "nonDocumentationAfterSHA256": "8a6dbb7ecf9104b2ad570c2ae2c75f333fc28a34cae493b93d4973fd9c2c11ab",
+  "proposalDocuments": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/stage-n-renderer-assertion-fix-r1/proposal.json",
+      "bytes": 6750,
+      "blob": "8ec9d75f40874056eb6fb565b6ded643ca4d23b4",
+      "sha256": "50ededbf744963ebc63256723d9e1463c435af059521485691f70d25bff851b9",
+      "unchangedFromReviewedActualParent": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/stage-n-renderer-assertion-fix-r1/candidate.patch",
+      "bytes": 324,
+      "blob": "3704dccb26289ee1e814e27ead70d3ed1ef7618e",
+      "sha256": "ab4703c7a3b29e8d2400f720854020d81fff3ab01d2ca91d5d730b2be9b9d67a",
+      "unchangedFromReviewedActualParent": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/stage-n-renderer-assertion-fix-r1/independent-source-review.json",
+      "bytes": 10014,
+      "blob": "add9bc855ee894883ac7b9b9914488e6847d7ced",
+      "sha256": "244bf1a8c0d7cb95d3e56a672e8628404e15c17689f49dd3016c7b49cdeb115e",
+      "unchangedFromReviewedActualParent": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/stage-n-renderer-assertion-fix-r1/preimage.ts.txt",
+      "bytes": 8708,
+      "blob": "8299f9f9589810c106c328840b2c0d3640113811",
+      "sha256": "96511a26aaf8ead7ebdaeec018d79d4f9568ff29ee85f8b4eef46adbc2a4a954",
+      "unchangedFromReviewedActualParent": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/stage-n-renderer-assertion-fix-r1/candidate.ts.txt",
+      "bytes": 8707,
+      "blob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+      "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10",
+      "unchangedFromReviewedActualParent": true
+    }
+  ],
+  "sourceChangesSince0660": [
+    "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+    "src/renderer/store/team/teamRuntimeRunAdoption.ts"
+  ],
+  "sourceChangesSince608": [
+    "src/renderer/store/team/teamRuntimeRunAdoption.ts"
+  ],
+  "privacyPrerequisite": "Actual original608 Team177/all24GREEN retained and independently reviewed; this is not a new79b3 source test run.",
+  "actualOriginalRendererRED": "608 originalTeam step10,201:12 no-unnecessary-type-assertion",
+  "actualResultingSourceTypedGREENObserved": false,
+  "primaryAtPostReadback": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "pr1192OpenDraft": true,
+  "localDetached0660Clean": true,
+  "noProjectExecution": true,
+  "noCIWorkflowMutationOrManualDispatch": true,
+  "limits": [
+    "Exact approved source publication only. Independent actual-published source R2 is separate.",
+    "Primary has not moved; actual original resulting-source full types and typed-renderer GREEN remain to be obtained through the existing automatic CI.",
+    "All other open Desktop/native/P08/P09/P11 and overall acceptance limits remain."
+  ]
+}

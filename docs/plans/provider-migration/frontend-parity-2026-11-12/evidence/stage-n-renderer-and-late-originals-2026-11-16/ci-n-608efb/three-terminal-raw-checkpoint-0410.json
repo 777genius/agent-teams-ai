@@ -1,0 +1,134 @@
+{
+  "kind": "N608_THREE_NEW_ORIGINAL_TERMINAL_RAW_PRESERVATION",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234483,
+  "apiSources": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/official-host-artifacts-0410.json",
+      "bytes": 9484,
+      "gitBlob": "f34ca6154c2b6e7016dcde8480bdd086e0f442e1",
+      "sha256": "badac9e3b213551e9b4ed59e9236c657320b8f834d2c9120b0009092d8feb670"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/owned-api-jobs-0409.json",
+      "bytes": 92338,
+      "gitBlob": "9da29cf8befc7c97ccbb75dad1157939de510308",
+      "sha256": "4569b37d23b0adccdf6b913ad913dec67c844b3ae0df68a68db7feeec87f5e43"
+    }
+  ],
+  "rows": [
+    {
+      "lane": "opencode",
+      "jobId": 133062441565,
+      "artifactId": 14197020809,
+      "originalStatus": "success",
+      "files": [
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/opencode/original-job-log-response.json",
+          "bytes": 190660,
+          "gitBlob": "ea3043819d6812f729c4406eec0d8e382b7434d9",
+          "sha256": "5f90b589fca096dd04772102b3dd6c61c6fa7942950d3b0cbab16bee976ecfcf"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/opencode/job-133062441565.log",
+          "bytes": 180796,
+          "gitBlob": "0887944bb5a7edee554cabe4e06429b1681273f7",
+          "sha256": "e7f0c34477899afce4a8176fcc99ce2544e4aebf534e7d22bf11a9177e49d17d"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/opencode/artifact-14197020809.zip",
+          "bytes": 2468350,
+          "gitBlob": "dc287ca539fdf615ce5cfcc660facbf00a570e07",
+          "sha256": "8ec1150d489d7591aeaf705062d79335b1a0743542820d40d35b1bef2c578b33"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/opencode/archive-retention.json",
+          "bytes": 7466,
+          "gitBlob": "67d30d39bb333e1fb5604c2946113a8fedacf88f",
+          "sha256": "ce535f150dce2d9cc37bb93a1eda551bbe29ad68e65dfeb8e8b88373cb2d9bfe"
+        }
+      ],
+      "archiveMembers": 32,
+      "rawLogEqualsMcpContentUtf8": true,
+      "officialZipDigestAndBytesMatch": true,
+      "allExtractedBytesRoundtrip": true,
+      "qualification": "RAW preservation only; semantic/source/visual/cleanup audit is separate and pending at this checkpoint."
+    },
+    {
+      "lane": "codex-login",
+      "jobId": 133062441602,
+      "artifactId": 14196866785,
+      "originalStatus": "success",
+      "files": [
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/codex-login/original-job-log-response.json",
+          "bytes": 192570,
+          "gitBlob": "dfde6aaca7bdccfd6c8469c38d7af31bb7787c0c",
+          "sha256": "9331ead7c822033165a6a4f613670e471dafcba46df9e5042b9936ad2c03b68d"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/codex-login/job-133062441602.log",
+          "bytes": 182675,
+          "gitBlob": "822b9c13cf724a2cc954d8a00f61b25b811a26e1",
+          "sha256": "ca4dbcbd627281f8d4e3c3b2f56c604d323f1604ee5f5463381319a5f6c388da"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/codex-login/artifact-14196866785.zip",
+          "bytes": 679796,
+          "gitBlob": "a8c03bb74ff8af7cf4f957af8737183121082d16",
+          "sha256": "eef3c95bc7fab484304af1d66d9b818c2f70bde171e4154dffc5cd7f4cad4c09"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/codex-login/archive-retention.json",
+          "bytes": 4357,
+          "gitBlob": "8109c483483f130af729263972d035c25f142445",
+          "sha256": "23157b663186fe359f13a19ddab8bbbae17c11703db901817da2c91546210985"
+        }
+      ],
+      "archiveMembers": 18,
+      "rawLogEqualsMcpContentUtf8": true,
+      "officialZipDigestAndBytesMatch": true,
+      "allExtractedBytesRoundtrip": true,
+      "qualification": "RAW preservation only; semantic/source/visual/cleanup audit is separate and pending at this checkpoint."
+    },
+    {
+      "lane": "review",
+      "jobId": 133062441661,
+      "artifactId": 14196496672,
+      "originalStatus": "success",
+      "files": [
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/review/original-job-log-response.json",
+          "bytes": 197984,
+          "gitBlob": "d99d628d9c53aec6f352f403c3ae634b432ed974",
+          "sha256": "25a592d50b0773bc22dac93b4e7c4662eccc56af1cfd9b9b37026bb9e5a8a9ad"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/review/job-133062441661.log",
+          "bytes": 187747,
+          "gitBlob": "c5405ee0301caaad4551908c2a9d7e8cc649217b",
+          "sha256": "287d27daea169dd6a2646d2aec3fd704f20e339e16a6cc8ec0f7b36b370e347b"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/review/artifact-14196496672.zip",
+          "bytes": 997173,
+          "gitBlob": "2c578b90a25a38a91ca22d5397af8816deb22e8a",
+          "sha256": "1d6cd13554357982033e76c26ff26659946c8869d4008905f791b89f392a167c"
+        },
+        {
+          "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/review/archive-retention.json",
+          "bytes": 4778,
+          "gitBlob": "aac5b7d80a6731f59e2e5e413831a7f721debd1a",
+          "sha256": "b0578bca3709aec9879ab58c6fa4d32fa93c29bedb68cb81e06f82629e200b90"
+        }
+      ],
+      "archiveMembers": 21,
+      "rawLogEqualsMcpContentUtf8": true,
+      "officialZipDigestAndBytesMatch": true,
+      "allExtractedBytesRoundtrip": true,
+      "qualification": "RAW preservation only; semantic/source/visual/cleanup audit is separate and pending at this checkpoint."
+    }
+  ],
+  "noNewExecution": true,
+  "noSignedTransportUrlsRetained": true
+}

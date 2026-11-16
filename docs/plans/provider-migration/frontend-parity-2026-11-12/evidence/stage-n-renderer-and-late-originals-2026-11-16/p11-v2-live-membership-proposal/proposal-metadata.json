@@ -1,0 +1,532 @@
+{
+  "status": "FROZEN_PROPOSAL_ONLY_NO_PROJECT_EXECUTION",
+  "head": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "tree": "e70ccffc6d55ad42c2249518bf142e2ed32ddf91",
+  "publicationRequiredBeforeAnyApplication": true,
+  "currentHeadObserved": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "currentWorktreeClean": true,
+  "paths": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "preimage": {
+        "bytes": 101741,
+        "lines": 1312,
+        "gitBlob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+      },
+      "preimageMode": "100644",
+      "candidate": {
+        "bytes": 103848,
+        "lines": 1340,
+        "gitBlob": "74c5964e1b28e02df2fd5649d9d67931889cd7a8",
+        "sha256": "8fd4f1edd2473382655d1fbb0850b60be890764460bdf4fdfd158637f8594a9f"
+      },
+      "candidateMode": "100644",
+      "componentBeforeConditionalPollSelection": null,
+      "phaseCPreimage": {
+        "bytes": 101741,
+        "lines": 1312,
+        "gitBlob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+      },
+      "linesAdded": 29,
+      "linesRemoved": 1,
+      "candidatePath": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/conditional-complete/.github/workflows/host-emulated-acceptance.yml",
+      "conditional": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "preimage": {
+        "bytes": 54778,
+        "lines": 791,
+        "gitBlob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc"
+      },
+      "preimageMode": "100644",
+      "candidate": {
+        "bytes": 55759,
+        "lines": 798,
+        "gitBlob": "4eabaf832901bf3ea82bc9761f1208207343b8a0",
+        "sha256": "1ded076e942640f4306af7ee6d5f1e4c49d7b9095d6aaeba4f59826e794863bd"
+      },
+      "candidateMode": "100644",
+      "componentBeforeConditionalPollSelection": null,
+      "phaseCPreimage": {
+        "bytes": 54778,
+        "lines": 791,
+        "gitBlob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+        "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc"
+      },
+      "linesAdded": 15,
+      "linesRemoved": 8,
+      "candidatePath": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "conditional": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-controlled.ts",
+      "preimage": null,
+      "preimageMode": null,
+      "candidate": {
+        "bytes": 15874,
+        "lines": 219,
+        "gitBlob": "6205acf48ae31051ae3b4dcb4d66c47286022ba4",
+        "sha256": "1663c2db6b7229472ec45529202053023d7cb33cd1affc333547105979e6b6ca"
+      },
+      "candidateMode": "100644",
+      "componentBeforeConditionalPollSelection": null,
+      "phaseCPreimage": null,
+      "linesAdded": 219,
+      "linesRemoved": 0,
+      "candidatePath": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-controlled.ts",
+      "conditional": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "preimage": {
+        "bytes": 45707,
+        "lines": 570,
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+      },
+      "preimageMode": "100644",
+      "candidate": {
+        "bytes": 47589,
+        "lines": 585,
+        "gitBlob": "de958fcbd9c1aef20ec843904dd89a6fec62568d",
+        "sha256": "e748025e727b8b6f96e4521496907e469058603610ac7024b600d8174300faf8"
+      },
+      "candidateMode": "100644",
+      "componentBeforeConditionalPollSelection": {
+        "bytes": 47501,
+        "lines": 583,
+        "gitBlob": "3fafe379fa85edf20aef44eeb4f544ca691d05d4",
+        "sha256": "0ec44f25649005b961bb7b5b81545de23953e2b055b1ee762cae30bc899cf9d3"
+      },
+      "phaseCPreimage": {
+        "bytes": 45795,
+        "lines": 572,
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b"
+      },
+      "linesAdded": 29,
+      "linesRemoved": 14,
+      "candidatePath": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "conditional": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-mixed-native-fixture.ts",
+      "preimage": {
+        "bytes": 33161,
+        "lines": 660,
+        "gitBlob": "426c45f6236a3aaf8b3f5e14b4cf21e4ce000c8f",
+        "sha256": "1e495ee7b244fa471f2a6a4039d7110db6ff2760260c23f89123703810d0bfad"
+      },
+      "preimageMode": "100644",
+      "candidate": {
+        "bytes": 34186,
+        "lines": 670,
+        "gitBlob": "3313bd7ea5f707a930f87322f8ec4fdaed86a527",
+        "sha256": "23e1e8651bdef907a525cb8918986623760444f685938942882571a3f695cbd5"
+      },
+      "candidateMode": "100644",
+      "componentBeforeConditionalPollSelection": null,
+      "phaseCPreimage": {
+        "bytes": 33161,
+        "lines": 660,
+        "gitBlob": "426c45f6236a3aaf8b3f5e14b4cf21e4ce000c8f",
+        "sha256": "1e495ee7b244fa471f2a6a4039d7110db6ff2760260c23f89123703810d0bfad"
+      },
+      "linesAdded": 18,
+      "linesRemoved": 8,
+      "candidatePath": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-mixed-native-fixture.ts",
+      "conditional": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "preimage": {
+        "bytes": 20996,
+        "lines": 323,
+        "gitBlob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+        "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b"
+      },
+      "preimageMode": "100644",
+      "candidate": {
+        "bytes": 21133,
+        "lines": 325,
+        "gitBlob": "868b7c7121cc85925b86fee641064493dc099785",
+        "sha256": "c2feed93785e08604a92db4cacb224164cd926b2b8d2826b502d408d16bdba71"
+      },
+      "candidateMode": "100644",
+      "componentBeforeConditionalPollSelection": null,
+      "phaseCPreimage": {
+        "bytes": 20996,
+        "lines": 323,
+        "gitBlob": "f1bfeb0235ed6fc4f80daba16aefda0364ee7e9d",
+        "sha256": "7789d31cd807d8e71fd40d45038ed3266eff98e9c877cc738fcae688e3b5e37b"
+      },
+      "linesAdded": 2,
+      "linesRemoved": 0,
+      "candidatePath": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "conditional": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "preimage": {
+        "bytes": 103573,
+        "lines": 1766,
+        "gitBlob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+      },
+      "preimageMode": "100644",
+      "candidate": {
+        "bytes": 114321,
+        "lines": 1914,
+        "gitBlob": "f25095fc93559fc8f84d159b946e89d729956f4c",
+        "sha256": "5ed2a20f03ef72fe2ea272bed84c4f38326f2ab0f6a90b2dc65ece615662b34f"
+      },
+      "candidateMode": "100644",
+      "componentBeforeConditionalPollSelection": null,
+      "phaseCPreimage": {
+        "bytes": 107837,
+        "lines": 1828,
+        "gitBlob": "a6c8df59b6fabc013b3570762d6b19a396e32c9e",
+        "sha256": "d8bfcea3677773bb7d9fd800f958728719f292c7e01a9e4a0ead4fd746276cf9"
+      },
+      "linesAdded": 148,
+      "linesRemoved": 0,
+      "candidatePath": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "conditional": false
+    },
+    {
+      "path": "scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts",
+      "preimage": null,
+      "preimageMode": null,
+      "candidate": {
+        "bytes": 13985,
+        "lines": 154,
+        "gitBlob": "d725e255682b0c092e7b05970622e732c1124580",
+        "sha256": "99f37883c6c0096ac75f7c53ee1f02680dd5a402260b067cdb136fd696287b3a"
+      },
+      "candidateMode": "100644",
+      "componentBeforeConditionalPollSelection": null,
+      "phaseCPreimage": null,
+      "linesAdded": 154,
+      "linesRemoved": 0,
+      "candidatePath": "/workspace/scratch/82d3f9ba6b85/p11-v2-live-membership-proposal/conditional-complete/scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts",
+      "conditional": false
+    }
+  ],
+  "sourceOnlyPathCount": 8,
+  "newPaths": [
+    "scripts/legacy-agent-host/desktop-live-membership-controlled.ts",
+    "scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts"
+  ],
+  "stages": {
+    "A": {
+      "changes": [
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "test": {
+        "bytes": 107837,
+        "lines": 1828,
+        "gitBlob": "a6c8df59b6fabc013b3570762d6b19a396e32c9e",
+        "sha256": "d8bfcea3677773bb7d9fd800f958728719f292c7e01a9e4a0ead4fd746276cf9"
+      },
+      "driver": {
+        "bytes": 45707,
+        "lines": 570,
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+      },
+      "scope": "test-only actual semantic RED under original whole 8-file CI prerequisite; no conditional fix or hybrid route active"
+    },
+    "B": {
+      "changes": [
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts"
+      ],
+      "conditionalDriver": {
+        "bytes": 45795,
+        "lines": 572,
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b"
+      },
+      "scope": "two post-read clock assertions only after observed specific A semantic RED and independent actual review; same full test command GREEN required"
+    },
+    "C": {
+      "changes": [
+        ".github/workflows/host-emulated-acceptance.yml",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "scripts/legacy-agent-host/desktop-live-membership-controlled.ts",
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-mixed-native-fixture.ts",
+        "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts"
+      ],
+      "scope": "only after reviewed actual B GREEN and original useful-cohort preservation; separate case uses conditional-complete bytes; all stage C inputs require fresh exact rebase/review if source changed"
+    }
+  },
+  "testPrefixes": {
+    "completeOriginalC4Prefix": true,
+    "completePhaseAPrefixInC": true,
+    "originalAssertionsUnchanged": true,
+    "predictedAddedPhaseACasesOnly": {
+      "redPass": 1,
+      "redFail": 3,
+      "greenPass": 4,
+      "greenFail": 0
+    },
+    "additionalPhaseCCases": 2,
+    "actualCounts": null
+  },
+  "sourceCaps": {
+    "scripts/legacy-agent-host/desktop-backend-smoke.ts": 798,
+    "scripts/legacy-agent-host/desktop-live-membership-controlled.ts": 219,
+    "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts": 585,
+    "scripts/legacy-agent-host/desktop-mixed-native-fixture.ts": 670,
+    "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts": 325,
+    "scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts": 154
+  },
+  "roster": {
+    "allOriginalBytesRecoverableByRemovingExactlyTwoLiteralLines": true,
+    "oldWindowsOnlyArrayUnchanged": true
+  },
+  "workflow": {
+    "status": "UNEXECUTED_PROPOSAL_ONLY",
+    "oldLintOperands": [
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts",
+      "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "packages/legacy-agent-host/tests/opencode-configuration-source.test.ts",
+      "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts",
+      "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+      "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+      "scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+      "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+      "src/features/agent-backend/renderer/createHostMemberSpawnStatuses.ts",
+      "src/features/agent-backend/renderer/createHostTeamChanges.ts",
+      "src/features/agent-backend/renderer/createHostTeamProvisioning.ts",
+      "src/features/agent-backend/renderer/index.ts",
+      "src/renderer/store/slices/teamSlice.ts",
+      "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "test/features/agent-backend/capturedWindowsSelection.test.ts",
+      "test/features/agent-backend/hostMemberSpawnStatuses.test.ts",
+      "test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "test/renderer/store/teamRuntimeRunAdoption.test.ts",
+      "test/renderer/store/teamSlice.test.ts",
+      "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts",
+      "packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "packages/legacy-agent-host/src/composition/HostScheduledRuns.ts",
+      "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "packages/legacy-agent-host/src/composition/readTeamActivity.ts",
+      "packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts",
+      "packages/legacy-agent-host/src/composition/scheduledRunProjection.ts",
+      "packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts",
+      "packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+      "packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts",
+      "packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+      "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "packages/legacy-agent-host/src/runtime/activityContracts.ts",
+      "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+      "packages/legacy-agent-host/src/runtime/providerActivityContracts.ts",
+      "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+      "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+      "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+      "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+      "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+      "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+      "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+      "src/features/agent-backend/contracts/operations.ts",
+      "src/features/agent-backend/main/adapters/output/projectBackendResult.ts",
+      "src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts",
+      "src/features/agent-backend/renderer/createHostTaskActivityApi.ts",
+      "src/renderer/components/team/ClaudeLogsPanel.tsx",
+      "src/renderer/components/team/ClaudeLogsSection.tsx",
+      "src/renderer/components/team/members/HostMemberActivityLog.tsx",
+      "src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx",
+      "src/renderer/components/team/members/MemberLogsTab.tsx",
+      "src/shared/types/teamActivity.ts",
+      "src/shared/utils/diagnosticsRedaction.ts",
+      "src/shared/utils/redactDiagnosticAssignments.ts",
+      "src/shared/utils/runtimeDiagnosticText.ts",
+      "test/features/agent-backend/hostTaskActivity.test.ts",
+      "test/renderer/components/team/ClaudeLogsSection.test.ts",
+      "test/renderer/components/team/members/MemberLogsPolling.test.ts",
+      "test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+      "test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx",
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "tools/owned-process-broker/nativeDebugServiceScenario.ts"
+    ],
+    "addedLintOperands": [
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "scripts/legacy-agent-host/desktop-live-membership-controlled.ts",
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-mixed-native-fixture.ts",
+      "scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts"
+    ],
+    "allLintOperands": [
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts",
+      "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "packages/legacy-agent-host/tests/opencode-configuration-source.test.ts",
+      "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+      "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+      "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts",
+      "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+      "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+      "scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+      "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+      "src/features/agent-backend/renderer/createHostMemberSpawnStatuses.ts",
+      "src/features/agent-backend/renderer/createHostTeamChanges.ts",
+      "src/features/agent-backend/renderer/createHostTeamProvisioning.ts",
+      "src/features/agent-backend/renderer/index.ts",
+      "src/renderer/store/slices/teamSlice.ts",
+      "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "test/features/agent-backend/capturedWindowsSelection.test.ts",
+      "test/features/agent-backend/hostMemberSpawnStatuses.test.ts",
+      "test/features/agent-backend/runtimeActivityFacade.test.ts",
+      "test/renderer/store/teamRuntimeRunAdoption.test.ts",
+      "test/renderer/store/teamSlice.test.ts",
+      "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts",
+      "packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts",
+      "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "packages/legacy-agent-host/src/composition/HostScheduledRuns.ts",
+      "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "packages/legacy-agent-host/src/composition/readTeamActivity.ts",
+      "packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts",
+      "packages/legacy-agent-host/src/composition/scheduledRunProjection.ts",
+      "packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts",
+      "packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+      "packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts",
+      "packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+      "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "packages/legacy-agent-host/src/runtime/activityContracts.ts",
+      "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+      "packages/legacy-agent-host/src/runtime/providerActivityContracts.ts",
+      "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+      "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+      "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+      "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+      "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+      "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+      "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+      "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+      "scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+      "src/features/agent-backend/contracts/operations.ts",
+      "src/features/agent-backend/main/adapters/output/projectBackendResult.ts",
+      "src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts",
+      "src/features/agent-backend/renderer/createHostTaskActivityApi.ts",
+      "src/renderer/components/team/ClaudeLogsPanel.tsx",
+      "src/renderer/components/team/ClaudeLogsSection.tsx",
+      "src/renderer/components/team/members/HostMemberActivityLog.tsx",
+      "src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx",
+      "src/renderer/components/team/members/MemberLogsTab.tsx",
+      "src/shared/types/teamActivity.ts",
+      "src/shared/utils/diagnosticsRedaction.ts",
+      "src/shared/utils/redactDiagnosticAssignments.ts",
+      "src/shared/utils/runtimeDiagnosticText.ts",
+      "test/features/agent-backend/hostTaskActivity.test.ts",
+      "test/renderer/components/team/ClaudeLogsSection.test.ts",
+      "test/renderer/components/team/members/MemberLogsPolling.test.ts",
+      "test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+      "test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx",
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+      "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "scripts/legacy-agent-host/desktop-live-membership-controlled.ts",
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-mixed-native-fixture.ts",
+      "scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts"
+    ],
+    "originalManagementStepsPreserved": true,
+    "addedJobInvocations": [
+      "one original desktop-backend-smoke.ts P11 case in the existing opencode-v2-management job",
+      "one evidence-only verifier invocation"
+    ],
+    "artifactAddition": "Six exact TEST-root path patterns; include-hidden-files is true only for existing opencode-v2-management lane, false for every other lane. No new upload step, retention change or job.",
+    "scope": "No workflow application; conditional poll correction must be reviewed after actual semantic RED before this case is eligible to run."
+  },
+  "patches": {
+    "allEightVersus0660": {
+      "bytes": 72151,
+      "lines": 949,
+      "gitBlob": "d342940e4f50f95aaf38f8df578698b955bfb4da",
+      "sha256": "ef0e8eabf254c3284ce1ebc7d7c56030414a307e5b47847f677f9df7a22c0b4c"
+    },
+    "stageCVersusConditionalB": {
+      "bytes": 67227,
+      "lines": 876,
+      "gitBlob": "205f56d04b6d565cd95dd49f782dfe06dd926eac",
+      "sha256": "6c59741c42728b4883b9d42f277f19a4c2faf30d6e06ee0ca11fc8f107b7323e"
+    }
+  },
+  "unselectedChanges": {
+    "conditionalPollFixRequiresActualRedFirst": true,
+    "privacyHelperAndTests": false,
+    "uiDiagnosticWorkflow93To94NotComposed": true
+  },
+  "limits": [
+    "No project test/compiler/build/Node/vendor/native invocation occurred.",
+    "No blob/ref/commit/workflow application occurred.",
+    "No source review can claim V2 or full mixed native PASS.",
+    "Linux process projection is finite source-level feasibility, requiring actual resulting-source custody proof.",
+    "This eight-path scope is pinned to 0660, not automatically authorized atop later diagnostics or privacy changes."
+  ]
+}

@@ -1,0 +1,271 @@
+{
+  "kind": "ORIGINAL_OFFICIAL_ARTIFACT_RETENTION",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234483,
+  "jobId": 133062441600,
+  "artifact": {
+    "id": 14197795395,
+    "name": "host-emulated-linux-x64-608efb78823d7c74b35f8a674fcfb6faea8ecfc5-claude-lifecycle",
+    "size_in_bytes": 4209728,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14197795395",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14197795395/zip",
+    "expired": false,
+    "created_at": "2026-11-16T04:20:57Z",
+    "expires_at": "2026-11-30T04:20:56Z",
+    "updated_at": "2026-11-16T04:20:57Z",
+    "digest": "sha256:4a6df9e075ee348f837d66011a6b1e41fcfe7e9a6efe8c88ea2735da1d9cb31c",
+    "workflow_run": {
+      "id": 43795234483,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+    }
+  },
+  "originalLog": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude-lifecycle/job-133062441600.log",
+    "bytes": 183894,
+    "gitBlob": "5e6bb5f4ca9a3f7ea69d89869e54260ef2aa2606",
+    "sha256": "6b80228ee58e70ef283b90399cde9c432e7194ed8ec1c6c3a4eba11f7fab7d46"
+  },
+  "originalResponse": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude-lifecycle/original-job-log-response.json",
+    "bytes": 193875,
+    "gitBlob": "54d90dd1fc2fc3312157b4947017e15c11f5f1c2",
+    "sha256": "d5a83ee92628236d6b6862156b6d54665ca975b0b0949e23134910d390f56262"
+  },
+  "zip": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/claude-lifecycle/artifact-14197795395.zip",
+    "bytes": 4209728,
+    "gitBlob": "bb41f056d1bb710554fa4a0ab801aba60f0ff4d0",
+    "sha256": "4a6df9e075ee348f837d66011a6b1e41fcfe7e9a6efe8c88ea2735da1d9cb31c"
+  },
+  "safeUniquePaths": true,
+  "crcAllVerified": true,
+  "extractedBytesExact": true,
+  "members": [
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/TEST-peer-claude-scope/config/projects/TEST-desktop-peer/aa8e017b-fc27-490d-a9df-c90d69ce036e.jsonl",
+      "bytes": 6448,
+      "sha256": "b673f512686a0208bad587e0a5c4fd7db0bb04a71efb9ec881b8c4ffcf6c88e6",
+      "crc32": "548273bf"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/TEST-peer-claude-scope/effects.ndjson",
+      "bytes": 7870,
+      "sha256": "c57c42bb76c7297df9f666a5ffacff4d76a639e52883474e1cbf05c07ce61b03",
+      "crc32": "67d18218"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/desktop-backend-receipt.json",
+      "bytes": 872933,
+      "sha256": "88d67b07e1bff5b2f596b6d0fb29e69765b7875a7aa8182e29d5c61670567a2f",
+      "crc32": "890b41ca"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/desktop-app.log",
+      "bytes": 35503,
+      "sha256": "dcffb796469db66b013615fb1d4ea22968981be500f3f95f313884d5003e37e7",
+      "crc32": "2e578846"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/desktop-descriptor.json",
+      "bytes": 2641,
+      "sha256": "e9d4bb59dd8974c2d77270fb921d40794e8ef9151a5149f4da60cef85e94ffe2",
+      "crc32": "db9fd2c9"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/emulated-cold-resume-epoch1-bundles/main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+      "bytes": 68952,
+      "sha256": "c14cfc36aeec6fd7103c507f258097aaeccf552dbbf608fea43f9e3c7a7ef3b3",
+      "crc32": "b3146783"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/emulated-cold-resume-epoch1-bundles/main/chunks/TeamDataService-DySh5-O-.cjs",
+      "bytes": 800653,
+      "sha256": "ed455bf2423e0511bf1fb8e30069280fe99b505e8e4968df3705309a7131556e",
+      "crc32": "cf0ee204"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/emulated-cold-resume-epoch1-bundles/main/chunks/index-D9GX0Q6a.cjs",
+      "bytes": 28605,
+      "sha256": "89c988b7be61f7f30f0effaed6a2626a2279b0ed753228360e77e227884d0a92",
+      "crc32": "e663d9bb"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/emulated-cold-resume-epoch1-bundles/main/chunks/index-yaJFGvjB.cjs",
+      "bytes": 4302,
+      "sha256": "ec64b11e28a53961fd7846392857a0167886b8b086d14f54e20041ddc9927155",
+      "crc32": "e5210327"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/emulated-cold-resume-epoch1-bundles/main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+      "bytes": 4251,
+      "sha256": "7babbc9bd69c863a2210647b3d5f589d96437a9a80fd794b54196387849217f6",
+      "crc32": "b6042485"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/emulated-cold-resume-epoch1-bundles/main/chunks/taskChangeState-rZolvpL6.cjs",
+      "bytes": 561881,
+      "sha256": "f40557112189b351692a4b0f19244d7845a4dfe754f468326a21c36386efa1cd",
+      "crc32": "6830d0f9"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/emulated-cold-resume-epoch1-bundles/main/chunks/taskHistory-2kbwfqIg.cjs",
+      "bytes": 1646698,
+      "sha256": "1d336b6cea5aa5c4768954541a24347fe89bb46a83faddaf8b26fd6e0afb7f85",
+      "crc32": "87d5a54d"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/emulated-cold-resume-epoch1-bundles/main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+      "bytes": 9723,
+      "sha256": "2915a9af73772eda67fa92bd4499976d75724d9605cc947e356bd1dc1cee600c",
+      "crc32": "9dd9b5ed"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/emulated-cold-resume-epoch1-bundles/main/index.cjs",
+      "bytes": 11737961,
+      "sha256": "047e62401bd12685acfbff8675c1afe006b894b5b32fceba6ec26332faa36ef1",
+      "crc32": "b21f27be"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/emulated-cold-resume-epoch1-bundles/main/internal-storage-worker.cjs",
+      "bytes": 212535,
+      "sha256": "3433cb94575a5748d3133174952698af2a98ac2afb348cb159fcb1110e0b284f",
+      "crc32": "19f85572"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/emulated-cold-resume-epoch1-bundles/main/task-change-worker.cjs",
+      "bytes": 2346,
+      "sha256": "f8fcc24dd4dc9842cd0f70ffe02891d39eef84019d4aab4ed21b529ba9326446",
+      "crc32": "a50420f3"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/emulated-cold-resume-epoch1-bundles/main/team-data-worker.cjs",
+      "bytes": 6593,
+      "sha256": "dc145e9f1fb5fdfa2e5f51ca6d6f2db8e22e89cb3ab34dae2745ccfd4e6f3823",
+      "crc32": "11b390ae"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/emulated-cold-resume-epoch1-bundles/main/team-fs-worker.cjs",
+      "bytes": 56734,
+      "sha256": "6e6410a44a3d1b97065085259858215045ed137b5bd0dd27bf70f797091c9c83",
+      "crc32": "18cefadb"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/emulated-cold-resume-epoch1-bundles/preload/index.js",
+      "bytes": 96166,
+      "sha256": "4f02e5f1659bb0373f5515d81c7edf5f9bc7af8b67a39f1600171f8acb291406",
+      "crc32": "7c658d63"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/host-profile.json",
+      "bytes": 7322,
+      "sha256": "b21e48116e914a65d339dfc6e66661f4aaf95321f14d037b029c09cc3300330d",
+      "crc32": "3a3729d2"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/hoststore/management-commands/4b81d447da351867eedf6cf1d5308d14528a4fe5989d18e01cdda595f48c5155.json",
+      "bytes": 956,
+      "sha256": "a4d1abbbee02cc055e29d2fe1f7de66d7b577a3bbe44581d1f3c7fed7335effc",
+      "crc32": "e6ae8d42"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/hoststore/runtime-checkpoints/cp1-524c390c0195aedcf38c1ef71982ad697710e2cb750abc9ae5d015481729239d.json",
+      "bytes": 1742,
+      "sha256": "0bd2d315663b9eec70e4a44476f2b6bb000f1d84f85ee9522a60a5cf8a2e69f1",
+      "crc32": "faf735f6"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+      "bytes": 969,
+      "sha256": "7c89629f8171cefbf21c015be51132e389e1c3660319077328937506942cd773",
+      "crc32": "97847a8a"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/sentinel-invocations.ndjson",
+      "bytes": 192,
+      "sha256": "6a654a1a19ba032449ef95df2bef8c8d31dbcd57e4c694085e111dc483c2fa8f",
+      "crc32": "5c83c4f5"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/ui-emulated-lifecycle-active-queued-before-quit.png",
+      "bytes": 120112,
+      "sha256": "fe8d15ca3d254ba9e3223137506f16618aa53395df7583787d01fb831774916b",
+      "crc32": "92db0c12"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/ui-emulated-lifecycle-launch.png",
+      "bytes": 102235,
+      "sha256": "32860e97a554981f406d58c00264bc719364acf70ca72868a94b3e9fe335a601",
+      "crc32": "5697d047"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/ui-emulated-lifecycle-resume-selected.png",
+      "bytes": 103560,
+      "sha256": "43cefad82ed997e61826015b739f9fcf9cf62d88f25d863ff30d6893c780ee80",
+      "crc32": "082b4481"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/ui-emulated-lifecycle-resumed.png",
+      "bytes": 108487,
+      "sha256": "4db66c9fd592a07a13e6457a6f92f017f806e8b871fb20e7b3559dfa63b41cb1",
+      "crc32": "39beb01f"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/ui-emulated-runtime-effects.json",
+      "bytes": 10509,
+      "sha256": "e5afca7e0f92a6328f4ef9e7423406d6b4f2a8266e219a972def1642a7c27c85",
+      "crc32": "3ce36139"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/ui-seed-receipt.json",
+      "bytes": 2335,
+      "sha256": "29e0546d5680aa39187287103a0b4fb428e0530fc03b5341500ddd8973e70b3c",
+      "crc32": "99a9c2ea"
+    },
+    {
+      "name": "TEST-desktop-backend-uvt4Zt/ui-emulated-lifecycle-stopped.png",
+      "bytes": 95036,
+      "sha256": "55f0ffdb8299caf652fa881fa2d27f788f76bf4de126b4cdb1af3bce4d9191bb",
+      "crc32": "8c4c0622"
+    },
+    {
+      "name": "TEST-emulated-ui-inputs-K8n7Nf/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45",
+      "crc32": "ed0ca14b"
+    },
+    {
+      "name": "host-emulated-emulated-claude-lifecycle-ui.log",
+      "bytes": 225,
+      "sha256": "083921054ebbb63ef3cff4c0801774cf00aa4ea672e7b9ca142278798af21ea9",
+      "crc32": "bc9bd4bf"
+    },
+    {
+      "name": "TEST-emulated-ui-inputs-K8n7Nf/linux-child-exec/manifest.json",
+      "bytes": 2406,
+      "sha256": "4ef7cd76c1a549d6fef41c4dc7561b5433547278d59b0c2907affe2be9a646f1",
+      "crc32": "e3de74e8"
+    },
+    {
+      "name": "host-emulated-inputs.json",
+      "bytes": 1803,
+      "sha256": "b20ef80cb8aed78e4a0a9f83c205352f3dd10d56557bf6e6dde8405a3ed39d5b",
+      "crc32": "c0fb34a5"
+    },
+    {
+      "name": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "sha256": "36c656140674fcaafccfc09eb413bf7e4c7f96d689d347b088f75111e558f117",
+      "crc32": "8553ce94"
+    },
+    {
+      "name": "host-emulated-summary.json",
+      "bytes": 912,
+      "sha256": "d1bb225c32f6de89bffb14bf58d17f178ccc3015164e5c4dbac82decee06a19c",
+      "crc32": "022bca71"
+    }
+  ],
+  "semanticReviewPending": true
+}
