@@ -478,7 +478,8 @@ function requestReview(context, taskId, flags = {}) {
               : `When approved, use MCP tool review_approve:\n` +
                 `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", note?: "<optional note>", notifyOwner: true }\n\n`) +
             `If changes are needed, use MCP tool review_request_changes:\n` +
-            `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", comment: "..." }`
+            `{ teamName: "${context.teamName}", taskId: "${task.id}", from: "<your-name>", comment: "..."` +
+            (humanOnlyApproval ? `, expectedReviewRequestId: "${reviewRequestId}"` : '') + ` }`
         ),
       summary: `Review request for #${task.displayId || task.id}`,
       source: 'system_notification',
@@ -507,12 +508,16 @@ function completeReview(context, taskId, flags = {}) {
       throw new Error(`Task #${task.displayId || task.id} must be completed before review completion`);
     }
     const state = getEffectiveReviewState(context, task);
-    const latest = getLatestReviewLifecycleEvent(task);
-    if (state === 'reviewed' && latest?.type === 'review_completed' &&
-        latest.reviewRequestId === expectedId) {
+    // A human may accept the completed cycle before its reviewer retries.
+    // Return the actual state, without moving an Approved card back to Done.
+    const completedCycle = [...(task.historyEvents || [])].reverse().find(
+      (event) => event.type === 'review_completed' && event.reviewRequestId === expectedId
+    );
+    if (completedCycle && (state === 'reviewed' || state === 'approved')) {
       return { duplicate: true, payload: {
-        ok: true, taskId: task.id, displayId: task.displayId, column: 'done',
-        reviewState: 'reviewed', reviewRequestId: expectedId, alreadyCompleted: true,
+        ok: true, taskId: task.id, displayId: task.displayId,
+        column: state === 'approved' ? 'approved' : 'done',
+        reviewState: state, reviewRequestId: expectedId, alreadyCompleted: true,
       } };
     }
     assertReviewTransitionAllowed(context, task, 'completing review');
@@ -732,11 +737,18 @@ function requestChangesWithAuthority(context, taskId, flags, fromHuman) {
       throw new Error(`No owner found for task ${String(taskId)}`);
     }
 
+    const currentReviewState = getEffectiveReviewState(context, currentTask);
     if (fromHuman) {
-      if (kanban.getKanbanState(context).humanOnlyApproval !== true ||
-          currentTask.status !== 'completed' ||
-          getEffectiveReviewState(context, currentTask) !== 'reviewed') {
-        throw new Error('Human rejection requires a reviewed Done task and human-only policy');
+      if (currentTask.status !== 'completed' ||
+          (currentReviewState !== 'review' && currentReviewState !== 'reviewed')) {
+        throw new Error('Human rejection requires active Review or reviewed Done');
+      }
+    } else if (kanban.getKanbanState(context).humanOnlyApproval === true) {
+      const expectedId = typeof flags.expectedReviewRequestId === 'string'
+        ? flags.expectedReviewRequestId.trim() : '';
+      const currentId = getLatestReviewRequestEvent(currentTask)?.id;
+      if (!expectedId || expectedId !== currentId) {
+        throw new Error('Stale review request: review_request_changes requires current expectedReviewRequestId');
       }
     }
     const nextFrom = fromHuman
@@ -747,7 +759,7 @@ function requestChangesWithAuthority(context, taskId, flags, fromHuman) {
         ? flags.comment.trim()
         : 'Reviewer requested changes.';
     const prevReviewState = fromHuman
-      ? 'reviewed'
+      ? currentReviewState
       : assertReviewTransitionAllowed(context, currentTask, 'requesting changes');
     const timestamp = new Date().toISOString();
 

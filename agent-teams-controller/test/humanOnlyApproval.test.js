@@ -67,6 +67,13 @@ describe('human-only review approval', () => {
     expect(events(task.id, 'human_approved')).toHaveLength(1);
     expect(board.approveAsHuman(task.id).reviewState).toBe('approved');
     expect(events(task.id, 'human_approved')).toHaveLength(1);
+    const retryAfterHumanApproval = board.completeReview(task.id, {
+      from: 'alice', expectedReviewRequestId: cycle,
+    });
+    expect(retryAfterHumanApproval).toMatchObject({
+      alreadyCompleted: true, column: 'approved', reviewState: 'approved',
+    });
+    expect(events(task.id, 'review_completed')).toHaveLength(1);
   });
 
   it('rejects stale, absent, wrong-reviewer and superseded cycle IDs without mutation', () => {
