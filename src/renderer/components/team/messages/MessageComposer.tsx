@@ -52,7 +52,6 @@ import {
 } from '@shared/utils/teamProvider';
 import { Paperclip } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
-
 import { crossTeamDraftMeta, memberDraftPreviews } from './composerDraftPreviews';
 import {
   buildPreparedSendRequest,

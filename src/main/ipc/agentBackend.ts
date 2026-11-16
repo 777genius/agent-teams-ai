@@ -23,16 +23,16 @@ import {
   registerCapturedReviewWatchIpc,
 } from '@features/agent-backend/main';
 import { InternalStorageOperationInterruptedError } from '@features/internal-storage/main';
-import { FileCodexAuthIntentStore } from '@features/runtime-provider-management/main';
-import { createCapturedCodexFeatures } from '@features/runtime-provider-management/main';
+import { NATIVE_NEXT_PROMPT_UPDATED } from '@features/native-prompt-suggestions/contracts';
 import {
+  createCapturedCodexFeatures,
   createCapturedRuntimeProviderManagementClient,
+  FileCodexAuthIntentStore,
   FileProviderOAuthIntentStore,
 } from '@features/runtime-provider-management/main';
 import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
+import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { createLogger } from '@shared/utils/logger';
-import { NATIVE_NEXT_PROMPT_UPDATED } from '@features/native-prompt-suggestions/contracts/channel';
-import type { NativeNextPromptCandidate } from '@features/native-prompt-suggestions/contracts';
 import { shell } from 'electron';
 
 import { createDesktopHostSchedules } from '../composition/createDesktopHostSchedules';
@@ -59,6 +59,7 @@ import type {
 } from '@features/agent-backend/main';
 import type { ApplicationCommandRunner } from '@features/application-command-ledger';
 import type { CodexAccountAuthMode } from '@features/codex-account/contracts';
+import type { NativeNextPromptCandidate } from '@features/native-prompt-suggestions/contracts';
 import type { RuntimeProviderOAuthProgressDto } from '@features/runtime-provider-management/contracts';
 import type {
   TeamCreateConfigResponse,
@@ -624,7 +625,7 @@ export function registerDesktopAgentBackend(options: BackendShellOptions): void 
       const contents = window && !window.isDestroyed() ? window.webContents : null;
       if (contents && !contents.isDestroyed() &&
           withoutHash(contents.getURL()) === withoutHash(expectedRendererUrl)) {
-        contents.send(NATIVE_NEXT_PROMPT_UPDATED, candidate);
+        safeSendToRenderer(window, NATIVE_NEXT_PROMPT_UPDATED, candidate);
       }
       try { options.publishHttpNativePromptSuggestion?.(candidate); }
       catch { /* Auxiliary transport may drop an offer; original work is unaffected. */ }

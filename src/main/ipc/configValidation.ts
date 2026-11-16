@@ -556,13 +556,7 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
         if (typeof value !== 'boolean') {
           return { valid: false, error: `general.${key} must be a boolean` };
         }
-        result[
-          key as
-            | 'autoExpandAIGroups'
-            | 'useNativeTitleBar'
-            | 'telemetryEnabled'
-            | 'externalAgentCdpEnabled'
-        ] = value;
+        result[key] = value;
         break;
       default:
         return { valid: false, error: `Unsupported general key: ${key}` };

@@ -15,10 +15,8 @@
  */
 
 import { createLogger } from '@shared/utils/logger';
-import type { NativeNextPromptCandidate } from '@features/native-prompt-suggestions/contracts';
 import { app, ipcMain } from 'electron';
 
-import { createTeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
 import {
   captureDesktopSkills,
   registerDesktopAgentBackend,
@@ -84,6 +82,7 @@ import {
   removeSubagentHandlers,
 } from './subagents';
 import { initializeTeamHandlers, registerTeamHandlers, removeTeamHandlers } from './teams';
+import { createTeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
 import { registerTelemetryHandlers, removeTelemetryHandlers } from './telemetry';
 import {
   initializeTerminalHandlers,
@@ -141,6 +140,7 @@ import type { CrossTeamService } from '../services/team/CrossTeamService';
 import type { LaunchIoGovernor } from '../services/team/LaunchIoGovernor';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
+import type { NativeNextPromptCandidate } from '@features/native-prompt-suggestions/contracts';
 
 const logger = createLogger('IPC:handlers');
 

@@ -143,7 +143,6 @@ import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contract
 import type { ExternalAgentConnectionApi } from '@features/external-agent-connection/contracts';
 import type { GatewayProviderApi } from '@features/gateway-provider/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
-import type { NativeNextPromptApi } from '@features/native-prompt-suggestions/contracts/channel';
 import type {
   MemberWorkSyncMetricsRequest,
   MemberWorkSyncReportRequest,
@@ -152,6 +151,7 @@ import type {
   MemberWorkSyncStatusRequest,
   MemberWorkSyncTeamMetrics,
 } from '@features/member-work-sync/contracts';
+import type { NativeNextPromptApi } from '@features/native-prompt-suggestions/contracts';
 import type { OrganizationsElectronApi } from '@features/organizations/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
