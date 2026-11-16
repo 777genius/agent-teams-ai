@@ -1,0 +1,112 @@
+{
+  "kind": "PLAN62_LINT_SIX_SOURCE_R2_PARENT_2A03_ADDENDUM",
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUtc": "2026-11-16T22:28:38.489533+00:00",
+  "decision": "APPROVE_SAME_EXACT_ONE_FILE_SOURCE_ON_2A03_WITH_FRESH_ROOT_GUARD",
+  "blockers": [],
+  "reusedExactSourceR2": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/plan62-lint-six-source-independent-r2/independent-r2.json",
+    "gitBlob": "6d142339da567214d28bfe507aa47cb414fc05be",
+    "bytes": 7946,
+    "sha256": "c3cf43b5e3c69064ed3a5a4c8799e73ec3ce70c2e65666b3103bca1f6e48469e"
+  },
+  "parent": {
+    "commit": "2a03bbf362abb224fa53519a248fb0ead59b8902",
+    "soleParent": "de4bf0f6071fe71ea4f81b882aa0e4535177faea",
+    "tree": "8130ebf84e70547d0fd9c0fdb8221195732d9072",
+    "leafCount": 11159,
+    "completePrior11155LeavesPreserved": true
+  },
+  "incomingDocuments": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/64-windows-cold-resume-fresh-launch-2026-11-16.md",
+      "gitBlob": "244eff62a93cf317e2a66738a2fe1eb829828549",
+      "bytes": 19135,
+      "sha256": "94b0ce22d4a5490445dccdb396b419a4f857c63b7bb7c69db2a202f0cae35439",
+      "completeAddedFilePatchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan64-windows-cold-resume-fresh-launch-2026-11-16/prospective-r1.json",
+      "gitBlob": "f67d9aa2b7d3010cbd19a4d1971b55c41337fc46",
+      "bytes": 11185,
+      "sha256": "aff3fd7de448869d7a603d29b73e1518f099c418deff616b19f8eaf2a06aa871",
+      "completeAddedFilePatchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan64-windows-cold-resume-fresh-launch-2026-11-16/prospective-r2.json",
+      "gitBlob": "106b4781eb6067ccb753fea3b72f90728465bf5a",
+      "bytes": 34402,
+      "sha256": "389eb5274b439968200f1b8456ae9153c8b280fd86669edcc07e11f5fb0594f8",
+      "completeAddedFilePatchExact": true
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan64-windows-cold-resume-fresh-launch-2026-11-16/prospective-r2.md",
+      "gitBlob": "1e4f888fe27a25ec908a8fe7d63114df767fbe5a",
+      "bytes": 7324,
+      "sha256": "934570303ad6312cd2012abe4240eefb66d0bd10b9ff0993c39acd34e44aa0a5",
+      "completeAddedFilePatchExact": true
+    }
+  ],
+  "source": {
+    "path": ".github/workflows/host-emulated-acceptance.yml",
+    "before": {
+      "gitBlob": "458a88ff6b3b197282f9144951aeb79074cc8d5b",
+      "bytes": 141809,
+      "sha256": "e8bafc0f5bc8016a6a7f55591436edf470f2e0eb259a6a85cc5a986d9f956d88"
+    },
+    "after": {
+      "gitBlob": "889332aafb86855e891b03f268bc33e49bd87597",
+      "bytes": 142256,
+      "sha256": "df050a35c76dfd64c74d66dfd5871cfff5459aed1e61eedc5e5d50b548edd1a9"
+    },
+    "patch": {
+      "gitBlob": "d138a692a68ee7ee9bdc16cdde1c7b603ed65b76",
+      "bytes": 1221,
+      "sha256": "8f2975803dedb0b0550704f37e182d58bdb198baa87a254b15fc4a72546177fc"
+    },
+    "sourceSemanticsUnchangedFromApproved6d142": true,
+    "projectedTree": "624996a7bfddc589f0c626f1c1969d2673e33b84",
+    "leafCount": 11159,
+    "allOther11158LeavesPreserved": true,
+    "publishedLintR1AndAllPriorPlansSourcesPreserved": true
+  },
+  "checks": [
+    "Official commit has sole parent de4.",
+    "Four complete added-file API patches reconstruct exact retained body hashes; inverse removes precisely those new bodies.",
+    "Independent full parent Merkle2995 and new Merkle8130 match exact maps.",
+    "All11155 original leaves preserved; only four new documents.",
+    "Unchanged source before/after/patch rehashed to approved6d142 identities.",
+    "Full projected source Merkle624996 matches root; only the Host workflow leaf changes."
+  ],
+  "inputs": [
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-2a03-api-readback.json",
+      "gitBlob": "bbcea2154b4fab4ac27253ceb3450367dac50992",
+      "bytes": 179997,
+      "sha256": "b3905891aff2c37f48f93255cacd525d3c3a1866cec5ddb3ce7d918df2044e5c"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-2a03-full-patch-readback.json",
+      "gitBlob": "cf4cd306bf1f3c51d1ac5de1f99f522bcd0fc22b",
+      "bytes": 75987,
+      "sha256": "1ca5917306f8131a8708df11c0682e2f264ead9e2e000108c73696b7e238ce4b"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-2a03-whole-tree-verification.json",
+      "gitBlob": "940c168077ea32a50a972c4d348c56af20b8abe4",
+      "bytes": 3430476,
+      "sha256": "d201f13ba02c42b529b75b235fe0a3f697b629583cc1ce5a5648dad14b5480b4"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/plan62-lint-six-source-proposal/parent-2a03.json",
+      "gitBlob": "d3bdd97d31326d652f87bd1c242c5d11b4f23582",
+      "bytes": 898,
+      "sha256": "6e368ea28fc19b4ca0d2d240f0970809f90f2dbd4b178b103470a88fb42eb435"
+    }
+  ],
+  "limits": [
+    "This addendum approves only parent rebinding of the already-reviewed lint6 source. It grants no semantic approval or implementation authority for Plan64; that separate review follows.",
+    "No project/compiler/lint/parser/test/native/provider/Git execution, API/CI action, source/canonical mutation or afterimage authoring. Only data reading/hash/Merkle calculations and this scratch addendum write.",
+    "Root still owns fresh current-ref guard and publication. No execution PASS or primary advancement authority is claimed."
+  ]
+}

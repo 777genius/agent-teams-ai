@@ -1,0 +1,53 @@
+{
+  "kind": "PLAN62_LINT_SIX_EXACT_SOURCE_R1",
+  "author": "root",
+  "status": "INERT_AFTERIMAGE_REQUIRES_INDEPENDENT_R2_BEFORE_APPLICATION",
+  "parent": "de4bf0f6071fe71ea4f81b882aa0e4535177faea",
+  "parentTree": "2995c81095c9eff626132be13b04e7aa69de2aaa",
+  "publishedR1Review": {
+    "path": "/tmp/migration-evidence-20261116/native/plan62-lint-six-published-r1-r2/independent-r2.json",
+    "sha": "15e4b9e337d690997435cf8be833c93b26ed29c6",
+    "bytes": 13825,
+    "sha256": "be5c06da6c6772b803d2a19eb94249feccf39dbfa895c93a10138dbb349ec7ac"
+  },
+  "sourcePath": ".github/workflows/host-emulated-acceptance.yml",
+  "before": {
+    "sha": "458a88ff6b3b197282f9144951aeb79074cc8d5b",
+    "bytes": 141809,
+    "sha256": "e8bafc0f5bc8016a6a7f55591436edf470f2e0eb259a6a85cc5a986d9f956d88",
+    "lines": 1767
+  },
+  "after": {
+    "sha": "889332aafb86855e891b03f268bc33e49bd87597",
+    "bytes": 142256,
+    "sha256": "df050a35c76dfd64c74d66dfd5871cfff5459aed1e61eedc5e5d50b548edd1a9",
+    "lines": 1773
+  },
+  "patch": {
+    "sha": "d138a692a68ee7ee9bdc16cdde1c7b603ed65b76",
+    "bytes": 1221,
+    "sha256": "8f2975803dedb0b0550704f37e182d58bdb198baa87a254b15fc4a72546177fc"
+  },
+  "sourceOnlyProjectedTree": "78bd182dd4d6367ea70273d2178fb11df0d710a9",
+  "leafCount": 11155,
+  "originalOperandCount": 132,
+  "newOperandCount": 138,
+  "originalOrderedPrefixPreserved": true,
+  "additions": [
+    "tools/owned-process-broker/nativeVendorInputs.ts",
+    "tools/owned-process-broker/nativeRetainedHostGate.ts",
+    "tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+    "tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+    "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+    "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts"
+  ],
+  "inverseRestoresCompletePreimage": true,
+  "allOtherWorkflowBytesPreserved": true,
+  "allOtherTreeLeavesPreserved": true,
+  "configurationAndTypedRoutesUnchanged": true,
+  "sourceTsBodiesUnchanged": true,
+  "newCommandsJobsStepsTimersNativeActions": 0,
+  "localProjectExecution": false,
+  "runtimePassClaim": false,
+  "primaryRefChangeAuthorizedByThisReview": false
+}

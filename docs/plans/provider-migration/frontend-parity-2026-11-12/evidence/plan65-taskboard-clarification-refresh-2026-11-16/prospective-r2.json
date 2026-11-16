@@ -1,0 +1,218 @@
+{
+  "kind": "TASKBOARD_CLARIFICATION_READINESS_PROSPECTIVE_R2",
+  "reviewer": "root",
+  "r1Author": "frontend_failures",
+  "decision": "APPROVE_NARROW_R1_PUBLICATION_ONLY",
+  "parent": "0f32b408e2d2e018883ea31a96ea67b7580fc3bd",
+  "parentTree": "624996a7bfddc589f0c626f1c1969d2673e33b84",
+  "r1": {
+    "sha": "5df22caf981497d23ef3137783e951fc7470ab80",
+    "bytes": 8760,
+    "sha256": "ed08632a83f7918cbcba0d58d4e2cc42a6945082a342872bb863e23c1241ac2a"
+  },
+  "sourcePath": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+  "sourceBefore": {
+    "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+    "sha": "3f1ce46fce847a861850ef874017f84227c62b0c",
+    "bytes": 36207,
+    "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+    "capturedSha256Matched": true
+  },
+  "currentHostWorkflow": {
+    "path": ".github/workflows/host-emulated-acceptance.yml",
+    "sha": "889332aafb86855e891b03f268bc33e49bd87597",
+    "bytes": 142256,
+    "sha256": "df050a35c76dfd64c74d66dfd5871cfff5459aed1e61eedc5e5d50b548edd1a9",
+    "fastOperandCount": 138
+  },
+  "originalFailure": {
+    "head": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "runId": 43959134362,
+    "jobId": 133621515452,
+    "attempt": 1,
+    "targetY": [
+      167.125,
+      171.125
+    ],
+    "dialogHeight": [
+      619.75,
+      611.75
+    ],
+    "physicalCloseAttempted": false,
+    "exactInvalidatingEventObserved": false
+  },
+  "sourceReview": [
+    "Read full authored R1, full existing assignment-ready expression, original caller phase and complete generic target/read/click logic relevant to refusal.",
+    "Read source owner chain: accepted clarification invalidates snapshot authority; absent accepted snapshot disables isOwner/canEditNow; Header switches32px editable selector to24px badge, consistent with retained geometry. Exact event/token at the failed evaluation is not recorded.",
+    "Strengthen only the existing banner-cleared wait acceptance with the existing default owner/detail-ready predicate using the captured context and surface. Retain Boolean return and original label.",
+    "No new wait or CDP call site; original30s polling site/100ms cadence and complete original Close target/geometry/tag/renderer/one-press guards remain. Predicate work consumes the same interval.",
+    "Preserve canonical disk/receipt joins, all prior and following Taskboard/Cross-Team assertions, source capture, cleanup and all clocks. Preserve natural800 cap without compression.",
+    "All20 retained source bodies rehash to current0f32 tree; nineteen original archive members/CRC rechecked. Existing Host workflow889332 retains both caller/helper fast-lint admission plus original types/harnesses. R1 reference458a names historical original route, not a later execution result."
+  ],
+  "evidence": {
+    "audit": {
+      "sha": "9db358536b43d2de63add54764ebb802e864f25b",
+      "bytes": 11711,
+      "sha256": "6822dc65ed0c9095fe37cd425d58e3d3d2c07e26b29c132babca366bd61f3602"
+    },
+    "sourceBinding": {
+      "sha": "59a21feb585770ec45eefb1d46d7849d884e8743",
+      "bytes": 12114,
+      "sha256": "ad182d3107162aac4f5b45781a58e236bcc8913f1dba3fe06e49402f3358f018"
+    },
+    "archive": {
+      "sha": "924503d1c488fa732de496592e1ee3e615b22f42",
+      "bytes": 868196,
+      "sha256": "f15cfa972cd2b4fd0852f9a2de62751bbcd84353249bf1daf2960c1c53bd1b76"
+    }
+  },
+  "sources": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "sha": "9c724c3895e467bc1db062e5015ded70c30e65e4",
+      "bytes": 55757,
+      "sha256": "bbd6647969c1ab0ae125b6a5e0685ca0f112dca05661a6c04b37c4fbee56a33e",
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-cross-team-ui-smoke.ts",
+      "sha": "db4d98b333e1fb1103c82cf7851a252c0ecff3a5",
+      "bytes": 8576,
+      "sha256": "4e62a8eee6a03074e05bf75f17c8cdfb2b717cd99f923d188a0ffe7f3db54e6a",
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "sha": "3f1ce46fce847a861850ef874017f84227c62b0c",
+      "bytes": 36207,
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "sha": "3703e649040020d7ed6b21ff3ccffcb7d1d35b2f",
+      "bytes": 6433,
+      "sha256": "a43bf978f992fec4ce9313631c454f1b164058f5b72e46d1234231c873e04374",
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "sha": "1c11809c6458f829bd9bb6995aea2ad60b85511e",
+      "bytes": 30733,
+      "sha256": "eb11423b89e2b70edfdd74d8144410dfce62155e9754a50e56d1b1a387e7566e",
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/adapters/TaskDetailPage.tsx",
+      "sha": "b0bda589bc5e7db5003ebeebb5629415ebb12882",
+      "bytes": 9715,
+      "sha256": "b05535ba6b48780520bcca99d1e0b5d28b95cdfd7846f9c7f2b69fc74c3d55c4",
+      "capturedSha256Matched": null
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailPresentation.ts",
+      "sha": "6640fd23e9941c261612517b6d583f7d4ddc5079",
+      "bytes": 12402,
+      "sha256": "245a59c0715bb05dc9da07c7ea51745734480a9e09863a09100bdbfe40fca019",
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailReviewRoute.ts",
+      "sha": "0488ba1929d37ce5dfb4b5d08a9ad0a8ebbed58d",
+      "bytes": 1875,
+      "sha256": "73b013b826058eeb3f5211f07906187909cbde6945b021b23c8c6547d6e76349",
+      "capturedSha256Matched": null
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/hooks/useTaskDetailSession.ts",
+      "sha": "4ebf5a55d7cdcc5c29cc63e2bc9915c631222165",
+      "bytes": 27853,
+      "sha256": "cc73af4fab0ee40b4711173ed71db67776e16027009156cd373a1abcb942cb30",
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/ui/TaskDetailBody.tsx",
+      "sha": "d039d7b35ba3e7d5e2a7bbaf0e04f85bda72cead",
+      "bytes": 22571,
+      "sha256": "fd98561aa85b8f243e75970bfb342af47fa5b65a04fe6c7d154d54b5cbc6bfde",
+      "capturedSha256Matched": null
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/ui/TaskDetailContent.tsx",
+      "sha": "2ccca35825ba451dc71546d19fd273f1e7ca5ec2",
+      "bytes": 3288,
+      "sha256": "a6bc6a07fa69607529914c3b552c55dafa1ffa492fd650e565e0bb8e07b4e7c4",
+      "capturedSha256Matched": null
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "sha": "68499fd50746417a48883f73ca1d25592c644089",
+      "bytes": 17067,
+      "sha256": "9aa3aabc0d50852af7010fc9dfd1834905c6c078ac4bfe691e789f002ac05bd1",
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "src/renderer/components/team/MemberBadge.tsx",
+      "sha": "d0285af90257ad90e1aaf0c2a6cb4be6915282e8",
+      "bytes": 6525,
+      "sha256": "9b3cb4a234416582ed836ba8358f45ea11d16c92698f3becc20b08d8c48765a9",
+      "capturedSha256Matched": null
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/TaskCommentInput.tsx",
+      "sha": "fde63957a08c0b076bd50ae272115737c4a4af19",
+      "bytes": 14513,
+      "sha256": "7f5c23b48db6fcb519d3a8837ad77688851c21419c5ab45183632a2600c4bc77",
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/TaskDetailDialog.tsx",
+      "sha": "003228a68f91bd3be004b8388fbb400f5b6a7aa6",
+      "bytes": 11909,
+      "sha256": "8efb9b58de0e0b41d0a1264cccef6ac6b530792698d6b7fcd3b1aadfe3fc046b",
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "src/renderer/components/ui/MemberSelect.tsx",
+      "sha": "56bd2c298ec1a7c9d74568d6338151e9b0e900cb",
+      "bytes": 13481,
+      "sha256": "69bf0eb3e109ee241e61619fd73bc7515415f45414eb61cbd56fd408ec1e782c",
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "src/renderer/components/ui/dialog.tsx",
+      "sha": "046c7452239fccb9d18858c86e9d075984888031",
+      "bytes": 4914,
+      "sha256": "038c9966ee8a0047c0ab1e32f5feb61ca8a2a38ea838260139187b5f041767f2",
+      "capturedSha256Matched": null
+    },
+    {
+      "path": "src/renderer/store/slices/teamSlice.ts",
+      "sha": "df9dd8391bdd9fcd2edc05057fa18a8cbd787dad",
+      "bytes": 184647,
+      "sha256": "87f07dfa0d132d20493add182d0bb05d40fa1c5f97b5ddb72fa9ab23b6df8e9a",
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "src/renderer/store/slices/teamTaskDetailSlice.ts",
+      "sha": "5d5da9534eeacf34d554b2df2ed5573876c3a09c",
+      "bytes": 27966,
+      "sha256": "7c1b2091311e921fc244e8d8d8814cd03451bd31327a91492fdf4f8730aa8fdf",
+      "capturedSha256Matched": true
+    },
+    {
+      "path": "src/renderer/store/team/taskDetailReadAuthority.ts",
+      "sha": "ebe4226a87ccc0b58cd2a24fd45e6bbf797ea08f",
+      "bytes": 14291,
+      "sha256": "300d67066bf861099b83684df1cf2898229c950ab12044c57fddb32d893f2719",
+      "capturedSha256Matched": true
+    }
+  ],
+  "limits": [
+    "Source-only proposal; no afterimage, patch, source application or runtime PASS.",
+    "Independent actual-published-R1 review is required before source preparation, and exact afterimage/inverse independent review before application.",
+    "No project/compiler/lint/test/provider/native/GUI execution or additional mandatory CI/RED cycle.",
+    "Late invalidation after acceptance still triggers the unchanged original final guard. No blind delay or retry.",
+    "1777 captured vectors equal is not a full1777 Git body rehash. Unobserved Host birth/exit remains unqualified."
+  ]
+}

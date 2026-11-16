@@ -1,0 +1,48 @@
+{
+  "kind": "PLAN62_LINT_SIX_ACTUAL_0F32_PUBLICATION_JOIN",
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUtc": "2026-11-16T22:31:06.704191+00:00",
+  "decision": "APPROVE_ACTUAL_SOURCE_BINDING_ONLY",
+  "blockers": [],
+  "actualCommit": "0f32b408e2d2e018883ea31a96ea67b7580fc3bd",
+  "soleParent": "2a03bbf362abb224fa53519a248fb0ead59b8902",
+  "actualTree": "624996a7bfddc589f0c626f1c1969d2673e33b84",
+  "leafCount": 11159,
+  "sourcePath": ".github/workflows/host-emulated-acceptance.yml",
+  "actualBody": {
+    "gitBlob": "889332aafb86855e891b03f268bc33e49bd87597",
+    "bytes": 142256,
+    "sha256": "df050a35c76dfd64c74d66dfd5871cfff5459aed1e61eedc5e5d50b548edd1a9"
+  },
+  "readback": {
+    "path": "/tmp/migration-evidence-20261116/root/plan62-lint-six-source-readback-packaged-poll08.json",
+    "gitBlob": "68bc144c380ff0a16c533ddf1171d2990a428675",
+    "bytes": 223508,
+    "sha256": "5b24b6c20d598eb19c7bbef331159d244e16e91497c281d2eff7d39870659236",
+    "reportedReadbackAt": "2026-11-16T22:29:46.772Z",
+    "deliveryRefAtReadback": "refs/heads/fix/frontend-parity-public-c2f5ff7c",
+    "refObjectAtReadback": "0f32b408e2d2e018883ea31a96ea67b7580fc3bd"
+  },
+  "reusedExactSourceAndParentR2": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/plan62-lint-six-source-independent-r2/parent-2a03-addendum.json",
+    "gitBlob": "462db51740f413d759a3034e34a399a836e3f110",
+    "bytes": 5410,
+    "sha256": "04b30cc62f1450e8e2cc8fefb62e0418524f265098240d72b15fbe25f47007b0"
+  },
+  "checks": {
+    "fullOfficialBodyEqualsApproved889332": true,
+    "soleParentMatchesReviewed2a03": true,
+    "officialOnlyOneSourcePathSevenAddedOneRemoved": true,
+    "officialPatchHunkNumbersAndAllChangeContextLinesMatchReviewedPatch": true,
+    "actualTreeEqualsIndependentlyRecomputed624996": true,
+    "allOther11158LeavesRemainPreservedViaExactTree": true,
+    "publishedPlan62AndPlan64DocumentLeavesPreserved": true,
+    "currentHostFastOperandCount": 138
+  },
+  "patchDisplayDifference": "API adds the hunk section label jobs: and omits the serialized patch final LF. Hunk coordinates and every context/add/remove line match; complete official afterbody is byte-identical.",
+  "limits": [
+    "Actual published source binding only; no runtime/lint/type PASS or primary advancement approval.",
+    "No new API/CI poll, project/Git/compiler/test/native/provider execution, source/canonical mutation. Packaged metadata embedded in the retained packet was not used for a new CI status conclusion.",
+    "Plan64 semantic review continues separately; its future workflow change must preserve current138 operands and add its helper to yield139."
+  ]
+}

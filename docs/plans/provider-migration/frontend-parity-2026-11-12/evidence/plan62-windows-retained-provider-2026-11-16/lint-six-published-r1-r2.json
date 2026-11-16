@@ -1,0 +1,253 @@
+{
+  "kind": "PLAN62_LINT_SIX_ACTUAL_PUBLISHED_R1_INDEPENDENT_R2",
+  "reviewer": "/root/native_failures",
+  "reviewedAt": "2026-11-16T22:24:26.296905+00:00",
+  "verdict": "APPROVE_PUBLISHED_R1_FOR_EXACT_SOURCE_PREPARATION_ONLY",
+  "actualCommit": "de4bf0f6071fe71ea4f81b882aa0e4535177faea",
+  "soleParent": "b627469aaa75b9e551e8183bd352c049fd4a5bfc",
+  "parentTree": "ede315fd8f8d7af6d838850a57525d41b518fb8e",
+  "actualTree": "2995c81095c9eff626132be13b04e7aa69de2aaa",
+  "actualLeafCount": 11155,
+  "inputs": [
+    {
+      "path": "/tmp/migration-evidence-20261116/root/plan62-lint-six-published-document-readback.json",
+      "gitBlob": "abca6f91d3a63f47822d3a08d8ec7f98c3a375a2",
+      "bytes": 113253,
+      "sha256": "8091cb8a3633a5e86e0d7389462e822a535aa347874c3af27937c213b7f72036"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/plan62-lint-six-document-selection.json",
+      "gitBlob": "761f337854f62c512a6e48c4e38b6712cf8536d9",
+      "bytes": 66397,
+      "sha256": "a4749d3a68003d2d03db5654f3d1b24313f3f8752def8802f2f180c8b6d443f6"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/incoming-b627-whole-tree-verification.json",
+      "gitBlob": "61589492340a523b4b34f1a2a45310e47f382eb7",
+      "bytes": 3434438,
+      "sha256": "bf82c94ef0968488fc4f97f4e91d54cf529166e5029359e12d79e9909f74b918"
+    }
+  ],
+  "actualDocuments": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/62-windows-retained-provider-test-completion-2026-11-16.md",
+      "gitBlob": "52564dd9f7396877485512517e7fcc4337be66c5",
+      "bytes": 35379,
+      "sha256": "0cfb843b31a050dbd38e7955c1deaba77d857a94f39b8bf0b35721596daaa701"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan62-windows-retained-provider-2026-11-16/lint-six-prospective-r1.json",
+      "gitBlob": "3ac8d67960b89016b1cf5050af8282c7dacbdf47",
+      "bytes": 22504,
+      "sha256": "44e0d76b013523cfc42c9578e7eedca261fdf9ef1a7c4d68f696d5e1814841a7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan62-windows-retained-provider-2026-11-16/lint-six-prospective-r2.json",
+      "gitBlob": "894a25a147aca535b5648eb8d7a1b3d4bfd1d727",
+      "bytes": 5312,
+      "sha256": "c94f8064b412284cbf084afdb77110d5161e843e1d7208626cb557b0a20d1f47"
+    }
+  ],
+  "proof": {
+    "officialReadbackBodiesEqualSelection": true,
+    "commitFilesExactlyThree": true,
+    "officialRefAtReadbackEqualsPublishedCommit": true,
+    "independentParentMerkle": "ede315fd8f8d7af6d838850a57525d41b518fb8e",
+    "independentDocumentMerkle": "2995c81095c9eff626132be13b04e7aa69de2aaa",
+    "entirePlan62Prefix": {
+      "gitBlob": "74c8b4dadac0d444a2649a7dd165740af064eae8",
+      "bytes": 27385,
+      "sha256": "767505513a51a092d8dca560c65cf0aa9acd019c63b2c07b475256cc0fb338ae"
+    },
+    "separator": {
+      "bytes": 1,
+      "value": "LF"
+    },
+    "exactAppendix": {
+      "gitBlob": "e29241eedf098ec5938ccf99b6817b7b77563e09",
+      "bytes": 7993,
+      "sha256": "be5ab06a3425d7a6b42f5751b072842853e07a854a859a9d80eb54fafab6a1c2"
+    },
+    "allOther11152ParentLeavesUnchanged": true,
+    "allSourceLeavesUnchanged": true,
+    "p10Unchanged": true,
+    "historical9464SourceBindingPreservedUnderActualB627": true
+  },
+  "commandReview": {
+    "sourcePreimage": {
+      "gitBlob": "458a88ff6b3b197282f9144951aeb79074cc8d5b",
+      "bytes": 141809,
+      "sha256": "e8bafc0f5bc8016a6a7f55591436edf470f2e0eb259a6a85cc5a986d9f956d88"
+    },
+    "sourcePath": ".github/workflows/host-emulated-acceptance.yml",
+    "step": "Verify complete workspace types and original typed lint scopes",
+    "predicate": "matrix.lane == 'team'",
+    "script": "eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content",
+    "kind": "fast non-type-aware lint",
+    "originalOperandCount": 132,
+    "originalOperandsSha256": "a5d659eaf4b9b0a26f6b09683eb7cb5554e2b0b51cd013030937e6772277f697",
+    "originalExactBlockSha256": "172b2fde22b49676c3856b0d60c9da088f93e4bd3caaecddd20a2e4beec21b68",
+    "addedOperands": [
+      "tools/owned-process-broker/nativeVendorInputs.ts",
+      "tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+      "tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+      "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts"
+    ],
+    "prospectiveCount": 138,
+    "existingPrefixUnique": true,
+    "sixDistinctAndAbsent": true,
+    "onlyPermittedMutation": "Final original operand continuation plus six new path lines, retaining all other complete workflow bytes.",
+    "configAdmission": "All six .ts paths match the fast TypeScript glob with projectService:false and fall outside actual global ignores. Imported gateway rules and fast-imports src/test/agent-graph scope do not apply to these six. No new configuration or type-aware claim.",
+    "cost": "Six additional file operands in the same ESLint process/content-cache regime; elapsed and actual lint result remain unknown.",
+    "sourceAfterimageCreatedByReviewer": false,
+    "futureSourceAfterimageNotCertified": true
+  },
+  "unchangedTypeRoutes": {
+    "lowLevelProject": "nativeVendorInputs via existing *.ts include; not excluded",
+    "retainedProject": "Gate+Scenario directly included; actual Scenario imports helper; helper imports both finite model owners",
+    "hostTestProject": "Both model paths included by tests/**/*.ts and existing strict base; workspace typecheck invokes package typecheck:test",
+    "existingProcessCommands": [
+      "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.json",
+      "node node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json",
+      "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json",
+      "node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json"
+    ],
+    "wholeWorkflowMutationAuthority": "No changes to compiler/type/lint configuration, original commands/steps/predicates/jobs/rosters/clock/native activation or source TS bodies."
+  },
+  "currentReferencesRehashed": [
+    {
+      "path": "eslint.fast.config.js",
+      "local": "/tmp/migration-evidence-20261116/frontend/fast-feedback-types-inert-proposal/reference/eslint.fast.config.js",
+      "gitBlob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "bytes": 7268,
+      "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88"
+    },
+    {
+      "path": "package.json",
+      "local": "/tmp/migration-evidence-20261116/frontend/fast-feedback-types-inert-proposal/reference/package.json",
+      "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "bytes": 26839,
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "local": "/tmp/migration-evidence-20261116/native/provider-c930-native-qualification/app-delta/after/packages/legacy-agent-host/package.json",
+      "gitBlob": "72bcb2ef993c43e8f5199b090ee3df8440d758b9",
+      "bytes": 12353,
+      "sha256": "16989c4b4c3a601bc8f106ca25495fb521268d6e3f4f14f773522cdca1d8b7d1"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.test.json",
+      "local": "/tmp/migration-evidence-20261116/native/current-consumer-regions-proposal/reference/packages/legacy-agent-host/tsconfig.test.json",
+      "gitBlob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+      "bytes": 174,
+      "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "local": "/tmp/migration-evidence-20261116/native/current-consumer-regions-proposal/reference/packages/legacy-agent-host/tsconfig.json",
+      "gitBlob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "bytes": 456,
+      "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab"
+    },
+    {
+      "path": "tsconfig.json",
+      "local": "/tmp/migration-evidence-20261116/frontend/fast-feedback-types-inert-proposal/reference/tsconfig.json",
+      "gitBlob": "568952f5025a88c16b0568c7279d8e85a4288b43",
+      "bytes": 1235,
+      "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a"
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "local": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/reference/tsconfig.legacy-agent-host-scripts.json",
+      "gitBlob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "bytes": 646,
+      "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306"
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "local": "/workspace/scratch/20ba97c23d57/retained-provider-proposal/source/after/tools/owned-process-broker/tsconfig.json",
+      "gitBlob": "2d0a94f85c2d23232f9ce1a7375e7765f552ebb9",
+      "bytes": 593,
+      "sha256": "d503beb57a0e2e41d81c89a73349acbecd1f7e1c958b3d732db4500bd532fb21"
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+      "local": "/workspace/scratch/20ba97c23d57/retained-provider-proposal/current-c5d-source/tools/owned-process-broker/tsconfig.retained-host.json",
+      "gitBlob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+      "bytes": 393,
+      "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7"
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "local": "/tmp/migration-evidence-20261116/native/a07-direct-i386-source-review/after/.github/workflows/host-process-acceptance.yml",
+      "gitBlob": "93606e49aedfe84b6452aee487efdf2055f45524",
+      "bytes": 32370,
+      "sha256": "1aa35cca543a731d88fb257522458e99f73964b1d18553c5118f4c8542815e7e"
+    },
+    {
+      "path": "AGENTS.md",
+      "local": "/tmp/migration-evidence-20261116/migration-scope/a07-plan42-scope-review/reference/AGENTS-0c8a4a63.md",
+      "gitBlob": "0c8a4a63abf24c1510c934990a025ebc99c9e435",
+      "bytes": 8999,
+      "sha256": "9a8bc5d8906292ca6949a3e7c9b969d72061aba020d8064c7e799351084fd8a7"
+    },
+    {
+      "path": "eslint.gateway-boundaries.mts",
+      "local": "/tmp/migration-evidence-20261116/root/plan62-lint-gateway-source-readback.json",
+      "gitBlob": "4975b20df1353a9687fd479ab043beb025e967ba",
+      "bytes": 3786,
+      "sha256": "0c68ab55ac206b45d8d01a75cd2877fbda9352955df1a687ff17b58cba3171e4"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeVendorInputs.ts",
+      "local": "/workspace/scratch/20ba97c23d57/retained-provider-proposal/source/after/tools/owned-process-broker/nativeVendorInputs.ts",
+      "gitBlob": "c46fe3a59d8676cbc921171f5683da03c0247f36",
+      "bytes": 11979,
+      "sha256": "fe74eda0b65b286e862e7b72362117616174dd0f19d3da682a0cac541fe85a91"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "local": "/workspace/scratch/20ba97c23d57/retained-provider-proposal/source/after/tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "gitBlob": "8cd7d429d668d533cd448bc14ce556c7adf5073f",
+      "bytes": 27977,
+      "sha256": "3913d14da42b0848763ee89ab99030a57803ad8797ecb42a7cd8200c8dda4429"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+      "local": "/workspace/scratch/20ba97c23d57/retained-provider-proposal/source/after/tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+      "gitBlob": "fce5ce7418b8ff4581fcadf0fc47e6118917af49",
+      "bytes": 36616,
+      "sha256": "865c5baf02f113b4e46a3b12b812bd970bac3295678f05e1e199c5ce27436640"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+      "local": "/workspace/scratch/20ba97c23d57/retained-provider-proposal/source/after/tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+      "gitBlob": "09971225cc43125424e72bc6ffcf267d52d5d99a",
+      "bytes": 38878,
+      "sha256": "87ca146d9835de136c88439f7721900c2a78fcba610b1f9ec16b9ae583a91435"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "local": "/workspace/scratch/20ba97c23d57/retained-provider-proposal/source/after/packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "gitBlob": "02c6f7cff1655272888047a637ea9286585688a0",
+      "bytes": 32330,
+      "sha256": "8b81665d2633d639b6450aba0a2c57a68a996e2ec36351a977bccace8b9cb708"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "local": "/workspace/scratch/20ba97c23d57/retained-provider-proposal/source/after/packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "gitBlob": "3953930cdb3aa2a1879fc65cc3d38586829ffdf0",
+      "bytes": 40896,
+      "sha256": "23acd95539e17610a6e2df3862f935f01790a92c7390f3e0f1c0ddbf46d6a1a2"
+    }
+  ],
+  "limits": [
+    "Only retained JSON/source/data were read; no API, CI poll, Git/canonical/ref mutation, project/compiler/lint/test/native/provider execution was used for this review.",
+    "The actual published R1 is approved for bounded exact workflow-afterimage preparation. A future afterimage/diff/inverse review is still required before source application.",
+    "No source-afterimage hash, actual future lint/type PASS, old-head PASS transfer, W01 native completion, W05/W07 selection or real-vendor execution is certified.",
+    "The actual documentary ancestry/readback is verified; no unseen earlier publication-review chronology is inferred."
+  ]
+}

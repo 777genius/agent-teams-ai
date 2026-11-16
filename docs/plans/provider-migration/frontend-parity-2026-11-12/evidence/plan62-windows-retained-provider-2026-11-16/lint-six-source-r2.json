@@ -1,0 +1,173 @@
+{
+  "kind": "PLAN62_LINT_SIX_EXACT_INERT_SOURCE_INDEPENDENT_R2",
+  "reviewer": "/root/migration_scope",
+  "sourceAuthor": "/root",
+  "reviewedAtUtc": "2026-11-16T22:27:01.856662+00:00",
+  "decision": "APPROVE_EXACT_SOURCE_ONLY_ON_DE4_WITH_FRESH_ROOT_GUARD",
+  "blockers": [],
+  "binding": {
+    "parent": "de4bf0f6071fe71ea4f81b882aa0e4535177faea",
+    "parentTree": "2995c81095c9eff626132be13b04e7aa69de2aaa",
+    "leafCount": 11155,
+    "projectedSourceTree": "78bd182dd4d6367ea70273d2178fb11df0d710a9",
+    "exactChangedPaths": [
+      ".github/workflows/host-emulated-acceptance.yml"
+    ],
+    "currentRefPolledByReviewer": false
+  },
+  "inputs": [
+    {
+      "path": "/tmp/migration-evidence-20261116/root/plan62-lint-six-source-proposal/source-r1.json",
+      "gitBlob": "2f328e76c7e67417c94bf2e47e1e528db77d8e4c",
+      "bytes": 2169,
+      "lines": 53,
+      "sha256": "89218179bee6a9fcfa99d7fb786e6051edebb6cd8e139acef2e0ee15864de8ba"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/root/plan62-lint-six-published-whole-tree-verification.json",
+      "gitBlob": "22bd1d47fb474cd0551c3e046996c883a678eaf9",
+      "bytes": 3429888,
+      "lines": 78117,
+      "sha256": "5950018ca1d3f0259f771f3cbb1ec5e219b9ff55abe9da4f3c6eec7dc4318cfc"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/native/plan62-lint-six-published-r1-r2/independent-r2.json",
+      "gitBlob": "15e4b9e337d690997435cf8be833c93b26ed29c6",
+      "bytes": 13825,
+      "lines": 253,
+      "sha256": "be5c06da6c6772b803d2a19eb94249feccf39dbfa895c93a10138dbb349ec7ac"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/plan62-lint-six-r1-proposal/scope.json",
+      "gitBlob": "3ac8d67960b89016b1cf5050af8282c7dacbdf47",
+      "bytes": 22504,
+      "lines": 410,
+      "sha256": "44e0d76b013523cfc42c9578e7eedca261fdf9ef1a7c4d68f696d5e1814841a7"
+    }
+  ],
+  "source": {
+    "path": ".github/workflows/host-emulated-acceptance.yml",
+    "before": {
+      "gitBlob": "458a88ff6b3b197282f9144951aeb79074cc8d5b",
+      "bytes": 141809,
+      "lines": 1767,
+      "sha256": "e8bafc0f5bc8016a6a7f55591436edf470f2e0eb259a6a85cc5a986d9f956d88"
+    },
+    "after": {
+      "gitBlob": "889332aafb86855e891b03f268bc33e49bd87597",
+      "bytes": 142256,
+      "lines": 1773,
+      "sha256": "df050a35c76dfd64c74d66dfd5871cfff5459aed1e61eedc5e5d50b548edd1a9"
+    },
+    "patch": {
+      "gitBlob": "d138a692a68ee7ee9bdc16cdde1c7b603ed65b76",
+      "bytes": 1221,
+      "lines": 17,
+      "sha256": "8f2975803dedb0b0550704f37e182d58bdb198baa87a254b15fc4a72546177fc"
+    },
+    "diff": {
+      "addedLines": 7,
+      "removedLines": 1,
+      "netLines": 6,
+      "netBytes": 447
+    }
+  },
+  "publishedR1": {
+    "actualCommit": "de4bf0f6071fe71ea4f81b882aa0e4535177faea",
+    "reviewDecision": "APPROVE_PUBLISHED_R1_FOR_EXACT_SOURCE_PREPARATION_ONLY",
+    "reviewFullyReadAndHashed": true,
+    "plan62Blob": "52564dd9f7396877485512517e7fcc4337be66c5",
+    "entireOriginalPlanAnd7993ByteAppendixPreserved": true,
+    "scopeBlob": "3ac8d67960b89016b1cf5050af8282c7dacbdf47",
+    "allThreePublishedDocumentLeavesUnchanged": true
+  },
+  "command": {
+    "name": "pnpm lint:fast:files --",
+    "kind": "SCOPED_NON_TYPE_AWARE_FAST_LINT",
+    "step": "Verify complete workspace types and original typed lint scopes",
+    "predicate": "matrix.lane == 'team'",
+    "beforeLines": [
+      139,
+      271
+    ],
+    "afterLines": [
+      139,
+      277
+    ],
+    "originalCount": 132,
+    "newCount": 138,
+    "allUnique": true,
+    "originalWholeOrderedPrefixEqual": true,
+    "oldOperandSha256": "a5d659eaf4b9b0a26f6b09683eb7cb5554e2b0b51cd013030937e6772277f697",
+    "newOperandSha256": "b4dbc28c73b285a40708d4e2d022f6e28474209a4c2ae4f6bfacd80e5720c1e5",
+    "oldRawCommandBlockSha256": "172b2fde22b49676c3856b0d60c9da088f93e4bd3caaecddd20a2e4beec21b68",
+    "newRawCommandBlockSha256": "24c2997dd83bb1a2a06087eaccc2e97f7c0022f0519b959a6515170d0073e048",
+    "addedOperands": [
+      "tools/owned-process-broker/nativeVendorInputs.ts",
+      "tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+      "tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+      "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts"
+    ]
+  },
+  "independentChecks": {
+    "completeBeforeAndAfterBodiesReadAndHashesMatched": true,
+    "beforeJoinedExactPublishedParentLeaf": true,
+    "completeUnifiedDiffExactlyMatchesSuppliedPatch": true,
+    "officiallySuppliedPatchForwardEqualsCompleteAfter": true,
+    "invertedPatchRestoresCompleteBefore": true,
+    "independentSingleLiteralReplacementEqualsCompleteAfter": true,
+    "singleLiteralInverseRestoresCompleteBefore": true,
+    "onlyOldLastOperandContinuationPlusSixNewLines": true,
+    "allOtherWorkflowBytesIdentical": true,
+    "fullParentMerkleIndependentlyMatches": true,
+    "fullSourceOnlyMerkleIndependentlyMatches": true,
+    "onlyOneOf11155LeavesChanges": true,
+    "allOther11154LeavesPreserved": true,
+    "allSixTsBodiesUnchanged": true,
+    "allTwelveReviewedConfigTypeWorkflowReferencePinsRemainCurrent": true,
+    "plan63RosterAndAllIncomingEvidencePreserved": true,
+    "publishedPlan62R1AllThreeLeavesPreserved": true,
+    "p10AndAllOtherPlansUnchanged": true
+  },
+  "configurationAndRoutes": {
+    "reuse": "The earlier full fast-config/gateway/type owner review is reused only after all twelve immutable reference pins and six current TS source pins matched the actual de4 parent map.",
+    "fastAdmission": "All six paths match the existing TypeScript glob with projectService:false and remain outside global ignores. Imported gateway src-only and fast-imports rules do not apply.",
+    "typeCoverage": "Existing Process936 low-level2d0 directly includes nativeVendorInputs; retained905 directly includes Gate/Scenario and reaches helper/models by imports. Host65ed tests/**/*.ts includes both model files under strict9fad, called by original workspace/package and Process commands.",
+    "preserved": "Original compiler/type-aware lint/MCP/full8/full10/five-harness commands, Team predicate, Node24.21, clocks, matrices, rosters and all unrelated source remain exact."
+  },
+  "costAndScope": {
+    "additionalFileOperandsInSameLintProcess": 6,
+    "newCommands": 0,
+    "newJobsOrSteps": 0,
+    "newTimersOrBudgets": 0,
+    "nativeOrUiActionsAdded": 0,
+    "sourceCapChanges": 0,
+    "largestOfSixUnchangedTsFilesLines": 794,
+    "elapsedAndLintResult": "UNEXECUTED_UNKNOWN",
+    "existingContentCacheUnchanged": true,
+    "noExtraMandatoryCiOrRedCycle": true
+  },
+  "limits": [
+    "Exact inert source-afterimage approval only; no assertion that source is already published or that any current ref is still de4. Root owns the fresh delivery guard and one-file publication.",
+    "No parser/compiler/lint/test/native/provider/GUI/project/Git execution, API calls, downloads or CI polling were performed. Only independent text/hash/JSON/Merkle calculations and this scratch report write occurred.",
+    "The reviewer did not author or modify the source afterimage; the earlier R1 scope authored by this reviewer was separately reviewed and actually published before root prepared this source image.",
+    "Existing resulting-source original CI is still the actual lint/type/behavior validation. No old PASS transfer, runtime W01 qualification, W05/W07 selection or real-vendor execution authority follows.",
+    "No blanket semantic approval of other canonical evidence or unrelated source is introduced by their unchanged-tree preservation."
+  ],
+  "executions": {
+    "project": 0,
+    "compiler": 0,
+    "lint": 0,
+    "test": 0,
+    "native": 0,
+    "provider": 0,
+    "gitOrIndex": 0,
+    "api": 0,
+    "ciPolls": 0,
+    "canonicalWrites": 0,
+    "sourceWrites": 0,
+    "scratchReportWrites": 1
+  }
+}
