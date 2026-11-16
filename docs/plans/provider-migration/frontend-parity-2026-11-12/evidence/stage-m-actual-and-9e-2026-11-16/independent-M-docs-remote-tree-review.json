@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "result": "APPROVE",
+  "independentTreeReadbackExact": true,
+  "reviewedAtUtc": "2026-11-16T00:12:29.396405+00:00",
+  "tree": "dfc7c99ede984603c3b7f0dabf18ac11211f78c6",
+  "prospectiveSoleParent": "db8b470bf3c530928fef9ad4a2b582a417d436bd",
+  "baseTree": "a36be1fc640e0750a1d792ef3e26fd49a731f9eb",
+  "remoteApiUrl": "https://api.github.com/repos/777genius/agent-teams-ai/git/trees/dfc7c99ede984603c3b7f0dabf18ac11211f78c6?recursive=1",
+  "remoteTruncated": false,
+  "remoteEntries": 11497,
+  "remoteLeafCount": 10031,
+  "canonicalSortedFullRemoteLeafMap": {
+    "bytes": 1578844,
+    "blob": "84f2908e8fc0ae668ea45faacc69e1bca796894f",
+    "sha256": "84c57563b22bd5250c59079b9386a78e314b00e2e8e031304a6af1334c810d12"
+  },
+  "fullRemoteLeafMapEqualsIndependentlyVerifiedLocalProjection": true,
+  "all45ModeAndBlobIdentitiesExact": true,
+  "all9986UnselectedExistingLeavesPreserved": true,
+  "newLeaves": 42,
+  "modifiedExistingLeaves": 3,
+  "noSourceTestWorkflowChanges": true,
+  "assemblyReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-m-publication-independent-assembly-review.json",
+    "bytes": 27630,
+    "blob": "2cef3a36ca031d4853bf9798c5d26a73658cc9ca",
+    "sha256": "7131999fb75020a75404ccf3fd6e8fe57702c9fc2a527fae0a3c12ff6e3fa5f0"
+  },
+  "uploadManifest": {
+    "bytes": 40560,
+    "blob": "b392a79fe228c497b2b38eb7e38325a294af15ef",
+    "sha256": "48b533dcefa948da36d8f1dc1761d930e4d3449d422f10ea731dd7fbae16fa27"
+  },
+  "complete45PayloadBytesVerified": 14029952,
+  "limits": [
+    "Unreferenced immutable documentation tree only; no commit or ref mutation by reviewer.",
+    "Complete original plan prefix/ten appendices,62 native originals and37 UI originals/full nested recoverability checked in referenced assembly review.",
+    "Source application, published commit/full Git readback and actual CI RED remain separate subsequent gates.",
+    "No project/Node/compiler/install/provider/native/CI execution was performed."
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "kind": "original-ui-evidence-bundle-envelope",
+  "createdAtUTC": "2026-11-16T00:20:31.198434+00:00",
+  "archive": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ui-9e542-publication/original-ui-evidence.zip",
+    "bytes": 5616707,
+    "gitBlob": "7e80a86094c5bc2e4ea6aa4540c132f0129e75a6",
+    "sha256": "0349314448bf95729f524cf2810212f467bce78396c3477e83efbaa425b79992",
+    "members": 22
+  },
+  "inventory": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ui-9e542-publication/inventory.json",
+    "bytes": 70353,
+    "gitBlob": "7fa492ecdcc0dc5d08fccfc3855c009606296ada",
+    "sha256": "87265033bb2dd9c0daf4f022a08ce2df3ef46b69783f326ba3e25d4fc80a2ee8"
+  },
+  "readme": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ui-9e542-publication/README.md",
+    "bytes": 4317,
+    "gitBlob": "f73bd54955f2ae20cf8b1d7cbda1e57f3c4116d8",
+    "sha256": "21a6ef9098576bdd6828fa1c9a178c48518f8e3a1e6e60f3493ee5d654955fe7"
+  },
+  "originalPayloadCount": 20,
+  "originalPayloadBytes": 6529474,
+  "originalZipCount": 3,
+  "omittedExtractedDerivatives": 116,
+  "originalNestedPngCount": 91,
+  "allOuterAndNestedSafeUniqueCrc": true,
+  "allOriginalAndReconstructibleBytesExact": true,
+  "noSignedTransportUrls": true,
+  "extractionOrArchiveCodeExecuted": false,
+  "testOrProviderExecution": false,
+  "currentComposedSourceQualification": false
+}
