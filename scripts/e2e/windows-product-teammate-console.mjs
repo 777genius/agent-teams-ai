@@ -348,12 +348,10 @@ async function run() {
   const attachResult = await wait('original app-managed member attachment IPC', () =>
     client.evaluate('window.__winProductAttach?.done ? window.__winProductAttach : null'),
     180_000);
+  // Electron preload unwraps IpcResult and resolves addMember as void;
+  // a rejected IPC is surfaced by the error callback, not by a success field.
+  addMemberIpcReceipt = { done: attachResult.done === true, error: attachResult.error ?? null };
   if (attachResult.error) throw new Error('Product member attachment failed: ' + attachResult.error);
-  addMemberIpcReceipt = attachResult.value;
-  // teams.addMember returns IpcResult, not a rejecting Promise. Preserve the
-  // product's actual rejection instead of misreporting a 180-second event timeout.
-  assert(addMemberIpcReceipt?.success === true,
-    'Product member attachment IPC rejected: ' + JSON.stringify(addMemberIpcReceipt));
   // The original process_spawned event proves the exact app-managed launch
   // path. Runtime liveness projections can lag this original event on Windows;
   // neither a cached alive flag nor a numeric PID alone qualifies the launch.
