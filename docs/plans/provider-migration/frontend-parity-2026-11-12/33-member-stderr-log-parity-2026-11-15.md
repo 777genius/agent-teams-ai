@@ -433,3 +433,32 @@ this existing plan. Root R2 accepts the exact scratch proposal SHA-256
 `6849c5999c2bc4eb441697bc4764907b8d6aab3e9ad4cefd7d6a9aed1865915f` before implementation. R1 `/root/p09_review` and independent R2 `/root` confirmed the exact source-grant and shared-projection boundary.
 This publication admits only its finite changes together with the sibling
 scheduled-log amendment; existing migration and actual qualification gates remain.
+
+## Reviewed standalone completion and actual controlled qualification
+
+The source-grant, original child observation, optional internal snapshot
+projection and16KiB compatibility stderr follow the published standalone
+amendment and sibling Plan32. Both target adapters reuse the original sanitizer;
+the endpoint is optional only where no Team endpoint exists. Active-entry,
+binding/request/profile, original owner/principal/Team revision and captured
+source checks are retained. Ordinary cancellation accepts only unreleased closing
+facts; Host composition seal, authority replacement or release refuses them.
+
+After the interrupted build and exact source recovery, the complete pinned
+Host/ledger build passed. The original scheduled suite passes8/8, including its
+actual pinned SDK with finite Node peer, failed startup before native SessionRef,
+source-grant changes, parallel cancellation isolation, UTF-8 bound/warning and
+cold readback. Original helper/captured-process suites pass32/32; original
+member-authority/Codex-member/owned-facade suites pass38/38. There are no skipped
+cases and no real Claude/Codex calls. The shared Runtime/Team read regressions
+and existing renderer/read-owner suites also pass in the exact inventory and
+command scopes recorded in Plan32.
+
+Plan32 records the17 final source Git blobs, the corrected common proof-source
+block, the two test-only oracle corrections, all source-specific executed
+checks and retained failures. The original full workspace check remains
+unqualified after a local240s timeout; scoped project checks and controlled
+SDK PASS do not qualify actual Desktop/native/packaged acceptance. Current-source
+CI gates, P08 and P09 remain required. No additional runtime owner, persistence
+format, poller, protocol capture, private diagnostic source or gate exception
+is introduced.

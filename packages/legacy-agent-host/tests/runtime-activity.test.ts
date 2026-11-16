@@ -1146,3 +1146,89 @@ test('distinct Thinking retains original attribution without becoming text, conv
   const retained = cold.readActivityFeed(binding(), { ...restored.cursor, sequence: cursor.sequence });
   assert.deepEqual(retained.events.filter(event => event.data.kind === 'thinking'), thinking);
 });
+
+test('scheduled log projection is one read of original Thinking identities and unattributed stderr, including cold recovery', async t => {
+  const f = await setup(t), owner = f.make(), { session, attribution } = await f.open(owner);
+  const cursor = owner.readActivitySnapshot(binding()).cursor;
+  const thought: WithoutSession<Extract<Event, { kind: 'thinking' }>> = {
+    ...attribution, kind: 'thinking', messageRef: 'TEST-same-message', block: 0,
+    text: 'TEST partial', phase: 'snapshot',
+  };
+  session.emit(thought);
+  session.emit({ ...thought, text: 'TEST same thought', phase: 'complete' });
+  session.emit({ ...thought, text: 'TEST stale snapshot' });
+  session.emit({ ...thought, messageRef: 'TEST-other-message', text: 'TEST same thought', phase: 'complete' });
+  session.emit({ ...thought, block: 1, text: 'TEST same thought', phase: 'complete' });
+  session.emit({ ...attribution, kind: 'text', messageRef: 'TEST-same-message', block: 0,
+    text: 'TEST original answer', phase: 'complete' });
+  session.emit({ ...attribution, kind: 'result', outcome: 'succeeded' });
+  await tick();
+  await owner.admitDelivery({ binding: binding(), deliveryId: 'TEST-second', inputId: 'TEST-second',
+    messageId: 'TEST-second', content: 'TEST second input' });
+  await owner.dispatchNext(binding());
+  const second = session.submits[1]!;
+  session.emit({ ...thought, inputId: second.inputId, operationRef: second.operationRef,
+    text: 'TEST same thought', phase: 'complete' });
+  await tick();
+  const config = owner.readSession(binding()).record!.config!;
+  for (let index = 0; index < 2; index++) owner.observeProcessOutput(binding(), config,
+    { kind: 'process-output', stream: 'stderr', text: 'TEST same stderr' }, () => {});
+  owner.observeProviderActivity(binding(), session.sessionRef, { inputId: second.inputId,
+    operationRef: second.operationRef, data: { kind: 'subagent', childId: 'TEST-child',
+      parentToolRef: 'TEST-parent', phase: 'fact', fact: { kind: 'thinking',
+        messageRef: 'TEST-child-message', block: 0, text: 'TEST child thought', phase: 'complete' } } });
+  const retained = await readFile(f.path(), 'utf8');
+  let reads = 0;
+  const read = f.store.readActivity.bind(f.store);
+  const spy = t.mock.method(f.store, 'readActivity', (target: RuntimeBinding) => { reads++; return read(target); });
+  const snapshot = owner.readActivitySnapshot(binding());
+  assert.equal(reads, 1, 'the auxiliary groups reuse the original snapshot journal read');
+  spy.mock.restore();
+  const projected = snapshot.logProjection!;
+  assert.equal(projected.truncated, false);
+  assert.equal(projected.thinking.length, 4, 'equal bodies from distinct messages, blocks and inputs stay distinct');
+  assert.ok(projected.thinking.every(event => event.data.phase === 'complete' && event.data.text === 'TEST same thought'));
+  assert.equal(new Set(projected.thinking.map(event => event.inputId)).size, 2);
+  assert.equal(projected.stderr.length, 2, 'separate original stderr facts are not deduplicated by body');
+  assert.ok(projected.stderr.every(event => event.inputId === undefined && event.operationRef === undefined));
+  const feed = owner.readActivityFeed(binding(), cursor);
+  assert.deepEqual(projected.thinking, feed.events.filter(event =>
+    event.data.kind === 'thinking' && event.data.phase === 'complete'));
+  assert.deepEqual(projected.stderr, feed.events.filter(event => event.data.kind === 'process-output'));
+  assert.equal(snapshot.latest.subagents.length, 1, 'child Thinking stays in its original child projection');
+  assert.deepEqual(snapshot.latest.text.map(event => event.data.text), ['TEST original answer']);
+  assert.equal(JSON.stringify(owner.readConversation(binding(), 'messages')).includes('thought'), false);
+  const cold = f.make('TEST-cold').readActivitySnapshot(binding());
+  assert.deepEqual(cold.logProjection, projected);
+  assert.equal(cold.gap?.reason, 'incarnation');
+  assert.equal(await readFile(f.path(), 'utf8'), retained, 'hot/cold derived reads never rewrite the journal');
+  assert.equal(f.sessions.length, 1); assert.equal(session.submits.length, 2);
+});
+
+test('auxiliary log trimming shares the existing byte budget without changing original groups or their completeness', async t => {
+  const f = await setup(t), owner = f.make(), { session, attribution } = await f.open(owner);
+  session.emit({ ...attribution, kind: 'text', messageRef: 'TEST-answer', block: 0,
+    text: 'TEST answer', phase: 'complete' });
+  session.emit({ ...attribution, kind: 'usage', inputTokens: 5, outputTokens: 2, cumulativeCostUsd: 0.25 });
+  await tick();
+  const original = owner.readActivitySnapshot(binding());
+  assert.equal(original.gap, undefined);
+  for (let index = 0; index < 20; index++) session.emit({ ...attribution, kind: 'thinking',
+    messageRef: 'TEST-thought-' + index, block: 0, phase: 'complete', text: 'x'.repeat(16 * 1024) });
+  await tick();
+  owner.observeProcessOutput(binding(), owner.readSession(binding()).record!.config!,
+    { kind: 'process-output', stream: 'stderr', text: 'TEST bounded stderr' }, () => {});
+  const snapshot = owner.readActivitySnapshot(binding());
+  assert.equal(snapshot.retainedFrom, original.retainedFrom, 'the journal itself has not lost any events');
+  assert.equal(snapshot.logProjection?.truncated, true);
+  assert.ok(snapshot.logProjection!.thinking.length > 0 && snapshot.logProjection!.thinking.length < 20);
+  assert.deepEqual(snapshot.latest, original.latest, 'old groups retain their original priority and exact observations');
+  assert.equal(snapshot.gap, undefined, 'auxiliary display loss must not become a global Stats gap');
+  assert.deepEqual(snapshot.state, original.state);
+  const events = [...snapshot.latest.usage, ...snapshot.latest.interactions, ...snapshot.latest.tools,
+    ...snapshot.latest.text, ...snapshot.latest.subagents, ...snapshot.logProjection!.thinking,
+    ...snapshot.logProjection!.stderr];
+  assert.ok(events.reduce((bytes, event) => bytes + Buffer.byteLength(JSON.stringify(event)), 0) <= 256 * 1024);
+  assert.ok((await stat(f.path())).size < f.store.activityLimits.maxBytes);
+  assert.equal(session.submits.length, 1);
+});

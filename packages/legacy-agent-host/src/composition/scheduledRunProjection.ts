@@ -15,13 +15,16 @@ export function projectScheduledRun(capture: ScheduledRunCapture, record: Runtim
   if (!released) return { runId: capture.input.runId, phase, cleanup: 'unresolved' };
   const children = new Map<string, RuntimeActivityEvent & { agentId: string }>();
   for (const event of activity.latest.subagents) {
-    const { fact, childId, phase } = event.data;
+    const { fact, childId, parentToolRef, phase } = event.data;
     if (phase !== 'fact' || typeof childId !== 'string' || !fact || typeof fact !== 'object' ||
-      Array.isArray(fact) || !['text', 'tool', 'tool-result'].includes(String(fact.kind))) continue;
-    const key = JSON.stringify([childId, fact.kind, fact.messageRef, fact.block, fact.toolRef]);
+      Array.isArray(fact) || !['text', 'thinking', 'tool', 'tool-result'].includes(String(fact.kind))) continue;
+    const key = JSON.stringify([event.inputId, event.operationRef, childId, parentToolRef,
+      fact.kind, fact.messageRef, fact.block, fact.toolRef]);
+    if (fact.kind === 'thinking' && fact.phase !== 'complete' && children.get(key)?.data.phase === 'complete') continue;
     children.set(key, { ...event, data: { ...fact, kind: String(fact.kind) }, agentId: childId });
   }
   const events: (RuntimeActivityEvent & { agentId?: string })[] = [...activity.latest.text,
+    ...(activity.logProjection?.thinking ?? []),
     ...activity.latest.tools,
     ...children.values()];
   events.sort((a, b) => a.sequence - b.sequence);
@@ -31,6 +34,7 @@ export function projectScheduledRun(capture: ScheduledRunCapture, record: Runtim
   for (const event of events) {
     const value = event.data;
     const block = value.kind === 'text' ? { type: 'text', text: value.text }
+      : value.kind === 'thinking' ? { type: 'thinking', thinking: value.text }
       : value.kind === 'tool' ? { type: 'tool_use', id: value.toolRef, name: value.name, input: value.input }
       : { type: 'tool_result', tool_use_id: value.toolRef, content: value.content, is_error: value.isError };
     const line = JSON.stringify({ type: value.kind === 'tool-result' ? 'user' : 'assistant',
@@ -51,10 +55,18 @@ export function projectScheduledRun(capture: ScheduledRunCapture, record: Runtim
       ...(usage.inputTokens === undefined ? {} : { input_tokens: usage.inputTokens }),
       ...(usage.outputTokens === undefined ? {} : { output_tokens: usage.outputTokens }),
     } } : {}) }));
+  const diagnostics = (activity.logProjection?.stderr ?? [])
+    .flatMap(event => typeof event.data.text === 'string' ? [event.data.text] : []).join('\n');
+  const incomplete = activity.gap || truncated || !durationKnown || activity.logProjection?.truncated ||
+    Buffer.byteLength(diagnostics) > 16 * 1024;
+  const warning = incomplete
+    ? (diagnostics ? '\n' : '') + 'Some retained runtime log entries are unavailable.' : '';
+  const stderr = new TextDecoder().decode(Buffer.from(diagnostics).subarray(0, 16 * 1024 - Buffer.byteLength(warning)),
+    { stream: true }) + warning;
   return { runId: capture.input.runId, phase, cleanup: 'confirmed', result: {
     exitCode: terminal?.phase === 'terminal' ? terminal.terminal === 'succeeded' ? 0 : 1 : null,
     stdout: lines.join('\n'),
-    stderr: activity.gap || truncated || !durationKnown ? 'Some retained runtime log entries are unavailable.' : '',
+    stderr,
     summary: (text || (terminal?.phase === 'terminal' ? `Scheduled run ${terminal.terminal}` :
       'Scheduled run stopped without a confirmed model result')).slice(0, 500),
     durationMs,

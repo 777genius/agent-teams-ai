@@ -505,3 +505,190 @@ this existing plan. Root R2 accepts the exact scratch proposal SHA-256
 `c47fe4548ac3f2975d45e80e0566885381968054b97ce1c690266421c9de5e69` before implementation. Independent R2 `/root/p09_review` also accepted this exact document.
 This publication admits only its finite changes together with the sibling
 scheduled-log amendment; existing migration and actual qualification gates remain.
+
+## Reviewed schedule-log completion and resulting-source checks
+
+This completion follows the two published amendments at
+`1f9242563bec2641b25077c3aa83a999bd7f4871`, preserving incoming
+`35cbd6e99b620e9b41802af936143d900f5e2aca` and the independently checked
+provider 9423 archives. The remaining coordination consumer accepts Thinking
+only after its original provenance and budget checks. It still requires the
+original two MCP effects, ordinary answer and result.
+
+Scheduled Logs derive actual retained root/child Thinking and original sanitized
+stderr through the same authorized journal read. There is no additional journal,
+cursor, RPC, poller or runtime owner. Original latest groups and global gap keep
+their prior budget/Stats behavior; the optional internal log projection consumes
+only the remaining 256 KiB budget. Complete Thinking beats stale snapshots while
+distinct input/operation/message/block and child/parent identities remain distinct.
+The compatibility stderr is bounded to 16 KiB including the existing warning,
+without splitting a final UTF-8 code point.
+
+Original-child observation retains exact binding, request, profile, owner,
+principal, Team revision and source checks. Ordinary cancellation permits
+unreleased closing facts; Host composition seal and revoked/replaced authority
+refuse them. Runtime's original full-config/incarnation/phase fence is unchanged.
+No stdout protocol capture, invented Team endpoint, input/task attribution,
+synthetic result/usage, real Claude/Codex invocation or new business turn is added.
+The finite standalone peer adds only final root Thinking and one benign stderr
+line. Child Thinking uses the existing controlled Host fixture.
+
+Independent review also found the already approved 52 Logs paths accidentally
+appended to WindowsRetrySources. Their exact block is moved intact to
+desktopProofSupplementarySources, where the actual common union consumes it.
+All 52 rows retain their bytes/order; other Windows-only rows are unchanged.
+The three existing scheduled projection/capture/contracts leaves join that common
+array. The original Windows union still inherits every path. No new roster,
+selector, workflow, deadline, cap exception or weakened acceptance gate is added.
+Pinned Node imports verified all 55 paths exist in the actual ordinary/Windows
+unions (1757/1798 distinct paths). The unchanged finite peer passes pinned Node
+syntax validation. The Desktop script remains 795 physical lines.
+
+### Interrupted execution, recovery, then actual checks
+
+The first combined Host build was killed by signal 9 after its ledger
+prerequisite. A direct pinned-compiler retry produced no completion receipt
+before the executor disconnected. Neither attempt is PASS, and that partial
+dist was never used for test evidence. The 16 reviewed source postimages were
+recovered as immutable Git blobs. After the environment returned, every local
+SHA-1 and SHA-256 matched the recovered manifest.
+
+The original complete Host build then passed on the restored combined source:
+pinned Node24.21.0/Corepack0.36/pnpm11.22, original ledger prebuild and Host
+compiler, exit0 in9.122s. GOMAXPROCS=2 and GOMEMLIMIT=512MiB are execution-resource
+settings only; the pinned native TypeScript7 executable and compiler options
+are unchanged. All subsequent Host tests use this fresh complete dist.
+
+The final affected inventory has **129 unique passing controlled Host tests in
+nine existing files**, with zero skips/cancellations. This is an inventory across
+the retained commands below, not a claim that the earlier failing command passed:
+
+| Existing suite(s) | Final relevant result |
+| --- | --- |
+| runtime-activity | 36 PASS, including same-read Thinking/stderr, exact identities/cold recovery and shared budget without Stats degradation. |
+| management-model-probe | 10 PASS; valid Thinking plus original MCP/result proof and the provenance/event/byte refusal table. Its causal RED on the old loop remains recorded. |
+| team-activity-read | 5 PASS on the corrected comparison; all facts, known cost and gaps remain equal. |
+| scheduled-run-host | 8 PASS, including original pinned SDK with finite Node peer, startup failure, closing/released authority, parallel-run isolation and bounded UTF-8/cold logs. |
+| member-process-stderr + captured-claude-process | 32 PASS, including original finite Claude/Codex adapter children; no real provider executable or model. |
+| member-provider-authority + codex-member-provider + owned-process-facade | 38 PASS on original controlled seams. |
+
+The first runtime/coordination/Team command was50/51 because the new Team Stats
+assertion also compared `computedAt` from two separate calls, 7ms apart. Its
+actual cost, facts and gaps were identical. R2 verified the existing neighboring
+test's clock-exclusion pattern; only those generated timestamps are excluded.
+The whole original Team file then passed5/5. No production change was needed.
+
+The affected renderer/read-side inventory has **66 unique passing tests across
+eight existing files**. The first six-file command was41/42: the old Task Activity
+test still required the literal raw-JSON text `"isError": true` after the already
+accepted rich rendering. R2 approved a test-only adaptation within published
+Plan32: locate original event `actual-source:3`, assert its true error flag and
+the actual red BaseItem status dot, open its original card, and assert the full
+result inside that card. Original Activity/Stream/Exact, stale-source/generation,
+timestamps, and no-transcript assertions remain. This is the existing neighboring
+member test's semantic oracle; production, mocks and turns are unchanged.
+
+That Task suite passed2/2, together with MemberLogsPolling14/14 and
+runtimeActivityFacade10/10. The final Task suite was rerun2/2 after ordering its
+two existing named imports to satisfy the original linter. The other five files
+from the first command passed40/40: ClaudeLogsSection21, hostLogStatsTabs5,
+hostTaskActivity7, hostLogStats3, teamLogSources4. Repeat executions are not
+double-counted. These runs use pinned Node24.21.0 and original Vitest3.2.6 with
+one worker. The full frontend CI has its own runtime and remains a separate gate.
+
+Additional actual results:
+
+- Original Host test TypeScript7 project PASS; tracked complete
+  `test/features/agent-backend/tsconfig.json` PASS; original legacy Host scripts
+  project PASS. No compiler/config changes or diagnostic suppressions.
+- Original source-size guard PASS:5020 production files,141 existing frozen
+  exceptions,800-line limit; no exception added. Original provisioning architecture
+  guard PASS. Scoped original fast lint passes all17 changed source/test/fixture
+  files with zero errors or warnings; it is not full typed lint.
+- The full original `typecheck:workspace` reaches the root noEmit program and
+  does not complete within the local240s execution bound: exit124, no compiler
+  diagnostic. Its earlier137 attempts and this timeout remain UNQUALIFIED.
+  Scoped project checks do not substitute for the original complete CI gate.
+
+### Native results keep their exact source and scope
+
+Original Process run
+[43773535515](https://github.com/777genius/agent-teams-ai/actions/runs/43773535515)
+on exact published1f has Windows x64/ARM64 and Darwin x64/ARM64 success.
+At the23:44 UTC observation Linux remains queued. This is code35 plus published
+plans, before this scheduled-log source completion; it is not the resulting-head
+qualification. Older71 cohorts were cancelled, not passed.
+
+At23:46 UTC the original Darwin ARM64 installer leaf
+[132994543515](https://github.com/777genius/agent-teams-ai/actions/runs/43773535255/job/132994543515)
+also completes successfully on1f, including its original stock Update/retained
+source exercise; the other21 Host Emulated leaves remain queued. This does not
+qualify those other journeys or the later scheduled source.
+
+Both original Windows logs, under both Node and Electron44.10.1, retain the
+pending-CREATE observation
+`{rootExited:false,activeProcesses:0,queryError:0,dispatchError:0,stopReplied:false}`.
+Their original service/admission-race scenarios complete and their recorded
+helper handles close64/64. This supports incoming35's TEST-only joint-absence
+correction: zero Job count alone did not mean the original root HANDLE was
+signaled or Stop acknowledged. It changes no production custody contract.
+The two full job-log hashes are
+`b67f65773370a6b4d0d6ca50ac67a045695bb507e3ee73b7bb2056c97cf41989`
+and
+`2e3821ade2b2d630a9425cd8a2674710d986c192b41b01af7cfa2dfa200c144b`.
+
+Actual current-source Desktop, the four full frontend shards, native/packaged
+acceptance and full workspace/typed-lint gates remain required. The local Xvfb
+attempt is blocked by EPERM creating its AF_UNIX socket; no alternate display,
+browser or permission bypass is introduced. P08's same-Main packaged journey
+and P09's strict selected-byte/allowed-writer/script-consumption boundary remain
+separate and incomplete. No queued, cancelled, skipped or source-reviewed result
+is promoted to PASS. Draft/base/history stay intact; no main merge, release,
+default activation or Stage2 is authorized.
+
+### Exact execution and source records
+
+The local receipts under `schedule-parity-qualification/` retain commands,
+exit codes, timings and the original logs. Initial failures and the workspace
+timeout are preserved alongside the passing reruns. The three empty-diagnostic
+TypeScript logs have the ordinary empty-file SHA256
+`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`;
+their distinct receipts retain their successful exit, command and source hashes.
+
+| Retained local execution log | SHA-256 |
+| --- | --- |
+| `host-build-restored.log` | `d6efa218a38b23ad8285a933ae787d9bcd6d542c54df4d1e1c3e04bf0f5e0789` |
+| `runtime-team-coordination-tests.log` | `06f5698df6090eb49082abb403bdcc6a0f84fa07a90b19cec813d91f2ced9506` |
+| `team-activity-read-clock-corrected.log` | `a66adf53a135d264d034081bfcdcbac2137b828b2ad41b0d7bbad9c37f1d0d6b` |
+| `scheduled-run-host.log` | `ffb3f92e3c0faf11cde4323c406d262af25eb314efc358dfe9886d18d3ba0c73` |
+| `p09-member-stderr-captured.log` | `00f573326295394fa6f301a3f8125a77b41027f948d41a658224d10fa68963ba` |
+| `p09-common-consumers.log` | `081ab7dd85e62634237e59743c1f0bb0fa5a54fa7ab05931ecf45b2bca3063d3` |
+| `logs-renderer-adapter-tests.log` | `75129dd73e61673f4f7b2d31507ccd7fa2b5bae67c716367cd0ead7a9e15af0e` |
+| `plan32-renderer-read-owner-restored.log` | `b8a19371a149b9081ff73e3009ef565cba890a93285d90b12af3ea180750fecf` |
+| `task-tabs-final.log` | `fe9bbfa29779ca28ad5b0ba47035faa18bf3500e43f940228e5be85ced9ef747` |
+| `scoped-fast-lint-final.log` | `490d91bee1fcad433b69e0d6d23eb67e245abfb0052c9b4a73c4c95546cfcdf9` |
+| `workspace-types-restored.log` | `e36a3891455af2e5a9d9023cdf840c50d946a01a6b7d74d29dbbd0d4b7abe9e1` |
+
+The final17 source postimages include the independently reviewed timestamp
+comparison and existing Task-view oracle corrections after recovery. Git
+publication remains a normal compare-and-set update on the existing Draft branch.
+
+| Final source/test/fixture path | Git blob SHA-1 |
+| --- | --- |
+| `packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts` | `186171f456cc99a18e12f0b87c4bd508936d6243` |
+| `packages/legacy-agent-host/tests/management-model-probe.test.ts` | `d13aa0c846dbf97aff99786e1165aa214aab93c7` |
+| `packages/legacy-agent-host/src/runtime/activityContracts.ts` | `d6a001c625d4369147811ee4d97b9853ff1c86c1` |
+| `packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts` | `ba90e3e6895bf7f85d7ca3de7d9608fe433fcadf` |
+| `packages/legacy-agent-host/src/composition/scheduledRunProjection.ts` | `46613a43c30311321280f11129ed02df18ef527a` |
+| `packages/legacy-agent-host/tests/runtime-activity.test.ts` | `077ad7ea54675a4782984fcb5399f9964d5ec5e6` |
+| `packages/legacy-agent-host/tests/team-activity-read.test.ts` | `881ec246b943f8ed166aa7fe45ccd7fa0dc6e0fb` |
+| `scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts` | `d1a43bae56a2bceceb450d01a2544cdbe801e06e` |
+| `tools/owned-process-broker/fixtures/claudeProviderPeer.mjs` | `920b40fa594f7aa65e11d1ec1f31d2aa69581a01` |
+| `scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts` | `b52876e3215910eba3a3a24756f61c289a0965f9` |
+| `packages/legacy-agent-host/tests/scheduled-run-host.test.ts` | `dbbd17b11db24a9dc3fb989e0266101847f0a778` |
+| `packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts` | `e6861511417070c9202458253a16a3ffb20216ae` |
+| `packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts` | `6b6c7003960eb4075d74ca449d303602e99ef83e` |
+| `packages/legacy-agent-host/src/composition/HostScheduledRuns.ts` | `13fd4d190e0a50267a295cb75cbf50320fa36d5a` |
+| `packages/legacy-agent-host/tests/captured-claude-process.test.ts` | `d2b952c9e6ac2281a14a00665cf4689d9c7d4b5c` |
+| `packages/legacy-agent-host/tests/member-process-stderr.test.ts` | `e52785444caebdc8c698d87ac122f4a13742b5cc` |
+| `test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx` | `a367866923405e4d584fac1145b56fe27bf37b5a` |

@@ -4659,3 +4659,26 @@ Execute once each: (1) the entire member-process-stderr.test.ts with pinned Node
 Use unchanged Node24.21.0, TypeScript7.0.2, app pnpm11.25.0, original environment unsets, coherent private dependency closure and180-second local process-group cap. Original11-root configd3f58336 and16-root configcaa12040 keep their complete bytes/options. New bounded command manifest SHA256 `3160cb4946aaf09fb15b986a61cd48538b719d78645f4af084f0e84568c4223c`; complete final17-path candidate patch SHA256 `79ebb1b7d79c9dca4404a83bbef427542a8c7f5ecbbb72c0d516451962ae6bbf`. No source correction or new check was applied/executed while preparing this proposal.
 
 All original15-second product gates, source/authority/cleanup assertions, resulting-source full CI/typed lint/Desktop/native/packaged/P08/P09/fullI386/genuine donor/M16 obligations remain. Do not promote the Draft, change its base, merge/release/default-activate or start Stage2. This test-only correction cannot close those external gates.
+
+
+## Scheduled Logs reconciliation: completed bounded qualification
+
+The preceding exact typed R1 was published/full-readback as `8b0ef177de3715e224c944d1162aeb56fd3e00d1`, tree `ce189d33755288157e558b17cfcc3343e5232b56`, at00:25:46UTC before application at00:26:23UTC. Working tree `0eaf682055c41d1f79c91de0314f3d0272822815` differs from1f2791 only in that Plan and the one approved test assertion. All17 selected after-images match, including final stderr-test `c568716b48e79bfe6ec0455052f14b5af4ffc9cf`.
+
+All three authorized correction checks completed without timeout, skip or suppression:
+
+| Correction check | Seconds | Raw bytes | Raw SHA256 |
+| --- | ---: | ---: | --- |
+| green-stderr-tests | 0.524 | 1955 | `9f624f6faf40aa3b50a8529fa6bcdee823480f890ec403bf44c407ad83d2f1d2` |
+| green-host-types | 2.378 | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| green-stderr-lint | 8.0 | 174 | `f2f948121e75c28b7dd2183e6767d0e45d00df89d0f836285e177087bca06e4b` |
+
+The complete changed stderr file passed20/20,0failed/cancelled/skipped/todo. The identical strict11-root Host configuration passed with empty diagnostics. Single-file fast lint passed without warnings. The earlier two TS2339 diagnostics stay preserved as the compiler RED; their resolution is this exact source assertion, without compiler options or declarations changing. The production Host/ledger build is explicitly reused from1f2791, whose executable sources are identical.
+
+The83/83 Host and33/33 app results, strict16-root app, original scripts compiler,15-file lint, original guards and actual four-module roster imports remain the completed source-bound results recorded above on1f2791. The final one-line test correction does not modify any production, app, scripts or roster input. The20 corrected-file cases are included in the prior83 inventory, not20 additional distinct cases. Local source qualification therefore comprises116 distinct cases, with the changed20-case test file checked again on0eaf682. This does not claim a fresh full-suite execution on a different tree.
+
+Postflight at00:26:47UTC independently matched all253+12 private archive members, five dependency edges, both Host links, normal indexSHA256161fc5143f7e03fc593d16afa0d4bb588e230fb3667602302bc7019f225fe92a and unchanged0eaf682 source. No install/shared-store mutation, provider binary/version invocation, native/GUI execution, workflow action, deadline change or additional feature was involved. Source diff whitespace check passed.
+
+This cut closes the known standalone schedule omission through the existing original stderr observer, authorized Runtime journal projection, scheduled compatibility output and existing saved-log consumers. It preserves the original result/state/Stats/cost behavior, secret masking, complete UTF-8 bounds, source/authority fences, final-tail-once, independent neighbor, cancellation and cold recovery checks. Existing Task rich error status/collapse/result semantics and three immediate Desktop ownership checks are retained. The original full saved-log→Electron dialog/Thinking clipboard journey still requires its existing Desktop gate; local tests/types do not stand in for it.
+
+Public #1192 remains Draft on9e542899 with originaldef73433 base. A bounded root read of that head's existing CI confirms V2 Darwin x64 and ARM64 failure at the original-path/mutation probe; the Desktop run has only installer Darwin ARM completed and17Desktop/4frontend leaves still queued. Those are public-source status observations, not final private-source acceptance. Original15-second deadlines, P08, P09, fullI386 exception/handler evidence, genuine donor/M16 and complete resulting-source CI/type-aware lint/packaged/Desktop/native qualification remain open. No main merge, release, default activation or Stage2 is claimed or authorized by these local results.

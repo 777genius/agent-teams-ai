@@ -267,6 +267,9 @@ export const desktopProofSupplementarySources = [
   'packages/legacy-agent-host/tests/runtime-team-host.test.ts',
   'packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts',
   'src/renderer/components/team/sidebar/teamSidebarUiState.ts',
+  'packages/legacy-agent-host/src/composition/scheduledRunProjection.ts',
+  'packages/legacy-agent-host/src/composition/scheduledRunCapture.ts',
+  'packages/legacy-agent-host/src/composition/scheduledRunContracts.ts',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */

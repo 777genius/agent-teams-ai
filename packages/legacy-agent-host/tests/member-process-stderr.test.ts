@@ -51,6 +51,28 @@ test('original stderr captures startup and tail while redacting selected values 
   assert.equal(f.child.listenerCount('close'), 0);
 });
 
+test('standalone stderr uses selected private values without a Team endpoint', async () => {
+  const f = fixture(), context = {
+    profile: f.context.profile, observeProcessOutput: f.context.observeProcessOutput,
+  };
+  assert.equal('endpoint' in context, false);
+  observeMemberProcessStderr(f.child, context, ['--token', 'TEST_STANDALONE_ARG_CANARY']);
+  assert.equal(f.observations.length, 0, 'no diagnostic is synthesized before original stderr arrives');
+  const canaries = ['TEST_ENV_FIRST_CANARY', 'TEST_ENV_SECOND_CANARY', 'TEST_HEADER_PRIVATE_CANARY',
+    'TEST_CUSTOM_HEADER_CANARY', 'TEST_MCP_ENV_CANARY', 'TEST_MCP_ARG_CANARY', 'TEST_STANDALONE_ARG_CANARY'];
+  f.child.stderr.write(`TEST standalone startup\n${canaries.join('\n')}\nTEST standalone final tail`);
+  f.child.stdout.write('TEST_STANDALONE_PROTOCOL_CANARY');
+  const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
+  f.child.emit('close', 0, null); f.child.stderr.emit('close');
+  const retained = JSON.stringify(f.observations);
+  for (const canary of [...canaries, 'TEST_STANDALONE_PROTOCOL_CANARY'])
+    assert.equal(retained.includes(canary), false, canary);
+  assert.deepEqual(f.observations[0], { kind: 'process-output', stream: 'stderr', text: 'TEST standalone startup' });
+  assert.deepEqual(f.observations.at(-1), { kind: 'process-output', stream: 'stderr', text: 'TEST standalone final tail' });
+  assert.equal(f.observations.filter(value => value.kind === 'process-output' && value.text === 'TEST standalone final tail').length, 1);
+  assert.equal(f.child.stderr.listenerCount('data'), 0);
+});
+
 test('invalid UTF-8 and NUL are readable diagnostics, including a final incomplete sequence', async () => {
   const f = fixture(); f.attach();
   f.child.stderr.write(Buffer.from([0x61, 0x00, 0xff, 0x0a, 0xf0, 0x9f]));
