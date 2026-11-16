@@ -19,9 +19,10 @@ export function spawnWindowsTeamRuntimeCli(
   const launch = resolveWindowsTeamRuntimeLauncher(binaryPath, {
     requireWrapper: process.env.AGENT_TEAMS_REQUIRE_TEAMMATE_WRAPPER === '1',
   });
+  if (!launch.targetEnv) return spawnCli(launch.binaryPath, args, options);
   return spawnCli(launch.binaryPath, args, {
     ...options,
-    env: { ...options.env, ...launch.targetEnv },
+    env: { ...(options.env ?? process.env), ...launch.targetEnv },
   });
 }
 
