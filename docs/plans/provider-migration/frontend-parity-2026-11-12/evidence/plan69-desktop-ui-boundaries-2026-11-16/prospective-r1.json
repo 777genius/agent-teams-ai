@@ -1,0 +1,212 @@
+{
+  "kind": "ROOT_PLAN69_PROSPECTIVE_R1",
+  "verdict": "GO_SIX_PATH_PROSPECTIVE_SELECTION_ONLY",
+  "baseCommit": "afb38eaad48b3b3b388a65359b8aafbc9a21f9da",
+  "baseTree": "dc7b5fafc29299ef58ba1faec2f5445b2a5dc0f5",
+  "plan": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan69-desktop-ui-boundaries/plan.md",
+    "bytes": 13047,
+    "physicalLines": 62,
+    "gitBlob": "60144b1fd149dff87abf055b58e314fe502147da",
+    "sha256": "03c3f304dedbd21d0ba0f52844da313e606b0f80679430d530188242c90f8abb"
+  },
+  "bindings": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan69-desktop-ui-boundaries/preimage-bindings.json",
+    "bytes": 1974,
+    "physicalLines": 54,
+    "gitBlob": "0de089ae0af1e22548e9e3abee7b824297b17e78",
+    "sha256": "224920699e627e6fbccb49106fda4d9ca3dbf3dcb21e6372246d67e518bace45"
+  },
+  "closedActualPlan68SourceR2": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan68-provider-activity-clock/actual-source/independent-actual-source-r2.json",
+    "bytes": 13454,
+    "physicalLines": 293,
+    "gitBlob": "3f4f2e6b5eee050b99bc7949f910afb9791533aa",
+    "sha256": "127b44e1f7a09d80ca8d1c8f9abc9dd41697f6b8bb0821cd7d44a3fd5e5b59e8"
+  },
+  "rootRead": "Full four original failure reports and bounded scroll/selector/validation design notes read, plus complete actual Plan68 R2. Current Header465 fully read, exact relevant current helper/test/Task owner/caller/selector windows read and hash-joined. Remaining unrelated source bytes are preserved; no claim to a fresh line-by-line reread of all historical donor handlers or every inherited test.",
+  "selectedFiles": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "gitBlob": "21f2f2d569efa32ef59948dce15cdbfc00a87bb7",
+      "bytes": 31452,
+      "physicalLines": 562,
+      "sha256": "125b7ce1eaa964e14a6bcd4db969f3853617960cd086f46a9ac046c65266baaf",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "gitBlob": "4b6f38290477741ea0f909b2fcb9dcecb904cdda",
+      "bytes": 164569,
+      "physicalLines": 2727,
+      "sha256": "41b2a7bd97bd062bdf1d6465c9b623495215529587f3c4f68d03da7fa6d664f3",
+      "mode": "100644"
+    },
+    {
+      "path": "src/features/team-task-detail/renderer/ui/TaskDetailHeader.tsx",
+      "gitBlob": "68499fd50746417a48883f73ca1d25592c644089",
+      "bytes": 17067,
+      "physicalLines": 465,
+      "sha256": "9aa3aabc0d50852af7010fc9dfd1834905c6c078ac4bfe691e789f002ac05bd1",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "gitBlob": "3f1ce46fce847a861850ef874017f84227c62b0c",
+      "bytes": 36207,
+      "physicalLines": 798,
+      "sha256": "80c118559ad75a9afa20e7c200d6217007f8c6c75d7521d4e5be640ee564a1d7",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "gitBlob": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db",
+      "bytes": 49147,
+      "physicalLines": 727,
+      "sha256": "11e064039a9ff28261a2daf41c247d0f6a947e192af03541fc0974d49a0e15ef",
+      "mode": "100644"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "gitBlob": "de958fcbd9c1aef20ec843904dd89a6fec62568d",
+      "bytes": 47589,
+      "physicalLines": 585,
+      "sha256": "e748025e727b8b6f96e4521496907e469058603610ac7024b600d8174300faf8",
+      "mode": "100644"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "/tmp/e2e-original-artifacts/reviews/75-taskboard-final-motion-r2/read-only-findings.json",
+      "bytes": 22127,
+      "physicalLines": 440,
+      "gitBlob": "7ad73b4696b04b79678c760154f89dfa685a3df1",
+      "sha256": "b623dd50dfca0289662074ea3608a49eee6a41d51dbfc7bf319f49c5b23905d2"
+    },
+    {
+      "path": "/tmp/e2e-original-artifacts/reviews/75-darwin-review-resume-r2/independent-original-r2.json",
+      "bytes": 30169,
+      "physicalLines": 611,
+      "gitBlob": "efe73aa0baa11eb991d989eeda4f4ce71060700e",
+      "sha256": "e6bfedd674af9450a0f9446a133cd08d2dfd88bf7ee1ba390b0ee05bfeffd502"
+    },
+    {
+      "path": "/tmp/e2e-original-artifacts/reviews/75-darwin-review-resume-r2/resume-scroll-source-only-design.json",
+      "bytes": 6623,
+      "physicalLines": 64,
+      "gitBlob": "ab32d2803cda5d60678e129171aac64c8cb7be28",
+      "sha256": "4b5ba957b5fa19b9aa6be6cfa73035a41bf237c6e17fa2ce41dcae8a2deaf2da"
+    },
+    {
+      "path": "/tmp/e2e-original-artifacts/reviews/75-retained-donor-b2-r2/independent-actual-failure-r2.json",
+      "bytes": 15234,
+      "physicalLines": 310,
+      "gitBlob": "5e7e67abb8cb18e1b637ad9db288ddead9e2028e",
+      "sha256": "55d60eeba0377d6feb13ff75643f498e200be10dcd3661d5c4a8f0c6438d3c99"
+    },
+    {
+      "path": "/tmp/e2e-original-artifacts/reviews/75-retained-donor-b2-r2/minimal-selector-prospect.json",
+      "bytes": 2926,
+      "physicalLines": 39,
+      "gitBlob": "450e6edafea87ba9423d8d3fde9adfea7d6b3163",
+      "sha256": "01eebc644c785df25e6864666630daf28428c10f0b0b4002c9b27db26e11d767"
+    },
+    {
+      "path": "/tmp/e2e-original-artifacts/reviews/75-retained-donor-b2-r2/existing-validation-closure.json",
+      "bytes": 2232,
+      "physicalLines": 46,
+      "gitBlob": "5e9ad8be36a146f1a020f4ab3bda4841a526a16b",
+      "sha256": "4c1d69ae9c13ad95d9602f3f8c37ece497859ca95233645377f94825a78e714b"
+    },
+    {
+      "path": "/tmp/e2e-original-artifacts/reviews/75-v2-management-membership-r2/independent-original-r2.json",
+      "bytes": 15877,
+      "physicalLines": 271,
+      "gitBlob": "0513f21015943e5c904f264b3be808d03519549a",
+      "sha256": "9623d4d417800b9330a514825fb494148f8c438185d1377dc14edce89b19053f"
+    }
+  ],
+  "validationClosure": {
+    "mainVector": 1783,
+    "allSixAlreadyPresent": true,
+    "fourRosterOwners": [
+      {
+        "repositoryPath": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+        "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/reference/desktop-proof-sources.ts",
+        "bytes": 52632,
+        "physicalLines": 800,
+        "gitBlob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+        "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a"
+      },
+      {
+        "repositoryPath": "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+        "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/reference/desktop-proof-integrated-sources.ts",
+        "bytes": 44561,
+        "physicalLines": 600,
+        "gitBlob": "083522612dd93e77dbb0e79c966103b03a71fe87",
+        "sha256": "555a309f762015659a3b7a0d44522785fa7ea171aedf77392020c25dc5d70e33"
+      },
+      {
+        "repositoryPath": "scripts/legacy-agent-host/desktop-proof-management-sources.ts",
+        "path": "/tmp/migration-evidence-20261116/frontend/plan53-lineage-compatibility-inert-proposal/reference/desktop-proof-management-sources.ts",
+        "bytes": 21211,
+        "physicalLines": 309,
+        "gitBlob": "762570da8b4fc492065b217303a3da169bf627cf",
+        "sha256": "7b89bab88022f53fbc8470f0cbcd4acd93f8ee5412059144e3a676c0fb7466f8"
+      },
+      {
+        "repositoryPath": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "path": "/tmp/e2e-original-artifacts/reviews/plan68-provider-activity-clock/after/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "bytes": 22669,
+        "physicalLines": 349,
+        "gitBlob": "eb917dd3cf76a917430b3a0cb3b20ea387307f99",
+        "sha256": "94ba59ade125b165474fa54bb108a2784b24b332ba2cf286a1082c7299a21448"
+      }
+    ],
+    "fastLint136Unchanged": true,
+    "existingFastPaths": [
+      "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts"
+    ],
+    "headerAlreadyInIntegrated": true,
+    "headerValidation": "Existing full typed src/features lint and workspace types. No class-mirroring test selected.",
+    "donorValidation": "Canonical ci.yml lines611\u2013620 already checks strict host scripts and exact5fast operands including app.ts.",
+    "workflow": {
+      "path": "/tmp/e2e-original-artifacts/reviews/plan68-provider-activity-clock/after/.github/workflows/host-emulated-acceptance.yml",
+      "bytes": 142070,
+      "physicalLines": 1771,
+      "gitBlob": "bd50fd9636f7b63bf8501bca0c6c5a296e2e21bb",
+      "sha256": "5da008329c759a03bbe83f984603048d5b832e1b5f8e9932beaad8385590f7ea"
+    },
+    "donorWorkflow": {
+      "path": "/tmp/e2e-original-artifacts/reviews/incoming-fc100/after/.github/workflows/ci.yml",
+      "bytes": 203111,
+      "physicalLines": 2978,
+      "gitBlob": "97a5aef8801b185d418b9c8c60764f7fcd32c5c0",
+      "sha256": "3adb6243ca0d6562b47577daf544c8bd85aba1b309c8f94acb1d046ec98bf0bf"
+    },
+    "sourceRostersAndWorkflowsSelectedForModification": 0
+  },
+  "sourceReview": {
+    "scroll": "Only absent-viewport nearest scroller chooses visible outer dispatch; original inner clip still determines target visibility. No partial-clip policy, ownership read, wheel/time budget or Plan65 click change.",
+    "regression": "Actual generated expression through existing VM/CDP; outer then inner wheel required, first old null fails immediately, no new timers/framework/mutation or copied implementation. Existing tests unchanged.",
+    "taskDetail": "Only min-h-8 token plus existing exact owner readiness conjunction after clarification. External Header common duplicate deliberately excluded because actual integrated roster already pins it.",
+    "donor": "Scope exact immutable historical Header title/action topology; Button default direct DOM independently bound. Exact text, unique target, hit/disabled/ownership/stability and one physical input remain.",
+    "membership": "Only finite rendered label Sonnet 4.6. Canonical saved anthropic/sonnet/medium readback, strict peer argv and every later lifecycle guard unchanged.",
+    "externalScope": "Select only two small supported Task detail changes from39a00/bf6. Never whole external chain or native W01 sources.",
+    "caps": "Current production562/465/798/727/585; planned Task Board799, other edits fit ordinary800 without extraction/packing. Existing2727 test may grow naturally."
+  },
+  "sourceAfterimages": 0,
+  "execution": 0,
+  "blockers": [],
+  "limits": [
+    "No current failure or cleanup limitation becomes PASS by source selection. Exact resulting-head original CI and full affected journeys remain.",
+    "No local project/native/test/compiler/lint execution or manual Actions. Primary useful executing jobs preserved.",
+    "Document publication/readback plus independent actual R2 must precede six source afterimages; source and actual-source R2 remain separate.",
+    "No Windows deadline/oracle adjustment, Review native-client fix, P09 owner choice, native W01/genuine M16 closure or archive adoption."
+  ],
+  "repositoryPlanPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/69-original-desktop-target-and-task-refresh-2026-11-16.md",
+  "repositoryEvidenceRoot": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan69-desktop-ui-boundaries-2026-11-16"
+}
