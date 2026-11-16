@@ -1,0 +1,242 @@
+{
+  "schemaVersion": 1,
+  "kind": "READ_ONLY_RECOMMENDATION_MINIMUM_PROSPECTIVE_RENDERER_TITLE_CONTROL_REPLACEMENT",
+  "reviewer": "/root/combined_binding_review",
+  "date": "2026-11-16",
+  "status": "RECOMMENDATIONS_ONLY; NO_REPLACEMENT_R1_OR_CONTROLS_AUTHORED; NO_ATTEMPT_SELECTED",
+  "authority": "User has already requested autonomous continuation. This report adds no user-approval requirement. Root remains sole author/applier/stager/executor; existing exact R1/R2/publication/readback gates remain.",
+  "subjects": {
+    "r1": {
+      "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5",
+      "bytes": 77830,
+      "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+      "publication": "cf6547aa79cc903a5833fa950a2de3178194c429"
+    },
+    "runner": {
+      "bytes": 89953,
+      "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+      "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+    },
+    "binding": {
+      "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d",
+      "bytes": 4898503,
+      "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9"
+    },
+    "sourceVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "tests": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    },
+    "historicalMaterialization": {
+      "receipt": {
+        "gitBlob": "f542dde38b84f533e5658aeafe5a06642c1dcca9",
+        "bytes": 92391,
+        "sha256": "3434b0dbd687c9514ca7e0fe35f19c3728624cd77b2b3eceb04bde4bba11819d"
+      },
+      "publication": "179e719480965da06faa6a1119196bcf8c28667a",
+      "rootActual": "1a90d32206b2b31ae3e3dba8e2edde55349851c7",
+      "independentActual": "374fc9db427cb6bcd3380190e836717fa661fe3f"
+    },
+    "failedOutcomeEvidence": {
+      "rootFull": {
+        "bytes": 35783,
+        "sha256": "a10bbfcf8dc3aff986eb504a89ce56cd8e916d8341aff56128c8abc30f248af1",
+        "gitBlob": "f11522d64b72f0c2d940420932d3845041f31a4f"
+      },
+      "rootSupplement": {
+        "gitBlob": "279c4943f4b58cb33540e1ff90659c10a9bd04fd",
+        "bytes": 8014,
+        "sha256": "fdb78777ba5e183103733802479154e139ad67dd106f9b1e820273161947fe71"
+      },
+      "diagnosis": {
+        "bytes": 127784,
+        "sha256": "7deff97792b556dea4da2ed2e1c10fc158445d51e4343171f2e813ff242b6196",
+        "gitBlob": "b80e069b705d41405733ff4fd40caa3ad2a753e6"
+      },
+      "limits": "These three complete reports were fetched and hashed for policy/diagnosis advice. The forthcoming failed-outcome actual publication is not yet independently read back in this report."
+    }
+  },
+  "controllingPolicy": {
+    "executionNoReplay": "One selected attempt per RED or GREEN package. Failed preflight, unexpected result, interruption, unknown launch, incomplete output/cleanup/postflight or missing outer observation spends the attempt. No rerun, partial resume, acceptance by aggregate count, hidden retry or auto-rescue is allowed.",
+    "failedPreflight": "Any failed full current-input preflight is a spent attempted invocation with the primary UNREACHED and later commands unrun. It never licenses a retry/automatic resume, source substitution, cached/earlier input evidence, skipped verification or relaxed admission.",
+    "freshReads": "Read/hash the whole inputs afresh for each package before and after. Earlier materialization snapshots, prior inventory reads and prior package equality do not substitute. Only the already specified bounded read-only manifest strategy, at most8 reader threads and32 outstanding jobs with complete deterministic joins, may be carried into a newly reviewed runner.",
+    "packageBoundary": "Exactly one complete fresh before and one complete fresh after per RED/GREEN package: all8798 source rows and their full HEAD/tree/index/workflow controls; all122773 dependency rows with full byte/link/mode identity; all1454 compiled rows;253D+12SPI provider members and original archive inputs; exact tools/pnpm/config/environment/control bodies; original seven bootstrap cache files. Retain complete actual manifests and compare entire identities, not counts or stat caches. No ignored dependency paths or blanket temp exclusion.",
+    "packageAcceptance": "After both primaries, exact cleanup and full postflight, require actual outer supervisor0 and independent full semantic/input/lifetime acceptance of the entire package. Expected RED child exits1 are kept as raw results and only the completed, independently accepted RED package can advance producer authorship. No primary success transfers to a rejected package.",
+    "producerGate": "No P11/Review/hook postimage may be authored or selected before complete independently accepted actual combined RED, separately observed outer0, and its required publication/readback.",
+    "runnerReview": "Before any staging or evaluation, exact new runner and full phase bindings require independent complete R2 of normal, rejection, exception, signal and cleanup paths, precise inverse/delta accounting, complete retained code/data, immediate-push publication and full actual root+independent readback.",
+    "runnerOutsideScope": "No unrelated runner refactor, imported package, new external interpreter/tool, benchmark/discovery runtime, installation/build, checksum/stat caching, omitted census or exceptional-path weakening. Any exact code delta outside these purposes requires a new reviewed scope before selection.",
+    "binding": {
+      "acceptedCombinedRed": null,
+      "acceptedCombinedGreen": null,
+      "producerR2ReviewedAndPublished": false,
+      "producerActualReadbackAccepted": false,
+      "executionScope": {
+        "requiresObservedSupervisorExitZeroForContinuation": true,
+        "rootSoleExecutor": true,
+        "noReplay": true,
+        "rawAndJsonRequired": true,
+        "nodeTmpDebtRefusesRenderer": true,
+        "independentActualReviewAndPublicationBeforeContinuation": true,
+        "qualification": "Finite TEST Node/public SDK peers and whole renderer actual-source suite. No realClaude/Codex; no GUI/native/vendor or whole E2E qualification."
+      }
+    }
+  },
+  "recommendation": {
+    "minimumSemanticChange": "Correct only six predicted expanded renderer title literals, using the exact retained actual titles and pinned installed formatter source. Do not change either test, any producer, a formatter, a semantic parser rule, failure site, pass/fail count, environment contract or test command flag.",
+    "sixCorrections": [
+      {
+        "ordinal": 1,
+        "sourceRegistrationLine": 258,
+        "sourceParameters": {
+          "operation": "connect",
+          "projectPath": null,
+          "authoritative": false
+        },
+        "wrongExpectedLiteral": "refreshes shared provider metadata after filtered connect (null, full=false)",
+        "sourceDerivedDisplayTitle": "refreshes shared provider metadata after filtered 'connect' (null, full=false)",
+        "actual": "refreshes shared provider metadata after filtered 'connect' (null, full=false)"
+      },
+      {
+        "ordinal": 2,
+        "sourceRegistrationLine": 258,
+        "sourceParameters": {
+          "operation": "connect",
+          "projectPath": "/tmp/TEST-connected-provider-cache",
+          "authoritative": false
+        },
+        "wrongExpectedLiteral": "refreshes shared provider metadata after filtered connect (/tmp/TEST-connected-provider-cache, full=false)",
+        "sourceDerivedDisplayTitle": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=false)",
+        "actual": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=false)"
+      },
+      {
+        "ordinal": 3,
+        "sourceRegistrationLine": 258,
+        "sourceParameters": {
+          "operation": "connect",
+          "projectPath": "/tmp/TEST-connected-provider-cache",
+          "authoritative": true
+        },
+        "wrongExpectedLiteral": "refreshes shared provider metadata after filtered connect (/tmp/TEST-connected-provider-cache, full=true)",
+        "sourceDerivedDisplayTitle": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=true)",
+        "actual": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=true)"
+      },
+      {
+        "ordinal": 4,
+        "sourceRegistrationLine": 258,
+        "sourceParameters": {
+          "operation": "forget",
+          "projectPath": null,
+          "authoritative": false
+        },
+        "wrongExpectedLiteral": "refreshes shared provider metadata after filtered forget (null, full=false)",
+        "sourceDerivedDisplayTitle": "refreshes shared provider metadata after filtered 'forget' (null, full=false)",
+        "actual": "refreshes shared provider metadata after filtered 'forget' (null, full=false)"
+      },
+      {
+        "ordinal": 5,
+        "sourceRegistrationLine": 258,
+        "sourceParameters": {
+          "operation": "forget",
+          "projectPath": "/tmp/TEST-connected-provider-cache",
+          "authoritative": false
+        },
+        "wrongExpectedLiteral": "refreshes shared provider metadata after filtered forget (/tmp/TEST-connected-provider-cache, full=false)",
+        "sourceDerivedDisplayTitle": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=false)",
+        "actual": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=false)"
+      },
+      {
+        "ordinal": 6,
+        "sourceRegistrationLine": 258,
+        "sourceParameters": {
+          "operation": "forget",
+          "projectPath": "/tmp/TEST-connected-provider-cache",
+          "authoritative": true
+        },
+        "wrongExpectedLiteral": "refreshes shared provider metadata after filtered forget (/tmp/TEST-connected-provider-cache, full=true)",
+        "sourceDerivedDisplayTitle": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=true)",
+        "actual": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=true)"
+      }
+    ],
+    "nameDataPropagation": "The six predictions occur in new-scope R1 rendererTestFirst.originalNames and full binding.rendererNames. Recompute the ordered-original80 identity wherever that prediction-array identity is mirrored (including preservedBaseline.rendererWholeTest.orderedNamesSha256), plus derived enclosing R1/control identities. The other79 current renderer names retain exact order/multiplicity. Historical R1/binding/review body copies remain literal unchanged; their original mistaken prediction remains documented.",
+    "parserPreservation": "Keep exact85/title/fullName/ancestor/status checks, exact three failure ordinals81/82/83 and existing failure messages/sites, snapshots/diagnostics gates. No stripping quotes, normalization, regex acceptance, skipping first6, sorting, dropping names, or acceptance by counts. Keep the139 Node contract and all old133/80 requirements.",
+    "freshProspectiveIdentity": "Publish and independently read back the current REFUSED/SPENT outcome first, as root has selected. A later root-authored R1 should explicitly select one new prospective complete two-primary RED package under the corrected control contract, after its exact review/publication gates. Preserve the original attempt, roots, receipts, raw/JSON and outer2 permanently. Distinct roots alone are not authorization; the new exact contract and selection must precede execution. No automatic retry, partial renderer-only resume or old-primary result borrowing.",
+    "necessaryAdministrativeDeltas": [
+      "New R1/publication/blob identities and full control-body joins; exact failed-outcome and title-diagnosis provenance.",
+      "Fresh exclusive control/output/TMP roots and owner identity. Change only root-dependent argv JSON output paths and corresponding ownership/environment/pointer identities; retain every other argument and clock.",
+      "A narrow explicit historical-materialization admission instead of pretending the old receipt belongs to the new binding. No source write or test rematerialization.",
+      "Keep separate identities for unchanged published tests/source subject, new control publication and historical materialization; do not use one accepted flag or commit for a different subject."
+    ],
+    "whyLiteralOnlyIsInsufficient": "Exact runner906d lines21/25/26 hardcode OUTROOT and R1 publication/blob. Lines1072–1075 and1090–1095 join those identities/roots. Lines1204–1221 load materialize-tests/phase-receipt.json under that OUTROOT and require its bindingIdentity to equal the current binding bytes. Old f542 receipt is truthfully bound to old f7c/906d. Therefore a fresh corrected binding cannot simply reference/copypaste it into a new output directory under the old same-binding assertion.",
+    "minimumMaterializationCarryForward": {
+      "selectedByRootInConversation": true,
+      "historicalTruth": "Keep the original materialize-tests action, original binding/runner/R1/publication identities, original two written paths and actual5→6 source transition as history. Keep its fullRuntimeInputsInspected=false and fullRuntimeInputsPreserved/inputsPreserved=null; it never inspected runtime dependencies.",
+      "newAdmission": "Pin the full immutable accepted old materialization body, original control identities, complete source-before/source-after evidence and both actual publication/readbacks. Validate the original success, no-error/no-signal/cleanup facts against their original identities, then separately require fresh full current source equality to the unchanged six-overlay expected vector before any primary.",
+      "zeroCurrentSourceWrites": "The replacement RED admission starts from current four fixed producer postimages plus two test postimages and three unchanged producer preimages: nine bound rows, six physical diffs against C5. Do not describe the historical five-overlay preimage as the new current filesystem state. Keep historical transition data distinct from new run-only admission. Do not restore/rewrite/re-materialize either test to manufacture a new receipt.",
+      "doNotWaive": "Replace only the same-binding relationship with the explicit old-materialization→published-readbacks→fresh-current-source chain. Retain original lifecycle, subject, test and source-vector checks. Do not remove the materialization gate or edit its historical receipt."
+    },
+    "futureProducerBoundary": "Original outer2 never becomes acceptedCombinedRed. New binding starts with acceptedCombinedRed=null and producer flags false. Only an actually completed newly selected package with separately observed outer0, full independent acceptance and publication/readback can open three-producer authorship. Conditional later producer R2/materialization/GREEN/validation retain existing contracts; no producer postimages are part of this correction recommendation."
+  },
+  "reuseVersusFresh": [
+    {
+      "category": "Accepted test materialization and publication",
+      "mayReference": "Full old receipt f542, source5→6 manifests, actual outer0, source-only Guard/parity reports, publication179e and both full actual readbacks.",
+      "mustReadFresh": "Selected immutable historical-control bodies wherever bound, plus complete current8798 source rows and C5 HEAD/tree/index11567/42 workflow controls. No old source snapshot substitutes for current state."
+    },
+    {
+      "category": "Exact selected source/tests",
+      "mayReference": "Same nine row identities, current vectorf644, Node896c and renderer7649. Same four fixed producer postimages and three preimages.",
+      "mustReadFresh": "Every current source body/mode/path and full repository/index controls before and after the package. Expected physical diffs remain6. No source changes between primaries."
+    },
+    {
+      "category": "Dependency/compiled expectations",
+      "mayReference": "Full admitted manifests8fb1a488... and224ff561..., all122773 dependency and1454 compiled row identities; retained import reviews.",
+      "mustReadFresh": "Every admitted dependency/compiled byte, link and mode before and after. No stat/hash cache, reduced census, deduplication of paths or reuse of failed attempt equality."
+    },
+    {
+      "category": "Provider archive/install and toolchain",
+      "mayReference": "Bound archive/provider manifestaea94f43...,253D+12SPI membership,8 input file identities,13 renderer static pins,2 native pins, pnpm/config/tool/SDK/MCP/proxy admissions.",
+      "mustReadFresh": "All original provider archive/member/install, tool/config/pnpm/control/environment and7 bootstrap-cache checks at fresh package boundaries. Reuse identities, not previously observed currentness."
+    },
+    {
+      "category": "Renderer native route/environment",
+      "mayReference": "Unchanged exact nativeMetadataArgv and static import/native/environment contracts.",
+      "mustReadFresh": "Run the already bounded builtin-only native metadata step afresh after accepted Node. Check current raw/effective environment, absence set, cache/override paths, and fresh phase-specific TMPDIR."
+    },
+    {
+      "category": "Original refused RED",
+      "mayReference": "Preserved raw/JSON/receipts, outer2, complete input/cleanup observations and exact six-title diagnosis as historical evidence explaining why a control replacement is considered.",
+      "mustReadFresh": "Both139/85 primaries and all new raw/JSON/capture/deadline/session/cleanup evidence within the newly selected package. Old Node acceptance cannot skip the new Node or seed a new accepted package."
+    },
+    {
+      "category": "Output/control ownership",
+      "mayReference": "Original path identities only as immutable history.",
+      "mustReadFresh": "Exclusive new root absence and owner/mode/no-symlink checks, exact newly staged controls, per-phase attempt marker, entire Node TMP emptiness before renderer, renderer transient capture and ownership-checked cleanup, full postflight, blocked-signal cutoff and separate actual outer observation."
+    }
+  ],
+  "requiredSequence": [
+    "Complete current failed-outcome evidence review; publish and immediately push its exact docs-only result; close both full actual publication readbacks. Preserve REFUSED/SPENT and outer2.",
+    "Root authors the narrow prospective R1 described above. Existing independent scope review, publication/immediate push and full root+independent actual readback precede new control authorship/selection.",
+    "Root authors only the minimal descendant runner/full binding controls. Independent complete R2 verifies exact six predictions, all mandatory identity/root/materialization-chain adaptations, inherited normal/rejection/exception/signal/cleanup logic and full body joins.",
+    "Publish/immediately push the reviewed controls and close full root+independent actual readbacks. Stage only exact new controls in exclusive roots. No test rematerialization or producer/source write.",
+    "Execute at most the one newly selected full RED package: fresh complete preflight → Node139 → exact Node semantics/raw/session/TMP-debt gate → fresh builtin-only native-route metadata → renderer85 → full captured cleanup/owned-transient retention+removal → fresh complete postflight → final signal cutoff → separately observed outer0. Original180-second primary and30-second metadata clocks remain. Any failure spends that new attempt with no retry/resume.",
+    "Independently review every new actual outcome/input/lifetime/branch; publish and immediately push the new package result; close both actual readbacks. Only accepted new actual RED opens the existing three-producer gate.",
+    "Subsequent exact producer R2/publication/readback, source-only producer materialization, unchanged139/85 GREEN and original validation remain conditional future stages. Canonical typecheck/build, GUI/native/platform and whole E2E qualification remain separate."
+  ],
+  "scopeLimits": [
+    "This is advice, not an R1, source/control postimage, selected binding, exception, execution receipt or approval request.",
+    "The source/test commands would execute again only under a newly and explicitly selected prospective corrected control scope. They are not claimed to be a continuation or successful reinterpretation of the original refused invocation.",
+    "No source/runtime/shell/CI/ref action was performed. Only immutable Git data readback and a bare review report are performed here."
+  ]
+}

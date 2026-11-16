@@ -2484,71 +2484,108 @@
     }
   ],
   "currentCombinedNodeRendererStage": {
-    "stage": "two exact tests physically materialized and independently accepted; combined RED not yet executed",
-    "controlsPublication": "6e83f68ead8e8add8edfd1d17b3947509ef5989b",
-    "controlsActual": {
+    "stage": "original combined RED executed once and refused on six wrong renderer title predictions",
+    "materializationPublication": "179e719480965da06faa6a1119196bcf8c28667a",
+    "materializationActual": {
       "root": {
-        "bytes": 53234,
-        "sha256": "a278bb97490a533a31dde75f884678647f233268f481550f62667cd858892004",
-        "gitBlob": "f54d36513fdce8cc8231070be653bf0db6ab8561"
+        "bytes": 68230,
+        "sha256": "8cd9f33fc3afeba9e1b9843620022272a850aef36a740a87e3147b9df89c3737",
+        "gitBlob": "1a90d32206b2b31ae3e3dba8e2edde55349851c7"
       },
       "independent": {
-        "bytes": 80400,
-        "sha256": "960e306976e821512927f538f06ff6e01e1b19961fe4915d89a3c9b15158caf8",
-        "gitBlob": "e6f2efd8354135dfcddf30cb08aba93108656d43"
+        "bytes": 115641,
+        "sha256": "fcfa1571b7ea385fea409dcbe5d5adfe2e9b8b60309a6b331c439feb26704790",
+        "gitBlob": "374fc9db427cb6bcd3380190e836717fa661fe3f"
       }
     },
     "packet": {
-      "bytes": 195085,
-      "sha256": "eaedc299cc59cab8b9291c1b253dc7ea2ac9233e51172715bf10a5892a080cf6",
-      "gitBlob": "bc87216a3f4cee41f3bfa97cca4a3cdfb8a85fd3"
+      "bytes": 372332,
+      "sha256": "7c1aaee9137993e352eb8e6f1e758d7f90e1d1ec211a415218ad1becb7b60f2a",
+      "gitBlob": "854cadcca36a216b01f501d4a3ae496c76a599c4"
     },
     "outer": {
-      "bytes": 5899,
-      "sha256": "c571e8e779b4e66b027365ae68581516b2dfd942cffbe3366f86c679799338a7",
-      "gitBlob": "17635bb8aed9be764c00b17e4a7af1d2b66e3dd3"
+      "bytes": 8828,
+      "sha256": "93ab8431fdd0c6515f4e01a84bb45b5ed16a9529a66659460004f5e976a687b8",
+      "gitBlob": "4eca696d2daa33c08ea4bd7fde795590406233ac"
     },
     "rootReview": {
-      "bytes": 45573,
-      "sha256": "8d841e4cbc0540751b2625a124969a6262443edb1e99903ac0b96a5c3af49335",
-      "gitBlob": "211a94dcd4dba4bff0ae3a10dd5c7aff7806a36c"
+      "bytes": 35783,
+      "sha256": "a10bbfcf8dc3aff986eb504a89ce56cd8e916d8341aff56128c8abc30f248af1",
+      "gitBlob": "f11522d64b72f0c2d940420932d3845041f31a4f"
     },
-    "rootCommandJoins": {
-      "bytes": 5332,
-      "sha256": "5a8f2b58a6192f89255c6322bed70ca9d18340bf81ab465e0d4a111b184181b1",
-      "gitBlob": "00c07b109baf0ab0e0692f9b8087ae341f7343c2"
+    "rootDiagnosisJoin": {
+      "bytes": 8014,
+      "sha256": "fdb78777ba5e183103733802479154e139ad67dd106f9b1e820273161947fe71",
+      "gitBlob": "279c4943f4b58cb33540e1ff90659c10a9bd04fd"
     },
-    "guard": {
-      "bytes": 126054,
-      "sha256": "34a3bb0df97616ea1b93524a628f320594f1700ee158617b04258c98d610cb9c",
-      "gitBlob": "62fda73c295b6fa1467a121685e4daa85a686869"
+    "independentGuard": {
+      "bytes": 356854,
+      "sha256": "bfed191f918b6f056faffac5b56a1e0ebae02139e22dc29529f59ee390e65572",
+      "gitBlob": "4cd9b4bc60e1d64789524c692ef171aaa98b42de"
     },
-    "parity": {
-      "bytes": 113999,
-      "sha256": "48dc8af6e125667c960df0d8fcead2c8a82428d8fd8b45294a1465071267ced9",
-      "gitBlob": "eeb4a37b7967a387bf01c16337788fc75f3bbb6e"
+    "rendererDiagnosis": {
+      "bytes": 127784,
+      "sha256": "7deff97792b556dea4da2ed2e1c10fc158445d51e4343171f2e813ff242b6196",
+      "gitBlob": "b80e069b705d41405733ff4fd40caa3ad2a753e6"
     },
-    "sourceBefore": {
-      "bytes": 2478650,
-      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
-      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+    "selectedRunner": {
+      "bytes": 89953,
+      "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+      "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
     },
-    "sourceAfter": {
-      "bytes": 2478745,
-      "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
-      "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+    "selectedBinding": {
+      "bytes": 4898503,
+      "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+      "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
     },
+    "observedSupervisorExit": 2,
+    "session": 64038,
+    "attemptSpent": true,
+    "replayed": false,
+    "classification": "REFUSED/SPENT",
+    "primaryObservations": {
+      "node": {
+        "cases": 139,
+        "pass": 134,
+        "fail": 5,
+        "old133Pass": true,
+        "mechanicallyAccepted": true
+      },
+      "renderer": {
+        "cases": 85,
+        "pass": 82,
+        "fail": 3,
+        "old80Pass": true,
+        "mechanicallyAccepted": false,
+        "titleMismatches": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      }
+    },
+    "all81ActualFilesRetained": true,
+    "totalPhaseFileBytes": 90418918,
+    "fullRuntimeInputsInspected": true,
+    "fullRuntimeInputsPreserved": true,
+    "source": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d",
     "sourceRows": 8798,
     "physicalOverlays": 6,
     "workflows": 42,
-    "materialized": true,
-    "observedOuterExit": 0,
-    "scope": "source-and-supervisor-metadata-only",
-    "fullRuntimeInputsInspected": false,
-    "fullRuntimeInputsPreserved": null,
-    "executed": false,
+    "scopeCompleted": false,
+    "acceptedCombinedRed": null,
+    "producerAuthorshipGateOpened": false,
     "producerPostimagesAuthored": false,
-    "next": "Complete actual materialization publication readback then exactly one combinedRED package with fresh full runtime-input boundaries. All three producer fixes remain gated on complete accepted current combinedRED and its publication/readback."
+    "replacementScopeSelected": false,
+    "recommendations": {
+      "bytes": 21134,
+      "sha256": "f745a8fa1ed54b995c7d379ab89d7e9030326e1fd049fdbab8bc925bb79a4572",
+      "gitBlob": "e5594f50d0894404c42b2bf631b75973e87869eb"
+    },
+    "next": "Complete actual refused-outcome publication readback; only then select and review an explicit narrow prospective control scope. Original attempt remains spent. Both primaries and all runtime boundaries must be freshly observed under any separately selected future scope."
   },
   "priorCombinedNodeRendererStageAtTestPublication": {
     "stage": "exact R1 published; complete actual readback required before authorship",
@@ -2876,5 +2913,165 @@
       "sha256": "960e306976e821512927f538f06ff6e01e1b19961fe4915d89a3c9b15158caf8",
       "gitBlob": "e6f2efd8354135dfcddf30cb08aba93108656d43"
     }
-  ]
+  ],
+  "priorCombinedNodeRendererStageAtRefusedRed": {
+    "stage": "two exact tests physically materialized and independently accepted; combined RED not yet executed",
+    "controlsPublication": "6e83f68ead8e8add8edfd1d17b3947509ef5989b",
+    "controlsActual": {
+      "root": {
+        "bytes": 53234,
+        "sha256": "a278bb97490a533a31dde75f884678647f233268f481550f62667cd858892004",
+        "gitBlob": "f54d36513fdce8cc8231070be653bf0db6ab8561"
+      },
+      "independent": {
+        "bytes": 80400,
+        "sha256": "960e306976e821512927f538f06ff6e01e1b19961fe4915d89a3c9b15158caf8",
+        "gitBlob": "e6f2efd8354135dfcddf30cb08aba93108656d43"
+      }
+    },
+    "packet": {
+      "bytes": 195085,
+      "sha256": "eaedc299cc59cab8b9291c1b253dc7ea2ac9233e51172715bf10a5892a080cf6",
+      "gitBlob": "bc87216a3f4cee41f3bfa97cca4a3cdfb8a85fd3"
+    },
+    "outer": {
+      "bytes": 5899,
+      "sha256": "c571e8e779b4e66b027365ae68581516b2dfd942cffbe3366f86c679799338a7",
+      "gitBlob": "17635bb8aed9be764c00b17e4a7af1d2b66e3dd3"
+    },
+    "rootReview": {
+      "bytes": 45573,
+      "sha256": "8d841e4cbc0540751b2625a124969a6262443edb1e99903ac0b96a5c3af49335",
+      "gitBlob": "211a94dcd4dba4bff0ae3a10dd5c7aff7806a36c"
+    },
+    "rootCommandJoins": {
+      "bytes": 5332,
+      "sha256": "5a8f2b58a6192f89255c6322bed70ca9d18340bf81ab465e0d4a111b184181b1",
+      "gitBlob": "00c07b109baf0ab0e0692f9b8087ae341f7343c2"
+    },
+    "guard": {
+      "bytes": 126054,
+      "sha256": "34a3bb0df97616ea1b93524a628f320594f1700ee158617b04258c98d610cb9c",
+      "gitBlob": "62fda73c295b6fa1467a121685e4daa85a686869"
+    },
+    "parity": {
+      "bytes": 113999,
+      "sha256": "48dc8af6e125667c960df0d8fcead2c8a82428d8fd8b45294a1465071267ced9",
+      "gitBlob": "eeb4a37b7967a387bf01c16337788fc75f3bbb6e"
+    },
+    "sourceBefore": {
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+    },
+    "sourceAfter": {
+      "bytes": 2478745,
+      "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+      "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+    },
+    "sourceRows": 8798,
+    "physicalOverlays": 6,
+    "workflows": 42,
+    "materialized": true,
+    "observedOuterExit": 0,
+    "scope": "source-and-supervisor-metadata-only",
+    "fullRuntimeInputsInspected": false,
+    "fullRuntimeInputsPreserved": null,
+    "executed": false,
+    "producerPostimagesAuthored": false,
+    "next": "Complete actual materialization publication readback then exactly one combinedRED package with fresh full runtime-input boundaries. All three producer fixes remain gated on complete accepted current combinedRED and its publication/readback."
+  },
+  "combined139Renderer85RefusedRedEvidenceFiles": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-full-packet-20261116.json",
+      "bytes": 372332,
+      "sha256": "7c1aaee9137993e352eb8e6f1e758d7f90e1d1ec211a415218ad1becb7b60f2a",
+      "gitBlob": "854cadcca36a216b01f501d4a3ae496c76a599c4"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-observed-outer-20261116.json",
+      "bytes": 8828,
+      "sha256": "93ab8431fdd0c6515f4e01a84bb45b5ed16a9529a66659460004f5e976a687b8",
+      "gitBlob": "4eca696d2daa33c08ea4bd7fde795590406233ac"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-root-review-20261116.json",
+      "bytes": 35783,
+      "sha256": "a10bbfcf8dc3aff986eb504a89ce56cd8e916d8341aff56128c8abc30f248af1",
+      "gitBlob": "f11522d64b72f0c2d940420932d3845041f31a4f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-root-diagnosis-joins-20261116.json",
+      "bytes": 8014,
+      "sha256": "fdb78777ba5e183103733802479154e139ad67dd106f9b1e820273161947fe71",
+      "gitBlob": "279c4943f4b58cb33540e1ff90659c10a9bd04fd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-renderer-title-diagnosis-20261116.json",
+      "bytes": 127784,
+      "sha256": "7deff97792b556dea4da2ed2e1c10fc158445d51e4343171f2e813ff242b6196",
+      "gitBlob": "b80e069b705d41405733ff4fd40caa3ad2a753e6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-loupe-source-read-20261116.json",
+      "bytes": 54541,
+      "sha256": "1b62fc4125d83f567d54b3feba78a8e3b90271c127827b57de0a840f5827835b",
+      "gitBlob": "2a2e7c637ba8b2690d0f59ae45d284f1c97e61de"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-full-retention-join-20261116.json",
+      "bytes": 4424,
+      "sha256": "b31f4015b0aafdb66e95300237eacb619f59d0e542dbdc2d8a81b91f53881fde",
+      "gitBlob": "5dfb4f3f78080a8c0890173e683a11d266d2ee55"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-full-retention-reconstruction-20261116.json",
+      "bytes": 7124,
+      "sha256": "f0eb74dad52bee46558440be43df46ef0e7f399a89db8d96b5ce99b1fdaa29b9",
+      "gitBlob": "f64c0246f31578ceecb7fb0bd5df830b2f7fc547"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-materialize-tests-actual-root-publication-20261116.json",
+      "bytes": 68230,
+      "sha256": "8cd9f33fc3afeba9e1b9843620022272a850aef36a740a87e3147b9df89c3737",
+      "gitBlob": "1a90d32206b2b31ae3e3dba8e2edde55349851c7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-materialize-tests-actual-independent-publication-20261116.json",
+      "bytes": 115641,
+      "sha256": "fcfa1571b7ea385fea409dcbe5d5adfe2e9b8b60309a6b331c439feb26704790",
+      "gitBlob": "374fc9db427cb6bcd3380190e836717fa661fe3f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-1192-75cf2dcb-and-d-pr8-bounded-assessment-20261116.json",
+      "bytes": 345710,
+      "sha256": "42e1483d832195946da1772abd172ffb903c6c3f1466925dd856bb33ea79c348",
+      "gitBlob": "530b81573d701849da6249e92195572dc450959a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-control-correction-recommendations-20261116.json",
+      "bytes": 21134,
+      "sha256": "f745a8fa1ed54b995c7d379ab89d7e9030326e1fd049fdbab8bc925bb79a4572",
+      "gitBlob": "e5594f50d0894404c42b2bf631b75973e87869eb"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-independent-guard-20261116.json",
+      "bytes": 356854,
+      "sha256": "bfed191f918b6f056faffac5b56a1e0ebae02139e22dc29529f59ee390e65572",
+      "gitBlob": "4cd9b4bc60e1d64789524c692ef171aaa98b42de"
+    }
+  ],
+  "incomingDeliveryAtRefusedCombinedRed": {
+    "assessment": {
+      "bytes": 345710,
+      "sha256": "42e1483d832195946da1772abd172ffb903c6c3f1466925dd856bb33ea79c348",
+      "gitBlob": "530b81573d701849da6249e92195572dc450959a"
+    },
+    "appHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "dRepository": "agent-teams-ai/old-provider-implementations",
+    "dHead": "8d471b51dbb3ae9aeaff4a261f98bf4ef2073a8b",
+    "sourceAdopted": false,
+    "runtimeQualified": false,
+    "dFullSourceReview": false
+  }
 }

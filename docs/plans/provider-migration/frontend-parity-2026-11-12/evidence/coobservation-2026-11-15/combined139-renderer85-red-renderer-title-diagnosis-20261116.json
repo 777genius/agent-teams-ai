@@ -1,0 +1,2412 @@
+{
+  "schema": "c714-original-combined-red-refused-renderer-title-source-diagnosis-v1",
+  "reviewer": "/root/combined_semantic_review",
+  "reviewedAtUtc": "2026-11-16T22:26:45.857Z",
+  "repository": "777genius/agent-teams-ai",
+  "verdict": "DIAGNOSED_WRONG_LITERAL_TITLE_PREDICTION_ORIGINAL_PACKAGE_REMAINS_REFUSED",
+  "originalPackageAccepted": false,
+  "originalAttemptSpent": true,
+  "originalAttemptReplayed": false,
+  "producerAuthorshipGateOpened": false,
+  "originalOutcome": {
+    "observedOuterExit": 2,
+    "outerSupervisorScopeCompleted": false,
+    "semanticAdmissionComplete": false,
+    "rendererStatus": "EXECUTED, NOT ACCEPTED",
+    "nodeStatus": "ACCEPTED by original mechanical supervisor; not transferred as package acceptance",
+    "sessionId": 64038,
+    "qualification": "Original aggregate remains REFUSED/SPENT. Matching semantic data below cannot reclassify its exit2 or turn a failed package into PASS."
+  },
+  "evidence": {
+    "runner": {
+      "bytes": 89953,
+      "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+      "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+    },
+    "binding": {
+      "bytes": 4898503,
+      "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+      "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+    },
+    "selectedR1": {
+      "publication": "cf6547aa79cc903a5833fa950a2de3178194c429",
+      "identity": {
+        "bytes": 77830,
+        "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+        "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+      }
+    },
+    "wholeTest": {
+      "bytes": 187890,
+      "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+      "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+    },
+    "testProposal": {
+      "bytes": 24017,
+      "sha256": "1532df713cd8c75025fccaaecbc7041e05f3ced87d1894f041a97a01e6d8f9a1",
+      "gitBlob": "061cb0545b58d847ef69b05baa2b140065456730"
+    },
+    "actualRaw": {
+      "bytes": 12173,
+      "sha256": "2d0c6c054e2894ee5f5bc67217dcc44d33a0122031cf25d03982bb9aa9d9ddfa",
+      "gitBlob": "6d53115bc43941f86a010a3937a530cef8c7187a"
+    },
+    "actualJson": {
+      "bytes": 29585,
+      "sha256": "b333cdf2b965e96ff04ae067880040885b309b37be1b71cd04cfdfcc9c3e8363",
+      "gitBlob": "13ca68588b509c6c38a9d98586e6338db675c4ae"
+    },
+    "actualOuter": {
+      "bytes": 8828,
+      "sha256": "93ab8431fdd0c6515f4e01a84bb45b5ed16a9529a66659460004f5e976a687b8",
+      "gitBlob": "4eca696d2daa33c08ea4bd7fde795590406233ac"
+    },
+    "actualPinnedLoupeRead": {
+      "bytes": 54541,
+      "sha256": "1b62fc4125d83f567d54b3feba78a8e3b90271c127827b57de0a840f5827835b",
+      "gitBlob": "2a2e7c637ba8b2690d0f59ae45d284f1c97e61de"
+    }
+  },
+  "diagnosis": {
+    "defectLocation": "The selected R1, test proposal and binding incorrectly predicted unquoted literal renderer titles for the first six object-parameterized it.each cases. The test source itself did not change. The runner correctly refused the exact literal-name mismatch against that erroneous binding.",
+    "sourceRegistration": {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "firstLine": 238,
+      "lastLine": 259,
+      "text": "  it.each([\n    { operation: 'connect', projectPath: null, authoritative: false },\n    {\n      operation: 'connect',\n      projectPath: '/tmp/TEST-connected-provider-cache',\n      authoritative: false,\n    },\n    {\n      operation: 'connect',\n      projectPath: '/tmp/TEST-connected-provider-cache',\n      authoritative: true,\n    },\n    { operation: 'forget', projectPath: null, authoritative: false },\n    {\n      operation: 'forget',\n      projectPath: '/tmp/TEST-connected-provider-cache',\n      authoritative: false,\n    },\n    { operation: 'forget', projectPath: '/tmp/TEST-connected-provider-cache', authoritative: true },\n  ])(\n    'refreshes shared provider metadata after filtered $operation ($projectPath, full=$authoritative)',\n    async ({ operation, projectPath, authoritative }) => {"
+    },
+    "formatterChain": [
+      "it.each receives each object row as items=[row], then calls formatTitle before test registration (collector59908 lines838–864).",
+      "formatTitle first handles printf placeholders. This template has no percent placeholders, so format(template) leaves it unchanged. It then replaces $operation, $projectPath and $authoritative using objectAttr and objDisplay, not String (lines950–960).",
+      "@vitest/utils reexports objDisplay from chunk-_commonjsHelpers.js. That implementation calls loupe.inspect with default truncate40 and returns its representation.",
+      "The actual @vitest/utils importer-local link resolves to loupe3.2.1. package.json has type=module and main/module=./lib/index.js. lib/index.js dispatches primitive strings to inspectString, null to literal null, and booleans to String(value).",
+      "lib/string.js wraps string values in single quotes after escaping and truncate(string, options.truncate-2). helpers.js defaults colorsfalse and stylizeString. The operation strings have6/7characters and the path has34characters, below the38-character content limit, so there is no truncation.",
+      "Later `%s` cases follow utils format's String(value) path for these primitive strings and booleans, explaining why their literal names remain unquoted and match the binding."
+    ],
+    "exactDiscrepancyCount": 6,
+    "discrepantOrdinals": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "matchingLiteralOrdinals": "7–85 (79 entries)",
+    "parserFailureLocalization": {
+      "runnerLine": 1008,
+      "predicate": "len(assertions)==85 and [row['title'] for row in assertions]==cfg['rendererNames']",
+      "result": false,
+      "method": "Source/evidence-derived localization: all prior raw/JSON value predicates in renderer_semantics match retained data; the 85-title array differs at exactly these six entries. The original error text lacks a traceback, so this identifies the first false value predicate from the exact source and retained data rather than inventing a recorded stack."
+    },
+    "noSemanticNormalization": "No quotes are stripped and no fuzzy matching or case filtering is proposed. The report retains exact original wrong literals, exact actual display titles and exact source parameters one-to-one. Corrected prospective authorization must bind exact source-derived display titles under a separately reviewed scope.",
+    "sourceParametersUnchanged": true,
+    "unknownOrExtraCases": 0
+  },
+  "sixExactMappings": [
+    {
+      "ordinal": 1,
+      "sourceRegistrationLine": 258,
+      "sourceParameters": {
+        "operation": "connect",
+        "projectPath": null,
+        "authoritative": false
+      },
+      "wrongExpectedLiteral": "refreshes shared provider metadata after filtered connect (null, full=false)",
+      "sourceDerivedDisplayTitle": "refreshes shared provider metadata after filtered 'connect' (null, full=false)",
+      "actual": "refreshes shared provider metadata after filtered 'connect' (null, full=false)"
+    },
+    {
+      "ordinal": 2,
+      "sourceRegistrationLine": 258,
+      "sourceParameters": {
+        "operation": "connect",
+        "projectPath": "/tmp/TEST-connected-provider-cache",
+        "authoritative": false
+      },
+      "wrongExpectedLiteral": "refreshes shared provider metadata after filtered connect (/tmp/TEST-connected-provider-cache, full=false)",
+      "sourceDerivedDisplayTitle": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=false)",
+      "actual": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=false)"
+    },
+    {
+      "ordinal": 3,
+      "sourceRegistrationLine": 258,
+      "sourceParameters": {
+        "operation": "connect",
+        "projectPath": "/tmp/TEST-connected-provider-cache",
+        "authoritative": true
+      },
+      "wrongExpectedLiteral": "refreshes shared provider metadata after filtered connect (/tmp/TEST-connected-provider-cache, full=true)",
+      "sourceDerivedDisplayTitle": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=true)",
+      "actual": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=true)"
+    },
+    {
+      "ordinal": 4,
+      "sourceRegistrationLine": 258,
+      "sourceParameters": {
+        "operation": "forget",
+        "projectPath": null,
+        "authoritative": false
+      },
+      "wrongExpectedLiteral": "refreshes shared provider metadata after filtered forget (null, full=false)",
+      "sourceDerivedDisplayTitle": "refreshes shared provider metadata after filtered 'forget' (null, full=false)",
+      "actual": "refreshes shared provider metadata after filtered 'forget' (null, full=false)"
+    },
+    {
+      "ordinal": 5,
+      "sourceRegistrationLine": 258,
+      "sourceParameters": {
+        "operation": "forget",
+        "projectPath": "/tmp/TEST-connected-provider-cache",
+        "authoritative": false
+      },
+      "wrongExpectedLiteral": "refreshes shared provider metadata after filtered forget (/tmp/TEST-connected-provider-cache, full=false)",
+      "sourceDerivedDisplayTitle": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=false)",
+      "actual": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=false)"
+    },
+    {
+      "ordinal": 6,
+      "sourceRegistrationLine": 258,
+      "sourceParameters": {
+        "operation": "forget",
+        "projectPath": "/tmp/TEST-connected-provider-cache",
+        "authoritative": true
+      },
+      "wrongExpectedLiteral": "refreshes shared provider metadata after filtered forget (/tmp/TEST-connected-provider-cache, full=true)",
+      "sourceDerivedDisplayTitle": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=true)",
+      "actual": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=true)"
+    }
+  ],
+  "complete85Mapping": [
+    {
+      "ordinal": 1,
+      "expectedR1Literal": "refreshes shared provider metadata after filtered connect (null, full=false)",
+      "actualTitle": "refreshes shared provider metadata after filtered 'connect' (null, full=false)",
+      "actualFullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'connect' (null, full=false)",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": false,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 2,
+      "expectedR1Literal": "refreshes shared provider metadata after filtered connect (/tmp/TEST-connected-provider-cache, full=false)",
+      "actualTitle": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=false)",
+      "actualFullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=false)",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": false,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 3,
+      "expectedR1Literal": "refreshes shared provider metadata after filtered connect (/tmp/TEST-connected-provider-cache, full=true)",
+      "actualTitle": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=true)",
+      "actualFullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=true)",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": false,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 4,
+      "expectedR1Literal": "refreshes shared provider metadata after filtered forget (null, full=false)",
+      "actualTitle": "refreshes shared provider metadata after filtered 'forget' (null, full=false)",
+      "actualFullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'forget' (null, full=false)",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": false,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 5,
+      "expectedR1Literal": "refreshes shared provider metadata after filtered forget (/tmp/TEST-connected-provider-cache, full=false)",
+      "actualTitle": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=false)",
+      "actualFullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=false)",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": false,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 6,
+      "expectedR1Literal": "refreshes shared provider metadata after filtered forget (/tmp/TEST-connected-provider-cache, full=true)",
+      "actualTitle": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=true)",
+      "actualFullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=true)",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": false,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 7,
+      "expectedR1Literal": "skips unsupported shared directory reads after connect without a refresh warning",
+      "actualTitle": "skips unsupported shared directory reads after connect without a refresh warning",
+      "actualFullName": "useRuntimeProviderManagement skips unsupported shared directory reads after connect without a refresh warning",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 8,
+      "expectedR1Literal": "skips unsupported shared directory reads after forget without a refresh warning",
+      "actualTitle": "skips unsupported shared directory reads after forget without a refresh warning",
+      "actualFullName": "useRuntimeProviderManagement skips unsupported shared directory reads after forget without a refresh warning",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 9,
+      "expectedR1Literal": "cancels all active probe attempts when startConnect closes the picker",
+      "actualTitle": "cancels all active probe attempts when startConnect closes the picker",
+      "actualFullName": "useRuntimeProviderManagement cancels all active probe attempts when startConnect closes the picker",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 10,
+      "expectedR1Literal": "cancels all active probe attempts when startReconnect closes the picker",
+      "actualTitle": "cancels all active probe attempts when startReconnect closes the picker",
+      "actualFullName": "useRuntimeProviderManagement cancels all active probe attempts when startReconnect closes the picker",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 11,
+      "expectedR1Literal": "cancels all active probe attempts when closeModelPicker closes the picker",
+      "actualTitle": "cancels all active probe attempts when closeModelPicker closes the picker",
+      "actualFullName": "useRuntimeProviderManagement cancels all active probe attempts when closeModelPicker closes the picker",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 12,
+      "expectedR1Literal": "cancels all active probe attempts when switchProvider closes the picker",
+      "actualTitle": "cancels all active probe attempts when switchProvider closes the picker",
+      "actualFullName": "useRuntimeProviderManagement cancels all active probe attempts when switchProvider closes the picker",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 13,
+      "expectedR1Literal": "stops only one probe and ignores its late response after immediate restart",
+      "actualTitle": "stops only one probe and ignores its late response after immediate restart",
+      "actualFullName": "useRuntimeProviderManagement stops only one probe and ignores its late response after immediate restart",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 14,
+      "expectedR1Literal": "keeps the probe running when stop is rejected",
+      "actualTitle": "keeps the probe running when stop is rejected",
+      "actualFullName": "useRuntimeProviderManagement keeps the probe running when stop is rejected",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 15,
+      "expectedR1Literal": "uses a clicked model as the app default for new teams without a global success banner",
+      "actualTitle": "uses a clicked model as the app default for new teams without a global success banner",
+      "actualFullName": "useRuntimeProviderManagement uses a clicked model as the app default for new teams without a global success banner",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 16,
+      "expectedR1Literal": "opens only the public GitHub device-login URL from OAuth progress",
+      "actualTitle": "opens only the public GitHub device-login URL from OAuth progress",
+      "actualFullName": "useRuntimeProviderManagement opens only the public GitHub device-login URL from OAuth progress",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 17,
+      "expectedR1Literal": "passes projectPath to the runtime provider management API",
+      "actualTitle": "passes projectPath to the runtime provider management API",
+      "actualFullName": "useRuntimeProviderManagement passes projectPath to the runtime provider management API",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 18,
+      "expectedR1Literal": "defers the full managed view until explicitly requested",
+      "actualTitle": "defers the full managed view until explicitly requested",
+      "actualFullName": "useRuntimeProviderManagement defers the full managed view until explicitly requested",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 19,
+      "expectedR1Literal": "opens a deep-linked provider setup after the directory row is ready",
+      "actualTitle": "opens a deep-linked provider setup after the directory row is ready",
+      "actualFullName": "useRuntimeProviderManagement opens a deep-linked provider setup after the directory row is ready",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 20,
+      "expectedR1Literal": "reloads a requested Models view when native runtime identity settles",
+      "actualTitle": "reloads a requested Models view when native runtime identity settles",
+      "actualFullName": "useRuntimeProviderManagement reloads a requested Models view when native runtime identity settles",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 21,
+      "expectedR1Literal": "reopens a pending deep-linked Connect when native runtime identity settles",
+      "actualTitle": "reopens a pending deep-linked Connect when native runtime identity settles",
+      "actualFullName": "useRuntimeProviderManagement reopens a pending deep-linked Connect when native runtime identity settles",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 22,
+      "expectedR1Literal": "hydrates the full provider directory without a catalog refresh",
+      "actualTitle": "hydrates the full provider directory without a catalog refresh",
+      "actualFullName": "useRuntimeProviderManagement hydrates the full provider directory without a catalog refresh",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 23,
+      "expectedR1Literal": "keeps summary providers when the full catalog comes back empty",
+      "actualTitle": "keeps summary providers when the full catalog comes back empty",
+      "actualFullName": "useRuntimeProviderManagement keeps summary providers when the full catalog comes back empty",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 24,
+      "expectedR1Literal": "paints same-scope curated cache while summary IPC is pending and retains errors",
+      "actualTitle": "paints same-scope curated cache while summary IPC is pending and retains errors",
+      "actualFullName": "useRuntimeProviderManagement paints same-scope curated cache while summary IPC is pending and retains errors",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 25,
+      "expectedR1Literal": "never emits a previous-project provider in the transition render",
+      "actualTitle": "never emits a previous-project provider in the transition render",
+      "actualFullName": "useRuntimeProviderManagement never emits a previous-project provider in the transition render",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 26,
+      "expectedR1Literal": "does not project cached summary credentials into another project or global scope",
+      "actualTitle": "does not project cached summary credentials into another project or global scope",
+      "actualFullName": "useRuntimeProviderManagement does not project cached summary credentials into another project or global scope",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 27,
+      "expectedR1Literal": "recovers directory support when a newer OpenCode runtime replaces an unsupported one",
+      "actualTitle": "recovers directory support when a newer OpenCode runtime replaces an unsupported one",
+      "actualFullName": "useRuntimeProviderManagement recovers directory support when a newer OpenCode runtime replaces an unsupported one",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 28,
+      "expectedR1Literal": "ignores a pre-mutation directory response without changing the project",
+      "actualTitle": "ignores a pre-mutation directory response without changing the project",
+      "actualFullName": "useRuntimeProviderManagement ignores a pre-mutation directory response without changing the project",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 29,
+      "expectedR1Literal": "masks cached rows and ignores pending responses when the OpenCode binary changes",
+      "actualTitle": "masks cached rows and ignores pending responses when the OpenCode binary changes",
+      "actualFullName": "useRuntimeProviderManagement masks cached rows and ignores pending responses when the OpenCode binary changes",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 30,
+      "expectedR1Literal": "reopens a cached full catalog without flashing the 16-provider summary",
+      "actualTitle": "reopens a cached full catalog without flashing the 16-provider summary",
+      "actualFullName": "useRuntimeProviderManagement reopens a cached full catalog without flashing the 16-provider summary",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 31,
+      "expectedR1Literal": "does not replace the cached full catalog with search results",
+      "actualTitle": "does not replace the cached full catalog with search results",
+      "actualFullName": "useRuntimeProviderManagement does not replace the cached full catalog with search results",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 32,
+      "expectedR1Literal": "reuses setup while preserving the connected auth method for reconnect",
+      "actualTitle": "reuses setup while preserving the connected auth method for reconnect",
+      "actualFullName": "useRuntimeProviderManagement reuses setup while preserving the connected auth method for reconnect",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 33,
+      "expectedR1Literal": "keeps provider search local until full-catalog search is explicitly requested",
+      "actualTitle": "keeps provider search local until full-catalog search is explicitly requested",
+      "actualFullName": "useRuntimeProviderManagement keeps provider search local until full-catalog search is explicitly requested",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 34,
+      "expectedR1Literal": "clears structured errors and stale provider state when disabled",
+      "actualTitle": "clears structured errors and stale provider state when disabled",
+      "actualFullName": "useRuntimeProviderManagement clears structured errors and stale provider state when disabled",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 35,
+      "expectedR1Literal": "ignores pending directory and setup-form responses after being disabled",
+      "actualTitle": "ignores pending directory and setup-form responses after being disabled",
+      "actualFullName": "useRuntimeProviderManagement ignores pending directory and setup-form responses after being disabled",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 36,
+      "expectedR1Literal": "ignores stale provider views after project context changes",
+      "actualTitle": "ignores stale provider views after project context changes",
+      "actualFullName": "useRuntimeProviderManagement ignores stale provider views after project context changes",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 37,
+      "expectedR1Literal": "reissues a requested view after temporary project-context hydration",
+      "actualTitle": "reissues a requested view after temporary project-context hydration",
+      "actualFullName": "useRuntimeProviderManagement reissues a requested view after temporary project-context hydration",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 38,
+      "expectedR1Literal": "restarts provider directory loading when project context changes while loading",
+      "actualTitle": "restarts provider directory loading when project context changes while loading",
+      "actualFullName": "useRuntimeProviderManagement restarts provider directory loading when project context changes while loading",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 39,
+      "expectedR1Literal": "drops stale model probe results after project context changes",
+      "actualTitle": "drops stale model probe results after project context changes",
+      "actualFullName": "useRuntimeProviderManagement drops stale model probe results after project context changes",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 40,
+      "expectedR1Literal": "drops stale set-default responses after project context changes",
+      "actualTitle": "drops stale set-default responses after project context changes",
+      "actualFullName": "useRuntimeProviderManagement drops stale set-default responses after project context changes",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 41,
+      "expectedR1Literal": "clears pending provider save state after project context changes",
+      "actualTitle": "clears pending provider save state after project context changes",
+      "actualFullName": "useRuntimeProviderManagement clears pending provider save state after project context changes",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 42,
+      "expectedR1Literal": "refreshes view and catalog after forgetting managed auth while local auth remains",
+      "actualTitle": "refreshes view and catalog after forgetting managed auth while local auth remains",
+      "actualFullName": "useRuntimeProviderManagement refreshes view and catalog after forgetting managed auth while local auth remains",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 43,
+      "expectedR1Literal": "refreshes the view and catalog after a confirmed connection",
+      "actualTitle": "refreshes the view and catalog after a confirmed connection",
+      "actualFullName": "useRuntimeProviderManagement refreshes the view and catalog after a confirmed connection",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 44,
+      "expectedR1Literal": "keeps provider data visible during catalog refresh",
+      "actualTitle": "keeps provider data visible during catalog refresh",
+      "actualFullName": "useRuntimeProviderManagement keeps provider data visible during catalog refresh",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 45,
+      "expectedR1Literal": "lazy-loads provider directory and ignores stale search responses",
+      "actualTitle": "lazy-loads provider directory and ignores stale search responses",
+      "actualFullName": "useRuntimeProviderManagement lazy-loads provider directory and ignores stale search responses",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 46,
+      "expectedR1Literal": "keeps the API key draft when provider connect fails",
+      "actualTitle": "keeps the API key draft when provider connect fails",
+      "actualFullName": "useRuntimeProviderManagement keeps the API key draft when provider connect fails",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 47,
+      "expectedR1Literal": "explains Copilot model access separately from GitHub authentication",
+      "actualTitle": "explains Copilot model access separately from GitHub authentication",
+      "actualFullName": "useRuntimeProviderManagement explains Copilot model access separately from GitHub authentication",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 48,
+      "expectedR1Literal": "keeps setup form diagnostics available when submit is attempted after form load failure",
+      "actualTitle": "keeps setup form diagnostics available when submit is attempted after form load failure",
+      "actualFullName": "useRuntimeProviderManagement keeps setup form diagnostics available when submit is attempted after form load failure",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 49,
+      "expectedR1Literal": "submits a supported setup form without a secret as a null API key",
+      "actualTitle": "submits a supported setup form without a secret as a null API key",
+      "actualFullName": "useRuntimeProviderManagement submits a supported setup form without a secret as a null API key",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 50,
+      "expectedR1Literal": "keeps OpenCode API connect pending beyond the old UI deadline: late-success",
+      "actualTitle": "keeps OpenCode API connect pending beyond the old UI deadline: late-success",
+      "actualFullName": "useRuntimeProviderManagement keeps OpenCode API connect pending beyond the old UI deadline: late-success",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 51,
+      "expectedR1Literal": "keeps OpenCode API connect pending beyond the old UI deadline: timeout",
+      "actualTitle": "keeps OpenCode API connect pending beyond the old UI deadline: timeout",
+      "actualFullName": "useRuntimeProviderManagement keeps OpenCode API connect pending beyond the old UI deadline: timeout",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 52,
+      "expectedR1Literal": "keeps setup open when the backend does not confirm a connected provider",
+      "actualTitle": "keeps setup open when the backend does not confirm a connected provider",
+      "actualFullName": "useRuntimeProviderManagement keeps setup open when the backend does not confirm a connected provider",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 53,
+      "expectedR1Literal": "keeps the actual API credential hint when xAI refresh fails after connect",
+      "actualTitle": "keeps the actual API credential hint when xAI refresh fails after connect",
+      "actualFullName": "useRuntimeProviderManagement keeps the actual API credential hint when xAI refresh fails after connect",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 54,
+      "expectedR1Literal": "refreshes provider status after a cancelled OAuth child settles",
+      "actualTitle": "refreshes provider status after a cancelled OAuth child settles",
+      "actualFullName": "useRuntimeProviderManagement refreshes provider status after a cancelled OAuth child settles",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 55,
+      "expectedR1Literal": "preserves the full slow model-picker allowance: complete",
+      "actualTitle": "preserves the full slow model-picker allowance: complete",
+      "actualFullName": "useRuntimeProviderManagement preserves the full slow model-picker allowance: complete",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 56,
+      "expectedR1Literal": "preserves the full slow model-picker allowance: timeout",
+      "actualTitle": "preserves the full slow model-picker allowance: timeout",
+      "actualFullName": "useRuntimeProviderManagement preserves the full slow model-picker allowance: timeout",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 57,
+      "expectedR1Literal": "clears model loading when switching from model picker to setup form",
+      "actualTitle": "clears model loading when switching from model picker to setup form",
+      "actualFullName": "useRuntimeProviderManagement clears model loading when switching from model picker to setup form",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 58,
+      "expectedR1Literal": "debounces provider model search and groups superseded picker requests",
+      "actualTitle": "debounces provider model search and groups superseded picker requests",
+      "actualFullName": "useRuntimeProviderManagement debounces provider model search and groups superseded picker requests",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 59,
+      "expectedR1Literal": "keeps Test results across a debounced catalog search reload",
+      "actualTitle": "keeps Test results across a debounced catalog search reload",
+      "actualFullName": "useRuntimeProviderManagement keeps Test results across a debounced catalog search reload",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 60,
+      "expectedR1Literal": "appends paged provider models without duplicates",
+      "actualTitle": "appends paged provider models without duplicates",
+      "actualFullName": "useRuntimeProviderManagement appends paged provider models without duplicates",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 61,
+      "expectedR1Literal": "tracks concurrent model probes independently",
+      "actualTitle": "tracks concurrent model probes independently",
+      "actualFullName": "useRuntimeProviderManagement tracks concurrent model probes independently",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 62,
+      "expectedR1Literal": "drops stale model probe results after leaving the model picker",
+      "actualTitle": "drops stale model probe results after leaving the model picker",
+      "actualFullName": "useRuntimeProviderManagement drops stale model probe results after leaving the model picker",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 63,
+      "expectedR1Literal": "refreshes global provider status after a current model test (ok=true)",
+      "actualTitle": "refreshes global provider status after a current model test (ok=true)",
+      "actualFullName": "useRuntimeProviderManagement refreshes global provider status after a current model test (ok=true)",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 64,
+      "expectedR1Literal": "refreshes global provider status after a current model test (ok=false)",
+      "actualTitle": "refreshes global provider status after a current model test (ok=false)",
+      "actualFullName": "useRuntimeProviderManagement refreshes global provider status after a current model test (ok=false)",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 65,
+      "expectedR1Literal": "records an empty model test response as a row failure and refreshes provider status",
+      "actualTitle": "records an empty model test response as a row failure and refreshes provider status",
+      "actualFullName": "useRuntimeProviderManagement records an empty model test response as a row failure and refreshes provider status",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 66,
+      "expectedR1Literal": "preserves successful model verification when its global status refresh rejects",
+      "actualTitle": "preserves successful model verification when its global status refresh rejects",
+      "actualFullName": "useRuntimeProviderManagement preserves successful model verification when its global status refresh rejects",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 67,
+      "expectedR1Literal": "does not refresh global status from a model test after project change",
+      "actualTitle": "does not refresh global status from a model test after project change",
+      "actualFullName": "useRuntimeProviderManagement does not refresh global status from a model test after project change",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 68,
+      "expectedR1Literal": "does not refresh global status from a model test after unmount",
+      "actualTitle": "does not refresh global status from a model test after unmount",
+      "actualFullName": "useRuntimeProviderManagement does not refresh global status from a model test after unmount",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 69,
+      "expectedR1Literal": "keeps failed model probes scoped to the model result instead of a global success banner",
+      "actualTitle": "keeps failed model probes scoped to the model result instead of a global success banner",
+      "actualFullName": "useRuntimeProviderManagement keeps failed model probes scoped to the model result instead of a global success banner",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 70,
+      "expectedR1Literal": "keeps structured runtime endpoint diagnostics on the model result",
+      "actualTitle": "keeps structured runtime endpoint diagnostics on the model result",
+      "actualFullName": "useRuntimeProviderManagement keeps structured runtime endpoint diagnostics on the model result",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 71,
+      "expectedR1Literal": "keeps the model-test UI watchdog outside the runtime probe transport budget",
+      "actualTitle": "keeps the model-test UI watchdog outside the runtime probe transport budget",
+      "actualFullName": "useRuntimeProviderManagement keeps the model-test UI watchdog outside the runtime probe transport budget",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 72,
+      "expectedR1Literal": "promotes structured model probe failures to the global diagnostics alert state",
+      "actualTitle": "promotes structured model probe failures to the global diagnostics alert state",
+      "actualFullName": "useRuntimeProviderManagement promotes structured model probe failures to the global diagnostics alert state",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 73,
+      "expectedR1Literal": "keeps successful model probes scoped to the model card instead of a global success banner",
+      "actualTitle": "keeps successful model probes scoped to the model card instead of a global success banner",
+      "actualFullName": "useRuntimeProviderManagement keeps successful model probes scoped to the model card instead of a global success banner",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 74,
+      "expectedR1Literal": "saves a default without probing or fabricating verified model state",
+      "actualTitle": "saves a default without probing or fabricating verified model state",
+      "actualFullName": "useRuntimeProviderManagement saves a default without probing or fabricating verified model state",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 75,
+      "expectedR1Literal": "keeps the effective project default selected when an all-projects default is shadowed",
+      "actualTitle": "keeps the effective project default selected when an all-projects default is shadowed",
+      "actualFullName": "useRuntimeProviderManagement keeps the effective project default selected when an all-projects default is shadowed",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 76,
+      "expectedR1Literal": "preserves project-scoped access evidence after a neutral all-projects probe",
+      "actualTitle": "preserves project-scoped access evidence after a neutral all-projects probe",
+      "actualFullName": "useRuntimeProviderManagement preserves project-scoped access evidence after a neutral all-projects probe",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 77,
+      "expectedR1Literal": "does not clear a project override before the bundled runtime supports scoped defaults",
+      "actualTitle": "does not clear a project override before the bundled runtime supports scoped defaults",
+      "actualFullName": "useRuntimeProviderManagement does not clear a project override before the bundled runtime supports scoped defaults",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 78,
+      "expectedR1Literal": "clears a valid project override with a compatible bundled runtime",
+      "actualTitle": "clears a valid project override with a compatible bundled runtime",
+      "actualFullName": "useRuntimeProviderManagement clears a valid project override with a compatible bundled runtime",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 79,
+      "expectedR1Literal": "keeps the clear-project watchdog beyond the 300-second main-process timeout",
+      "actualTitle": "keeps the clear-project watchdog beyond the 300-second main-process timeout",
+      "actualFullName": "useRuntimeProviderManagement keeps the clear-project watchdog beyond the 300-second main-process timeout",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 80,
+      "expectedR1Literal": "does not clear project B while its view is still refreshing after switching from A",
+      "actualTitle": "does not clear project B while its view is still refreshing after switching from A",
+      "actualFullName": "useRuntimeProviderManagement does not clear project B while its view is still refreshing after switching from A",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 81,
+      "expectedR1Literal": "clears loading for the current silent refresh and refuses a stale response",
+      "actualTitle": "clears loading for the current silent refresh and refuses a stale response",
+      "actualFullName": "useRuntimeProviderManagement clears loading for the current silent refresh and refuses a stale response",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "failed",
+      "literalTitleMatches": true,
+      "failureMessages": [
+        "AssertionError: expected true to be false // Object.is equality\n    at /workspace/scratch/c714-fresh-20261116/source/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts:5722:28\n    at file:///workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20"
+      ]
+    },
+    {
+      "ordinal": 82,
+      "expectedR1Literal": "clears pending loading when the current silent refresh ends with response-error",
+      "actualTitle": "clears pending loading when the current silent refresh ends with response-error",
+      "actualFullName": "useRuntimeProviderManagement clears pending loading when the current silent refresh ends with response-error",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "failed",
+      "literalTitleMatches": true,
+      "failureMessages": [
+        "AssertionError: expected true to be false // Object.is equality\n    at /workspace/scratch/c714-fresh-20261116/source/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts:5781:30\n    at file:///workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20"
+      ]
+    },
+    {
+      "ordinal": 83,
+      "expectedR1Literal": "clears pending loading when the current silent refresh ends with rejection",
+      "actualTitle": "clears pending loading when the current silent refresh ends with rejection",
+      "actualFullName": "useRuntimeProviderManagement clears pending loading when the current silent refresh ends with rejection",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "failed",
+      "literalTitleMatches": true,
+      "failureMessages": [
+        "AssertionError: expected true to be false // Object.is equality\n    at /workspace/scratch/c714-fresh-20261116/source/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts:5781:30\n    at file:///workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/@vitest+runner@3.2.6/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20"
+      ]
+    },
+    {
+      "ordinal": 84,
+      "expectedR1Literal": "keeps a silent view completion inert after newer-request",
+      "actualTitle": "keeps a silent view completion inert after newer-request",
+      "actualFullName": "useRuntimeProviderManagement keeps a silent view completion inert after newer-request",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    },
+    {
+      "ordinal": 85,
+      "expectedR1Literal": "keeps a silent view completion inert after unmounted",
+      "actualTitle": "keeps a silent view completion inert after unmounted",
+      "actualFullName": "useRuntimeProviderManagement keeps a silent view completion inert after unmounted",
+      "ancestorTitles": [
+        "useRuntimeProviderManagement"
+      ],
+      "status": "passed",
+      "literalTitleMatches": true,
+      "failureMessages": []
+    }
+  ],
+  "observedTitleArrays": {
+    "all85": [
+      "refreshes shared provider metadata after filtered 'connect' (null, full=false)",
+      "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=false)",
+      "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=true)",
+      "refreshes shared provider metadata after filtered 'forget' (null, full=false)",
+      "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=false)",
+      "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=true)",
+      "skips unsupported shared directory reads after connect without a refresh warning",
+      "skips unsupported shared directory reads after forget without a refresh warning",
+      "cancels all active probe attempts when startConnect closes the picker",
+      "cancels all active probe attempts when startReconnect closes the picker",
+      "cancels all active probe attempts when closeModelPicker closes the picker",
+      "cancels all active probe attempts when switchProvider closes the picker",
+      "stops only one probe and ignores its late response after immediate restart",
+      "keeps the probe running when stop is rejected",
+      "uses a clicked model as the app default for new teams without a global success banner",
+      "opens only the public GitHub device-login URL from OAuth progress",
+      "passes projectPath to the runtime provider management API",
+      "defers the full managed view until explicitly requested",
+      "opens a deep-linked provider setup after the directory row is ready",
+      "reloads a requested Models view when native runtime identity settles",
+      "reopens a pending deep-linked Connect when native runtime identity settles",
+      "hydrates the full provider directory without a catalog refresh",
+      "keeps summary providers when the full catalog comes back empty",
+      "paints same-scope curated cache while summary IPC is pending and retains errors",
+      "never emits a previous-project provider in the transition render",
+      "does not project cached summary credentials into another project or global scope",
+      "recovers directory support when a newer OpenCode runtime replaces an unsupported one",
+      "ignores a pre-mutation directory response without changing the project",
+      "masks cached rows and ignores pending responses when the OpenCode binary changes",
+      "reopens a cached full catalog without flashing the 16-provider summary",
+      "does not replace the cached full catalog with search results",
+      "reuses setup while preserving the connected auth method for reconnect",
+      "keeps provider search local until full-catalog search is explicitly requested",
+      "clears structured errors and stale provider state when disabled",
+      "ignores pending directory and setup-form responses after being disabled",
+      "ignores stale provider views after project context changes",
+      "reissues a requested view after temporary project-context hydration",
+      "restarts provider directory loading when project context changes while loading",
+      "drops stale model probe results after project context changes",
+      "drops stale set-default responses after project context changes",
+      "clears pending provider save state after project context changes",
+      "refreshes view and catalog after forgetting managed auth while local auth remains",
+      "refreshes the view and catalog after a confirmed connection",
+      "keeps provider data visible during catalog refresh",
+      "lazy-loads provider directory and ignores stale search responses",
+      "keeps the API key draft when provider connect fails",
+      "explains Copilot model access separately from GitHub authentication",
+      "keeps setup form diagnostics available when submit is attempted after form load failure",
+      "submits a supported setup form without a secret as a null API key",
+      "keeps OpenCode API connect pending beyond the old UI deadline: late-success",
+      "keeps OpenCode API connect pending beyond the old UI deadline: timeout",
+      "keeps setup open when the backend does not confirm a connected provider",
+      "keeps the actual API credential hint when xAI refresh fails after connect",
+      "refreshes provider status after a cancelled OAuth child settles",
+      "preserves the full slow model-picker allowance: complete",
+      "preserves the full slow model-picker allowance: timeout",
+      "clears model loading when switching from model picker to setup form",
+      "debounces provider model search and groups superseded picker requests",
+      "keeps Test results across a debounced catalog search reload",
+      "appends paged provider models without duplicates",
+      "tracks concurrent model probes independently",
+      "drops stale model probe results after leaving the model picker",
+      "refreshes global provider status after a current model test (ok=true)",
+      "refreshes global provider status after a current model test (ok=false)",
+      "records an empty model test response as a row failure and refreshes provider status",
+      "preserves successful model verification when its global status refresh rejects",
+      "does not refresh global status from a model test after project change",
+      "does not refresh global status from a model test after unmount",
+      "keeps failed model probes scoped to the model result instead of a global success banner",
+      "keeps structured runtime endpoint diagnostics on the model result",
+      "keeps the model-test UI watchdog outside the runtime probe transport budget",
+      "promotes structured model probe failures to the global diagnostics alert state",
+      "keeps successful model probes scoped to the model card instead of a global success banner",
+      "saves a default without probing or fabricating verified model state",
+      "keeps the effective project default selected when an all-projects default is shadowed",
+      "preserves project-scoped access evidence after a neutral all-projects probe",
+      "does not clear a project override before the bundled runtime supports scoped defaults",
+      "clears a valid project override with a compatible bundled runtime",
+      "keeps the clear-project watchdog beyond the 300-second main-process timeout",
+      "does not clear project B while its view is still refreshing after switching from A",
+      "clears loading for the current silent refresh and refuses a stale response",
+      "clears pending loading when the current silent refresh ends with response-error",
+      "clears pending loading when the current silent refresh ends with rejection",
+      "keeps a silent view completion inert after newer-request",
+      "keeps a silent view completion inert after unmounted"
+    ],
+    "original80": [
+      "refreshes shared provider metadata after filtered 'connect' (null, full=false)",
+      "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=false)",
+      "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=true)",
+      "refreshes shared provider metadata after filtered 'forget' (null, full=false)",
+      "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=false)",
+      "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=true)",
+      "skips unsupported shared directory reads after connect without a refresh warning",
+      "skips unsupported shared directory reads after forget without a refresh warning",
+      "cancels all active probe attempts when startConnect closes the picker",
+      "cancels all active probe attempts when startReconnect closes the picker",
+      "cancels all active probe attempts when closeModelPicker closes the picker",
+      "cancels all active probe attempts when switchProvider closes the picker",
+      "stops only one probe and ignores its late response after immediate restart",
+      "keeps the probe running when stop is rejected",
+      "uses a clicked model as the app default for new teams without a global success banner",
+      "opens only the public GitHub device-login URL from OAuth progress",
+      "passes projectPath to the runtime provider management API",
+      "defers the full managed view until explicitly requested",
+      "opens a deep-linked provider setup after the directory row is ready",
+      "reloads a requested Models view when native runtime identity settles",
+      "reopens a pending deep-linked Connect when native runtime identity settles",
+      "hydrates the full provider directory without a catalog refresh",
+      "keeps summary providers when the full catalog comes back empty",
+      "paints same-scope curated cache while summary IPC is pending and retains errors",
+      "never emits a previous-project provider in the transition render",
+      "does not project cached summary credentials into another project or global scope",
+      "recovers directory support when a newer OpenCode runtime replaces an unsupported one",
+      "ignores a pre-mutation directory response without changing the project",
+      "masks cached rows and ignores pending responses when the OpenCode binary changes",
+      "reopens a cached full catalog without flashing the 16-provider summary",
+      "does not replace the cached full catalog with search results",
+      "reuses setup while preserving the connected auth method for reconnect",
+      "keeps provider search local until full-catalog search is explicitly requested",
+      "clears structured errors and stale provider state when disabled",
+      "ignores pending directory and setup-form responses after being disabled",
+      "ignores stale provider views after project context changes",
+      "reissues a requested view after temporary project-context hydration",
+      "restarts provider directory loading when project context changes while loading",
+      "drops stale model probe results after project context changes",
+      "drops stale set-default responses after project context changes",
+      "clears pending provider save state after project context changes",
+      "refreshes view and catalog after forgetting managed auth while local auth remains",
+      "refreshes the view and catalog after a confirmed connection",
+      "keeps provider data visible during catalog refresh",
+      "lazy-loads provider directory and ignores stale search responses",
+      "keeps the API key draft when provider connect fails",
+      "explains Copilot model access separately from GitHub authentication",
+      "keeps setup form diagnostics available when submit is attempted after form load failure",
+      "submits a supported setup form without a secret as a null API key",
+      "keeps OpenCode API connect pending beyond the old UI deadline: late-success",
+      "keeps OpenCode API connect pending beyond the old UI deadline: timeout",
+      "keeps setup open when the backend does not confirm a connected provider",
+      "keeps the actual API credential hint when xAI refresh fails after connect",
+      "refreshes provider status after a cancelled OAuth child settles",
+      "preserves the full slow model-picker allowance: complete",
+      "preserves the full slow model-picker allowance: timeout",
+      "clears model loading when switching from model picker to setup form",
+      "debounces provider model search and groups superseded picker requests",
+      "keeps Test results across a debounced catalog search reload",
+      "appends paged provider models without duplicates",
+      "tracks concurrent model probes independently",
+      "drops stale model probe results after leaving the model picker",
+      "refreshes global provider status after a current model test (ok=true)",
+      "refreshes global provider status after a current model test (ok=false)",
+      "records an empty model test response as a row failure and refreshes provider status",
+      "preserves successful model verification when its global status refresh rejects",
+      "does not refresh global status from a model test after project change",
+      "does not refresh global status from a model test after unmount",
+      "keeps failed model probes scoped to the model result instead of a global success banner",
+      "keeps structured runtime endpoint diagnostics on the model result",
+      "keeps the model-test UI watchdog outside the runtime probe transport budget",
+      "promotes structured model probe failures to the global diagnostics alert state",
+      "keeps successful model probes scoped to the model card instead of a global success banner",
+      "saves a default without probing or fabricating verified model state",
+      "keeps the effective project default selected when an all-projects default is shadowed",
+      "preserves project-scoped access evidence after a neutral all-projects probe",
+      "does not clear a project override before the bundled runtime supports scoped defaults",
+      "clears a valid project override with a compatible bundled runtime",
+      "keeps the clear-project watchdog beyond the 300-second main-process timeout",
+      "does not clear project B while its view is still refreshing after switching from A"
+    ],
+    "all85CompactJsonIdentity": {
+      "bytes": 6292,
+      "sha256": "66e1508f9a02882291b6233a03af58ff4713aca256351f1758f91e7b5855a787",
+      "gitBlob": "92bb24568c9a463b494fa5f88ddef3a662d284cb"
+    },
+    "original80CompactJsonIdentity": {
+      "bytes": 5942,
+      "sha256": "ba8c10ba9ea7648d49765b140f1c58468c072b035a36345d10124d37be159834",
+      "gitBlob": "e0570969566e0ec30c7f5693a18bca71cc5aa5fc"
+    },
+    "identityQualification": "Derived identities of arrays embedded in this report, not claims of separately retained standalone Git blobs."
+  },
+  "rendererOtherDataPredicates": {
+    "observedCounts": {
+      "total": 85,
+      "pass": 82,
+      "fail": 3,
+      "pending": 0,
+      "todo": 0,
+      "suites": 2,
+      "files": 1
+    },
+    "allOriginal80Passed": true,
+    "newControls84And85Passed": true,
+    "onlyFailedOrdinals": [
+      81,
+      82,
+      83
+    ],
+    "failureSites": {
+      "81": [
+        5722,
+        28
+      ],
+      "82": [
+        5781,
+        30
+      ],
+      "83": [
+        5781,
+        30
+      ]
+    },
+    "observedExactFailureHeader": "AssertionError: expected true to be false // Object.is equality",
+    "fileMessage": "",
+    "oneAncestor": [
+      "useRuntimeProviderManagement"
+    ],
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "rawDiagnostics": "Complete raw output was read; no unhandled/uncaught/close/timeout/native/config/module/console/report-write diagnostics, no ANSI escapes, and the exact report-written path are present as required.",
+    "unchangedBranchLimit": "Failed81–83 stop at their first loading assertion. Later stale/error/view assertions in those failed functions remain unreached, as previously described; this diagnostic does not turn them into exercised branches.",
+    "checks": [
+      {
+        "name": "85 assertions",
+        "pass": true
+      },
+      {
+        "name": "85 unique titles/fullNames",
+        "pass": true
+      },
+      {
+        "name": "only six literal title discrepancies",
+        "pass": true
+      },
+      {
+        "name": "remaining79names exactoriginalbinding",
+        "pass": true
+      },
+      {
+        "name": "one absolute file",
+        "pass": true
+      },
+      {
+        "name": "file failed with empty message",
+        "pass": true
+      },
+      {
+        "name": "all exact predicted counters",
+        "pass": true
+      },
+      {
+        "name": "allold80 pass",
+        "pass": true
+      },
+      {
+        "name": "newcontrols84and85 pass",
+        "pass": true
+      },
+      {
+        "name": "assertion 1 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 2 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 3 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 4 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 5 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 6 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 7 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 8 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 9 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 10 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 11 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 12 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 13 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 14 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 15 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 16 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 17 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 18 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 19 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 20 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 21 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 22 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 23 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 24 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 25 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 26 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 27 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 28 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 29 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 30 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 31 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 32 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 33 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 34 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 35 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 36 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 37 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 38 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 39 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 40 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 41 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 42 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 43 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 44 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 45 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 46 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 47 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 48 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 49 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 50 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 51 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 52 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 53 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 54 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 55 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 56 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 57 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 58 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 59 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 60 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 61 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 62 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 63 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 64 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 65 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 66 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 67 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 68 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 69 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 70 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 71 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 72 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 73 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 74 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 75 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 76 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 77 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 78 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 79 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 80 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 81 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 81 exactloadingsemantic/site/raw",
+        "pass": true
+      },
+      {
+        "name": "assertion 82 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 82 exactloadingsemantic/site/raw",
+        "pass": true
+      },
+      {
+        "name": "assertion 83 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 83 exactloadingsemantic/site/raw",
+        "pass": true
+      },
+      {
+        "name": "assertion 84 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "assertion 85 status/ancestor/fullname/errorcount",
+        "pass": true
+      },
+      {
+        "name": "no rawdiagnostic /unhandled (?:error|rejection)/im",
+        "pass": true
+      },
+      {
+        "name": "no rawdiagnostic /uncaught (?:exception|error)/im",
+        "pass": true
+      },
+      {
+        "name": "no rawdiagnostic /error during close/im",
+        "pass": true
+      },
+      {
+        "name": "no rawdiagnostic /close timed out/im",
+        "pass": true
+      },
+      {
+        "name": "no rawdiagnostic /still running/im",
+        "pass": true
+      },
+      {
+        "name": "no rawdiagnostic /vitest did not exit/im",
+        "pass": true
+      },
+      {
+        "name": "no rawdiagnostic /failed to load config/im",
+        "pass": true
+      },
+      {
+        "name": "no rawdiagnostic /failed to resolve/im",
+        "pass": true
+      },
+      {
+        "name": "no rawdiagnostic /cannot find (?:module|package)/im",
+        "pass": true
+      },
+      {
+        "name": "no rawdiagnostic /ERR_DLOPEN_FAILED/im",
+        "pass": true
+      },
+      {
+        "name": "no rawdiagnostic /unexpected console\\.(?:error|warn) calls/im",
+        "pass": true
+      },
+      {
+        "name": "no rawdiagnostic /^\\s*(?:stderr|stdout)\\s*\\|/im",
+        "pass": true
+      },
+      {
+        "name": "no rawdiagnostic /^(?:\\[[^\\]\\n]+\\]\\s*)?(?:WARN(?:ING)?|DeprecationWarning)\\b/im",
+        "pass": true
+      },
+      {
+        "name": "no rawdiagnostic /^\\(node:\\d+\\)\\s+(?:[A-Za-z]+Warning|Warning):/im",
+        "pass": true
+      },
+      {
+        "name": "no rawdiagnostic /failed to (?:write|save).*report/im",
+        "pass": true
+      },
+      {
+        "name": "no rawdiagnostic /error writing.*report/im",
+        "pass": true
+      },
+      {
+        "name": "raw uncolored",
+        "pass": true
+      },
+      {
+        "name": "exactJSONreport path written",
+        "pass": true
+      },
+      {
+        "name": "zero snapshot mutations",
+        "pass": true
+      }
+    ],
+    "checkCount": 116,
+    "qualification": "These are diagnostic predicates over retained result data. The original renderer semantic receipt was not produced, and original package acceptance remains false."
+  },
+  "formatterSourceProof": [
+    {
+      "role": "Installed Vitest collector",
+      "identity": {
+        "bytes": 80980,
+        "sha256": "5e0b0ece2242e3475a0312a375fac6e47287602792d7f4999d2d733ecda2d69a",
+        "gitBlob": "59908e26ff1e58a646673c14c2114609a035f54c"
+      },
+      "passages": [
+        {
+          "firstLine": 1,
+          "lastLine": 5,
+          "text": "import { isObject, createDefer, toArray, isNegativeNaN, format, objectAttr, objDisplay, getSafeTimers, shuffle, assertTypes } from '@vitest/utils';\nimport { parseSingleStack } from '@vitest/utils/source-map';\nimport { processError } from '@vitest/utils/error';\nimport { stripLiteral } from 'strip-literal';\nimport { relative } from 'pathe';"
+        },
+        {
+          "firstLine": 838,
+          "lastLine": 868,
+          "text": "function createTaskCollector(fn, context) {\n\tconst taskFn = fn;\n\ttaskFn.each = function(cases, ...args) {\n\t\tconst test = this.withContext();\n\t\tthis.setContext(\"each\", true);\n\t\tif (Array.isArray(cases) && args.length) {\n\t\t\tcases = formatTemplateString(cases, args);\n\t\t}\n\t\treturn (name, optionsOrFn, fnOrOptions) => {\n\t\t\tconst _name = formatName(name);\n\t\t\tconst arrayOnlyCases = cases.every(Array.isArray);\n\t\t\tconst { options, handler } = parseArguments(optionsOrFn, fnOrOptions);\n\t\t\tconst fnFirst = typeof optionsOrFn === \"function\" && typeof fnOrOptions === \"object\";\n\t\t\tcases.forEach((i, idx) => {\n\t\t\t\tconst items = Array.isArray(i) ? i : [i];\n\t\t\t\tif (fnFirst) {\n\t\t\t\t\tif (arrayOnlyCases) {\n\t\t\t\t\t\ttest(formatTitle(_name, items, idx), () => handler(...items), options);\n\t\t\t\t\t} else {\n\t\t\t\t\t\ttest(formatTitle(_name, items, idx), () => handler(i), options);\n\t\t\t\t\t}\n\t\t\t\t} else {\n\t\t\t\t\tif (arrayOnlyCases) {\n\t\t\t\t\t\ttest(formatTitle(_name, items, idx), options, () => handler(...items));\n\t\t\t\t\t} else {\n\t\t\t\t\t\ttest(formatTitle(_name, items, idx), options, () => handler(i));\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t});\n\t\t\tthis.setContext(\"each\", undefined);\n\t\t};"
+        },
+        {
+          "firstLine": 928,
+          "lastLine": 962,
+          "text": "function formatName(name) {\n\treturn typeof name === \"string\" ? name : typeof name === \"function\" ? name.name || \"<anonymous>\" : String(name);\n}\nfunction formatTitle(template, items, idx) {\n\tif (template.includes(\"%#\") || template.includes(\"%$\")) {\n\t\t// '%#' match index of the test case\n\t\ttemplate = template.replace(/%%/g, \"__vitest_escaped_%__\").replace(/%#/g, `${idx}`).replace(/%\\$/g, `${idx + 1}`).replace(/__vitest_escaped_%__/g, \"%%\");\n\t}\n\tconst count = template.split(\"%\").length - 1;\n\tif (template.includes(\"%f\")) {\n\t\tconst placeholders = template.match(/%f/g) || [];\n\t\tplaceholders.forEach((_, i) => {\n\t\t\tif (isNegativeNaN(items[i]) || Object.is(items[i], -0)) {\n\t\t\t\t// Replace the i-th occurrence of '%f' with '-%f'\n\t\t\t\tlet occurrence = 0;\n\t\t\t\ttemplate = template.replace(/%f/g, (match) => {\n\t\t\t\t\toccurrence++;\n\t\t\t\t\treturn occurrence === i + 1 ? \"-%f\" : match;\n\t\t\t\t});\n\t\t\t}\n\t\t});\n\t}\n\tlet formatted = format(template, ...items.slice(0, count));\n\tconst isObjectItem = isObject(items[0]);\n\tformatted = formatted.replace(/\\$([$\\w.]+)/g, (_, key) => {\n\t\tvar _runner$config;\n\t\tconst isArrayKey = /^\\d+$/.test(key);\n\t\tif (!isObjectItem && !isArrayKey) {\n\t\t\treturn `$${key}`;\n\t\t}\n\t\tconst arrayElement = isArrayKey ? objectAttr(items, key) : undefined;\n\t\tconst value = isObjectItem ? objectAttr(items[0], key, arrayElement) : arrayElement;\n\t\treturn objDisplay(value, { truncate: runner === null || runner === void 0 || (_runner$config = runner.config) === null || _runner$config === void 0 || (_runner$config = _runner$config.chaiConfig) === null || _runner$config === void 0 ? void 0 : _runner$config.truncateThreshold });\n\t});\n\treturn formatted;"
+        }
+      ]
+    },
+    {
+      "role": "Installed utils public exports",
+      "pin": {
+        "path": "node_modules/.pnpm/@vitest+utils@3.2.6/node_modules/@vitest/utils/dist/index.js",
+        "mode": "100644",
+        "bytes": 21066,
+        "sha256": "905db1e39c8e380d3d0eeea0095d8a3d2e0fe73a823aebe97cd52450493df5ee",
+        "gitBlob": "fa7d21eadc565babbe510aefd29ab04f927b7ca2"
+      },
+      "passages": [
+        {
+          "firstLine": 1,
+          "lastLine": 6,
+          "text": "import { g as getDefaultExportFromCjs } from './chunk-_commonjsHelpers.js';\nexport { f as format, i as inspect, o as objDisplay, s as stringify } from './chunk-_commonjsHelpers.js';\nexport { assertTypes, clone, createDefer, createSimpleStackTrace, deepClone, deepMerge, getCallLastIndex, getOwnProperties, getType, isNegativeNaN, isObject, isPrimitive, noop, notNullish, objectAttr, parseRegexp, slash, toArray } from './helpers.js';\nimport c from 'tinyrainbow';\nimport '@vitest/pretty-format';\nimport 'loupe';"
+        }
+      ]
+    },
+    {
+      "role": "Installed utils format/inspect/objDisplay implementation",
+      "pin": {
+        "path": "node_modules/.pnpm/@vitest+utils@3.2.6/node_modules/@vitest/utils/dist/chunk-_commonjsHelpers.js",
+        "mode": "100644",
+        "bytes": 4156,
+        "sha256": "3c9bdd7b396aa5297c9cacc859389ec1b9a08cb1eff5fa629e7185943f95bfb4",
+        "gitBlob": "a8647550ee055e777783d61a1949cd961c2507a1"
+      },
+      "body": "import { plugins, format as format$1 } from '@vitest/pretty-format';\nimport * as loupe from 'loupe';\n\nconst { AsymmetricMatcher, DOMCollection, DOMElement, Immutable, ReactElement, ReactTestComponent } = plugins;\nconst PLUGINS = [\n\tReactTestComponent,\n\tReactElement,\n\tDOMElement,\n\tDOMCollection,\n\tImmutable,\n\tAsymmetricMatcher\n];\nfunction stringify(object, maxDepth = 10, { maxLength,...options } = {}) {\n\tconst MAX_LENGTH = maxLength ?? 1e4;\n\tlet result;\n\ttry {\n\t\tresult = format$1(object, {\n\t\t\tmaxDepth,\n\t\t\tescapeString: false,\n\t\t\tplugins: PLUGINS,\n\t\t\t...options\n\t\t});\n\t} catch {\n\t\tresult = format$1(object, {\n\t\t\tcallToJSON: false,\n\t\t\tmaxDepth,\n\t\t\tescapeString: false,\n\t\t\tplugins: PLUGINS,\n\t\t\t...options\n\t\t});\n\t}\n\t// Prevents infinite loop https://github.com/vitest-dev/vitest/issues/7249\n\treturn result.length >= MAX_LENGTH && maxDepth > 1 ? stringify(object, Math.floor(Math.min(maxDepth, Number.MAX_SAFE_INTEGER) / 2), {\n\t\tmaxLength,\n\t\t...options\n\t}) : result;\n}\nconst formatRegExp = /%[sdjifoOc%]/g;\nfunction format(...args) {\n\tif (typeof args[0] !== \"string\") {\n\t\tconst objects = [];\n\t\tfor (let i = 0; i < args.length; i++) {\n\t\t\tobjects.push(inspect(args[i], {\n\t\t\t\tdepth: 0,\n\t\t\t\tcolors: false\n\t\t\t}));\n\t\t}\n\t\treturn objects.join(\" \");\n\t}\n\tconst len = args.length;\n\tlet i = 1;\n\tconst template = args[0];\n\tlet str = String(template).replace(formatRegExp, (x) => {\n\t\tif (x === \"%%\") {\n\t\t\treturn \"%\";\n\t\t}\n\t\tif (i >= len) {\n\t\t\treturn x;\n\t\t}\n\t\tswitch (x) {\n\t\t\tcase \"%s\": {\n\t\t\t\tconst value = args[i++];\n\t\t\t\tif (typeof value === \"bigint\") {\n\t\t\t\t\treturn `${value.toString()}n`;\n\t\t\t\t}\n\t\t\t\tif (typeof value === \"number\" && value === 0 && 1 / value < 0) {\n\t\t\t\t\treturn \"-0\";\n\t\t\t\t}\n\t\t\t\tif (typeof value === \"object\" && value !== null) {\n\t\t\t\t\tif (typeof value.toString === \"function\" && value.toString !== Object.prototype.toString) {\n\t\t\t\t\t\treturn value.toString();\n\t\t\t\t\t}\n\t\t\t\t\treturn inspect(value, {\n\t\t\t\t\t\tdepth: 0,\n\t\t\t\t\t\tcolors: false\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t\treturn String(value);\n\t\t\t}\n\t\t\tcase \"%d\": {\n\t\t\t\tconst value = args[i++];\n\t\t\t\tif (typeof value === \"bigint\") {\n\t\t\t\t\treturn `${value.toString()}n`;\n\t\t\t\t}\n\t\t\t\treturn Number(value).toString();\n\t\t\t}\n\t\t\tcase \"%i\": {\n\t\t\t\tconst value = args[i++];\n\t\t\t\tif (typeof value === \"bigint\") {\n\t\t\t\t\treturn `${value.toString()}n`;\n\t\t\t\t}\n\t\t\t\treturn Number.parseInt(String(value)).toString();\n\t\t\t}\n\t\t\tcase \"%f\": return Number.parseFloat(String(args[i++])).toString();\n\t\t\tcase \"%o\": return inspect(args[i++], {\n\t\t\t\tshowHidden: true,\n\t\t\t\tshowProxy: true\n\t\t\t});\n\t\t\tcase \"%O\": return inspect(args[i++]);\n\t\t\tcase \"%c\": {\n\t\t\t\ti++;\n\t\t\t\treturn \"\";\n\t\t\t}\n\t\t\tcase \"%j\": try {\n\t\t\t\treturn JSON.stringify(args[i++]);\n\t\t\t} catch (err) {\n\t\t\t\tconst m = err.message;\n\t\t\t\tif (m.includes(\"circular structure\") || m.includes(\"cyclic structures\") || m.includes(\"cyclic object\")) {\n\t\t\t\t\treturn \"[Circular]\";\n\t\t\t\t}\n\t\t\t\tthrow err;\n\t\t\t}\n\t\t\tdefault: return x;\n\t\t}\n\t});\n\tfor (let x = args[i]; i < len; x = args[++i]) {\n\t\tif (x === null || typeof x !== \"object\") {\n\t\t\tstr += ` ${x}`;\n\t\t} else {\n\t\t\tstr += ` ${inspect(x)}`;\n\t\t}\n\t}\n\treturn str;\n}\nfunction inspect(obj, options = {}) {\n\tif (options.truncate === 0) {\n\t\toptions.truncate = Number.POSITIVE_INFINITY;\n\t}\n\treturn loupe.inspect(obj, options);\n}\nfunction objDisplay(obj, options = {}) {\n\tif (typeof options.truncate === \"undefined\") {\n\t\toptions.truncate = 40;\n\t}\n\tconst str = inspect(obj, options);\n\tconst type = Object.prototype.toString.call(obj);\n\tif (options.truncate && str.length >= options.truncate) {\n\t\tif (type === \"[object Function]\") {\n\t\t\tconst fn = obj;\n\t\t\treturn !fn.name ? \"[Function]\" : `[Function: ${fn.name}]`;\n\t\t} else if (type === \"[object Array]\") {\n\t\t\treturn `[ Array(${obj.length}) ]`;\n\t\t} else if (type === \"[object Object]\") {\n\t\t\tconst keys = Object.keys(obj);\n\t\t\tconst kstr = keys.length > 2 ? `${keys.splice(0, 2).join(\", \")}, ...` : keys.join(\", \");\n\t\t\treturn `{ Object (${kstr}) }`;\n\t\t} else {\n\t\t\treturn str;\n\t\t}\n\t}\n\treturn str;\n}\n\nfunction getDefaultExportFromCjs (x) {\n\treturn x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;\n}\n\nexport { format as f, getDefaultExportFromCjs as g, inspect as i, objDisplay as o, stringify as s };\n"
+    },
+    {
+      "role": "Actual importer-local loupe /package.json",
+      "pin": {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/package.json",
+        "mode": "100644",
+        "bytes": 2170,
+        "sha256": "576be81053b77e14f3ccb78111e9c0dbf19164f59d3eeff9763d620d21ef2591",
+        "gitBlob": "de69efdbc4cb6c109acc97149706c1fff1e463b8"
+      },
+      "body": "{\n  \"name\": \"loupe\",\n  \"version\": \"3.2.1\",\n  \"description\": \"Inspect utility for Node.js and browsers\",\n  \"homepage\": \"https://github.com/chaijs/loupe\",\n  \"license\": \"MIT\",\n  \"author\": \"Veselin Todorov <hi@vesln.com>\",\n  \"contributors\": [\n    \"Keith Cirkel (https://github.com/keithamus)\"\n  ],\n  \"type\": \"module\",\n  \"main\": \"./lib/index.js\",\n  \"module\": \"./lib/index.js\",\n  \"browser\": {\n    \"./index.js\": \"./loupe.js\",\n    \"util\": false\n  },\n  \"repository\": {\n    \"type\": \"git\",\n    \"url\": \"https://github.com/chaijs/loupe\"\n  },\n  \"files\": [\n    \"loupe.js\",\n    \"lib/*\"\n  ],\n  \"scripts\": {\n    \"bench\": \"node bench\",\n    \"lint\": \"eslint .\",\n    \"semantic-release\": \"semantic-release pre && npm publish && semantic-release post\",\n    \"test\": \"npm run test:node && npm run test:browser\",\n    \"pretest:browser\": \"npx playwright install-deps && npx playwright install && npm run build\",\n    \"test:browser\": \"wtr\",\n    \"pretest:node\": \"npm run build\",\n    \"test:node\": \"mocha\",\n    \"build\": \"npm run build:lib && npm run build:esm-bundle && npm run build:cjs-bundle\",\n    \"build:lib\": \"tsc\",\n    \"build:esm-bundle\": \"esbuild --bundle src/index.ts --outfile=loupe.js --format=esm\",\n    \"build:cjs-bundle\": \"esbuild --bundle src/index.ts --outfile=loupe.js --format=cjs\",\n    \"upload-coverage\": \"codecov\"\n  },\n  \"prettier\": {\n    \"printWidth\": 120,\n    \"tabWidth\": 2,\n    \"useTabs\": false,\n    \"semi\": false,\n    \"singleQuote\": true,\n    \"trailingComma\": \"es5\",\n    \"arrowParens\": \"avoid\",\n    \"bracketSpacing\": true\n  },\n  \"devDependencies\": {\n    \"@web/dev-server-esbuild\": \"^1.0.3\",\n    \"@web/test-runner\": \"^0.19.0\",\n    \"@web/test-runner-playwright\": \"^0.11.0\",\n    \"benchmark\": \"^2.1.4\",\n    \"chai\": \"^5.0.0-alpha.0\",\n    \"codecov\": \"^3.8.3\",\n    \"core-js\": \"^3.8.3\",\n    \"cross-env\": \"^7.0.3\",\n    \"esbuild\": \"^0.24.2\",\n    \"eslint\": \"^9.19.0\",\n    \"eslint-config-prettier\": \"^10.0.1\",\n    \"eslint-config-strict\": \"^14.0.1\",\n    \"eslint-plugin-filenames\": \"^1.3.2\",\n    \"eslint-plugin-prettier\": \"^5.2.3\",\n    \"husky\": \"^9.1.7\",\n    \"mocha\": \"^11.1.0\",\n    \"nyc\": \"^17.1.0\",\n    \"prettier\": \"^3.0.0\",\n    \"simple-assert\": \"^2.0.0\",\n    \"typescript\": \"^5.0.0-beta\"\n  }\n}\n"
+    },
+    {
+      "role": "Actual importer-local loupe /lib/index.js",
+      "pin": {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/index.js",
+        "mode": "100644",
+        "bytes": 5847,
+        "sha256": "26cfa7659e15ba08cb45829fbbdb52a8753e00ae96b6a988eea4432cfac973dc",
+        "gitBlob": "0259276571d03802f9dd4453e00ec112dff6edfe"
+      },
+      "body": "/* !\n * loupe\n * Copyright(c) 2013 Jake Luer <jake@alogicalparadox.com>\n * MIT Licensed\n */\nimport inspectArray from './array.js';\nimport inspectTypedArray from './typedarray.js';\nimport inspectDate from './date.js';\nimport inspectFunction from './function.js';\nimport inspectMap from './map.js';\nimport inspectNumber from './number.js';\nimport inspectBigInt from './bigint.js';\nimport inspectRegExp from './regexp.js';\nimport inspectSet from './set.js';\nimport inspectString from './string.js';\nimport inspectSymbol from './symbol.js';\nimport inspectPromise from './promise.js';\nimport inspectClass from './class.js';\nimport inspectObject from './object.js';\nimport inspectArguments from './arguments.js';\nimport inspectError from './error.js';\nimport inspectHTMLElement, { inspectNodeCollection } from './html.js';\nimport { normaliseOptions } from './helpers.js';\nconst symbolsSupported = typeof Symbol === 'function' && typeof Symbol.for === 'function';\nconst chaiInspect = symbolsSupported ? Symbol.for('chai/inspect') : '@@chai/inspect';\nconst nodeInspect = Symbol.for('nodejs.util.inspect.custom');\nconst constructorMap = new WeakMap();\nconst stringTagMap = {};\nconst baseTypesMap = {\n    undefined: (value, options) => options.stylize('undefined', 'undefined'),\n    null: (value, options) => options.stylize('null', 'null'),\n    boolean: (value, options) => options.stylize(String(value), 'boolean'),\n    Boolean: (value, options) => options.stylize(String(value), 'boolean'),\n    number: inspectNumber,\n    Number: inspectNumber,\n    bigint: inspectBigInt,\n    BigInt: inspectBigInt,\n    string: inspectString,\n    String: inspectString,\n    function: inspectFunction,\n    Function: inspectFunction,\n    symbol: inspectSymbol,\n    // A Symbol polyfill will return `Symbol` not `symbol` from typedetect\n    Symbol: inspectSymbol,\n    Array: inspectArray,\n    Date: inspectDate,\n    Map: inspectMap,\n    Set: inspectSet,\n    RegExp: inspectRegExp,\n    Promise: inspectPromise,\n    // WeakSet, WeakMap are totally opaque to us\n    WeakSet: (value, options) => options.stylize('WeakSet{…}', 'special'),\n    WeakMap: (value, options) => options.stylize('WeakMap{…}', 'special'),\n    Arguments: inspectArguments,\n    Int8Array: inspectTypedArray,\n    Uint8Array: inspectTypedArray,\n    Uint8ClampedArray: inspectTypedArray,\n    Int16Array: inspectTypedArray,\n    Uint16Array: inspectTypedArray,\n    Int32Array: inspectTypedArray,\n    Uint32Array: inspectTypedArray,\n    Float32Array: inspectTypedArray,\n    Float64Array: inspectTypedArray,\n    Generator: () => '',\n    DataView: () => '',\n    ArrayBuffer: () => '',\n    Error: inspectError,\n    HTMLCollection: inspectNodeCollection,\n    NodeList: inspectNodeCollection,\n};\n// eslint-disable-next-line complexity\nconst inspectCustom = (value, options, type, inspectFn) => {\n    if (chaiInspect in value && typeof value[chaiInspect] === 'function') {\n        return value[chaiInspect](options);\n    }\n    if (nodeInspect in value && typeof value[nodeInspect] === 'function') {\n        return value[nodeInspect](options.depth, options, inspectFn);\n    }\n    if ('inspect' in value && typeof value.inspect === 'function') {\n        return value.inspect(options.depth, options);\n    }\n    if ('constructor' in value && constructorMap.has(value.constructor)) {\n        return constructorMap.get(value.constructor)(value, options);\n    }\n    if (stringTagMap[type]) {\n        return stringTagMap[type](value, options);\n    }\n    return '';\n};\nconst toString = Object.prototype.toString;\n// eslint-disable-next-line complexity\nexport function inspect(value, opts = {}) {\n    const options = normaliseOptions(opts, inspect);\n    const { customInspect } = options;\n    let type = value === null ? 'null' : typeof value;\n    if (type === 'object') {\n        type = toString.call(value).slice(8, -1);\n    }\n    // If it is a base value that we already support, then use Loupe's inspector\n    if (type in baseTypesMap) {\n        return baseTypesMap[type](value, options);\n    }\n    // If `options.customInspect` is set to true then try to use the custom inspector\n    if (customInspect && value) {\n        const output = inspectCustom(value, options, type, inspect);\n        if (output) {\n            if (typeof output === 'string')\n                return output;\n            return inspect(output, options);\n        }\n    }\n    const proto = value ? Object.getPrototypeOf(value) : false;\n    // If it's a plain Object then use Loupe's inspector\n    if (proto === Object.prototype || proto === null) {\n        return inspectObject(value, options);\n    }\n    // Specifically account for HTMLElements\n    // @ts-ignore\n    if (value && typeof HTMLElement === 'function' && value instanceof HTMLElement) {\n        return inspectHTMLElement(value, options);\n    }\n    if ('constructor' in value) {\n        // If it is a class, inspect it like an object but add the constructor name\n        if (value.constructor !== Object) {\n            return inspectClass(value, options);\n        }\n        // If it is an object with an anonymous prototype, display it as an object.\n        return inspectObject(value, options);\n    }\n    // last chance to check if it's an object\n    if (value === Object(value)) {\n        return inspectObject(value, options);\n    }\n    // We have run out of options! Just stringify the value\n    return options.stylize(String(value), type);\n}\nexport function registerConstructor(constructor, inspector) {\n    if (constructorMap.has(constructor)) {\n        return false;\n    }\n    constructorMap.set(constructor, inspector);\n    return true;\n}\nexport function registerStringTag(stringTag, inspector) {\n    if (stringTag in stringTagMap) {\n        return false;\n    }\n    stringTagMap[stringTag] = inspector;\n    return true;\n}\nexport const custom = chaiInspect;\nexport default inspect;\n"
+    },
+    {
+      "role": "Actual importer-local loupe /lib/string.js",
+      "pin": {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/string.js",
+        "mode": "100644",
+        "bytes": 828,
+        "sha256": "7e3ec319428cfedefc7acc5b191843f593561438b30f640915655f6dd5fd4362",
+        "gitBlob": "49c966580a8abfff4758d1c2785144dd18300761"
+      },
+      "body": "import { truncate } from './helpers.js';\nconst stringEscapeChars = new RegExp(\"['\\\\u0000-\\\\u001f\\\\u007f-\\\\u009f\\\\u00ad\\\\u0600-\\\\u0604\\\\u070f\\\\u17b4\\\\u17b5\" +\n    '\\\\u200c-\\\\u200f\\\\u2028-\\\\u202f\\\\u2060-\\\\u206f\\\\ufeff\\\\ufff0-\\\\uffff]', 'g');\nconst escapeCharacters = {\n    '\\b': '\\\\b',\n    '\\t': '\\\\t',\n    '\\n': '\\\\n',\n    '\\f': '\\\\f',\n    '\\r': '\\\\r',\n    \"'\": \"\\\\'\",\n    '\\\\': '\\\\\\\\',\n};\nconst hex = 16;\nconst unicodeLength = 4;\nfunction escape(char) {\n    return (escapeCharacters[char] ||\n        `\\\\u${`0000${char.charCodeAt(0).toString(hex)}`.slice(-unicodeLength)}`);\n}\nexport default function inspectString(string, options) {\n    if (stringEscapeChars.test(string)) {\n        string = string.replace(stringEscapeChars, escape);\n    }\n    return options.stylize(`'${truncate(string, options.truncate - 2)}'`, 'string');\n}\n"
+    },
+    {
+      "role": "Actual importer-local loupe /lib/helpers.js",
+      "pin": {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/helpers.js",
+        "mode": "100644",
+        "bytes": 5596,
+        "sha256": "b09f94ca54b0c9a2df2b8a4f9d3951da96a9c5ae291aac25366258dbd2894c62",
+        "gitBlob": "0ca92ba876ffa78f4486fa05138255e97dd36f67"
+      },
+      "body": "const ansiColors = {\n    bold: ['1', '22'],\n    dim: ['2', '22'],\n    italic: ['3', '23'],\n    underline: ['4', '24'],\n    // 5 & 6 are blinking\n    inverse: ['7', '27'],\n    hidden: ['8', '28'],\n    strike: ['9', '29'],\n    // 10-20 are fonts\n    // 21-29 are resets for 1-9\n    black: ['30', '39'],\n    red: ['31', '39'],\n    green: ['32', '39'],\n    yellow: ['33', '39'],\n    blue: ['34', '39'],\n    magenta: ['35', '39'],\n    cyan: ['36', '39'],\n    white: ['37', '39'],\n    brightblack: ['30;1', '39'],\n    brightred: ['31;1', '39'],\n    brightgreen: ['32;1', '39'],\n    brightyellow: ['33;1', '39'],\n    brightblue: ['34;1', '39'],\n    brightmagenta: ['35;1', '39'],\n    brightcyan: ['36;1', '39'],\n    brightwhite: ['37;1', '39'],\n    grey: ['90', '39'],\n};\nconst styles = {\n    special: 'cyan',\n    number: 'yellow',\n    bigint: 'yellow',\n    boolean: 'yellow',\n    undefined: 'grey',\n    null: 'bold',\n    string: 'green',\n    symbol: 'green',\n    date: 'magenta',\n    regexp: 'red',\n};\nexport const truncator = '…';\nfunction colorise(value, styleType) {\n    const color = ansiColors[styles[styleType]] || ansiColors[styleType] || '';\n    if (!color) {\n        return String(value);\n    }\n    return `\\u001b[${color[0]}m${String(value)}\\u001b[${color[1]}m`;\n}\nexport function normaliseOptions({ showHidden = false, depth = 2, colors = false, customInspect = true, showProxy = false, maxArrayLength = Infinity, breakLength = Infinity, seen = [], \n// eslint-disable-next-line no-shadow\ntruncate = Infinity, stylize = String, } = {}, inspect) {\n    const options = {\n        showHidden: Boolean(showHidden),\n        depth: Number(depth),\n        colors: Boolean(colors),\n        customInspect: Boolean(customInspect),\n        showProxy: Boolean(showProxy),\n        maxArrayLength: Number(maxArrayLength),\n        breakLength: Number(breakLength),\n        truncate: Number(truncate),\n        seen,\n        inspect,\n        stylize,\n    };\n    if (options.colors) {\n        options.stylize = colorise;\n    }\n    return options;\n}\nfunction isHighSurrogate(char) {\n    return char >= '\\ud800' && char <= '\\udbff';\n}\nexport function truncate(string, length, tail = truncator) {\n    string = String(string);\n    const tailLength = tail.length;\n    const stringLength = string.length;\n    if (tailLength > length && stringLength > tailLength) {\n        return tail;\n    }\n    if (stringLength > length && stringLength > tailLength) {\n        let end = length - tailLength;\n        if (end > 0 && isHighSurrogate(string[end - 1])) {\n            end = end - 1;\n        }\n        return `${string.slice(0, end)}${tail}`;\n    }\n    return string;\n}\n// eslint-disable-next-line complexity\nexport function inspectList(list, options, inspectItem, separator = ', ') {\n    inspectItem = inspectItem || options.inspect;\n    const size = list.length;\n    if (size === 0)\n        return '';\n    const originalLength = options.truncate;\n    let output = '';\n    let peek = '';\n    let truncated = '';\n    for (let i = 0; i < size; i += 1) {\n        const last = i + 1 === list.length;\n        const secondToLast = i + 2 === list.length;\n        truncated = `${truncator}(${list.length - i})`;\n        const value = list[i];\n        // If there is more than one remaining we need to account for a separator of `, `\n        options.truncate = originalLength - output.length - (last ? 0 : separator.length);\n        const string = peek || inspectItem(value, options) + (last ? '' : separator);\n        const nextLength = output.length + string.length;\n        const truncatedLength = nextLength + truncated.length;\n        // If this is the last element, and adding it would\n        // take us over length, but adding the truncator wouldn't - then break now\n        if (last && nextLength > originalLength && output.length + truncated.length <= originalLength) {\n            break;\n        }\n        // If this isn't the last or second to last element to scan,\n        // but the string is already over length then break here\n        if (!last && !secondToLast && truncatedLength > originalLength) {\n            break;\n        }\n        // Peek at the next string to determine if we should\n        // break early before adding this item to the output\n        peek = last ? '' : inspectItem(list[i + 1], options) + (secondToLast ? '' : separator);\n        // If we have one element left, but this element and\n        // the next takes over length, the break early\n        if (!last && secondToLast && truncatedLength > originalLength && nextLength + peek.length > originalLength) {\n            break;\n        }\n        output += string;\n        // If the next element takes us to length -\n        // but there are more after that, then we should truncate now\n        if (!last && !secondToLast && nextLength + peek.length >= originalLength) {\n            truncated = `${truncator}(${list.length - i - 1})`;\n            break;\n        }\n        truncated = '';\n    }\n    return `${output}${truncated}`;\n}\nfunction quoteComplexKey(key) {\n    if (key.match(/^[a-zA-Z_][a-zA-Z_0-9]*$/)) {\n        return key;\n    }\n    return JSON.stringify(key)\n        .replace(/'/g, \"\\\\'\")\n        .replace(/\\\\\"/g, '\"')\n        .replace(/(^\"|\"$)/g, \"'\");\n}\nexport function inspectProperty([key, value], options) {\n    options.truncate -= 2;\n    if (typeof key === 'string') {\n        key = quoteComplexKey(key);\n    }\n    else if (typeof key !== 'number') {\n        key = `[${options.inspect(key, options)}]`;\n    }\n    options.truncate -= key.length;\n    value = options.inspect(value, options);\n    return `${key}: ${value}`;\n}\n"
+    }
+  ],
+  "actualLoupeBoundary": {
+    "container": {
+      "bytes": 54541,
+      "sha256": "1b62fc4125d83f567d54b3feba78a8e3b90271c127827b57de0a840f5827835b",
+      "gitBlob": "2a2e7c637ba8b2690d0f59ae45d284f1c97e61de"
+    },
+    "importerLink": {
+      "path": "node_modules/.pnpm/@vitest+utils@3.2.6/node_modules/loupe",
+      "mode": "120000",
+      "bytes": 36,
+      "sha256": "5fd7da23ed32194194aa89da23b448d215325a269f6a4698a48461d5b1c548c5",
+      "gitBlob": "1164ec2956b0b55641bb0f11012dd37e9336af9c",
+      "target": "../../loupe@3.2.1/node_modules/loupe"
+    },
+    "resolvedRoot": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/loupe@3.2.1/node_modules/loupe",
+    "dependencyManifest": {
+      "bytes": 39168001,
+      "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+      "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+    },
+    "completeBodies": 22,
+    "completeBodyBytes": 44166,
+    "allBodiesRehashed": true,
+    "fullBodyChecks": [
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/arguments.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/arguments.js",
+          "mode": "100644",
+          "bytes": 246,
+          "sha256": "404d025426787646a08bb03a783160004558c77aafa5a8d27d24f7ba5fe454ac",
+          "gitBlob": "b5df404d15a0e30593d127184357e5ff511eb38a"
+        },
+        "actual": {
+          "bytes": 246,
+          "sha256": "404d025426787646a08bb03a783160004558c77aafa5a8d27d24f7ba5fe454ac",
+          "gitBlob": "b5df404d15a0e30593d127184357e5ff511eb38a"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/array.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/array.js",
+          "mode": "100644",
+          "bytes": 795,
+          "sha256": "26eb29350a564d5bfcd0b9d3bc03fbf3b3e61f7a4cc9eec501620b5aeb37fb02",
+          "gitBlob": "78f6c9631ad6d49a1d08ebb15297035afb43d490"
+        },
+        "actual": {
+          "bytes": 795,
+          "sha256": "26eb29350a564d5bfcd0b9d3bc03fbf3b3e61f7a4cc9eec501620b5aeb37fb02",
+          "gitBlob": "78f6c9631ad6d49a1d08ebb15297035afb43d490"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/bigint.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/bigint.js",
+          "mode": "100644",
+          "bytes": 270,
+          "sha256": "b609cc49e18392ccf092bcce065dc41294de3a218bce7540ad4223f367985a49",
+          "gitBlob": "808ab0ff00a0bbfdb21e184cf4ed7316a8c53f92"
+        },
+        "actual": {
+          "bytes": 270,
+          "sha256": "b609cc49e18392ccf092bcce065dc41294de3a218bce7540ad4223f367985a49",
+          "gitBlob": "808ab0ff00a0bbfdb21e184cf4ed7316a8c53f92"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/class.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/class.js",
+          "mode": "100644",
+          "bytes": 584,
+          "sha256": "787b16ff2d2d3ad09b40f86d06f76ba0dc55bbfcde2f86bb4ef225fb3446e886",
+          "gitBlob": "a5f9332b41a8c3ceae5c587817d2fb679822b920"
+        },
+        "actual": {
+          "bytes": 584,
+          "sha256": "787b16ff2d2d3ad09b40f86d06f76ba0dc55bbfcde2f86bb4ef225fb3446e886",
+          "gitBlob": "a5f9332b41a8c3ceae5c587817d2fb679822b920"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/date.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/date.js",
+          "mode": "100644",
+          "bytes": 486,
+          "sha256": "358966745ff371d63f24d15a7765b52caa6c032b9a634145893f9fe6d19f9ed4",
+          "gitBlob": "09a645aae1981f1c6d9d640222a0e9049f5d38aa"
+        },
+        "actual": {
+          "bytes": 486,
+          "sha256": "358966745ff371d63f24d15a7765b52caa6c032b9a634145893f9fe6d19f9ed4",
+          "gitBlob": "09a645aae1981f1c6d9d640222a0e9049f5d38aa"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/error.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/error.js",
+          "mode": "100644",
+          "bytes": 1105,
+          "sha256": "e13e9e53692d35eeea37e93cabc1062d97d801ac413b26ddce7a5212e795173d",
+          "gitBlob": "ab8f996b54b1142c319797cffef7531a66a44c0a"
+        },
+        "actual": {
+          "bytes": 1105,
+          "sha256": "e13e9e53692d35eeea37e93cabc1062d97d801ac413b26ddce7a5212e795173d",
+          "gitBlob": "ab8f996b54b1142c319797cffef7531a66a44c0a"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/function.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/function.js",
+          "mode": "100644",
+          "bytes": 381,
+          "sha256": "aec65e4f295ba93768fe0d5cb94089d2a17f31221ea54d4e180bf03975c78d8e",
+          "gitBlob": "4459d5b108ba6f40ce2b7bfb7840807850496284"
+        },
+        "actual": {
+          "bytes": 381,
+          "sha256": "aec65e4f295ba93768fe0d5cb94089d2a17f31221ea54d4e180bf03975c78d8e",
+          "gitBlob": "4459d5b108ba6f40ce2b7bfb7840807850496284"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/helpers.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/helpers.js",
+          "mode": "100644",
+          "bytes": 5596,
+          "sha256": "b09f94ca54b0c9a2df2b8a4f9d3951da96a9c5ae291aac25366258dbd2894c62",
+          "gitBlob": "0ca92ba876ffa78f4486fa05138255e97dd36f67"
+        },
+        "actual": {
+          "bytes": 5596,
+          "sha256": "b09f94ca54b0c9a2df2b8a4f9d3951da96a9c5ae291aac25366258dbd2894c62",
+          "gitBlob": "0ca92ba876ffa78f4486fa05138255e97dd36f67"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/html.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/html.js",
+          "mode": "100644",
+          "bytes": 1735,
+          "sha256": "bf21d578c2a4ec522d36a8aed9c0eaffb501def795dd769c6ef01a837d221200",
+          "gitBlob": "85b0a62e2454bedf9a3cb830a876c77b20fbc18d"
+        },
+        "actual": {
+          "bytes": 1735,
+          "sha256": "bf21d578c2a4ec522d36a8aed9c0eaffb501def795dd769c6ef01a837d221200",
+          "gitBlob": "85b0a62e2454bedf9a3cb830a876c77b20fbc18d"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/index.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/index.js",
+          "mode": "100644",
+          "bytes": 5847,
+          "sha256": "26cfa7659e15ba08cb45829fbbdb52a8753e00ae96b6a988eea4432cfac973dc",
+          "gitBlob": "0259276571d03802f9dd4453e00ec112dff6edfe"
+        },
+        "actual": {
+          "bytes": 5847,
+          "sha256": "26cfa7659e15ba08cb45829fbbdb52a8753e00ae96b6a988eea4432cfac973dc",
+          "gitBlob": "0259276571d03802f9dd4453e00ec112dff6edfe"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/map.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/map.js",
+          "mode": "100644",
+          "bytes": 680,
+          "sha256": "2910fe80f619cd4da65a76dd41fde6f915460e977678878d463e7868d420c0af",
+          "gitBlob": "ab60dc0cb8ace4f5a1059eef69e2834b8d8b07ac"
+        },
+        "actual": {
+          "bytes": 680,
+          "sha256": "2910fe80f619cd4da65a76dd41fde6f915460e977678878d463e7868d420c0af",
+          "gitBlob": "ab60dc0cb8ace4f5a1059eef69e2834b8d8b07ac"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/number.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/number.js",
+          "mode": "100644",
+          "bytes": 642,
+          "sha256": "6b118098dc135e3b9e2c5a5be52255162678969b879c85dc5ee7dcbfecf2d3c9",
+          "gitBlob": "85442f04e3766c580afb61959f4379ccddce56a6"
+        },
+        "actual": {
+          "bytes": 642,
+          "sha256": "6b118098dc135e3b9e2c5a5be52255162678969b879c85dc5ee7dcbfecf2d3c9",
+          "gitBlob": "85442f04e3766c580afb61959f4379ccddce56a6"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/object.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/object.js",
+          "mode": "100644",
+          "bytes": 924,
+          "sha256": "a904cb60872f204eacaa62a2bdea32f79db2266619ea49452c7e785e1b749458",
+          "gitBlob": "e39eb45d1d76485c4cc8b4ec4e28a572f6c085bd"
+        },
+        "actual": {
+          "bytes": 924,
+          "sha256": "a904cb60872f204eacaa62a2bdea32f79db2266619ea49452c7e785e1b749458",
+          "gitBlob": "e39eb45d1d76485c4cc8b4ec4e28a572f6c085bd"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/promise.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/promise.js",
+          "mode": "100644",
+          "bytes": 78,
+          "sha256": "da1e5bc3e1b99bbcd170dfb779223a9260742411aa7a2546da511cbfcd66f6b1",
+          "gitBlob": "8fb9d3a90edc8a64f16c4d0ec4071ffff08fd49f"
+        },
+        "actual": {
+          "bytes": 78,
+          "sha256": "da1e5bc3e1b99bbcd170dfb779223a9260742411aa7a2546da511cbfcd66f6b1",
+          "gitBlob": "8fb9d3a90edc8a64f16c4d0ec4071ffff08fd49f"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/regexp.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/regexp.js",
+          "mode": "100644",
+          "bytes": 331,
+          "sha256": "8c5c8ca138ea48364ba69947226072e1f0149fb5475ce4ee7b18c1792b69a806",
+          "gitBlob": "0a35f49f9f6b1054de912ca44b2b6a855db6d209"
+        },
+        "actual": {
+          "bytes": 331,
+          "sha256": "8c5c8ca138ea48364ba69947226072e1f0149fb5475ce4ee7b18c1792b69a806",
+          "gitBlob": "0a35f49f9f6b1054de912ca44b2b6a855db6d209"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/set.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/set.js",
+          "mode": "100644",
+          "bytes": 414,
+          "sha256": "29b9313ba4376768d3f48d46a7f578796bc5752d9d17c5aa4f16c49e5531d5c9",
+          "gitBlob": "51b81adda98cb74852f5125c86c0a1a95993b702"
+        },
+        "actual": {
+          "bytes": 414,
+          "sha256": "29b9313ba4376768d3f48d46a7f578796bc5752d9d17c5aa4f16c49e5531d5c9",
+          "gitBlob": "51b81adda98cb74852f5125c86c0a1a95993b702"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/string.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/string.js",
+          "mode": "100644",
+          "bytes": 828,
+          "sha256": "7e3ec319428cfedefc7acc5b191843f593561438b30f640915655f6dd5fd4362",
+          "gitBlob": "49c966580a8abfff4758d1c2785144dd18300761"
+        },
+        "actual": {
+          "bytes": 828,
+          "sha256": "7e3ec319428cfedefc7acc5b191843f593561438b30f640915655f6dd5fd4362",
+          "gitBlob": "49c966580a8abfff4758d1c2785144dd18300761"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/symbol.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/symbol.js",
+          "mode": "100644",
+          "bytes": 209,
+          "sha256": "4e787049d906004d72205b012a155314a11002cec140385619268578ff9173ad",
+          "gitBlob": "ca8dd68edd674c2b2c71b6a6902e363f5d483275"
+        },
+        "actual": {
+          "bytes": 209,
+          "sha256": "4e787049d906004d72205b012a155314a11002cec140385619268578ff9173ad",
+          "gitBlob": "ca8dd68edd674c2b2c71b6a6902e363f5d483275"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/typedarray.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/typedarray.js",
+          "mode": "100644",
+          "bytes": 1719,
+          "sha256": "68637fc99623cb68769c00d75d5ca9be90ffb403c122c8921196c383d5ab3ce6",
+          "gitBlob": "e8257f69269aad648f73ac8cf560ac8caf0705bb"
+        },
+        "actual": {
+          "bytes": 1719,
+          "sha256": "68637fc99623cb68769c00d75d5ca9be90ffb403c122c8921196c383d5ab3ce6",
+          "gitBlob": "e8257f69269aad648f73ac8cf560ac8caf0705bb"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/types.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/lib/types.js",
+          "mode": "100644",
+          "bytes": 11,
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "gitBlob": "cb0ff5c3b541f646105198ee23ac0fc3d805023e"
+        },
+        "actual": {
+          "bytes": 11,
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "gitBlob": "cb0ff5c3b541f646105198ee23ac0fc3d805023e"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/loupe.js",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/loupe.js",
+          "mode": "100644",
+          "bytes": 19115,
+          "sha256": "b060b1cf1e7d2896ffefbd01614c9b7fd1d4494947082b3465eeca9b33c6f5c1",
+          "gitBlob": "a90bcbc712e965e68b2887fb184874d733172e03"
+        },
+        "actual": {
+          "bytes": 19115,
+          "sha256": "b060b1cf1e7d2896ffefbd01614c9b7fd1d4494947082b3465eeca9b33c6f5c1",
+          "gitBlob": "a90bcbc712e965e68b2887fb184874d733172e03"
+        },
+        "pass": true
+      },
+      {
+        "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/package.json",
+        "pin": {
+          "path": "node_modules/.pnpm/loupe@3.2.1/node_modules/loupe/package.json",
+          "mode": "100644",
+          "bytes": 2170,
+          "sha256": "576be81053b77e14f3ccb78111e9c0dbf19164f59d3eeff9763d620d21ef2591",
+          "gitBlob": "de69efdbc4cb6c109acc97149706c1fff1e463b8"
+        },
+        "actual": {
+          "bytes": 2170,
+          "sha256": "576be81053b77e14f3ccb78111e9c0dbf19164f59d3eeff9763d620d21ef2591",
+          "gitBlob": "de69efdbc4cb6c109acc97149706c1fff1e463b8"
+        },
+        "pass": true
+      }
+    ],
+    "scope": "Root data-only read binds these files to the complete original dependency manifest. This reviewer rehashed every retained body and exact importer link target; no package was evaluated."
+  },
+  "correctionToPriorReview": {
+    "sourceGuide": "969d58ae7fb9788b0266ff6cefd8c9cd2aad7231",
+    "semanticR2": "067403c46c573232e42da401e9d09e479e50dd36",
+    "acknowledgedOmission": "My prior exact-name checks established agreement between R1, proposal and binding but did not derive the first six $field names through installed objDisplay/loupe formatting. Therefore the earlier claim that all85 predicted literal runtime titles were correct was wrong.",
+    "correction": "Only the correctness claim for first-six literal title predictions is superseded by this diagnosis. Historical reports remain retained as historical evidence; this does not alter original statuses, waive a gate or retroactively accept the refused package.",
+    "causality": "The incorrect shared prediction originated in the authored acceptance data and escaped my review; it is not evidence of a production hook regression or a change to the six existing test semantics."
+  },
+  "continuationBoundary": "New exact scope/R1 review, publication and full actual readbacks are required before any new runner/binding/producer authorship or execution. This report authors no fix and selects no retry, replacement run or producer postimage.",
+  "lifecycleLimit": "The supplied outer summary records full inputs preserved and cleanup empty, but full lifecycle/input packet acceptance belongs to the independent Guard/root review. This diagnosis does not replace those reviews.",
+  "reviewerActions": {
+    "completeRetainedGitReads": true,
+    "dataInspectionAndHashingOnly": true,
+    "shellCommands": 0,
+    "packageEvaluations": 0,
+    "testExecutions": 0,
+    "sourceWrites": 0,
+    "runnerOrBindingWrites": 0,
+    "refMutations": 0,
+    "ciActions": 0,
+    "bareDiagnosticReportOnly": true
+  }
+}

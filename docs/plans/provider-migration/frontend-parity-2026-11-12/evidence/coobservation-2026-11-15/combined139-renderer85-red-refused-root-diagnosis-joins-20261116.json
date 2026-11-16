@@ -1,0 +1,413 @@
+{
+  "schema": "c714-refused-red-root-diagnosis-and-publication-joins-v1",
+  "reviewer": "root",
+  "at": "2026-11-16T22:34:57.611Z",
+  "packet": {
+    "bytes": 372332,
+    "sha256": "7c1aaee9137993e352eb8e6f1e758d7f90e1d1ec211a415218ad1becb7b60f2a",
+    "gitBlob": "854cadcca36a216b01f501d4a3ae496c76a599c4"
+  },
+  "actualOuter": {
+    "bytes": 8828,
+    "sha256": "93ab8431fdd0c6515f4e01a84bb45b5ed16a9529a66659460004f5e976a687b8",
+    "gitBlob": "4eca696d2daa33c08ea4bd7fde795590406233ac"
+  },
+  "phaseReceipt": {
+    "bytes": 137409,
+    "sha256": "03482f1355c14b3b33530748a47ecafc059edb74acb6b3217ea2c99dfcd0809f",
+    "gitBlob": "b7e726db8ccec12bf41277dd2f40c31dc5148fe2"
+  },
+  "rootFullActualReview": {
+    "bytes": 35783,
+    "sha256": "a10bbfcf8dc3aff986eb504a89ce56cd8e916d8341aff56128c8abc30f248af1",
+    "gitBlob": "f11522d64b72f0c2d940420932d3845041f31a4f"
+  },
+  "diagnosis": {
+    "bytes": 127784,
+    "sha256": "7deff97792b556dea4da2ed2e1c10fc158445d51e4343171f2e813ff242b6196",
+    "gitBlob": "b80e069b705d41405733ff4fd40caa3ad2a753e6"
+  },
+  "loupe": {
+    "bytes": 54541,
+    "sha256": "1b62fc4125d83f567d54b3feba78a8e3b90271c127827b57de0a840f5827835b",
+    "gitBlob": "2a2e7c637ba8b2690d0f59ae45d284f1c97e61de"
+  },
+  "materializationActualPublication": {
+    "commit": "179e719480965da06faa6a1119196bcf8c28667a",
+    "root": {
+      "bytes": 68230,
+      "sha256": "8cd9f33fc3afeba9e1b9843620022272a850aef36a740a87e3147b9df89c3737",
+      "gitBlob": "1a90d32206b2b31ae3e3dba8e2edde55349851c7"
+    },
+    "independent": {
+      "bytes": 115641,
+      "sha256": "fcfa1571b7ea385fea409dcbe5d5adfe2e9b8b60309a6b331c439feb26704790",
+      "gitBlob": "374fc9db427cb6bcd3380190e836717fa661fe3f"
+    },
+    "gateClosedAt": "2026-11-16T22:17:41.528Z"
+  },
+  "checks": [
+    {
+      "name": "Actual outer distinct supervisor exit2",
+      "pass": true
+    },
+    {
+      "name": "Complete actual85 diagnosis mapping",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row1",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row2",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row3",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row4",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row5",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row6",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row7",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row8",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row9",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row10",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row11",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row12",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row13",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row14",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row15",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row16",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row17",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row18",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row19",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row20",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row21",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row22",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row23",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row24",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row25",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row26",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row27",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row28",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row29",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row30",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row31",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row32",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row33",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row34",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row35",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row36",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row37",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row38",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row39",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row40",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row41",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row42",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row43",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row44",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row45",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row46",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row47",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row48",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row49",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row50",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row51",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row52",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row53",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row54",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row55",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row56",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row57",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row58",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row59",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row60",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row61",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row62",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row63",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row64",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row65",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row66",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row67",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row68",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row69",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row70",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row71",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row72",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row73",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row74",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row75",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row76",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row77",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row78",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row79",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row80",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row81",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row82",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row83",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row84",
+      "pass": true
+    },
+    {
+      "name": "Diagnosis row85",
+      "pass": true
+    },
+    {
+      "name": "Exactly6 diagnosis mismatches",
+      "pass": true
+    },
+    {
+      "name": "Data-only all85 compact identity",
+      "pass": true
+    },
+    {
+      "name": "Source diagnosis leaves gate closed",
+      "pass": true
+    }
+  ],
+  "verdict": "REFUSED/SPENT retained; exact diagnosis read and independently joined; no producer gate and no replacement scope selected",
+  "scope": "Root read the full diagnosis, actual JSON/raw/outer/phase and current complete packet. This report does not reclassify the original attempt."
+}

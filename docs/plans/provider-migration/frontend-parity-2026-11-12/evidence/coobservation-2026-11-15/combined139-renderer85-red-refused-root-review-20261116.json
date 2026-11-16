@@ -1,0 +1,1370 @@
+{
+  "schema": "c714-refused-combined-red-root-complete-data-review-v1",
+  "reviewer": "root",
+  "at": "2026-11-16T22:34:16.227304+00:00",
+  "verdict": "REFUSED/SPENT; observed outer2; complete evidence, no retrospective semantic admission",
+  "packet": {
+    "bytes": 372332,
+    "sha256": "7c1aaee9137993e352eb8e6f1e758d7f90e1d1ec211a415218ad1becb7b60f2a",
+    "gitBlob": "854cadcca36a216b01f501d4a3ae496c76a599c4"
+  },
+  "outer": {
+    "bytes": 8828,
+    "sha256": "93ab8431fdd0c6515f4e01a84bb45b5ed16a9529a66659460004f5e976a687b8",
+    "gitBlob": "4eca696d2daa33c08ea4bd7fde795590406233ac"
+  },
+  "observedSupervisorExit": 2,
+  "source": {
+    "path": "/tmp/c714-combined139-85-evidence/red/red-before-source.json",
+    "bytes": 2478745,
+    "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+    "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+  },
+  "scopeCompleted": false,
+  "producerGateOpened": false,
+  "all81ActualFilesFullyReread": true,
+  "totalActualFileBytes": 90418918,
+  "largeRetentionJoin": {
+    "bytes": 4424,
+    "sha256": "b31f4015b0aafdb66e95300237eacb619f59d0e542dbdc2d8a81b91f53881fde",
+    "gitBlob": "5dfb4f3f78080a8c0890173e683a11d266d2ee55"
+  },
+  "largeRetentionScope": "Root previously fully reconstructed the four dependency parts and read full compiled/tree/index/source retained bodies; this data-only review rereads and hashes all81 actual phase files. No primary is replayed.",
+  "checks": [
+    {
+      "name": "81 exact unique actual files",
+      "pass": true
+    },
+    {
+      "name": "Actual file phase-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-compiled.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-dependencies.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-10-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-10-start.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-10.log",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-10.stderr",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-11-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-11-start.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-11.log",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-11.stderr",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-12-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-12-start.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-12.log",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-12.stderr",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-13-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-13-start.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-13.log",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-13.stderr",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-14-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-14-start.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-14.log",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-14.stderr",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-15-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-15-start.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-15.log",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-15.stderr",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-9-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-9-start.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-9.log",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-metadata-9.stderr",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-after-source.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-compiled.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-dependencies.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-1-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-1-start.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-1.log",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-1.stderr",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-2-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-2-start.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-2.log",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-2.stderr",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-3-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-3-start.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-3.log",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-3.stderr",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-4-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-4-start.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-4.log",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-4.stderr",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-5-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-5-start.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-5.log",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-5.stderr",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-6-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-6-start.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-6.log",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-6.stderr",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-7-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-7-start.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-7.log",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-metadata-7.stderr",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-before-source.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-native-metadata-8-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-native-metadata-8-start.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-native-metadata-8.log",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-native-metadata-8.stderr",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-native-route-admission.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-node-1-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-node-1-start.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-node-1.log",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-node-semantics.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-node-tmp-gate.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-renderer-1-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-renderer-1-start.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-renderer-1.log",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-renderer-output-ownership.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-renderer-tmp-surviving-transients.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red-vite-config-surviving-transients.json",
+      "pass": true
+    },
+    {
+      "name": "Actual file red.attempt",
+      "pass": true
+    },
+    {
+      "name": "Actual file renderer-results.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal phase-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-10-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-10-start.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-10.log",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-10.stderr",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-11-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-11-start.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-11.stderr",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-12-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-12-start.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-12.log",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-12.stderr",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-13-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-13-start.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-13.log",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-13.stderr",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-14-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-14-start.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-14.stderr",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-15-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-15-start.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-15.log",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-15.stderr",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-9-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-9-start.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-9.log",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-after-metadata-9.stderr",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-1-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-1-start.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-1.log",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-1.stderr",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-2-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-2-start.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-2.log",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-2.stderr",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-3-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-3-start.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-3.stderr",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-4-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-4-start.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-4.log",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-4.stderr",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-5-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-5-start.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-5.log",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-5.stderr",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-6-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-6-start.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-6.stderr",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-7-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-7-start.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-7.log",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-before-metadata-7.stderr",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-native-metadata-8-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-native-metadata-8-start.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-native-metadata-8.log",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-native-metadata-8.stderr",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-native-route-admission.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-node-1-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-node-1-start.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-node-1.log",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-node-semantics.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-node-tmp-gate.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-renderer-1-receipt.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-renderer-1-start.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-renderer-1.log",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-renderer-output-ownership.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-renderer-tmp-surviving-transients.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red-vite-config-surviving-transients.json",
+      "pass": true
+    },
+    {
+      "name": "Full literal red.attempt",
+      "pass": true
+    },
+    {
+      "name": "Full literal renderer-results.json",
+      "pass": true
+    },
+    {
+      "name": "71 literal plus10 large exact coverage",
+      "pass": true
+    },
+    {
+      "name": "90418918B full actual evidence",
+      "pass": true
+    },
+    {
+      "name": "Exact unchanged runner and binding",
+      "pass": true
+    },
+    {
+      "name": "Original attempt1 refused",
+      "pass": true
+    },
+    {
+      "name": "Both primaries finalized",
+      "pass": true
+    },
+    {
+      "name": "No signal or timeout",
+      "pass": true
+    },
+    {
+      "name": "Complete preserved full inputs",
+      "pass": true
+    },
+    {
+      "name": "source exact before/after",
+      "pass": true
+    },
+    {
+      "name": "dependencies exact before/after",
+      "pass": true
+    },
+    {
+      "name": "compiled exact before/after",
+      "pass": true
+    },
+    {
+      "name": "controls exact before/after",
+      "pass": true
+    },
+    {
+      "name": "providers exact before/after",
+      "pass": true
+    },
+    {
+      "name": "rendererRuntime exact before/after",
+      "pass": true
+    },
+    {
+      "name": "tools exact before/after",
+      "pass": true
+    },
+    {
+      "name": "pnpm exact before/after",
+      "pass": true
+    },
+    {
+      "name": "environment exact before/after",
+      "pass": true
+    },
+    {
+      "name": "bootstrapCache exact before/after",
+      "pass": true
+    },
+    {
+      "name": "testTemps exact before/after",
+      "pass": true
+    },
+    {
+      "name": "taskTmpTopEntries exact before/after",
+      "pass": true
+    },
+    {
+      "name": "Exact current8798 source/42workflows/6overlays",
+      "pass": true
+    },
+    {
+      "name": "Source pin scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "pass": true
+    },
+    {
+      "name": "Source pin scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "name": "Source pin scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "name": "Source pin scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+      "pass": true
+    },
+    {
+      "name": "Source pin scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "pass": true
+    },
+    {
+      "name": "Source pin scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "pass": true
+    },
+    {
+      "name": "Source pin scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "pass": true
+    },
+    {
+      "name": "Source pin src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "pass": true
+    },
+    {
+      "name": "Source pin test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "pass": true
+    },
+    {
+      "name": "139 exact ordered Node names",
+      "pass": true
+    },
+    {
+      "name": "Node134P5selectedF",
+      "pass": true
+    },
+    {
+      "name": "Old133 and control137 passed",
+      "pass": true
+    },
+    {
+      "name": "Five exact Node failure sites",
+      "pass": true
+    },
+    {
+      "name": "Node mechanical admission",
+      "pass": true
+    },
+    {
+      "name": "Renderer not mechanically admitted",
+      "pass": true
+    },
+    {
+      "name": "85 unique renderer assertions",
+      "pass": true
+    },
+    {
+      "name": "Exactly first6 predicted-name errors",
+      "pass": true
+    },
+    {
+      "name": "Renderer82P3selectedF",
+      "pass": true
+    },
+    {
+      "name": "Old80 and controls84/85 passed",
+      "pass": true
+    },
+    {
+      "name": "All85 exact ancestors and fullnames",
+      "pass": true
+    },
+    {
+      "name": "node full final/raw/start joins",
+      "pass": true
+    },
+    {
+      "name": "node captured original180s",
+      "pass": true
+    },
+    {
+      "name": "node source and binding exact",
+      "pass": true
+    },
+    {
+      "name": "renderer full final/raw/start joins",
+      "pass": true
+    },
+    {
+      "name": "renderer captured original180s",
+      "pass": true
+    },
+    {
+      "name": "renderer source and binding exact",
+      "pass": true
+    },
+    {
+      "name": "red-after-metadata-10-receipt.json captured0within30",
+      "pass": true
+    },
+    {
+      "name": "red-after-metadata-10-receipt.json full raw/stderr exact",
+      "pass": true
+    },
+    {
+      "name": "red-after-metadata-11-receipt.json captured0within30",
+      "pass": true
+    },
+    {
+      "name": "red-after-metadata-11-receipt.json full raw/stderr exact",
+      "pass": true
+    },
+    {
+      "name": "red-after-metadata-12-receipt.json captured0within30",
+      "pass": true
+    },
+    {
+      "name": "red-after-metadata-12-receipt.json full raw/stderr exact",
+      "pass": true
+    },
+    {
+      "name": "red-after-metadata-13-receipt.json captured0within30",
+      "pass": true
+    },
+    {
+      "name": "red-after-metadata-13-receipt.json full raw/stderr exact",
+      "pass": true
+    },
+    {
+      "name": "red-after-metadata-14-receipt.json captured0within30",
+      "pass": true
+    },
+    {
+      "name": "red-after-metadata-14-receipt.json full raw/stderr exact",
+      "pass": true
+    },
+    {
+      "name": "red-after-metadata-15-receipt.json captured0within30",
+      "pass": true
+    },
+    {
+      "name": "red-after-metadata-15-receipt.json full raw/stderr exact",
+      "pass": true
+    },
+    {
+      "name": "red-after-metadata-9-receipt.json captured0within30",
+      "pass": true
+    },
+    {
+      "name": "red-after-metadata-9-receipt.json full raw/stderr exact",
+      "pass": true
+    },
+    {
+      "name": "red-before-metadata-1-receipt.json captured0within30",
+      "pass": true
+    },
+    {
+      "name": "red-before-metadata-1-receipt.json full raw/stderr exact",
+      "pass": true
+    },
+    {
+      "name": "red-before-metadata-2-receipt.json captured0within30",
+      "pass": true
+    },
+    {
+      "name": "red-before-metadata-2-receipt.json full raw/stderr exact",
+      "pass": true
+    },
+    {
+      "name": "red-before-metadata-3-receipt.json captured0within30",
+      "pass": true
+    },
+    {
+      "name": "red-before-metadata-3-receipt.json full raw/stderr exact",
+      "pass": true
+    },
+    {
+      "name": "red-before-metadata-4-receipt.json captured0within30",
+      "pass": true
+    },
+    {
+      "name": "red-before-metadata-4-receipt.json full raw/stderr exact",
+      "pass": true
+    },
+    {
+      "name": "red-before-metadata-5-receipt.json captured0within30",
+      "pass": true
+    },
+    {
+      "name": "red-before-metadata-5-receipt.json full raw/stderr exact",
+      "pass": true
+    },
+    {
+      "name": "red-before-metadata-6-receipt.json captured0within30",
+      "pass": true
+    },
+    {
+      "name": "red-before-metadata-6-receipt.json full raw/stderr exact",
+      "pass": true
+    },
+    {
+      "name": "red-before-metadata-7-receipt.json captured0within30",
+      "pass": true
+    },
+    {
+      "name": "red-before-metadata-7-receipt.json full raw/stderr exact",
+      "pass": true
+    },
+    {
+      "name": "red-native-metadata-8-receipt.json captured0within30",
+      "pass": true
+    },
+    {
+      "name": "red-native-metadata-8-receipt.json full raw/stderr exact",
+      "pass": true
+    },
+    {
+      "name": "15 complete metadata launches",
+      "pass": true
+    },
+    {
+      "name": "No captured process or file debt",
+      "pass": true
+    },
+    {
+      "name": "Actual owned temp roots empty",
+      "pass": true
+    },
+    {
+      "name": "vite exact complete captured cleanup",
+      "pass": true
+    },
+    {
+      "name": "tmp exact complete captured cleanup",
+      "pass": true
+    }
+  ],
+  "checkCount": 234,
+  "node": {
+    "summary": {
+      "tests": 139,
+      "suites": 0,
+      "pass": 134,
+      "fail": 5,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "durationMs": 13219.624138
+    },
+    "exact139": true,
+    "original133Pass": true,
+    "control137Pass": true,
+    "failureSites": [
+      {
+        "ordinal": 134,
+        "registration": [
+          2591,
+          4
+        ],
+        "assertion": [
+          2593,
+          3
+        ],
+        "operator": "rejects"
+      },
+      {
+        "ordinal": 135,
+        "registration": [
+          2591,
+          4
+        ],
+        "assertion": [
+          2593,
+          3
+        ],
+        "operator": "rejects"
+      },
+      {
+        "ordinal": 136,
+        "registration": [
+          2591,
+          4
+        ],
+        "assertion": [
+          2593,
+          3
+        ],
+        "operator": "rejects"
+      },
+      {
+        "ordinal": 138,
+        "registration": [
+          2678,
+          1
+        ],
+        "assertion": [
+          2682,
+          5
+        ],
+        "operator": "rejects"
+      },
+      {
+        "ordinal": 139,
+        "registration": [
+          2688,
+          1
+        ],
+        "assertion": [
+          2692,
+          12
+        ],
+        "operator": "deepStrictEqual"
+      }
+    ]
+  },
+  "renderer": {
+    "total": 85,
+    "pass": 82,
+    "fail": 3,
+    "original80Pass": true,
+    "controls84And85Pass": true,
+    "exact6Mismatches": [
+      {
+        "ordinal": 1,
+        "bound": "refreshes shared provider metadata after filtered connect (null, full=false)",
+        "actual": "refreshes shared provider metadata after filtered 'connect' (null, full=false)",
+        "fullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'connect' (null, full=false)",
+        "status": "passed"
+      },
+      {
+        "ordinal": 2,
+        "bound": "refreshes shared provider metadata after filtered connect (/tmp/TEST-connected-provider-cache, full=false)",
+        "actual": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=false)",
+        "fullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=false)",
+        "status": "passed"
+      },
+      {
+        "ordinal": 3,
+        "bound": "refreshes shared provider metadata after filtered connect (/tmp/TEST-connected-provider-cache, full=true)",
+        "actual": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=true)",
+        "fullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=true)",
+        "status": "passed"
+      },
+      {
+        "ordinal": 4,
+        "bound": "refreshes shared provider metadata after filtered forget (null, full=false)",
+        "actual": "refreshes shared provider metadata after filtered 'forget' (null, full=false)",
+        "fullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'forget' (null, full=false)",
+        "status": "passed"
+      },
+      {
+        "ordinal": 5,
+        "bound": "refreshes shared provider metadata after filtered forget (/tmp/TEST-connected-provider-cache, full=false)",
+        "actual": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=false)",
+        "fullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=false)",
+        "status": "passed"
+      },
+      {
+        "ordinal": 6,
+        "bound": "refreshes shared provider metadata after filtered forget (/tmp/TEST-connected-provider-cache, full=true)",
+        "actual": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=true)",
+        "fullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=true)",
+        "status": "passed"
+      }
+    ],
+    "semanticReceiptProduced": false
+  },
+  "timing": {
+    "preflightSeconds": 60.39094469400152,
+    "commandPhaseSeconds": 24.291327454993734,
+    "postflightSeconds": 59.33960245000344,
+    "totalInvocationSeconds": 144.0245011299994,
+    "cleanupSeconds": 0,
+    "transientCaptureAndCleanupSeconds": 0.0010036660023615696
+  },
+  "metadata": [
+    {
+      "file": "red-after-metadata-10-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "rev-parse",
+        "HEAD^{tree}"
+      ],
+      "seconds": 0.004123590995732229,
+      "pid": 156,
+      "receipt": {
+        "bytes": 1648,
+        "sha256": "08c40a5e090732b720478b1820f1c73740364d05a6f58113b97f2afd3f0c7510",
+        "gitBlob": "cd0c2ce343021e7086ebf2a476c8986ecf2341d1"
+      }
+    },
+    {
+      "file": "red-after-metadata-11-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "ls-tree",
+        "-rz",
+        "--full-tree",
+        "HEAD"
+      ],
+      "seconds": 0.06764343800023198,
+      "pid": 157,
+      "receipt": {
+        "bytes": 1673,
+        "sha256": "ace948564acd838e2d9a54ba12fffd2c9b6b615a36a8f3bf86924d9676a7df66",
+        "gitBlob": "7fa9a9e4f5fb9a4b21110293f9de86a06bb1f88b"
+      }
+    },
+    {
+      "file": "red-after-metadata-12-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "diff",
+        "--cached",
+        "--name-only",
+        "-z"
+      ],
+      "seconds": 0.008479153999360278,
+      "pid": 158,
+      "receipt": {
+        "bytes": 1668,
+        "sha256": "36ed6080f8f50de7b00b334cfb7bed7be2343018df9183511b6e889ac05b2e71",
+        "gitBlob": "02f6df442e1b8e2aac19f789f70204f2da6564dd"
+      }
+    },
+    {
+      "file": "red-after-metadata-13-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "ls-files",
+        "--others",
+        "--exclude-standard",
+        "-z"
+      ],
+      "seconds": 0.032639746998029295,
+      "pid": 159,
+      "receipt": {
+        "bytes": 1679,
+        "sha256": "81d4c9860253b2e3506c9515c5698beda210feed7518f10f1f86c0274b24fffb",
+        "gitBlob": "d53f08f3045cf861dd3dd04f3a50875e265e560c"
+      }
+    },
+    {
+      "file": "red-after-metadata-14-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "ls-files",
+        "--stage",
+        "-z"
+      ],
+      "seconds": 0.010925639995548408,
+      "pid": 160,
+      "receipt": {
+        "bytes": 1658,
+        "sha256": "f4bff36d5b2ef9c8e967f147c85d6906cdbf4263ffa1a54c2d49abae07c57e24",
+        "gitBlob": "9e743c77d638dff2b40022b4c583e6f7f9e71ac1"
+      }
+    },
+    {
+      "file": "red-after-metadata-15-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "diff",
+        "--name-only",
+        "-z",
+        "HEAD"
+      ],
+      "seconds": 0.017202467999595683,
+      "pid": 161,
+      "receipt": {
+        "bytes": 1666,
+        "sha256": "2abf7d1bab88829155574811a7025961c632176c9be203a1d7607fcf403bf57c",
+        "gitBlob": "dc96ee7adb08fea79e1612b030d32dff6d5f6425"
+      }
+    },
+    {
+      "file": "red-after-metadata-9-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "seconds": 0.004502219002461061,
+      "pid": 155,
+      "receipt": {
+        "bytes": 1639,
+        "sha256": "0c8cbe472b4df102f334db0dd7a7f1538c6022d0cc69f669956d263abf995827",
+        "gitBlob": "b734242e940eab19e8112b09a85a29eaad0236a5"
+      }
+    },
+    {
+      "file": "red-before-metadata-1-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "seconds": 0.004565140996419359,
+      "pid": 3,
+      "receipt": {
+        "bytes": 1639,
+        "sha256": "dc226f42b21e3fcc5ebd699dc88a7f2347aed0056be64d42a2c4e31ad18e6490",
+        "gitBlob": "bf0479b9ddc3d2e63752fabb3c1a7f81363acb3e"
+      }
+    },
+    {
+      "file": "red-before-metadata-2-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "rev-parse",
+        "HEAD^{tree}"
+      ],
+      "seconds": 0.004366059001768008,
+      "pid": 4,
+      "receipt": {
+        "bytes": 1646,
+        "sha256": "e82392bc37620660ce4c42f242e6cd1ca9858808219a000b3b453366a3a65525",
+        "gitBlob": "3d14ab01f4a67eb03b5dc21206f2b63bb904e9d6"
+      }
+    },
+    {
+      "file": "red-before-metadata-3-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "ls-tree",
+        "-rz",
+        "--full-tree",
+        "HEAD"
+      ],
+      "seconds": 0.11862165699858451,
+      "pid": 5,
+      "receipt": {
+        "bytes": 1671,
+        "sha256": "1ef533563357e8179554fd858183154dffd9cebfa3055b0575e9c1781b3f3513",
+        "gitBlob": "c4b18b66b127cf083aec64f9714c6efdbb858050"
+      }
+    },
+    {
+      "file": "red-before-metadata-4-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "diff",
+        "--cached",
+        "--name-only",
+        "-z"
+      ],
+      "seconds": 0.008757844996580388,
+      "pid": 6,
+      "receipt": {
+        "bytes": 1666,
+        "sha256": "397b46d501ebfa6a0ce9ef77656940be71e0a1ffe18a2d4a6f3acbcd75dcfb77",
+        "gitBlob": "77f85599412df5e0c1ca687008f009b13e69a78d"
+      }
+    },
+    {
+      "file": "red-before-metadata-5-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "ls-files",
+        "--others",
+        "--exclude-standard",
+        "-z"
+      ],
+      "seconds": 0.032693606000975706,
+      "pid": 7,
+      "receipt": {
+        "bytes": 1677,
+        "sha256": "c94928b59f7ed8bb82d693b72084d1ebde220e29f27c6ce911d86e4192963142",
+        "gitBlob": "da3fd4b72c7e2813467e49dd830d038f8ae3e84a"
+      }
+    },
+    {
+      "file": "red-before-metadata-6-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "ls-files",
+        "--stage",
+        "-z"
+      ],
+      "seconds": 0.020310932995926123,
+      "pid": 8,
+      "receipt": {
+        "bytes": 1656,
+        "sha256": "fc3e37e69736de522d860372e05058a22b1f82aa79e534ebce5197d90ebfb9dc",
+        "gitBlob": "49c16dc912bce9b2798d77ca1911d077361a53e7"
+      }
+    },
+    {
+      "file": "red-before-metadata-7-receipt.json",
+      "argv": [
+        "/usr/local/bin/git",
+        "diff",
+        "--name-only",
+        "-z",
+        "HEAD"
+      ],
+      "seconds": 0.020993372003431432,
+      "pid": 9,
+      "receipt": {
+        "bytes": 1664,
+        "sha256": "facdacbe73f9099fafef958c780385259afea7a15bfd5172aaee276832ebbe9c",
+        "gitBlob": "42c3ac2deb2f67f6df0004c072944d1c27b567f9"
+      }
+    },
+    {
+      "file": "red-native-metadata-8-receipt.json",
+      "argv": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "--input-type=commonjs",
+        "-e",
+        "'use strict';\nconst os = require('node:os');\nlet reads = 1;\nlet header = process.report.getReport().header;\nconst firstHeaderNullish = header == null;\nif (firstHeaderNullish) {\n  reads++;\n  header = process.report.getReport().header;\n}\nconst finalHeaderFalsy = !header;\nconst glibcVersionRuntime = header && header.glibcVersionRuntime || null;\nprocess.stdout.write(JSON.stringify({\n  platform: process.platform, arch: process.arch, nodeVersion: process.version,\n  endianness: os.endianness(), execPath: process.execPath, cwd: process.cwd(),\n  denoAbsent: typeof process.versions.deno === 'undefined' && typeof globalThis.Deno === 'undefined',\n  pnpAbsent: typeof process.versions.pnp === 'undefined',\n  requireModule: process.features.require_module === true,\n  reportReads: reads, firstHeaderNullish, finalHeaderFalsy, glibcVersionRuntime,\n  selectedRollupGnu: finalHeaderFalsy || Boolean(glibcVersionRuntime)\n}) + '\\n');\n"
+      ],
+      "seconds": 0.11501744300039718,
+      "pid": 107,
+      "receipt": {
+        "bytes": 2653,
+        "sha256": "fd2d68f9a8519ac7937818220314b982c920668ae9531721f9dcb4994fce136e",
+        "gitBlob": "dbd01ccf27e81849af4965b9bbb05c8472805b17"
+      }
+    }
+  ],
+  "cleanup": {
+    "unknownPrimaryLaunches": [],
+    "capturedSessionMembersAfter": [],
+    "newTestTempsRemaining": [],
+    "taskTmpEntriesAfter": [],
+    "viteTempAbsent": true,
+    "nodeDebtGatePassed": true,
+    "scope": "Captured primary sessions/groups and exact owned phase outputs; metadata sessions checked individually. No universal escaped-child/native custody claim."
+  },
+  "limits": [
+    "Original attempt remains refused/spent; no primary success transfers.",
+    "Formatter diagnosis and 116 other renderer data predicates remain diagnostic only.",
+    "No producer postimage, new control or replacement scope authored here.",
+    "No GUI/native/vendor/canonical build or whole E2E qualification."
+  ]
+}

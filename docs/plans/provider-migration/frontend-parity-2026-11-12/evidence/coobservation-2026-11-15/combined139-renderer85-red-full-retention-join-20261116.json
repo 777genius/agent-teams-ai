@@ -1,0 +1,125 @@
+{
+  "schema": "c714-current-refused-red-full-retention-root-join-v1",
+  "at": "2026-11-16T22:27:22.773Z",
+  "root": "/root",
+  "currentOuter": {
+    "bytes": 8828,
+    "sha256": "93ab8431fdd0c6515f4e01a84bb45b5ed16a9529a66659460004f5e976a687b8",
+    "gitBlob": "4eca696d2daa33c08ea4bd7fde795590406233ac"
+  },
+  "currentClassification": "REFUSED/SPENT; outer2, notPASS",
+  "priorRetentionProof": {
+    "bytes": 7124,
+    "sha256": "f0eb74dad52bee46558440be43df46ef0e7f399a89db8d96b5ce99b1fdaa29b9",
+    "gitBlob": "f64c0246f31578ceecb7fb0bd5df830b2f7fc547"
+  },
+  "full4PartitionBodiesFetchedAndRehashed": true,
+  "partitionJoins": [
+    {
+      "part": 1,
+      "identity": {
+        "bytes": 4326013,
+        "sha256": "78b5d2718cb8d11b44bfff74d83d29bedf28f5c6cdf74ba5fda2ae5a78cd751c",
+        "gitBlob": "bc970c1035aa7804b9fd6f50e45204fb466ba02f"
+      },
+      "rowStart": 0,
+      "rowEndExclusive": 31000,
+      "tupleField": "rows",
+      "rows": 31000
+    },
+    {
+      "part": 2,
+      "identity": {
+        "bytes": 4141629,
+        "sha256": "867bad8dc5bea19cfabd3e5e33748228e3a119129b8be4ff72f43fea8c4b3abb",
+        "gitBlob": "36e809c267f130aa696632f14f9f25d32b13bea3"
+      },
+      "rowStart": 31000,
+      "rowEndExclusive": 62000,
+      "tupleField": "rows",
+      "rows": 31000
+    },
+    {
+      "part": 3,
+      "identity": {
+        "bytes": 4204973,
+        "sha256": "1c63baf237ccf2485bb8787b50f9a243953c431f490cb970f55567d9543ebd76",
+        "gitBlob": "ec99ecaf06e8a2f013944e66983c5e771b9f86a5"
+      },
+      "rowStart": 62000,
+      "rowEndExclusive": 93000,
+      "tupleField": "rows",
+      "rows": 31000
+    },
+    {
+      "part": 4,
+      "identity": {
+        "bytes": 4167930,
+        "sha256": "b1c98bd7747f44ca2ff26d35c8dd3dec845bc52a47e0f85b42a4ca7560b358b0",
+        "gitBlob": "93491c2c85d205867ce5f25363d0c33d0c8f3420"
+      },
+      "rowStart": 93000,
+      "rowEndExclusive": 122773,
+      "tupleField": "rows",
+      "rows": 29773
+    }
+  ],
+  "fullReconstructedDependencies": {
+    "bytes": 39168001,
+    "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+    "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7",
+    "rows": 122773,
+    "regular": 117336,
+    "links": 5437,
+    "regularBytes": 1393889166
+  },
+  "currentFreshDependencyInstances": [
+    {
+      "path": "/tmp/c714-combined139-85-evidence/red/red-after-dependencies.json",
+      "name": "red-after-dependencies.json",
+      "mode": 420,
+      "bytes": 39168001,
+      "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+      "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+    },
+    {
+      "path": "/tmp/c714-combined139-85-evidence/red/red-before-dependencies.json",
+      "name": "red-before-dependencies.json",
+      "mode": 420,
+      "bytes": 39168001,
+      "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+      "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+    }
+  ],
+  "fullCompiled": {
+    "bytes": 400300,
+    "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+    "gitBlob": "224ff561f65772393140302de26b584bf08b06d9",
+    "rows": 1454,
+    "container": {
+      "bytes": 2572284,
+      "sha256": "22fe3985fc1fa3708a4c0387ecbb955c687d653538e11ba1fed1a64d19633652",
+      "gitBlob": "5192e6e0290dd5beaf486a3315b984759fef96bd"
+    },
+    "member": "host-build-compiled-after.json"
+  },
+  "currentFreshCompiledInstances": [
+    {
+      "path": "/tmp/c714-combined139-85-evidence/red/red-after-compiled.json",
+      "name": "red-after-compiled.json",
+      "mode": 420,
+      "bytes": 400300,
+      "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+      "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+    },
+    {
+      "path": "/tmp/c714-combined139-85-evidence/red/red-before-compiled.json",
+      "name": "red-before-compiled.json",
+      "mode": 420,
+      "bytes": 400300,
+      "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+      "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+    }
+  ],
+  "scope": "Currentrunner wrote fresh complete actualbefore/after manifests; rootcollector fullyreread eachactualfile. Both actualcurrent identities equal the complete losslessretained bodies independently reconstructed here. Historical outcomes are not transferred; originalcurrentpackage remainsREFUSED."
+}

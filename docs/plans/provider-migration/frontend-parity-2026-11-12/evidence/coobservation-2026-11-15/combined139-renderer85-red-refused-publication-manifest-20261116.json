@@ -1,0 +1,163 @@
+{
+  "schema": "c714-refused-combined-red-publication-manifest-v1",
+  "at": "2026-11-16T22:38:59.787Z",
+  "repository": "777genius/agent-teams-ai",
+  "branch": "fix/frontend-parity-coobservation-c714-20261115",
+  "parent": "179e719480965da06faa6a1119196bcf8c28667a",
+  "parentTree": "4e384efa3d86f9fee5c67797e5c1e1b0cb1acbd6",
+  "purpose": "Retain complete refused original combined RED, source-derived six-title diagnosis and bounded incoming source assessment. No new runtime/control/producer scope.",
+  "evidenceFiles": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-full-packet-20261116.json",
+      "bytes": 372332,
+      "sha256": "7c1aaee9137993e352eb8e6f1e758d7f90e1d1ec211a415218ad1becb7b60f2a",
+      "gitBlob": "854cadcca36a216b01f501d4a3ae496c76a599c4"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-observed-outer-20261116.json",
+      "bytes": 8828,
+      "sha256": "93ab8431fdd0c6515f4e01a84bb45b5ed16a9529a66659460004f5e976a687b8",
+      "gitBlob": "4eca696d2daa33c08ea4bd7fde795590406233ac"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-root-review-20261116.json",
+      "bytes": 35783,
+      "sha256": "a10bbfcf8dc3aff986eb504a89ce56cd8e916d8341aff56128c8abc30f248af1",
+      "gitBlob": "f11522d64b72f0c2d940420932d3845041f31a4f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-root-diagnosis-joins-20261116.json",
+      "bytes": 8014,
+      "sha256": "fdb78777ba5e183103733802479154e139ad67dd106f9b1e820273161947fe71",
+      "gitBlob": "279c4943f4b58cb33540e1ff90659c10a9bd04fd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-renderer-title-diagnosis-20261116.json",
+      "bytes": 127784,
+      "sha256": "7deff97792b556dea4da2ed2e1c10fc158445d51e4343171f2e813ff242b6196",
+      "gitBlob": "b80e069b705d41405733ff4fd40caa3ad2a753e6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-loupe-source-read-20261116.json",
+      "bytes": 54541,
+      "sha256": "1b62fc4125d83f567d54b3feba78a8e3b90271c127827b57de0a840f5827835b",
+      "gitBlob": "2a2e7c637ba8b2690d0f59ae45d284f1c97e61de"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-full-retention-join-20261116.json",
+      "bytes": 4424,
+      "sha256": "b31f4015b0aafdb66e95300237eacb619f59d0e542dbdc2d8a81b91f53881fde",
+      "gitBlob": "5dfb4f3f78080a8c0890173e683a11d266d2ee55"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-full-retention-reconstruction-20261116.json",
+      "bytes": 7124,
+      "sha256": "f0eb74dad52bee46558440be43df46ef0e7f399a89db8d96b5ce99b1fdaa29b9",
+      "gitBlob": "f64c0246f31578ceecb7fb0bd5df830b2f7fc547"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-materialize-tests-actual-root-publication-20261116.json",
+      "bytes": 68230,
+      "sha256": "8cd9f33fc3afeba9e1b9843620022272a850aef36a740a87e3147b9df89c3737",
+      "gitBlob": "1a90d32206b2b31ae3e3dba8e2edde55349851c7"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-materialize-tests-actual-independent-publication-20261116.json",
+      "bytes": 115641,
+      "sha256": "fcfa1571b7ea385fea409dcbe5d5adfe2e9b8b60309a6b331c439feb26704790",
+      "gitBlob": "374fc9db427cb6bcd3380190e836717fa661fe3f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-1192-75cf2dcb-and-d-pr8-bounded-assessment-20261116.json",
+      "bytes": 345710,
+      "sha256": "42e1483d832195946da1772abd172ffb903c6c3f1466925dd856bb33ea79c348",
+      "gitBlob": "530b81573d701849da6249e92195572dc450959a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-control-correction-recommendations-20261116.json",
+      "bytes": 21134,
+      "sha256": "f745a8fa1ed54b995c7d379ab89d7e9030326e1fd049fdbab8bc925bb79a4572",
+      "gitBlob": "e5594f50d0894404c42b2bf631b75973e87869eb"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-independent-guard-20261116.json",
+      "bytes": 356854,
+      "sha256": "bfed191f918b6f056faffac5b56a1e0ebae02139e22dc29529f59ee390e65572",
+      "gitBlob": "4cd9b4bc60e1d64789524c692ef171aaa98b42de"
+    }
+  ],
+  "modifiedFiles": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2541109,
+      "sha256": "ec927f71974b17150a157a1e6a08ae1849ff88d391539531ae4abc874850f6ae",
+      "gitBlob": "1050796efbbb561e5db91788055bb31be4629897",
+      "prior": {
+        "bytes": 2537686,
+        "sha256": "2b3cd6bb6f0b1a165d4d3a7f4e1a23c3cc5835e929ac0d233c465a9f5c3e63d5",
+        "gitBlob": "dc942891889503c6d6c50c9f401ea5bfd2c6ce76"
+      },
+      "exactPrefixPreserved": true,
+      "appendIdentity": {
+        "bytes": 3423,
+        "sha256": "e359a6cb718e335245bd671065cbf4c99da317d3b92013d62b286eed12382b99",
+        "gitBlob": "29c352292f1dea297b086565495ad5b2c923f68c"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 39214,
+      "sha256": "a216b4f514d6a004e9a216ae7d6e1185c91abc2dc5eddcabe2de72d98cb29fdb",
+      "gitBlob": "f269fe29cb7b3bcbe7be6ff67936bc91a44c0b62",
+      "prior": {
+        "bytes": 37880,
+        "sha256": "ac36398b286a028b6d043fcacb80e9b132f4f8571bf4773a789c2e99e3b98db7",
+        "gitBlob": "81ac235ebeecfa8e28998174e9190520b3d927a7"
+      },
+      "exactPrefixPreserved": true,
+      "appendIdentity": {
+        "bytes": 1334,
+        "sha256": "85281fc89c0493e01af7be30a23ac2c03c0e557b2d228ad9bdd3492f5e49da4a",
+        "gitBlob": "108b6bda120afd9238102f488f7ae0adb8839411"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 134214,
+      "sha256": "39a33e74179c7bd17c834935b77d91affcdef6ffd8a3e4d98200034540a58cfd",
+      "gitBlob": "e7e28e7c9d7032fe1034b128bae2953002fc2c88",
+      "prior": {
+        "bytes": 125227,
+        "sha256": "f378553c772f35c07ce9c9899b1a7e312a1b1a007ae74c7acfd2d68a40ec9984",
+        "gitBlob": "5719272acd2695cb9e6d2f8ecc6ff5ac6800658f"
+      },
+      "preservedOriginalBundles": 27,
+      "preservedOriginalTotals": {
+        "bundles": 27,
+        "outerBytes": 17894693,
+        "payloadInstances": 219,
+        "payloadBytes": 15911913
+      }
+    }
+  ],
+  "manifestPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-publication-manifest-20261116.json",
+  "expectedDelta": {
+    "adds": 14,
+    "modifications": 3,
+    "totalChanges": 17,
+    "sourceChanges": 0,
+    "modeChanges": 0,
+    "deletions": 0,
+    "allDocs": true
+  },
+  "expectedCensus": {
+    "parentLeaves": 11812,
+    "parentDocs": 3014,
+    "leaves": 11826,
+    "docs": 3028,
+    "nonDocs": 8798,
+    "workflows": 42
+  },
+  "unchangedLargeRetention": "All four dependency partitions, compiled container, full NUL metadata container and fullsource499fe remain at existing parent paths. Exact current joins are retained in the packet and root/independent reports.",
+  "classification": "REFUSED/SPENT; no acceptedCombinedRed, no producer authority, no replacement selection"
+}

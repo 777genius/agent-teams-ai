@@ -1,0 +1,169 @@
+{
+  "kind": "combined-red-separately-observed-outer-result",
+  "observedAtUtc": "2026-11-16T22:21:00.361Z",
+  "sessionId": 64038,
+  "intent": {
+    "kind": "once-only-combined-red-launch-intent",
+    "at": "2026-11-16T22:17:48.543Z",
+    "selectedAttempt": 1,
+    "noRetry": true,
+    "publicationGate": {
+      "kind": "complete-materialization-publication-gate-closed",
+      "at": "2026-11-16T22:17:41.528Z",
+      "commit": "179e719480965da06faa6a1119196bcf8c28667a",
+      "tree": "4e384efa3d86f9fee5c67797e5c1e1b0cb1acbd6",
+      "root": {
+        "bytes": 68230,
+        "sha256": "8cd9f33fc3afeba9e1b9843620022272a850aef36a740a87e3147b9df89c3737",
+        "gitBlob": "1a90d32206b2b31ae3e3dba8e2edde55349851c7"
+      },
+      "independent": {
+        "bytes": 115641,
+        "sha256": "fcfa1571b7ea385fea409dcbe5d5adfe2e9b8b60309a6b331c439feb26704790",
+        "gitBlob": "374fc9db427cb6bcd3380190e836717fa661fe3f"
+      },
+      "rootFullReadIndependent": true,
+      "materializationOuter": {
+        "bytes": 5899,
+        "sha256": "c571e8e779b4e66b027365ae68581516b2dfd942cffbe3366f86c679799338a7",
+        "gitBlob": "17635bb8aed9be764c00b17e4a7af1d2b66e3dd3"
+      },
+      "observedMaterializationOuterExit": 0,
+      "runner": {
+        "bytes": 89953,
+        "sha256": "95cdbc1f16f770878f8ac8862f4a3ef1dde3667d180e3cdca39f3ca3d7e7058d",
+        "gitBlob": "906d8b49218f64037b71a7642bfa1bd4254befbd"
+      },
+      "binding": {
+        "bytes": 4898503,
+        "sha256": "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+        "gitBlob": "f7c78d18f79cf7781aad840ae35f7464faa7542d"
+      },
+      "sourceAfter": {
+        "bytes": 2478745,
+        "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+        "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+      },
+      "combinedRedExecuted": false,
+      "producerPostimagesAuthored": false
+    },
+    "argv": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+      "/tmp/c714-combined139-85-controls/combined-runner.py",
+      "/tmp/c714-combined139-85-controls/red-binding.json",
+      "5b44dba9bac95dae81abcb01f569d55ce49e506d643a2c148b5b5d6ec0c7ede9",
+      "run",
+      "red"
+    ],
+    "expectedButUnobserved": {
+      "node": {
+        "cases": 139,
+        "pass": 134,
+        "fail": 5
+      },
+      "renderer": {
+        "cases": 85,
+        "pass": 82,
+        "fail": 3
+      }
+    },
+    "scope": "One complete fresh before/after runtime-input package; original180s perprimary/30s metadata; fullcensus and capturedcleanup; no realClaude/Codex."
+  },
+  "launchToolResult": {
+    "chunk_id": "72911d",
+    "wall_time_seconds": 1.00085479,
+    "session_id": 64038,
+    "original_token_count": 0,
+    "output": ""
+  },
+  "finalToolResult": {
+    "chunk_id": "8c9df6",
+    "wall_time_seconds": 3.078406246,
+    "exit_code": 2,
+    "original_token_count": 613,
+    "output": "{\"command\": \"red\", \"action\": \"run\", \"phase\": \"red\", \"exitCode\": 1, \"exitSignal\": null, \"timedOut\": false, \"executionError\": \"AssertionError: \", \"postflightError\": null, \"transientCleanupError\": null, \"inputsPreserved\": true, \"fullRuntimeInputsInspected\": true, \"fullRuntimeInputsPreserved\": true, \"sourceAndSupervisorMetadataPreserved\": true, \"commandCompletedNormally\": false, \"semanticAdmissionComplete\": false, \"scopeCompleted\": false, \"preflightSeconds\": 60.39094469400152, \"commandPhaseSeconds\": 24.291327454993734, \"cleanupSeconds\": 0, \"transientCaptureAndCleanupSeconds\": 0.0010036660023615696, \"postflightSeconds\": 59.33960245000344, \"totalInvocationSeconds\": 144.0245011299994, \"unreachedCommands\": [], \"unacceptedCommands\": [\"renderer\"], \"cleanup\": {\"unknownPrimaryLaunches\": [], \"capturedSessionMembersAfter\": [], \"newTestTempsRemaining\": [], \"taskTmpEntriesAfter\": [], \"viteTempAbsent\": true, \"nodeDebtGatePassed\": true, \"scope\": \"Captured primary sessions/groups and exact owned phase outputs; metadata sessions checked individually. No universal escaped-child/native custody claim.\"}, \"signalAdmissionCutoff\": {\"at\": \"2026-11-16T22:20:14.355443+00:00\", \"pendingSignals\": [], \"supervisorExitZeroRequired\": true, \"scope\": \"Managed-signal pending snapshot while blocked; later signals require separate observed outer-exit admission.\"}, \"primarySummaries\": [{\"command\": \"node\", \"status\": \"ACCEPTED\", \"primaryReceipt\": {\"path\": \"/tmp/c714-combined139-85-evidence/red/red-node-1-receipt.json\", \"bytes\": 1470, \"sha256\": \"84160450cbfa9c402fbc30ea5930760a00951e7619c3af4e7baaf6fd984edfc3\", \"gitBlob\": \"21fc9645dd2c9fd729e5d0e77e2612ecdf3c5305\"}, \"semanticReceipt\": {\"path\": \"/tmp/c714-combined139-85-evidence/red/red-node-semantics.json\", \"bytes\": 32700, \"sha256\": \"26bc8e31878cc82b2c779ca2be4a0a7b7b3087de0f59b86e0eebb5650ec4a2c8\", \"gitBlob\": \"c2afe20a24063301a59bfacce29a75da8d797606\"}}, {\"command\": \"renderer\", \"status\": \"EXECUTED\", \"primaryReceipt\": {\"path\": \"/tmp/c714-combined139-85-evidence/red/red-renderer-1-receipt.json\", \"bytes\": 2610, \"sha256\": \"a8938423b046b39eb3116c35b7a12059dae2af6625d32107067e4c1c512bafe2\", \"gitBlob\": \"a34ef65d1fff31d4523e178f7f33839b600c495f\"}, \"semanticReceipt\": null}], \"finalReceipt\": {\"path\": \"/tmp/c714-combined139-85-evidence/red/phase-receipt.json\", \"bytes\": 137409, \"sha256\": \"03482f1355c14b3b33530748a47ecafc059edb74acb6b3217ea2c99dfcd0809f\", \"gitBlob\": \"b7e726db8ccec12bf41277dd2f40c31dc5148fe2\"}}\n"
+  },
+  "observedOuterExit": 2,
+  "summary": {
+    "command": "red",
+    "action": "run",
+    "phase": "red",
+    "exitCode": 1,
+    "exitSignal": null,
+    "timedOut": false,
+    "executionError": "AssertionError: ",
+    "postflightError": null,
+    "transientCleanupError": null,
+    "inputsPreserved": true,
+    "fullRuntimeInputsInspected": true,
+    "fullRuntimeInputsPreserved": true,
+    "sourceAndSupervisorMetadataPreserved": true,
+    "commandCompletedNormally": false,
+    "semanticAdmissionComplete": false,
+    "scopeCompleted": false,
+    "preflightSeconds": 60.39094469400152,
+    "commandPhaseSeconds": 24.291327454993734,
+    "cleanupSeconds": 0,
+    "transientCaptureAndCleanupSeconds": 0.0010036660023615696,
+    "postflightSeconds": 59.33960245000344,
+    "totalInvocationSeconds": 144.0245011299994,
+    "unreachedCommands": [],
+    "unacceptedCommands": [
+      "renderer"
+    ],
+    "cleanup": {
+      "unknownPrimaryLaunches": [],
+      "capturedSessionMembersAfter": [],
+      "newTestTempsRemaining": [],
+      "taskTmpEntriesAfter": [],
+      "viteTempAbsent": true,
+      "nodeDebtGatePassed": true,
+      "scope": "Captured primary sessions/groups and exact owned phase outputs; metadata sessions checked individually. No universal escaped-child/native custody claim."
+    },
+    "signalAdmissionCutoff": {
+      "at": "2026-11-16T22:20:14.355443+00:00",
+      "pendingSignals": [],
+      "supervisorExitZeroRequired": true,
+      "scope": "Managed-signal pending snapshot while blocked; later signals require separate observed outer-exit admission."
+    },
+    "primarySummaries": [
+      {
+        "command": "node",
+        "status": "ACCEPTED",
+        "primaryReceipt": {
+          "path": "/tmp/c714-combined139-85-evidence/red/red-node-1-receipt.json",
+          "bytes": 1470,
+          "sha256": "84160450cbfa9c402fbc30ea5930760a00951e7619c3af4e7baaf6fd984edfc3",
+          "gitBlob": "21fc9645dd2c9fd729e5d0e77e2612ecdf3c5305"
+        },
+        "semanticReceipt": {
+          "path": "/tmp/c714-combined139-85-evidence/red/red-node-semantics.json",
+          "bytes": 32700,
+          "sha256": "26bc8e31878cc82b2c779ca2be4a0a7b7b3087de0f59b86e0eebb5650ec4a2c8",
+          "gitBlob": "c2afe20a24063301a59bfacce29a75da8d797606"
+        }
+      },
+      {
+        "command": "renderer",
+        "status": "EXECUTED",
+        "primaryReceipt": {
+          "path": "/tmp/c714-combined139-85-evidence/red/red-renderer-1-receipt.json",
+          "bytes": 2610,
+          "sha256": "a8938423b046b39eb3116c35b7a12059dae2af6625d32107067e4c1c512bafe2",
+          "gitBlob": "a34ef65d1fff31d4523e178f7f33839b600c495f"
+        },
+        "semanticReceipt": null
+      }
+    ],
+    "finalReceipt": {
+      "path": "/tmp/c714-combined139-85-evidence/red/phase-receipt.json",
+      "bytes": 137409,
+      "sha256": "03482f1355c14b3b33530748a47ecafc059edb74acb6b3217ea2c99dfcd0809f",
+      "gitBlob": "b7e726db8ccec12bf41277dd2f40c31dc5148fe2"
+    }
+  },
+  "attemptSpent": true,
+  "replayed": false,
+  "classification": "REFUSED: renderer mechanical semantic admission asserted; fullbefore/after inputs preserved and cleanup complete. Original attempt remains failed and is not promoted toPASS.",
+  "producerPostimagesAuthored": false
+}

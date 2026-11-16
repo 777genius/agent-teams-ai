@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 1,
+  "kind": "complete-runtime-manifest-retention-reconstruction-preparation",
+  "reviewer": "/root/combined_guard_review",
+  "preparedAtUtc": "2026-11-16T22:21:49.229Z",
+  "repository": "777genius/agent-teams-ai",
+  "scope": "Pure data reconstruction of historical immutable manifest bodies for future exact joins. No current combinedRED evidence or runtime acceptance.",
+  "basis": {
+    "priorClosedRecoveryPacket": {
+      "bytes": 269555,
+      "sha256": "c3de8b5712f022466023598b7c90c6ef7cee302780014f11bd1c16a84e43c3bd",
+      "gitBlob": "4dfdbf5272044f933c5d3015511633487cbf3946"
+    },
+    "compiledAndTreeContainer": {
+      "bytes": 2572284,
+      "sha256": "22fe3985fc1fa3708a4c0387ecbb955c687d653538e11ba1fed1a64d19633652",
+      "gitBlob": "5192e6e0290dd5beaf486a3315b984759fef96bd"
+    },
+    "identityHelper": {
+      "bytes": 3982,
+      "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7",
+      "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8"
+    }
+  },
+  "dependencyPartitions": [
+    {
+      "identity": {
+        "bytes": 4326013,
+        "sha256": "78b5d2718cb8d11b44bfff74d83d29bedf28f5c6cdf74ba5fda2ae5a78cd751c",
+        "gitBlob": "bc970c1035aa7804b9fd6f50e45204fb466ba02f"
+      },
+      "part": 1,
+      "parts": 4,
+      "rowStart": 0,
+      "rowEndExclusive": 31000,
+      "rows": 31000,
+      "startingPreviousPath": "",
+      "modes": [
+        "100644",
+        "100755",
+        "120000"
+      ],
+      "tupleColumns": [
+        "commonPrefixLengthWithPreviousPath",
+        "pathSuffix",
+        "modeIndex",
+        "bytes",
+        "sha256",
+        "gitBlob",
+        "optionalTarget"
+      ]
+    },
+    {
+      "identity": {
+        "bytes": 4141629,
+        "sha256": "867bad8dc5bea19cfabd3e5e33748228e3a119129b8be4ff72f43fea8c4b3abb",
+        "gitBlob": "36e809c267f130aa696632f14f9f25d32b13bea3"
+      },
+      "part": 2,
+      "parts": 4,
+      "rowStart": 31000,
+      "rowEndExclusive": 62000,
+      "rows": 31000,
+      "startingPreviousPath": "node_modules/.pnpm/@typescript-eslint+scope-manager@8.57.1/node_modules/@typescript-eslint/scope-manager/dist/scope/BlockScope.js",
+      "modes": [
+        "100644",
+        "100755",
+        "120000"
+      ],
+      "tupleColumns": [
+        "commonPrefixLengthWithPreviousPath",
+        "pathSuffix",
+        "modeIndex",
+        "bytes",
+        "sha256",
+        "gitBlob",
+        "optionalTarget"
+      ]
+    },
+    {
+      "identity": {
+        "bytes": 4204973,
+        "sha256": "1c63baf237ccf2485bb8787b50f9a243953c431f490cb970f55567d9543ebd76",
+        "gitBlob": "ec99ecaf06e8a2f013944e66983c5e771b9f86a5"
+      },
+      "part": 3,
+      "parts": 4,
+      "rowStart": 62000,
+      "rowEndExclusive": 93000,
+      "rows": 31000,
+      "startingPreviousPath": "node_modules/.pnpm/es-abstract@1.24.1/node_modules/es-abstract/2023/GetMatchIndexPair.js",
+      "modes": [
+        "100644",
+        "100755",
+        "120000"
+      ],
+      "tupleColumns": [
+        "commonPrefixLengthWithPreviousPath",
+        "pathSuffix",
+        "modeIndex",
+        "bytes",
+        "sha256",
+        "gitBlob",
+        "optionalTarget"
+      ]
+    },
+    {
+      "identity": {
+        "bytes": 4167930,
+        "sha256": "b1c98bd7747f44ca2ff26d35c8dd3dec845bc52a47e0f85b42a4ca7560b358b0",
+        "gitBlob": "93491c2c85d205867ce5f25363d0c33d0c8f3420"
+      },
+      "part": 4,
+      "parts": 4,
+      "rowStart": 93000,
+      "rowEndExclusive": 122773,
+      "rows": 29773,
+      "startingPreviousPath": "node_modules/.pnpm/lucide-react@0.575.0_react@19.2.4/node_modules/lucide-react/dist/esm/icons/refresh-ccw.js",
+      "modes": [
+        "100644",
+        "100755",
+        "120000"
+      ],
+      "tupleColumns": [
+        "commonPrefixLengthWithPreviousPath",
+        "pathSuffix",
+        "modeIndex",
+        "bytes",
+        "sha256",
+        "gitBlob",
+        "optionalTarget"
+      ]
+    }
+  ],
+  "reconstruction": {
+    "exactMechanism": "Visit partitions1..4, require contiguous rowStart/rowEndExclusive and previous-path continuity. For each6/7column tuple: path=previousPath.slice(0,commonPrefixLength)+pathSuffix. Emit object fields in order path,mode,bytes,sha256,gitBlob; append literal target only when tuple length7. Require mode120000 iff target present, valid prefix/mode and strictly increasing paths. Serialize full array using Python json.dumps(indent=2,ensure_ascii=True)+LF; in pureJS JSON.stringify(indent2) followed by escaping U+007F..FFFF code units and terminalLF produced the exact expected body.",
+    "fullReconstructedBodyReadAndRehashed": true,
+    "identity": {
+      "bytes": 39168001,
+      "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+      "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+    },
+    "rows": 122773,
+    "regular": 117336,
+    "links": 5437,
+    "regularBytes": 1393889166,
+    "noOmittedOrDeduplicatedRows": true,
+    "all4FullPartitionBodiesReadAndRehashed": true
+  },
+  "compiled": {
+    "container": {
+      "bytes": 2572284,
+      "sha256": "22fe3985fc1fa3708a4c0387ecbb955c687d653538e11ba1fed1a64d19633652",
+      "gitBlob": "5192e6e0290dd5beaf486a3315b984759fef96bd"
+    },
+    "memberOriginalName": "host-build-compiled-after.json",
+    "memberStringField": "content",
+    "identity": {
+      "bytes": 400300,
+      "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+      "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+    },
+    "rows": 1454,
+    "regularBytes": 6243084,
+    "fullLiteralReadAndRehashed": true
+  },
+  "correction": {
+    "parentProvidedPart2": "36e809c267f130aa696632f14f9f25d32b13bea34",
+    "issue": "41characters caused GitHub422; trailing4 was concatenated size prefix.",
+    "resolvedFrom": "Complete accepted freshBootstrapGuardActualReview6253 and originalRED/GREEN guard bodies already preserved in reviewed binding.",
+    "actualExactPart2": "36e809c267f130aa696632f14f9f25d32b13bea3"
+  },
+  "joinRequirements": [
+    "Current selected runner must actually perform its fresh complete preflight and postflight reads. Old payloads never replace those reads.",
+    "Each actual current manifest file must be retained with its full actual bytes/SHA256/Git identity and exact phase path; then equality to this complete reconstruction proves its lossless retained representation.",
+    "Join every current instance independently; do not accept only counts, an earlier boundary, earlier green/recovery result or a partial array.",
+    "If any actual current identity differs, no historical substitution is admitted; retain the new entire body and inspect the difference.",
+    "Keep full source/current raw/start/final/semantic/cleanup/outer evidence separate. This proof says nothing about current Node139/renderer85 outcome."
+  ],
+  "currentCombinedRuntime": {
+    "observedByReviewer": false,
+    "accepted": false,
+    "freshBoundaryInspected": false
+  },
+  "reviewerActions": {
+    "gitReads": true,
+    "pureJavaScriptDataProcessing": true,
+    "bareProofBlobOnly": true,
+    "shellRuntimeSourceRefCiActions": 0
+  }
+}

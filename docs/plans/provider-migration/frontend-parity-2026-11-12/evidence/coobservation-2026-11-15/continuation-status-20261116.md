@@ -207,3 +207,11 @@ No selected controls were staged, no source was materialized, no current package
 The one source-only materialize-tests session10639 completed with observedouter0 in5.904 seconds. Packetbc87216a retains all60files/11,128,084bytes. Root211a94dc with command supplement00c07b10, Guard62fda73c and parityeeb4a37b accept the complete source/metadata result. Exactlytwo test rows changed;8796otherrows, sevenproducers and42workflows remain exact. Fullsourceafter499fe054 has6physicaloverlays; all14Gitmetadata commands and captured cleanup are complete.
 
 No test primary has run. Runtimeinputclosure remainsUNINSPECTEDfalse/null for this source-only phase. Full actual publication readback precedes the once-only combinedRED using complete fresh runtime inputs. Producer fixes still require acceptedcurrentRED; canonicaltyping/build, GUI/platform/native, integration and fullE2E remainOPEN.
+
+## Combined RED refused; six-title prediction error diagnosed
+
+The one original combined RED invocation, session 64038, returned observed supervisor 2 and remains REFUSED/SPENT. Node completed 139 cases (134 pass / five selected failures); renderer completed 85 (82 pass / three selected failures). All original 133 Node and 80 renderer cases passed. Renderer admission nevertheless failed because the first six expected display names omitted Vitest's quotes around string parameters. Exact source-derived diagnosis b80e069b and complete retained package 854cadcc preserve the discrepancy.
+
+Root f11522d6 / 279c4943 and independent Guard 4cd9b4bc account for all 81 phase files, complete fresh before/after inputs, 17 captured launches, original clocks and empty captured/output cleanup. The package is not accepted; no primary result transfers and no producer postimage is authorized.
+
+Recommendations e5594f50 describe a possible new, narrowly reviewed control scope with corrected literal names and historical materialization provenance. This checkpoint selects no replacement scope. Complete publication readbacks still precede that selection. No real Claude/Codex, CI action, frozen-PR mutation, incoming adoption or E2E completion is claimed. Broader runtime/platform, integration and canonical typing/build gates remain OPEN.
