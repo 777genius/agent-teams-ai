@@ -1,0 +1,198 @@
+{
+  "kind": "renderer-prospective-control-path-data",
+  "paths": [
+    {
+      "path": "node_modules/.vite-temp",
+      "lexists": false,
+      "followedTargetExists": false
+    },
+    {
+      "path": "node_modules/.vite",
+      "lexists": false,
+      "followedTargetExists": false
+    },
+    {
+      "path": ".env",
+      "lexists": false,
+      "followedTargetExists": false
+    },
+    {
+      "path": ".env.local",
+      "lexists": false,
+      "followedTargetExists": false
+    },
+    {
+      "path": ".env.test",
+      "lexists": false,
+      "followedTargetExists": false
+    },
+    {
+      "path": ".env.test.local",
+      "lexists": false,
+      "followedTargetExists": false
+    },
+    {
+      "path": "vitest.workspace.ts",
+      "lexists": false,
+      "followedTargetExists": false
+    },
+    {
+      "path": "vitest.workspace.js",
+      "lexists": false,
+      "followedTargetExists": false
+    },
+    {
+      "path": "vitest.workspace.mjs",
+      "lexists": false,
+      "followedTargetExists": false
+    },
+    {
+      "path": "vitest.workspace.json",
+      "lexists": false,
+      "followedTargetExists": false
+    },
+    {
+      "path": "node_modules/.bin/vitest",
+      "lexists": true,
+      "followedTargetExists": true,
+      "mode": "0o755",
+      "kind": "regular",
+      "resolvedPath": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.bin/vitest",
+      "body": "#!/bin/sh\n# Resolve $0 through symlinks so basedir is the shim's real directory.\n# Cap hops at the kernel's ELOOP limit so a cycle cannot hang the shim.\nlink=\"$0\"\nhops=0\nwhile [ -L \"$link\" ] && [ \"$hops\" -lt 40 ]; do\n  hops=$((hops+1))\n  target=$(readlink \"$link\")\n  case \"$target\" in\n    /*) link=\"$target\" ;;\n    *)  link=\"$(dirname \"$link\")/$target\" ;;\n  esac\ndone\nbasedir=$(dirname \"$(echo \"$link\" | sed -e 's,\\\\,/,g')\")\nbasedir_win=\"$basedir\"\nexe=\"\"\nmsys=\"\"\n\ncase `uname -a` in\n  *CYGWIN*|*MINGW*|*MSYS*)\n    if command -v cygpath > /dev/null 2>&1; then\n      basedir_win=`cygpath -w \"$basedir\"`\n    fi\n    exe=\".exe\"\n    msys=\"true\"\n  ;;\n  *WSL2*)\n    if command -v wslpath > /dev/null 2>&1; then\n      basedir_win=\"$(wslpath -w \"$basedir\" 2> /dev/null)\"\n      if [ $? -ne 0 ] || [ -z \"$basedir_win\" ]; then\n        basedir_win=\"$basedir\"\n      else\n        exe=\".exe\"\n      fi\n    fi\n  ;;\nesac\n\nif [ -z \"$NODE_PATH\" ]; then\n  export NODE_PATH=\"/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/node_modules:/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules:/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/node_modules\"\nelse\n  export NODE_PATH=\"/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/node_modules:/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules:/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/node_modules:$NODE_PATH\"\nfi\nif [ -n \"$exe\" ] && [ -x \"$basedir/node.exe\" ]; then\n  exec \"$basedir/node.exe\"  \"$basedir_win/../.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/vitest.mjs\" \"$@\"\nelif [ -x \"$basedir/node\" ]; then\n  exec \"$basedir/node\"  \"$basedir/../.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/vitest.mjs\" \"$@\"\nelif command -v node >/dev/null 2>&1; then\n  exec node  \"$basedir/../.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/vitest.mjs\" \"$@\"\nelif [ -n \"$exe\" ] && command -v node.exe >/dev/null 2>&1; then\n  exec node.exe  \"$basedir_win/../.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/vitest.mjs\" \"$@\"\nelse\n  exec node  \"$basedir/../.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/vitest.mjs\" \"$@\"\nfi\n# cmd-shim-target=/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/vitest.mjs\n",
+      "identity": {
+        "bytes": 3409,
+        "sha256": "4932ff45e356889b3e615bf1fcd05012914f6421e63da335a5858c85f2c7317d",
+        "gitBlob": "e7a50ea8a192a948e539a48db1867ec541a5a9f1"
+      }
+    },
+    {
+      "path": "node_modules/vitest",
+      "lexists": true,
+      "followedTargetExists": true,
+      "mode": "0o777",
+      "kind": "symlink",
+      "resolvedPath": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest",
+      "literalTarget": ".pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest"
+    }
+  ],
+  "environmentPresenceOnly": [
+    {
+      "key": "ESBUILD_BINARY_PATH",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "NODE_OPTIONS",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "NODE_ENV",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "NODE_COMPILE_CACHE",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "NODE_COMPILE_CACHE_PORTABLE",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "NODE_DISABLE_COMPILE_CACHE",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "VITEST",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "VITEST_MODE",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "VITEST_MAX_THREADS",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "VITEST_MIN_THREADS",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "VITEST_MAX_FORKS",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "VITEST_MIN_FORKS",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "VITEST_POOL_ID",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "VITEST_WORKER_ID",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "VITEST_COVERAGE_PROVIDER",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "VITE_NODE_DEPS_MODULE_DIRECTORIES",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "VITE_NODE_WEB_WORKER",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "VITEST_DUMP",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "DEBUG",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "CI",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "AGENT_TEAMS_VITEST_TEMP_CLEANUP_DONE",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "MEMBER_WORK_SYNC_RECOVERY_KEEP_TEMP",
+      "present": false,
+      "valueIdentity": null
+    },
+    {
+      "key": "MEMBER_WORK_SYNC_RECOVERY_LIVE",
+      "present": false,
+      "valueIdentity": null
+    }
+  ],
+  "sourceOrConfigChanged": false,
+  "argvSelected": false,
+  "rendererExecuted": false
+}

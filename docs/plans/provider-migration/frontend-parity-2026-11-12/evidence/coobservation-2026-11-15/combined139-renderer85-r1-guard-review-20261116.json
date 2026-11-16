@@ -1,0 +1,574 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-prospective-combined-node139-renderer85-r1-guard-review",
+  "reviewer": "/root/recovery_guard_v2",
+  "repository": "777genius/agent-teams-ai",
+  "recordedAtUTC": "2026-11-16T20:57:19.185Z",
+  "verdict": {
+    "accepted": true,
+    "disposition": "ACCEPTED: exact prospective combined R1 d52bf425109d265914631ddea62f2d67e979cff5 for its existing two-review, docs-only publication and complete actual readback gates.",
+    "blockingIssues": [],
+    "scope": "Requirements review of one Node139->renderer85 RED package, one corresponding GREEN package, exact two-test/three-producer source transitions and the separately selected four-command validation package.",
+    "noPostimageOrRuntimeApprovalBeforeRequiredGates": true,
+    "noExistingAttemptRenewed": true,
+    "noBroadQualificationTransferred": true
+  },
+  "exactReviewedSubjects": {
+    "finalR1": {
+      "bytes": 77830,
+      "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+      "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+    },
+    "previousPnPmAmendedDraft": {
+      "bytes": 75543,
+      "sha256": "1fd956ca96ad953e0d47b98b954f7db6d91b163bd3223c47e2b4d4a52cb4d108",
+      "gitBlob": "35b498f4a655053892d6d23e9f669d4a4f453edd"
+    },
+    "previousCombinedDraft": {
+      "bytes": 74706,
+      "sha256": "e40d3915741b0d288a2ca5e1fee241dae1a6efef2a028b7cff94c733d5a4956d",
+      "gitBlob": "a6e60dceaf3aee4cd0ff379fd7252a4f28270ef2"
+    },
+    "completionRootReadback": {
+      "bytes": 24097,
+      "sha256": "89873e701182ef5e1d94177ac041daadfc6bc9d067bcf752b8e76e9620e953cd",
+      "gitBlob": "46ff433364d89b354dddacdea287983db022aed1"
+    },
+    "completionIndependentReadback": {
+      "bytes": 127111,
+      "sha256": "e6017abfe125a635b5f6ce887277ca300786e814865f66b2c1695bc6c24d5909",
+      "gitBlob": "d2f792137c51e94c1ff7b95909514738e41baa9b"
+    },
+    "originalRunner": {
+      "bytes": 48838,
+      "sha256": "e50699cb9f6e92b563cf06dabc2af6c1d16d50f703fbc4ef90ff63d23c9c86a5",
+      "gitBlob": "165f4e8ce9a32f03922de9cf4b4a9168bf29e9f1"
+    },
+    "reviewedRecoveryRunner": {
+      "bytes": 52074,
+      "sha256": "fa3920cdf633c585db18c2fc30fa0e97f2103c5ae00a133145f1e069105753cd",
+      "gitBlob": "b961d5e8283a775ae66afcb5475247c55b859547"
+    },
+    "completeCurrentSource": {
+      "bytes": 2478650,
+      "sha256": "b38030cb61abe1e4eddc1812de9bfebc5e707352b9aef26826981de25c4d94f0",
+      "gitBlob": "8860893e39a0daf17e8b499baee64b7040a9b3a2"
+    }
+  },
+  "method": {
+    "completeR1Read": true,
+    "initial74706ByteProposalReadInFull": true,
+    "intermediateAndFinalWholeBodiesIndependentlyRehashed": true,
+    "everyAmendedFieldReadAndUnchangedFieldsCompared": true,
+    "fullTargetBodiesEvaluated": false,
+    "shellCommands": 0,
+    "runtimeCommands": 0,
+    "sourceOrControlFileWrites": 0,
+    "refPrCiMutations": 0,
+    "realClaudeCodexExecutions": 0,
+    "newPostimagesAuthored": 0,
+    "gitOperationScope": "Read-only blob fetches; this review retained solely as a bare Git blob.",
+    "proofStyle": "Pure V8 data hashing/comparison and static reading. The original165f and exact reviewedb961 are source data only. Five cited preparation reports were fetched and rehashed; relevant installed-source passages for CLI, reporters, conditions, temp ownership and teardown were inspected."
+  },
+  "completionAuthority": {
+    "baseCommit": "356a919a66818e03e62664930a4d74086fd2e11d",
+    "baseTree": "0b99fe0fe928ed49bf4a16cae330512225f03cbd",
+    "soleParent": "d9e8e189143c8f20017aa5c184ba8adcaa83c198",
+    "rootReadback": {
+      "bytes": 24097,
+      "sha256": "89873e701182ef5e1d94177ac041daadfc6bc9d067bcf752b8e76e9620e953cd",
+      "gitBlob": "46ff433364d89b354dddacdea287983db022aed1"
+    },
+    "independentReadback": {
+      "bytes": 127111,
+      "sha256": "e6017abfe125a635b5f6ce887277ca300786e814865f66b2c1695bc6c24d5909",
+      "gitBlob": "d2f792137c51e94c1ff7b95909514738e41baa9b"
+    },
+    "independentPublicationAccepted": true,
+    "independentPublicationAssertions": 87,
+    "independentPublicationErrors": [],
+    "qualification": "This joins the exact completed-recovery documentation publication prerequisite. It is not a publication/readback of the still-prospective new R1."
+  },
+  "supportingPreparation": [
+    {
+      "role": "nodeSixCasePrediction",
+      "identity": {
+        "bytes": 22397,
+        "sha256": "91883d843025a57320c292e34bb90e598c1325c3f1fde4c033b79486548e70fe",
+        "gitBlob": "a9cf5d6d2e3102d0e73233151c35f6aac5c3a679"
+      },
+      "exactExpectedIdentity": true
+    },
+    {
+      "role": "rendererAdmission",
+      "identity": {
+        "bytes": 156717,
+        "sha256": "76e5d3440254a5e778eb700eb306251a779d0f5a8c6dfe8c47e740895b316154",
+        "gitBlob": "a342571a13ce31b46e9782356cc23527c61ee644"
+      },
+      "exactExpectedIdentity": true
+    },
+    {
+      "role": "rendererFourGaps",
+      "identity": {
+        "bytes": 167326,
+        "sha256": "c880352c1d6cc0ac0c2c37bfb4d18d3a9718170298e814cb884f67fbc7e0413b",
+        "gitBlob": "e37de06a48b2d958fbd54de599ca5f933e3c23b0"
+      },
+      "exactExpectedIdentity": true
+    },
+    {
+      "role": "combinedFeasibility",
+      "identity": {
+        "bytes": 53474,
+        "sha256": "1ce3d9e96b5a8a100bccb1caa7bb1ab2ee8f234cb2afd35e940eb298c64c1238",
+        "gitBlob": "6ee0aadb457acd58e35df41c8fa8492ff6654933"
+      },
+      "exactExpectedIdentity": true
+    },
+    {
+      "role": "prospectivePathData",
+      "identity": {
+        "bytes": 8151,
+        "sha256": "9ceef73e09588b59852323fba2d2396cd83b2a524849a8cfb20b4bb278daa323",
+        "gitBlob": "d688c295815c064fad5e6d4f3a7481c083c6cd06"
+      },
+      "exactExpectedIdentity": true
+    }
+  ],
+  "amendmentReview": {
+    "pnpmCorrection": {
+      "previous": {
+        "bytes": 74706,
+        "sha256": "e40d3915741b0d288a2ca5e1fee241dae1a6efef2a028b7cff94c733d5a4956d",
+        "gitBlob": "a6e60dceaf3aee4cd0ff379fd7252a4f28270ef2"
+      },
+      "intermediate": {
+        "bytes": 75543,
+        "sha256": "1fd956ca96ad953e0d47b98b954f7db6d91b163bd3223c47e2b4d4a52cb4d108",
+        "gitBlob": "35b498f4a655053892d6d23e9f669d4a4f453edd"
+      },
+      "result": "First three validation commands retain the exact admitted Node/pnpm/pm-on-fail/dependency-check/engine-strict prefix. Unselected run/-- spellings were removed. Four-command count and selected paths are unchanged."
+    },
+    "nodeTemporaryDebt": {
+      "status": "CLOSED",
+      "previousIssue": "A generic after-each-primary capture/delete clause could erase Node temporary debt before renderer admission despite the inherited no-debt requirement.",
+      "finalRequirement": "Immediately after the Node primary is finalized and its captured session is empty, inspect the exact owned phase TMPDIR before any supervisor file deletion. Require it to be completely empty, including zero surviving TEST-* entries. Any surviving entry is retained as observed debt, causes permanent refusal for this attempt and leaves renderer UNREACHED. Do not erase Node TEST debt or other Node leftovers to admit renderer. Actual primary failure, timeout, unknown/capture error or interruption remains latched even if later cleanup succeeds.",
+      "rendererCleanupLimitedToPostNodeGate": true,
+      "failedNodeDebtCannotBeReclassifiedAfterCleanup": true
+    },
+    "materializationTemporaryOwnership": {
+      "status": "CLOSED",
+      "previousIssue": "The selected runtime TMPDIR table did not state exact directories for the two source-only metadata phases.",
+      "exactSelectedPaths": {
+        "materializeTests": "/tmp/c714-combined139-85-evidence/materialize-tests/tmp",
+        "red": "/tmp/c714-combined139-85-evidence/red/tmp",
+        "materializeProducers": "/tmp/c714-combined139-85-evidence/materialize-producers/tmp",
+        "green": "/tmp/c714-combined139-85-evidence/green/tmp",
+        "validation": "/tmp/c714-combined139-85-evidence/validation/tmp"
+      },
+      "materializationScope": "Each source-only metadata phase exclusively owns its own exact phase tmp directory, which must remain empty before/after. It never creates or borrows red/green/validation phase directories and never evaluates the renderer setup.",
+      "result": "All five paths are unique and phase-local; materialization neither creates nor borrows future runtime phase directories."
+    },
+    "deltaConfinement": "Compared the complete35b498f object to d52bf425. Only the Node no-debt gate, renderer-only cleanup wording, exact two metadata TMPDIR paths, environment path reference and draft provenance changed. The prior PNPM amendment was independently inverse-compared to a6e60d and was confined to the first three validation vectors plus provenance."
+  },
+  "scopeAndSourceFindings": {
+    "ninePreimages": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+        "role": "fixed UI producer; bytes remain unchanged",
+        "matchesCompleteAcceptedSource": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+        "role": "fixed UI producer; bytes remain unchanged",
+        "matchesCompleteAcceptedSource": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+        "role": "fixed UI producer; bytes remain unchanged",
+        "matchesCompleteAcceptedSource": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+        "role": "fixed UI producer; bytes remain unchanged",
+        "matchesCompleteAcceptedSource": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+        "role": "one of three narrowly selected prospective producer regions",
+        "matchesCompleteAcceptedSource": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+        "role": "one of three narrowly selected prospective producer regions",
+        "matchesCompleteAcceptedSource": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143",
+        "role": "one of three narrowly selected prospective producer regions",
+        "matchesCompleteAcceptedSource": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+        "role": "whole Node133+6 test",
+        "matchesCompleteAcceptedSource": true
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "bytes": 180091,
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+        "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+        "role": "whole renderer80+5 test",
+        "matchesCompleteAcceptedSource": true
+      }
+    ],
+    "partition": "Exactly four fixed paths plus three narrowly selected producers plus two whole-test paths. No other source path, import, helper, package, workflow, exception or diagnostic publisher is selected.",
+    "materializeTests": "Two reviewed test postimages only, producing exactly six physical changes relative to detachedC5. All three producer preimages remain unchanged.",
+    "redSource": "Both fixed whole suites run against the same explicitly bound nine-row vector containing the two test postimages and all three producer preimages. The four fixed producer identities never change.",
+    "producerAuthorship": "No P11/Review/hook postimage may be authored or selected before complete independently accepted combined RED, its actual outer0 and required publication/readback.",
+    "materializeProducers": "After exact independently accepted three-producer R2 and published readback, exactly those three changes produce nine physical overlays relative toC5; both test postimages stay byte-identical.",
+    "preservation": "All8798 source rows,11567 completeC5 tree/index leaves and42 workflow rows remain in every applicable boundary; production5020 files,800 cap and141 exceptions stay fixed. Hook must preserve its2068-line frozen exception without growth.",
+    "testPreservation": "Node original0aec full body remains an exact prefix and keeps all133 cases. Renderer original6c311 full body is recovered by deleting only the single five-case insertion and keeps all80 expanded cases/names/order/multiplicity."
+  },
+  "semanticAdmissionFindings": {
+    "nodeRed": {
+      "cases": 139,
+      "pass": 134,
+      "fail": 5,
+      "old133PassRequired": true,
+      "newControlPass": 1
+    },
+    "rendererRed": {
+      "cases": 85,
+      "pass": 82,
+      "fail": 3,
+      "old80PassRequired": true,
+      "newControlsPass": 2
+    },
+    "green": {
+      "nodeCases": 139,
+      "nodePass": 139,
+      "nodeFail": 0,
+      "rendererCases": 85,
+      "rendererPass": 85,
+      "rendererFail": 0
+    },
+    "nodeToRenderer": "Expected RED exit1 alone is insufficient. Exact intended Node semantic names/failure sites, full raw and final receipt, no timeout/error/interruption, captured-session emptiness and the new pre-deletion empty-TMPDIR gate must all pass before the builtin metadata step and renderer launch.",
+    "redErrors": "Import/setup/extraction/native/transform/console/teardown errors, missing or duplicate output, unrelated assertions, timeouts/kills and unknown outcomes never count as intended RED.",
+    "branches": "RED preserves reached/unreached distinctions in the multi-variant cases; GREEN must complete all selected variants. Summary counts never replace exact outcome identities or preserved old coverage.",
+    "rendererReporting": "One exact absolute-file testResults entry and85 exact assertion identities are required. Default raw reporter output is retained in addition to JSON because JsonReporter ignores its_errors argument and close() can log rejected cleanup without changing exit. Unexpected diagnostics fail the package even when JSON/exit appear nominal."
+  },
+  "lifecycleAndCurrentnessFindings": {
+    "attempts": {
+      "materializeTests": 1,
+      "redPackage": 1,
+      "materializeProducers": 1,
+      "greenPackage": 1,
+      "validationPackage": 1
+    },
+    "primaryClock": "Each Node, renderer and validation primary retains its own original180-second absolute deadline beginning before start/raw/spawn work. It includes required output finalization/captured cleanup and is never reset by another child or late exit.",
+    "metadataClock": "All captured metadata commands retain30-second refusal caps. The finite pinned-Node builtin-only native-route check is a specifically selected new metadata operation whose exact source/argv/schema still requires R2.",
+    "suiteClock": "Unchanged Vitest testTimeout15000 and existing hook/teardown defaults; no testTimeout,hookTimeout or teardownTimeout override in either fixed renderer argv.",
+    "packageBoundary": "Exactly one full current before and after census per RED/GREEN/validation package. No separate all-input census is claimed between Node and renderer; each still has separate argv, source-vector reference, environment reference, raw/results, process capture and lifetime receipts.",
+    "inputClosure": "Entire122773 dependency and1454 compiled inventories,253D+12SPI archive/installed members, original toolchain/pnpm/environment/config/control bodies and seven bootstrap cache files must be freshly checked at each runtime package boundary. Counts, stat caches and previous successful reads cannot substitute.",
+    "readerOwnership": "Only the already reviewed full-byte8-worker/32-pending deterministic manifest path may be reused. Complete drains and joined ownership before any return/error/next boundary/primary remain mandatory; exceptional and signal cases require exact future R2.",
+    "outerGate": "Each complete package must retain final blocked-signal cutoff plus separately observed actual supervisor0 and independent full semantic/input/lifetime acceptance. Expected child exits1 are raw outcomes; only a completely accepted RED package advances authorship.",
+    "failure": "Failed preflight, first-primary mismatch, Node temporary debt, metadata failure, unknown launch, signal, incomplete output/cleanup/postflight or absent outer observation spends the attempt. Later commands remainUNREACHED; no replay, partial resume or cleanup-as-success conversion."
+  },
+  "environmentAndNativeRouteFindings": {
+    "fixedEnvironment": "Every admitted effective assignment is preserved except the explicitly rebound phase TMPDIR. CI=true, NODE_DISABLE_COMPILE_CACHE=1, pinnedNode/PATH/pnpm settings, original HOME and captured CODEX_HOME remain. RawCI absence is not substituted for effectiveCI.",
+    "futureBinding": "Exact effective values or value identities, absent/removed Node/Vite/Vitest/esbuild/snapshot/debug/coverage/worker overrides and all explicit phase differences must appear in the complete future binding. The R1 does not permit unreviewed inherited options.",
+    "rendererEntry": "Direct pinnedNode and exact canonical installed Vitest entry; no.bin shell route, pnpm test/test:ci, install/build/list/help/version probe, config-loader substitution or setup/config rewrite.",
+    "conditions": "Pinned Node defaults and actual require-module support, precise Vite/test defines, test-mode conditions and unchanged happy-dom settings must be bound. Both retained conditional bodies are data, not permission to leave the selected route unspecified.",
+    "rollup": "GNU remains conditional until the selected builtin-only metadata observation establishes actual platform/arch/endianness and the loader's report-header/nullish-retry predicate. A truthy header with falsyglibcVersionRuntime refuses this prepared GNU route. Local override absence and importer-local package/native identity are required.",
+    "esbuild": "PinnedVite->esbuild0.28.1->linux-x64 identity/link route, absent effectiveESBUILD_BINARY_PATH, and no downloaded/PnP/WASM/alternate fallback; service child ownership remains in the renderer lifecycle.",
+    "qualification": "Native file hashing and data-source coverage are not machine-code semantic qualification or an exhaustive startup graph proof."
+  },
+  "outputAndCleanupFindings": {
+    "ownership": "New exclusive mode0700/no-symlink control/output roots and once-only phase directories; control files exact mode0600. No reuse or overwrite of historical owner/attempt/evidence.",
+    "node": "After captured Node finalization and before supervisor file deletion, TMPDIR must be entirely empty. Any entry is retained as debt, permanently refuses the attempt and leaves rendererUNREACHED.",
+    "renderer": "Only after Node passes that gate may the renderer-specific transient cleanup path run. .vite-temp must be absent before package and renderer, exclusively created and identity-bound; no fallback beside vitest.config.ts or ownership of surrounding node_modules.",
+    "retention": "After renderer exit/raw finalization and captured-group quiescence, every surviving owned temp entry is captured with exact names/kinds/modes/link targets/full bytes and identities before exact ownership/race-checked deletion. Unknown/unowned/special/mutated entries refuse success and remain for review.",
+    "postflight": "Owned.vite-temp must be removed and lexists=false; phase TMPDIR empty/removed under its exact contract; unapproved.vite/cache outputs absent. Full dependency/source postflight has no temporary-path ignore.",
+    "limit": "This is full before/after preservation and capture of surviving transients. Self-deleted intermediate history and universal escaped-child custody are explicitly not claimed; internal Tinypool/esbuild/happy-dom cleanup is not treated as an external lifetime proof."
+  },
+  "validationFindings": {
+    "fourSteps": [
+      [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "lint:fast:files",
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "lint:fast:files",
+        "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+      ],
+      [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "guard:source-file-size"
+      ],
+      [
+        "/usr/local/bin/git",
+        "diff",
+        "--check",
+        "--",
+        "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+      ]
+    ],
+    "order": "Node three-file lint -> renderer two-file lint -> source-size -> all-nine-path diff-check, only after independent completeGREEN acceptance.",
+    "clockAndGates": "Each command has its own original180-second clock and distinct start/raw/final capture. Prior exact exit0, finalized output, no error/signal/deadline and empty captured session gate the next. One whole package fresh input pre/post surrounds all four.",
+    "pnpmPrefixRestored": true,
+    "newScopeExplicit": true,
+    "canonicalTypecheckBuildQualified": false
+  },
+  "remainingRequiredGates": [
+    "The second independent complete final-R1 review, immediate-push docs-only publication and complete root+independent actual readback of this exactd52 R1 must precede new test or runner authorship.",
+    "Exact whole tests, future runner, builtin metadata source and full phase bindings need complete R2, precise deltas/inverses, publication and actual readback before any staging/materialization/evaluation.",
+    "Source-only materialization requires honest UNINSPECTED runtime fields, complete actual source/control/tool/config/session evidence and separately observed outer0 before the next phase.",
+    "Complete actual combinedRED semantic/current-input/lifetime/outer acceptance and its publication gate precede all three producer postimages.",
+    "Exact three-producerR2/publication/materialization acceptance precedes unchanged whole-suiteGREEN; completeGREEN acceptance precedes the separately selected four-command validation.",
+    "All remaining broad canonical typecheck/build, GUI/platform/native and wholeE2E gates stay open."
+  ],
+  "unchangedBoundaries": {
+    "originalValidation81561": "INCOMPLETE/SPENT; aggregate, outer result and physical supervisor lifetime UNKNOWN. Never reclassified by this plan.",
+    "frozenPullRequests": [
+      1206,
+      1207,
+      1208,
+      1211,
+      1212,
+      1213
+    ],
+    "terminalCI": "Original9 runs remain terminal and untouched; no further poll/rerun/cancel/dispatch action.",
+    "realClaudeCodex": "Forbidden, including--version.",
+    "incomingDelivery": "No wholesale incoming adoption, extra source region, package/workflow/native/diagnostic/geometry change or new provider import.",
+    "defaultReleaseActivation": "No default/main merge,Ready,release/default activation orStage2."
+  },
+  "structuredChecks": [
+    {
+      "name": "Exact final R1 identity",
+      "pass": true
+    },
+    {
+      "name": "Prepared base exactly accepted completion commit/tree",
+      "pass": true
+    },
+    {
+      "name": "Independent completion publication acceptance87 assertions no errors",
+      "pass": true
+    },
+    {
+      "name": "Five supporting preparation reports fully fetched and exact hashed",
+      "pass": true
+    },
+    {
+      "name": "Exactly nine distinct bound source paths",
+      "pass": true
+    },
+    {
+      "name": "All nine preimage identities match complete accepted current source body",
+      "pass": true
+    },
+    {
+      "name": "Exactly three selected producer and two test paths",
+      "pass": true
+    },
+    {
+      "name": "All five mutable paths are among bound nine",
+      "pass": true
+    },
+    {
+      "name": "Fixed four and mutable five are disjoint and partition all nine",
+      "pass": true
+    },
+    {
+      "name": "Inherited C5/full source/tree/workflow census held",
+      "pass": true
+    },
+    {
+      "name": "No production cap/exception/count expansion",
+      "pass": true
+    },
+    {
+      "name": "P11 and Review keep800 cap; hook keeps frozen2068",
+      "pass": true
+    },
+    {
+      "name": "Node whole133 prefix plus exactly six selected unique names",
+      "pass": true
+    },
+    {
+      "name": "Node selected names equal complete cited six-case prediction",
+      "pass": true
+    },
+    {
+      "name": "Node expected RED134P5F preserves133 plus one new control",
+      "pass": true
+    },
+    {
+      "name": "Renderer retains80 unique original expanded names and five unique additions",
+      "pass": true
+    },
+    {
+      "name": "Renderer original ordered-name identity preserved",
+      "pass": true
+    },
+    {
+      "name": "RendererRED82P3F and GREEN85P0F exact",
+      "pass": true
+    },
+    {
+      "name": "Renderer first three cases semantic failures and last two controls",
+      "pass": true
+    },
+    {
+      "name": "Source materialization exact two tests then three producers",
+      "pass": true
+    },
+    {
+      "name": "Exactly one attempt each five phases",
+      "pass": true
+    },
+    {
+      "name": "Source-only metadata scope honest false/null/uninspected",
+      "pass": true
+    },
+    {
+      "name": "Original Node argv unchanged from reviewed feasibility",
+      "pass": true
+    },
+    {
+      "name": "Both renderer vectors exactly reviewed feasibility",
+      "pass": true
+    },
+    {
+      "name": "Renderer RED/GREEN argv differs only owned JSON file",
+      "pass": true
+    },
+    {
+      "name": "Four separately selected validation commands",
+      "pass": true
+    },
+    {
+      "name": "All first three validation commands retain exact admitted PNPM prefix",
+      "pass": true
+    },
+    {
+      "name": "Node lint has exact selected three-file list",
+      "pass": true
+    },
+    {
+      "name": "Renderer lint has exact selected two-file list",
+      "pass": true
+    },
+    {
+      "name": "Source-size command exactly original recovery vector",
+      "pass": true
+    },
+    {
+      "name": "Diff-check exact nine bound rows and original git prefix",
+      "pass": true
+    },
+    {
+      "name": "Effective environment preserves every admitted fixed assignment except phase TMPDIR",
+      "pass": true
+    },
+    {
+      "name": "Effective CItrue and disabled Node compile cache explicit",
+      "pass": true
+    },
+    {
+      "name": "All five phase TMPDIRs exact unique disjoint",
+      "pass": true,
+      "detail": "Compared as exact keyed path mapping; JSON object property insertion order is not a path-selection requirement."
+    },
+    {
+      "name": "Source-only materialization temporary paths exactly selected phase paths",
+      "pass": true
+    },
+    {
+      "name": "Node temporary-debt guard explicit before any deletion",
+      "pass": true
+    },
+    {
+      "name": "Renderer-only cleanup cannot erase failed Node debt",
+      "pass": true
+    },
+    {
+      "name": "Reader limits unchanged8workers32pending",
+      "pass": true
+    },
+    {
+      "name": "Runner inheritance exact original165f and reviewedb961",
+      "pass": true
+    },
+    {
+      "name": "Unchanged renderer config/setup exact pins and15000 test timeout",
+      "pass": true
+    },
+    {
+      "name": "No Vitest timeout override in either fixed argv",
+      "pass": true
+    },
+    {
+      "name": "No new postimage authored flag; old original validation remains unknown",
+      "pass": true
+    },
+    {
+      "name": "Guard final amendments confined to named temp gates/paths and amendment provenance",
+      "pass": true
+    }
+  ],
+  "structuredCheckCount": 43,
+  "failedStructuredChecks": [],
+  "manualFindings": "No remaining contradiction, missing source identity, unbounded permission expansion, or R1-level lifecycle/output/environment blocker after the exactd52 amendments. Future executable bodies and actual results remain subject to the explicitly required gates."
+}

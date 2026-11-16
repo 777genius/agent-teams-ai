@@ -1,0 +1,154 @@
+{
+  "schema": "c714-combined-r1-composition-v1",
+  "author": "root",
+  "preparedAtUtc": "2026-11-16T20:58:22.221Z",
+  "repository": "777genius/agent-teams-ai",
+  "prospectiveR1": {
+    "bytes": 77830,
+    "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+    "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+  },
+  "guard": {
+    "bytes": 30734,
+    "sha256": "523467e4750781010a1d274c863045c2e814924d33b5c783429de9cb168e3fef",
+    "gitBlob": "3b3a3d2117405b44e6499ca418edd95768dcc727"
+  },
+  "rendererReview": {
+    "bytes": 119695,
+    "sha256": "68e587a63a7e93eb4e35a99ad4faa28b6a5d5dbb813e715c88b1d2ebfc339c9a",
+    "gitBlob": "6094fb81fcf688b48c5535ac4678446ba6cbcaf6"
+  },
+  "acceptedChecks": {
+    "guard": 43,
+    "renderer": 67,
+    "blockers": []
+  },
+  "prerequisitePublication": "356a919a66818e03e62664930a4d74086fd2e11d",
+  "prerequisiteReadbacks": {
+    "root": {
+      "bytes": 24097,
+      "sha256": "89873e701182ef5e1d94177ac041daadfc6bc9d067bcf752b8e76e9620e953cd",
+      "gitBlob": "46ff433364d89b354dddacdea287983db022aed1"
+    },
+    "independent": {
+      "bytes": 127111,
+      "sha256": "e6017abfe125a635b5f6ce887277ca300786e814865f66b2c1695bc6c24d5909",
+      "gitBlob": "d2f792137c51e94c1ff7b95909514738e41baa9b"
+    }
+  },
+  "exactScope": {
+    "nodeWhole": 139,
+    "rendererWhole": 85,
+    "oldNode": 133,
+    "oldRenderer": 80,
+    "newNode": 6,
+    "newRenderer": 5,
+    "producers": 3,
+    "wholeTestFiles": 2,
+    "fixedProducers": 4,
+    "boundRows": 9,
+    "originalPerPrimarySeconds": 180,
+    "metadataSeconds": 30,
+    "vitestTestTimeoutMs": 15000
+  },
+  "expectedRed": {
+    "node": {
+      "pass": 134,
+      "fail": 5
+    },
+    "renderer": {
+      "pass": 82,
+      "fail": 3
+    },
+    "observed": false
+  },
+  "expectedGreen": {
+    "node": 139,
+    "renderer": 85,
+    "observed": false
+  },
+  "validationCommands": 4,
+  "ownedOutputs": "Distinct materialize-tests/red/materialize-producers/green/validation phase directories and TMPDIRs. Node must leave the entire TMPDIR empty before supervisor deletion or renderer admission; retain/refuse debt. Renderer capture covers surviving owned transients only before exact deletion and actual absence.",
+  "unchanged": {
+    "sourceRows": 8798,
+    "workflows": 42,
+    "productionFiles": 5020,
+    "frozenExceptions": 141,
+    "ordinaryCap": 800,
+    "hookException": 2068,
+    "originalCatalogBundles": 27
+  },
+  "completeBodyEvidence": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-r1-20261116.json",
+      "bytes": 77830,
+      "sha256": "40fff8016fc7be677b6152d362bbb8fb85dca4884ac8e116c95a4d67535cab0f",
+      "gitBlob": "d52bf425109d265914631ddea62f2d67e979cff5"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-r1-guard-review-20261116.json",
+      "bytes": 30734,
+      "sha256": "523467e4750781010a1d274c863045c2e814924d33b5c783429de9cb168e3fef",
+      "gitBlob": "3b3a3d2117405b44e6499ca418edd95768dcc727"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-r1-renderer-review-20261116.json",
+      "bytes": 119695,
+      "sha256": "68e587a63a7e93eb4e35a99ad4faa28b6a5d5dbb813e715c88b1d2ebfc339c9a",
+      "gitBlob": "6094fb81fcf688b48c5535ac4678446ba6cbcaf6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-completion-root-publication-readback-20261116.json",
+      "bytes": 24097,
+      "sha256": "89873e701182ef5e1d94177ac041daadfc6bc9d067bcf752b8e76e9620e953cd",
+      "gitBlob": "46ff433364d89b354dddacdea287983db022aed1"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/cross-close-validation-recovery-completion-independent-publication-readback-20261116.json",
+      "bytes": 127111,
+      "sha256": "e6017abfe125a635b5f6ce887277ca300786e814865f66b2c1695bc6c24d5909",
+      "gitBlob": "d2f792137c51e94c1ff7b95909514738e41baa9b"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/p11-review-renderer-source-preparation-20261116.json",
+      "bytes": 208027,
+      "sha256": "be924172ba9702dbb8a41b50c8f21a916d16e6f953ceddd56397b1ec59c71a1c",
+      "gitBlob": "c43f10bce07cba82d66a8d6060dd043f8d29126a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/p11-review-six-case-prediction-20261116.json",
+      "bytes": 22397,
+      "sha256": "91883d843025a57320c292e34bb90e598c1325c3f1fde4c033b79486548e70fe",
+      "gitBlob": "a9cf5d6d2e3102d0e73233151c35f6aac5c3a679"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/renderer-installed-runtime-admission-20261116.json",
+      "bytes": 156717,
+      "sha256": "76e5d3440254a5e778eb700eb306251a779d0f5a8c6dfe8c47e740895b316154",
+      "gitBlob": "a342571a13ce31b46e9782356cc23527c61ee644"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/renderer-installed-four-gap-closure-20261116.json",
+      "bytes": 167326,
+      "sha256": "c880352c1d6cc0ac0c2c37bfb4d18d3a9718170298e814cb884f67fbc7e0413b",
+      "gitBlob": "e37de06a48b2d958fbd54de599ca5f933e3c23b0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-feasibility-20261116.json",
+      "bytes": 53474,
+      "sha256": "1ce3d9e96b5a8a100bccb1caa7bb1ab2ee8f234cb2afd35e940eb298c64c1238",
+      "gitBlob": "6ee0aadb457acd58e35df41c8fa8492ff6654933"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/renderer-control-path-data-20261116.json",
+      "bytes": 8151,
+      "sha256": "9ceef73e09588b59852323fba2d2396cd83b2a524849a8cfb20b4bb278daa323",
+      "gitBlob": "d688c295815c064fad5e6d4f3a7481c083c6cd06"
+    }
+  ],
+  "sourceTestRunnerPostimagesAuthored": false,
+  "runtimeExecuted": false,
+  "nextGate": "This exact R1 plus both full reviews must be published immediately on commit creation, and root plus an independent reviewer must completely read back actual commit/sole parent/tree/changed bodies/prefixes/catalog/census before new source/test/runner postimage authorship. Later exact R2 and actual RED gates remain.",
+  "original81561": "INCOMPLETE/SPENT/UNKNOWN",
+  "wholeE2E": "OPEN"
+}

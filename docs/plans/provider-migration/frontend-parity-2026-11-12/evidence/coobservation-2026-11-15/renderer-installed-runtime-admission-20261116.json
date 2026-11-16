@@ -1,0 +1,991 @@
+{
+  "schema": "c714.installed-renderer-runtime-boundary-review.v2-recovered-freeze",
+  "reviewer": "/root/renderer_admission",
+  "scope": "Read-only recovery and static data assessment of exact installed sources for a prospective whole renderer suite. No package/target code, shell, compiler service, provider, runner, test, install or CI invocation; no source/config/test postimage, route, argv, tree, commit, branch/ref or PR change. Only a bare assessment blob is retained.",
+  "disposition": {
+    "runtimeAdmitted": false,
+    "renderer85SuiteSelected": false,
+    "argvSelected": false,
+    "conclusion": "The unchanged config is compatible with Vite's bundle loader, which performs real compiler-service and transient file work. Neither native nor runner is a proved compatible no-write substitute for its bare __dirname. Boolean cache:false is preserved but does not suppress fork transform-cache writes. Installed worker teardown does not establish a global lifetime bound. The remaining indispensable exact-data gaps and a concrete ownership/cleanup contract must be resolved before a separate runtime decision.",
+    "boundedDataGapsRemain": true,
+    "completeStartupImportClosureEstablished": false
+  },
+  "recoveredEvidence": {
+    "priorBoundedAssessment": {
+      "bytes": 79491,
+      "sha256": "37ec4ed61e7c3e76aa4c6f9e5457c9e6620b1fe133002c65ccfbc35c890a8ab6",
+      "gitBlob": "7156ce4b503f7f6e9591021672db6771c0d19cb3"
+    },
+    "original14Inventory": {
+      "bytes": 7713,
+      "sha256": "7dc84404eba4d6ce406662a3a5ba04b7a5c9feb8a79da9d83eee150714b8c291",
+      "gitBlob": "28efd09a0199e8b789d0557ae8cb86946c1f9fcb"
+    },
+    "additional119FullBodyBundle": {
+      "bytes": 1765386,
+      "sha256": "8c193ec6dce5c786e0c5a9005eacf828afad60e10b636fa69c87b1924c8af0dc",
+      "gitBlob": "a0432cc3f0512fd027c3e4ce519000af323fc777"
+    },
+    "pureDataIdentityHelper": {
+      "bytes": 3982,
+      "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7",
+      "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8",
+      "audit": "Pure UTF-8 byte count, SHA-256 and Git SHA-1 implementation; reviewed and used only on data strings. Empty-string and abc standard digests also checked."
+    },
+    "all133Bodies": {
+      "count": 133,
+      "bytes": 4121888,
+      "allCompleteBodiesReverifiedAgainstEachPin": true,
+      "checks": [
+        "UTF-8 bytes",
+        "SHA-256",
+        "Git blob SHA-1"
+      ],
+      "packageCodeEvaluated": false
+    },
+    "all23PriorQuotedPassagesReverifiedAgainstRecoveredFullBodies": true,
+    "priorActualDependencyInventory": {
+      "bytes": 39168001,
+      "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+      "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+    },
+    "fullBodiesRecoverable": "The original14Inventory lists 14 individually retained complete bare blobs. The additional119FullBodyBundle embeds every remaining complete body and its path/mode/byte/SHA-256/Git pin. These are content identities, not a claim of complete runtime import closure."
+  },
+  "sourceBasis": {
+    "historicalAssessmentBasis": {
+      "appExecutableCommit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+      "appExecutableTree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+      "originalRendererTest": {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+        "bytes": 180091,
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+        "registrations": 67,
+        "expandedCases": 80
+      },
+      "proposedFutureRendererCases": 5,
+      "renderer85SuiteSelected": false,
+      "existingNodeOnlyR1Review": "475b50789c6c9286724c47e7b28399fb8329572c",
+      "previousFullRendererCensusAndSetupReview": "c43f10bce07cba82d66a8d6060dd043f8d29126a",
+      "installedInventory": {
+        "gitBlob": "28efd09a0199e8b789d0557ae8cb86946c1f9fcb",
+        "bytes": 7713,
+        "sha256": "7dc84404eba4d6ce406662a3a5ba04b7a5c9feb8a79da9d83eee150714b8c291"
+      },
+      "actualDependencyInventory": {
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "sourceRoot": "/workspace/scratch/c714-fresh-20261116/source"
+    },
+    "parentSuppliedCurrentSnapshot": {
+      "branchHead": "34f3090480edff81beb56507e0f2b7e2f0060b1e",
+      "sourceRows": 8798,
+      "workflowRows": 42,
+      "unchangedOverlays": 5,
+      "verificationStatus": "Continuity supplied by parent; no new tree/ref census performed in this read-only recovery."
+    },
+    "prospectiveRenderer": {
+      "originalTest": {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+        "bytes": 180091,
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+        "registrations": 67,
+        "expandedCases": 80
+      },
+      "originalCensus": "60 ordinary registrations plus seven it.each registrations expand to 80 cases; previous retained full-file census, not re-executed or broadened here.",
+      "hook": {
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b7",
+        "bytes": 4351,
+        "parentContinuityMarker": "2068 frozen cap",
+        "provenance": "Parent-supplied continuity; marker retained without additional interpretation. Hook not rewritten or re-executed."
+      },
+      "prospectiveAdditionalCases": 5,
+      "prospectiveTotal": 85,
+      "expectedPreFixOutcome": {
+        "passes": 82,
+        "failures": 3,
+        "status": "Prospective expectation from the parent's silent-refresh-loading-bug analysis; no result observed."
+      },
+      "sourceOrTestPostimageAuthored": false
+    }
+  },
+  "findings": [
+    {
+      "id": "result-cache-closed",
+      "status": "source-proved",
+      "summary": "The earlier missing resolveConfig branch is now recovered: resolved.cache !== false gates normalization to {dir:viteConfig.cacheDir}; false survives. Combined with the original parser and ResultsCache passages, boolean cache:false suppresses that results.json route. This says nothing about independent Vite config, fork transform, debug, snapshot or reporter writes.",
+      "sources": [
+        {
+          "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+          "firstLine": 3863,
+          "lastLine": 3866
+        },
+        {
+          "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+          "firstLine": 5309,
+          "lastLine": 5393
+        },
+        {
+          "gitBlob": "437f31f0af0c6b2b8efc4703578ad6763eb17aa1",
+          "firstLine": 1133,
+          "lastLine": 1147
+        }
+      ]
+    },
+    {
+      "id": "fork-transform-files",
+      "status": "source-proved",
+      "summary": "Fork createChildProcessChannel unconditionally passes cacheFs:true. RPC fetch creates project.tmpDir/<transformMode>, hashes module ids, and writes transformed code via write-then-rename with a direct-write fallback. These writes are separate from result-cache normalization. Project tmpDir/clearTmpDir behavior is in the preserved original passages; cleanup swallows errors, so debt needs observation.",
+      "sources": [
+        {
+          "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+          "firstLine": 2440,
+          "lastLine": 2484
+        },
+        {
+          "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+          "firstLine": 2542,
+          "lastLine": 2605
+        },
+        {
+          "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+          "firstLine": 7272,
+          "lastLine": 7283
+        },
+        {
+          "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+          "firstLine": 7335,
+          "lastLine": 7339
+        }
+      ]
+    },
+    {
+      "id": "unchanged-config-loader",
+      "status": "source-proved-compatibility-boundary",
+      "summary": "Current vitest.config.ts uses bare __dirname in an ESM package. Bundle injects that binding and is the established unchanged-config route. Vite's runner supplies filename/dirname only on the import.meta object; its AsyncFunction parameter list contains only SSR helper bindings and has no bare __dirname. Native directly imports without injected binding. Neither alternate establishes compatibility for the unchanged config, and no alternate/config rewrite is selected.",
+      "sources": [
+        {
+          "gitBlob": "45ba59b2f708506a01b518299f543defb88553cd",
+          "firstLine": 1059,
+          "lastLine": 1082
+        },
+        {
+          "gitBlob": "45ba59b2f708506a01b518299f543defb88553cd",
+          "firstLine": 1235,
+          "lastLine": 1285
+        },
+        {
+          "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a",
+          "firstLine": 49559,
+          "lastLine": 49753
+        }
+      ],
+      "projectSources": [
+        "c57faa53a1bb869b4379bf888194806ef7e228e3",
+        "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+      ]
+    },
+    {
+      "id": "bundle-transient-debt",
+      "status": "source-proved",
+      "summary": "Bundle uses esbuild build(write:false), then Vite itself mkdir/writes a timestamped .mjs under nearest node_modules/.vite-temp. It unlinks with an unawaited callback that ignores error; the directory remains. No node_modules or EACCES fallback writes adjacent to original config. cache:false, cacheDir and TMPDIR do not redirect this branch. Any later owned transient exception must preserve existing occupants, disallow unrelated deletion, and include actual cleanup verification.",
+      "sources": [
+        {
+          "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a",
+          "firstLine": 49631,
+          "lastLine": 49799
+        }
+      ]
+    },
+    {
+      "id": "finite-whole-file-one-fork-options",
+      "status": "supported-not-selected",
+      "summary": "Installed CLI supports finite run/watch control, boolean cache false, fork isolation, min/max workers, fileParallelism and singleFork. createForksPool uses child_process runtime, worker.js, workers/forks.js, teardown named export, and concurrentTasksPerWorker:1. singleFork or disabled fileParallelism bounds min/max to one; isolation remains true unless separately overridden. These are supported options, not an assembled or admitted argv. Preserve all 80 old and five prospective cases; no name filtering, manufactured skips, retries-as-success or missing-case acceptance.",
+      "sources": [
+        {
+          "gitBlob": "437f31f0af0c6b2b8efc4703578ad6763eb17aa1",
+          "firstLine": 638,
+          "lastLine": 664
+        },
+        {
+          "gitBlob": "437f31f0af0c6b2b8efc4703578ad6763eb17aa1",
+          "firstLine": 908,
+          "lastLine": 959
+        },
+        {
+          "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+          "firstLine": 2607,
+          "lastLine": 2718
+        },
+        {
+          "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+          "firstLine": 3584,
+          "lastLine": 3598
+        }
+      ]
+    },
+    {
+      "id": "teardown-global-boundary",
+      "status": "source-proved-limit",
+      "summary": "Tinypool 2.2.0 WorkerInfo.destroy awaits the teardown task before starting its termination timeout and calling worker.terminate. ProcessWorker.terminate sends the default termination signal, schedules SIGKILL after 1000ms, and waits for that direct child exit. Therefore an unresolved teardown can prevent the internal termination phase from starting, and direct-child exit does not prove descendants gone. Vitest cleanup and esbuild stop similarly do not prove group quiescence. A separately admitted external captured-group deadline/cleanup/postflight remains essential.",
+      "sources": [
+        {
+          "gitBlob": "a38174cbbd0853d598a64a50b251cfc6d3af7528",
+          "firstLine": 54,
+          "lastLine": 144
+        },
+        {
+          "gitBlob": "a38174cbbd0853d598a64a50b251cfc6d3af7528",
+          "firstLine": 375,
+          "lastLine": 399
+        },
+        {
+          "gitBlob": "91b87b274086cfc7a15db2b54ae27c39fc7036fb",
+          "firstLine": 50,
+          "lastLine": 124
+        },
+        {
+          "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+          "firstLine": 9911,
+          "lastLine": 9955
+        },
+        {
+          "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+          "firstLine": 2246,
+          "lastLine": 2358
+        }
+      ]
+    },
+    {
+      "id": "worker-env-and-output-triggers",
+      "status": "source-proved",
+      "summary": "createPool filters process.execArgv to profiler/diagnostic options plus module conditions but spreads process.env and config.env into workers. Those inherited values can override the earlier VITEST/TEST flags. VITEST_MIN_FORKS/MAX_FORKS affect normalization; UPDATE_SNAPSHOT can make snapshot mode all despite update:false; non-CI default snapshot mode is new. Empty reporter selection adds github-actions when GITHUB_ACTIONS=true. VITE_NODE_DEBUG_DUMP enables dump-file writes and may recursively remove the dump directory. A concrete future contract must bind these inputs and output ownership; no inherited-environment safety is assumed here.",
+      "sources": [
+        {
+          "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+          "firstLine": 3309,
+          "lastLine": 3352
+        },
+        {
+          "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+          "firstLine": 3704,
+          "lastLine": 3715
+        },
+        {
+          "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+          "firstLine": 3741,
+          "lastLine": 3776
+        },
+        {
+          "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+          "firstLine": 3840,
+          "lastLine": 3856
+        },
+        {
+          "gitBlob": "20de7a8c50c9f16213a464c85a27eab99ff2722b",
+          "firstLine": 23,
+          "lastLine": 76
+        },
+        {
+          "gitBlob": "20de7a8c50c9f16213a464c85a27eab99ff2722b",
+          "firstLine": 193,
+          "lastLine": 231
+        }
+      ]
+    },
+    {
+      "id": "optimizer-and-option-defaults",
+      "status": "source-proved-with-stage-qualification",
+      "summary": "The Vitest optimizer config hook treats absent enabled as false and translates the Vite6 disabled route into noDiscovery:true/include:[]; current project config has no optimizer enablement. Later normalized/serialized Vitest deps.optimizer fields default enabled:true, so a blanket claim that every optimizer field defaults false would be incorrect. Actual Vite optimizer setup is the controlling boundary. Coverage enabled:false, API:false and UI:false are explicit defaults; separate snapshot, attachment, reporter, browser, typecheck, debugger and profiling routes must not be inferred absent merely from result cache:false.",
+      "sources": [
+        {
+          "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+          "firstLine": 6538,
+          "lastLine": 6657
+        },
+        {
+          "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+          "firstLine": 3652,
+          "lastLine": 3656
+        },
+        {
+          "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+          "firstLine": 9268,
+          "lastLine": 9295
+        },
+        {
+          "gitBlob": "6bb2026bcb6d529b91fb947ac1a1f5db0826ac10",
+          "firstLine": 1,
+          "lastLine": 115
+        },
+        {
+          "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a",
+          "firstLine": 48226,
+          "lastLine": 48233
+        }
+      ]
+    },
+    {
+      "id": "happy-dom-teardown-unclosed",
+      "status": "caller-proved-callee-gap",
+      "summary": "Installed Vitest happy-dom setup imports GlobalWindow/Window; teardownWindow awaits win.happyDOM.abort and calls win.close when present, otherwise cancelAsync. runBaseTests awaits environment teardown in finally. The actual happy-dom 21.0.4 Window/abort/close implementation is not in these 133 bodies, so these callers do not prove bounded cancellation, subprocess/network absence or final handle cleanup.",
+      "sources": [
+        {
+          "gitBlob": "90004b3064c731a22f584000525e0bff3f423867",
+          "firstLine": 334,
+          "lastLine": 397
+        },
+        {
+          "gitBlob": "9c62d6d1d5598aeeb5123803f33bbd28d5ce1ca4",
+          "firstLine": 1,
+          "lastLine": 130
+        }
+      ]
+    },
+    {
+      "id": "esbuild-installed-service-boundary",
+      "status": "js-body-proved-native-identity-gap",
+      "summary": "Recovered installed esbuild package.json/lib/main.js identify 0.28.1. Parent continuity states Vite's installed override edge resolves this version; that edge was not independently re-censused here. The JS honors a valid ESBUILD_BINARY_PATH, otherwise resolves the platform package/bin then a downloaded fallback; a zip/PnP branch can copy/chmod into node_modules/.cache/esbuild. Async service spawns the chosen command with --service=0.28.1 --ping, pipes stdin/stdout and inherits stderr; stop kills without awaiting child exit. Transform inputs over 1 MiB can use randomized os.tmpdir files. Exact selected native executable identity and platform/link/override conditions remain unclosed; no binary was run.",
+      "sources": [
+        {
+          "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+          "firstLine": 1885,
+          "lastLine": 2080
+        },
+        {
+          "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+          "firstLine": 2096,
+          "lastLine": 2117
+        },
+        {
+          "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+          "firstLine": 1038,
+          "lastLine": 1065
+        },
+        {
+          "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+          "firstLine": 2142,
+          "lastLine": 2164
+        },
+        {
+          "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+          "firstLine": 2246,
+          "lastLine": 2358
+        },
+        {
+          "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+          "firstLine": 2385,
+          "lastLine": 2387
+        }
+      ],
+      "packagePin": {
+        "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/package.json",
+        "mode": "100644",
+        "bytes": 3980,
+        "sha256": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a",
+        "gitBlob": "628583884bffe38c662c1806c474c22009d9bafa"
+      }
+    },
+    {
+      "id": "setup-temp-and-lifecycle",
+      "status": "preserved-source-proved-boundary",
+      "summary": "Unchanged setup scans immediate os.tmpdir agent-teams-vitest-home-* directories older than its cutoff, creates a home, and stubs worker HOME/USERPROFILE before each test; CODEX_HOME is not changed. An exclusive empty owned phase TMPDIR can contain that scan/home and fork/esbuild temporary files, while supervisor HOME/CODEX_HOME remain as-is. Setup cleanup is best effort, with its once flag set before removal. Direct installed Vitest avoids root test/test:ci scripts that build MCP+Host, but installed bundle work is still compiler work. Missing dependency installation remains possible only through the reviewed interactive acceptance branch; no skip-install-checks or install/build route is authorized.",
+      "sources": [
+        {
+          "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+          "firstLine": 5648,
+          "lastLine": 5681
+        }
+      ],
+      "projectSources": [
+        "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c",
+        "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7"
+      ]
+    },
+    {
+      "id": "preservation-and-result-scope",
+      "status": "admission-constraint",
+      "summary": "The final complete dependency census must match all original files/links/modes; any owned transient directory exception must be explicit and separately checked. Final equality is not proof of no writes during the run. Preserve unexpected errors, exact case census and raw result evidence; expected 82P3F is not observed proof. Existing Node-only/Cross gates, frozen PRs and real Claude/Codex execution remain outside this renderer assessment.",
+      "sources": []
+    }
+  ],
+  "boundedRemainingDataGaps": [
+    {
+      "id": "esbuild-native",
+      "need": "Exact installed platform package/link rows and resolved native executable path/mode/bytes/Git blob/SHA-256, including proof of the effective ESBUILD_BINARY_PATH/fallback choice for the prospective environment. Read/retain only; no version call, compiler call or binary execution.",
+      "knownBody": {
+        "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js",
+        "mode": "100644",
+        "bytes": 97214,
+        "sha256": "8331fe1d8b3a07381f33cc425fcfaa94776e263113653f80ec3ba433e9657e73",
+        "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b"
+      }
+    },
+    {
+      "id": "rollup-parser-native",
+      "need": "Exact installed rollup/parseAst export wrapper, native loader selection body and actual platform native binding identity/link/mode/bytes/hash used by Vite. Existing eager import evidence is in the retained Vite source; upstream or lockfile-only replacement is insufficient.",
+      "knownImporter": {
+        "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/chunks/dep-3O3b9SCF.js",
+        "mode": "100644",
+        "bytes": 1510150,
+        "sha256": "5549a587e82930bd10b0da4e30a6c1642d530cce754e13859dbb6d0e7d22cd2c",
+        "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a"
+      }
+    },
+    {
+      "id": "happy-dom-window-cleanup",
+      "need": "Exact installed happy-dom 21.0.4 exports and bounded GlobalWindow/Window, happyDOM.abort, close/cancelAsync and directly necessary cleanup-manager bodies/pins. Caller availability alone does not establish lifetime or side-effect closure.",
+      "knownCaller": {
+        "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/index.CmSc2RE5.js",
+        "mode": "100644",
+        "bytes": 14960,
+        "sha256": "e8882f50bc71827f172cc282fb75fe553962395f426acf582d70f25319803e51",
+        "gitBlob": "90004b3064c731a22f584000525e0bff3f423867"
+      }
+    },
+    {
+      "id": "vite-conditional-and-env",
+      "need": "Exact complete installed Vite misc/true.js, misc/false.js and dist/client/env.mjs bodies/pins. package.json maps #module-sync-enabled to the first two; constants.js maps /@vite/env to the latter. Preserve selected conditions; no config-loader substitution.",
+      "evidence": [
+        {
+          "gitBlob": "3b6d03c4ebc634c5c2ea5a05f9d8cafda1da6a23",
+          "firstLine": 45,
+          "lastLine": 50
+        },
+        {
+          "gitBlob": "e5e4dec6b508dfca9c1b59eb2cc7d77cefdbc962",
+          "firstLine": 77,
+          "lastLine": 86
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Those are bounded indispensable gaps identified for this prospective route, not a claim that resolving them alone establishes complete eager/transitive closure.",
+    "All 133 bodies were fully retrieved and hashed as data. Relevant functions and caller relationships were statically inspected. No claim that every optional branch in every large bundle was semantically qualified.",
+    "Historical 80-case census, prospective 5 additions/82P3F expectation, frozen hook cap and current root snapshot are preserved with their provenance; no source/test postimage or runtime evidence has been created.",
+    "No broad dependency/source/workflow census or new runtime request was made. Root may recover only exact needed installed data and later prepare a separate concrete reviewable runtime contract.",
+    "Old report 7156ce4b503f7f6e9591021672db6771c0d19cb3 remains the durable baseline. This assessment supersedes only its now-closed missing resolveConfig/module-runner/worker-body statements; all unmodified limits remain.",
+    "No real Claude/Codex, frozen PR mutation, package install, CI action, shell or target execution occurred. Evidence retention is a bare Git blob only, without tree/commit/ref changes."
+  ],
+  "referencedInstalledPins": [
+    {
+      "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js",
+      "mode": "100644",
+      "bytes": 97214,
+      "sha256": "8331fe1d8b3a07381f33cc425fcfaa94776e263113653f80ec3ba433e9657e73",
+      "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b"
+    },
+    {
+      "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/package.json",
+      "mode": "100644",
+      "bytes": 3980,
+      "sha256": "d55d1d19fcc5b6079e4a71dd4111340c79c682bc36835ac7058a0c364c7db58a",
+      "gitBlob": "628583884bffe38c662c1806c474c22009d9bafa"
+    },
+    {
+      "path": "node_modules/.pnpm/tinypool@2.2.0/node_modules/tinypool/dist/entry/process.js",
+      "mode": "100644",
+      "bytes": 2048,
+      "sha256": "a73d2103a366a3dfdbe65495eaa26df058af1e3ad12339fd4b0f679e7c70989f",
+      "gitBlob": "893fddd8a895cfcec913802907c2515d13d556a4"
+    },
+    {
+      "path": "node_modules/.pnpm/tinypool@2.2.0/node_modules/tinypool/dist/index.js",
+      "mode": "100644",
+      "bytes": 25889,
+      "sha256": "b5a818e11ee7e1ede0f823a377b282521fd1ee94976d05c4b8b0bcca1bbf86ed",
+      "gitBlob": "a38174cbbd0853d598a64a50b251cfc6d3af7528"
+    },
+    {
+      "path": "node_modules/.pnpm/tinypool@2.2.0/node_modules/tinypool/package.json",
+      "mode": "100644",
+      "bytes": 1433,
+      "sha256": "ca52f4e27cd55885bd4e8ed225d4d4710b241bf172433a8441e798652d1612ed",
+      "gitBlob": "8c573c79f7db3c38616357ad1de245bbab9ce55e"
+    },
+    {
+      "path": "node_modules/.pnpm/vite-node@3.2.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_supports-color@10.2.2_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite-node/dist/server.mjs",
+      "mode": "100644",
+      "bytes": 18289,
+      "sha256": "5a0339b566e6c066d660495f9aa07abd53ca1f06340164fcb3ddeb9dbe101045",
+      "gitBlob": "20de7a8c50c9f16213a464c85a27eab99ff2722b"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/constants.js",
+      "mode": "100644",
+      "bytes": 4186,
+      "sha256": "58c1d17e5f8118fe278a620a1ca11bc2554d3c7fb899ac9d13ffeb5a15279e17",
+      "gitBlob": "e5e4dec6b508dfca9c1b59eb2cc7d77cefdbc962"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/module-runner.js",
+      "mode": "100644",
+      "bytes": 53266,
+      "sha256": "82300b4a5e6b52632ca2fc9226b3fb3ac11f95b788f7c5b7f89166e91f712823",
+      "gitBlob": "45ba59b2f708506a01b518299f543defb88553cd"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/coverage.DfSpMS-b.js",
+      "mode": "100644",
+      "bytes": 148575,
+      "sha256": "37b63dd27952c9779fb1cbcd962cf111147a0c42663f3df83dd8094409ff6500",
+      "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/defaults.B7q_naMc.js",
+      "mode": "100644",
+      "bytes": 2919,
+      "sha256": "c84619826897eaefdc3ece71578174b14dfa0b374a1dbc609fbd8346b5627ed7",
+      "gitBlob": "6bb2026bcb6d529b91fb947ac1a1f5db0826ac10"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/index.CmSc2RE5.js",
+      "mode": "100644",
+      "bytes": 14960,
+      "sha256": "e8882f50bc71827f172cc282fb75fe553962395f426acf582d70f25319803e51",
+      "gitBlob": "90004b3064c731a22f584000525e0bff3f423867"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/runBaseTests.9Ij9_de-.js",
+      "mode": "100644",
+      "bytes": 5198,
+      "sha256": "9adf4ac9eb4cd425a9f3847936450536243dd0fabe81de354cf14fc8d72814e7",
+      "gitBlob": "9c62d6d1d5598aeeb5123803f33bbd28d5ce1ca4"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/worker.js",
+      "mode": "100644",
+      "bytes": 5574,
+      "sha256": "6f1f468fae92e676b10915a4fecd78e501470115d8bdb1fa7bea419ba52c8103",
+      "gitBlob": "91b87b274086cfc7a15db2b54ae27c39fc7036fb"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/cac.0BJqEUeA.js",
+      "mode": "100644",
+      "bytes": 52944,
+      "sha256": "74c1fc435e8149e13a5037cf4be9f67994827d9bac1a5f3951d1085aa1c6695d",
+      "gitBlob": "437f31f0af0c6b2b8efc4703578ad6763eb17aa1"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/cli-api.DWGBtMmz.js",
+      "mode": "100644",
+      "bytes": 339628,
+      "sha256": "123e44ea39aee4f9e7a0d8f91fd78d9091c161e56d0f15ece5ab7e807ac5eaed",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/chunks/dep-3O3b9SCF.js",
+      "mode": "100644",
+      "bytes": 1510150,
+      "sha256": "5549a587e82930bd10b0da4e30a6c1642d530cce754e13859dbb6d0e7d22cd2c",
+      "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/package.json",
+      "mode": "100644",
+      "bytes": 5251,
+      "sha256": "08aa811517022c5b83c52c63dc435d2aa725a64fe4e3cfa6f351affa6b9ed9de",
+      "gitBlob": "3b6d03c4ebc634c5c2ea5a05f9d8cafda1da6a23"
+    }
+  ],
+  "fullProjectSourceEvidence": [
+    {
+      "path": "vitest.config.ts",
+      "bytes": 1187,
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+      "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "body": "import { defineConfig } from 'vitest/config';\nimport { resolve } from 'path';\n\nexport default defineConfig({\n  test: {\n    globals: true,\n    environment: 'happy-dom',\n    testTimeout: 15000,\n    setupFiles: ['./test/setup.ts'],\n    include: ['test/**/*.test.ts', 'test/**/*.test.tsx', 'src/**/*.test.ts', 'src/**/*.test.tsx'],\n    coverage: {\n      provider: 'v8',\n      reporter: ['text', 'json', 'html'],\n      include: ['src/**/*.ts', 'src/**/*.tsx'],\n      exclude: ['src/**/*.d.ts', 'src/main/index.ts', 'src/preload/index.ts'],\n    },\n  },\n  resolve: {\n    alias: {\n      '@features': resolve(__dirname, 'src/features'),\n      '@shared': resolve(__dirname, 'src/shared'),\n      '@main': resolve(__dirname, 'src/main'),\n      '@renderer': resolve(__dirname, 'src/renderer'),\n      '@preload': resolve(__dirname, 'src/preload'),\n      '@claude-teams/agent-graph': resolve(__dirname, 'packages/agent-graph/src/index.ts'),\n      '@radix-ui/react-compose-refs': resolve(\n        __dirname,\n        'src/renderer/vendor/radixComposeRefs.ts'\n      ),\n      react: resolve(__dirname, 'node_modules/react'),\n      'react-dom': resolve(__dirname, 'node_modules/react-dom'),\n    },\n  },\n});\n"
+    },
+    {
+      "path": "test/setup.ts",
+      "bytes": 5297,
+      "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b",
+      "gitBlob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c",
+      "body": "/**\n * Vitest setup file.\n * Runs before each test file.\n */\n\nimport * as fs from 'fs';\nimport { Storage as HappyDOMStorage } from 'happy-dom';\nimport * as os from 'os';\nimport * as path from 'path';\nimport { afterAll, afterEach, beforeEach, expect, vi } from 'vitest';\n\nconst TEST_HOME_PREFIX = 'agent-teams-vitest-home-';\nconst DEFAULT_STALE_TEST_HOME_MAX_AGE_MS = 24 * 60 * 60 * 1000;\n\n// Node 26 exposes global storage getters that return undefined without\n// --localstorage-file. Vitest reuses globalThis as window, so those getters\n// shadow happy-dom's in-memory storage in renderer tests.\nif (typeof window !== 'undefined' && Number.parseInt(process.versions.node, 10) >= 26) {\n  for (const key of ['localStorage', 'sessionStorage'] as const) {\n    Object.defineProperty(window, key, {\n      configurable: true,\n      value: new HappyDOMStorage(),\n    });\n  }\n}\n\n/**\n * Resolve the max age (ms) for stale test-home directories from env or default.\n */\nfunction getStaleTestHomeMaxAgeMs(): number {\n  const value = Number(process.env.AGENT_TEAMS_VITEST_STALE_HOME_MAX_AGE_MS);\n  return Number.isFinite(value) && value > 0 ? value : DEFAULT_STALE_TEST_HOME_MAX_AGE_MS;\n}\n\n/**\n * Best-effort removal of stale test-home directories older than the cutoff.\n */\nfunction cleanupStaleTestHomeDirs(): void {\n  const cutoff = Date.now() - getStaleTestHomeMaxAgeMs();\n\n  for (const entry of fs.readdirSync(os.tmpdir(), { withFileTypes: true })) {\n    if (!entry.isDirectory() || !entry.name.startsWith(TEST_HOME_PREFIX)) {\n      continue;\n    }\n\n    const dir = path.join(os.tmpdir(), entry.name);\n    try {\n      const stat = fs.statSync(dir);\n      if (stat.mtimeMs < cutoff) {\n        fs.rmSync(dir, { recursive: true, force: true });\n      }\n    } catch {\n      // Best effort cleanup only.\n    }\n  }\n}\n\nif (process.env.AGENT_TEAMS_VITEST_TEMP_CLEANUP_DONE !== '1') {\n  process.env.AGENT_TEAMS_VITEST_TEMP_CLEANUP_DONE = '1';\n  cleanupStaleTestHomeDirs();\n}\n\n// Mock Sentry Electron SDK - it requires the real `electron` package at import\n// time which is unavailable in the vitest/happy-dom environment.\nconst sentryNoOp = {\n  IPCMode: {\n    Classic: 1,\n    Protocol: 2,\n    Both: 3,\n  },\n  init: vi.fn(),\n  addBreadcrumb: vi.fn(),\n  captureException: vi.fn(),\n  setUser: vi.fn(),\n  setTags: vi.fn(),\n  close: vi.fn(() => Promise.resolve(true)),\n  startSpan: vi.fn((_opts: unknown, fn: () => unknown) => fn()),\n  withScope: vi.fn((fn: (scope: unknown) => void) => fn({ setContext: vi.fn() })),\n  browserTracingIntegration: vi.fn(() => ({\n    name: 'BrowserTracing',\n    setup: vi.fn(),\n    afterAllSetup: vi.fn(),\n  })),\n};\nvi.mock('@sentry/electron/main', () => sentryNoOp);\nvi.mock('@sentry/electron/renderer', () => sentryNoOp);\nvi.mock('@sentry/react', () => sentryNoOp);\n\n// Mock HOME for tests that need a predictable home path. It must be writable:\n// some services persist state in best-effort background writes after a test has\n// already reset path overrides.\nconst testHomeDir = fs.mkdtempSync(path.join(os.tmpdir(), TEST_HOME_PREFIX));\n// getHomeDir() reads HOME before USERPROFILE, and on Windows only USERPROFILE is\n// actually set, so both must point inside the test home. Re-applied before every\n// test: twelve test files call vi.unstubAllEnvs(), after which the rest of that\n// worker resolves ~/.claude to the developer's real home.\nfunction applyTestHomeEnv(): void {\n  vi.stubEnv('HOME', testHomeDir);\n  vi.stubEnv('USERPROFILE', testHomeDir);\n}\napplyTestHomeEnv();\nlet testHomeDirRemoved = false;\nfunction removeTestHomeDir(): void {\n  if (process.env.MEMBER_WORK_SYNC_RECOVERY_KEEP_TEMP === '1') {\n    console.info(`[vitest setup] preserved test HOME: ${testHomeDir}`);\n    return;\n  }\n  if (testHomeDirRemoved) {\n    return;\n  }\n  testHomeDirRemoved = true;\n  try {\n    fs.rmSync(testHomeDir, { recursive: true, force: true });\n  } catch {\n    // Best effort cleanup only.\n  }\n}\nafterAll(removeTestHomeDir);\nprocess.once('exit', removeTestHomeDir);\n\nlet errorSpy: ReturnType<typeof vi.spyOn>;\nlet warnSpy: ReturnType<typeof vi.spyOn>;\n\nfunction formatConsoleCall(args: unknown[]): string {\n  return args\n    .map((arg) => {\n      if (arg instanceof Error) {\n        return arg.message;\n      }\n      return String(arg);\n    })\n    .join(' ');\n}\n\nbeforeEach(() => {\n  applyTestHomeEnv();\n  errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);\n  warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);\n});\n\n/**\n * Identify the expected slow-config-read diagnostic emitted under live recovery.\n */\nfunction isLiveSlowConfigReadWarning(text: string): boolean {\n  return (\n    process.env.MEMBER_WORK_SYNC_RECOVERY_LIVE === '1' &&\n    text.includes('[Service:TeamConfigReader] [getConfig] slow read diag=')\n  );\n}\n\nafterEach(() => {\n  const unexpectedErrors = errorSpy.mock.calls.map(formatConsoleCall);\n  const unexpectedWarnings = warnSpy.mock.calls\n    .map(formatConsoleCall)\n    .filter((text) => !isLiveSlowConfigReadWarning(text));\n\n  errorSpy.mockRestore();\n  warnSpy.mockRestore();\n\n  expect(\n    unexpectedErrors,\n    `Unexpected console.error calls:\\n${unexpectedErrors.join('\\n')}`\n  ).toEqual([]);\n  expect(\n    unexpectedWarnings,\n    `Unexpected console.warn calls:\\n${unexpectedWarnings.join('\\n')}`\n  ).toEqual([]);\n});\n"
+    },
+    {
+      "path": "package.json",
+      "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "type": "module",
+      "testScript": "pnpm --filter agent-teams-mcp build && pnpm --filter @agent-teams/legacy-agent-host build && vitest run",
+      "testCiScript": "pnpm --filter agent-teams-mcp build && pnpm --filter @agent-teams/legacy-agent-host build && vitest run --maxWorkers=1"
+    }
+  ],
+  "exactInstalledPassages": [
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/cac.0BJqEUeA.js",
+      "gitBlob": "437f31f0af0c6b2b8efc4703578ad6763eb17aa1",
+      "firstLine": 638,
+      "lastLine": 664,
+      "text": "const poolThreadsCommands = {\n\tisolate: { description: \"Isolate tests in threads pool (default: `true`)\" },\n\tsingleThread: { description: \"Run tests inside a single thread (default: `false`)\" },\n\tmaxThreads: {\n\t\tdescription: \"Maximum number or percentage of threads to run tests in\",\n\t\targument: \"<workers>\"\n\t},\n\tminThreads: {\n\t\tdescription: \"Minimum number or percentage of threads to run tests in\",\n\t\targument: \"<workers>\"\n\t},\n\tuseAtomics: { description: \"Use Atomics to synchronize threads. This can improve performance in some cases, but might cause segfault in older Node versions (default: `false`)\" },\n\texecArgv: null\n};\nconst poolForksCommands = {\n\tisolate: { description: \"Isolate tests in forks pool (default: `true`)\" },\n\tsingleFork: { description: \"Run tests inside a single child_process (default: `false`)\" },\n\tmaxForks: {\n\t\tdescription: \"Maximum number or percentage of processes to run tests in\",\n\t\targument: \"<workers>\"\n\t},\n\tminForks: {\n\t\tdescription: \"Minimum number or percentage of processes to run tests in\",\n\t\targument: \"<workers>\"\n\t},\n\texecArgv: null\n};"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/cac.0BJqEUeA.js",
+      "gitBlob": "437f31f0af0c6b2b8efc4703578ad6763eb17aa1",
+      "firstLine": 908,
+      "lastLine": 959,
+      "text": "\tpool: {\n\t\tdescription: \"Specify pool, if not running in the browser (default: `forks`)\",\n\t\targument: \"<pool>\",\n\t\tsubcommands: null\n\t},\n\tpoolOptions: {\n\t\tdescription: \"Specify pool options\",\n\t\targument: \"<options>\",\n\t\tsubcommands: {\n\t\t\tthreads: {\n\t\t\t\tdescription: \"Specify threads pool options\",\n\t\t\t\targument: \"<options>\",\n\t\t\t\tsubcommands: poolThreadsCommands\n\t\t\t},\n\t\t\tvmThreads: {\n\t\t\t\tdescription: \"Specify VM threads pool options\",\n\t\t\t\targument: \"<options>\",\n\t\t\t\tsubcommands: {\n\t\t\t\t\t...poolThreadsCommands,\n\t\t\t\t\tmemoryLimit: {\n\t\t\t\t\t\tdescription: \"Memory limit for VM threads pool. If you see memory leaks, try to tinker this value.\",\n\t\t\t\t\t\targument: \"<limit>\"\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t},\n\t\t\tforks: {\n\t\t\t\tdescription: \"Specify forks pool options\",\n\t\t\t\targument: \"<options>\",\n\t\t\t\tsubcommands: poolForksCommands\n\t\t\t},\n\t\t\tvmForks: {\n\t\t\t\tdescription: \"Specify VM forks pool options\",\n\t\t\t\targument: \"<options>\",\n\t\t\t\tsubcommands: {\n\t\t\t\t\t...poolForksCommands,\n\t\t\t\t\tmemoryLimit: {\n\t\t\t\t\t\tdescription: \"Memory limit for VM forks pool. If you see memory leaks, try to tinker this value.\",\n\t\t\t\t\t\targument: \"<limit>\"\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t},\n\tfileParallelism: { description: \"Should all test files run in parallel. Use `--no-file-parallelism` to disable (default: `true`)\" },\n\tmaxWorkers: {\n\t\tdescription: \"Maximum number or percentage of workers to run tests in\",\n\t\targument: \"<workers>\"\n\t},\n\tminWorkers: {\n\t\tdescription: \"Minimum number or percentage of workers to run tests in\",\n\t\targument: \"<workers>\"\n\t},"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/cac.0BJqEUeA.js",
+      "gitBlob": "437f31f0af0c6b2b8efc4703578ad6763eb17aa1",
+      "firstLine": 1133,
+      "lastLine": 1147,
+      "text": "\tteardownTimeout: {\n\t\tdescription: \"Default timeout of a teardown function in milliseconds (default: `10000`)\",\n\t\targument: \"<timeout>\"\n\t},\n\tcache: {\n\t\tdescription: \"Enable cache\",\n\t\targument: \"\",\n\t\tsubcommands: { dir: null },\n\t\tdefault: true,\n\t\ttransform(cache) {\n\t\t\tif (typeof cache !== \"boolean\" && cache) throw new Error(\"--cache.dir is deprecated\");\n\t\t\tif (cache) return {};\n\t\t\treturn cache;\n\t\t}\n\t},"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/cac.0BJqEUeA.js",
+      "gitBlob": "437f31f0af0c6b2b8efc4703578ad6763eb17aa1",
+      "firstLine": 1187,
+      "lastLine": 1196,
+      "text": "\trun: { description: \"Disable watch mode\" },\n\tcolor: {\n\t\tdescription: \"Removes colors from the console output\",\n\t\talias: \"no-color\"\n\t},\n\tclearScreen: { description: \"Clear terminal screen when re-running tests during watch mode (default: `true`)\" },\n\tconfigLoader: {\n\t\tdescription: \"Use `bundle` to bundle the config with esbuild or `runner` (experimental) to process it on the fly. This is only available in vite version 6.1.0 and above. (default: `bundle`)\",\n\t\targument: \"<loader>\"\n\t},"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/cli-api.DWGBtMmz.js",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+      "firstLine": 5309,
+      "lastLine": 5393,
+      "text": "class ResultsCache {\n\tcache = /* @__PURE__ */ new Map();\n\tworkspacesKeyMap = /* @__PURE__ */ new Map();\n\tcachePath = null;\n\tversion;\n\troot = \"/\";\n\tconstructor(version) {\n\t\tthis.version = version;\n\t}\n\tgetCachePath() {\n\t\treturn this.cachePath;\n\t}\n\tsetConfig(root, config) {\n\t\tthis.root = root;\n\t\tif (config) this.cachePath = resolve(config.dir, \"results.json\");\n\t}\n\tgetResults(key) {\n\t\treturn this.cache.get(key);\n\t}\n\tasync readFromCache() {\n\t\tif (!this.cachePath) return;\n\t\tif (!fs.existsSync(this.cachePath)) return;\n\t\tconst resultsCache = await fs.promises.readFile(this.cachePath, \"utf8\");\n\t\tconst { results, version } = JSON.parse(resultsCache || \"[]\");\n\t\tconst [major, minor] = version.split(\".\");\n\t\t// handling changed in 0.30.0\n\t\tif (major > 0 || Number(minor) >= 30) {\n\t\t\tthis.cache = new Map(results);\n\t\t\tthis.version = version;\n\t\t\tresults.forEach(([spec]) => {\n\t\t\t\tconst [projectName, relativePath] = spec.split(\":\");\n\t\t\t\tconst keyMap = this.workspacesKeyMap.get(relativePath) || [];\n\t\t\t\tkeyMap.push(projectName);\n\t\t\t\tthis.workspacesKeyMap.set(relativePath, keyMap);\n\t\t\t});\n\t\t}\n\t}\n\tupdateResults(files) {\n\t\tfiles.forEach((file) => {\n\t\t\tconst result = file.result;\n\t\t\tif (!result) return;\n\t\t\tconst duration = result.duration || 0;\n\t\t\t// store as relative, so cache would be the same in CI and locally\n\t\t\tconst relativePath = relative(this.root, file.filepath);\n\t\t\tthis.cache.set(`${file.projectName || \"\"}:${relativePath}`, {\n\t\t\t\tduration: duration >= 0 ? duration : 0,\n\t\t\t\tfailed: result.state === \"fail\"\n\t\t\t});\n\t\t});\n\t}\n\tremoveFromCache(filepath) {\n\t\tthis.cache.forEach((_, key) => {\n\t\t\tif (key.endsWith(filepath)) this.cache.delete(key);\n\t\t});\n\t}\n\tasync writeToCache() {\n\t\tif (!this.cachePath) return;\n\t\tconst results = Array.from(this.cache.entries());\n\t\tconst cacheDirname = dirname(this.cachePath);\n\t\tif (!fs.existsSync(cacheDirname)) await fs.promises.mkdir(cacheDirname, { recursive: true });\n\t\tconst cache = JSON.stringify({\n\t\t\tversion: this.version,\n\t\t\tresults\n\t\t});\n\t\tawait fs.promises.writeFile(this.cachePath, cache);\n\t}\n}\n\nclass VitestCache {\n\tresults;\n\tstats = new FilesStatsCache();\n\tconstructor(version) {\n\t\tthis.results = new ResultsCache(version);\n\t}\n\tgetFileTestResults(key) {\n\t\treturn this.results.getResults(key);\n\t}\n\tgetFileStats(key) {\n\t\treturn this.stats.getStats(key);\n\t}\n\tstatic resolveCacheDir(root, dir, projectName) {\n\t\tconst baseDir = slash(dir || \"node_modules/.vite\");\n\t\treturn resolve(root, baseDir, \"vitest\", hash(\"sha1\", projectName || \"\", \"hex\"));\n\t}\n}"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/cli-api.DWGBtMmz.js",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+      "firstLine": 5648,
+      "lastLine": 5681,
+      "text": "const __dirname = url.fileURLToPath(new URL(\".\", import.meta.url));\nclass VitestPackageInstaller {\n\tisPackageExists(name, options) {\n\t\treturn isPackageExists(name, options);\n\t}\n\tasync ensureInstalled(dependency, root, version) {\n\t\tif (process.env.VITEST_SKIP_INSTALL_CHECKS) return true;\n\t\tif (process.versions.pnp) {\n\t\t\tconst targetRequire = createRequire(__dirname);\n\t\t\ttry {\n\t\t\t\ttargetRequire.resolve(dependency, { paths: [root, __dirname] });\n\t\t\t\treturn true;\n\t\t\t} catch {}\n\t\t}\n\t\tif (/* @__PURE__ */ isPackageExists(dependency, { paths: [root, __dirname] })) return true;\n\t\tprocess.stderr.write(c.red(`${c.inverse(c.red(\" MISSING DEPENDENCY \"))} Cannot find dependency '${dependency}'\\n\\n`));\n\t\tif (!isTTY) return false;\n\t\tconst prompts = await import('./index.X0nbfr6-.js').then(function (n) { return n.i; });\n\t\tconst { install } = await prompts.default({\n\t\t\ttype: \"confirm\",\n\t\t\tname: \"install\",\n\t\t\tmessage: c.reset(`Do you want to install ${c.green(dependency)}?`)\n\t\t});\n\t\tif (install) {\n\t\t\tconst packageName = version ? `${dependency}@${version}` : dependency;\n\t\t\tawait (await import('./index.D3XRDfWc.js')).installPackage(packageName, { dev: true });\n\t\t\t// TODO: somehow it fails to load the package after installation, remove this when it's fixed\n\t\t\tprocess.stderr.write(c.yellow(`\\nPackage ${packageName} installed, re-run the command to start.\\n`));\n\t\t\tprocess.exit();\n\t\t\treturn true;\n\t\t}\n\t\treturn false;\n\t}\n}"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/cli-api.DWGBtMmz.js",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+      "firstLine": 6538,
+      "lastLine": 6582,
+      "text": "function resolveOptimizerConfig(_testOptions, viteOptions) {\n\tconst testOptions = _testOptions || {};\n\tconst newConfig = {};\n\tconst [major, minor, fix] = version.split(\".\").map(Number);\n\tconst allowed = major >= 5 || major === 4 && minor >= 4 || major === 4 && minor === 3 && fix >= 2;\n\tif (!allowed && testOptions?.enabled === true) console.warn(`Vitest: \"deps.optimizer\" is only available in Vite >= 4.3.2, current Vite version: ${version}`);\n\telse testOptions.enabled ??= false;\n\tif (!allowed || testOptions?.enabled !== true) {\n\t\tnewConfig.cacheDir = void 0;\n\t\tnewConfig.optimizeDeps = {\n\t\t\tdisabled: true,\n\t\t\tentries: []\n\t\t};\n\t} else {\n\t\tconst currentInclude = testOptions.include || viteOptions?.include || [];\n\t\tconst exclude = [\n\t\t\t\"vitest\",\n\t\t\t\"react\",\n\t\t\t\"vue\",\n\t\t\t...testOptions.exclude || viteOptions?.exclude || []\n\t\t];\n\t\tconst runtime = currentInclude.filter((n) => n.endsWith(\"jsx-dev-runtime\") || n.endsWith(\"jsx-runtime\"));\n\t\texclude.push(...runtime);\n\t\tconst include = (testOptions.include || viteOptions?.include || []).filter((n) => !exclude.includes(n));\n\t\tnewConfig.optimizeDeps = {\n\t\t\t...viteOptions,\n\t\t\t...testOptions,\n\t\t\tnoDiscovery: true,\n\t\t\tdisabled: false,\n\t\t\tentries: [],\n\t\t\texclude,\n\t\t\tinclude\n\t\t};\n\t}\n\t// `optimizeDeps.disabled` is deprecated since v5.1.0-beta.1\n\t// https://github.com/vitejs/vite/pull/15184\n\tif (major >= 5 && minor >= 1 || major >= 6) {\n\t\tif (newConfig.optimizeDeps.disabled) {\n\t\t\tnewConfig.optimizeDeps.noDiscovery = true;\n\t\t\tnewConfig.optimizeDeps.include = [];\n\t\t}\n\t\tdelete newConfig.optimizeDeps.disabled;\n\t}\n\treturn newConfig;\n}"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/cli-api.DWGBtMmz.js",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+      "firstLine": 6639,
+      "lastLine": 6657,
+      "text": "function VitestOptimizer() {\n\treturn {\n\t\tname: \"vitest:normalize-optimizer\",\n\t\tconfig: {\n\t\t\torder: \"post\",\n\t\t\thandler(viteConfig) {\n\t\t\t\tconst testConfig = viteConfig.test || {};\n\t\t\t\tconst webOptimizer = resolveOptimizerConfig(testConfig.deps?.optimizer?.web, viteConfig.optimizeDeps);\n\t\t\t\tconst ssrOptimizer = resolveOptimizerConfig(testConfig.deps?.optimizer?.ssr, viteConfig.ssr?.optimizeDeps);\n\t\t\t\tconst root = resolve(viteConfig.root || process.cwd());\n\t\t\t\tconst name = viteConfig.test?.name;\n\t\t\t\tconst label = typeof name === \"string\" ? name : name?.label || \"\";\n\t\t\t\tviteConfig.cacheDir = VitestCache.resolveCacheDir(resolve(root || process.cwd()), testConfig.cache != null && testConfig.cache !== false ? testConfig.cache.dir : viteConfig.cacheDir, label);\n\t\t\t\tviteConfig.optimizeDeps = webOptimizer.optimizeDeps;\n\t\t\t\tviteConfig.ssr ??= {};\n\t\t\t\tviteConfig.ssr.optimizeDeps = ssrOptimizer.optimizeDeps;\n\t\t\t}\n\t\t}\n\t};"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/cli-api.DWGBtMmz.js",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+      "firstLine": 6926,
+      "lastLine": 6963,
+      "text": "class TestProject {\n\t/**\n\t* The global Vitest instance.\n\t* @experimental The public Vitest API is experimental and does not follow semver.\n\t*/\n\tvitest;\n\t/**\n\t* Resolved global configuration. If there are no workspace projects, this will be the same as `config`.\n\t*/\n\tglobalConfig;\n\t/**\n\t* Browser instance if the browser is enabled. This is initialized when the tests run for the first time.\n\t*/\n\tbrowser;\n\t/** @deprecated use `vitest` instead */\n\tctx;\n\t/**\n\t* Temporary directory for the project. This is unique for each project. Vitest stores transformed content here.\n\t*/\n\ttmpDir = join(tmpdir(), nanoid());\n\t/** @internal */ vitenode;\n\t/** @internal */ typechecker;\n\t/** @internal */ _config;\n\t/** @internal */ _vite;\n\t/** @internal */ _hash;\n\trunner;\n\tclosingPromise;\n\ttestFilesList = null;\n\ttypecheckFilesList = null;\n\t_globalSetups;\n\t_provided = {};\n\tconstructor(path, vitest, options) {\n\t\tthis.path = path;\n\t\tthis.options = options;\n\t\tthis.vitest = vitest;\n\t\tthis.ctx = vitest;\n\t\tthis.globalConfig = vitest.config;\n\t}"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/cli-api.DWGBtMmz.js",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+      "firstLine": 7272,
+      "lastLine": 7283,
+      "text": "\tclose() {\n\t\tif (!this.closingPromise) this.closingPromise = Promise.all([\n\t\t\tthis.vite?.close(),\n\t\t\tthis.typechecker?.stop(),\n\t\t\tthis.browser?.close(),\n\t\t\tthis.clearTmpDir()\n\t\t].filter(Boolean)).then(() => {\n\t\t\tthis._provided = {};\n\t\t\tthis._vite = void 0;\n\t\t});\n\t\treturn this.closingPromise;\n\t}"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/cli-api.DWGBtMmz.js",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+      "firstLine": 7335,
+      "lastLine": 7339,
+      "text": "\tasync clearTmpDir() {\n\t\ttry {\n\t\t\tawait rm(this.tmpDir, { recursive: true });\n\t\t} catch {}\n\t}"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/cli-api.DWGBtMmz.js",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+      "firstLine": 9911,
+      "lastLine": 9955,
+      "text": "\tasync close() {\n\t\tif (!this.closingPromise) this.closingPromise = (async () => {\n\t\t\tconst teardownProjects = [...this.projects];\n\t\t\tif (this.coreWorkspaceProject && !teardownProjects.includes(this.coreWorkspaceProject)) teardownProjects.push(this.coreWorkspaceProject);\n\t\t\t// do teardown before closing the server\n\t\t\tfor (const project of teardownProjects.reverse()) await project._teardownGlobalSetup();\n\t\t\tconst closePromises = this.projects.map((w) => w.close());\n\t\t\t// close the core workspace server only once\n\t\t\t// it's possible that it's not initialized at all because it's not running any tests\n\t\t\tif (this.coreWorkspaceProject && !this.projects.includes(this.coreWorkspaceProject)) closePromises.push(this.coreWorkspaceProject.close().then(() => this._vite = void 0));\n\t\t\tif (this.pool) closePromises.push((async () => {\n\t\t\t\tawait this.pool?.close?.();\n\t\t\t\tthis.pool = void 0;\n\t\t\t})());\n\t\t\tclosePromises.push(...this._onClose.map((fn) => fn()));\n\t\t\treturn Promise.allSettled(closePromises).then((results) => {\n\t\t\t\tresults.forEach((r) => {\n\t\t\t\t\tif (r.status === \"rejected\") this.logger.error(\"error during close\", r.reason);\n\t\t\t\t});\n\t\t\t});\n\t\t})();\n\t\treturn this.closingPromise;\n\t}\n\t/**\n\t* Closes all projects and exit the process\n\t* @param force If true, the process will exit immediately after closing the projects.\n\t*/\n\tasync exit(force = false) {\n\t\tsetTimeout(() => {\n\t\t\tthis.report(\"onProcessTimeout\").then(() => {\n\t\t\t\tconsole.warn(`close timed out after ${this.config.teardownTimeout}ms`);\n\t\t\t\tthis.state.getProcessTimeoutCauses().forEach((cause) => console.warn(cause));\n\t\t\t\tif (!this.pool) {\n\t\t\t\t\tconst runningServers = [this._vite, ...this.projects.map((p) => p._vite)].filter(Boolean).length;\n\t\t\t\t\tif (runningServers === 1) console.warn(\"Tests closed successfully but something prevents Vite server from exiting\");\n\t\t\t\t\telse if (runningServers > 1) console.warn(`Tests closed successfully but something prevents ${runningServers} Vite servers from exiting`);\n\t\t\t\t\telse console.warn(\"Tests closed successfully but something prevents the main process from exiting\");\n\t\t\t\t\tif (!this.reporters.some((r) => r instanceof HangingProcessReporter)) console.warn(\"You can try to identify the cause by enabling \\\"hanging-process\\\" reporter. See https://vitest.dev/config/#reporters\");\n\t\t\t\t}\n\t\t\t\tprocess.exit();\n\t\t\t});\n\t\t}, this.config.teardownTimeout).unref();\n\t\tawait this.close();\n\t\tif (force) process.exit();\n\t}"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/cli-api.DWGBtMmz.js",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+      "firstLine": 10200,
+      "lastLine": 10215,
+      "text": "async function createVitest(mode, options, viteOverrides = {}, vitestOptions = {}) {\n\tconst ctx = new Vitest(mode, deepClone(options), vitestOptions);\n\tconst root = slash(resolve$1(options.root || process.cwd()));\n\tconst configPath = options.config === false ? false : options.config ? resolve$1(root, options.config) : await findUp(configFiles, { cwd: root });\n\toptions.config = configPath;\n\tconst { browser: _removeBrowser,...restOptions } = options;\n\tconst config = {\n\t\tconfigFile: configPath,\n\t\tconfigLoader: options.configLoader,\n\t\tmode: options.mode || mode,\n\t\tplugins: await VitestPlugin(restOptions, ctx)\n\t};\n\tconst server = await createViteServer(mergeConfig(config, mergeConfig(viteOverrides, { root: options.root })));\n\tif (ctx.config.api?.port) await server.listen();\n\treturn ctx;\n}"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/cli-api.DWGBtMmz.js",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+      "firstLine": 10496,
+      "lastLine": 10557,
+      "text": "async function startVitest(mode, cliFilters = [], options = {}, viteOverrides, vitestOptions) {\n\tconst root = resolve(options.root || process.cwd());\n\tconst ctx = await prepareVitest(mode, options, viteOverrides, vitestOptions);\n\tif (mode === \"test\" && ctx.config.coverage.enabled) {\n\t\tconst provider = ctx.config.coverage.provider || \"v8\";\n\t\tconst requiredPackages = CoverageProviderMap[provider];\n\t\tif (requiredPackages) {\n\t\t\tif (!await ctx.packageInstaller.ensureInstalled(requiredPackages, root, ctx.version)) {\n\t\t\t\tprocess.exitCode = 1;\n\t\t\t\treturn ctx;\n\t\t\t}\n\t\t}\n\t}\n\tconst stdin = vitestOptions?.stdin || process.stdin;\n\tconst stdout = vitestOptions?.stdout || process.stdout;\n\tlet stdinCleanup;\n\tif (stdin.isTTY && ctx.config.watch) stdinCleanup = registerConsoleShortcuts(ctx, stdin, stdout);\n\tctx.onAfterSetServer(() => {\n\t\tif (ctx.config.standalone) ctx.init();\n\t\telse ctx.start(cliFilters);\n\t});\n\ttry {\n\t\tif (ctx.config.mergeReports) await ctx.mergeReports();\n\t\telse if (ctx.config.standalone) await ctx.init();\n\t\telse await ctx.start(cliFilters);\n\t} catch (e) {\n\t\tif (e instanceof FilesNotFoundError) return ctx;\n\t\tif (e instanceof GitNotFoundError) {\n\t\t\tctx.logger.error(e.message);\n\t\t\treturn ctx;\n\t\t}\n\t\tif (e instanceof IncludeTaskLocationDisabledError || e instanceof RangeLocationFilterProvidedError || e instanceof LocationFilterFileNotFoundError) {\n\t\t\tctx.logger.printError(e, { verbose: false });\n\t\t\treturn ctx;\n\t\t}\n\t\tprocess.exitCode = 1;\n\t\tctx.logger.printError(e, {\n\t\t\tfullStack: true,\n\t\t\ttype: \"Unhandled Error\"\n\t\t});\n\t\tctx.logger.error(\"\\n\\n\");\n\t\treturn ctx;\n\t}\n\tif (ctx.shouldKeepServer()) return ctx;\n\tstdinCleanup?.();\n\tawait ctx.close();\n\treturn ctx;\n}\nasync function prepareVitest(mode, options = {}, viteOverrides, vitestOptions) {\n\tprocess.env.TEST = \"true\";\n\tprocess.env.VITEST = \"true\";\n\tprocess.env.NODE_ENV ??= \"test\";\n\tif (options.run) options.watch = false;\n\t// this shouldn't affect _application root_ that can be changed inside config\n\tconst root = resolve(options.root || process.cwd());\n\tconst ctx = await createVitest(mode, options, viteOverrides, vitestOptions);\n\tconst environmentPackage = getEnvPackageName(ctx.config.environment);\n\tif (environmentPackage && !await ctx.packageInstaller.ensureInstalled(environmentPackage, root)) {\n\t\tprocess.exitCode = 1;\n\t\treturn ctx;\n\t}\n\treturn ctx;"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/chunks/dep-3O3b9SCF.js",
+      "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a",
+      "firstLine": 14725,
+      "lastLine": 14727,
+      "text": "function isDepOptimizationDisabled(optimizeDeps2) {\n  return optimizeDeps2.disabled === true || optimizeDeps2.disabled === \"dev\" || !!optimizeDeps2.noDiscovery && !optimizeDeps2.include?.length;\n}"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/chunks/dep-3O3b9SCF.js",
+      "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a",
+      "firstLine": 14789,
+      "lastLine": 14798,
+      "text": "let firstLoadCachedDepOptimizationMetadata = true;\nasync function loadCachedDepOptimizationMetadata(environment, force = environment.config.optimizeDeps.force ?? false, asCommand = false) {\n  const log = asCommand ? environment.logger.info : debug$f;\n  if (firstLoadCachedDepOptimizationMetadata) {\n    firstLoadCachedDepOptimizationMetadata = false;\n    setTimeout(\n      () => cleanupDepsCacheStaleDirs(environment.getTopLevelConfig()),\n      0\n    );\n  }"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/chunks/dep-3O3b9SCF.js",
+      "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a",
+      "firstLine": 15531,
+      "lastLine": 15551,
+      "text": "const MAX_TEMP_DIR_AGE_MS = 24 * 60 * 60 * 1e3;\nasync function cleanupDepsCacheStaleDirs(config) {\n  try {\n    const cacheDir = path$c.resolve(config.cacheDir);\n    if (fs__default.existsSync(cacheDir)) {\n      const dirents = await fsp.readdir(cacheDir, { withFileTypes: true });\n      for (const dirent of dirents) {\n        if (dirent.isDirectory() && dirent.name.includes(\"_temp_\")) {\n          const tempDirPath = path$c.resolve(config.cacheDir, dirent.name);\n          const stats = await fsp.stat(tempDirPath).catch(() => null);\n          if (stats?.mtime && Date.now() - stats.mtime.getTime() > MAX_TEMP_DIR_AGE_MS) {\n            debug$f?.(`removing stale cache temp dir ${tempDirPath}`);\n            await fsp.rm(tempDirPath, { recursive: true, force: true });\n          }\n        }\n      }\n    }\n  } catch (err) {\n    config.logger.error(err);\n  }\n}"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/chunks/dep-3O3b9SCF.js",
+      "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a",
+      "firstLine": 48226,
+      "lastLine": 48233,
+      "text": "    const { optimizeDeps } = this.config;\n    if (context.depsOptimizer) {\n      this.depsOptimizer = context.depsOptimizer;\n    } else if (isDepOptimizationDisabled(optimizeDeps)) {\n      this.depsOptimizer = void 0;\n    } else {\n      this.depsOptimizer = (optimizeDeps.noDiscovery ? createExplicitDepsOptimizer : createDepsOptimizer)(this);\n    }"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/chunks/dep-3O3b9SCF.js",
+      "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a",
+      "firstLine": 48700,
+      "lastLine": 48766,
+      "text": "  optimizeDeps: {}\n  // resolve\n});\nfunction resolveSSROptions(ssr, preserveSymlinks) {\n  const defaults = mergeWithDefaults(ssrConfigDefaults, {\n    optimizeDeps: { esbuildOptions: { preserveSymlinks } }\n  });\n  return mergeWithDefaults(defaults, ssr ?? {});\n}\n\nasync function runnerImport(moduleId, inlineConfig) {\n  const isModuleSyncConditionEnabled = (await import('#module-sync-enabled')).default;\n  const config = await resolveConfig(\n    mergeConfig(inlineConfig || {}, {\n      configFile: false,\n      envDir: false,\n      cacheDir: process.cwd(),\n      environments: {\n        inline: {\n          consumer: \"server\",\n          dev: {\n            moduleRunnerTransform: true\n          },\n          resolve: {\n            external: true,\n            mainFields: [],\n            conditions: [\n              \"node\",\n              ...isModuleSyncConditionEnabled ? [\"module-sync\"] : []\n            ]\n          }\n        }\n      }\n    }),\n    \"serve\"\n  );\n  const environment = createRunnableDevEnvironment(\"inline\", config, {\n    runnerOptions: {\n      hmr: {\n        logger: false\n      }\n    },\n    hot: false\n  });\n  await environment.init();\n  try {\n    const module = await environment.runner.import(moduleId);\n    const modules = [\n      ...environment.runner.evaluatedModules.urlToIdModuleMap.values()\n    ];\n    const dependencies = modules.filter((m) => {\n      if (!m.meta || \"externalize\" in m.meta) {\n        return false;\n      }\n      return m.exports !== module;\n    }).map((m) => m.file);\n    return {\n      module,\n      dependencies\n    };\n  } finally {\n    await environment.close();\n  }\n}\n\nconst debug = createDebugger(\"vite:config\", { depth: 10 });\nconst promisifiedRealpath = promisify$4(fs__default.realpath);"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/chunks/dep-3O3b9SCF.js",
+      "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a",
+      "firstLine": 49261,
+      "lastLine": 49264,
+      "text": "  const pkgDir = findNearestPackageData(resolvedRoot, packageCache)?.dir;\n  const cacheDir = normalizePath$3(\n    config.cacheDir ? path$c.resolve(resolvedRoot, config.cacheDir) : pkgDir ? path$c.join(pkgDir, `node_modules/.vite`) : path$c.join(resolvedRoot, `.vite`)\n  );"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/chunks/dep-3O3b9SCF.js",
+      "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a",
+      "firstLine": 49559,
+      "lastLine": 49629,
+      "text": "async function loadConfigFromFile(configEnv, configFile, configRoot = process.cwd(), logLevel, customLogger, configLoader = \"bundle\") {\n  if (configLoader !== \"bundle\" && configLoader !== \"runner\" && configLoader !== \"native\") {\n    throw new Error(\n      `Unsupported configLoader: ${configLoader}. Accepted values are 'bundle', 'runner', and 'native'.`\n    );\n  }\n  const start = performance$1.now();\n  const getTime = () => `${(performance$1.now() - start).toFixed(2)}ms`;\n  let resolvedPath;\n  if (configFile) {\n    resolvedPath = path$c.resolve(configFile);\n  } else {\n    for (const filename of DEFAULT_CONFIG_FILES) {\n      const filePath = path$c.resolve(configRoot, filename);\n      if (!fs__default.existsSync(filePath)) continue;\n      resolvedPath = filePath;\n      break;\n    }\n  }\n  if (!resolvedPath) {\n    debug?.(\"no config file found.\");\n    return null;\n  }\n  try {\n    const resolver = configLoader === \"bundle\" ? bundleAndLoadConfigFile : configLoader === \"runner\" ? runnerImportConfigFile : nativeImportConfigFile;\n    const { configExport, dependencies } = await resolver(resolvedPath);\n    debug?.(`config file loaded in ${getTime()}`);\n    const config = await (typeof configExport === \"function\" ? configExport(configEnv) : configExport);\n    if (!isObject$1(config)) {\n      throw new Error(`config must export or return an object.`);\n    }\n    return {\n      path: normalizePath$3(resolvedPath),\n      config,\n      dependencies\n    };\n  } catch (e) {\n    const logger = createLogger(logLevel, { customLogger });\n    checkBadCharactersInPath(\"The config path\", resolvedPath, logger);\n    logger.error(colors$1.red(`failed to load config from ${resolvedPath}`), {\n      error: e\n    });\n    throw e;\n  }\n}\nasync function nativeImportConfigFile(resolvedPath) {\n  const module = await import(pathToFileURL$1(resolvedPath).href + \"?t=\" + Date.now());\n  return {\n    configExport: module.default,\n    dependencies: []\n  };\n}\nasync function runnerImportConfigFile(resolvedPath) {\n  const { module, dependencies } = await runnerImport(resolvedPath);\n  return {\n    configExport: module.default,\n    dependencies\n  };\n}\nasync function bundleAndLoadConfigFile(resolvedPath) {\n  const isESM = typeof process.versions.deno === \"string\" || isFilePathESM(resolvedPath);\n  const bundled = await bundleConfigFile(resolvedPath, isESM);\n  const userConfig = await loadConfigFromBundledFile(\n    resolvedPath,\n    bundled.code,\n    isESM\n  );\n  return {\n    configExport: userConfig,\n    dependencies: bundled.dependencies\n  };"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/chunks/dep-3O3b9SCF.js",
+      "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a",
+      "firstLine": 49631,
+      "lastLine": 49753,
+      "text": "async function bundleConfigFile(fileName, isESM) {\n  const isModuleSyncConditionEnabled = (await import('#module-sync-enabled')).default;\n  const dirnameVarName = \"__vite_injected_original_dirname\";\n  const filenameVarName = \"__vite_injected_original_filename\";\n  const importMetaUrlVarName = \"__vite_injected_original_import_meta_url\";\n  const result = await build$3({\n    absWorkingDir: process.cwd(),\n    entryPoints: [fileName],\n    write: false,\n    target: [`node${process.versions.node}`],\n    platform: \"node\",\n    bundle: true,\n    format: isESM ? \"esm\" : \"cjs\",\n    mainFields: [\"main\"],\n    sourcemap: \"inline\",\n    // the last slash is needed to make the path correct\n    sourceRoot: path$c.dirname(fileName) + path$c.sep,\n    metafile: true,\n    define: {\n      __dirname: dirnameVarName,\n      __filename: filenameVarName,\n      \"import.meta.url\": importMetaUrlVarName,\n      \"import.meta.dirname\": dirnameVarName,\n      \"import.meta.filename\": filenameVarName\n    },\n    plugins: [\n      {\n        name: \"externalize-deps\",\n        setup(build2) {\n          const packageCache = /* @__PURE__ */ new Map();\n          const resolveByViteResolver = (id, importer, isRequire) => {\n            return tryNodeResolve(id, importer, {\n              root: path$c.dirname(fileName),\n              isBuild: true,\n              isProduction: true,\n              preferRelative: false,\n              tryIndex: true,\n              mainFields: [],\n              conditions: [\n                \"node\",\n                ...isModuleSyncConditionEnabled ? [\"module-sync\"] : []\n              ],\n              externalConditions: [],\n              external: [],\n              noExternal: [],\n              dedupe: [],\n              extensions: configDefaults.resolve.extensions,\n              preserveSymlinks: false,\n              packageCache,\n              isRequire,\n              builtins: nodeLikeBuiltins\n            })?.id;\n          };\n          build2.onResolve(\n            { filter: /^[^.#].*/ },\n            async ({ path: id, importer, kind }) => {\n              if (kind === \"entry-point\" || path$c.isAbsolute(id) || isNodeBuiltin(id)) {\n                return;\n              }\n              if (isNodeLikeBuiltin(id)) {\n                return { external: true };\n              }\n              const isImport = isESM || kind === \"dynamic-import\";\n              let idFsPath;\n              try {\n                idFsPath = resolveByViteResolver(id, importer, !isImport);\n              } catch (e) {\n                if (!isImport) {\n                  let canResolveWithImport = false;\n                  try {\n                    canResolveWithImport = !!resolveByViteResolver(\n                      id,\n                      importer,\n                      false\n                    );\n                  } catch {\n                  }\n                  if (canResolveWithImport) {\n                    throw new Error(\n                      `Failed to resolve ${JSON.stringify(\n                        id\n                      )}. This package is ESM only but it was tried to load by \\`require\\`. See https://vite.dev/guide/troubleshooting.html#this-package-is-esm-only for more details.`\n                    );\n                  }\n                }\n                throw e;\n              }\n              if (idFsPath && isImport) {\n                idFsPath = pathToFileURL$1(idFsPath).href;\n              }\n              return {\n                path: idFsPath,\n                external: true\n              };\n            }\n          );\n        }\n      },\n      {\n        name: \"inject-file-scope-variables\",\n        setup(build2) {\n          build2.onLoad({ filter: /\\.[cm]?[jt]s$/ }, async (args) => {\n            const contents = await fsp.readFile(args.path, \"utf-8\");\n            const injectValues = `const ${dirnameVarName} = ${JSON.stringify(\n              path$c.dirname(args.path)\n            )};const ${filenameVarName} = ${JSON.stringify(args.path)};const ${importMetaUrlVarName} = ${JSON.stringify(\n              pathToFileURL$1(args.path).href\n            )};`;\n            return {\n              loader: args.path.endsWith(\"ts\") ? \"ts\" : \"js\",\n              contents: injectValues + contents\n            };\n          });\n        }\n      }\n    ]\n  });\n  const { text } = result.outputFiles[0];\n  return {\n    code: text,\n    dependencies: Object.keys(result.metafile.inputs)\n  };\n}"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/chunks/dep-3O3b9SCF.js",
+      "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a",
+      "firstLine": 49755,
+      "lastLine": 49799,
+      "text": "async function loadConfigFromBundledFile(fileName, bundledCode, isESM) {\n  if (isESM) {\n    let nodeModulesDir = typeof process.versions.deno === \"string\" ? void 0 : findNearestNodeModules(path$c.dirname(fileName));\n    if (nodeModulesDir) {\n      try {\n        await fsp.mkdir(path$c.resolve(nodeModulesDir, \".vite-temp/\"), {\n          recursive: true\n        });\n      } catch (e) {\n        if (e.code === \"EACCES\") {\n          nodeModulesDir = void 0;\n        } else {\n          throw e;\n        }\n      }\n    }\n    const hash = `timestamp-${Date.now()}-${Math.random().toString(16).slice(2)}`;\n    const tempFileName = nodeModulesDir ? path$c.resolve(\n      nodeModulesDir,\n      `.vite-temp/${path$c.basename(fileName)}.${hash}.mjs`\n    ) : `${fileName}.${hash}.mjs`;\n    await fsp.writeFile(tempFileName, bundledCode);\n    try {\n      return (await import(pathToFileURL$1(tempFileName).href)).default;\n    } finally {\n      fs__default.unlink(tempFileName, () => {\n      });\n    }\n  } else {\n    const extension = path$c.extname(fileName);\n    const realFileName = await promisifiedRealpath(fileName);\n    const loaderExt = extension in _require.extensions ? extension : \".js\";\n    const defaultLoader = _require.extensions[loaderExt];\n    _require.extensions[loaderExt] = (module, filename) => {\n      if (filename === realFileName) {\n        module._compile(bundledCode, filename);\n      } else {\n        defaultLoader(module, filename);\n      }\n    };\n    delete _require.cache[_require.resolve(fileName)];\n    const raw = _require(fileName);\n    _require.extensions[loaderExt] = defaultLoader;\n    return raw.__esModule ? raw.default : raw;\n  }"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/coverage.DfSpMS-b.js",
+      "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+      "firstLine": 2440,
+      "lastLine": 2521,
+      "text": "\nconst created = /* @__PURE__ */ new Set();\nconst promises = /* @__PURE__ */ new Map();\nfunction createMethodsRPC(project, options = {}) {\n\tconst ctx = project.vitest;\n\tconst cacheFs = options.cacheFs ?? false;\n\treturn {\n\t\tsnapshotSaved(snapshot) {\n\t\t\tctx.snapshot.add(snapshot);\n\t\t},\n\t\tresolveSnapshotPath(testPath) {\n\t\t\treturn ctx.snapshot.resolvePath(testPath, { config: project.serializedConfig });\n\t\t},\n\t\tasync getSourceMap(id, force) {\n\t\t\tif (force) {\n\t\t\t\tconst mod = project.vite.moduleGraph.getModuleById(id);\n\t\t\t\tif (mod) project.vite.moduleGraph.invalidateModule(mod);\n\t\t\t}\n\t\t\tconst r = await project.vitenode.transformRequest(id);\n\t\t\treturn r?.map;\n\t\t},\n\t\tasync fetch(id, transformMode) {\n\t\t\tconst result = await project.vitenode.fetchResult(id, transformMode).catch(handleRollupError);\n\t\t\tconst code = result.code;\n\t\t\tif (!cacheFs || result.externalize) return result;\n\t\t\tif (\"id\" in result && typeof result.id === \"string\") return { id: result.id };\n\t\t\tif (code == null) throw new Error(`Failed to fetch module ${id}`);\n\t\t\tconst dir = join$1(project.tmpDir, transformMode);\n\t\t\tconst name = hash(\"sha1\", id, \"hex\");\n\t\t\tconst tmp = join$1(dir, name);\n\t\t\tif (!created.has(dir)) {\n\t\t\t\tmkdirSync(dir, { recursive: true });\n\t\t\t\tcreated.add(dir);\n\t\t\t}\n\t\t\tif (promises.has(tmp)) {\n\t\t\t\tawait promises.get(tmp);\n\t\t\t\treturn { id: tmp };\n\t\t\t}\n\t\t\tpromises.set(tmp, atomicWriteFile(tmp, code).catch(() => writeFile(tmp, code, \"utf-8\")).finally(() => promises.delete(tmp)));\n\t\t\tawait promises.get(tmp);\n\t\t\tObject.assign(result, { id: tmp });\n\t\t\treturn { id: tmp };\n\t\t},\n\t\tresolveId(id, importer, transformMode) {\n\t\t\treturn project.vitenode.resolveId(id, importer, transformMode).catch(handleRollupError);\n\t\t},\n\t\ttransform(id, environment) {\n\t\t\treturn project.vitenode.transformModule(id, environment).catch(handleRollupError);\n\t\t},\n\t\tasync onQueued(file) {\n\t\t\tif (options.collect) ctx.state.collectFiles(project, [file]);\n\t\t\telse await ctx._testRun.enqueued(project, file);\n\t\t},\n\t\tasync onCollected(files) {\n\t\t\tif (options.collect) ctx.state.collectFiles(project, files);\n\t\t\telse await ctx._testRun.collected(project, files);\n\t\t},\n\t\tonAfterSuiteRun(meta) {\n\t\t\tctx.coverageProvider?.onAfterSuiteRun(meta);\n\t\t},\n\t\tasync onTaskAnnotate(testId, annotation) {\n\t\t\treturn ctx._testRun.annotate(testId, annotation);\n\t\t},\n\t\tasync onTaskUpdate(packs, events) {\n\t\t\tif (options.collect) ctx.state.updateTasks(packs);\n\t\t\telse await ctx._testRun.updated(packs, events);\n\t\t},\n\t\tasync onUserConsoleLog(log) {\n\t\t\tif (options.collect) ctx.state.updateUserLog(log);\n\t\t\telse await ctx._testRun.log(log);\n\t\t},\n\t\tonUnhandledError(err, type) {\n\t\t\tctx.state.catchError(err, type);\n\t\t},\n\t\tonCancel(reason) {\n\t\t\tctx.cancelCurrentRun(reason);\n\t\t},\n\t\tgetCountOfFailedTests() {\n\t\t\treturn ctx.state.getCountOfFailedTests();\n\t\t}\n\t};\n}"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/coverage.DfSpMS-b.js",
+      "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+      "firstLine": 2542,
+      "lastLine": 2718,
+      "text": "*\n* Why we need this:\n* - Ensures file integrity by never leaving partially written files on disk\n* - Prevents other processes from reading incomplete data during writes\n* - Particularly important for test files where incomplete writes could cause test failures\n*\n* The implementation writes to a temporary file first, then renames it to the target path.\n* This rename operation is atomic on most filesystems (including POSIX-compliant ones),\n* guaranteeing that other processes will only ever see the complete file.\n*\n* Added in https://github.com/vitest-dev/vitest/pull/7531\n*/\nasync function atomicWriteFile(realFilePath, data) {\n\tconst dir = dirname$1(realFilePath);\n\tconst tmpFilePath = join$1(dir, `.tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`);\n\ttry {\n\t\tawait writeFile(tmpFilePath, data, \"utf-8\");\n\t\tawait rename(tmpFilePath, realFilePath);\n\t} finally {\n\t\ttry {\n\t\t\tif (await stat(tmpFilePath)) await unlink(tmpFilePath);\n\t\t} catch {}\n\t}\n}\n\nfunction createChildProcessChannel$1(project, collect = false) {\n\tconst emitter = new EventEmitter();\n\tconst events = {\n\t\tmessage: \"message\",\n\t\tresponse: \"response\"\n\t};\n\tconst channel = {\n\t\tonMessage: (callback) => emitter.on(events.message, callback),\n\t\tpostMessage: (message) => emitter.emit(events.response, message),\n\t\tonClose: () => emitter.removeAllListeners()\n\t};\n\tconst rpc = createBirpc(createMethodsRPC(project, {\n\t\tcacheFs: true,\n\t\tcollect\n\t}), {\n\t\teventNames: [\"onCancel\"],\n\t\tserialize: v8.serialize,\n\t\tdeserialize: (v) => {\n\t\t\ttry {\n\t\t\t\treturn v8.deserialize(Buffer.from(v));\n\t\t\t} catch (error) {\n\t\t\t\tlet stringified = \"\";\n\t\t\t\ttry {\n\t\t\t\t\tstringified = `\\nReceived value: ${JSON.stringify(v)}`;\n\t\t\t\t} catch {}\n\t\t\t\tthrow new Error(`[vitest-pool]: Unexpected call to process.send(). Make sure your test cases are not interfering with process's channel.${stringified}`, { cause: error });\n\t\t\t}\n\t\t},\n\t\tpost(v) {\n\t\t\temitter.emit(events.message, v);\n\t\t},\n\t\ton(fn) {\n\t\t\temitter.on(events.response, fn);\n\t\t},\n\t\tonTimeoutError(functionName) {\n\t\t\tthrow new Error(`[vitest-pool]: Timeout calling \"${functionName}\"`);\n\t\t}\n\t});\n\tproject.vitest.onCancel((reason) => rpc.onCancel(reason));\n\treturn channel;\n}\nfunction createForksPool(vitest, { execArgv, env }) {\n\tconst numCpus = typeof nodeos.availableParallelism === \"function\" ? nodeos.availableParallelism() : nodeos.cpus().length;\n\tconst threadsCount = vitest.config.watch ? Math.max(Math.floor(numCpus / 2), 1) : Math.max(numCpus - 1, 1);\n\tconst poolOptions = vitest.config.poolOptions?.forks ?? {};\n\tconst maxThreads = poolOptions.maxForks ?? vitest.config.maxWorkers ?? threadsCount;\n\tconst minThreads = poolOptions.minForks ?? vitest.config.minWorkers ?? Math.min(threadsCount, maxThreads);\n\tconst worker = resolve(vitest.distPath, \"workers/forks.js\");\n\tconst options = {\n\t\truntime: \"child_process\",\n\t\tfilename: resolve(vitest.distPath, \"worker.js\"),\n\t\tteardown: \"teardown\",\n\t\tmaxThreads,\n\t\tminThreads,\n\t\tenv,\n\t\texecArgv: [...poolOptions.execArgv ?? [], ...execArgv],\n\t\tterminateTimeout: vitest.config.teardownTimeout,\n\t\tconcurrentTasksPerWorker: 1\n\t};\n\tconst isolated = poolOptions.isolate ?? true;\n\tif (isolated) options.isolateWorkers = true;\n\tif (poolOptions.singleFork || !vitest.config.fileParallelism) {\n\t\toptions.maxThreads = 1;\n\t\toptions.minThreads = 1;\n\t}\n\tconst pool = new Tinypool(options);\n\tconst runWithFiles = (name) => {\n\t\tlet id = 0;\n\t\tasync function runFiles(project, config, files, environment, invalidates = []) {\n\t\t\tconst paths = files.map((f) => f.filepath);\n\t\t\tvitest.state.clearFiles(project, paths);\n\t\t\tconst channel = createChildProcessChannel$1(project, name === \"collect\");\n\t\t\tconst workerId = ++id;\n\t\t\tconst data = {\n\t\t\t\tpool: \"forks\",\n\t\t\t\tworker,\n\t\t\t\tconfig,\n\t\t\t\tfiles,\n\t\t\t\tinvalidates,\n\t\t\t\tenvironment,\n\t\t\t\tworkerId,\n\t\t\t\tprojectName: project.name,\n\t\t\t\tprovidedContext: project.getProvidedContext()\n\t\t\t};\n\t\t\ttry {\n\t\t\t\tawait pool.run(data, {\n\t\t\t\t\tname,\n\t\t\t\t\tchannel\n\t\t\t\t});\n\t\t\t} catch (error) {\n\t\t\t\t// Worker got stuck and won't terminate - this may cause process to hang\n\t\t\t\tif (error instanceof Error && /Failed to terminate worker/.test(error.message)) vitest.state.addProcessTimeoutCause(`Failed to terminate worker while running ${paths.join(\", \")}.`);\n\t\t\t\telse if (vitest.isCancelling && error instanceof Error && /The task has been cancelled/.test(error.message)) vitest.state.cancelFiles(paths, project);\n\t\t\t\telse throw error;\n\t\t\t}\n\t\t}\n\t\treturn async (specs, invalidates) => {\n\t\t\t// Cancel pending tasks from pool when possible\n\t\t\tvitest.onCancel(() => pool.cancelPendingTasks());\n\t\t\tconst configs = /* @__PURE__ */ new WeakMap();\n\t\t\tconst getConfig = (project) => {\n\t\t\t\tif (configs.has(project)) return configs.get(project);\n\t\t\t\tconst _config = project.getSerializableConfig();\n\t\t\t\tconst config = wrapSerializableConfig(_config);\n\t\t\t\tconfigs.set(project, config);\n\t\t\t\treturn config;\n\t\t\t};\n\t\t\tconst singleFork = specs.filter((spec) => spec.project.config.poolOptions?.forks?.singleFork);\n\t\t\tconst multipleForks = specs.filter((spec) => !spec.project.config.poolOptions?.forks?.singleFork);\n\t\t\tif (multipleForks.length) {\n\t\t\t\tconst filesByEnv = await groupFilesByEnv(multipleForks);\n\t\t\t\tconst files = Object.values(filesByEnv).flat();\n\t\t\t\tconst results = [];\n\t\t\t\tif (isolated) results.push(...await Promise.allSettled(files.map(({ file, environment, project }) => runFiles(project, getConfig(project), [file], environment, invalidates))));\n\t\t\t\telse {\n\t\t\t\t\t// When isolation is disabled, we still need to isolate environments and workspace projects from each other.\n\t\t\t\t\t// Tasks are still running parallel but environments are isolated between tasks.\n\t\t\t\t\tconst grouped = groupBy(files, ({ project, environment }) => project.name + environment.name + JSON.stringify(environment.options));\n\t\t\t\t\tfor (const group of Object.values(grouped)) {\n\t\t\t\t\t\t// Push all files to pool's queue\n\t\t\t\t\t\tresults.push(...await Promise.allSettled(group.map(({ file, environment, project }) => runFiles(project, getConfig(project), [file], environment, invalidates))));\n\t\t\t\t\t\t// Once all tasks are running or finished, recycle worker for isolation.\n\t\t\t\t\t\t// On-going workers will run in the previous environment.\n\t\t\t\t\t\tawait new Promise((resolve) => pool.queueSize === 0 ? resolve() : pool.once(\"drain\", resolve));\n\t\t\t\t\t\tawait pool.recycleWorkers();\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tconst errors = results.filter((r) => r.status === \"rejected\").map((r) => r.reason);\n\t\t\t\tif (errors.length > 0) throw new AggregateError(errors, \"Errors occurred while running tests. For more information, see serialized error.\");\n\t\t\t}\n\t\t\tif (singleFork.length) {\n\t\t\t\tconst filesByEnv = await groupFilesByEnv(singleFork);\n\t\t\t\tconst envs = envsOrder.concat(Object.keys(filesByEnv).filter((env) => !envsOrder.includes(env)));\n\t\t\t\tfor (const env of envs) {\n\t\t\t\t\tconst files = filesByEnv[env];\n\t\t\t\t\tif (!files?.length) continue;\n\t\t\t\t\tconst filesByOptions = groupBy(files, ({ project, environment }) => project.name + JSON.stringify(environment.options));\n\t\t\t\t\tfor (const files of Object.values(filesByOptions)) {\n\t\t\t\t\t\t// Always run environments isolated between each other\n\t\t\t\t\t\tawait pool.recycleWorkers();\n\t\t\t\t\t\tconst filenames = files.map((f) => f.file);\n\t\t\t\t\t\tawait runFiles(files[0].project, getConfig(files[0].project), filenames, files[0].environment, invalidates);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t};\n\t};\n\treturn {\n\t\tname: \"forks\",\n\t\trunTests: runWithFiles(\"run\"),\n\t\tcollectTests: runWithFiles(\"collect\"),\n\t\tclose: () => pool.destroy()"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/coverage.DfSpMS-b.js",
+      "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+      "firstLine": 3309,
+      "lastLine": 3352,
+      "text": "function createPool(ctx) {\n\tconst pools = {\n\t\tforks: null,\n\t\tthreads: null,\n\t\tbrowser: null,\n\t\tvmThreads: null,\n\t\tvmForks: null,\n\t\ttypescript: null\n\t};\n\t// in addition to resolve.conditions Vite also adds production/development,\n\t// see: https://github.com/vitejs/vite/blob/af2aa09575229462635b7cbb6d248ca853057ba2/packages/vite/src/node/plugins/resolve.ts#L1056-L1080\n\tconst viteMajor = Number(version.split(\".\")[0]);\n\tconst potentialConditions = new Set(viteMajor >= 6 ? ctx.vite.config.ssr.resolve?.conditions ?? [] : [\n\t\t\"production\",\n\t\t\"development\",\n\t\t...ctx.vite.config.resolve.conditions\n\t]);\n\tconst conditions = [...potentialConditions].filter((condition) => {\n\t\tif (condition === \"production\") return ctx.vite.config.isProduction;\n\t\tif (condition === \"development\") return !ctx.vite.config.isProduction;\n\t\treturn true;\n\t}).map((condition) => {\n\t\tif (viteMajor >= 6 && condition === \"development|production\") return ctx.vite.config.isProduction ? \"production\" : \"development\";\n\t\treturn condition;\n\t}).flatMap((c) => [\"--conditions\", c]);\n\t// Instead of passing whole process.execArgv to the workers, pick allowed options.\n\t// Some options may crash worker, e.g. --prof, --title. nodejs/node#41103\n\tconst execArgv = process.execArgv.filter((execArg) => execArg.startsWith(\"--cpu-prof\") || execArg.startsWith(\"--heap-prof\") || execArg.startsWith(\"--diagnostic-dir\"));\n\tasync function executeTests(method, files, invalidate) {\n\t\tconst options = {\n\t\t\texecArgv: [...execArgv, ...conditions],\n\t\t\tenv: {\n\t\t\t\tTEST: \"true\",\n\t\t\t\tVITEST: \"true\",\n\t\t\t\tNODE_ENV: process.env.NODE_ENV || \"test\",\n\t\t\t\tVITEST_MODE: ctx.config.watch ? \"WATCH\" : \"RUN\",\n\t\t\t\tFORCE_TTY: isatty(1) ? \"true\" : \"\",\n\t\t\t\t...process.env,\n\t\t\t\t...ctx.config.env\n\t\t\t}\n\t\t};\n\t\t// env are case-insensitive on Windows, but spawned processes don't support it\n\t\tif (isWindows) for (const name in options.env) options.env[name.toUpperCase()] = options.env[name];\n\t\tconst poolConcurrentPromises = /* @__PURE__ */ new Map();"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/coverage.DfSpMS-b.js",
+      "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+      "firstLine": 3544,
+      "lastLine": 3558,
+      "text": "function resolveConfig$1(vitest, options, viteConfig) {\n\tconst mode = vitest.mode;\n\tconst logger = vitest.logger;\n\tif (options.dom) {\n\t\tif (viteConfig.test?.environment != null && viteConfig.test.environment !== \"happy-dom\") logger.console.warn(c.yellow(`${c.inverse(c.yellow(\" Vitest \"))} Your config.test.environment (\"${viteConfig.test.environment}\") conflicts with --dom flag (\"happy-dom\"), ignoring \"${viteConfig.test.environment}\"`));\n\t\toptions.environment = \"happy-dom\";\n\t}\n\tconst resolved = {\n\t\t...configDefaults,\n\t\t...options,\n\t\troot: viteConfig.root,\n\t\tmode\n\t};\n\tresolved.project = toArray(resolved.project);\n\tresolved.provide ??= {};"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/coverage.DfSpMS-b.js",
+      "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+      "firstLine": 3584,
+      "lastLine": 3598,
+      "text": "\tif (resolved.maxWorkers) resolved.maxWorkers = resolveInlineWorkerOption(resolved.maxWorkers);\n\tif (resolved.minWorkers) resolved.minWorkers = resolveInlineWorkerOption(resolved.minWorkers);\n\t// run benchmark sequentially by default\n\tresolved.fileParallelism ??= mode !== \"benchmark\";\n\tif (!resolved.fileParallelism) {\n\t\t// ignore user config, parallelism cannot be implemented without limiting workers\n\t\tresolved.maxWorkers = 1;\n\t\tresolved.minWorkers = 1;\n\t}\n\tif (resolved.maxConcurrency === 0) {\n\t\tlogger.console.warn(c.yellow(`The option \"maxConcurrency\" cannot be set to 0. Using default value ${configDefaults.maxConcurrency} instead.`));\n\t\tresolved.maxConcurrency = configDefaults.maxConcurrency;\n\t}\n\tif (resolved.inspect || resolved.inspectBrk) {\n\t\tconst isSingleThread = resolved.pool === \"threads\" && resolved.poolOptions?.threads?.singleThread;"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/coverage.DfSpMS-b.js",
+      "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+      "firstLine": 3652,
+      "lastLine": 3656,
+      "text": "\tresolved.deps.optimizer ??= {};\n\tresolved.deps.optimizer.ssr ??= {};\n\tresolved.deps.optimizer.ssr.enabled ??= true;\n\tresolved.deps.optimizer.web ??= {};\n\tresolved.deps.optimizer.web.enabled ??= true;"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/coverage.DfSpMS-b.js",
+      "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+      "firstLine": 3704,
+      "lastLine": 3715,
+      "text": "\tresolved.testNamePattern = resolved.testNamePattern ? resolved.testNamePattern instanceof RegExp ? resolved.testNamePattern : new RegExp(resolved.testNamePattern) : void 0;\n\tif (resolved.snapshotFormat && \"plugins\" in resolved.snapshotFormat) resolved.snapshotFormat.plugins = [];\n\tconst UPDATE_SNAPSHOT = resolved.update || process.env.UPDATE_SNAPSHOT;\n\tresolved.snapshotOptions = {\n\t\texpand: resolved.expandSnapshotDiff ?? false,\n\t\tsnapshotFormat: resolved.snapshotFormat || {},\n\t\tupdateSnapshot: isCI && !UPDATE_SNAPSHOT ? \"none\" : UPDATE_SNAPSHOT ? \"all\" : \"new\",\n\t\tresolveSnapshotPath: options.resolveSnapshotPath,\n\t\tsnapshotEnvironment: null\n\t};\n\tresolved.snapshotSerializers ??= [];\n\tresolved.snapshotSerializers = resolved.snapshotSerializers.map((file) => resolvePath(file, resolved.root));"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/coverage.DfSpMS-b.js",
+      "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+      "firstLine": 3741,
+      "lastLine": 3776,
+      "text": "\tif (process.env.VITEST_MAX_FORKS) resolved.poolOptions = {\n\t\t...resolved.poolOptions,\n\t\tforks: {\n\t\t\t...resolved.poolOptions?.forks,\n\t\t\tmaxForks: Number.parseInt(process.env.VITEST_MAX_FORKS)\n\t\t},\n\t\tvmForks: {\n\t\t\t...resolved.poolOptions?.vmForks,\n\t\t\tmaxForks: Number.parseInt(process.env.VITEST_MAX_FORKS)\n\t\t}\n\t};\n\tif (process.env.VITEST_MIN_FORKS) resolved.poolOptions = {\n\t\t...resolved.poolOptions,\n\t\tforks: {\n\t\t\t...resolved.poolOptions?.forks,\n\t\t\tminForks: Number.parseInt(process.env.VITEST_MIN_FORKS)\n\t\t},\n\t\tvmForks: {\n\t\t\t...resolved.poolOptions?.vmForks,\n\t\t\tminForks: Number.parseInt(process.env.VITEST_MIN_FORKS)\n\t\t}\n\t};\n\tconst poolThreadsOptions = [\n\t\t[\"threads\", \"minThreads\"],\n\t\t[\"threads\", \"maxThreads\"],\n\t\t[\"vmThreads\", \"minThreads\"],\n\t\t[\"vmThreads\", \"maxThreads\"]\n\t];\n\tfor (const [poolOptionKey, workerOptionKey] of poolThreadsOptions) if (resolved.poolOptions?.[poolOptionKey]?.[workerOptionKey]) resolved.poolOptions[poolOptionKey][workerOptionKey] = resolveInlineWorkerOption(resolved.poolOptions[poolOptionKey][workerOptionKey]);\n\tconst poolForksOptions = [\n\t\t[\"forks\", \"minForks\"],\n\t\t[\"forks\", \"maxForks\"],\n\t\t[\"vmForks\", \"minForks\"],\n\t\t[\"vmForks\", \"maxForks\"]\n\t];\n\tfor (const [poolOptionKey, workerOptionKey] of poolForksOptions) if (resolved.poolOptions?.[poolOptionKey]?.[workerOptionKey]) resolved.poolOptions[poolOptionKey][workerOptionKey] = resolveInlineWorkerOption(resolved.poolOptions[poolOptionKey][workerOptionKey]);"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/coverage.DfSpMS-b.js",
+      "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+      "firstLine": 3840,
+      "lastLine": 3866,
+      "text": "\t}\n\tif (mode !== \"benchmark\") {\n\t\t// @ts-expect-error \"reporter\" is from CLI, should be absolute to the running directory\n\t\t// it is passed down as \"vitest --reporter ../reporter.js\"\n\t\tconst reportersFromCLI = resolved.reporter;\n\t\tconst cliReporters = toArray(reportersFromCLI || []).map((reporter) => {\n\t\t\t// ./reporter.js || ../reporter.js, but not .reporters/reporter.js\n\t\t\tif (/^\\.\\.?\\//.test(reporter)) return resolve$1(process.cwd(), reporter);\n\t\t\treturn reporter;\n\t\t});\n\t\tif (cliReporters.length) resolved.reporters = Array.from(new Set(toArray(cliReporters))).filter(Boolean).map((reporter) => [reporter, {}]);\n\t}\n\tif (!resolved.reporters.length) {\n\t\tresolved.reporters.push([\"default\", {}]);\n\t\t// also enable github-actions reporter as a default\n\t\tif (process.env.GITHUB_ACTIONS === \"true\") resolved.reporters.push([\"github-actions\", {}]);\n\t}\n\tif (resolved.changed) resolved.passWithNoTests ??= true;\n\tresolved.css ??= {};\n\tif (typeof resolved.css === \"object\") {\n\t\tresolved.css.modules ??= {};\n\t\tresolved.css.modules.classNameStrategy ??= \"stable\";\n\t}\n\tif (resolved.cache !== false) {\n\t\tif (resolved.cache && typeof resolved.cache.dir === \"string\") vitest.logger.deprecate(`\"cache.dir\" is deprecated, use Vite's \"cacheDir\" instead if you want to change the cache director. Note caches will be written to \"cacheDir\\/vitest\"`);\n\t\tresolved.cache = { dir: viteConfig.cacheDir };\n\t}"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/module-runner.js",
+      "gitBlob": "45ba59b2f708506a01b518299f543defb88553cd",
+      "firstLine": 1059,
+      "lastLine": 1082,
+      "text": "class ESModulesEvaluator {\n  startOffset = getAsyncFunctionDeclarationPaddingLineCount();\n  async runInlinedModule(context, code) {\n    await new AsyncFunction(\n      ssrModuleExportsKey,\n      ssrImportMetaKey,\n      ssrImportKey,\n      ssrDynamicImportKey,\n      ssrExportAllKey,\n      // source map should already be inlined by Vite\n      '\"use strict\";' + code\n    )(\n      context[ssrModuleExportsKey],\n      context[ssrImportMetaKey],\n      context[ssrImportKey],\n      context[ssrDynamicImportKey],\n      context[ssrExportAllKey]\n    ), Object.seal(context[ssrModuleExportsKey]);\n  }\n  runExternalModule(filepath) {\n    return import(filepath);\n  }\n}\nclass ModuleRunner {"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/module-runner.js",
+      "gitBlob": "45ba59b2f708506a01b518299f543defb88553cd",
+      "firstLine": 1235,
+      "lastLine": 1285,
+      "text": "    }\n    const { code, file } = fetchResult;\n    if (code == null) {\n      const importer = callstack[callstack.length - 2];\n      throw new Error(\n        `[module runner] Failed to load \"${url}\"${importer ? ` imported from ${importer}` : \"\"}`\n      );\n    }\n    const modulePath = cleanUrl(file || moduleId), href = posixPathToFileHref(modulePath), filename = modulePath, dirname2 = posixDirname(modulePath), meta = {\n      filename: isWindows ? toWindowsPath(filename) : filename,\n      dirname: isWindows ? toWindowsPath(dirname2) : dirname2,\n      url: href,\n      env: this.envProxy,\n      resolve(_id, _parent) {\n        throw new Error(\n          '[module runner] \"import.meta.resolve\" is not supported.'\n        );\n      },\n      // should be replaced during transformation\n      glob() {\n        throw new Error(\n          '[module runner] \"import.meta.glob\" is statically replaced during file transformation. Make sure to reference it by the full name.'\n        );\n      }\n    }, exports = /* @__PURE__ */ Object.create(null);\n    Object.defineProperty(exports, Symbol.toStringTag, {\n      value: \"Module\",\n      enumerable: !1,\n      configurable: !1\n    }), mod.exports = exports;\n    let hotContext;\n    this.hmrClient && Object.defineProperty(meta, \"hot\", {\n      enumerable: !0,\n      get: () => {\n        if (!this.hmrClient)\n          throw new Error(\"[module runner] HMR client was closed.\");\n        return this.debug?.(\"[module runner] creating hmr context for\", mod.url), hotContext ||= new HMRContext(this.hmrClient, mod.url), hotContext;\n      },\n      set: (value) => {\n        hotContext = value;\n      }\n    });\n    const context = {\n      [ssrImportKey]: request,\n      [ssrDynamicImportKey]: dynamicRequest,\n      [ssrModuleExportsKey]: exports,\n      [ssrExportAllKey]: (obj) => exportAll(exports, obj),\n      [ssrImportMetaKey]: meta\n    };\n    return this.debug?.(\"[module runner] executing\", href), await this.evaluator.runInlinedModule(context, code, mod), exports;\n  }"
+    },
+    {
+      "path": "node_modules/.pnpm/tinypool@2.2.0/node_modules/tinypool/dist/index.js",
+      "gitBlob": "a38174cbbd0853d598a64a50b251cfc6d3af7528",
+      "firstLine": 54,
+      "lastLine": 144,
+      "text": "const __tinypool_worker_message__ = true;\nconst SIGKILL_TIMEOUT = 1e3;\nvar ProcessWorker = class {\n\tname = \"ProcessWorker\";\n\truntime = \"child_process\";\n\tisTerminating = false;\n\tinitialize(options) {\n\t\tthis.process = fork(fileURLToPath(import.meta.url + \"/../entry/process.js\"), options.argv, {\n\t\t\t...options,\n\t\t\tstdio: \"pipe\",\n\t\t\tenv: {\n\t\t\t\t...options.env,\n\t\t\t\tTINYPOOL_WORKER_ID: options.workerData[0].workerId.toString()\n\t\t\t}\n\t\t});\n\t\tprocess.stdout.setMaxListeners(1 + process.stdout.getMaxListeners());\n\t\tprocess.stderr.setMaxListeners(1 + process.stderr.getMaxListeners());\n\t\tthis.process.stdout?.pipe(process.stdout);\n\t\tthis.process.stderr?.pipe(process.stderr);\n\t\tthis.threadId = this.process.pid;\n\t\tthis.process.on(\"exit\", this.onUnexpectedExit);\n\t\tthis.waitForExit = new Promise((r) => this.process.on(\"exit\", r));\n\t}\n\tonUnexpectedExit = () => {\n\t\tthis.process.emit(\"error\", new Error(\"Worker exited unexpectedly\"));\n\t};\n\tasync terminate() {\n\t\tthis.isTerminating = true;\n\t\tthis.process.off(\"exit\", this.onUnexpectedExit);\n\t\tconst sigkillTimeout = setTimeout(() => this.process.kill(\"SIGKILL\"), SIGKILL_TIMEOUT);\n\t\tthis.process.kill();\n\t\tawait this.waitForExit;\n\t\tthis.process.stdout?.unpipe(process.stdout);\n\t\tthis.process.stderr?.unpipe(process.stderr);\n\t\tthis.port?.close();\n\t\tthis.channel?.onClose?.();\n\t\tclearTimeout(sigkillTimeout);\n\t}\n\tsetChannel(channel) {\n\t\tif (this.channel && this.channel !== channel) this.channel.onClose?.();\n\t\tthis.channel = channel;\n\t\tthis.channel.onMessage?.((message) => {\n\t\t\tthis.send(message);\n\t\t});\n\t}\n\tsend(message) {\n\t\tif (!this.isTerminating) this.process.send(message);\n\t}\n\tpostMessage(message, transferListItem) {\n\t\ttransferListItem?.forEach((item) => {\n\t\t\tif (item instanceof MessagePort) {\n\t\t\t\tthis.port = item;\n\t\t\t\tthis.port.start();\n\t\t\t}\n\t\t});\n\t\tif (this.port) this.port.on(\"message\", (message$1) => this.send({\n\t\t\t...message$1,\n\t\t\tsource: \"port\",\n\t\t\t__tinypool_worker_message__\n\t\t}));\n\t\treturn this.send({\n\t\t\t...message,\n\t\t\tsource: \"pool\",\n\t\t\t__tinypool_worker_message__\n\t\t});\n\t}\n\ton(event, callback) {\n\t\treturn this.process.on(event, (data) => {\n\t\t\tif (event === \"error\") return callback(data);\n\t\t\tif (!data || !data.__tinypool_worker_message__) return this.channel?.postMessage?.(data);\n\t\t\tif (data.source === \"pool\") callback(data);\n\t\t\telse if (data.source === \"port\") this.port.postMessage(data);\n\t\t});\n\t}\n\tonce(event, callback) {\n\t\treturn this.process.once(event, callback);\n\t}\n\temit(event, ...data) {\n\t\treturn this.process.emit(event, ...data);\n\t}\n\tref() {\n\t\treturn this.process.ref();\n\t}\n\tunref() {\n\t\tthis.port?.unref();\n\t\tthis.process.channel?.unref?.();\n\t\tif (hasUnref(this.process.stdout)) this.process.stdout.unref();\n\t\tif (hasUnref(this.process.stderr)) this.process.stderr.unref();\n\t\treturn this.process.unref();\n\t}\n};"
+    },
+    {
+      "path": "node_modules/.pnpm/tinypool@2.2.0/node_modules/tinypool/dist/index.js",
+      "gitBlob": "a38174cbbd0853d598a64a50b251cfc6d3af7528",
+      "firstLine": 375,
+      "lastLine": 399,
+      "text": "\tasync destroy(timeout) {\n\t\tlet resolve;\n\t\tlet reject;\n\t\tconst ret = new Promise((res, rej) => {\n\t\t\tresolve = res;\n\t\t\treject = rej;\n\t\t});\n\t\tif (this.teardown && this.filename) {\n\t\t\tconst { teardown, filename } = this;\n\t\t\tawait new Promise((resolve$1, reject$1) => {\n\t\t\t\tthis.postTask(new TaskInfo({}, [], filename, teardown, (error, result) => error ? reject$1(error) : resolve$1(result), null, 1, void 0));\n\t\t\t});\n\t\t}\n\t\tconst timer = timeout ? setTimeout(() => reject(new Error(\"Failed to terminate worker\")), timeout) : null;\n\t\tthis.worker.terminate().then(() => {\n\t\t\tif (timer !== null) clearTimeout(timer);\n\t\t\tthis.port.close();\n\t\t\tthis.clearIdleTimeout();\n\t\t\tfor (const taskInfo of this.taskInfos.values()) taskInfo.done(Errors.ThreadTermination());\n\t\t\tthis.taskInfos.clear();\n\t\t\tresolve();\n\t\t});\n\t\treturn ret;\n\t}\n\tclearIdleTimeout() {"
+    },
+    {
+      "path": "node_modules/.pnpm/tinypool@2.2.0/node_modules/tinypool/dist/entry/process.js",
+      "gitBlob": "893fddd8a895cfcec913802907c2515d13d556a4",
+      "firstLine": 1,
+      "lastLine": 72,
+      "text": "import { stderr, stdout } from \"../utils-De75vAgL.js\";\nimport { getHandler, throwInNextTick } from \"../utils-B--2TaWv.js\";\n\n//#region src/entry/process.ts\nprocess.__tinypool_state__ = {\n\tisChildProcess: true,\n\tisTinypoolWorker: true,\n\tworkerData: null,\n\tworkerId: Number(process.env.TINYPOOL_WORKER_ID)\n};\nconst memoryUsage = process.memoryUsage.bind(process);\nconst send = process.send.bind(process);\nprocess.on(\"message\", (message) => {\n\tif (!message || !message.__tinypool_worker_message__) return;\n\tif (message.source === \"pool\") {\n\t\tconst { filename, name } = message;\n\t\t(async function() {\n\t\t\tif (filename !== null) await getHandler(filename, name);\n\t\t\tsend({\n\t\t\t\tready: true,\n\t\t\t\tsource: \"pool\",\n\t\t\t\t__tinypool_worker_message__: true\n\t\t\t}, () => {});\n\t\t})().catch(throwInNextTick);\n\t\treturn;\n\t}\n\tif (message.source === \"port\") {\n\t\tonMessage(message).catch(throwInNextTick);\n\t\treturn;\n\t}\n\tthrow new Error(`Unexpected TinypoolWorkerMessage ${JSON.stringify(message)}`);\n});\nasync function onMessage(message) {\n\tconst { taskId, task, filename, name } = message;\n\tlet response;\n\ttry {\n\t\tconst handler = await getHandler(filename, name);\n\t\tif (handler === null) throw new Error(`No handler function \"${name}\" exported from \"${filename}\"`);\n\t\tconst result = await handler(task);\n\t\tresponse = {\n\t\t\tsource: \"port\",\n\t\t\t__tinypool_worker_message__: true,\n\t\t\ttaskId,\n\t\t\tresult,\n\t\t\terror: null,\n\t\t\tusedMemory: memoryUsage().heapUsed\n\t\t};\n\t\tif (stdout()?.writableLength > 0) await new Promise((resolve) => process.stdout.write(\"\", resolve));\n\t\tif (stderr()?.writableLength > 0) await new Promise((resolve) => process.stderr.write(\"\", resolve));\n\t} catch (error) {\n\t\tresponse = {\n\t\t\tsource: \"port\",\n\t\t\t__tinypool_worker_message__: true,\n\t\t\ttaskId,\n\t\t\tresult: null,\n\t\t\terror: serializeError(error),\n\t\t\tusedMemory: memoryUsage().heapUsed\n\t\t};\n\t}\n\tsend(response);\n}\nfunction serializeError(error) {\n\tif (error instanceof Error) return {\n\t\t...error,\n\t\tname: error.name,\n\t\tstack: error.stack,\n\t\tmessage: error.message\n\t};\n\treturn String(error);\n}\n\n//#endregion"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/index.CmSc2RE5.js",
+      "gitBlob": "90004b3064c731a22f584000525e0bff3f423867",
+      "firstLine": 334,
+      "lastLine": 397,
+      "text": "async function teardownWindow(win) {\n\tif (win.close && win.happyDOM.abort) {\n\t\tawait win.happyDOM.abort();\n\t\twin.close();\n\t} else win.happyDOM.cancelAsync();\n}\nvar happy = {\n\tname: \"happy-dom\",\n\ttransformMode: \"web\",\n\tasync setupVM({ happyDOM = {} }) {\n\t\tconst { Window } = await import('happy-dom');\n\t\tlet win = new Window({\n\t\t\t...happyDOM,\n\t\t\tconsole: console && globalThis.console ? globalThis.console : void 0,\n\t\t\turl: happyDOM.url || \"http://localhost:3000\",\n\t\t\tsettings: {\n\t\t\t\t...happyDOM.settings,\n\t\t\t\tdisableErrorCapturing: true\n\t\t\t}\n\t\t});\n\t\t// TODO: browser doesn't expose Buffer, but a lot of dependencies use it\n\t\twin.Buffer = Buffer;\n\t\t// inject structuredClone if it exists\n\t\tif (typeof structuredClone !== \"undefined\" && !win.structuredClone) win.structuredClone = structuredClone;\n\t\treturn {\n\t\t\tgetVmContext() {\n\t\t\t\treturn win;\n\t\t\t},\n\t\t\tasync teardown() {\n\t\t\t\tawait teardownWindow(win);\n\t\t\t\twin = void 0;\n\t\t\t}\n\t\t};\n\t},\n\tasync setup(global, { happyDOM = {} }) {\n\t\t// happy-dom v3 introduced a breaking change to Window, but\n\t\t// provides GlobalWindow as a way to use previous behaviour\n\t\tconst { Window, GlobalWindow } = await import('happy-dom');\n\t\tconst win = new (GlobalWindow || Window)({\n\t\t\t...happyDOM,\n\t\t\tconsole: console && global.console ? global.console : void 0,\n\t\t\turl: happyDOM.url || \"http://localhost:3000\",\n\t\t\tsettings: {\n\t\t\t\t...happyDOM.settings,\n\t\t\t\tdisableErrorCapturing: true\n\t\t\t}\n\t\t});\n\t\tconst { keys, originals } = populateGlobal(global, win, {\n\t\t\tbindFunctions: true,\n\t\t\tadditionalKeys: [\n\t\t\t\t\"Request\",\n\t\t\t\t\"Response\",\n\t\t\t\t\"MessagePort\",\n\t\t\t\t\"fetch\"\n\t\t\t]\n\t\t});\n\t\treturn { async teardown(global) {\n\t\t\tawait teardownWindow(win);\n\t\t\tkeys.forEach((key) => delete global[key]);\n\t\t\toriginals.forEach((v, k) => global[k] = v);\n\t\t} };\n\t}\n};\n"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/runBaseTests.9Ij9_de-.js",
+      "gitBlob": "9c62d6d1d5598aeeb5123803f33bbd28d5ce1ca4",
+      "firstLine": 1,
+      "lastLine": 130,
+      "text": "import { performance } from 'node:perf_hooks';\nimport { startTests, collectTests } from '@vitest/runner';\nimport { a as resolveSnapshotEnvironment, s as setupChaiConfig, r as resolveTestRunner } from './index.CwejwG0H.js';\nimport { c as setupCommonEnv, s as startCoverageInsideWorker, a as stopCoverageInsideWorker } from './setup-common.Dd054P77.js';\nimport { a as globalExpect, v as vi } from './vi.bdSIJ99Y.js';\nimport { c as closeInspector } from './inspector.C914Efll.js';\nimport { createRequire } from 'node:module';\nimport timers from 'node:timers';\nimport timersPromises from 'node:timers/promises';\nimport util from 'node:util';\nimport { getSafeTimers } from '@vitest/utils';\nimport { KNOWN_ASSET_TYPES } from 'vite-node/constants';\nimport { installSourcemapsSupport } from 'vite-node/source-map';\nimport { V as VitestIndex } from './index.CdQS2e2Q.js';\nimport { g as getWorkerState, r as resetModules } from './utils.XdZDrNZV.js';\nimport 'chai';\nimport 'node:path';\nimport '../path.js';\nimport 'node:url';\nimport './rpc.-pEldfrD.js';\nimport './index.B521nVV-.js';\nimport './coverage.DVF1vEu8.js';\nimport '@vitest/snapshot';\nimport '@vitest/expect';\nimport '@vitest/runner/utils';\nimport './_commonjsHelpers.BFTU3MAI.js';\nimport '@vitest/utils/error';\nimport '@vitest/spy';\nimport '@vitest/utils/source-map';\nimport './date.Bq6ZW5rf.js';\nimport './benchmark.CYdenmiT.js';\nimport 'expect-type';\n\n// this should only be used in Node\nlet globalSetup = false;\nasync function setupGlobalEnv(config, { environment }, executor) {\n\tawait setupCommonEnv(config);\n\tObject.defineProperty(globalThis, \"__vitest_index__\", {\n\t\tvalue: VitestIndex,\n\t\tenumerable: false\n\t});\n\tconst state = getWorkerState();\n\tif (!state.config.snapshotOptions.snapshotEnvironment) state.config.snapshotOptions.snapshotEnvironment = await resolveSnapshotEnvironment(config, executor);\n\tif (globalSetup) return;\n\tglobalSetup = true;\n\tif (environment.transformMode === \"web\") {\n\t\tconst _require = createRequire(import.meta.url);\n\t\t// always mock \"required\" `css` files, because we cannot process them\n\t\t_require.extensions[\".css\"] = resolveCss;\n\t\t_require.extensions[\".scss\"] = resolveCss;\n\t\t_require.extensions[\".sass\"] = resolveCss;\n\t\t_require.extensions[\".less\"] = resolveCss;\n\t\t// since we are using Vite, we can assume how these will be resolved\n\t\tKNOWN_ASSET_TYPES.forEach((type) => {\n\t\t\t_require.extensions[`.${type}`] = resolveAsset;\n\t\t});\n\t\tprocess.env.SSR = \"\";\n\t} else process.env.SSR = \"1\";\n\t// @ts-expect-error not typed global for patched timers\n\tglobalThis.__vitest_required__ = {\n\t\tutil,\n\t\ttimers,\n\t\ttimersPromises\n\t};\n\tinstallSourcemapsSupport({ getSourceMap: (source) => state.moduleCache.getSourceMap(source) });\n\tif (!config.disableConsoleIntercept) await setupConsoleLogSpy();\n}\nfunction resolveCss(mod) {\n\tmod.exports = \"\";\n}\nfunction resolveAsset(mod, url) {\n\tmod.exports = url;\n}\nasync function setupConsoleLogSpy() {\n\tconst { createCustomConsole } = await import('./console.CtFJOzRO.js');\n\tglobalThis.console = createCustomConsole();\n}\nasync function withEnv({ environment }, options, fn) {\n\t// @ts-expect-error untyped global\n\tglobalThis.__vitest_environment__ = environment.name;\n\tglobalExpect.setState({ environment: environment.name });\n\tconst env = await environment.setup(globalThis, options);\n\ttry {\n\t\tawait fn();\n\t} finally {\n\t\t// Run possible setTimeouts, e.g. the onces used by ConsoleLogSpy\n\t\tconst { setTimeout } = getSafeTimers();\n\t\tawait new Promise((resolve) => setTimeout(resolve));\n\t\tawait env.teardown(globalThis);\n\t}\n}\n\n// browser shouldn't call this!\nasync function run(method, files, config, environment, executor) {\n\tconst workerState = getWorkerState();\n\tconst isIsolatedThreads = config.pool === \"threads\" && (config.poolOptions?.threads?.isolate ?? true);\n\tconst isIsolatedForks = config.pool === \"forks\" && (config.poolOptions?.forks?.isolate ?? true);\n\tconst isolate = isIsolatedThreads || isIsolatedForks;\n\tawait setupGlobalEnv(config, environment, executor);\n\tawait startCoverageInsideWorker(config.coverage, executor, { isolate });\n\tif (config.chaiConfig) setupChaiConfig(config.chaiConfig);\n\tconst runner = await resolveTestRunner(config, executor);\n\tworkerState.onCancel.then((reason) => {\n\t\tcloseInspector(config);\n\t\trunner.cancel?.(reason);\n\t});\n\tworkerState.durations.prepare = performance.now() - workerState.durations.prepare;\n\tworkerState.durations.environment = performance.now();\n\tawait withEnv(environment, environment.options || config.environmentOptions || {}, async () => {\n\t\tworkerState.durations.environment = performance.now() - workerState.durations.environment;\n\t\tfor (const file of files) {\n\t\t\tif (isolate) {\n\t\t\t\texecutor.mocker.reset();\n\t\t\t\tresetModules(workerState.moduleCache, true);\n\t\t\t}\n\t\t\tworkerState.filepath = file.filepath;\n\t\t\tif (method === \"run\") await startTests([file], runner);\n\t\t\telse await collectTests([file], runner);\n\t\t\t// reset after tests, because user might call `vi.setConfig` in setupFile\n\t\t\tvi.resetConfig();\n\t\t\t// mocks should not affect different files\n\t\t\tvi.restoreAllMocks();\n\t\t}\n\t\tawait stopCoverageInsideWorker(config.coverage, executor, { isolate });\n\t});\n\tworkerState.environmentTeardownRun = true;\n}\n\nexport { run };\n"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/worker.js",
+      "gitBlob": "91b87b274086cfc7a15db2b54ae27c39fc7036fb",
+      "firstLine": 1,
+      "lastLine": 125,
+      "text": "import { pathToFileURL } from 'node:url';\nimport { createStackString, parseStacktrace } from '@vitest/utils/source-map';\nimport { workerId } from 'tinypool';\nimport { ViteNodeRunner, ModuleCacheMap } from 'vite-node/client';\nimport { readFileSync } from 'node:fs';\nimport { resolve, normalize } from 'pathe';\nimport { e as environments } from './chunks/index.CmSc2RE5.js';\nimport { s as setupInspect } from './chunks/inspector.C914Efll.js';\nimport { c as createRuntimeRpc, a as rpcDone } from './chunks/rpc.-pEldfrD.js';\nimport { i as isChildProcess, s as setProcessTitle } from './chunks/utils.XdZDrNZV.js';\nimport { d as disposeInternalListeners } from './chunks/utils.CAioKnHs.js';\nimport 'node:console';\nimport 'node:module';\nimport '@vitest/utils';\nimport './chunks/index.B521nVV-.js';\n\nfunction isBuiltinEnvironment(env) {\n\treturn env in environments;\n}\nconst _loaders = /* @__PURE__ */ new Map();\nasync function createEnvironmentLoader(options) {\n\tif (!_loaders.has(options.root)) {\n\t\tconst loader = new ViteNodeRunner(options);\n\t\tawait loader.executeId(\"/@vite/env\");\n\t\t_loaders.set(options.root, loader);\n\t}\n\treturn _loaders.get(options.root);\n}\nasync function loadEnvironment(ctx, rpc) {\n\tconst name = ctx.environment.name;\n\tif (isBuiltinEnvironment(name)) return environments[name];\n\tconst loader = await createEnvironmentLoader({\n\t\troot: ctx.config.root,\n\t\tfetchModule: async (id) => {\n\t\t\tconst result = await rpc.fetch(id, \"ssr\");\n\t\t\tif (result.id) return { code: readFileSync(result.id, \"utf-8\") };\n\t\t\treturn result;\n\t\t},\n\t\tresolveId: (id, importer) => rpc.resolveId(id, importer, \"ssr\")\n\t});\n\tconst root = loader.root;\n\tconst packageId = name[0] === \".\" || name[0] === \"/\" ? resolve(root, name) : (await rpc.resolveId(`vitest-environment-${name}`, void 0, \"ssr\"))?.id ?? resolve(root, name);\n\tconst pkg = await loader.executeId(normalize(packageId));\n\tif (!pkg || !pkg.default || typeof pkg.default !== \"object\") throw new TypeError(`Environment \"${name}\" is not a valid environment. Path \"${packageId}\" should export default object with a \"setup\" or/and \"setupVM\" method.`);\n\tconst environment = pkg.default;\n\tif (environment.transformMode !== \"web\" && environment.transformMode !== \"ssr\") throw new TypeError(`Environment \"${name}\" is not a valid environment. Path \"${packageId}\" should export default object with a \"transformMode\" method equal to \"ssr\" or \"web\".`);\n\treturn environment;\n}\n\nconst listeners = /* @__PURE__ */ new Set();\nfunction addCleanupListener(listener) {\n\tlisteners.add(listener);\n}\nasync function cleanup() {\n\tconst promises = [...listeners].map((l) => l());\n\tawait Promise.all(promises);\n}\n\nif (isChildProcess()) {\n\tsetProcessTitle(`vitest ${workerId}`);\n\tconst isProfiling = process.execArgv.some((execArg) => execArg.startsWith(\"--prof\") || execArg.startsWith(\"--cpu-prof\") || execArg.startsWith(\"--heap-prof\") || execArg.startsWith(\"--diagnostic-dir\"));\n\tif (isProfiling)\n // Work-around for nodejs/node#55094\n\tprocess.on(\"SIGTERM\", () => {\n\t\tprocess.exit();\n\t});\n}\n// this is what every pool executes when running tests\nasync function execute(method, ctx) {\n\tdisposeInternalListeners();\n\tconst prepareStart = performance.now();\n\tconst inspectorCleanup = setupInspect(ctx);\n\tprocess.env.VITEST_WORKER_ID = String(ctx.workerId);\n\tprocess.env.VITEST_POOL_ID = String(workerId);\n\ttry {\n\t\t// worker is a filepath or URL to a file that exposes a default export with \"getRpcOptions\" and \"runTests\" methods\n\t\tif (ctx.worker[0] === \".\") throw new Error(`Path to the test runner cannot be relative, received \"${ctx.worker}\"`);\n\t\tconst file = ctx.worker.startsWith(\"file:\") ? ctx.worker : pathToFileURL(ctx.worker).toString();\n\t\tconst testRunnerModule = await import(file);\n\t\tif (!testRunnerModule.default || typeof testRunnerModule.default !== \"object\") throw new TypeError(`Test worker object should be exposed as a default export. Received \"${typeof testRunnerModule.default}\"`);\n\t\tconst worker = testRunnerModule.default;\n\t\tif (!worker.getRpcOptions || typeof worker.getRpcOptions !== \"function\") throw new TypeError(`Test worker should expose \"getRpcOptions\" method. Received \"${typeof worker.getRpcOptions}\".`);\n\t\t// RPC is used to communicate between worker (be it a thread worker or child process or a custom implementation) and the main thread\n\t\tconst { rpc, onCancel } = createRuntimeRpc(worker.getRpcOptions(ctx));\n\t\tconst beforeEnvironmentTime = performance.now();\n\t\tconst environment = await loadEnvironment(ctx, rpc);\n\t\tif (ctx.environment.transformMode) environment.transformMode = ctx.environment.transformMode;\n\t\tconst state = {\n\t\t\tctx,\n\t\t\tmoduleCache: new ModuleCacheMap(),\n\t\t\tmoduleExecutionInfo: /* @__PURE__ */ new Map(),\n\t\t\tconfig: ctx.config,\n\t\t\tonCancel,\n\t\t\tenvironment,\n\t\t\tdurations: {\n\t\t\t\tenvironment: beforeEnvironmentTime,\n\t\t\t\tprepare: prepareStart\n\t\t\t},\n\t\t\trpc,\n\t\t\tonCleanup: (listener) => addCleanupListener(listener),\n\t\t\tprovidedContext: ctx.providedContext,\n\t\t\tonFilterStackTrace(stack) {\n\t\t\t\treturn createStackString(parseStacktrace(stack));\n\t\t\t}\n\t\t};\n\t\tconst methodName = method === \"collect\" ? \"collectTests\" : \"runTests\";\n\t\tif (!worker[methodName] || typeof worker[methodName] !== \"function\") throw new TypeError(`Test worker should expose \"runTests\" method. Received \"${typeof worker.runTests}\".`);\n\t\tawait worker[methodName](state);\n\t} finally {\n\t\tawait rpcDone().catch(() => {});\n\t\tinspectorCleanup();\n\t}\n}\nfunction run(ctx) {\n\treturn execute(\"run\", ctx);\n}\nfunction collect(ctx) {\n\treturn execute(\"collect\", ctx);\n}\nasync function teardown() {\n\treturn cleanup();\n}\n\nexport { collect, run, teardown };\n"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/defaults.B7q_naMc.js",
+      "gitBlob": "6bb2026bcb6d529b91fb947ac1a1f5db0826ac10",
+      "firstLine": 1,
+      "lastLine": 115,
+      "text": "import nodeos__default from 'node:os';\nimport './env.D4Lgay0q.js';\nimport { isCI } from 'std-env';\n\nconst defaultInclude = [\"**/*.{test,spec}.?(c|m)[jt]s?(x)\"];\nconst defaultExclude = [\n\t\"**/node_modules/**\",\n\t\"**/dist/**\",\n\t\"**/cypress/**\",\n\t\"**/.{idea,git,cache,output,temp}/**\",\n\t\"**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*\"\n];\nconst benchmarkConfigDefaults = {\n\tinclude: [\"**/*.{bench,benchmark}.?(c|m)[jt]s?(x)\"],\n\texclude: defaultExclude,\n\tincludeSource: [],\n\treporters: [\"default\"],\n\tincludeSamples: false\n};\nconst defaultCoverageExcludes = [\n\t\"coverage/**\",\n\t\"dist/**\",\n\t\"**/node_modules/**\",\n\t\"**/[.]**\",\n\t\"packages/*/test?(s)/**\",\n\t\"**/*.d.ts\",\n\t\"**/virtual:*\",\n\t\"**/__x00__*\",\n\t\"**/\\0*\",\n\t\"cypress/**\",\n\t\"test?(s)/**\",\n\t\"test?(-*).?(c|m)[jt]s?(x)\",\n\t\"**/*{.,-}{test,spec,bench,benchmark}?(-d).?(c|m)[jt]s?(x)\",\n\t\"**/__tests__/**\",\n\t\"**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*\",\n\t\"**/vitest.{workspace,projects}.[jt]s?(on)\",\n\t\"**/.{eslint,mocha,prettier}rc.{?(c|m)js,yml}\"\n];\n// These are the generic defaults for coverage. Providers may also set some provider specific defaults.\nconst coverageConfigDefaults = {\n\tprovider: \"v8\",\n\tenabled: false,\n\tall: true,\n\tclean: true,\n\tcleanOnRerun: true,\n\treportsDirectory: \"./coverage\",\n\texclude: defaultCoverageExcludes,\n\treportOnFailure: false,\n\treporter: [\n\t\t[\"text\", {}],\n\t\t[\"html\", {}],\n\t\t[\"clover\", {}],\n\t\t[\"json\", {}]\n\t],\n\textension: [\n\t\t\".js\",\n\t\t\".cjs\",\n\t\t\".mjs\",\n\t\t\".ts\",\n\t\t\".mts\",\n\t\t\".tsx\",\n\t\t\".jsx\",\n\t\t\".vue\",\n\t\t\".svelte\",\n\t\t\".marko\",\n\t\t\".astro\"\n\t],\n\tallowExternal: false,\n\texcludeAfterRemap: false,\n\tignoreEmptyLines: true,\n\tprocessingConcurrency: Math.min(20, nodeos__default.availableParallelism?.() ?? nodeos__default.cpus().length)\n};\nconst fakeTimersDefaults = {\n\tloopLimit: 1e4,\n\tshouldClearNativeTimers: true\n};\nconst configDefaults = Object.freeze({\n\tallowOnly: !isCI,\n\tisolate: true,\n\twatch: !isCI && process.stdin.isTTY,\n\tglobals: false,\n\tenvironment: \"node\",\n\tpool: \"forks\",\n\tclearMocks: false,\n\trestoreMocks: false,\n\tmockReset: false,\n\tunstubGlobals: false,\n\tunstubEnvs: false,\n\tinclude: defaultInclude,\n\texclude: defaultExclude,\n\tteardownTimeout: 1e4,\n\tforceRerunTriggers: [\"**/package.json/**\", \"**/{vitest,vite}.config.*/**\"],\n\tupdate: false,\n\treporters: [],\n\tsilent: false,\n\thideSkippedTests: false,\n\tapi: false,\n\tui: false,\n\tuiBase: \"/__vitest__/\",\n\topen: !isCI,\n\tcss: { include: [] },\n\tcoverage: coverageConfigDefaults,\n\tfakeTimers: fakeTimersDefaults,\n\tmaxConcurrency: 5,\n\tdangerouslyIgnoreUnhandledErrors: false,\n\ttypecheck: {\n\t\tchecker: \"tsc\",\n\t\tinclude: [\"**/*.{test,spec}-d.?(c|m)[jt]s?(x)\"],\n\t\texclude: defaultExclude\n\t},\n\tslowTestThreshold: 300,\n\tdisableConsoleIntercept: false\n});\n\nexport { coverageConfigDefaults as a, defaultInclude as b, configDefaults as c, defaultExclude as d, benchmarkConfigDefaults as e };"
+    },
+    {
+      "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js",
+      "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+      "firstLine": 1885,
+      "lastLine": 2080,
+      "text": "// lib/npm/node-platform.ts\nvar fs = require(\"fs\");\nvar os = require(\"os\");\nvar path = require(\"path\");\nvar ESBUILD_BINARY_PATH = process.env.ESBUILD_BINARY_PATH || ESBUILD_BINARY_PATH;\nvar isValidBinaryPath = (x) => !!x && x !== \"/usr/bin/esbuild\";\nvar packageDarwin_arm64 = \"@esbuild/darwin-arm64\";\nvar packageDarwin_x64 = \"@esbuild/darwin-x64\";\nvar knownWindowsPackages = {\n  \"win32 arm64 LE\": \"@esbuild/win32-arm64\",\n  \"win32 ia32 LE\": \"@esbuild/win32-ia32\",\n  \"win32 x64 LE\": \"@esbuild/win32-x64\"\n};\nvar knownUnixlikePackages = {\n  \"aix ppc64 BE\": \"@esbuild/aix-ppc64\",\n  \"android arm64 LE\": \"@esbuild/android-arm64\",\n  \"darwin arm64 LE\": \"@esbuild/darwin-arm64\",\n  \"darwin x64 LE\": \"@esbuild/darwin-x64\",\n  \"freebsd arm64 LE\": \"@esbuild/freebsd-arm64\",\n  \"freebsd x64 LE\": \"@esbuild/freebsd-x64\",\n  \"linux arm LE\": \"@esbuild/linux-arm\",\n  \"linux arm64 LE\": \"@esbuild/linux-arm64\",\n  \"linux ia32 LE\": \"@esbuild/linux-ia32\",\n  \"linux mips64el LE\": \"@esbuild/linux-mips64el\",\n  \"linux ppc64 LE\": \"@esbuild/linux-ppc64\",\n  \"linux riscv64 LE\": \"@esbuild/linux-riscv64\",\n  \"linux s390x BE\": \"@esbuild/linux-s390x\",\n  \"linux x64 LE\": \"@esbuild/linux-x64\",\n  \"linux loong64 LE\": \"@esbuild/linux-loong64\",\n  \"netbsd arm64 LE\": \"@esbuild/netbsd-arm64\",\n  \"netbsd x64 LE\": \"@esbuild/netbsd-x64\",\n  \"openbsd arm64 LE\": \"@esbuild/openbsd-arm64\",\n  \"openbsd x64 LE\": \"@esbuild/openbsd-x64\",\n  \"sunos x64 LE\": \"@esbuild/sunos-x64\"\n};\nvar knownWebAssemblyFallbackPackages = {\n  \"android arm LE\": \"@esbuild/android-arm\",\n  \"android x64 LE\": \"@esbuild/android-x64\",\n  \"openharmony arm64 LE\": \"@esbuild/openharmony-arm64\"\n};\nfunction pkgAndSubpathForCurrentPlatform() {\n  let pkg;\n  let subpath;\n  let isWASM = false;\n  let platformKey = `${process.platform} ${os.arch()} ${os.endianness()}`;\n  if (platformKey in knownWindowsPackages) {\n    pkg = knownWindowsPackages[platformKey];\n    subpath = \"esbuild.exe\";\n  } else if (platformKey in knownUnixlikePackages) {\n    pkg = knownUnixlikePackages[platformKey];\n    subpath = \"bin/esbuild\";\n  } else if (platformKey in knownWebAssemblyFallbackPackages) {\n    pkg = knownWebAssemblyFallbackPackages[platformKey];\n    subpath = \"bin/esbuild\";\n    isWASM = true;\n  } else {\n    throw new Error(`Unsupported platform: ${platformKey}`);\n  }\n  return { pkg, subpath, isWASM };\n}\nfunction pkgForSomeOtherPlatform() {\n  const libMainJS = require.resolve(\"esbuild\");\n  const nodeModulesDirectory = path.dirname(path.dirname(path.dirname(libMainJS)));\n  if (path.basename(nodeModulesDirectory) === \"node_modules\") {\n    for (const unixKey in knownUnixlikePackages) {\n      try {\n        const pkg = knownUnixlikePackages[unixKey];\n        if (fs.existsSync(path.join(nodeModulesDirectory, pkg))) return pkg;\n      } catch {\n      }\n    }\n    for (const windowsKey in knownWindowsPackages) {\n      try {\n        const pkg = knownWindowsPackages[windowsKey];\n        if (fs.existsSync(path.join(nodeModulesDirectory, pkg))) return pkg;\n      } catch {\n      }\n    }\n  }\n  return null;\n}\nfunction downloadedBinPath(pkg, subpath) {\n  const esbuildLibDir = path.dirname(require.resolve(\"esbuild\"));\n  return path.join(esbuildLibDir, `downloaded-${pkg.replace(\"/\", \"-\")}-${path.basename(subpath)}`);\n}\nfunction generateBinPath() {\n  if (isValidBinaryPath(ESBUILD_BINARY_PATH)) {\n    if (!fs.existsSync(ESBUILD_BINARY_PATH)) {\n      console.warn(`[esbuild] Ignoring bad configuration: ESBUILD_BINARY_PATH=${ESBUILD_BINARY_PATH}`);\n    } else {\n      return { binPath: ESBUILD_BINARY_PATH, isWASM: false };\n    }\n  }\n  const { pkg, subpath, isWASM } = pkgAndSubpathForCurrentPlatform();\n  let binPath;\n  try {\n    binPath = require.resolve(`${pkg}/${subpath}`);\n  } catch (e) {\n    binPath = downloadedBinPath(pkg, subpath);\n    if (!fs.existsSync(binPath)) {\n      try {\n        require.resolve(pkg);\n      } catch {\n        const otherPkg = pkgForSomeOtherPlatform();\n        if (otherPkg) {\n          let suggestions = `\nSpecifically the \"${otherPkg}\" package is present but this platform\nneeds the \"${pkg}\" package instead. People often get into this\nsituation by installing esbuild on Windows or macOS and copying \"node_modules\"\ninto a Docker image that runs Linux, or by copying \"node_modules\" between\nWindows and WSL environments.\n\nIf you are installing with npm, you can try not copying the \"node_modules\"\ndirectory when you copy the files over, and running \"npm ci\" or \"npm install\"\non the destination platform after the copy. Or you could consider using yarn\ninstead of npm which has built-in support for installing a package on multiple\nplatforms simultaneously.\n\nIf you are installing with yarn, you can try listing both this platform and the\nother platform in your \".yarnrc.yml\" file using the \"supportedArchitectures\"\nfeature: https://yarnpkg.com/configuration/yarnrc/#supportedArchitectures\nKeep in mind that this means multiple copies of esbuild will be present.\n`;\n          if (pkg === packageDarwin_x64 && otherPkg === packageDarwin_arm64 || pkg === packageDarwin_arm64 && otherPkg === packageDarwin_x64) {\n            suggestions = `\nSpecifically the \"${otherPkg}\" package is present but this platform\nneeds the \"${pkg}\" package instead. People often get into this\nsituation by installing esbuild with npm running inside of Rosetta 2 and then\ntrying to use it with node running outside of Rosetta 2, or vice versa (Rosetta\n2 is Apple's on-the-fly x86_64-to-arm64 translation service).\n\nIf you are installing with npm, you can try ensuring that both npm and node are\nnot running under Rosetta 2 and then reinstalling esbuild. This likely involves\nchanging how you installed npm and/or node. For example, installing node with\nthe universal installer here should work: https://nodejs.org/en/download/. Or\nyou could consider using yarn instead of npm which has built-in support for\ninstalling a package on multiple platforms simultaneously.\n\nIf you are installing with yarn, you can try listing both \"arm64\" and \"x64\"\nin your \".yarnrc.yml\" file using the \"supportedArchitectures\" feature:\nhttps://yarnpkg.com/configuration/yarnrc/#supportedArchitectures\nKeep in mind that this means multiple copies of esbuild will be present.\n`;\n          }\n          throw new Error(`\nYou installed esbuild for another platform than the one you're currently using.\nThis won't work because esbuild is written with native code and needs to\ninstall a platform-specific binary executable.\n${suggestions}\nAnother alternative is to use the \"esbuild-wasm\" package instead, which works\nthe same way on all platforms. But it comes with a heavy performance cost and\ncan sometimes be 10x slower than the \"esbuild\" package, so you may also not\nwant to do that.\n`);\n        }\n        throw new Error(`The package \"${pkg}\" could not be found, and is needed by esbuild.\n\nIf you are installing esbuild with npm, make sure that you don't specify the\n\"--no-optional\" or \"--omit=optional\" flags. The \"optionalDependencies\" feature\nof \"package.json\" is used by esbuild to install the correct binary executable\nfor your current platform.`);\n      }\n      throw e;\n    }\n  }\n  if (/\\.zip\\//.test(binPath)) {\n    let pnpapi;\n    try {\n      pnpapi = require(\"pnpapi\");\n    } catch (e) {\n    }\n    if (pnpapi) {\n      const root = pnpapi.getPackageInformation(pnpapi.topLevel).packageLocation;\n      const binTargetPath = path.join(\n        root,\n        \"node_modules\",\n        \".cache\",\n        \"esbuild\",\n        `pnpapi-${pkg.replace(\"/\", \"-\")}-${\"0.28.1\"}-${path.basename(subpath)}`\n      );\n      if (!fs.existsSync(binTargetPath)) {\n        fs.mkdirSync(path.dirname(binTargetPath), { recursive: true });\n        fs.copyFileSync(binPath, binTargetPath);\n        fs.chmodSync(binTargetPath, 493);\n      }\n      return { binPath: binTargetPath, isWASM };\n    }\n  }\n  return { binPath, isWASM };\n}\n\n// lib/npm/node.ts\nvar child_process = require(\"child_process\");\nvar crypto = require(\"crypto\");\nvar path2 = require(\"path\");\nvar fs2 = require(\"fs\");"
+    },
+    {
+      "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js",
+      "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+      "firstLine": 2096,
+      "lastLine": 2117,
+      "text": "}\nvar _a;\nvar isInternalWorkerThread = ((_a = worker_threads == null ? void 0 : worker_threads.workerData) == null ? void 0 : _a.esbuildVersion) === \"0.28.1\";\nvar esbuildCommandAndArgs = () => {\n  if ((!ESBUILD_BINARY_PATH || false) && (path2.basename(__filename) !== \"main.js\" || path2.basename(__dirname) !== \"lib\")) {\n    throw new Error(\n      `The esbuild JavaScript API cannot be bundled. Please mark the \"esbuild\" package as external so it's not included in the bundle.\n\nMore information: The file containing the code for esbuild's JavaScript API (${__filename}) does not appear to be inside the esbuild package on the file system, which usually means that the esbuild package was bundled into another file. This is problematic because the API needs to run a binary executable inside the esbuild package which is located using a relative path from the API code to the executable. If the esbuild package is bundled, the relative path will be incorrect and the executable won't be found.`\n    );\n  }\n  if (false) {\n    return [\"node\", [path2.join(__dirname, \"..\", \"bin\", \"esbuild\")]];\n  } else {\n    const { binPath, isWASM } = generateBinPath();\n    if (isWASM) {\n      return [\"node\", [binPath]];\n    } else {\n      return [binPath, []];\n    }\n  }\n};"
+    },
+    {
+      "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js",
+      "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+      "firstLine": 1038,
+      "lastLine": 1065,
+      "text": "            });\n          }\n          next();\n        });\n      } catch (e) {\n        let flags = [];\n        try {\n          pushLogFlags(flags, options, {}, isTTY2, transformLogLevelDefault);\n        } catch {\n        }\n        const error = extractErrorMessageV8(e, streamIn, details, void 0, \"\");\n        sendRequest(refs, { command: \"error\", flags, error }, () => {\n          error.detail = details.load(error.detail);\n          callback(failureErrorWithLog(\"Transform failed\", [error], []), null);\n        });\n      }\n    };\n    if ((typeof input === \"string\" || input instanceof Uint8Array) && input.length > 1024 * 1024) {\n      let next = start;\n      start = () => fs3.writeFile(input, next);\n    }\n    start(null);\n  };\n  let formatMessages2 = ({ callName, refs, messages, options, callback }) => {\n    if (!options) throw new Error(`Missing second argument in ${callName}() call`);\n    let keys = {};\n    let kind = getFlag(options, keys, \"kind\", mustBeString);\n    let color = getFlag(options, keys, \"color\", mustBeBoolean);"
+    },
+    {
+      "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js",
+      "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+      "firstLine": 2142,
+      "lastLine": 2164,
+      "text": "var fsAsync = {\n  readFile(tempFile, callback) {\n    try {\n      fs2.readFile(tempFile, \"utf8\", (err, contents) => {\n        try {\n          fs2.unlink(tempFile, () => callback(err, contents));\n        } catch {\n          callback(err, contents);\n        }\n      });\n    } catch (err) {\n      callback(err, null);\n    }\n  },\n  writeFile(contents, callback) {\n    try {\n      let tempFile = randomFileName();\n      fs2.writeFile(tempFile, contents, (err) => err !== null ? callback(null) : callback(tempFile));\n    } catch {\n      callback(null);\n    }\n  }\n};"
+    },
+    {
+      "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js",
+      "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+      "firstLine": 2246,
+      "lastLine": 2358,
+      "text": "var stop = () => {\n  if (stopService) stopService();\n  if (workerThreadService) workerThreadService.stop();\n  return Promise.resolve();\n};\nvar initializeWasCalled = false;\nvar initialize = (options) => {\n  options = validateInitializeOptions(options || {});\n  if (options.wasmURL) throw new Error(`The \"wasmURL\" option only works in the browser`);\n  if (options.wasmModule) throw new Error(`The \"wasmModule\" option only works in the browser`);\n  if (options.worker) throw new Error(`The \"worker\" option only works in the browser`);\n  if (initializeWasCalled) throw new Error('Cannot call \"initialize\" more than once');\n  ensureServiceIsRunning();\n  initializeWasCalled = true;\n  return Promise.resolve();\n};\nvar defaultWD = process.cwd();\nvar longLivedService;\nvar stopService;\nvar ensureServiceIsRunning = () => {\n  if (longLivedService) return longLivedService;\n  let [command, args] = esbuildCommandAndArgs();\n  let child = child_process.spawn(command, args.concat(`--service=${\"0.28.1\"}`, \"--ping\"), {\n    windowsHide: true,\n    stdio: [\"pipe\", \"pipe\", \"inherit\"],\n    cwd: defaultWD\n  });\n  let { readFromStdout, afterClose, service } = createChannel({\n    writeToStdin(bytes) {\n      child.stdin.write(bytes, (err) => {\n        if (err) afterClose(err);\n      });\n    },\n    readFileSync: fs2.readFileSync,\n    isSync: false,\n    hasFS: true,\n    esbuild: node_exports\n  });\n  child.stdin.on(\"error\", afterClose);\n  child.on(\"error\", afterClose);\n  const stdin = child.stdin;\n  const stdout = child.stdout;\n  stdout.on(\"data\", readFromStdout);\n  stdout.on(\"end\", afterClose);\n  stopService = () => {\n    stdin.destroy();\n    stdout.destroy();\n    child.kill();\n    initializeWasCalled = false;\n    longLivedService = void 0;\n    stopService = void 0;\n  };\n  let refCount = 0;\n  child.unref();\n  if (stdin.unref) {\n    stdin.unref();\n  }\n  if (stdout.unref) {\n    stdout.unref();\n  }\n  const refs = {\n    ref() {\n      if (++refCount === 1) child.ref();\n    },\n    unref() {\n      if (--refCount === 0) child.unref();\n    }\n  };\n  longLivedService = {\n    build: (options) => new Promise((resolve, reject) => {\n      service.buildOrContext({\n        callName: \"build\",\n        refs,\n        options,\n        isTTY: isTTY(),\n        defaultWD,\n        callback: (err, res) => err ? reject(err) : resolve(res)\n      });\n    }),\n    context: (options) => new Promise((resolve, reject) => service.buildOrContext({\n      callName: \"context\",\n      refs,\n      options,\n      isTTY: isTTY(),\n      defaultWD,\n      callback: (err, res) => err ? reject(err) : resolve(res)\n    })),\n    transform: (input, options) => new Promise((resolve, reject) => service.transform({\n      callName: \"transform\",\n      refs,\n      input,\n      options: options || {},\n      isTTY: isTTY(),\n      fs: fsAsync,\n      callback: (err, res) => err ? reject(err) : resolve(res)\n    })),\n    formatMessages: (messages, options) => new Promise((resolve, reject) => service.formatMessages({\n      callName: \"formatMessages\",\n      refs,\n      messages,\n      options,\n      callback: (err, res) => err ? reject(err) : resolve(res)\n    })),\n    analyzeMetafile: (metafile, options) => new Promise((resolve, reject) => service.analyzeMetafile({\n      callName: \"analyzeMetafile\",\n      refs,\n      metafile: typeof metafile === \"string\" ? metafile : JSON.stringify(metafile),\n      options,\n      callback: (err, res) => err ? reject(err) : resolve(res)\n    }))\n  };\n  return longLivedService;\n};"
+    },
+    {
+      "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js",
+      "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+      "firstLine": 2385,
+      "lastLine": 2387,
+      "text": "var randomFileName = () => {\n  return path2.join(os2.tmpdir(), `esbuild-${crypto.randomBytes(32).toString(\"hex\")}`);\n};"
+    },
+    {
+      "path": "node_modules/.pnpm/vite-node@3.2.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_supports-color@10.2.2_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite-node/dist/server.mjs",
+      "gitBlob": "20de7a8c50c9f16213a464c85a27eab99ff2722b",
+      "firstLine": 23,
+      "lastLine": 76,
+      "text": "class Debugger {\n\tdumpDir;\n\tinitPromise;\n\texternalizeMap = /* @__PURE__ */ new Map();\n\tconstructor(root, options) {\n\t\tthis.options = options;\n\t\tif (options.dumpModules) this.dumpDir = resolve(root, options.dumpModules === true ? \".vite-node/dump\" : options.dumpModules);\n\t\tif (this.dumpDir) if (options.loadDumppedModules) console.info(s.gray(`[vite-node] [debug] load modules from ${this.dumpDir}`));\n\t\telse console.info(s.gray(`[vite-node] [debug] dump modules to ${this.dumpDir}`));\n\t\tthis.initPromise = this.clearDump();\n\t}\n\tasync clearDump() {\n\t\tif (!this.dumpDir) return;\n\t\tif (!this.options.loadDumppedModules && existsSync(this.dumpDir)) await promises.rm(this.dumpDir, {\n\t\t\trecursive: true,\n\t\t\tforce: true\n\t\t});\n\t\tawait promises.mkdir(this.dumpDir, { recursive: true });\n\t}\n\tencodeId(id) {\n\t\treturn `${id.replace(/[^\\w@\\-]/g, \"_\").replace(/_+/g, \"_\")}-${hashCode(id)}.js`;\n\t}\n\tasync recordExternalize(id, path) {\n\t\tif (!this.dumpDir) return;\n\t\tthis.externalizeMap.set(id, path);\n\t\tawait this.writeInfo();\n\t}\n\tasync dumpFile(id, result) {\n\t\tif (!result || !this.dumpDir) return;\n\t\tawait this.initPromise;\n\t\tconst name = this.encodeId(id);\n\t\treturn await promises.writeFile(join(this.dumpDir, name), `// ${id.replace(/\\0/g, \"\\\\0\")}\\n${result.code}`, \"utf-8\");\n\t}\n\tasync loadDump(id) {\n\t\tif (!this.dumpDir) return null;\n\t\tawait this.initPromise;\n\t\tconst name = this.encodeId(id);\n\t\tconst path = join(this.dumpDir, name);\n\t\tif (!existsSync(path)) return null;\n\t\tconst code = await promises.readFile(path, \"utf-8\");\n\t\treturn {\n\t\t\tcode: code.replace(/^\\/\\/.*\\n/, \"\"),\n\t\t\tmap: void 0\n\t\t};\n\t}\n\tasync writeInfo() {\n\t\tif (!this.dumpDir) return;\n\t\tconst info = JSON.stringify({\n\t\t\ttime: (/* @__PURE__ */ new Date()).toLocaleString(),\n\t\t\texternalize: Object.fromEntries(this.externalizeMap.entries())\n\t\t}, null, 2);\n\t\treturn promises.writeFile(join(this.dumpDir, \"info.json\"), info, \"utf-8\");\n\t}\n}"
+    },
+    {
+      "path": "node_modules/.pnpm/vite-node@3.2.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_supports-color@10.2.2_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite-node/dist/server.mjs",
+      "gitBlob": "20de7a8c50c9f16213a464c85a27eab99ff2722b",
+      "firstLine": 193,
+      "lastLine": 231,
+      "text": "\t\tvar _options$deps3;\n\t\tthis.server = server;\n\t\tthis.options = options;\n\t\tconst ssrOptions = server.config.ssr;\n\t\toptions.deps ?? (options.deps = {});\n\t\toptions.deps.cacheDir = relative(server.config.root, options.deps.cacheDir || server.config.cacheDir);\n\t\tif (ssrOptions) {\n\t\t\t// we don't externalize ssr, because it has different semantics in Vite\n\t\t\t// if (ssrOptions.external) {\n\t\t\t//   options.deps.external ??= []\n\t\t\t//   options.deps.external.push(...ssrOptions.external)\n\t\t\t// }\n\t\t\tif (ssrOptions.noExternal === true) {\n\t\t\t\tvar _options$deps;\n\t\t\t\t(_options$deps = options.deps).inline ?? (_options$deps.inline = true);\n\t\t\t} else if (options.deps.inline !== true) {\n\t\t\t\tvar _options$deps2;\n\t\t\t\t(_options$deps2 = options.deps).inline ?? (_options$deps2.inline = []);\n\t\t\t\tconst inline = options.deps.inline;\n\t\t\t\toptions.deps.inline.push(...toArray(ssrOptions.noExternal).filter((dep) => !inline.includes(dep)));\n\t\t\t}\n\t\t}\n\t\tif (process.env.VITE_NODE_DEBUG_DUMP) options.debug = Object.assign({\n\t\t\tdumpModules: !!process.env.VITE_NODE_DEBUG_DUMP,\n\t\t\tloadDumppedModules: process.env.VITE_NODE_DEBUG_DUMP === \"load\"\n\t\t}, options.debug ?? {});\n\t\tif (options.debug) this.debugger = new Debugger(server.config.root, options.debug);\n\t\tif (options.deps.inlineFiles) options.deps.inlineFiles = options.deps.inlineFiles.flatMap((file) => {\n\t\t\tif (file.startsWith(\"file://\")) return file;\n\t\t\tconst resolvedId = resolve(file);\n\t\t\treturn [resolvedId, pathToFileURL(resolvedId).href];\n\t\t});\n\t\t(_options$deps3 = options.deps).moduleDirectories ?? (_options$deps3.moduleDirectories = []);\n\t\tconst envValue = process.env.VITE_NODE_DEPS_MODULE_DIRECTORIES || process.env.npm_config_VITE_NODE_DEPS_MODULE_DIRECTORIES;\n\t\tconst customModuleDirectories = envValue === null || envValue === void 0 ? void 0 : envValue.split(\",\");\n\t\tif (customModuleDirectories) options.deps.moduleDirectories.push(...customModuleDirectories);\n\t\toptions.deps.moduleDirectories = options.deps.moduleDirectories.map((dir) => {\n\t\t\tif (!dir.startsWith(\"/\")) dir = `/${dir}`;\n\t\t\tif (!dir.endsWith(\"/\")) dir += \"/\";"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/cli-api.DWGBtMmz.js",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+      "firstLine": 6538,
+      "lastLine": 6657,
+      "text": "function resolveOptimizerConfig(_testOptions, viteOptions) {\n\tconst testOptions = _testOptions || {};\n\tconst newConfig = {};\n\tconst [major, minor, fix] = version.split(\".\").map(Number);\n\tconst allowed = major >= 5 || major === 4 && minor >= 4 || major === 4 && minor === 3 && fix >= 2;\n\tif (!allowed && testOptions?.enabled === true) console.warn(`Vitest: \"deps.optimizer\" is only available in Vite >= 4.3.2, current Vite version: ${version}`);\n\telse testOptions.enabled ??= false;\n\tif (!allowed || testOptions?.enabled !== true) {\n\t\tnewConfig.cacheDir = void 0;\n\t\tnewConfig.optimizeDeps = {\n\t\t\tdisabled: true,\n\t\t\tentries: []\n\t\t};\n\t} else {\n\t\tconst currentInclude = testOptions.include || viteOptions?.include || [];\n\t\tconst exclude = [\n\t\t\t\"vitest\",\n\t\t\t\"react\",\n\t\t\t\"vue\",\n\t\t\t...testOptions.exclude || viteOptions?.exclude || []\n\t\t];\n\t\tconst runtime = currentInclude.filter((n) => n.endsWith(\"jsx-dev-runtime\") || n.endsWith(\"jsx-runtime\"));\n\t\texclude.push(...runtime);\n\t\tconst include = (testOptions.include || viteOptions?.include || []).filter((n) => !exclude.includes(n));\n\t\tnewConfig.optimizeDeps = {\n\t\t\t...viteOptions,\n\t\t\t...testOptions,\n\t\t\tnoDiscovery: true,\n\t\t\tdisabled: false,\n\t\t\tentries: [],\n\t\t\texclude,\n\t\t\tinclude\n\t\t};\n\t}\n\t// `optimizeDeps.disabled` is deprecated since v5.1.0-beta.1\n\t// https://github.com/vitejs/vite/pull/15184\n\tif (major >= 5 && minor >= 1 || major >= 6) {\n\t\tif (newConfig.optimizeDeps.disabled) {\n\t\t\tnewConfig.optimizeDeps.noDiscovery = true;\n\t\t\tnewConfig.optimizeDeps.include = [];\n\t\t}\n\t\tdelete newConfig.optimizeDeps.disabled;\n\t}\n\treturn newConfig;\n}\nfunction deleteDefineConfig(viteConfig) {\n\tconst defines = {};\n\tif (viteConfig.define) {\n\t\tdelete viteConfig.define[\"import.meta.vitest\"];\n\t\tdelete viteConfig.define[\"process.env\"];\n\t\tdelete viteConfig.define.process;\n\t\tdelete viteConfig.define.global;\n\t}\n\tfor (const key in viteConfig.define) {\n\t\tconst val = viteConfig.define[key];\n\t\tlet replacement;\n\t\ttry {\n\t\t\treplacement = typeof val === \"string\" ? JSON.parse(val) : val;\n\t\t} catch {\n\t\t\t// probably means it contains reference to some variable,\n\t\t\t// like this: \"__VAR__\": \"process.env.VAR\"\n\t\t\tcontinue;\n\t\t}\n\t\tif (key.startsWith(\"import.meta.env.\")) {\n\t\t\tconst envKey = key.slice(16);\n\t\t\tprocess.env[envKey] = replacement;\n\t\t\tdelete viteConfig.define[key];\n\t\t} else if (key.startsWith(\"process.env.\")) {\n\t\t\tconst envKey = key.slice(12);\n\t\t\tprocess.env[envKey] = replacement;\n\t\t\tdelete viteConfig.define[key];\n\t\t} else if (!key.includes(\".\")) {\n\t\t\tdefines[key] = replacement;\n\t\t\tdelete viteConfig.define[key];\n\t\t}\n\t}\n\treturn defines;\n}\nfunction resolveFsAllow(projectRoot, rootConfigFile) {\n\tif (!rootConfigFile) return [searchForWorkspaceRoot(projectRoot), rootDir];\n\treturn [\n\t\tdirname(rootConfigFile),\n\t\tsearchForWorkspaceRoot(projectRoot),\n\t\trootDir\n\t];\n}\nfunction getDefaultResolveOptions() {\n\treturn {\n\t\tmainFields: [],\n\t\tconditions: getDefaultServerConditions()\n\t};\n}\nfunction getDefaultServerConditions() {\n\tconst viteMajor = Number(version.split(\".\")[0]);\n\tif (viteMajor >= 6) {\n\t\tconst conditions = vite.defaultServerConditions;\n\t\treturn conditions.filter((c) => c !== \"module\");\n\t}\n\treturn [\"node\"];\n}\n\nfunction VitestOptimizer() {\n\treturn {\n\t\tname: \"vitest:normalize-optimizer\",\n\t\tconfig: {\n\t\t\torder: \"post\",\n\t\t\thandler(viteConfig) {\n\t\t\t\tconst testConfig = viteConfig.test || {};\n\t\t\t\tconst webOptimizer = resolveOptimizerConfig(testConfig.deps?.optimizer?.web, viteConfig.optimizeDeps);\n\t\t\t\tconst ssrOptimizer = resolveOptimizerConfig(testConfig.deps?.optimizer?.ssr, viteConfig.ssr?.optimizeDeps);\n\t\t\t\tconst root = resolve(viteConfig.root || process.cwd());\n\t\t\t\tconst name = viteConfig.test?.name;\n\t\t\t\tconst label = typeof name === \"string\" ? name : name?.label || \"\";\n\t\t\t\tviteConfig.cacheDir = VitestCache.resolveCacheDir(resolve(root || process.cwd()), testConfig.cache != null && testConfig.cache !== false ? testConfig.cache.dir : viteConfig.cacheDir, label);\n\t\t\t\tviteConfig.optimizeDeps = webOptimizer.optimizeDeps;\n\t\t\t\tviteConfig.ssr ??= {};\n\t\t\t\tviteConfig.ssr.optimizeDeps = ssrOptimizer.optimizeDeps;\n\t\t\t}\n\t\t}\n\t};"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/cli-api.DWGBtMmz.js",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+      "firstLine": 9268,
+      "lastLine": 9295,
+      "text": "\tasync _setServer(options, server) {\n\t\tthis.watcher.unregisterWatcher();\n\t\tclearTimeout(this._rerunTimer);\n\t\tthis.restartsCount += 1;\n\t\tthis._browserLastPort = defaultBrowserPort;\n\t\tthis.pool?.close?.();\n\t\tthis.pool = void 0;\n\t\tthis.closingPromise = void 0;\n\t\tthis.projects = [];\n\t\tthis.resolvedProjects = [];\n\t\tthis._workspaceConfigPath = void 0;\n\t\tthis.coverageProvider = void 0;\n\t\tthis.runningPromise = void 0;\n\t\tthis.coreWorkspaceProject = void 0;\n\t\tthis.specifications.clearCache();\n\t\tthis._onUserTestsRerun = [];\n\t\tthis._vite = server;\n\t\tconst resolved = resolveConfig(this, options, server.config);\n\t\tthis._config = resolved;\n\t\tthis._state = new StateManager();\n\t\tthis._cache = new VitestCache(this.version);\n\t\tthis._snapshot = new SnapshotManager({ ...resolved.snapshotOptions });\n\t\tthis._testRun = new TestRun(this);\n\t\tif (this.config.watch) this.watcher.registerWatcher();\n\t\tthis.vitenode = new ViteNodeServer(server, this.config.server);\n\t\tconst node = this.vitenode;\n\t\tthis.runner = new ViteNodeRunner({\n\t\t\troot: server.config.root,"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/package.json",
+      "gitBlob": "3b6d03c4ebc634c5c2ea5a05f9d8cafda1da6a23",
+      "firstLine": 45,
+      "lastLine": 50,
+      "text": "  \"imports\": {\n    \"#module-sync-enabled\": {\n      \"module-sync\": \"./misc/true.js\",\n      \"default\": \"./misc/false.js\"\n    }\n  },"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/constants.js",
+      "gitBlob": "e5e4dec6b508dfca9c1b59eb2cc7d77cefdbc962",
+      "firstLine": 77,
+      "lastLine": 86,
+      "text": "const CLIENT_PUBLIC_PATH = `/@vite/client`;\nconst ENV_PUBLIC_PATH = `/@vite/env`;\nconst VITE_PACKAGE_DIR = resolve(\n  // import.meta.url is `dist/node/constants.js` after bundle\n  fileURLToPath(import.meta.url),\n  \"../../..\"\n);\nconst CLIENT_ENTRY = resolve(VITE_PACKAGE_DIR, \"dist/client/client.mjs\");\nconst ENV_ENTRY = resolve(VITE_PACKAGE_DIR, \"dist/client/env.mjs\");\nconst CLIENT_DIR = path.dirname(CLIENT_ENTRY);"
+    }
+  ]
+}

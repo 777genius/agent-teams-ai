@@ -1,0 +1,338 @@
+{
+  "schemaVersion": 1,
+  "kind": "read-only-independent-six-case-P11-and-Review-baseline-prediction",
+  "repository": "777genius/agent-teams-ai",
+  "reviewer": "/root/parity_audit",
+  "reviewDate": "2026-11-16",
+  "verdict": "CONFIRMED_STATIC_SIX_ONLY_5_FAIL_1_PASS",
+  "selected": false,
+  "observed": false,
+  "sourceCommit": "e6a7764d01afc32631d6b4dd0f98fa9cd7c490cb",
+  "sourceTree": "e9bb2f34a94f5d936ff4145056d0ccce16ae8a58",
+  "completeBodyIdentities": {
+    "incomingTest": {
+      "bytes": 162166,
+      "sha256": "a6d8237d934911e755305361496ee043e45995627b6cadbab9218e6738be1a8d",
+      "gitBlob": "b7fda498b1e50856211616a3c062ca65a148cc26"
+    },
+    "currentP11": {
+      "bytes": 45707,
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+      "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2"
+    },
+    "currentReview": {
+      "bytes": 32845,
+      "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+      "gitBlob": "d65706646743798f2646421105f2f6a75819f143"
+    },
+    "currentControls": {
+      "bytes": 28974,
+      "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+      "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+    },
+    "currentOwnTest": {
+      "bytes": 155423,
+      "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+      "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900"
+    }
+  },
+  "sourceRowsJoinedToCompletePublished8798": true,
+  "markerProof": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "markers": [
+        {
+          "text": "  const poll = async <T>(",
+          "count": 1
+        },
+        {
+          "text": "  const workspace = join(fixture.root, 'workspace');",
+          "count": 1
+        }
+      ],
+      "order": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+      "markers": [
+        {
+          "text": "  const commentTarget = record(",
+          "count": 1
+        },
+        {
+          "text": "  await snapshotStage(await newReceipt(commentBefore, 'task.comment'), 'in_progress');",
+          "count": 1
+        }
+      ],
+      "order": true
+    }
+  ],
+  "fixtureNamesAbsentFromOwn": [
+    {
+      "name": "originalLiveMembershipPoll",
+      "absent": true
+    },
+    {
+      "name": "originalReviewCorrectionStage",
+      "absent": true
+    }
+  ],
+  "newNamesNotInOwn133": true,
+  "newNames": [
+    "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+    "P11 keeps the original 90-second cutoff for first result after the cutoff",
+    "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+    "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+    "original review correction refuses missing or false live edit authority before any input action",
+    "original review correction admits current authority with one original insertion and submit"
+  ],
+  "registryCounts": {
+    "P11": 4,
+    "Review": 2,
+    "total": 6,
+    "predictedPass": 1,
+    "predictedFail": 5
+  },
+  "sourcePassages": {
+    "incomingP11": {
+      "start": 2026,
+      "end": 2085,
+      "text": "async function originalLiveMembershipPoll() {\n  const { stripTypeScriptTypes } = await import('node:module');\n  const source = (await readFile(new URL('./desktop-live-membership-ui-smoke.ts', import.meta.url), 'utf8')).replace(/\\r\\n/gu, '\\n');\n  const begin = '  const poll = async <T>(', end = \"  const workspace = join(fixture.root, 'workspace');\";\n  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original P11 poll boundary');\n  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));\n  const makePoll = Function('environment', `'use strict';\n    const {assert,current,Date,setTimeout}=environment;\n    ${actual}\n    return poll;`) as (environment: Record<string, unknown>) =>\n      (observe: () => Promise<boolean>, accepts: (value: boolean) => boolean, label: string) => Promise<boolean>;\n  return (observations: { at: number; value?: boolean; error?: Error }[], guardError?: Error) => {\n    let now = 0, reads = 0;\n    const trace: string[] = [], delays: number[] = [];\n    const poll = makePoll({ assert, Date: { now: () => now },\n      current() { trace.push('guard'); if (guardError) throw guardError; },\n      setTimeout(done: () => void, delay: number) {\n        assert.equal(delay, 100); delays.push(delay); now += delay; done();\n      },\n    });\n    return { trace, delays, reads: () => reads,\n      run: (label: string) => poll(async () => {\n        const observation = observations[reads++]; assert.ok(observation, 'no unplanned observation');\n        trace.push('read'); assert.ok(observation.at >= now); now = observation.at;\n        if (observation.error) throw observation.error;\n        assert.equal(typeof observation.value, 'boolean'); return observation.value!;\n      }, value => value, label),\n    };\n  };\n}\n\nfor (const scenario of [\n  { name: 'first result at the exact cutoff', values: [{ at: 90_000, value: true }], reads: 1, trace: ['read'], delays: [] },\n  { name: 'first result after the cutoff', values: [{ at: 90_001, value: true }], reads: 1, trace: ['read'], delays: [] },\n  { name: 'polled result after the cutoff', values: [{ at: 0, value: false }, { at: 90_001, value: true }], reads: 2,\n    trace: ['read', 'guard', 'read'], delays: [100] },\n]) test('P11 keeps the original 90-second cutoff for ' + scenario.name, async () => {\n  const make = await originalLiveMembershipPoll(), f = make(scenario.values), label = 'TEST original P11 deadline';\n  await assert.rejects(f.run(label), error => error instanceof assert.AssertionError && error.message.includes(label));\n  assert.equal(f.reads(), scenario.reads); assert.deepEqual(f.trace, scenario.trace); assert.deepEqual(f.delays, scenario.delays);\n});\n\ntest('P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity', async () => {\n  const make = await originalLiveMembershipPoll(), label = 'TEST original P11 observation';\n  const immediate = make([{ at: 89_999, value: true }]);\n  assert.equal(await immediate.run(label), true); assert.equal(immediate.reads(), 1);\n  assert.deepEqual(immediate.trace, ['read']); assert.deepEqual(immediate.delays, []);\n  const later = make([{ at: 0, value: false }, { at: 101, value: true }]);\n  assert.equal(await later.run(label), true); assert.equal(later.reads(), 2);\n  assert.deepEqual(later.trace, ['read', 'guard', 'read']); assert.deepEqual(later.delays, [100]);\n  const refusal = new Error('TEST original observation failure'), failed = make([{ at: 90_001, error: refusal }]);\n  await assert.rejects(failed.run(label), error => error === refusal);\n  assert.equal(failed.reads(), 1); assert.deepEqual(failed.trace, ['read']); assert.deepEqual(failed.delays, []);\n  const stale = new Error('TEST original currentness failure'), guarded = make([{ at: 0, value: false }], stale);\n  await assert.rejects(guarded.run(label), error => error === stale);\n  assert.equal(guarded.reads(), 1); assert.deepEqual(guarded.trace, ['read', 'guard']); assert.deepEqual(guarded.delays, []);\n  const noReady = make([{ at: 90_000, value: false }]);\n  await assert.rejects(noReady.run(label), assert.AssertionError);\n  assert.equal(noReady.reads(), 1); assert.deepEqual(noReady.trace, ['read']); assert.deepEqual(noReady.delays, []);\n});\n"
+    },
+    "incomingReview": {
+      "start": 2288,
+      "end": 2370,
+      "text": "async function originalReviewCorrectionStage(observations: unknown[], insertFailure?: Error) {\n  const { stripTypeScriptTypes } = await import('node:module');\n  const source = (await readFile(new URL('./desktop-task-review-cycle-ui-smoke.ts', import.meta.url), 'utf8')).replace(/\\r\\n/gu, '\\n');\n  const begin = '  const commentTarget = record(', end = \"  await snapshotStage(await newReceipt(commentBefore, 'task.comment'), 'in_progress');\";\n  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original correction input boundary');\n  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));\n  const selector = '[role=\"dialog\"] textarea[id=\"TEST-original-correction-input\"]';\n  const original = { selector, canEditNow: true }, trace: string[] = [], budgets: number[] = [];\n  let reads = 0;\n  const cdp = {\n    async evaluate(expression: string) {\n      assert.equal(expression, 'TEST-original-current-correction-expression');\n      assert.ok(reads < observations.length, 'no unplanned currentness observation');\n      const value = observations[reads++]; trace.push('read');\n      if (value instanceof Error) throw value;\n      return value === 'current' ? original : value && typeof value === 'object' && !Array.isArray(value)\n        ? { selector, ...value } : value;\n    },\n    async send(method: string, params?: Record<string, unknown>) {\n      assert.equal(method, 'Input.insertText');\n      assert.deepEqual(params, { text: 'TEST original correction text' });\n      trace.push('insert');\n      if (insertFailure) throw insertFailure;\n      return {};\n    },\n  };\n  const controls = createDesktopUiControls(cdp, { assertOwnedRenderer() {}, step() {} });\n  const ui = {\n    ...controls,\n    waitRead: ((expression: string, label: string, timeoutMs = 30_000, accepts?: (value: unknown) => boolean) => {\n      assert.equal(label, 'exact current correction Task/owner/surface');\n      budgets.push(timeoutMs);\n      return controls.waitRead(expression, label, timeoutMs, accepts);\n    }) as typeof controls.waitRead,\n    async scrollTo(target: string, label: string) {\n      assert.equal(target, selector); assert.equal(label, 'existing Task comment composer'); trace.push('scroll');\n    },\n    async click(target: string, label: string, text?: string) {\n      if (label === 'focus existing correction comment') {\n        assert.equal(target, selector); assert.equal(text, undefined); trace.push('focus');\n      } else {\n        assert.equal(target, '[role=\"dialog\"] button.message-composer-send-button');\n        assert.equal(label, 'original correction Comment once'); assert.equal(text, 'Comment'); trace.push('submit');\n      }\n    },\n  };\n  const run = Function('environment', `'use strict';\n    const {assert,record,ui,cdp,options,taskId,commentText,desktopTaskCommentInputExpression}=environment;\n    return (async()=>{${actual}})();`) as (environment: Record<string, unknown>) => Promise<void>;\n  return { trace, budgets, reads: () => reads, run: () => run({ assert, ui, cdp,\n    record(value: unknown) { assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value; },\n    options: { handleId: 'TEST-original-correction-owner' }, taskId: 'TEST-original-correction-task',\n    commentText: 'TEST original correction text',\n    desktopTaskCommentInputExpression(handleId: string, taskId: string) {\n      assert.equal(handleId, 'TEST-original-correction-owner'); assert.equal(taskId, 'TEST-original-correction-task');\n      return 'TEST-original-current-correction-expression';\n    },\n  }) };\n}\n\ntest('original review correction refuses missing or false live edit authority before any input action', { timeout: 5000 }, async () => {\n  for (const observation of [null, {}, { canEditNow: false }, { canEditNow: 1 }, [{ canEditNow: true }]]) {\n    const refusal = new Error('TEST original currentness read failed');\n    const f = await originalReviewCorrectionStage([observation, refusal]);\n    await assert.rejects(f.run(), error => error === refusal);\n    assert.deepEqual(f.trace, ['read', 'read']); assert.deepEqual(f.budgets, [30_000]);\n    assert.equal(f.reads(), 2);\n  }\n});\n\ntest('original review correction admits current authority with one original insertion and submit', { timeout: 5000 }, async () => {\n  for (const observations of [['current'], [{ canEditNow: false }, 'current']]) {\n    const f = await originalReviewCorrectionStage(observations);\n    await f.run();\n    assert.deepEqual(f.trace, [...observations.map(() => 'read'), 'scroll', 'focus', 'insert', 'submit']);\n    assert.deepEqual(f.budgets, [30_000]); assert.equal(f.reads(), observations.length);\n  }\n  const failure = new Error('TEST original insertion response failed');\n  const refused = await originalReviewCorrectionStage(['current'], failure);\n  await assert.rejects(refused.run(), error => error === failure);\n  assert.deepEqual(refused.trace, ['read', 'scroll', 'focus', 'insert']);\n  assert.deepEqual(refused.budgets, [30_000]); assert.equal(refused.reads(), 1);\n});\n"
+    },
+    "currentP11": {
+      "start": 89,
+      "end": 95,
+      "text": "  const poll = async <T>(observe: () => Promise<T>, accepts: (value: T) => boolean, label: string) => {\n    const cutoff = Date.now() + 90_000; let value = await observe();\n    while (!accepts(value) && Date.now() < cutoff) {\n      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();\n    }\n    assert.ok(accepts(value), label); return value;\n  };\n"
+    },
+    "currentReview": {
+      "start": 414,
+      "end": 429,
+      "text": "  const commentTarget = record(\n    await ui.waitRead(\n      desktopTaskCommentInputExpression(options.handleId, taskId),\n      'exact current correction Task/owner/surface'\n    )\n  );\n  assert.equal(typeof commentTarget.selector, 'string');\n  await ui.scrollTo(String(commentTarget.selector), 'existing Task comment composer');\n  await ui.click(String(commentTarget.selector), 'focus existing correction comment');\n  await cdp.send('Input.insertText', { text: commentText });\n  await ui.click(\n    '[role=\"dialog\"] button.message-composer-send-button',\n    'original correction Comment once',\n    'Comment'\n  );\n  await snapshotStage(await newReceipt(commentBefore, 'task.comment'), 'in_progress');\n"
+    },
+    "currentWaitRead": {
+      "start": 186,
+      "end": 209,
+      "text": "  const waitRead = async (\n    expression: string,\n    label: string,\n    timeoutMs = 30_000,\n    isReady: (value: unknown) => boolean = Boolean\n  ): Promise<unknown> => {\n    const deadline = Date.now() + timeoutMs;\n    while (Date.now() < deadline) {\n      options.assertOwnedRenderer();\n      try {\n        const value = await cdp.evaluate(expression);\n        if (isReady(value)) return value;\n      } catch (error) {\n        if (\n          !/execution context was destroyed|cannot find (?:default )?execution context|cannot find context with specified id/i.test(\n            String(error)\n          )\n        )\n          throw error;\n      }\n      await new Promise<void>((done) => setTimeout(done, 100));\n    }\n    throw new Error(`UI read timed out: ${label}; no mutation retry`);\n  };\n"
+    }
+  },
+  "prediction": [
+    {
+      "ordinal": 1,
+      "name": "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+      "predicted": "FAIL",
+      "semanticSite": "incoming test2064 assert.rejects",
+      "reason": "First await returns true at90000. Old poll checks accepts(value) before any post-await cutoff refusal and returns true at94; expected rejection is missing.",
+      "downstreamCountsUnreached": true
+    },
+    {
+      "ordinal": 2,
+      "name": "P11 keeps the original 90-second cutoff for first result after the cutoff",
+      "predicted": "FAIL",
+      "semanticSite": "incoming test2064 assert.rejects",
+      "reason": "First await returns true at90001. Old poll returns true at94 despite elapsed cutoff; expected rejection is missing.",
+      "downstreamCountsUnreached": true
+    },
+    {
+      "ordinal": 3,
+      "name": "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+      "predicted": "FAIL",
+      "semanticSite": "incoming test2064 assert.rejects",
+      "reason": "First false at0 enters original guard/100ms wait; second true at90001 makes loop stop and94 accept. Missing expected rejection, original two observations/guard trace present before assertion.",
+      "downstreamCountsUnreached": true
+    },
+    {
+      "ordinal": 4,
+      "name": "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+      "predicted": "PASS",
+      "branches": [
+        {
+          "name": "immediate timely true",
+          "at": 89999,
+          "reads": 1,
+          "trace": [
+            "read"
+          ],
+          "delays": [],
+          "complete": true
+        },
+        {
+          "name": "timely after one100ms cadence",
+          "observations": [
+            0,
+            101
+          ],
+          "reads": 2,
+          "trace": [
+            "read",
+            "guard",
+            "read"
+          ],
+          "delays": [
+            100
+          ],
+          "complete": true
+        },
+        {
+          "name": "original read error after cutoff",
+          "at": 90001,
+          "reads": 1,
+          "trace": [
+            "read"
+          ],
+          "delays": [],
+          "sameErrorIdentity": true,
+          "complete": true
+        },
+        {
+          "name": "original currentness error",
+          "reads": 1,
+          "trace": [
+            "read",
+            "guard"
+          ],
+          "delays": [],
+          "sameErrorIdentity": true,
+          "complete": true
+        },
+        {
+          "name": "false at exact cutoff",
+          "at": 90000,
+          "reads": 1,
+          "trace": [
+            "read"
+          ],
+          "delays": [],
+          "originalAssertionError": true,
+          "complete": true
+        }
+      ]
+    },
+    {
+      "ordinal": 5,
+      "name": "original review correction refuses missing or false live edit authority before any input action",
+      "predicted": "FAIL",
+      "semanticSite": "incoming test2352 assert.rejects, second loop iteration",
+      "iterations": [
+        {
+          "input": "null",
+          "reached": true,
+          "predictedComplete": true,
+          "trace": [
+            "read",
+            "read"
+          ],
+          "reads": 2,
+          "budget": 30000,
+          "reason": "Default Boolean rejects null; original100ms wait then exact refusal error propagates before any input."
+        },
+        {
+          "input": "{}",
+          "reached": true,
+          "predictedComplete": false,
+          "traceBeforeFailure": [
+            "read",
+            "scroll",
+            "focus",
+            "insert",
+            "submit"
+          ],
+          "reads": 1,
+          "budget": 30000,
+          "reason": "Fixture maps{} to truthy{selector}; old waitRead has defaultBoolean and returns it. Existing record/selector validation admits it. All original input stubs resolve, then assert.rejects fails Missing expected rejection."
+        },
+        {
+          "input": "{canEditNow:false}",
+          "reached": false
+        },
+        {
+          "input": "{canEditNow:1}",
+          "reached": false
+        },
+        {
+          "input": "[{canEditNow:true}]",
+          "reached": false
+        }
+      ],
+      "laterAssertionsUnreached": "Second iteration trace/budget/read assertions and all remaining iterations are not reached after Missing expected rejection."
+    },
+    {
+      "ordinal": 6,
+      "name": "original review correction admits current authority with one original insertion and submit",
+      "predicted": "FAIL",
+      "semanticSite": "incoming test2362 deepEqual trace, second loop iteration",
+      "iterations": [
+        {
+          "input": "['current']",
+          "reached": true,
+          "predictedComplete": true,
+          "trace": [
+            "read",
+            "scroll",
+            "focus",
+            "insert",
+            "submit"
+          ],
+          "reads": 1,
+          "budget": 30000
+        },
+        {
+          "input": "[{canEditNow:false},'current']",
+          "reached": true,
+          "predictedComplete": false,
+          "actualPredictedTrace": [
+            "read",
+            "scroll",
+            "focus",
+            "insert",
+            "submit"
+          ],
+          "expectedTrace": [
+            "read",
+            "read",
+            "scroll",
+            "focus",
+            "insert",
+            "submit"
+          ],
+          "actualPredictedReads": 1,
+          "expectedReads": 2,
+          "budget": 30000,
+          "reason": "Truthiness of the first returned object satisfies old defaultBoolean before the live edit authority can change. Input stubs resolve; the mismatch is the explicit trace assertion, not setup/import failure."
+        }
+      ],
+      "insertionErrorControl": "UNREACHED after the second iteration trace failure; no preservationPASS is inferred for2365–2369."
+    }
+  ],
+  "fixtureBoundary": {
+    "actualDriverAndControls": true,
+    "sourceTypeErasureIsOnlyInsideUnexecutedTestFixture": true,
+    "helperExpressionStubbedByIncomingReviewFixture": true,
+    "realReadinessExpressionNotEvaluatedByThisReview": true,
+    "reviewControlsWaitReadUsesOriginal100msAnd30000msDefaults": true,
+    "noMissingMarkerOrNewExportFailureIdentified": true
+  },
+  "qualification": [
+    "This is a source-only prediction for six incoming registrations, not an authored/tested combined suite or an R1.",
+    "The existing whole0aec133 remains unchanged and selected separately; its actual new producer GREEN was still pending during this review. No139-case result is claimed.",
+    "A future additive six-case proposal must preserve all133 definitions/bytes, receive a separate concrete published scope, and establish actual meaningfulRED before any P11/Review producer adoption.",
+    "No incoming BOOT helper, Review producer, live-membership cutoff source, other UI fixtures, native lane or workflow is selected.",
+    "No fixture, Function, module, target source, test, provider or native process was executed in this review."
+  ],
+  "reviewerActions": {
+    "immutableGitReads": true,
+    "pureTextAndHashAnalysis": true,
+    "bareEvidenceOnly": true,
+    "sourcePostimage": false,
+    "runner": false,
+    "shell": false,
+    "runtime": false,
+    "refs": false,
+    "PR": false,
+    "CI": false
+  }
+}

@@ -1,0 +1,2004 @@
+{
+  "schema": "c714.installed-renderer-four-gap-data-assessment.v1",
+  "reviewer": "/root/renderer_admission",
+  "scope": "Final bounded static data assessment of the four previously identified installed-runtime gaps. This is an evidence report, not a runner, argv, source/test/config postimage, runtime request, or startup-closure certificate.",
+  "disposition": {
+    "boundedDataPreparationComplete": true,
+    "preparedConditions": "Pinned Linux x64 little-endian inputs, the recorded esbuild no-override platform route, a conditional Rollup GNU candidate, and the unchanged happy-dom standalone-window/default-settings cleanup route.",
+    "noFurtherDataRequestedWithinThisBoundedScope": true,
+    "actualRendererArgvSelected": false,
+    "actualRendererRuntimeSelected": false,
+    "renderer85SuiteSelected": false,
+    "runtimeAdmitted": false,
+    "completeTransitiveStartupClosureEstablished": false,
+    "actualRollupNativeSelectionEstablished": false,
+    "nativeMachineCodeSemanticallyQualified": false,
+    "summary": "The four data gaps now have exact supporting text and native identity evidence within the stated conditions. Rollup's dynamic report predicate is still unobserved and unbound; GNU is prepared candidate data. happy-dom cancellation and close limitations are source-proved outcomes, not reasons to expand into unselected DOM, navigation or alternative-loader branches."
+  },
+  "priorAcceptedAssessment": {
+    "bytes": 156717,
+    "sha256": "76e5d3440254a5e778eb700eb306251a779d0f5a8c6dfe8c47e740895b316154",
+    "gitBlob": "a342571a13ce31b46e9782356cc23527c61ee644",
+    "relationship": "Supersedes only the four bounded missing-data statuses. All prior config-loader, cache/write, worker ownership, finite whole-file, setup/home, preservation and non-execution limits remain applicable.",
+    "originalBoundedReport": {
+      "bytes": 79491,
+      "sha256": "37ec4ed61e7c3e76aa4c6f9e5457c9e6620b1fe133002c65ccfbc35c890a8ab6",
+      "gitBlob": "7156ce4b503f7f6e9591021672db6771c0d19cb3"
+    }
+  },
+  "evidence": {
+    "stageBundles": [
+      {
+        "stage": 1,
+        "bytes": 20961,
+        "sha256": "406eee6b2745ad2f49aafb8375866a83ada9c622c1617cce3346570b2c7f3613",
+        "gitBlob": "0261822e4c9317a90856ee4a7ef7f142cf249a56"
+      },
+      {
+        "stage": 2,
+        "bytes": 21832,
+        "sha256": "1dc7cb24cb111ac1b67d922d782e1376468c0c64b228ca9263f9ac8b058d45fd",
+        "gitBlob": "bff2e4762fef38f052c4623867792845fe3a1905"
+      },
+      {
+        "stage": 3,
+        "bytes": 99240,
+        "sha256": "8a479ebddfca22a5431777512c7c9e7ae1907d92af8c1051c248bf5cb8841a58",
+        "gitBlob": "a9678812b40d820eb541246ac87577d47f8a02f1"
+      },
+      {
+        "stage": 4,
+        "bytes": 133538,
+        "sha256": "ffc729c90534c52fa26301f2f44567a2c7e7d6a9695b64a90e2afcb7a91ebf59",
+        "gitBlob": "7a362b24d9d2dc82f1aecbdae477184c196aad44"
+      },
+      {
+        "stage": 5,
+        "bytes": 10599,
+        "sha256": "e55717b97dcdc5f4a93451f4f7710657ad39d020aa84c1ba0856350186f76ac1",
+        "gitBlob": "1df63a179aae14b2eb0a01c04f0a8465e0b1fe33"
+      },
+      {
+        "stage": 6,
+        "bytes": 21944,
+        "sha256": "b7a9b9a01256f76d25ae98c5ece144a2a063f136f32b246bf0bbf5bfbb75a7be",
+        "gitBlob": "6fcd9181dcdc63879fb77f931bc24e34b934e946"
+      },
+      {
+        "stage": 7,
+        "bytes": 11140,
+        "sha256": "48ad03945061e7abc082df6bf3582f1529960f327aad5f3801a0e6c137d58686",
+        "gitBlob": "b1f64e6b0e885cb093eb7f16eda26fba90f5a3ad"
+      }
+    ],
+    "finalMembershipReport": {
+      "bytes": 22379,
+      "sha256": "e2bf101f3669ae45cca9d83619312e4e26d7906077710d75c24652316f2d6fa1",
+      "gitBlob": "2d348e5be9d38e774b703282118288add8279c5d"
+    },
+    "priorDependencyCensus": {
+      "bytes": 39168001,
+      "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+      "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+    },
+    "rootCompleteCensusRead": {
+      "bytes": 39168001,
+      "rows": 122773,
+      "method": "Root retained evidence states the complete original manifest was streamed and hashed with bounded memory; this reviewer verified the complete membership report and each of its 30 joins, without independently restreaming the 39 MB original manifest."
+    },
+    "newLiteralTextBodies": {
+      "count": 28,
+      "bytes": 288610,
+      "allFullBodiesIndependentlyByteGitAndSha256Verified": true,
+      "verificationRows": [
+        {
+          "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/misc/true.js",
+          "bytes": 20,
+          "sha256": "1ca1ff5b531880de960715f4622cb4bfe61620ad0ab56764a00f3afe2bf2981a",
+          "gitBlob": "186b120756be198f7b34e195640ac267dba19c4e",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/misc/false.js",
+          "bytes": 21,
+          "sha256": "3f405f8c82812b5fd5a6ca325a1b9039479bf9de3ee1ef51d76ea80fba7d486c",
+          "gitBlob": "2693369b44337b7c5d3a96226f7e7eea4715618a",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/client/env.mjs",
+          "bytes": 643,
+          "sha256": "5bdaca544f5cef6f738fbd103a0f60ceaedacd1051edd3514d912e01448443f2",
+          "gitBlob": "b58bfc1ec39d563e9f67b4dc435f137bbe7cbb66",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/package.json",
+          "bytes": 12026,
+          "sha256": "d2b8a7290987a7989c993f4f9adb2939de7d4030e7eb9ec252bc505fcb0b90f3",
+          "gitBlob": "971d21ebd6ff8ecac75305d5156ee178c611b54b",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/package.json",
+          "bytes": 1798,
+          "sha256": "516fdf64d51eee945fc0b5e15de4219489ec2ce8d3343f201782fe69044f5242",
+          "gitBlob": "996aab3b689f21363f482e782ba8eec9410c47c5",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/package.json",
+          "bytes": 17,
+          "sha256": "6dc1b06d6b093e9cccb20bee06a93836eee0420ae26803ca2ce4065d82f070d1",
+          "gitBlob": "7c34deb5837d8d5e168b54f95f7872b2c50eca13",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/parseAst.js",
+          "bytes": 293,
+          "sha256": "6f74029976e5c0dfc7002680a345ba771d64da9517ce2cac0f5c84c110f0ce49",
+          "gitBlob": "aeb181a512c0fb435ee3da9a998b573e83a1208f",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/index.js",
+          "bytes": 16922,
+          "sha256": "ef24535de425ea58d8650fca46be1ad4ec33dc817524a500c097e5f4df1e0b00",
+          "gitBlob": "8efc4d9e3351be746f1f51c249f8852c42001d56",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/package.json",
+          "bytes": 372,
+          "sha256": "2332dc7d04175b16730f136b5bf32b31203eecea5be03b66e9453a4658b3d971",
+          "gitBlob": "1ce7bc3bed21efe1a508f0ac6cafb28c8771685c",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js",
+          "bytes": 4787,
+          "sha256": "93c3da450b25ba485bb3de20dded405aa9c105951e8d31964eeb49633c2b16ea",
+          "gitBlob": "962a10163ad9a8289ef4661070b526f886293dff",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/parseAst.js",
+          "bytes": 84758,
+          "sha256": "077033312dbcd03604df8c54f6f159a21c056ceed2b6cd3c682cf9a2e5076827",
+          "gitBlob": "bd38785ee45f12d60d0d02c53cb2e9b976f47f5d",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/GlobalWindow.js",
+          "bytes": 2589,
+          "sha256": "ad03577dc75921f32a963c734ad426b0670dcf566315d8d2139d545b36ee54b4",
+          "gitBlob": "7fe16e979f04822782576e6b1e3eff2e0b92f05b",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/Window.js",
+          "bytes": 1966,
+          "sha256": "7202cc7f3dd840bbf3cdbcd9c9c208d95c70f7052d6df4f80b473c06e462687c",
+          "gitBlob": "d56d6099feb9335cee618b062b0aba3f6f8c4860",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/BrowserWindow.js",
+          "bytes": 101308,
+          "sha256": "f8ca4b3cdd603652f705385a83b31914155f0bf81605e4b012e6fa63052e9385",
+          "gitBlob": "70b08346cabf28259bdd00700e332d907cb7dde7",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/DetachedWindowAPI.js",
+          "bytes": 2598,
+          "sha256": "7c3b1eb055b786160e122510e1c1a1f4fb3e1c37c9d4ac05beee929d920ed67b",
+          "gitBlob": "38221a395dbcfe0fc3cdb0dddf197c2487f6d3c0",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowser.js",
+          "bytes": 3354,
+          "sha256": "ac5d6155f65cc77c746d07ad5c4d63f5966d07b445d2d2285261d2978cec6a62",
+          "gitBlob": "aa66c0225ae2f3f8ee8a3c1ec50503cd16eefe46",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/PropertySymbol.js",
+          "bytes": 20722,
+          "sha256": "96928362a8d5dbe5e2ea84b47129791dd4ae7ed9b61dc3ce05465cdd04fe765c",
+          "gitBlob": "047e40fd03fea59f42126663089c0eae6975f749",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserContext.js",
+          "bytes": 2708,
+          "sha256": "3fb5fe83bc8f5f9b390e2a3d94c578c2b4880da42777597f8a417cb967192c04",
+          "gitBlob": "1029cd540e0527ef1a3106147f809c039687a34f",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/nodes/document/DocumentReadyStateManager.js",
+          "bytes": 1059,
+          "sha256": "9561cb2e9ccd3a41ad0cf902fe36c8edda449f72262f2591b8e4c470ee6fb482",
+          "gitBlob": "b2d57ddff9a0d6dda8cc5a81753bbd8737d2f92d",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/BrowserSettingsFactory.js",
+          "bytes": 3347,
+          "sha256": "900140317d5593cb136a1442cf2fbbfd82c82f0af7e5dcdd73ccc9d43cb9ecdf",
+          "gitBlob": "230872f32bfeefe00c5952ef4d41d85f5863242a",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/enums/BrowserErrorCaptureEnum.js",
+          "bytes": 930,
+          "sha256": "b2b461d11904fab87556685344f3b7952cfe21d70fc5968a4ded486f8ce6f350",
+          "gitBlob": "0b430799c4db48f05019c06a23d436821b7a2dba",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserPage.js",
+          "bytes": 5163,
+          "sha256": "dfc16465d0661b39e12c626e7c56fc91b94dea105a8eae8e1218b22f3bfd1028",
+          "gitBlob": "7ef8c9406140f2e820b0c5f88d362ff9ed079ef8",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/async-task-manager/AsyncTaskManager.js",
+          "bytes": 10284,
+          "sha256": "daa2f3903aafda56454c790d87bdd7b5faaeea683043c36bf3d03dbf8bf16043",
+          "gitBlob": "eac85e911ec44e81f871f5ac4da37513bdc51e73",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/DefaultBrowserSettings.js",
+          "bytes": 2247,
+          "sha256": "cc46d26ff1db64b6c09b0a59d3fe0be9582d6733e66332efffdca124fdbf2017",
+          "gitBlob": "0b296db7bea6840530ef9a0f5c5c5347c46189f0",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/package.json",
+          "bytes": 480,
+          "sha256": "119bf5922da37602ead3a4c40f2b6279a1501388d6fe944c0be18b16e95a35af",
+          "gitBlob": "1ca44457535e1981d2537169d41daad15e66e6fb",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserFrame.js",
+          "bytes": 6522,
+          "sha256": "0448d04e856e90970bfe5c7aeedd7b58701947a445aa88a04800b1d31e95413d",
+          "gitBlob": "8c4a9f3f8d7c5393108b254f8063d40b84790082",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/utilities/BrowserPageUtility.js",
+          "bytes": 1302,
+          "sha256": "81df070bf3b28559f5caabb5ec3daf22c1308ae509e60901c6bd2b977dca0072",
+          "gitBlob": "b44cc9d59ae0bf6f0a1641305c1d285b0ba67c9b",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/async-task-manager/AsyncTaskManagerDebugError.js",
+          "bytes": 374,
+          "sha256": "75f072b701f661317f6c281573894c67700a7547249cb83d68a6fc0923105300",
+          "gitBlob": "8b81dff07debde5237481f02fb41f346c1010f9f",
+          "mode": "100644",
+          "allIdentityFieldsMatch": true
+        }
+      ]
+    },
+    "allTextBodiesIncludingPrior": {
+      "count": 161,
+      "bytes": 4410498,
+      "prior133Count": 133,
+      "prior133Bytes": 4121888
+    },
+    "newNativeFiles": {
+      "count": 2,
+      "bytes": 13438152,
+      "identityRows": [
+        {
+          "path": "node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/bin/esbuild",
+          "mode": "100755",
+          "bytes": 11407472,
+          "sha256": "0c6588b092a2c291a72bab90659f3c9e0e25e0fe59c9ac12b4dae4d945e5548c",
+          "gitBlob": "71fe4f8318ca6039f84b0165618f921eb3cab609"
+        },
+        {
+          "path": "node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/rollup.linux-x64-gnu.node",
+          "mode": "100644",
+          "bytes": 2030680,
+          "sha256": "c3aedeb1740b7363287f97013b4e03e3485bf0a74c442e90862e8cf53c9144f5",
+          "gitBlob": "59216bda58fc192ff0f5eac32719a884fa74a03c"
+        }
+      ],
+      "verificationLimit": "The complete root data-read/hash receipts and ELF headers were read and joined to exact original-census rows. Native bytes are not embedded in the stage bundles and were not independently rehashed by this reviewer. Neither native file was executed or semantically qualified as machine code."
+    },
+    "thirtyRecordMembership": {
+      "expectedRecords": 30,
+      "textRecords": 28,
+      "textBytes": 288610,
+      "nativeRecords": 2,
+      "nativeBytes": 13438152,
+      "allThirtyJoinsExact": true,
+      "comparisons": [
+        {
+          "path": "node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/bin/esbuild",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/package.json",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/package.json",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/rollup.linux-x64-gnu.node",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/PropertySymbol.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/async-task-manager/AsyncTaskManager.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/async-task-manager/AsyncTaskManagerDebugError.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/BrowserSettingsFactory.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/DefaultBrowserSettings.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowser.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserContext.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserFrame.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserPage.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/enums/BrowserErrorCaptureEnum.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/utilities/BrowserPageUtility.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/index.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/nodes/document/DocumentReadyStateManager.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/BrowserWindow.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/DetachedWindowAPI.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/GlobalWindow.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/Window.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/package.json",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/package.json",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/parseAst.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/parseAst.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/package.json",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/client/env.mjs",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/misc/false.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        },
+        {
+          "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/misc/true.js",
+          "present": true,
+          "originalRowMatches": true,
+          "newReadIdentityMatches": true,
+          "declaredExact": true
+        }
+      ],
+      "originalCensusPinMatchesPrior": true
+    },
+    "observedResolutionLinks": [
+      {
+        "logicalPath": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/rollup",
+        "mode": "0o777",
+        "kind": "symlink",
+        "literalTarget": "../../rollup@4.59.0/node_modules/rollup",
+        "resolvedPath": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup",
+        "literalTargetIdentity": {
+          "bytes": 39,
+          "sha256": "8f51af9f121033aa303009b7bc9220f2b539c3ddd49bdd2e4a6c78c581d45a56",
+          "gitBlob": "25d90f60ca260b3caf42c7478e9969f3c38c5cf2"
+        }
+      },
+      {
+        "logicalPath": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/happy-dom",
+        "mode": "0o777",
+        "kind": "symlink",
+        "literalTarget": "../../happy-dom@21.0.4/node_modules/happy-dom",
+        "resolvedPath": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom",
+        "literalTargetIdentity": {
+          "bytes": 45,
+          "sha256": "5808b80c71162732964913557cd8fc8dd3a3a2b1b7cc21db3c808932274a1868",
+          "gitBlob": "a59886880735d7c6a3a9aed585e3387c833c812b"
+        }
+      },
+      {
+        "logicalPath": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/esbuild",
+        "mode": "0o777",
+        "kind": "symlink",
+        "literalTarget": "../../esbuild@0.28.1/node_modules/esbuild",
+        "resolvedPath": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild",
+        "literalTargetIdentity": {
+          "bytes": 41,
+          "sha256": "b2536c7793b26d8138bef0eff27062d27620cfacddf306dcd86413732bf733ac",
+          "gitBlob": "a0c3155c22602bc0e8d95b8eb1188d903c11f4f9"
+        }
+      },
+      {
+        "logicalPath": "node_modules/.pnpm/esbuild@0.28.1/node_modules/@esbuild/linux-x64",
+        "mode": "0o777",
+        "kind": "symlink",
+        "literalTarget": "../../../@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64",
+        "resolvedPath": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64",
+        "literalTargetIdentity": {
+          "bytes": 66,
+          "sha256": "d9d2b2af4cbb49175d7784f39432ddeec04505d978f4fe86f5a0681d5ea0ba81",
+          "gitBlob": "d3d87753592b0fa1840c0bf6bda46e7f10926c4b"
+        }
+      },
+      {
+        "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu",
+        "mode": "0o777",
+        "literalTarget": "../../../@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu",
+        "resolvedPath": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu",
+        "literalTargetIdentity": {
+          "bytes": 86,
+          "sha256": "d0c2b21cea2f55759c3a6286572b0bcc7d94557dcfbe96332879fbe8649b325d",
+          "gitBlob": "b6ded27b883614dd57b66a584a4e3711c2d415e0"
+        }
+      }
+    ],
+    "linkMembershipLimit": "Five exact current link/target observations are retained. The supplied final membership proof covers 30 regular/native rows; no additional original-census membership claim for these five links is made here.",
+    "allExactSourcePassagesChecked": true,
+    "pureDataIdentityHelper": {
+      "bytes": 3982,
+      "sha256": "cd3d5b96a5508215010923078469cc718282f17d765f6af493913c157bdf3db7",
+      "gitBlob": "e4a4568d589e1254b88ade1a5f87d53924e7c2e8"
+    },
+    "packageOrTargetCodeEvaluated": false
+  },
+  "fourGapResults": [
+    {
+      "id": "vite-conditionals-and-client-environment",
+      "dataStatus": "closed",
+      "findings": [
+        "misc/true.js and misc/false.js only export their boolean constants; both complete bodies are pinned.",
+        "package.json selects misc/true.js for #module-sync-enabled under the module-sync condition, otherwise misc/false.js. No actual invocation conditions are selected here.",
+        "dist/client/env.mjs has no import, filesystem or process-creation call. It selects a global context and assigns define values to dotted property paths.",
+        "Vite's already retained client-injection plugin replaces __DEFINES__ for the normalized environment entry. This is a transformed module; the raw placeholder and future define map are not independently executed or inferred."
+      ],
+      "pins": [
+        {
+          "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/misc/true.js",
+          "bytes": 20,
+          "gitBlob": "186b120756be198f7b34e195640ac267dba19c4e",
+          "sha256": "1ca1ff5b531880de960715f4622cb4bfe61620ad0ab56764a00f3afe2bf2981a",
+          "mode": "100644"
+        },
+        {
+          "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/misc/false.js",
+          "bytes": 21,
+          "gitBlob": "2693369b44337b7c5d3a96226f7e7eea4715618a",
+          "sha256": "3f405f8c82812b5fd5a6ca325a1b9039479bf9de3ee1ef51d76ea80fba7d486c",
+          "mode": "100644"
+        },
+        {
+          "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/client/env.mjs",
+          "bytes": 643,
+          "gitBlob": "b58bfc1ec39d563e9f67b4dc435f137bbe7cbb66",
+          "sha256": "5bdaca544f5cef6f738fbd103a0f60ceaedacd1051edd3514d912e01448443f2",
+          "mode": "100644"
+        }
+      ],
+      "sources": [
+        {
+          "gitBlob": "3b6d03c4ebc634c5c2ea5a05f9d8cafda1da6a23",
+          "firstLine": 45,
+          "lastLine": 50
+        },
+        {
+          "gitBlob": "e5e4dec6b508dfca9c1b59eb2cc7d77cefdbc962",
+          "firstLine": 77,
+          "lastLine": 86
+        },
+        {
+          "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a",
+          "firstLine": 41318,
+          "lastLine": 41329
+        },
+        {
+          "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a",
+          "firstLine": 41371,
+          "lastLine": 41386
+        }
+      ]
+    },
+    {
+      "id": "esbuild-installed-native-selection",
+      "dataStatus": "closed for the recorded no-override Linux x64 LE platform route",
+      "findings": [
+        "The exact Vite-to-esbuild link resolves installed esbuild 0.28.1, not the version implied solely by Vite's dependency range.",
+        "Recorded platform data are linux/x86_64/little-endian with an ELF64 LE x86-64 Node header. ESBUILD_BINARY_PATH was absent at observation.",
+        "The retained JS selects @esbuild/linux-x64/bin/esbuild for that platform; the actual package link and its manifest are pinned and the manifest has no exports redirect.",
+        "The root completely read/hashed the selected 0755 regular executable, and its identity matches the corresponding original dependency-census row.",
+        "The canonical path contains no .zip/ component, so the examined package route does not enter the zip/PnP copy/cache branch.",
+        "Valid existing ESBUILD_BINARY_PATH, a different platform, downloaded fallback, WASM node command or zip/PnP destination would be a different selection, not silently covered by this result.",
+        "The JS service launches the selected command with --service=0.28.1 and --ping. Its stop function kills without awaiting child exit. This source behavior remains a process-ownership limit."
+      ],
+      "nativeIdentity": {
+        "path": "node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/bin/esbuild",
+        "mode": "100755",
+        "bytes": 11407472,
+        "sha256": "0c6588b092a2c291a72bab90659f3c9e0e25e0fe59c9ac12b4dae4d945e5548c",
+        "gitBlob": "71fe4f8318ca6039f84b0165618f921eb3cab609"
+      },
+      "observedTargetData": {
+        "pythonPlatform": "linux",
+        "machine": "x86_64",
+        "byteorder": "little",
+        "nodeELFHeaderHex": "7f454c4602010103000000000000000002003e0001000000400b7d00000000004000000000000000a8e790070000000000000000400038000e0040002a002900",
+        "ESBUILD_BINARY_PATH": null,
+        "cwd": "/",
+        "targetCodeExecuted": false
+      },
+      "sources": [
+        {
+          "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+          "firstLine": 1885,
+          "lastLine": 2080
+        },
+        {
+          "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+          "firstLine": 2096,
+          "lastLine": 2117
+        },
+        {
+          "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+          "firstLine": 2246,
+          "lastLine": 2358
+        }
+      ]
+    },
+    {
+      "id": "rollup-parser-native",
+      "dataStatus": "wrapper/loader/GNU-candidate data complete; actual GNU-versus-musl selection remains unobserved",
+      "findings": [
+        "The actual Vite dependency link resolves Rollup 4.59.0. Its ./parseAst import export selects dist/es/parseAst.js; dist/es/package.json establishes ESM format.",
+        "The wrapper imports ../native.js and re-exports the shared parser. The shared parser imports parse/parseAsync from ../../native.js and invokes those native methods.",
+        "The platform-table initializer evaluates isMingw32() even on Linux. Non-Windows getReportHeader directly calls report.getReport().header; the Windows subprocess branch is not selected by the observed Linux platform.",
+        "Both isMingw32 and isMusl use reportHeader ??= getReportHeader(). A nullish initial result is retried by isMusl.",
+        "For Linux/x64, isMusl returns reportHeader ? !reportHeader.glibcVersionRuntime : false. GNU therefore requires a falsy final header or a truthy glibcVersionRuntime value; merely non-null is insufficient.",
+        "Root recorded Python glibc 2.41 and Node ELF interpreter /lib64/ld-linux-x86-64.so.2 as data. They do not constitute observing the JavaScript report value or binding the future invocation.",
+        "The GNU local override path dist/rollup.linux-x64-gnu.node has both followed-target-exists and lexists false in the retained observation. The candidate therefore uses the importer-local @rollup/rollup-linux-x64-gnu package, whose main is ./rollup.linux-x64-gnu.node.",
+        "The exact GNU package link, manifest and root complete-read/hash receipt for its 0644 native shared object all match the supplied evidence; the regular/native row matches the complete original census.",
+        "The loader chooses one identifier based on local-path existence. A failed local require throws and does not fall back to the optional package.",
+        "No musl candidate or alternative-platform binding is qualified. No Node report collection or native loading was executed by this review."
+      ],
+      "nativeCandidateIdentity": {
+        "path": "node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/rollup.linux-x64-gnu.node",
+        "mode": "100644",
+        "bytes": 2030680,
+        "sha256": "c3aedeb1740b7363287f97013b4e03e3485bf0a74c442e90862e8cf53c9144f5",
+        "gitBlob": "59216bda58fc192ff0f5eac32719a884fa74a03c"
+      },
+      "candidateOnly": true,
+      "nodeReportPredicateObserved": false,
+      "futureSelectionBound": false,
+      "localAndPackageEvidence": {
+        "candidateOnly": true,
+        "nodeReportPredicateObserved": false,
+        "localPath": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/rollup.linux-x64-gnu.node",
+        "localFollowedTargetExists": false,
+        "localLexists": false,
+        "packageLink": {
+          "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu",
+          "mode": "0o777",
+          "literalTarget": "../../../@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu",
+          "resolvedPath": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu"
+        },
+        "packageManifest": {
+          "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/package.json",
+          "resolvedPath": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/package.json",
+          "mode": "0o644",
+          "identity": {
+            "bytes": 480,
+            "sha256": "119bf5922da37602ead3a4c40f2b6279a1501388d6fe944c0be18b16e95a35af",
+            "gitBlob": "1ca44457535e1981d2537169d41daad15e66e6fb"
+          },
+          "fullFileBytesRead": true,
+          "body": "{\n  \"name\": \"@rollup/rollup-linux-x64-gnu\",\n  \"version\": \"4.59.0\",\n  \"os\": [\n    \"linux\"\n  ],\n  \"cpu\": [\n    \"x64\"\n  ],\n  \"files\": [\n    \"rollup.linux-x64-gnu.node\"\n  ],\n  \"description\": \"Native bindings for Rollup\",\n  \"author\": \"Lukas Taegert-Atkinson\",\n  \"homepage\": \"https://rollupjs.org/\",\n  \"license\": \"MIT\",\n  \"repository\": {\n    \"type\": \"git\",\n    \"url\": \"git+https://github.com/rollup/rollup.git\"\n  },\n  \"libc\": [\n    \"glibc\"\n  ],\n  \"main\": \"./rollup.linux-x64-gnu.node\"\n}"
+        }
+      },
+      "libcData": {
+        "pythonGNUConfstr": "glibc 2.41",
+        "nodeELFInterpreterLiterals": [
+          "/lib64/ld-linux-x86-64.so.2"
+        ],
+        "nodeProcessReportObserved": false,
+        "futureNativeSelectionBound": false
+      },
+      "sources": [
+        {
+          "gitBlob": "962a10163ad9a8289ef4661070b526f886293dff",
+          "firstLine": 1,
+          "lastLine": 159
+        },
+        {
+          "gitBlob": "bd38785ee45f12d60d0d02c53cb2e9b976f47f5d",
+          "firstLine": 10,
+          "lastLine": 11
+        },
+        {
+          "gitBlob": "bd38785ee45f12d60d0d02c53cb2e9b976f47f5d",
+          "firstLine": 2078,
+          "lastLine": 2100
+        }
+      ]
+    },
+    {
+      "id": "happy-dom-window-abort-close",
+      "dataStatus": "bounded standalone-window/default-settings lifecycle path established, with explicit source-proved limitations",
+      "findings": [
+        "Vitest's normal environment setup imports GlobalWindow/Window and chooses GlobalWindow || Window. The installed GlobalWindow is a class extending Window; Window extends BrowserWindow.",
+        "Window constructs DetachedBrowser, its default DetachedBrowserContext, a DetachedBrowserPage and main DetachedBrowserFrame. It then binds its own window object to that frame and installs DetachedWindowAPI.",
+        "The initial detached frame sets openerWindow=null. Its happyDOM.abort path returns frame.abort. With no child frames this returns its AsyncTaskManager.abort; with child frames it joins child abort promises and its own manager abort.",
+        "The actual win.close is BrowserWindow.close, not DetachedWindowAPI.close. BrowserWindow.close requires both the main-frame relationship and a truthy openerWindow. For the initial standalone frame its opener gate is false, so that call is a no-op.",
+        "If the close gate becomes true, BrowserWindow calls its symbol destructor and page.close without awaiting or returning the latter. The bounded result does not assert unconditional destruction or completion of that conditional page-close route.",
+        "BrowserWindow captures timer functions at module initialization and registers timeout/interval/immediate/microtask work with the frame AsyncTaskManager. The document-ready manager has its own AsyncTaskManager; its destroy method is directly registered as a frame-task abort callback.",
+        "AsyncTaskManager.abortAll snapshots and clears the tracked registries, clears registered timer/immediate handles, and invokes registered task abort handlers synchronously. It does not await promises returned by those handlers, and an uncaught synchronous handler exception can interrupt the remainder.",
+        "Completion requires empty tracked counters/arrays and a 1ms timer check. The implementation explicitly cannot detect all promise/nextTick microtasks. This is not global asynchronous-work or handle quiescence.",
+        "abortAll(false), used by abort(), does not permanently disable new registrations. Even the destroy path resets destroyed=false after completion. A resolved abort is not a permanent shutdown guarantee.",
+        "Default debug.traceWaitUntilComplete is -1 and the timer limit defaults are -1, so no finite global deadline follows from these defaults.",
+        "BrowserSettingsFactory merges the defaults with supplied settings. Under unchanged Vitest setup, errorCapture remains tryAndCatch while disableErrorCapturing is set true; DetachedBrowser's processLevel exception-observer creation branch is therefore not reached.",
+        "BrowserPageUtility's conditional close path references BrowserFrameFactory.destroyFrame. This and other conditional DOM/navigation/script-evaluation branches were not expanded because they are not needed to establish the bounded initial-frame abort and gated win.close behavior.",
+        "The decoded source limitations reinforce, rather than replace, the prior requirement for external captured-group deadline/termination and final owned-output cleanup checks."
+      ],
+      "keyPins": [
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/GlobalWindow.js",
+          "mode": "100644",
+          "bytes": 2589,
+          "sha256": "ad03577dc75921f32a963c734ad426b0670dcf566315d8d2139d545b36ee54b4",
+          "gitBlob": "7fe16e979f04822782576e6b1e3eff2e0b92f05b"
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/Window.js",
+          "mode": "100644",
+          "bytes": 1966,
+          "sha256": "7202cc7f3dd840bbf3cdbcd9c9c208d95c70f7052d6df4f80b473c06e462687c",
+          "gitBlob": "d56d6099feb9335cee618b062b0aba3f6f8c4860"
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/BrowserWindow.js",
+          "mode": "100644",
+          "bytes": 101308,
+          "sha256": "f8ca4b3cdd603652f705385a83b31914155f0bf81605e4b012e6fa63052e9385",
+          "gitBlob": "70b08346cabf28259bdd00700e332d907cb7dde7"
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/DetachedWindowAPI.js",
+          "mode": "100644",
+          "bytes": 2598,
+          "sha256": "7c3b1eb055b786160e122510e1c1a1f4fb3e1c37c9d4ac05beee929d920ed67b",
+          "gitBlob": "38221a395dbcfe0fc3cdb0dddf197c2487f6d3c0"
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserFrame.js",
+          "mode": "100644",
+          "bytes": 6522,
+          "sha256": "0448d04e856e90970bfe5c7aeedd7b58701947a445aa88a04800b1d31e95413d",
+          "gitBlob": "8c4a9f3f8d7c5393108b254f8063d40b84790082"
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/async-task-manager/AsyncTaskManager.js",
+          "mode": "100644",
+          "bytes": 10284,
+          "sha256": "daa2f3903aafda56454c790d87bdd7b5faaeea683043c36bf3d03dbf8bf16043",
+          "gitBlob": "eac85e911ec44e81f871f5ac4da37513bdc51e73"
+        },
+        {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/DefaultBrowserSettings.js",
+          "mode": "100644",
+          "bytes": 2247,
+          "sha256": "cc46d26ff1db64b6c09b0a59d3fe0be9582d6733e66332efffdca124fdbf2017",
+          "gitBlob": "0b296db7bea6840530ef9a0f5c5c5347c46189f0"
+        }
+      ],
+      "sources": [
+        {
+          "gitBlob": "90004b3064c731a22f584000525e0bff3f423867",
+          "firstLine": 334,
+          "lastLine": 397
+        },
+        {
+          "gitBlob": "70b08346cabf28259bdd00700e332d907cb7dde7",
+          "firstLine": 709,
+          "lastLine": 746
+        },
+        {
+          "gitBlob": "70b08346cabf28259bdd00700e332d907cb7dde7",
+          "firstLine": 1870,
+          "lastLine": 1878
+        },
+        {
+          "gitBlob": "38221a395dbcfe0fc3cdb0dddf197c2487f6d3c0",
+          "firstLine": 50,
+          "lastLine": 66
+        },
+        {
+          "gitBlob": "8c4a9f3f8d7c5393108b254f8063d40b84790082",
+          "firstLine": 1,
+          "lastLine": 35
+        },
+        {
+          "gitBlob": "8c4a9f3f8d7c5393108b254f8063d40b84790082",
+          "firstLine": 110,
+          "lastLine": 122
+        },
+        {
+          "gitBlob": "eac85e911ec44e81f871f5ac4da37513bdc51e73",
+          "firstLine": 1,
+          "lastLine": 301
+        }
+      ]
+    }
+  ],
+  "outstandingFutureInvocationConditions": [
+    {
+      "id": "bind-exact-inputs-and-authority",
+      "condition": "A future invocation must separately bind its actual executable, source/dependency identities, working directory, argument vector, effective environment and output/cleanup ownership to a concrete reviewed contract. Current data-reader cwd '/' is not a selected runtime cwd. No permission or selection is created by this report.",
+      "currentlySatisfiedAsInvocationBinding": false
+    },
+    {
+      "id": "esbuild-selection",
+      "condition": "The prepared native route requires the same installed Vite/esbuild/platform links and bytes, Linux x64 LE execution context, absent effective ESBUILD_BINARY_PATH, successful resolution of the pinned @esbuild/linux-x64/bin/esbuild, and no zip/PnP/fallback/alternate command selection. Any changed selection requires its own exact bounded identity evidence.",
+      "currentlyObservedAsData": true,
+      "currentlyBoundForRuntime": false
+    },
+    {
+      "id": "rollup-dynamic-selection",
+      "condition": "Before treating the GNU candidate as the actual loaded binding, the future exact invocation must establish the actual platform/arch and effective native-loader report predicate, including the nullish retry: final header falsy OR header.glibcVersionRuntime truthy for GNU. A truthy header with a falsy field selects musl and is not covered. Python libc/ELF evidence alone is not this observation or binding.",
+      "currentlyObservedOrBound": false
+    },
+    {
+      "id": "rollup-local-versus-package",
+      "condition": "The local GNU path must retain the recorded absence, and the importer-local GNU package link/manifest/native identity must remain exact for the prepared package route. A present local .node path takes precedence; its load failure is not a fallback. Runtime-loaded native identity is not inferred from the candidate's mere presence.",
+      "currentlyObservedAsData": true,
+      "currentlyBoundForRuntime": false
+    },
+    {
+      "id": "vite-conditions-and-defines",
+      "condition": "Bind the effective Node import conditions and Vite define/config transformation values. Both tiny module-sync/default support bodies are available, but no actual condition set or transformed define map is chosen here. Keep the unchanged config's established bundle semantics; the prior runner/native bare-__dirname incompatibility limit remains."
+    },
+    {
+      "id": "happy-dom-settings-and-lifecycle-scope",
+      "condition": "The scoped path assumes the pinned non-VM happy-dom environment and unchanged configuration/settings, including default errorCapture=tryAndCatch, debug.traceWaitUntilComplete=-1, timer defaults and Vitest's disableErrorCapturing=true. Do not treat a future processLevel override, explicit alternative environment, popup/opener mutation, explicit page-close or navigation branch as qualified by this bounded path. No source-proved cancellation limit is silently replaced with a success assumption."
+    },
+    {
+      "id": "whole-file-results-and-supervision",
+      "condition": "A separately reviewed whole-file execution must preserve the original 80-case census plus five prospective additions, raw outcomes and unexpected errors; an expected 82P3F result is not observed evidence. Bound the captured process group and all owned temp/output cleanup externally. Vitest/Tinypool/happy-dom/esbuild internal cleanup alone is insufficient. No case filter, skips, retry-as-success or unreviewed optional output route is supplied here."
+    }
+  ],
+  "preservedPriorConstraints": [
+    "Boolean cache:false suppresses the result-cache route but forks still write transformed modules under project.tmpDir.",
+    "The unchanged bare-__dirname config uses the established bundle loader, which invokes esbuild and writes timestamped config modules under node_modules/.vite-temp (or its documented fallback). Unlink is unawaited and the directory remains.",
+    "Tinypool 2.2.0 awaits teardown before starting its termination timer. No package-internal timeout proves a global deadline or absence of surviving descendants.",
+    "Setup's stale-home scan, fresh worker HOME/USERPROFILE, best-effort cleanup, and unchanged CODEX_HOME boundary remain as previously assessed. Do not infer .vite-temp redirection from TMPDIR.",
+    "Inherited environment, debug dump, snapshot/update, reporter, profiler, coverage, browser/API/UI and typecheck behavior require exact future binding; cache:false alone does not remove their effects.",
+    "All dependency file/link/mode preservation obligations and owned-transient exceptions remain explicit. Final equality is not proof of no intermediate writes.",
+    "No install, root package lifecycle build, real Claude/Codex, frozen-PR change or CI action is added."
+  ],
+  "sourceAndCaseContinuity": {
+    "originalRendererTest": {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+      "bytes": 180091,
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+      "registrations": 67,
+      "expandedCases": 80
+    },
+    "originalCensus": "60 ordinary registrations plus seven it.each registrations expand to 80 cases; previous retained full-file census, not re-executed or broadened here.",
+    "prospectiveAdditionalCases": 5,
+    "prospectiveTotal": 85,
+    "expectedPreFixOutcome": {
+      "passes": 82,
+      "failures": 3,
+      "status": "Inherited prospective expectation only; no renderer run observed."
+    },
+    "sourceOrTestPostimageAuthoredByReviewer": false,
+    "originalSourceRoot": "/workspace/scratch/c714-fresh-20261116/source",
+    "currentBranchOrTreeRechecked": false
+  },
+  "limits": [
+    "All 28 new text bodies were completely read and independently hashed. Exact selected passages and relevant caller relationships were reviewed. This does not assert full semantic qualification of every optional branch in the large files.",
+    "The two native identities are supported by root complete-file read/hash receipts and exact retained original-census rows. This reviewer did not receive/re-hash their full native byte streams or execute them.",
+    "The 30-row original-census membership report was fully read, hashed and independently joined to the 28 verified text identities and two native receipts. Root, not this reviewer, performed the recorded complete 122773-row/39168001-byte original-manifest stream.",
+    "GNU remains a conditional prepared candidate; the Node report predicate and actual runtime-loaded binding have not been observed or bound.",
+    "happy-dom registered-task cancellation and initial close gating are established. Global handle quiescence, permanent shutdown, arbitrary callback completion and all possible DOM/navigation/page-close branches are not established.",
+    "No further source traversal is requested for these four bounded data questions. Other eager or optional imports remain outside a complete transitive-startup claim.",
+    "No shell, package/target evaluation, runtime, new runner/argv/source/test/config candidate, tree/commit/ref/PR mutation or CI action was performed by this reviewer. Retention is a bare evidence blob only.",
+    "The helper review turn is completed and was interrupted after completion; no helper turn remains running."
+  ],
+  "completeMembershipEvidence": {
+    "kind": "renderer-new-input-complete-census-membership",
+    "completeOriginalCensusIdentity": {
+      "bytes": 39168001,
+      "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+      "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+    },
+    "completeRows": 122773,
+    "newRecords": 30,
+    "records": [
+      {
+        "path": "node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/bin/esbuild",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/bin/esbuild",
+          "mode": "100755",
+          "bytes": 11407472,
+          "sha256": "0c6588b092a2c291a72bab90659f3c9e0e25e0fe59c9ac12b4dae4d945e5548c",
+          "gitBlob": "71fe4f8318ca6039f84b0165618f921eb3cab609"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 11407472,
+          "sha256": "0c6588b092a2c291a72bab90659f3c9e0e25e0fe59c9ac12b4dae4d945e5548c",
+          "gitBlob": "71fe4f8318ca6039f84b0165618f921eb3cab609"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/package.json",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/package.json",
+          "mode": "100644",
+          "bytes": 372,
+          "sha256": "2332dc7d04175b16730f136b5bf32b31203eecea5be03b66e9453a4658b3d971",
+          "gitBlob": "1ce7bc3bed21efe1a508f0ac6cafb28c8771685c"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 372,
+          "sha256": "2332dc7d04175b16730f136b5bf32b31203eecea5be03b66e9453a4658b3d971",
+          "gitBlob": "1ce7bc3bed21efe1a508f0ac6cafb28c8771685c"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/package.json",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/package.json",
+          "mode": "100644",
+          "bytes": 480,
+          "sha256": "119bf5922da37602ead3a4c40f2b6279a1501388d6fe944c0be18b16e95a35af",
+          "gitBlob": "1ca44457535e1981d2537169d41daad15e66e6fb"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 480,
+          "sha256": "119bf5922da37602ead3a4c40f2b6279a1501388d6fe944c0be18b16e95a35af",
+          "gitBlob": "1ca44457535e1981d2537169d41daad15e66e6fb"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/rollup.linux-x64-gnu.node",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/rollup.linux-x64-gnu.node",
+          "mode": "100644",
+          "bytes": 2030680,
+          "sha256": "c3aedeb1740b7363287f97013b4e03e3485bf0a74c442e90862e8cf53c9144f5",
+          "gitBlob": "59216bda58fc192ff0f5eac32719a884fa74a03c"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 2030680,
+          "sha256": "c3aedeb1740b7363287f97013b4e03e3485bf0a74c442e90862e8cf53c9144f5",
+          "gitBlob": "59216bda58fc192ff0f5eac32719a884fa74a03c"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/PropertySymbol.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/PropertySymbol.js",
+          "mode": "100644",
+          "bytes": 20722,
+          "sha256": "96928362a8d5dbe5e2ea84b47129791dd4ae7ed9b61dc3ce05465cdd04fe765c",
+          "gitBlob": "047e40fd03fea59f42126663089c0eae6975f749"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 20722,
+          "sha256": "96928362a8d5dbe5e2ea84b47129791dd4ae7ed9b61dc3ce05465cdd04fe765c",
+          "gitBlob": "047e40fd03fea59f42126663089c0eae6975f749"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/async-task-manager/AsyncTaskManager.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/async-task-manager/AsyncTaskManager.js",
+          "mode": "100644",
+          "bytes": 10284,
+          "sha256": "daa2f3903aafda56454c790d87bdd7b5faaeea683043c36bf3d03dbf8bf16043",
+          "gitBlob": "eac85e911ec44e81f871f5ac4da37513bdc51e73"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 10284,
+          "sha256": "daa2f3903aafda56454c790d87bdd7b5faaeea683043c36bf3d03dbf8bf16043",
+          "gitBlob": "eac85e911ec44e81f871f5ac4da37513bdc51e73"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/async-task-manager/AsyncTaskManagerDebugError.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/async-task-manager/AsyncTaskManagerDebugError.js",
+          "mode": "100644",
+          "bytes": 374,
+          "sha256": "75f072b701f661317f6c281573894c67700a7547249cb83d68a6fc0923105300",
+          "gitBlob": "8b81dff07debde5237481f02fb41f346c1010f9f"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 374,
+          "sha256": "75f072b701f661317f6c281573894c67700a7547249cb83d68a6fc0923105300",
+          "gitBlob": "8b81dff07debde5237481f02fb41f346c1010f9f"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/BrowserSettingsFactory.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/BrowserSettingsFactory.js",
+          "mode": "100644",
+          "bytes": 3347,
+          "sha256": "900140317d5593cb136a1442cf2fbbfd82c82f0af7e5dcdd73ccc9d43cb9ecdf",
+          "gitBlob": "230872f32bfeefe00c5952ef4d41d85f5863242a"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 3347,
+          "sha256": "900140317d5593cb136a1442cf2fbbfd82c82f0af7e5dcdd73ccc9d43cb9ecdf",
+          "gitBlob": "230872f32bfeefe00c5952ef4d41d85f5863242a"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/DefaultBrowserSettings.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/DefaultBrowserSettings.js",
+          "mode": "100644",
+          "bytes": 2247,
+          "sha256": "cc46d26ff1db64b6c09b0a59d3fe0be9582d6733e66332efffdca124fdbf2017",
+          "gitBlob": "0b296db7bea6840530ef9a0f5c5c5347c46189f0"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 2247,
+          "sha256": "cc46d26ff1db64b6c09b0a59d3fe0be9582d6733e66332efffdca124fdbf2017",
+          "gitBlob": "0b296db7bea6840530ef9a0f5c5c5347c46189f0"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowser.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowser.js",
+          "mode": "100644",
+          "bytes": 3354,
+          "sha256": "ac5d6155f65cc77c746d07ad5c4d63f5966d07b445d2d2285261d2978cec6a62",
+          "gitBlob": "aa66c0225ae2f3f8ee8a3c1ec50503cd16eefe46"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 3354,
+          "sha256": "ac5d6155f65cc77c746d07ad5c4d63f5966d07b445d2d2285261d2978cec6a62",
+          "gitBlob": "aa66c0225ae2f3f8ee8a3c1ec50503cd16eefe46"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserContext.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserContext.js",
+          "mode": "100644",
+          "bytes": 2708,
+          "sha256": "3fb5fe83bc8f5f9b390e2a3d94c578c2b4880da42777597f8a417cb967192c04",
+          "gitBlob": "1029cd540e0527ef1a3106147f809c039687a34f"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 2708,
+          "sha256": "3fb5fe83bc8f5f9b390e2a3d94c578c2b4880da42777597f8a417cb967192c04",
+          "gitBlob": "1029cd540e0527ef1a3106147f809c039687a34f"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserFrame.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserFrame.js",
+          "mode": "100644",
+          "bytes": 6522,
+          "sha256": "0448d04e856e90970bfe5c7aeedd7b58701947a445aa88a04800b1d31e95413d",
+          "gitBlob": "8c4a9f3f8d7c5393108b254f8063d40b84790082"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 6522,
+          "sha256": "0448d04e856e90970bfe5c7aeedd7b58701947a445aa88a04800b1d31e95413d",
+          "gitBlob": "8c4a9f3f8d7c5393108b254f8063d40b84790082"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserPage.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserPage.js",
+          "mode": "100644",
+          "bytes": 5163,
+          "sha256": "dfc16465d0661b39e12c626e7c56fc91b94dea105a8eae8e1218b22f3bfd1028",
+          "gitBlob": "7ef8c9406140f2e820b0c5f88d362ff9ed079ef8"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 5163,
+          "sha256": "dfc16465d0661b39e12c626e7c56fc91b94dea105a8eae8e1218b22f3bfd1028",
+          "gitBlob": "7ef8c9406140f2e820b0c5f88d362ff9ed079ef8"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/enums/BrowserErrorCaptureEnum.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/enums/BrowserErrorCaptureEnum.js",
+          "mode": "100644",
+          "bytes": 930,
+          "sha256": "b2b461d11904fab87556685344f3b7952cfe21d70fc5968a4ded486f8ce6f350",
+          "gitBlob": "0b430799c4db48f05019c06a23d436821b7a2dba"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 930,
+          "sha256": "b2b461d11904fab87556685344f3b7952cfe21d70fc5968a4ded486f8ce6f350",
+          "gitBlob": "0b430799c4db48f05019c06a23d436821b7a2dba"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/utilities/BrowserPageUtility.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/utilities/BrowserPageUtility.js",
+          "mode": "100644",
+          "bytes": 1302,
+          "sha256": "81df070bf3b28559f5caabb5ec3daf22c1308ae509e60901c6bd2b977dca0072",
+          "gitBlob": "b44cc9d59ae0bf6f0a1641305c1d285b0ba67c9b"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 1302,
+          "sha256": "81df070bf3b28559f5caabb5ec3daf22c1308ae509e60901c6bd2b977dca0072",
+          "gitBlob": "b44cc9d59ae0bf6f0a1641305c1d285b0ba67c9b"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/index.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/index.js",
+          "mode": "100644",
+          "bytes": 16922,
+          "sha256": "ef24535de425ea58d8650fca46be1ad4ec33dc817524a500c097e5f4df1e0b00",
+          "gitBlob": "8efc4d9e3351be746f1f51c249f8852c42001d56"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 16922,
+          "sha256": "ef24535de425ea58d8650fca46be1ad4ec33dc817524a500c097e5f4df1e0b00",
+          "gitBlob": "8efc4d9e3351be746f1f51c249f8852c42001d56"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/nodes/document/DocumentReadyStateManager.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/nodes/document/DocumentReadyStateManager.js",
+          "mode": "100644",
+          "bytes": 1059,
+          "sha256": "9561cb2e9ccd3a41ad0cf902fe36c8edda449f72262f2591b8e4c470ee6fb482",
+          "gitBlob": "b2d57ddff9a0d6dda8cc5a81753bbd8737d2f92d"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 1059,
+          "sha256": "9561cb2e9ccd3a41ad0cf902fe36c8edda449f72262f2591b8e4c470ee6fb482",
+          "gitBlob": "b2d57ddff9a0d6dda8cc5a81753bbd8737d2f92d"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/BrowserWindow.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/BrowserWindow.js",
+          "mode": "100644",
+          "bytes": 101308,
+          "sha256": "f8ca4b3cdd603652f705385a83b31914155f0bf81605e4b012e6fa63052e9385",
+          "gitBlob": "70b08346cabf28259bdd00700e332d907cb7dde7"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 101308,
+          "sha256": "f8ca4b3cdd603652f705385a83b31914155f0bf81605e4b012e6fa63052e9385",
+          "gitBlob": "70b08346cabf28259bdd00700e332d907cb7dde7"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/DetachedWindowAPI.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/DetachedWindowAPI.js",
+          "mode": "100644",
+          "bytes": 2598,
+          "sha256": "7c3b1eb055b786160e122510e1c1a1f4fb3e1c37c9d4ac05beee929d920ed67b",
+          "gitBlob": "38221a395dbcfe0fc3cdb0dddf197c2487f6d3c0"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 2598,
+          "sha256": "7c3b1eb055b786160e122510e1c1a1f4fb3e1c37c9d4ac05beee929d920ed67b",
+          "gitBlob": "38221a395dbcfe0fc3cdb0dddf197c2487f6d3c0"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/GlobalWindow.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/GlobalWindow.js",
+          "mode": "100644",
+          "bytes": 2589,
+          "sha256": "ad03577dc75921f32a963c734ad426b0670dcf566315d8d2139d545b36ee54b4",
+          "gitBlob": "7fe16e979f04822782576e6b1e3eff2e0b92f05b"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 2589,
+          "sha256": "ad03577dc75921f32a963c734ad426b0670dcf566315d8d2139d545b36ee54b4",
+          "gitBlob": "7fe16e979f04822782576e6b1e3eff2e0b92f05b"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/Window.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/Window.js",
+          "mode": "100644",
+          "bytes": 1966,
+          "sha256": "7202cc7f3dd840bbf3cdbcd9c9c208d95c70f7052d6df4f80b473c06e462687c",
+          "gitBlob": "d56d6099feb9335cee618b062b0aba3f6f8c4860"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 1966,
+          "sha256": "7202cc7f3dd840bbf3cdbcd9c9c208d95c70f7052d6df4f80b473c06e462687c",
+          "gitBlob": "d56d6099feb9335cee618b062b0aba3f6f8c4860"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/package.json",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/package.json",
+          "mode": "100644",
+          "bytes": 1798,
+          "sha256": "516fdf64d51eee945fc0b5e15de4219489ec2ce8d3343f201782fe69044f5242",
+          "gitBlob": "996aab3b689f21363f482e782ba8eec9410c47c5"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 1798,
+          "sha256": "516fdf64d51eee945fc0b5e15de4219489ec2ce8d3343f201782fe69044f5242",
+          "gitBlob": "996aab3b689f21363f482e782ba8eec9410c47c5"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/package.json",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/package.json",
+          "mode": "100644",
+          "bytes": 17,
+          "sha256": "6dc1b06d6b093e9cccb20bee06a93836eee0420ae26803ca2ce4065d82f070d1",
+          "gitBlob": "7c34deb5837d8d5e168b54f95f7872b2c50eca13"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 17,
+          "sha256": "6dc1b06d6b093e9cccb20bee06a93836eee0420ae26803ca2ce4065d82f070d1",
+          "gitBlob": "7c34deb5837d8d5e168b54f95f7872b2c50eca13"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/parseAst.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/parseAst.js",
+          "mode": "100644",
+          "bytes": 293,
+          "sha256": "6f74029976e5c0dfc7002680a345ba771d64da9517ce2cac0f5c84c110f0ce49",
+          "gitBlob": "aeb181a512c0fb435ee3da9a998b573e83a1208f"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 293,
+          "sha256": "6f74029976e5c0dfc7002680a345ba771d64da9517ce2cac0f5c84c110f0ce49",
+          "gitBlob": "aeb181a512c0fb435ee3da9a998b573e83a1208f"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/parseAst.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/parseAst.js",
+          "mode": "100644",
+          "bytes": 84758,
+          "sha256": "077033312dbcd03604df8c54f6f159a21c056ceed2b6cd3c682cf9a2e5076827",
+          "gitBlob": "bd38785ee45f12d60d0d02c53cb2e9b976f47f5d"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 84758,
+          "sha256": "077033312dbcd03604df8c54f6f159a21c056ceed2b6cd3c682cf9a2e5076827",
+          "gitBlob": "bd38785ee45f12d60d0d02c53cb2e9b976f47f5d"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js",
+          "mode": "100644",
+          "bytes": 4787,
+          "sha256": "93c3da450b25ba485bb3de20dded405aa9c105951e8d31964eeb49633c2b16ea",
+          "gitBlob": "962a10163ad9a8289ef4661070b526f886293dff"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 4787,
+          "sha256": "93c3da450b25ba485bb3de20dded405aa9c105951e8d31964eeb49633c2b16ea",
+          "gitBlob": "962a10163ad9a8289ef4661070b526f886293dff"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/package.json",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/package.json",
+          "mode": "100644",
+          "bytes": 12026,
+          "sha256": "d2b8a7290987a7989c993f4f9adb2939de7d4030e7eb9ec252bc505fcb0b90f3",
+          "gitBlob": "971d21ebd6ff8ecac75305d5156ee178c611b54b"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 12026,
+          "sha256": "d2b8a7290987a7989c993f4f9adb2939de7d4030e7eb9ec252bc505fcb0b90f3",
+          "gitBlob": "971d21ebd6ff8ecac75305d5156ee178c611b54b"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/client/env.mjs",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/client/env.mjs",
+          "mode": "100644",
+          "bytes": 643,
+          "sha256": "5bdaca544f5cef6f738fbd103a0f60ceaedacd1051edd3514d912e01448443f2",
+          "gitBlob": "b58bfc1ec39d563e9f67b4dc435f137bbe7cbb66"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 643,
+          "sha256": "5bdaca544f5cef6f738fbd103a0f60ceaedacd1051edd3514d912e01448443f2",
+          "gitBlob": "b58bfc1ec39d563e9f67b4dc435f137bbe7cbb66"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/misc/false.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/misc/false.js",
+          "mode": "100644",
+          "bytes": 21,
+          "sha256": "3f405f8c82812b5fd5a6ca325a1b9039479bf9de3ee1ef51d76ea80fba7d486c",
+          "gitBlob": "2693369b44337b7c5d3a96226f7e7eea4715618a"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 21,
+          "sha256": "3f405f8c82812b5fd5a6ca325a1b9039479bf9de3ee1ef51d76ea80fba7d486c",
+          "gitBlob": "2693369b44337b7c5d3a96226f7e7eea4715618a"
+        },
+        "exactMembership": true
+      },
+      {
+        "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/misc/true.js",
+        "completeOriginalCensusRow": {
+          "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/misc/true.js",
+          "mode": "100644",
+          "bytes": 20,
+          "sha256": "1ca1ff5b531880de960715f4622cb4bfe61620ad0ab56764a00f3afe2bf2981a",
+          "gitBlob": "186b120756be198f7b34e195640ac267dba19c4e"
+        },
+        "actualNewReadIdentity": {
+          "bytes": 20,
+          "sha256": "1ca1ff5b531880de960715f4622cb4bfe61620ad0ab56764a00f3afe2bf2981a",
+          "gitBlob": "186b120756be198f7b34e195640ac267dba19c4e"
+        },
+        "exactMembership": true
+      }
+    ],
+    "allExact": true,
+    "memory": "streamed original bytes/one row at a time",
+    "targetCodeExecuted": false
+  },
+  "newTextPins": [
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/misc/true.js",
+      "bytes": 20,
+      "gitBlob": "186b120756be198f7b34e195640ac267dba19c4e",
+      "sha256": "1ca1ff5b531880de960715f4622cb4bfe61620ad0ab56764a00f3afe2bf2981a",
+      "mode": "100644"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/misc/false.js",
+      "bytes": 21,
+      "gitBlob": "2693369b44337b7c5d3a96226f7e7eea4715618a",
+      "sha256": "3f405f8c82812b5fd5a6ca325a1b9039479bf9de3ee1ef51d76ea80fba7d486c",
+      "mode": "100644"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/client/env.mjs",
+      "bytes": 643,
+      "gitBlob": "b58bfc1ec39d563e9f67b4dc435f137bbe7cbb66",
+      "sha256": "5bdaca544f5cef6f738fbd103a0f60ceaedacd1051edd3514d912e01448443f2",
+      "mode": "100644"
+    },
+    {
+      "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/package.json",
+      "bytes": 12026,
+      "gitBlob": "971d21ebd6ff8ecac75305d5156ee178c611b54b",
+      "sha256": "d2b8a7290987a7989c993f4f9adb2939de7d4030e7eb9ec252bc505fcb0b90f3",
+      "mode": "100644"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/package.json",
+      "bytes": 1798,
+      "gitBlob": "996aab3b689f21363f482e782ba8eec9410c47c5",
+      "sha256": "516fdf64d51eee945fc0b5e15de4219489ec2ce8d3343f201782fe69044f5242",
+      "mode": "100644"
+    },
+    {
+      "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/package.json",
+      "bytes": 17,
+      "gitBlob": "7c34deb5837d8d5e168b54f95f7872b2c50eca13",
+      "sha256": "6dc1b06d6b093e9cccb20bee06a93836eee0420ae26803ca2ce4065d82f070d1",
+      "mode": "100644"
+    },
+    {
+      "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/parseAst.js",
+      "bytes": 293,
+      "gitBlob": "aeb181a512c0fb435ee3da9a998b573e83a1208f",
+      "sha256": "6f74029976e5c0dfc7002680a345ba771d64da9517ce2cac0f5c84c110f0ce49",
+      "mode": "100644"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/index.js",
+      "bytes": 16922,
+      "gitBlob": "8efc4d9e3351be746f1f51c249f8852c42001d56",
+      "sha256": "ef24535de425ea58d8650fca46be1ad4ec33dc817524a500c097e5f4df1e0b00",
+      "mode": "100644"
+    },
+    {
+      "path": "node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/package.json",
+      "bytes": 372,
+      "gitBlob": "1ce7bc3bed21efe1a508f0ac6cafb28c8771685c",
+      "sha256": "2332dc7d04175b16730f136b5bf32b31203eecea5be03b66e9453a4658b3d971",
+      "mode": "100644"
+    },
+    {
+      "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js",
+      "mode": "100644",
+      "bytes": 4787,
+      "sha256": "93c3da450b25ba485bb3de20dded405aa9c105951e8d31964eeb49633c2b16ea",
+      "gitBlob": "962a10163ad9a8289ef4661070b526f886293dff"
+    },
+    {
+      "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/parseAst.js",
+      "mode": "100644",
+      "bytes": 84758,
+      "sha256": "077033312dbcd03604df8c54f6f159a21c056ceed2b6cd3c682cf9a2e5076827",
+      "gitBlob": "bd38785ee45f12d60d0d02c53cb2e9b976f47f5d"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/GlobalWindow.js",
+      "mode": "100644",
+      "bytes": 2589,
+      "sha256": "ad03577dc75921f32a963c734ad426b0670dcf566315d8d2139d545b36ee54b4",
+      "gitBlob": "7fe16e979f04822782576e6b1e3eff2e0b92f05b"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/Window.js",
+      "mode": "100644",
+      "bytes": 1966,
+      "sha256": "7202cc7f3dd840bbf3cdbcd9c9c208d95c70f7052d6df4f80b473c06e462687c",
+      "gitBlob": "d56d6099feb9335cee618b062b0aba3f6f8c4860"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/BrowserWindow.js",
+      "mode": "100644",
+      "bytes": 101308,
+      "sha256": "f8ca4b3cdd603652f705385a83b31914155f0bf81605e4b012e6fa63052e9385",
+      "gitBlob": "70b08346cabf28259bdd00700e332d907cb7dde7"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/DetachedWindowAPI.js",
+      "mode": "100644",
+      "bytes": 2598,
+      "sha256": "7c3b1eb055b786160e122510e1c1a1f4fb3e1c37c9d4ac05beee929d920ed67b",
+      "gitBlob": "38221a395dbcfe0fc3cdb0dddf197c2487f6d3c0"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowser.js",
+      "mode": "100644",
+      "bytes": 3354,
+      "sha256": "ac5d6155f65cc77c746d07ad5c4d63f5966d07b445d2d2285261d2978cec6a62",
+      "gitBlob": "aa66c0225ae2f3f8ee8a3c1ec50503cd16eefe46"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/PropertySymbol.js",
+      "mode": "100644",
+      "bytes": 20722,
+      "sha256": "96928362a8d5dbe5e2ea84b47129791dd4ae7ed9b61dc3ce05465cdd04fe765c",
+      "gitBlob": "047e40fd03fea59f42126663089c0eae6975f749"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserContext.js",
+      "mode": "100644",
+      "bytes": 2708,
+      "sha256": "3fb5fe83bc8f5f9b390e2a3d94c578c2b4880da42777597f8a417cb967192c04",
+      "gitBlob": "1029cd540e0527ef1a3106147f809c039687a34f"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/nodes/document/DocumentReadyStateManager.js",
+      "mode": "100644",
+      "bytes": 1059,
+      "sha256": "9561cb2e9ccd3a41ad0cf902fe36c8edda449f72262f2591b8e4c470ee6fb482",
+      "gitBlob": "b2d57ddff9a0d6dda8cc5a81753bbd8737d2f92d"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/BrowserSettingsFactory.js",
+      "mode": "100644",
+      "bytes": 3347,
+      "sha256": "900140317d5593cb136a1442cf2fbbfd82c82f0af7e5dcdd73ccc9d43cb9ecdf",
+      "gitBlob": "230872f32bfeefe00c5952ef4d41d85f5863242a"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/enums/BrowserErrorCaptureEnum.js",
+      "mode": "100644",
+      "bytes": 930,
+      "sha256": "b2b461d11904fab87556685344f3b7952cfe21d70fc5968a4ded486f8ce6f350",
+      "gitBlob": "0b430799c4db48f05019c06a23d436821b7a2dba"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserPage.js",
+      "mode": "100644",
+      "bytes": 5163,
+      "sha256": "dfc16465d0661b39e12c626e7c56fc91b94dea105a8eae8e1218b22f3bfd1028",
+      "gitBlob": "7ef8c9406140f2e820b0c5f88d362ff9ed079ef8"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/async-task-manager/AsyncTaskManager.js",
+      "mode": "100644",
+      "bytes": 10284,
+      "sha256": "daa2f3903aafda56454c790d87bdd7b5faaeea683043c36bf3d03dbf8bf16043",
+      "gitBlob": "eac85e911ec44e81f871f5ac4da37513bdc51e73"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/DefaultBrowserSettings.js",
+      "mode": "100644",
+      "bytes": 2247,
+      "sha256": "cc46d26ff1db64b6c09b0a59d3fe0be9582d6733e66332efffdca124fdbf2017",
+      "gitBlob": "0b296db7bea6840530ef9a0f5c5c5347c46189f0"
+    },
+    {
+      "path": "node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/package.json",
+      "mode": "100644",
+      "bytes": 480,
+      "sha256": "119bf5922da37602ead3a4c40f2b6279a1501388d6fe944c0be18b16e95a35af",
+      "gitBlob": "1ca44457535e1981d2537169d41daad15e66e6fb"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserFrame.js",
+      "mode": "100644",
+      "bytes": 6522,
+      "sha256": "0448d04e856e90970bfe5c7aeedd7b58701947a445aa88a04800b1d31e95413d",
+      "gitBlob": "8c4a9f3f8d7c5393108b254f8063d40b84790082"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/utilities/BrowserPageUtility.js",
+      "mode": "100644",
+      "bytes": 1302,
+      "sha256": "81df070bf3b28559f5caabb5ec3daf22c1308ae509e60901c6bd2b977dca0072",
+      "gitBlob": "b44cc9d59ae0bf6f0a1641305c1d285b0ba67c9b"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/async-task-manager/AsyncTaskManagerDebugError.js",
+      "mode": "100644",
+      "bytes": 374,
+      "sha256": "75f072b701f661317f6c281573894c67700a7547249cb83d68a6fc0923105300",
+      "gitBlob": "8b81dff07debde5237481f02fb41f346c1010f9f"
+    }
+  ],
+  "nativeReadReceipts": {
+    "esbuild": {
+      "logicalPath": "node_modules/.pnpm/esbuild@0.28.1/node_modules/@esbuild/linux-x64/bin/esbuild",
+      "resolvedPath": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/bin/esbuild",
+      "mode": "0o755",
+      "type": "regular",
+      "identity": {
+        "bytes": 11407472,
+        "sha256": "0c6588b092a2c291a72bab90659f3c9e0e25e0fe59c9ac12b4dae4d945e5548c",
+        "gitBlob": "71fe4f8318ca6039f84b0165618f921eb3cab609"
+      },
+      "fullFileBytesRead": true,
+      "targetCodeExecuted": false,
+      "elfHeaderHex": "7f454c4602010100000000000000000002003e000100000060e8480000000000400000000000000058010000000000000000000040003800050040000d000c00",
+      "retention": "Pinned complete installed dependency census plus actual complete-file identity; native machine code not semantically qualified"
+    },
+    "rollupGNUPotentialBinding": {
+      "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/rollup.linux-x64-gnu.node",
+      "resolvedPath": "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/rollup.linux-x64-gnu.node",
+      "mode": "0o644",
+      "identity": {
+        "bytes": 2030680,
+        "sha256": "c3aedeb1740b7363287f97013b4e03e3485bf0a74c442e90862e8cf53c9144f5",
+        "gitBlob": "59216bda58fc192ff0f5eac32719a884fa74a03c"
+      },
+      "fullFileBytesRead": true,
+      "elfHeaderHex": "7f454c4602010100000000000000000003003e0001000000f0f1000000000000400000000000000058f41e000000000000000000400038000900400020001f00"
+    }
+  },
+  "exactSourcePassages": [
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/misc/true.js",
+      "gitBlob": "186b120756be198f7b34e195640ac267dba19c4e",
+      "firstLine": 1,
+      "lastLine": 2,
+      "text": "export default true\n"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/misc/false.js",
+      "gitBlob": "2693369b44337b7c5d3a96226f7e7eea4715618a",
+      "firstLine": 1,
+      "lastLine": 2,
+      "text": "export default false\n"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/client/env.mjs",
+      "gitBlob": "b58bfc1ec39d563e9f67b4dc435f137bbe7cbb66",
+      "firstLine": 1,
+      "lastLine": 25,
+      "text": "const context = (() => {\n  if (typeof globalThis !== \"undefined\") {\n    return globalThis;\n  } else if (typeof self !== \"undefined\") {\n    return self;\n  } else if (typeof window !== \"undefined\") {\n    return window;\n  } else {\n    return Function(\"return this\")();\n  }\n})();\nconst defines = __DEFINES__;\nObject.keys(defines).forEach((key) => {\n  const segments = key.split(\".\");\n  let target = context;\n  for (let i = 0; i < segments.length; i++) {\n    const segment = segments[i];\n    if (i === segments.length - 1) {\n      target[segment] = defines[key];\n    } else {\n      target = target[segment] || (target[segment] = {});\n    }\n  }\n});\n"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/package.json",
+      "gitBlob": "3b6d03c4ebc634c5c2ea5a05f9d8cafda1da6a23",
+      "firstLine": 45,
+      "lastLine": 50,
+      "text": "  \"imports\": {\n    \"#module-sync-enabled\": {\n      \"module-sync\": \"./misc/true.js\",\n      \"default\": \"./misc/false.js\"\n    }\n  },"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/constants.js",
+      "gitBlob": "e5e4dec6b508dfca9c1b59eb2cc7d77cefdbc962",
+      "firstLine": 77,
+      "lastLine": 86,
+      "text": "const CLIENT_PUBLIC_PATH = `/@vite/client`;\nconst ENV_PUBLIC_PATH = `/@vite/env`;\nconst VITE_PACKAGE_DIR = resolve(\n  // import.meta.url is `dist/node/constants.js` after bundle\n  fileURLToPath(import.meta.url),\n  \"../../..\"\n);\nconst CLIENT_ENTRY = resolve(VITE_PACKAGE_DIR, \"dist/client/client.mjs\");\nconst ENV_ENTRY = resolve(VITE_PACKAGE_DIR, \"dist/client/env.mjs\");\nconst CLIENT_DIR = path.dirname(CLIENT_ENTRY);"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/chunks/dep-3O3b9SCF.js",
+      "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a",
+      "firstLine": 41318,
+      "lastLine": 41329,
+      "text": "  const getDefineReplacer = perEnvironmentState((environment) => {\n    const userDefine = {};\n    for (const key in environment.config.define) {\n      if (!key.startsWith(\"import.meta.env.\")) {\n        userDefine[key] = environment.config.define[key];\n      }\n    }\n    const serializedDefines = serializeDefine(userDefine);\n    const definesReplacement = () => serializedDefines;\n    return (code) => code.replace(`__DEFINES__`, definesReplacement);\n  });\n  return {"
+    },
+    {
+      "path": "node_modules/.pnpm/vite@6.4.4_@types+node@24.12.4_jiti@1.21.7_sass@1.98.0_terser@5.46.0_tsx@4.23.15_yaml@2.9.0/node_modules/vite/dist/node/chunks/dep-3O3b9SCF.js",
+      "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a",
+      "firstLine": 41371,
+      "lastLine": 41386,
+      "text": "    async transform(code, id, options) {\n      const ssr = options?.ssr ?? this.environment.config.consumer === \"server\";\n      if (id === normalizedClientEntry || id === normalizedEnvEntry) {\n        const defineReplacer = getDefineReplacer(this);\n        return defineReplacer(injectConfigValues(code));\n      } else if (!ssr && code.includes(\"process.env.NODE_ENV\")) {\n        const nodeEnv = this.environment.config.define?.[\"process.env.NODE_ENV\"] || JSON.stringify(process.env.NODE_ENV || config.mode);\n        return await replaceDefine(this.environment, code, id, {\n          \"process.env.NODE_ENV\": nodeEnv,\n          \"global.process.env.NODE_ENV\": nodeEnv,\n          \"globalThis.process.env.NODE_ENV\": nodeEnv\n        });\n      }\n    }\n  };\n}"
+    },
+    {
+      "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js",
+      "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+      "firstLine": 1885,
+      "lastLine": 2080,
+      "text": "// lib/npm/node-platform.ts\nvar fs = require(\"fs\");\nvar os = require(\"os\");\nvar path = require(\"path\");\nvar ESBUILD_BINARY_PATH = process.env.ESBUILD_BINARY_PATH || ESBUILD_BINARY_PATH;\nvar isValidBinaryPath = (x) => !!x && x !== \"/usr/bin/esbuild\";\nvar packageDarwin_arm64 = \"@esbuild/darwin-arm64\";\nvar packageDarwin_x64 = \"@esbuild/darwin-x64\";\nvar knownWindowsPackages = {\n  \"win32 arm64 LE\": \"@esbuild/win32-arm64\",\n  \"win32 ia32 LE\": \"@esbuild/win32-ia32\",\n  \"win32 x64 LE\": \"@esbuild/win32-x64\"\n};\nvar knownUnixlikePackages = {\n  \"aix ppc64 BE\": \"@esbuild/aix-ppc64\",\n  \"android arm64 LE\": \"@esbuild/android-arm64\",\n  \"darwin arm64 LE\": \"@esbuild/darwin-arm64\",\n  \"darwin x64 LE\": \"@esbuild/darwin-x64\",\n  \"freebsd arm64 LE\": \"@esbuild/freebsd-arm64\",\n  \"freebsd x64 LE\": \"@esbuild/freebsd-x64\",\n  \"linux arm LE\": \"@esbuild/linux-arm\",\n  \"linux arm64 LE\": \"@esbuild/linux-arm64\",\n  \"linux ia32 LE\": \"@esbuild/linux-ia32\",\n  \"linux mips64el LE\": \"@esbuild/linux-mips64el\",\n  \"linux ppc64 LE\": \"@esbuild/linux-ppc64\",\n  \"linux riscv64 LE\": \"@esbuild/linux-riscv64\",\n  \"linux s390x BE\": \"@esbuild/linux-s390x\",\n  \"linux x64 LE\": \"@esbuild/linux-x64\",\n  \"linux loong64 LE\": \"@esbuild/linux-loong64\",\n  \"netbsd arm64 LE\": \"@esbuild/netbsd-arm64\",\n  \"netbsd x64 LE\": \"@esbuild/netbsd-x64\",\n  \"openbsd arm64 LE\": \"@esbuild/openbsd-arm64\",\n  \"openbsd x64 LE\": \"@esbuild/openbsd-x64\",\n  \"sunos x64 LE\": \"@esbuild/sunos-x64\"\n};\nvar knownWebAssemblyFallbackPackages = {\n  \"android arm LE\": \"@esbuild/android-arm\",\n  \"android x64 LE\": \"@esbuild/android-x64\",\n  \"openharmony arm64 LE\": \"@esbuild/openharmony-arm64\"\n};\nfunction pkgAndSubpathForCurrentPlatform() {\n  let pkg;\n  let subpath;\n  let isWASM = false;\n  let platformKey = `${process.platform} ${os.arch()} ${os.endianness()}`;\n  if (platformKey in knownWindowsPackages) {\n    pkg = knownWindowsPackages[platformKey];\n    subpath = \"esbuild.exe\";\n  } else if (platformKey in knownUnixlikePackages) {\n    pkg = knownUnixlikePackages[platformKey];\n    subpath = \"bin/esbuild\";\n  } else if (platformKey in knownWebAssemblyFallbackPackages) {\n    pkg = knownWebAssemblyFallbackPackages[platformKey];\n    subpath = \"bin/esbuild\";\n    isWASM = true;\n  } else {\n    throw new Error(`Unsupported platform: ${platformKey}`);\n  }\n  return { pkg, subpath, isWASM };\n}\nfunction pkgForSomeOtherPlatform() {\n  const libMainJS = require.resolve(\"esbuild\");\n  const nodeModulesDirectory = path.dirname(path.dirname(path.dirname(libMainJS)));\n  if (path.basename(nodeModulesDirectory) === \"node_modules\") {\n    for (const unixKey in knownUnixlikePackages) {\n      try {\n        const pkg = knownUnixlikePackages[unixKey];\n        if (fs.existsSync(path.join(nodeModulesDirectory, pkg))) return pkg;\n      } catch {\n      }\n    }\n    for (const windowsKey in knownWindowsPackages) {\n      try {\n        const pkg = knownWindowsPackages[windowsKey];\n        if (fs.existsSync(path.join(nodeModulesDirectory, pkg))) return pkg;\n      } catch {\n      }\n    }\n  }\n  return null;\n}\nfunction downloadedBinPath(pkg, subpath) {\n  const esbuildLibDir = path.dirname(require.resolve(\"esbuild\"));\n  return path.join(esbuildLibDir, `downloaded-${pkg.replace(\"/\", \"-\")}-${path.basename(subpath)}`);\n}\nfunction generateBinPath() {\n  if (isValidBinaryPath(ESBUILD_BINARY_PATH)) {\n    if (!fs.existsSync(ESBUILD_BINARY_PATH)) {\n      console.warn(`[esbuild] Ignoring bad configuration: ESBUILD_BINARY_PATH=${ESBUILD_BINARY_PATH}`);\n    } else {\n      return { binPath: ESBUILD_BINARY_PATH, isWASM: false };\n    }\n  }\n  const { pkg, subpath, isWASM } = pkgAndSubpathForCurrentPlatform();\n  let binPath;\n  try {\n    binPath = require.resolve(`${pkg}/${subpath}`);\n  } catch (e) {\n    binPath = downloadedBinPath(pkg, subpath);\n    if (!fs.existsSync(binPath)) {\n      try {\n        require.resolve(pkg);\n      } catch {\n        const otherPkg = pkgForSomeOtherPlatform();\n        if (otherPkg) {\n          let suggestions = `\nSpecifically the \"${otherPkg}\" package is present but this platform\nneeds the \"${pkg}\" package instead. People often get into this\nsituation by installing esbuild on Windows or macOS and copying \"node_modules\"\ninto a Docker image that runs Linux, or by copying \"node_modules\" between\nWindows and WSL environments.\n\nIf you are installing with npm, you can try not copying the \"node_modules\"\ndirectory when you copy the files over, and running \"npm ci\" or \"npm install\"\non the destination platform after the copy. Or you could consider using yarn\ninstead of npm which has built-in support for installing a package on multiple\nplatforms simultaneously.\n\nIf you are installing with yarn, you can try listing both this platform and the\nother platform in your \".yarnrc.yml\" file using the \"supportedArchitectures\"\nfeature: https://yarnpkg.com/configuration/yarnrc/#supportedArchitectures\nKeep in mind that this means multiple copies of esbuild will be present.\n`;\n          if (pkg === packageDarwin_x64 && otherPkg === packageDarwin_arm64 || pkg === packageDarwin_arm64 && otherPkg === packageDarwin_x64) {\n            suggestions = `\nSpecifically the \"${otherPkg}\" package is present but this platform\nneeds the \"${pkg}\" package instead. People often get into this\nsituation by installing esbuild with npm running inside of Rosetta 2 and then\ntrying to use it with node running outside of Rosetta 2, or vice versa (Rosetta\n2 is Apple's on-the-fly x86_64-to-arm64 translation service).\n\nIf you are installing with npm, you can try ensuring that both npm and node are\nnot running under Rosetta 2 and then reinstalling esbuild. This likely involves\nchanging how you installed npm and/or node. For example, installing node with\nthe universal installer here should work: https://nodejs.org/en/download/. Or\nyou could consider using yarn instead of npm which has built-in support for\ninstalling a package on multiple platforms simultaneously.\n\nIf you are installing with yarn, you can try listing both \"arm64\" and \"x64\"\nin your \".yarnrc.yml\" file using the \"supportedArchitectures\" feature:\nhttps://yarnpkg.com/configuration/yarnrc/#supportedArchitectures\nKeep in mind that this means multiple copies of esbuild will be present.\n`;\n          }\n          throw new Error(`\nYou installed esbuild for another platform than the one you're currently using.\nThis won't work because esbuild is written with native code and needs to\ninstall a platform-specific binary executable.\n${suggestions}\nAnother alternative is to use the \"esbuild-wasm\" package instead, which works\nthe same way on all platforms. But it comes with a heavy performance cost and\ncan sometimes be 10x slower than the \"esbuild\" package, so you may also not\nwant to do that.\n`);\n        }\n        throw new Error(`The package \"${pkg}\" could not be found, and is needed by esbuild.\n\nIf you are installing esbuild with npm, make sure that you don't specify the\n\"--no-optional\" or \"--omit=optional\" flags. The \"optionalDependencies\" feature\nof \"package.json\" is used by esbuild to install the correct binary executable\nfor your current platform.`);\n      }\n      throw e;\n    }\n  }\n  if (/\\.zip\\//.test(binPath)) {\n    let pnpapi;\n    try {\n      pnpapi = require(\"pnpapi\");\n    } catch (e) {\n    }\n    if (pnpapi) {\n      const root = pnpapi.getPackageInformation(pnpapi.topLevel).packageLocation;\n      const binTargetPath = path.join(\n        root,\n        \"node_modules\",\n        \".cache\",\n        \"esbuild\",\n        `pnpapi-${pkg.replace(\"/\", \"-\")}-${\"0.28.1\"}-${path.basename(subpath)}`\n      );\n      if (!fs.existsSync(binTargetPath)) {\n        fs.mkdirSync(path.dirname(binTargetPath), { recursive: true });\n        fs.copyFileSync(binPath, binTargetPath);\n        fs.chmodSync(binTargetPath, 493);\n      }\n      return { binPath: binTargetPath, isWASM };\n    }\n  }\n  return { binPath, isWASM };\n}\n\n// lib/npm/node.ts\nvar child_process = require(\"child_process\");\nvar crypto = require(\"crypto\");\nvar path2 = require(\"path\");\nvar fs2 = require(\"fs\");"
+    },
+    {
+      "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js",
+      "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+      "firstLine": 2096,
+      "lastLine": 2117,
+      "text": "}\nvar _a;\nvar isInternalWorkerThread = ((_a = worker_threads == null ? void 0 : worker_threads.workerData) == null ? void 0 : _a.esbuildVersion) === \"0.28.1\";\nvar esbuildCommandAndArgs = () => {\n  if ((!ESBUILD_BINARY_PATH || false) && (path2.basename(__filename) !== \"main.js\" || path2.basename(__dirname) !== \"lib\")) {\n    throw new Error(\n      `The esbuild JavaScript API cannot be bundled. Please mark the \"esbuild\" package as external so it's not included in the bundle.\n\nMore information: The file containing the code for esbuild's JavaScript API (${__filename}) does not appear to be inside the esbuild package on the file system, which usually means that the esbuild package was bundled into another file. This is problematic because the API needs to run a binary executable inside the esbuild package which is located using a relative path from the API code to the executable. If the esbuild package is bundled, the relative path will be incorrect and the executable won't be found.`\n    );\n  }\n  if (false) {\n    return [\"node\", [path2.join(__dirname, \"..\", \"bin\", \"esbuild\")]];\n  } else {\n    const { binPath, isWASM } = generateBinPath();\n    if (isWASM) {\n      return [\"node\", [binPath]];\n    } else {\n      return [binPath, []];\n    }\n  }\n};"
+    },
+    {
+      "path": "node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js",
+      "gitBlob": "1c23302b938a1164a990027c2e376aae8afc3e5b",
+      "firstLine": 2246,
+      "lastLine": 2358,
+      "text": "var stop = () => {\n  if (stopService) stopService();\n  if (workerThreadService) workerThreadService.stop();\n  return Promise.resolve();\n};\nvar initializeWasCalled = false;\nvar initialize = (options) => {\n  options = validateInitializeOptions(options || {});\n  if (options.wasmURL) throw new Error(`The \"wasmURL\" option only works in the browser`);\n  if (options.wasmModule) throw new Error(`The \"wasmModule\" option only works in the browser`);\n  if (options.worker) throw new Error(`The \"worker\" option only works in the browser`);\n  if (initializeWasCalled) throw new Error('Cannot call \"initialize\" more than once');\n  ensureServiceIsRunning();\n  initializeWasCalled = true;\n  return Promise.resolve();\n};\nvar defaultWD = process.cwd();\nvar longLivedService;\nvar stopService;\nvar ensureServiceIsRunning = () => {\n  if (longLivedService) return longLivedService;\n  let [command, args] = esbuildCommandAndArgs();\n  let child = child_process.spawn(command, args.concat(`--service=${\"0.28.1\"}`, \"--ping\"), {\n    windowsHide: true,\n    stdio: [\"pipe\", \"pipe\", \"inherit\"],\n    cwd: defaultWD\n  });\n  let { readFromStdout, afterClose, service } = createChannel({\n    writeToStdin(bytes) {\n      child.stdin.write(bytes, (err) => {\n        if (err) afterClose(err);\n      });\n    },\n    readFileSync: fs2.readFileSync,\n    isSync: false,\n    hasFS: true,\n    esbuild: node_exports\n  });\n  child.stdin.on(\"error\", afterClose);\n  child.on(\"error\", afterClose);\n  const stdin = child.stdin;\n  const stdout = child.stdout;\n  stdout.on(\"data\", readFromStdout);\n  stdout.on(\"end\", afterClose);\n  stopService = () => {\n    stdin.destroy();\n    stdout.destroy();\n    child.kill();\n    initializeWasCalled = false;\n    longLivedService = void 0;\n    stopService = void 0;\n  };\n  let refCount = 0;\n  child.unref();\n  if (stdin.unref) {\n    stdin.unref();\n  }\n  if (stdout.unref) {\n    stdout.unref();\n  }\n  const refs = {\n    ref() {\n      if (++refCount === 1) child.ref();\n    },\n    unref() {\n      if (--refCount === 0) child.unref();\n    }\n  };\n  longLivedService = {\n    build: (options) => new Promise((resolve, reject) => {\n      service.buildOrContext({\n        callName: \"build\",\n        refs,\n        options,\n        isTTY: isTTY(),\n        defaultWD,\n        callback: (err, res) => err ? reject(err) : resolve(res)\n      });\n    }),\n    context: (options) => new Promise((resolve, reject) => service.buildOrContext({\n      callName: \"context\",\n      refs,\n      options,\n      isTTY: isTTY(),\n      defaultWD,\n      callback: (err, res) => err ? reject(err) : resolve(res)\n    })),\n    transform: (input, options) => new Promise((resolve, reject) => service.transform({\n      callName: \"transform\",\n      refs,\n      input,\n      options: options || {},\n      isTTY: isTTY(),\n      fs: fsAsync,\n      callback: (err, res) => err ? reject(err) : resolve(res)\n    })),\n    formatMessages: (messages, options) => new Promise((resolve, reject) => service.formatMessages({\n      callName: \"formatMessages\",\n      refs,\n      messages,\n      options,\n      callback: (err, res) => err ? reject(err) : resolve(res)\n    })),\n    analyzeMetafile: (metafile, options) => new Promise((resolve, reject) => service.analyzeMetafile({\n      callName: \"analyzeMetafile\",\n      refs,\n      metafile: typeof metafile === \"string\" ? metafile : JSON.stringify(metafile),\n      options,\n      callback: (err, res) => err ? reject(err) : resolve(res)\n    }))\n  };\n  return longLivedService;\n};"
+    },
+    {
+      "path": "node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/package.json",
+      "gitBlob": "1ce7bc3bed21efe1a508f0ac6cafb28c8771685c",
+      "firstLine": 1,
+      "lastLine": 21,
+      "text": "{\n  \"name\": \"@esbuild/linux-x64\",\n  \"version\": \"0.28.1\",\n  \"description\": \"The Linux 64-bit binary for esbuild, a JavaScript bundler.\",\n  \"repository\": {\n    \"type\": \"git\",\n    \"url\": \"git+https://github.com/evanw/esbuild.git\"\n  },\n  \"license\": \"MIT\",\n  \"preferUnplugged\": true,\n  \"engines\": {\n    \"node\": \">=18\"\n  },\n  \"os\": [\n    \"linux\"\n  ],\n  \"cpu\": [\n    \"x64\"\n  ]\n}\n"
+    },
+    {
+      "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/package.json",
+      "gitBlob": "7c34deb5837d8d5e168b54f95f7872b2c50eca13",
+      "firstLine": 1,
+      "lastLine": 1,
+      "text": "{\"type\":\"module\"}"
+    },
+    {
+      "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/parseAst.js",
+      "gitBlob": "aeb181a512c0fb435ee3da9a998b573e83a1208f",
+      "firstLine": 1,
+      "lastLine": 13,
+      "text": "/*\n  @license\n\tRollup.js v4.59.0\n\tSun, 22 Feb 2026 07:31:53 GMT - commit ae846957f109690a866cc3e4c073613c338d3476\n\n\thttps://github.com/rollup/rollup\n\n\tReleased under the MIT License.\n*/\nimport '../native.js';\nexport { parseAst, parseAstAsync } from './shared/parseAst.js';\nimport 'node:path';\n"
+    },
+    {
+      "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js",
+      "gitBlob": "962a10163ad9a8289ef4661070b526f886293dff",
+      "firstLine": 1,
+      "lastLine": 162,
+      "text": "const { existsSync } = require('node:fs');\nconst path = require('node:path');\nconst { platform, arch, report } = require('node:process');\nconst { spawnSync } = require('node:child_process');\n\nconst getReportHeader = () => {\n\ttry {\n\t\tif (platform !== 'win32') {\n\t\t\treturn report.getReport().header;\n\t\t}\n\n\t\t// This is needed because report.getReport() crashes the process on Windows sometimes.\n\t\tconst script =\n\t\t\t\"console.log(JSON.stringify(require('node:process').report.getReport().header));\";\n\t\tconst child = spawnSync(process.execPath, ['-p', script], {\n\t\t\tencoding: 'utf8',\n\t\t\ttimeout: 3000,\n\t\t\twindowsHide: true\n\t\t});\n\n\t\tif (child.status !== 0) {\n\t\t\treturn null;\n\t\t}\n\n\t\t// The output from node -p might include a trailing 'undefined' and newline\n\t\tconst stdout = child.stdout?.replace(/undefined\\r?\\n?$/, '').trim();\n\t\tif (!stdout) {\n\t\t\treturn null;\n\t\t}\n\n\t\treturn JSON.parse(stdout);\n\t} catch {\n\t\treturn null;\n\t}\n};\n\nlet reportHeader;\nconst isMingw32 = () => {\n\treportHeader ??= getReportHeader();\n\n\treturn reportHeader?.osName?.startsWith('MINGW32_NT') ?? false;\n};\n\nconst isMusl = () => {\n\treportHeader ??= getReportHeader();\n\n\treturn reportHeader ? !reportHeader.glibcVersionRuntime : false;\n};\n\nconst bindingsByPlatformAndArch = {\n\tandroid: {\n\t\tarm: { base: 'android-arm-eabi' },\n\t\tarm64: { base: 'android-arm64' }\n\t},\n\tdarwin: {\n\t\tarm64: { base: 'darwin-arm64' },\n\t\tx64: { base: 'darwin-x64' }\n\t},\n\tfreebsd: {\n\t\tarm64: { base: 'freebsd-arm64' },\n\t\tx64: { base: 'freebsd-x64' }\n\t},\n\tlinux: {\n\t\tarm: { base: 'linux-arm-gnueabihf', musl: 'linux-arm-musleabihf' },\n\t\tarm64: { base: 'linux-arm64-gnu', musl: 'linux-arm64-musl' },\n\t\tloong64: { base: 'linux-loong64-gnu', musl: 'linux-loong64-musl' },\n\t\tppc64: { base: 'linux-ppc64-gnu', musl: 'linux-ppc64-musl' },\n\t\triscv64: { base: 'linux-riscv64-gnu', musl: 'linux-riscv64-musl' },\n\t\ts390x: { base: 'linux-s390x-gnu', musl: null },\n\t\tx64: { base: 'linux-x64-gnu', musl: 'linux-x64-musl' }\n\t},\n\topenbsd: {\n\t\tx64: { base: 'openbsd-x64' }\n\t},\n\topenharmony: {\n\t\tarm64: { base: 'openharmony-arm64' }\n\t},\n\twin32: {\n\t\tarm64: { base: 'win32-arm64-msvc' },\n\t\tia32: { base: 'win32-ia32-msvc' },\n\t\tx64: {\n\t\t\tbase: isMingw32() ? 'win32-x64-gnu' : 'win32-x64-msvc'\n\t\t}\n\t}\n};\n\nconst msvcLinkFilenameByArch = {\n\tarm64: 'vc_redist.arm64.exe',\n\tia32: 'vc_redist.x86.exe',\n\tx64: 'vc_redist.x64.exe'\n};\n\nconst packageBase = getPackageBase();\nconst localName = `./rollup.${packageBase}.node`;\nconst requireWithFriendlyError = id => {\n\ttry {\n\t\treturn require(id);\n\t} catch (error) {\n\t\tif (\n\t\t\tplatform === 'win32' &&\n\t\t\terror instanceof Error &&\n\t\t\terror.code === 'ERR_DLOPEN_FAILED' &&\n\t\t\terror.message.includes('The specified module could not be found')\n\t\t) {\n\t\t\tconst msvcDownloadLink = `https://aka.ms/vs/17/release/${msvcLinkFilenameByArch[arch]}`;\n\t\t\tthrow new Error(\n\t\t\t\t`Failed to load module ${id}. ` +\n\t\t\t\t\t'Required DLL was not found. ' +\n\t\t\t\t\t'This error usually happens when Microsoft Visual C++ Redistributable is not installed. ' +\n\t\t\t\t\t`You can download it from ${msvcDownloadLink}`,\n\t\t\t\t{ cause: error }\n\t\t\t);\n\t\t}\n\n\t\tthrow new Error(\n\t\t\t`Cannot find module ${id}. ` +\n\t\t\t\t`npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). ` +\n\t\t\t\t'Please try `npm i` again after removing both package-lock.json and node_modules directory.',\n\t\t\t{ cause: error }\n\t\t);\n\t}\n};\n\nconst { parse, parseAsync, xxhashBase64Url, xxhashBase36, xxhashBase16 } = requireWithFriendlyError(\n\texistsSync(path.join(__dirname, localName)) ? localName : `@rollup/rollup-${packageBase}`\n);\n\nfunction getPackageBase() {\n\tconst imported = bindingsByPlatformAndArch[platform]?.[arch];\n\tif (!imported) {\n\t\tthrowUnsupportedError(false);\n\t}\n\tif ('musl' in imported && isMusl()) {\n\t\treturn imported.musl || throwUnsupportedError(true);\n\t}\n\treturn imported.base;\n}\n\nfunction throwUnsupportedError(isMusl) {\n\tthrow new Error(\n\t\t`Your current platform \"${platform}${isMusl ? ' (musl)' : ''}\" and architecture \"${arch}\" combination is not yet supported by the native Rollup build. Please use the WASM build \"@rollup/wasm-node\" instead.\n\nThe following platform-architecture combinations are supported:\n${Object.entries(bindingsByPlatformAndArch)\n\t.flatMap(([platformName, architectures]) =>\n\t\tObject.entries(architectures).flatMap(([architectureName, { musl }]) => {\n\t\t\tconst name = `${platformName}-${architectureName}`;\n\t\t\treturn musl ? [name, `${name} (musl)`] : [name];\n\t\t})\n\t)\n\t.join('\\n')}\n\nIf this is important to you, please consider supporting Rollup to make a native build for your platform and architecture available.`\n\t);\n}\n\nmodule.exports.parse = parse;\nmodule.exports.parseAsync = parseAsync;\nmodule.exports.xxhashBase64Url = xxhashBase64Url;\nmodule.exports.xxhashBase36 = xxhashBase36;\nmodule.exports.xxhashBase16 = xxhashBase16;\n"
+    },
+    {
+      "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/parseAst.js",
+      "gitBlob": "bd38785ee45f12d60d0d02c53cb2e9b976f47f5d",
+      "firstLine": 10,
+      "lastLine": 11,
+      "text": "import { parse, parseAsync } from '../../native.js';\nimport { resolve, dirname, basename, extname } from 'node:path';"
+    },
+    {
+      "path": "node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/es/shared/parseAst.js",
+      "gitBlob": "bd38785ee45f12d60d0d02c53cb2e9b976f47f5d",
+      "firstLine": 2078,
+      "lastLine": 2100,
+      "text": "function getAstBuffer(astBuffer) {\n    const array = new Uint32Array(astBuffer.buffer);\n    let convertString;\n    if (typeof Buffer !== 'undefined' && astBuffer instanceof Buffer) {\n        convertString = (position) => {\n            const length = array[position++];\n            const bytePosition = position << 2;\n            return astBuffer.toString('utf8', bytePosition, bytePosition + length);\n        };\n    }\n    else {\n        const textDecoder = new TextDecoder();\n        convertString = (position) => {\n            const length = array[position++];\n            const bytePosition = position << 2;\n            return textDecoder.decode(astBuffer.subarray(bytePosition, bytePosition + length));\n        };\n    }\n    return Object.assign(array, { convertString });\n}\n\nconst parseAst = (input, { allowReturnOutsideFunction = false, jsx = false } = {}) => convertProgram(getAstBuffer(parse(input, allowReturnOutsideFunction, jsx)));\nconst parseAstAsync = async (input, { allowReturnOutsideFunction = false, jsx = false, signal } = {}) => convertProgram(getAstBuffer(await parseAsync(input, allowReturnOutsideFunction, jsx, signal)));"
+    },
+    {
+      "path": "node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/package.json",
+      "gitBlob": "1ca44457535e1981d2537169d41daad15e66e6fb",
+      "firstLine": 1,
+      "lastLine": 25,
+      "text": "{\n  \"name\": \"@rollup/rollup-linux-x64-gnu\",\n  \"version\": \"4.59.0\",\n  \"os\": [\n    \"linux\"\n  ],\n  \"cpu\": [\n    \"x64\"\n  ],\n  \"files\": [\n    \"rollup.linux-x64-gnu.node\"\n  ],\n  \"description\": \"Native bindings for Rollup\",\n  \"author\": \"Lukas Taegert-Atkinson\",\n  \"homepage\": \"https://rollupjs.org/\",\n  \"license\": \"MIT\",\n  \"repository\": {\n    \"type\": \"git\",\n    \"url\": \"git+https://github.com/rollup/rollup.git\"\n  },\n  \"libc\": [\n    \"glibc\"\n  ],\n  \"main\": \"./rollup.linux-x64-gnu.node\"\n}"
+    },
+    {
+      "path": "node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/dist/chunks/index.CmSc2RE5.js",
+      "gitBlob": "90004b3064c731a22f584000525e0bff3f423867",
+      "firstLine": 334,
+      "lastLine": 397,
+      "text": "async function teardownWindow(win) {\n\tif (win.close && win.happyDOM.abort) {\n\t\tawait win.happyDOM.abort();\n\t\twin.close();\n\t} else win.happyDOM.cancelAsync();\n}\nvar happy = {\n\tname: \"happy-dom\",\n\ttransformMode: \"web\",\n\tasync setupVM({ happyDOM = {} }) {\n\t\tconst { Window } = await import('happy-dom');\n\t\tlet win = new Window({\n\t\t\t...happyDOM,\n\t\t\tconsole: console && globalThis.console ? globalThis.console : void 0,\n\t\t\turl: happyDOM.url || \"http://localhost:3000\",\n\t\t\tsettings: {\n\t\t\t\t...happyDOM.settings,\n\t\t\t\tdisableErrorCapturing: true\n\t\t\t}\n\t\t});\n\t\t// TODO: browser doesn't expose Buffer, but a lot of dependencies use it\n\t\twin.Buffer = Buffer;\n\t\t// inject structuredClone if it exists\n\t\tif (typeof structuredClone !== \"undefined\" && !win.structuredClone) win.structuredClone = structuredClone;\n\t\treturn {\n\t\t\tgetVmContext() {\n\t\t\t\treturn win;\n\t\t\t},\n\t\t\tasync teardown() {\n\t\t\t\tawait teardownWindow(win);\n\t\t\t\twin = void 0;\n\t\t\t}\n\t\t};\n\t},\n\tasync setup(global, { happyDOM = {} }) {\n\t\t// happy-dom v3 introduced a breaking change to Window, but\n\t\t// provides GlobalWindow as a way to use previous behaviour\n\t\tconst { Window, GlobalWindow } = await import('happy-dom');\n\t\tconst win = new (GlobalWindow || Window)({\n\t\t\t...happyDOM,\n\t\t\tconsole: console && global.console ? global.console : void 0,\n\t\t\turl: happyDOM.url || \"http://localhost:3000\",\n\t\t\tsettings: {\n\t\t\t\t...happyDOM.settings,\n\t\t\t\tdisableErrorCapturing: true\n\t\t\t}\n\t\t});\n\t\tconst { keys, originals } = populateGlobal(global, win, {\n\t\t\tbindFunctions: true,\n\t\t\tadditionalKeys: [\n\t\t\t\t\"Request\",\n\t\t\t\t\"Response\",\n\t\t\t\t\"MessagePort\",\n\t\t\t\t\"fetch\"\n\t\t\t]\n\t\t});\n\t\treturn { async teardown(global) {\n\t\t\tawait teardownWindow(win);\n\t\t\tkeys.forEach((key) => delete global[key]);\n\t\t\toriginals.forEach((v, k) => global[k] = v);\n\t\t} };\n\t}\n};\n"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/GlobalWindow.js",
+      "gitBlob": "7fe16e979f04822782576e6b1e3eff2e0b92f05b",
+      "firstLine": 1,
+      "lastLine": 85,
+      "text": "import * as PropertySymbol from '../PropertySymbol.js';\nimport Window from './Window.js';\nimport { Buffer } from 'buffer';\n/**\n * Browser window.\n *\n * Reference:\n * https://developer.mozilla.org/en-US/docs/Web/API/Window.\n */\nexport default class GlobalWindow extends Window {\n    // Node.js Globals\n    Array = globalThis.Array;\n    ArrayBuffer = globalThis.ArrayBuffer;\n    Boolean = globalThis.Boolean;\n    Buffer = Buffer;\n    DataView = globalThis.DataView;\n    Date = globalThis.Date;\n    Error = globalThis.Error;\n    EvalError = globalThis.EvalError;\n    Float32Array = globalThis.Float32Array;\n    Float64Array = globalThis.Float64Array;\n    Function = globalThis.Function;\n    Infinity = globalThis.Infinity;\n    Int16Array = globalThis.Int16Array;\n    Int32Array = globalThis.Int32Array;\n    Int8Array = globalThis.Int8Array;\n    Intl = globalThis.Intl;\n    JSON = globalThis.JSON;\n    Map = globalThis.Map;\n    Math = globalThis.Math;\n    NaN = globalThis.NaN;\n    Number = globalThis.Number;\n    Object = globalThis.Object;\n    Promise = globalThis.Promise;\n    RangeError = globalThis.RangeError;\n    ReferenceError = globalThis.ReferenceError;\n    RegExp = globalThis.RegExp;\n    Set = globalThis.Set;\n    String = globalThis.String;\n    Symbol = globalThis.Symbol;\n    SyntaxError = globalThis.SyntaxError;\n    TypeError = globalThis.TypeError;\n    URIError = globalThis.URIError;\n    Uint16Array = globalThis.Uint16Array;\n    Uint32Array = globalThis.Uint32Array;\n    Uint8Array = globalThis.Uint8Array;\n    Uint8ClampedArray = globalThis.Uint8ClampedArray;\n    WeakMap = globalThis.WeakMap;\n    WeakSet = globalThis.WeakSet;\n    decodeURI = globalThis.decodeURI;\n    decodeURIComponent = globalThis.decodeURIComponent;\n    encodeURI = globalThis.encodeURI;\n    encodeURIComponent = globalThis.encodeURIComponent;\n    eval = globalThis.eval;\n    /**\n     * @deprecated\n     */\n    escape = globalThis.escape;\n    global = globalThis;\n    isFinite = globalThis.isFinite;\n    isNaN = globalThis.isNaN;\n    parseFloat = globalThis.parseFloat;\n    parseInt = globalThis.parseInt;\n    undefined = globalThis.undefined;\n    /**\n     * @deprecated\n     */\n    unescape = globalThis.unescape;\n    /**\n     * @override\n     */\n    [PropertySymbol.evaluateScript](code, options) {\n        if (options?.filename) {\n            return this.eval(`${code}\\n//# sourceURL=${options.filename}`);\n        }\n        return this.eval(code);\n    }\n    /**\n     * @override\n     */\n    [PropertySymbol.setupVMContext]() {\n        // Do nothing\n    }\n}\n//# sourceMappingURL=GlobalWindow.js.map"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/Window.js",
+      "gitBlob": "d56d6099feb9335cee618b062b0aba3f6f8c4860",
+      "firstLine": 1,
+      "lastLine": 49,
+      "text": "import DetachedWindowAPI from './DetachedWindowAPI.js';\nimport BrowserWindow from './BrowserWindow.js';\nimport DetachedBrowser from '../browser/detached-browser/DetachedBrowser.js';\nimport * as PropertySymbol from '../PropertySymbol.js';\n/**\n * Window.\n *\n * Reference:\n * https://developer.mozilla.org/en-US/docs/Web/API/Window.\n */\nexport default class Window extends BrowserWindow {\n    // Detached Window API.\n    happyDOM;\n    /**\n     * Constructor.\n     *\n     * @param [options] Options.\n     * @param [options.width] Window width. Defaults to \"1024\".\n     * @param [options.height] Window height. Defaults to \"768\".\n     * @param [options.innerWidth] Inner width. Deprecated. Defaults to \"1024\".\n     * @param [options.innerHeight] Inner height. Deprecated. Defaults to \"768\".\n     * @param [options.url] URL.\n     * @param [options.console] Console.\n     * @param [options.settings] Settings.\n     */\n    constructor(options) {\n        const browser = new DetachedBrowser(BrowserWindow, {\n            console: options?.console,\n            settings: options?.settings\n        });\n        const browserPage = browser.defaultContext.pages[0];\n        const browserFrame = browserPage.mainFrame;\n        if (options && (options.width || options.height || options.innerWidth || options.innerHeight)) {\n            Object.assign(browserPage.viewport, {\n                width: options.width || options.innerWidth || browserPage.viewport.width,\n                height: options.height || options.innerHeight || browserPage.viewport.height\n            });\n        }\n        super(browserFrame, {\n            url: options?.url\n        });\n        browserFrame.window = this;\n        if (browserFrame.page.context.browser[PropertySymbol.exceptionObserver]) {\n            browserFrame.page.context.browser[PropertySymbol.exceptionObserver].observe(this);\n        }\n        this.happyDOM = new DetachedWindowAPI(browserFrame);\n    }\n}\n//# sourceMappingURL=Window.js.map"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/DetachedWindowAPI.js",
+      "gitBlob": "38221a395dbcfe0fc3cdb0dddf197c2487f6d3c0",
+      "firstLine": 30,
+      "lastLine": 66,
+      "text": "    /**\n     * Waits for all async tasks to complete.\n     *\n     * @returns Promise.\n     */\n    waitUntilComplete() {\n        return this.#browserFrame.waitUntilComplete();\n    }\n    /**\n     * Waits for all async tasks to complete.\n     *\n     * @deprecated Use waitUntilComplete() instead.\n     * @returns Promise.\n     */\n    whenAsyncComplete() {\n        return this.waitUntilComplete();\n    }\n    /**\n     * Aborts all async tasks.\n     */\n    abort() {\n        return this.#browserFrame.abort();\n    }\n    /**\n     * Aborts all async tasks.\n     *\n     * @deprecated Use abort() instead.\n     */\n    cancelAsync() {\n        return this.abort();\n    }\n    /**\n     * Aborts all async tasks and closes the window.\n     */\n    close() {\n        return this.#browserFrame.page.close();\n    }"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowser.js",
+      "gitBlob": "aa66c0225ae2f3f8ee8a3c1ec50503cd16eefe46",
+      "firstLine": 1,
+      "lastLine": 32,
+      "text": "import DetachedBrowserContext from './DetachedBrowserContext.js';\nimport BrowserSettingsFactory from '../BrowserSettingsFactory.js';\nimport * as PropertySymbol from '../../PropertySymbol.js';\nimport BrowserErrorCaptureEnum from '../enums/BrowserErrorCaptureEnum.js';\nimport BrowserExceptionObserver from '../utilities/BrowserExceptionObserver.js';\n/**\n * Detached browser used when constructing a Window instance without a browser.\n */\nexport default class DetachedBrowser {\n    contexts;\n    settings;\n    console;\n    windowClass;\n    [PropertySymbol.exceptionObserver] = null;\n    /**\n     * Constructor.\n     *\n     * @param windowClass Window class.\n     * @param [options] Options.\n     * @param [options.settings] Browser settings.\n     * @param [options.console] Console.\n     */\n    constructor(windowClass, options) {\n        this.windowClass = windowClass;\n        this.console = options?.console || null;\n        this.settings = BrowserSettingsFactory.createSettings(options?.settings);\n        if (this.settings.errorCapture === BrowserErrorCaptureEnum.processLevel) {\n            this[PropertySymbol.exceptionObserver] = new BrowserExceptionObserver();\n        }\n        this.contexts = [];\n        this.contexts.push(new DetachedBrowserContext(this));\n    }"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserContext.js",
+      "gitBlob": "1029cd540e0527ef1a3106147f809c039687a34f",
+      "firstLine": 1,
+      "lastLine": 26,
+      "text": "import DetachedBrowserPage from './DetachedBrowserPage.js';\nimport CookieContainer from '../../cookie/CookieContainer.js';\nimport ResponseCache from '../../fetch/cache/response/ResponseCache.js';\nimport PreflightResponseCache from '../../fetch/cache/preflight/PreflightResponseCache.js';\nimport * as PropertySymbol from '../../PropertySymbol.js';\n/**\n * Detached browser context used when constructing a Window instance without a browser.\n */\nexport default class DetachedBrowserContext {\n    pages;\n    browser;\n    cookieContainer = new CookieContainer();\n    responseCache = new ResponseCache();\n    preflightResponseCache = new PreflightResponseCache();\n    closed = false;\n    [PropertySymbol.moduleCache] = new Map();\n    /**\n     * Constructor.\n     *\n     * @param browser Browser.\n     */\n    constructor(browser) {\n        this.browser = browser;\n        this.pages = [];\n        this.pages.push(new DetachedBrowserPage(this));\n    }"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserPage.js",
+      "gitBlob": "7ef8c9406140f2e820b0c5f88d362ff9ed079ef8",
+      "firstLine": 1,
+      "lastLine": 30,
+      "text": "import VirtualConsolePrinter from '../../console/VirtualConsolePrinter.js';\nimport DetachedBrowserFrame from './DetachedBrowserFrame.js';\nimport VirtualConsole from '../../console/VirtualConsole.js';\nimport BrowserPageUtility from '../utilities/BrowserPageUtility.js';\nimport Event from '../../event/Event.js';\n/**\n * Detached browser page used when constructing a Window instance without a browser.\n */\nexport default class DetachedBrowserPage {\n    virtualConsolePrinter = new VirtualConsolePrinter();\n    mainFrame;\n    context;\n    console;\n    viewport;\n    closed = false;\n    /**\n     * Constructor.\n     *\n     * @param context Browser context.\n     */\n    constructor(context) {\n        this.context = context;\n        this.console = context.browser.console ?? new VirtualConsole(this.virtualConsolePrinter);\n        this.mainFrame = new DetachedBrowserFrame(this);\n        this.viewport = {\n            width: context.browser.settings.viewport.width,\n            height: context.browser.settings.viewport.height,\n            devicePixelRatio: context.browser.settings.viewport.devicePixelRatio\n        };\n    }"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserPage.js",
+      "gitBlob": "7ef8c9406140f2e820b0c5f88d362ff9ed079ef8",
+      "firstLine": 67,
+      "lastLine": 104,
+      "text": "    /**\n     * Aborts all ongoing operations and destroys the page.\n     */\n    close() {\n        // Using Promise instead of async/await to prevent microtask\n        return new Promise((resolve, reject) => {\n            const context = this.context;\n            BrowserPageUtility.closePage(this)\n                .then(() => {\n                // As we are in a detached page, a context or browser should not exist without a page as there are no references to them.\n                if (context.pages[0] === this) {\n                    context.browser.close().then(resolve).catch(reject);\n                }\n                else {\n                    resolve();\n                }\n            })\n                .catch(reject);\n        });\n    }\n    /**\n     * Returns a promise that is resolved when all resources has been loaded, fetch has completed, and all async tasks such as timers are complete.\n     */\n    waitUntilComplete() {\n        return this.mainFrame.waitUntilComplete();\n    }\n    /**\n     * Returns a promise that is resolved when the page has navigated and the response HTML has been written to the document.\n     */\n    waitForNavigation() {\n        return this.mainFrame.waitForNavigation();\n    }\n    /**\n     * Aborts all ongoing operations.\n     */\n    abort() {\n        return this.mainFrame.abort();\n    }"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserFrame.js",
+      "gitBlob": "8c4a9f3f8d7c5393108b254f8063d40b84790082",
+      "firstLine": 1,
+      "lastLine": 35,
+      "text": "import * as PropertySymbol from '../../PropertySymbol.js';\nimport AsyncTaskManager from '../../async-task-manager/AsyncTaskManager.js';\nimport BrowserFrameURL from '../utilities/BrowserFrameURL.js';\nimport BrowserFrameScriptEvaluator from '../utilities/BrowserFrameScriptEvaluator.js';\nimport BrowserFrameNavigator from '../utilities/BrowserFrameNavigator.js';\nimport HistoryItemList from '../../history/HistoryItemList.js';\n/**\n * Browser frame used when constructing a Window instance without a browser.\n */\nexport default class DetachedBrowserFrame {\n    childFrames = [];\n    parentFrame = null;\n    page;\n    closed = false;\n    [PropertySymbol.asyncTaskManager] = new AsyncTaskManager(this);\n    [PropertySymbol.listeners] = { navigation: [] };\n    [PropertySymbol.openerFrame] = null;\n    [PropertySymbol.openerWindow] = null;\n    [PropertySymbol.popup] = false;\n    [PropertySymbol.history] = new HistoryItemList();\n    /**\n     * Constructor.\n     *\n     * @param page Page.\n     * @param [window] Window.\n     */\n    constructor(page) {\n        this.page = page;\n        if (page.context.browser.contexts[0]?.pages[0]?.mainFrame) {\n            this.window = new this.page.context.browser.windowClass(this);\n            // Attach process level error capturing.\n            if (page.context.browser[PropertySymbol.exceptionObserver]) {\n                page.context.browser[PropertySymbol.exceptionObserver].observe(this.window);\n            }\n        }"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/detached-browser/DetachedBrowserFrame.js",
+      "gitBlob": "8c4a9f3f8d7c5393108b254f8063d40b84790082",
+      "firstLine": 90,
+      "lastLine": 122,
+      "text": "        return this.window?.document ?? null;\n    }\n    /**\n     * Returns a promise that is resolved when all resources has been loaded, fetch has completed, and all async tasks such as timers are complete.\n     */\n    async waitUntilComplete() {\n        await Promise.all([\n            this[PropertySymbol.asyncTaskManager].waitUntilComplete(),\n            ...this.childFrames.map((frame) => frame.waitUntilComplete())\n        ]);\n    }\n    /**\n     * Returns a promise that is resolved when the frame has navigated and the response HTML has been written to the document.\n     */\n    waitForNavigation() {\n        return new Promise((resolve) => this[PropertySymbol.listeners].navigation.push(resolve));\n    }\n    /**\n     * Aborts all ongoing operations.\n     */\n    abort() {\n        if (!this.childFrames.length) {\n            return this[PropertySymbol.asyncTaskManager].abort();\n        }\n        return new Promise((resolve, reject) => {\n            // Using Promise instead of async/await to prevent microtask\n            Promise.all(this.childFrames\n                .map((frame) => frame.abort())\n                .concat([this[PropertySymbol.asyncTaskManager].abort()]))\n                .then(() => resolve())\n                .catch(reject);\n        });\n    }"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/BrowserWindow.js",
+      "gitBlob": "70b08346cabf28259bdd00700e332d907cb7dde7",
+      "firstLine": 279,
+      "lastLine": 288,
+      "text": "const TIMER = {\n    setTimeout: globalThis.setTimeout.bind(globalThis),\n    clearTimeout: globalThis.clearTimeout.bind(globalThis),\n    setInterval: globalThis.setInterval.bind(globalThis),\n    clearInterval: globalThis.clearInterval.bind(globalThis),\n    queueMicrotask: globalThis.queueMicrotask.bind(globalThis),\n    setImmediate: globalThis.setImmediate.bind(globalThis),\n    clearImmediate: globalThis.clearImmediate.bind(globalThis)\n};\nconst IS_NODE_JS_TIMEOUT_ENVIRONMENT = setTimeout.toString().includes('new Timeout');"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/BrowserWindow.js",
+      "gitBlob": "70b08346cabf28259bdd00700e332d907cb7dde7",
+      "firstLine": 709,
+      "lastLine": 746,
+      "text": "    constructor(browserFrame, options) {\n        super();\n        this.#browserFrame = browserFrame;\n        this[PropertySymbol.validateJavaScriptExecutionEnvironment]();\n        this.console = browserFrame.page.console;\n        this[PropertySymbol.readyStateManager] = new DocumentReadyStateManager(browserFrame);\n        this[PropertySymbol.navigator] = new Navigator(this);\n        this[PropertySymbol.screen] = new Screen();\n        this[PropertySymbol.sessionStorage] = new Storage();\n        this[PropertySymbol.localStorage] = new Storage();\n        this[PropertySymbol.cookieStore] = new CookieStore(PropertySymbol.illegalConstructor, this);\n        this[PropertySymbol.location] = new Location(this.#browserFrame, options?.url ?? 'about:blank');\n        this[PropertySymbol.history] = new History(this.#browserFrame, this);\n        browserFrame[PropertySymbol.history].currentItem.href = options?.url ?? 'about:blank';\n        WindowBrowserContext.setWindowBrowserFrameRelation(this, this.#browserFrame);\n        this[PropertySymbol.setupVMContext]();\n        WindowContextClassExtender.extendClasses(this);\n        // Document\n        this.document = new this.HTMLDocument();\n        this.document[PropertySymbol.defaultView] = this;\n        // Ready state manager\n        const taskID = browserFrame[PropertySymbol.asyncTaskManager].startTask(() => this[PropertySymbol.readyStateManager].destroy());\n        this[PropertySymbol.readyStateManager].waitUntilComplete().then(() => {\n            browserFrame[PropertySymbol.asyncTaskManager].endTask(taskID);\n            this.document[PropertySymbol.readyState] = DocumentReadyStateEnum.complete;\n            this.document.dispatchEvent(new Event('readystatechange'));\n            const loadEvent = new Event('load');\n            // Not sure why target is set to document here, but this is how it seem to work in the browser\n            loadEvent[PropertySymbol.currentTarget] = this;\n            loadEvent[PropertySymbol.target] = this.document;\n            loadEvent[PropertySymbol.eventPhase] = EventPhaseEnum.atTarget;\n            this.dispatchEvent(loadEvent);\n            loadEvent[PropertySymbol.currentTarget] = null;\n            loadEvent[PropertySymbol.eventPhase] = EventPhaseEnum.none;\n            loadEvent[PropertySymbol.dispatching] = false;\n        });\n        this[PropertySymbol.bindMethods]();\n    }"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/BrowserWindow.js",
+      "gitBlob": "70b08346cabf28259bdd00700e332d907cb7dde7",
+      "firstLine": 1870,
+      "lastLine": 1878,
+      "text": "    close() {\n        // Users can only close the main frame of a page (not child frames such as iframes).\n        if (this.#browserFrame.page.mainFrame === this.#browserFrame &&\n            // Scripts may close only the windows that were opened by them.\n            // In this case, this means windows that have been opened by another window\n            this.#browserFrame[PropertySymbol.openerWindow]) {\n            this[PropertySymbol.destroy]();\n            this.#browserFrame.page.close();\n        }"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/BrowserWindow.js",
+      "gitBlob": "70b08346cabf28259bdd00700e332d907cb7dde7",
+      "firstLine": 2164,
+      "lastLine": 2181,
+      "text": "    queueMicrotask(callback) {\n        if (this.closed) {\n            return;\n        }\n        let isAborted = false;\n        const taskId = this.#browserFrame[PropertySymbol.asyncTaskManager].startTask(() => (isAborted = true));\n        const settings = this.#browserFrame.page.context.browser.settings;\n        const useTryCatch = !settings ||\n            (!settings.disableErrorCapturing &&\n                settings.errorCapture === BrowserErrorCaptureEnum.tryAndCatch);\n        TIMER.queueMicrotask(() => {\n            if (!isAborted) {\n                // We need to call endTask() before the callback as the callback might throw an error.\n                this.#browserFrame[PropertySymbol.asyncTaskManager].endTask(taskId);\n                if (useTryCatch) {\n                    let result;\n                    try {\n                        result = callback();"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/window/BrowserWindow.js",
+      "gitBlob": "70b08346cabf28259bdd00700e332d907cb7dde7",
+      "firstLine": 2372,
+      "lastLine": 2420,
+      "text": "    [PropertySymbol.destroy]() {\n        if (this.closed) {\n            return;\n        }\n        super[PropertySymbol.destroy]();\n        this.closed = true;\n        const mutationObservers = this[PropertySymbol.mutationObservers];\n        for (const mutationObserver of mutationObservers) {\n            if (mutationObserver[PropertySymbol.destroy]) {\n                mutationObserver[PropertySymbol.destroy]();\n            }\n        }\n        this[PropertySymbol.mutationObservers] = [];\n        for (const webSocket of this[PropertySymbol.openWebSockets]) {\n            webSocket[PropertySymbol.destroy]();\n        }\n        this[PropertySymbol.openWebSockets] = [];\n        this.document[PropertySymbol.destroy]();\n        // Create some empty elements for scripts that are still running.\n        const htmlElement = this.document.createElement('html');\n        const headElement = this.document.createElement('head');\n        const bodyElement = this.document.createElement('body');\n        htmlElement.appendChild(headElement);\n        htmlElement.appendChild(bodyElement);\n        this.document[PropertySymbol.appendChild](htmlElement);\n        if (this.location[PropertySymbol.destroy]) {\n            this.location[PropertySymbol.destroy]();\n        }\n        if (this.customElements[PropertySymbol.destroy]) {\n            this.customElements[PropertySymbol.destroy]();\n        }\n        if (this.history[PropertySymbol.destroy]) {\n            this.history[PropertySymbol.destroy]();\n        }\n        this[PropertySymbol.querySelectorCache].clear();\n        this[PropertySymbol.modules].json.clear();\n        this[PropertySymbol.modules].css.clear();\n        this[PropertySymbol.modules].esm.clear();\n        this.document[PropertySymbol.preloads].clear();\n        this.document[PropertySymbol.activeElement] = null;\n        this.document[PropertySymbol.nextActiveElement] = null;\n        this.document[PropertySymbol.currentScript] = null;\n        this.document[PropertySymbol.selection] = null;\n        // Clear parent/top references to break circular references\n        this[PropertySymbol.parent] = null;\n        this[PropertySymbol.top] = null;\n        WindowBrowserContext.removeWindowBrowserFrameRelation(this);\n    }\n    /**"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/PropertySymbol.js",
+      "gitBlob": "047e40fd03fea59f42126663089c0eae6975f749",
+      "firstLine": 1,
+      "lastLine": 75,
+      "text": "export const abort = Symbol('abort');\nexport const activeElement = Symbol('activeElement');\nexport const asyncTaskManager = Symbol('asyncTaskManager');\nexport const bodyBuffer = Symbol('bodyBuffer');\nexport const buffer = Symbol('buffer');\nexport const cachedResponse = Symbol('cachedResponse');\nexport const callbacks = Symbol('callbacks');\nexport const checked = Symbol('checked');\nexport const childNodes = Symbol('childNodes');\nexport const children = Symbol('children');\nexport const classList = Symbol('classList');\nexport const connectedToNode = Symbol('connectedToNode');\nexport const disconnectedFromNode = Symbol('disconnectedFromNode');\nexport const connectedToDocument = Symbol('connectedToDocument');\nexport const disconnectedFromDocument = Symbol('disconnectedFromDocument');\nexport const contentLength = Symbol('contentLength');\nexport const contentType = Symbol('contentType');\nexport const cssText = Symbol('cssText');\nexport const currentScript = Symbol('currentScript');\nexport const currentTarget = Symbol('currentTarget');\nexport const data = Symbol('data');\nexport const defaultView = Symbol('defaultView');\nexport const destroy = Symbol('destroy');\nexport const dirtyness = Symbol('dirtyness');\nexport const end = Symbol('end');\nexport const entries = Symbol('entries');\nexport const evaluateCSS = Symbol('evaluateCSS');\nexport const evaluateScript = Symbol('evaluateScript');\nexport const exceptionObserver = Symbol('exceptionObserver');\nexport const formNode = Symbol('formNode');\nexport const internalId = Symbol('internalId');\nexport const height = Symbol('height');\nexport const immediatePropagationStopped = Symbol('immediatePropagationStopped');\nexport const indeterminate = Symbol('indeterminate');\nexport const isFirstWrite = Symbol('isFirstWrite');\nexport const isFirstWriteAfterOpen = Symbol('isFirstWriteAfterOpen');\nexport const isInPassiveEventListener = Symbol('isInPassiveEventListener');\nexport const isValue = Symbol('isValue');\nexport const listenerOptions = Symbol('listenerOptions');\nexport const listeners = Symbol('listeners');\nexport const itemsByName = Symbol('itemsByName');\nexport const nextActiveElement = Symbol('nextActiveElement');\nexport const observeMutations = Symbol('observeMutations');\nexport const mutationListeners = Symbol('mutationListeners');\nexport const ownerDocument = Symbol('ownerDocument');\nexport const ownerElement = Symbol('ownerElement');\nexport const propagationStopped = Symbol('propagationStopped');\nexport const readyStateManager = Symbol('readyStateManager');\nexport const referrer = Symbol('referrer');\nexport const registry = Symbol('registry');\nexport const relList = Symbol('relList');\nexport const resetSelection = Symbol('resetSelection');\nexport const rootNode = Symbol('rootNode');\nexport const selectNode = Symbol('selectNode');\nexport const selectedness = Symbol('selectedness');\nexport const selection = Symbol('selection');\nexport const setupVMContext = Symbol('setupVMContext');\nexport const shadowRoot = Symbol('shadowRoot');\nexport const start = Symbol('start');\nexport const style = Symbol('style');\nexport const target = Symbol('target');\nexport const textAreaNode = Symbol('textAreaNode');\nexport const unobserveMutations = Symbol('unobserveMutations');\nexport const reportMutation = Symbol('reportMutation');\nexport const updateSelectedness = Symbol('updateSelectedness');\nexport const url = Symbol('url');\nexport const value = Symbol('value');\nexport const width = Symbol('width');\nexport const window = Symbol('window');\nexport const windowResizeListener = Symbol('windowResizeListener');\nexport const mutationObservers = Symbol('mutationObservers');\nexport const openerFrame = Symbol('openerFrame');\nexport const openerWindow = Symbol('openerWindow');\nexport const pointerCaptures = Symbol('pointerCaptures');\nexport const popup = Symbol('popup');"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/nodes/document/DocumentReadyStateManager.js",
+      "gitBlob": "b2d57ddff9a0d6dda8cc5a81753bbd8737d2f92d",
+      "firstLine": 1,
+      "lastLine": 46,
+      "text": "import AsyncTaskManager from '../../async-task-manager/AsyncTaskManager.js';\n/**\n * Document ready state manager.\n */\nexport default class DocumentReadyStateManager {\n    #asyncTaskManager;\n    /**\n     * Constructor.\n     *\n     * @param browserFrame Browser frame.\n     */\n    constructor(browserFrame) {\n        this.#asyncTaskManager = new AsyncTaskManager(browserFrame);\n    }\n    /**\n     * Returns a promise that is fulfilled when ready state is complete.\n     *\n     * @returns Promise.\n     */\n    waitUntilComplete() {\n        return this.#asyncTaskManager.waitUntilComplete();\n    }\n    /**\n     * Starts a task.\n     *\n     * @returns Task ID.\n     */\n    startTask() {\n        return this.#asyncTaskManager.startTask();\n    }\n    /**\n     * Ends a task.\n     *\n     * @param taskID Task ID.\n     */\n    endTask(taskID) {\n        this.#asyncTaskManager.endTask(taskID);\n    }\n    /**\n     * Destroys the manager.\n     */\n    destroy() {\n        return this.#asyncTaskManager.destroy();\n    }\n}\n//# sourceMappingURL=DocumentReadyStateManager.js.map"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/async-task-manager/AsyncTaskManager.js",
+      "gitBlob": "eac85e911ec44e81f871f5ac4da37513bdc51e73",
+      "firstLine": 1,
+      "lastLine": 301,
+      "text": "import AsyncTaskManagerDebugError from './AsyncTaskManagerDebugError.js';\n// We need to set this as a global constant, so that using fake timers in Jest and Vitest won't override this on the global object.\nconst TIMER = {\n    setTimeout: globalThis.setTimeout.bind(globalThis),\n    clearTimeout: globalThis.clearTimeout.bind(globalThis),\n    clearImmediate: globalThis.clearImmediate.bind(globalThis)\n};\n/**\n * Handles async tasks.\n */\nexport default class AsyncTaskManager {\n    static taskID = 0;\n    runningTasks = {};\n    runningTaskCount = 0;\n    runningTimers = [];\n    runningImmediates = [];\n    debugTrace = new Map();\n    waitUntilCompleteTimer = null;\n    waitUntilCompleteResolvers = [];\n    destroyed = false;\n    #debugTimeout = null;\n    #browserFrame;\n    /**\n     * Constructor.\n     *\n     * @param browserFrame Browser frame.\n     */\n    constructor(browserFrame) {\n        this.#browserFrame = browserFrame;\n    }\n    /**\n     * Returns a promise that is resolved when async tasks are complete.\n     *\n     * @returns Promise.\n     */\n    waitUntilComplete() {\n        return new Promise((resolve, reject) => {\n            this.waitUntilCompleteResolvers.push({ resolve, reject });\n            this.resolveWhenComplete();\n        });\n    }\n    /**\n     * Aborts all tasks.\n     */\n    abort() {\n        if (this.destroyed) {\n            return new Promise((resolve, reject) => {\n                this.waitUntilCompleteResolvers.push({ resolve, reject });\n                this.resolveWhenComplete();\n            });\n        }\n        return this.abortAll(false);\n    }\n    /**\n     * Destroys the manager.\n     */\n    destroy() {\n        if (this.destroyed) {\n            return new Promise((resolve, reject) => {\n                this.waitUntilCompleteResolvers.push({ resolve, reject });\n                this.resolveWhenComplete();\n            });\n        }\n        return this.abortAll(true);\n    }\n    /**\n     * Starts a timer.\n     *\n     * @param timerID Timer ID.\n     */\n    startTimer(timerID) {\n        if (this.destroyed) {\n            TIMER.clearTimeout(timerID);\n            return;\n        }\n        if (this.waitUntilCompleteTimer) {\n            TIMER.clearTimeout(this.waitUntilCompleteTimer);\n            this.waitUntilCompleteTimer = null;\n        }\n        this.runningTimers.push(timerID);\n        if (this.#browserFrame.page.context.browser.settings.debug.traceWaitUntilComplete > 0) {\n            this.debugTrace.set(timerID, new AsyncTaskManagerDebugError().stack);\n        }\n    }\n    /**\n     * Ends a timer.\n     *\n     * @param timerID Timer ID.\n     */\n    endTimer(timerID) {\n        if (this.destroyed) {\n            TIMER.clearTimeout(timerID);\n            return;\n        }\n        const index = this.runningTimers.indexOf(timerID);\n        if (index !== -1) {\n            this.runningTimers.splice(index, 1);\n            this.resolveWhenComplete();\n        }\n        if (this.#browserFrame.page.context.browser.settings.debug.traceWaitUntilComplete > 0) {\n            this.debugTrace.delete(timerID);\n        }\n    }\n    /**\n     * Starts an immediate.\n     *\n     * @param immediateID Immediate ID.\n     */\n    startImmediate(immediateID) {\n        if (this.destroyed) {\n            TIMER.clearImmediate(immediateID);\n            return;\n        }\n        if (this.waitUntilCompleteTimer) {\n            TIMER.clearTimeout(this.waitUntilCompleteTimer);\n            this.waitUntilCompleteTimer = null;\n        }\n        this.runningImmediates.push(immediateID);\n        if (this.#browserFrame.page?.context?.browser?.settings?.debug?.traceWaitUntilComplete > 0) {\n            this.debugTrace.set(immediateID, new AsyncTaskManagerDebugError().stack);\n        }\n    }\n    /**\n     * Ends an immediate.\n     *\n     * @param immediateID Immediate ID.\n     */\n    endImmediate(immediateID) {\n        if (this.destroyed) {\n            TIMER.clearImmediate(immediateID);\n            return;\n        }\n        const index = this.runningImmediates.indexOf(immediateID);\n        if (index !== -1) {\n            this.runningImmediates.splice(index, 1);\n            this.resolveWhenComplete();\n        }\n        if (this.#browserFrame.page.context.browser.settings.debug.traceWaitUntilComplete > 0) {\n            this.debugTrace.delete(immediateID);\n        }\n    }\n    /**\n     * Starts an async task.\n     *\n     * @param abortHandler Abort handler.\n     * @returns Task ID.\n     */\n    startTask(abortHandler) {\n        if (this.destroyed) {\n            if (abortHandler) {\n                abortHandler(this.destroyed);\n            }\n            throw new this.#browserFrame.window.Error(`Failed to execute 'startTask()' on 'AsyncTaskManager': The asynchronous task manager has been destroyed. This error can be thrown if scripts continue to run while a browser frame is closed.`);\n        }\n        if (this.waitUntilCompleteTimer) {\n            TIMER.clearTimeout(this.waitUntilCompleteTimer);\n            this.waitUntilCompleteTimer = null;\n        }\n        const taskID = this.newTaskID();\n        this.runningTasks[taskID] = abortHandler ? abortHandler : () => { };\n        this.runningTaskCount++;\n        if (this.#browserFrame.page.context.browser.settings.debug.traceWaitUntilComplete > 0) {\n            this.debugTrace.set(taskID, new AsyncTaskManagerDebugError().stack);\n        }\n        return taskID;\n    }\n    /**\n     * Ends an async task.\n     *\n     * @param taskID Task ID.\n     */\n    endTask(taskID) {\n        if (this.destroyed) {\n            return;\n        }\n        if (this.runningTasks[taskID]) {\n            delete this.runningTasks[taskID];\n            this.runningTaskCount--;\n            this.resolveWhenComplete();\n        }\n        if (this.#browserFrame.page.context.browser.settings.debug.traceWaitUntilComplete > 0) {\n            this.debugTrace.delete(taskID);\n        }\n    }\n    /**\n     * Returns the amount of running tasks.\n     *\n     * @returns Count.\n     */\n    getTaskCount() {\n        return this.runningTaskCount;\n    }\n    /**\n     * Returns a new task ID.\n     *\n     * @returns Task ID.\n     */\n    newTaskID() {\n        this.constructor.taskID++;\n        return this.constructor.taskID;\n    }\n    /**\n     * Resolves when complete.\n     */\n    resolveWhenComplete() {\n        this.applyDebugging();\n        if (this.runningTaskCount || this.runningTimers.length || this.runningImmediates.length) {\n            return;\n        }\n        if (this.waitUntilCompleteTimer) {\n            TIMER.clearTimeout(this.waitUntilCompleteTimer);\n            this.waitUntilCompleteTimer = null;\n        }\n        // It is not possible to detect when all microtasks are complete (such as process.nextTick() or promises).\n        // To cater for this we use setTimeout() which has the lowest priority and will be executed last.\n        // @see https://nodejs.org/en/learn/asynchronous-work/event-loop-timers-and-nexttick\n        this.waitUntilCompleteTimer = TIMER.setTimeout(() => {\n            this.waitUntilCompleteTimer = null;\n            if (!this.runningTaskCount && !this.runningTimers.length && !this.runningImmediates.length) {\n                if (this.#debugTimeout) {\n                    TIMER.clearTimeout(this.#debugTimeout);\n                }\n                const resolvers = this.waitUntilCompleteResolvers;\n                this.waitUntilCompleteResolvers = [];\n                for (const resolver of resolvers) {\n                    resolver.resolve();\n                }\n                this.destroyed = false;\n            }\n            else {\n                this.applyDebugging();\n            }\n        }, 1);\n    }\n    /**\n     * Applies debugging.\n     */\n    applyDebugging() {\n        const debug = this.#browserFrame.page.context.browser.settings.debug;\n        if (!debug?.traceWaitUntilComplete || debug.traceWaitUntilComplete < 1) {\n            return;\n        }\n        if (this.#debugTimeout) {\n            return;\n        }\n        this.#debugTimeout = TIMER.setTimeout(() => {\n            this.#debugTimeout = null;\n            let errorMessage = `The maximum time was reached for \"waitUntilComplete()\".\\n\\n${this.debugTrace.size} task${this.debugTrace.size === 1 ? '' : 's'} did not end in time.\\n\\nThe following traces were recorded:\\n\\n`;\n            let number = 1;\n            for (const [key, value] of this.debugTrace.entries()) {\n                const type = typeof key === 'number' ? 'Task' : 'Timer';\n                errorMessage += `${type} #${number}\\n‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾${value\n                    .replace(/AsyncTaskManagerDebugError:{0,1}/, '')\n                    .replace(/\\s+at /gm, '\\n> ')}\\n\\n`;\n                number++;\n            }\n            const error = new Error(errorMessage);\n            for (const resolver of this.waitUntilCompleteResolvers) {\n                resolver.reject(error);\n            }\n            this.abortAll(true);\n        }, debug.traceWaitUntilComplete);\n    }\n    /**\n     * Aborts all tasks.\n     *\n     * @param destroy Destroy.\n     */\n    abortAll(destroy) {\n        const runningTimers = this.runningTimers;\n        const runningImmediates = this.runningImmediates;\n        const runningTasks = this.runningTasks;\n        if (destroy) {\n            this.destroyed = true;\n        }\n        this.runningTasks = {};\n        this.runningTaskCount = 0;\n        this.runningImmediates = [];\n        this.runningTimers = [];\n        this.debugTrace = new Map();\n        if (this.waitUntilCompleteTimer) {\n            TIMER.clearTimeout(this.waitUntilCompleteTimer);\n            this.waitUntilCompleteTimer = null;\n        }\n        for (const immediate of runningImmediates) {\n            TIMER.clearImmediate(immediate);\n        }\n        for (const timer of runningTimers) {\n            TIMER.clearTimeout(timer);\n        }\n        for (const key of Object.keys(runningTasks)) {\n            runningTasks[key](destroy);\n        }\n        // We need to wait for microtasks to complete before resolving.\n        return new Promise((resolve, reject) => {\n            this.waitUntilCompleteResolvers.push({ resolve, reject });\n            this.resolveWhenComplete();\n        });\n    }\n}\n//# sourceMappingURL=AsyncTaskManager.js.map"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/async-task-manager/AsyncTaskManagerDebugError.js",
+      "gitBlob": "8b81dff07debde5237481f02fb41f346c1010f9f",
+      "firstLine": 1,
+      "lastLine": 15,
+      "text": "/**\n * Error thrown for retrieving the stack trace during debugging.\n */\nexport default class AsyncTaskManagerDebugError extends Error {\n    /**\n     * Constructor.\n     *\n     * @param message Message.\n     */\n    constructor(message) {\n        super(message);\n        this.name = 'AsyncTaskManagerDebugError';\n    }\n}\n//# sourceMappingURL=AsyncTaskManagerDebugError.js.map"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/BrowserSettingsFactory.js",
+      "gitBlob": "230872f32bfeefe00c5952ef4d41d85f5863242a",
+      "firstLine": 1,
+      "lastLine": 89,
+      "text": "import DefaultBrowserSettings from './DefaultBrowserSettings.js';\n/**\n * Browser settings utility.\n */\nexport default class BrowserSettingsFactory {\n    /**\n     * Returns browser settings.\n     *\n     * @param [settings] Browser settings.\n     * @returns Settings.\n     */\n    static createSettings(settings) {\n        if (settings) {\n            this.validate(DefaultBrowserSettings, settings);\n        }\n        return {\n            ...DefaultBrowserSettings,\n            ...settings,\n            navigation: {\n                ...DefaultBrowserSettings.navigation,\n                ...settings?.navigation\n            },\n            navigator: {\n                ...DefaultBrowserSettings.navigator,\n                ...settings?.navigator\n            },\n            timer: {\n                ...DefaultBrowserSettings.timer,\n                ...settings?.timer\n            },\n            fetch: {\n                ...DefaultBrowserSettings.fetch,\n                ...settings?.fetch\n            },\n            module: {\n                ...DefaultBrowserSettings.module,\n                ...settings?.module\n            },\n            device: {\n                ...DefaultBrowserSettings.device,\n                ...settings?.device\n            },\n            debug: {\n                ...DefaultBrowserSettings.debug,\n                ...settings?.debug\n            },\n            viewport: {\n                ...DefaultBrowserSettings.viewport,\n                ...settings?.viewport\n            },\n            canvasAdapter: settings?.canvasAdapter ?? DefaultBrowserSettings.canvasAdapter\n        };\n    }\n    /**\n     * Validates settings.\n     *\n     * @param target Target.\n     * @param source Source.\n     * @param [parentNamespace] Parent namespace.\n     */\n    static validate(target, source, parentNamespace) {\n        for (const key of Object.keys(source)) {\n            if (target[key] === undefined) {\n                const namespace = parentNamespace ? parentNamespace + '.' + key : key;\n                throw new Error(`Unknown browser setting \"${namespace}\"`);\n            }\n            if (typeof target[key] === 'object' && !Array.isArray(target[key]) && target[key] !== null) {\n                const namespace = parentNamespace ? parentNamespace + '.' + key : key;\n                if (typeof source[key] !== 'object' || Array.isArray(source[key]) || source[key] === null) {\n                    throw new Error(`Browser setting \"${namespace}\" cannot be null`);\n                }\n                this.validate(target[key], source[key], namespace);\n            }\n            else {\n                if ((typeof target[key] === 'boolean' ||\n                    typeof target[key] === 'number' ||\n                    typeof target[key] === 'string') &&\n                    typeof source[key] !== typeof target[key]) {\n                    const isValidPreventTimerLoops = key === 'preventTimerLoops' && typeof source[key] === 'object' && source[key] !== null;\n                    if (!isValidPreventTimerLoops) {\n                        const namespace = parentNamespace ? parentNamespace + '.' + key : key;\n                        throw new Error(`Browser setting \"${namespace}\" must be of type \"${typeof target[key]}\"`);\n                    }\n                }\n            }\n        }\n    }\n}\n//# sourceMappingURL=BrowserSettingsFactory.js.map"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/DefaultBrowserSettings.js",
+      "gitBlob": "0b296db7bea6840530ef9a0f5c5c5347c46189f0",
+      "firstLine": 1,
+      "lastLine": 66,
+      "text": "import PackageVersion from '../version.js';\nimport BrowserErrorCaptureEnum from './enums/BrowserErrorCaptureEnum.js';\nimport BrowserNavigationCrossOriginPolicyEnum from './enums/BrowserNavigationCrossOriginPolicyEnum.js';\nexport default {\n    disableJavaScriptEvaluation: false,\n    enableJavaScriptEvaluation: false,\n    disableJavaScriptFileLoading: false,\n    disableCSSFileLoading: false,\n    enableCSSFileLoading: false,\n    enableImageFileLoading: false,\n    disableIframePageLoading: false,\n    enableIframePageLoading: false,\n    disableComputedStyleRendering: false,\n    handleDisabledFileLoadingAsSuccess: false,\n    disableErrorCapturing: false,\n    errorCapture: BrowserErrorCaptureEnum.tryAndCatch,\n    enableFileSystemHttpRequests: false,\n    suppressCodeGenerationFromStringsWarning: false,\n    suppressInsecureJavaScriptEnvironmentWarning: false,\n    timer: {\n        maxTimeout: -1,\n        maxIntervalTime: -1,\n        maxIntervalIterations: -1,\n        preventTimerLoops: false\n    },\n    fetch: {\n        disableSameOriginPolicy: false,\n        disableStrictSSL: false,\n        interceptor: null,\n        requestHeaders: null,\n        virtualServers: null\n    },\n    module: {\n        resolveNodeModules: null,\n        urlResolver: null,\n        disableCache: false\n    },\n    navigation: {\n        disableMainFrameNavigation: false,\n        disableChildFrameNavigation: false,\n        disableChildPageNavigation: false,\n        disableFallbackToSetURL: false,\n        crossOriginPolicy: BrowserNavigationCrossOriginPolicyEnum.anyOrigin,\n        beforeContentCallback: null\n    },\n    navigator: {\n        userAgent: `Mozilla/5.0 (X11; ${process.platform.charAt(0).toUpperCase() + process.platform.slice(1) + ' ' + process.arch}) AppleWebKit/537.36 (KHTML, like Gecko) HappyDOM/${PackageVersion.version}`,\n        maxTouchPoints: 0\n    },\n    device: {\n        prefersColorScheme: 'light',\n        prefersReducedMotion: 'no-preference',\n        mediaType: 'screen',\n        forcedColors: 'none'\n    },\n    debug: {\n        traceWaitUntilComplete: -1\n    },\n    viewport: {\n        width: 1024,\n        height: 768,\n        devicePixelRatio: 1\n    },\n    canvasAdapter: null\n};\n//# sourceMappingURL=DefaultBrowserSettings.js.map"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/enums/BrowserErrorCaptureEnum.js",
+      "gitBlob": "0b430799c4db48f05019c06a23d436821b7a2dba",
+      "firstLine": 1,
+      "lastLine": 11,
+      "text": "var BrowserErrorCaptureEnum;\n(function (BrowserErrorCaptureEnum) {\n    /** Happy DOM use try and catch when evaluating code, but will not be able to catch all errors and Promise rejections. This will decrease performance as using try and catch makes the execution significally slower. This is the default setting. */\n    BrowserErrorCaptureEnum[\"tryAndCatch\"] = \"tryAndCatch\";\n    /** Happy DOM will add an event listener to the Node.js process to catch all errors and Promise rejections. This will not work in Jest and Vitest as it conflicts with their error listeners. */\n    BrowserErrorCaptureEnum[\"processLevel\"] = \"processLevel\";\n    /** Error capturing is disabled. Errors and Promise rejections will be thrown. */\n    BrowserErrorCaptureEnum[\"disabled\"] = \"disabled\";\n})(BrowserErrorCaptureEnum || (BrowserErrorCaptureEnum = {}));\nexport default BrowserErrorCaptureEnum;\n//# sourceMappingURL=BrowserErrorCaptureEnum.js.map"
+    },
+    {
+      "path": "node_modules/.pnpm/happy-dom@21.0.4/node_modules/happy-dom/lib/browser/utilities/BrowserPageUtility.js",
+      "gitBlob": "b44cc9d59ae0bf6f0a1641305c1d285b0ba67c9b",
+      "firstLine": 1,
+      "lastLine": 47,
+      "text": "import BrowserFrameFactory from './BrowserFrameFactory.js';\n/**\n * Browser page utility.\n */\nexport default class BrowserPageUtility {\n    /**\n     * Returns frames for a page.\n     *\n     * @param page Page.\n     * @returns Frames.\n     */\n    static getFrames(page) {\n        return this.findFrames(page.mainFrame);\n    }\n    /**\n     * Aborts all ongoing operations and destroys the page.\n     *\n     * @param page Page.\n     */\n    static closePage(page) {\n        if (page.closed) {\n            return Promise.resolve();\n        }\n        page.closed = true;\n        const index = page.context.pages.indexOf(page);\n        if (index !== -1) {\n            page.context.pages.splice(index, 1);\n        }\n        page.virtualConsolePrinter.close();\n        // Using Promise instead of async/await to prevent microtask\n        return BrowserFrameFactory.destroyFrame(page.mainFrame);\n    }\n    /**\n     * Returns all frames.\n     *\n     * @param parentFrame Parent frame.\n     * @returns Frames, including the parent.\n     */\n    static findFrames(parentFrame) {\n        let frames = [parentFrame];\n        for (const frame of parentFrame.childFrames) {\n            frames = frames.concat(this.findFrames(frame));\n        }\n        return frames;\n    }\n}\n//# sourceMappingURL=BrowserPageUtility.js.map"
+    }
+  ]
+}

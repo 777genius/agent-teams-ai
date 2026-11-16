@@ -1,0 +1,561 @@
+{
+  "schema": "c714.combined139-node85-renderer-feasibility.v1",
+  "reviewer": "/root/renderer_combined_plan",
+  "repository": "777genius/agent-teams-ai",
+  "scope": "Read-only static feasibility and concrete argv/input/output ownership proposal. This is neither an R1 nor a runner, test, producer, source/config postimage, runtime selection, source publication or ref change. No shell, package/target evaluation, compiler, provider, test, install or CI was invoked. Root exclusively owns future R1/test/producer/runner authorship and execution. Only this bare evidence report and its readback are retained.",
+  "verdict": {
+    "feasibleConditionally": true,
+    "runtimeAdmitted": false,
+    "argvSelected": false,
+    "newScopeSelected": false,
+    "summary": "One ordered Node139 -> renderer85 RED package and one corresponding GREEN package are feasible, with one complete fresh input boundary before and after each package, the same exact nine source identity rows for both primaries within that package, separate original 180-second captured primary lifecycles, and unchanged Vitest 15000-ms per-test clock. This is a package-level input preservation claim; it is not independent full input preservation evidence around each primary. A new combined R1/review/publication must replace the unpublished Node-only R1 before any future implementation authorship/selection.",
+    "remainingBlockers": "No additional broad installed-source inventory is required by this bounded assessment. Actual permission/selection, exact future bodies, environment/ownership bindings, Rollup report predicate, native route, complete input checks and required independent acceptance remain future gates, not already satisfied execution evidence."
+  },
+  "basis": [
+    {
+      "role": "installed renderer admission",
+      "gitBlob": "a342571a13ce31b46e9782356cc23527c61ee644",
+      "bytes": 156717,
+      "sha256": "76e5d3440254a5e778eb700eb306251a779d0f5a8c6dfe8c47e740895b316154"
+    },
+    {
+      "role": "final four-gap installed data",
+      "gitBlob": "e37de06a48b2d958fbd54de599ca5f933e3c23b0",
+      "bytes": 167326,
+      "sha256": "c880352c1d6cc0ac0c2c37bfb4d18d3a9718170298e814cb884f67fbc7e0413b"
+    },
+    {
+      "role": "actual control-path and raw environment data",
+      "gitBlob": "d688c295815c064fad5e6d4f3a7481c083c6cd06",
+      "bytes": 8151,
+      "sha256": "9ceef73e09588b59852323fba2d2396cd83b2a524849a8cfb20b4bb278daa323"
+    },
+    {
+      "role": "complete source/case preparation",
+      "gitBlob": "c43f10bce07cba82d66a8d6060dd043f8d29126a",
+      "bytes": 208027,
+      "sha256": "be924172ba9702dbb8a41b50c8f21a916d16e6f953ceddd56397b1ec59c71a1c"
+    },
+    {
+      "role": "unpublished Node-only prospective R1 to be replaced, not amended in place by this report",
+      "gitBlob": "9bc91d0a53d775528ffe9a9040c67493a5f10546"
+    },
+    {
+      "role": "full original14 installed body inventory",
+      "gitBlob": "28efd09a0199e8b789d0557ae8cb86946c1f9fcb",
+      "bytes": 7713
+    },
+    {
+      "role": "full additional119 installed body bundle",
+      "gitBlob": "a0432cc3f0512fd027c3e4ce519000af323fc777",
+      "bytes": 1765386
+    },
+    {
+      "role": "current recovery complete packet; its independent acceptance is a separate prerequisite",
+      "gitBlob": "4dfdbf5272044f933c5d3015511633487cbf3946"
+    },
+    {
+      "role": "recovery effective environment and input receipt",
+      "bytes": 50702,
+      "sha256": "32653981d28c0b6e4428a462d39f906bbf939122fc302eac288f69effd25f923",
+      "gitBlob": "7438586d694e2c7155711ce16af357af4b1f8a12"
+    },
+    {
+      "role": "read-only recovery runner source used only to recover unchanged Node argv and input/lifetime conventions",
+      "gitBlob": "b961d5e8283a775ae66afcb5475247c55b859547",
+      "bytes": 52074
+    }
+  ],
+  "scopeAndStages": {
+    "nineSourceRows": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad",
+        "role": "fixed UI producer; bytes remain unchanged"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927",
+        "role": "fixed UI producer; bytes remain unchanged"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+        "bytes": 8457,
+        "sha256": "2da55bb40a5689ace0e922dc4867d7c73278d9a1cd200ea8c4602ca68f82da3b",
+        "gitBlob": "3c7b4bb53f4259ac0795d3f92fb715887acb554f",
+        "role": "fixed UI producer; bytes remain unchanged"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+        "bytes": 36260,
+        "sha256": "26357f37b146fc171bbceadb624bde4a7f4e459d2073ae23a651e757817b2d38",
+        "gitBlob": "4700a0052d3c58a2b3d9bc66e6803220688050fd",
+        "role": "fixed UI producer; bytes remain unchanged"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "bytes": 74351,
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+        "gitBlob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+        "physicalLines": 2068,
+        "role": "one of three narrowly selected prospective producer regions"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+        "bytes": 45707,
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+        "physicalLines": 570,
+        "role": "one of three narrowly selected prospective producer regions"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts",
+        "bytes": 32845,
+        "sha256": "43e12eb3252e578061ea5840ae39d173ce0cd5a8ce6673c5c5ea06d97a8bedaa",
+        "gitBlob": "d65706646743798f2646421105f2f6a75819f143",
+        "physicalLines": 788,
+        "role": "one of three narrowly selected prospective producer regions"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "bytes": 155423,
+        "sha256": "b1b6573cf17971fc479135b8aa7dbc4e8705206ba85818bcdc97c7d8539ba409",
+        "gitBlob": "0aec698e88cc3af8d12c48f6d93b038efcc84900",
+        "physicalLines": 2551,
+        "role": "whole Node133+6 test"
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "bytes": 180091,
+        "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54",
+        "gitBlob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+        "physicalLines": 5678,
+        "role": "whole renderer80+5 test"
+      }
+    ],
+    "identityCorrection": "The complete c43 source record identifies hook1176fd06b70f1b717ba83deb387f87b05b18b45b as 74351 bytes, SHA25668abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575, 2068 lines. The older a342 continuity summary accidentally joined one size digit onto its SHA and reported4351 bytes; use the complete c43 identity.",
+    "red": "Future RED binds both exact independently reviewed whole test postimages and the three producer preimages. Both primaries see that same vector throughout the package; no inter-primary materialization.",
+    "green": "Only after complete independently accepted combined RED, root may author the three minimal producer fixes, obtain exact R2/publication/readback, then materialize them together. GREEN uses the same two test postimages and one new nine-row vector throughout both primaries. The vectors are intentionally different between RED and GREEN only at the three selected producer paths.",
+    "order": "Fresh full preflight -> Node139 -> finalized Node evidence/semantic refusal gate and empty captured session -> renderer85 -> finalized renderer evidence and captured-group cleanup -> exact owned transient cleanup -> fresh full postflight -> final signal cutoff -> separately observed supervisor outer0 -> independent complete package review.",
+    "testFirst": "The combined replacement must preserve all Node-only R1 P11/Review limits and all existing133 cases, add exactly six Node cases, preserve all original80 renderer cases and add exactly five selected functional cases. All old registrations, names, order, multiplicity and assertions remain. No unrelated diagnostic cases or helper extraction is added.",
+    "existingGates": "Current Cross/recovery independent full acceptance and required checkpoint/publication remain prerequisites. Neither their selected scope nor any spent/incomplete attempt is changed. Combined R1, test R2, runner R2, materialization and producer R2 each retain the original exact publication/readback gates.",
+    "unselected": [
+      "separate waitRead deadline finding",
+      "Windows Process15s",
+      "Windows Packaged10s",
+      "strict Darwin P09",
+      "other Windows/Darwin proposals",
+      "later P11/genuine M16",
+      "new-head reconciliation",
+      "canonical typecheck/build",
+      "fresh GUI/platform acceptance",
+      "whole E2E completion"
+    ],
+    "validationAfterGreen": "The new R1 should preserve the separate ordered three-command validation package after independently accepted complete GREEN: pinned pnpm lint:fast:files for P11, Review, hook and the two whole test files; pinned pnpm guard:source-file-size; pinned git diff --check for all nine authorized overlay paths. Every command retains its own180-second lifecycle and exact previous-success gate. Production5020, cap800, frozen141 exceptions, hook2068 line exception and42 workflows remain unchanged."
+  },
+  "proposedArgv": {
+    "selected": false,
+    "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+    "nodePrimary": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--test",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+    ],
+    "rendererRed": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/vitest.mjs",
+      "run",
+      "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "--root=/workspace/scratch/c714-fresh-20261116/source",
+      "--config=/workspace/scratch/c714-fresh-20261116/source/vitest.config.ts",
+      "--configLoader=bundle",
+      "--mode=test",
+      "--pool=forks",
+      "--poolOptions.forks.singleFork",
+      "--poolOptions.forks.isolate",
+      "--no-file-parallelism",
+      "--maxWorkers=1",
+      "--minWorkers=1",
+      "--no-cache",
+      "--reporter=default",
+      "--reporter=json",
+      "--outputFile.json=/tmp/c714-combined139-85-evidence/red/renderer-results.json",
+      "--no-watch",
+      "--no-allowOnly",
+      "--no-passWithNoTests",
+      "--no-dangerouslyIgnoreUnhandledErrors",
+      "--retry=0",
+      "--bail=0",
+      "--no-silent",
+      "--no-hideSkippedTests",
+      "--no-coverage",
+      "--no-typecheck",
+      "--browser.enabled=false",
+      "--no-api",
+      "--no-ui",
+      "--no-open",
+      "--no-update",
+      "--no-color",
+      "--no-clearScreen"
+    ],
+    "rendererGreen": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "/workspace/scratch/c714-fresh-20261116/source/node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/vitest.mjs",
+      "run",
+      "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "--root=/workspace/scratch/c714-fresh-20261116/source",
+      "--config=/workspace/scratch/c714-fresh-20261116/source/vitest.config.ts",
+      "--configLoader=bundle",
+      "--mode=test",
+      "--pool=forks",
+      "--poolOptions.forks.singleFork",
+      "--poolOptions.forks.isolate",
+      "--no-file-parallelism",
+      "--maxWorkers=1",
+      "--minWorkers=1",
+      "--no-cache",
+      "--reporter=default",
+      "--reporter=json",
+      "--outputFile.json=/tmp/c714-combined139-85-evidence/green/renderer-results.json",
+      "--no-watch",
+      "--no-allowOnly",
+      "--no-passWithNoTests",
+      "--no-dangerouslyIgnoreUnhandledErrors",
+      "--retry=0",
+      "--bail=0",
+      "--no-silent",
+      "--no-hideSkippedTests",
+      "--no-coverage",
+      "--no-typecheck",
+      "--browser.enabled=false",
+      "--no-api",
+      "--no-ui",
+      "--no-open",
+      "--no-update",
+      "--no-color",
+      "--no-clearScreen"
+    ],
+    "executableChain": "The installed43-byte vitest.mjs entry imports dist/cli.js, which invokes createCLI().parse(). Using pinned Node and the exact canonical installed entry avoids the .bin shell shim and does not invoke package lifecycle scripts.",
+    "pnpmPreference": "Keep pinned pnpm11.22.0 for the existing lint/guard package where already appropriate. Plain pinned pnpm exec vitest is technically possible, but its executable selection reaches the observed3409-byte .bin/vitest shell shim, its readlink/dirname/sed/uname/possible-platform branches, PATH-selected Node and NODE_PATH rewriting. It is not command-closure-equivalent to the direct Node route. Select it only if the complete additional shell/tool/env chain is separately bound and reviewed; no such expansion is needed for the recommended direct route. A pnpm exec pinned-Node absolute-entry variant could bypass that shim but still adds pnpm environment/config behavior and is unnecessary here.",
+    "noPackageScripts": "Do not use pnpm test/test:ci: the actual root scripts build MCP and Host first. No install, build, npx/dlx, loader substitution, config rewrite, Vitest collect/list probe or --help/--version invocation is part of this proposal.",
+    "optionsMeaning": [
+      "run plus --no-watch fixes one finite invocation; explicit root/config selects the unchanged1187-byte config.",
+      "--configLoader=bundle preserves bare __dirname compatibility. runner/native are not compatible substitutes proved for this config.",
+      "forks + singleFork + isolate + disabled file parallelism + min/max1 is supported by the installed CLI and createForksPool. No poolOptions execArgv override is supplied.",
+      "--no-cache sets boolean false and suppresses results-cache writes; it does not suppress fork transform files or Vite bundle files.",
+      "Default reporter plus JSON retains human-readable unhandled/close diagnostics and every assertion result; --outputFile.json is supported by CLI dotted mapping and getOutputFile(config,'json').",
+      "retry0/bail0/allowOnlyfalse/passWithNoTestsfalse and unhandled-errors-false do not weaken semantic acceptance; no skipped-test hiding or silent output is enabled.",
+      "Coverage/typecheck/browser/API/UI/open/update are explicitly disabled. No profiler/inspector/custom reporter/output route is selected.",
+      "No --testTimeout, --hookTimeout or --teardownTimeout is supplied: unchanged config testTimeout15000 and installed teardown defaults remain. The supervisor's separate180-second bound is still required."
+    ],
+    "fileSelectionLimit": "The positional file argument uses Vitest's substring/prefix filter, not an exact-equality option. The complete source census must establish that the selected include intersection is the one exact .test.ts path (not .tsx); actual JSON must contain exactly one testResults entry with that absolute name. Do not mistake numTotalTestSuites for file count, because nested suites affect it. No test-name, line, shard, changed, related, project or extra exclude filter is allowed.",
+    "flagProofs": [
+      {
+        "gitBlob": "437f31f0af0c6b2b8efc4703578ad6763eb17aa1",
+        "lines": "666-734,846-875,908-968,1028-1040,1090-1123,1137-1147,1187-1197,1262-1289,1344-1346,1383-1419"
+      },
+      {
+        "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+        "lines": "2607-2633,3584-3593,3838-3866"
+      },
+      {
+        "gitBlob": "d3a49f9aaf44ad73d44bbe231b312c3281f4ba31",
+        "lines": "75-79"
+      }
+    ]
+  },
+  "inputContract": {
+    "fullBoundary": "Exactly one complete fresh before and one complete fresh after per RED/GREEN package: all8798 source rows and their full HEAD/tree/index/workflow controls; all122773 dependency rows with full byte/link/mode identity; all1454 compiled rows;253D+12SPI provider members and original archive inputs; exact tools/pnpm/config/environment/control bodies; original seven bootstrap cache files. Retain complete actual manifests and compare entire identities, not counts or stat caches. No ignored dependency paths or blanket temp exclusion.",
+    "noInterPrimarySnapshotClaim": "There is no independent complete source/dependency manifest boundary between the two primaries. Per-primary argv/env/start/raw/result/lifetime receipts are separate, while full input preservation is package-scoped. Cheap exact nine-overlay and temp/ownership checks may be retained at admission to the second primary, but must not be labelled a second full input census.",
+    "freshness": "Read/hash the whole inputs afresh for each package before and after. Earlier materialization snapshots, prior inventory reads and prior package equality do not substitute. Only the already specified bounded read-only manifest strategy, at most8 reader threads and32 outstanding jobs with complete deterministic joins, may be carried into a newly reviewed runner.",
+    "effectiveEnvironment": {
+      "basis": {
+        "bytes": 50702,
+        "sha256": "32653981d28c0b6e4428a462d39f906bbf939122fc302eac288f69effd25f923",
+        "gitBlob": "7438586d694e2c7155711ce16af357af4b1f8a12"
+      },
+      "rawVersusEffective": "d688 observes raw CI absent. The actual admitted recovery primary environment separately sets CI='true'; its receipt records that assignment. Reuse the admitted effective environment, including CI=true, rather than deriving runtime behavior from the raw absent-key list.",
+      "inheritedFixedAssignments": {
+        "PATH": "/workspace/scratch/c714-fresh-20261116/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin",
+        "TMPDIR": "/tmp/c714-cross-validation-recovery-evidence/test-tmp",
+        "XDG_CACHE_HOME": "/workspace/scratch/c714-fresh-20261116/cache",
+        "XDG_STATE_HOME": "/workspace/scratch/c714-fresh-20261116/state",
+        "AGENT_TEAMS_INSTALL_PROFILE": "node-ci",
+        "CI": "true",
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_TERMINAL_PROMPT": "0",
+        "XDG_CONFIG_HOME": "/workspace/scratch/c714-fresh-20261116/config",
+        "XDG_DATA_HOME": "/workspace/scratch/c714-fresh-20261116/data",
+        "PNPM_HOME": "/workspace/scratch/c714-fresh-20261116/bin",
+        "PNPM_CONFIG_PM_ON_FAIL": "error",
+        "PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN": "false",
+        "PNPM_CONFIG_ENGINE_STRICT": "true",
+        "PNPM_CONFIG_ENABLE_PRE_POST_SCRIPTS": "true",
+        "PNPM_CONFIG_IGNORE_PNPMFILE": "true",
+        "PNPM_CONFIG_STORE_DIR": "/workspace/scratch/c714-fresh-20261116/store",
+        "PNPM_CONFIG_ENABLE_GLOBAL_VIRTUAL_STORE": "false",
+        "PNPM_CONFIG_UPDATE_NOTIFIER": "false",
+        "PNPM_CONFIG_SCRIPT_SHELL": "/bin/sh",
+        "AGENT_BACKEND_TEST_NODE": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "NODE_DISABLE_COMPILE_CACHE": "1"
+      },
+      "changesRequiredByNewOutputOwnership": "Rebind only the separately reviewed task TMPDIR and output/control roots for the new package. Supervisor HOME remains/home/agent and CODEX_HOME remains the captured original value. Existing transport/config normalization, PATH, XDG, pnpm and Node-test binary checks remain.",
+      "childTempProposal": {
+        "red": "/tmp/c714-combined139-85-evidence/red/tmp",
+        "green": "/tmp/c714-combined139-85-evidence/green/tmp",
+        "scope": "One new exclusive empty no-symlink directory for the entire package. Node finishes with no surviving TEST-prefixed debt before renderer. Renderer workers inherit this TMPDIR; setup's stale-home scan is confined to it. An alternative separate node/renderer subdirectory is also feasible only if exact paths and per-child environment deltas are fixed in the new R1."
+      },
+      "mustBindAbsentOrExplicit": "Do not infer these from d688 alone: NODE_OPTIONS; NODE_PATH; NODE_COMPILE_CACHE and NODE_COMPILE_CACHE_PORTABLE; NODE_V8_COVERAGE; ESBUILD_BINARY_PATH; UPDATE_SNAPSHOT; VITEST_SKIP_INSTALL_CHECKS; VITE_NODE_DEBUG_DUMP; VITE_NODE_DEPS_MODULE_DIRECTORIES and its npm_config alias; VITE_USER_NODE_ENV and other effective VITE_* defines; worker/thread/fork/coverage overrides; debugger/profiler/inspection controls; AGENT_TEAMS_VITEST_TEMP_CLEANUP_DONE; MEMBER_WORK_SYNC_RECOVERY_KEEP_TEMP and MEMBER_WORK_SYNC_RECOVERY_LIVE. Retain the exact full effective map or value identities and explicit removals/assignments in the new binding; no unreviewed inherited option.",
+      "compileCache": "NODE_DISABLE_COMPILE_CACHE=1 remains explicit, compilation-cache variables remain absent, and all seven original bootstrap cache files are checked unchanged. New TMPDIR is outside ROOT/tmp.",
+      "vitestDerived": "With effective NODE_ENV initially absent and the unchanged config, prepareVitest sets TEST=true, VITEST=true and NODE_ENV=test; the worker route supplies VITEST_MODE=RUN. CI=true and absent UPDATE_SNAPSHOT with updatefalse makes the reviewed snapshot normalization select none. Worker HOME/USERPROFILE changes are the unchanged setup behavior only; no supervisor HOME/CODEX_HOME substitution is added.",
+      "noInteractiveInstall": "Use the admitted non-TTY captured stdio/stdin behavior and CI=true, keep VITEST_SKIP_INSTALL_CHECKS absent and preflight exact installed happy-dom/Vitest availability. Missing dependency is failure/UNREACHED, never installation or a new attempt."
+    },
+    "configAndConditions": {
+      "unchangedConfig": {
+        "path": "vitest.config.ts",
+        "gitBlob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+        "bytes": 1187,
+        "testTimeout": 15000,
+        "environment": "happy-dom",
+        "setup": "test/setup.ts"
+      },
+      "unchangedSetup": {
+        "gitBlob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c",
+        "bytes": 5297
+      },
+      "observedAbsentMustRecheck": [
+        "node_modules/.vite-temp",
+        "node_modules/.vite",
+        ".env",
+        ".env.local",
+        ".env.test",
+        ".env.test.local",
+        "vitest.workspace.ts",
+        "vitest.workspace.js",
+        "vitest.workspace.mjs",
+        "vitest.workspace.json"
+      ],
+      "conditions": "Bind pinned Node default import conditions and no NODE_OPTIONS/custom conditions/profiler flags. Installed Vitest removes 'module' from Vite6 default server conditions; with NODE_ENV=test its worker condition argv is --conditions node --conditions development. Normal built-in Node import/require conditions still apply. The Vite #module-sync-enabled choice must be bound to the pinned Node's actual require-module/default-condition support; both tiny true/false bodies are already retained, not an excuse to leave the chosen route unspecified.",
+      "defines": "The unchanged config has no custom define map. Bind absent effective VITE_* inputs and env files. Vite mode=test, NODE_ENV=test implies isProductionfalse and env BASE_URL='/', MODE='test', DEV=true, PROD=false. Vitest's config hook supplies process.env.NODE_ENV as a runtime reference and an empty test.defines map; the env.mjs __DEFINES__ replacement is derived from that effective map, not an unbound raw placeholder. Retain precise derived values in the future binding.",
+      "optimizer": "Absent optimizer enablement follows the reviewed Vite6 disabled/noDiscovery/include[] route. Do not claim every later normalized optimizer.enabled field is false; do require no unexpected .vite/result/optimizer output.",
+      "happyDom": "Pinned non-VM happy-dom, unchanged settings/defaults and Vitest disableErrorCapturing=true only. No alternative environment, processLevel override, popup/opener change or navigation/page-close route is added. Abort does not prove all callback promises/microtasks settled, and standalone win.close is initially a no-op; external lifecycle observation remains essential."
+    },
+    "nativeMetadataGate": {
+      "beforeRendererPrimary": "A separately bound finite pinned-Node builtin-only metadata command, with its existing metadata30-second refusal cap/captured session and full output identity, must establish process.platform=linux, arch=x64, Node24.22.1, little-endian context, absence of Deno/PnP/Node option overrides, and the actual report-header predicate. It must not import/evaluate package/provider/native code. No such metadata command was authored or run in this report.",
+      "rollup": "Reproduce the loader's nullish retry: observe report.getReport().header once for the table initializer, repeat only if nullish, and bind the final outcome. GNU iff the final header is falsy OR its glibcVersionRuntime field is truthy. A truthy header with falsy glibcVersionRuntime is musl and refuses this prepared GNU route. Python libc/ELF facts are insufficient.",
+      "rollupIdentity": {
+        "path": "node_modules/.pnpm/@rollup+rollup-linux-x64-gnu@4.59.0/node_modules/@rollup/rollup-linux-x64-gnu/rollup.linux-x64-gnu.node",
+        "mode": "100644",
+        "bytes": 2030680,
+        "sha256": "c3aedeb1740b7363287f97013b4e03e3485bf0a74c442e90862e8cf53c9144f5",
+        "gitBlob": "59216bda58fc192ff0f5eac32719a884fa74a03c"
+      },
+      "rollupPath": "Recheck absent local dist/rollup.linux-x64-gnu.node and exact importer-local GNU package link/manifest/native. No local override, musl substitution or guessed package fallback.",
+      "esbuildIdentity": {
+        "path": "node_modules/.pnpm/@esbuild+linux-x64@0.28.1/node_modules/@esbuild/linux-x64/bin/esbuild",
+        "mode": "100755",
+        "bytes": 11407472,
+        "sha256": "0c6588b092a2c291a72bab90659f3c9e0e25e0fe59c9ac12b4dae4d945e5548c",
+        "gitBlob": "71fe4f8318ca6039f84b0165618f921eb3cab609"
+      },
+      "esbuild": "Exact Vite->esbuild0.28.1->@esbuild/linux-x64 link route, ESBUILD_BINARY_PATH absent, no downloaded fallback, zip/PnP copy, WASM or PATH-selected Node. Service executable/--service=0.28.1/--ping and child ownership are part of renderer lifecycle. No native semantic qualification is inferred from hashing."
+    }
+  },
+  "outputOwnershipAndCleanup": {
+    "proposalOnly": {
+      "outputRoot": "/tmp/c714-combined139-85-evidence",
+      "controlRoot": "/tmp/c714-combined139-85-controls"
+    },
+    "outputRoot": "New exclusive no-symlink root, with red and green records kept distinct. Root must prove absence/exclusivity before creating each selected package path. No reuse, overwrite or partial resume. Raw stdout/stderr (or a complete documented combined stream), launch/start/final receipts, JSON results, metadata records, full before/after manifests and surviving-transient retention live outside the source tree.",
+    "viteTemp": "Prove source/node_modules/.vite-temp absent in the package preflight and again before renderer; atomically create and exclusively own only that directory, with recorded device/inode/type/mode and same-user writable access. Vite's recursive mkdir then uses it. Do not own or recursively remove node_modules, existing .vite, config siblings or unknown occupants. EACCES/no-node_modules fallback beside vitest.config.ts is not an admitted route.",
+    "captureThenDelete": "After each primary's complete exit/raw finalization and captured-group quiescence, enumerate all surviving entries in its exclusively owned temp area. Before supervisor deletion, retain their exact names, directory/link/regular-file kinds, modes, literal link targets and complete file bytes with identities. Verify ownership/no alias/race before deleting exact enumerated owned entries; remove directories only after known contents are removed and emptiness/identity rechecked. Unknown/unowned/special/mutated entries refuse success and are preserved for review, not blanket-rm'ed.",
+    "vitePattern": "Within the owned .vite-temp, only the source-proved vitest.config.ts.timestamp-<Date.now>-<random hex>.mjs family is expected. A naming pattern alone is not ownership. Retain every surviving such file before exact unlink; require actual directory removal and lexists=false before postflight.",
+    "tmpFamilies": "TMPDIR confines old finite Node TEST-* fixtures, setup agent-teams-vitest-home-* homes, Vitest per-project nanoid transform trees including web/ssr hashed code and atomic .tmp-* intermediates, and possible esbuild-<64hex> transform files. Each actual remaining tree must be attributed to its owned phase and captured completely; do not scan/delete global /tmp or rely only on TEST-* prefix cleanup, because renderer families differ.",
+    "cleanupLimit": "Vite self-unlinks its bundled config module with an unawaited error-ignoring callback; Vitest/project/setup/esbuild also self-delete some intermediates. A post-exit capture can retain every surviving owned entry before the supervisor deletes it. It cannot reconstruct an exhaustive byte history of already self-deleted transients. This proposal therefore makes a surviving-transient capture claim and full before/after equality claim, not no-intermediate-write or exhaustive-transient-history claims. If exhaustive history is required, this CLI-only proposal does not establish it and a separately reviewed observation mechanism would be a new requirement.",
+    "beforePostflight": "All captured sessions must be empty, phase TMPDIR must be verified empty/removed as the exact ownership contract specifies, and .vite-temp must be absent before full postflight. .vite and other unapproved caches/output routes remain absent. Perform the same complete122773-row dependency census afterward with no ignore for temporary paths. Any unexpected source/config/output/dependency difference fails the package.",
+    "lifetime": "Tinypool awaits teardown before its internal terminate timer; esbuild stop does not await descendant exit; happy-dom abort/close does not establish global quiescence. Keep external session/group capture, unknown-launch refusal, original signal cleanup/finalization, and separately observed outer0. No universal escaped-child custody claim is introduced."
+  },
+  "acceptance": {
+    "perPrimaryRecords": "Each primary has a distinct argv, exact source-vector reference, effective environment reference, captured PID/session/group, prelaunch absolute monotonic deadline, full raw output, result identity, exit code/signal, start/final receipts, interruptions, timeout/deadline status, cleanup result and actual captured-session emptiness. The second launch never borrows or resets the first clock. Full pre/post hashing remains separately timed outside the primary clocks.",
+    "deadline": "180 seconds per primary, starting before spawn/start/raw work as in the admitted supervisor; include ordinary exit, output drain/finalization and required captured cleanup without resetting the deadline. Preserve metadata30-second caps and original signal refusal behavior. Do not claim a single180-second total package or increase any Vitest test timeout.",
+    "nodeRed": {
+      "cases": 139,
+      "pass": 134,
+      "fail": 5,
+      "old133Pass": true,
+      "primaryExit": 1
+    },
+    "rendererRed": {
+      "cases": 85,
+      "pass": 82,
+      "fail": 3,
+      "old80Pass": true,
+      "primaryExit": 1
+    },
+    "nodeGreen": {
+      "cases": 139,
+      "pass": 139,
+      "fail": 0,
+      "primaryExit": 0
+    },
+    "rendererGreen": {
+      "cases": 85,
+      "pass": 85,
+      "fail": 0,
+      "primaryExit": 0
+    },
+    "nodeSemantics": "Carry forward exact Node R1 case names, order/multiplicity, P11 original90-second cutoff/currentness/read-error/cadence and Review exact canEditNow/currentness/input trace checks. The six new cases are five semantic failures plus one control pass before fixes. Import/extraction/setup errors, timeout/kill and unrelated failures never count as RED.",
+    "rendererSemantics": "Require all85 assertion identities exactly once in retained order, original80PASS and only the three selected current silent-refresh loading failures in RED; the two newer-request/unmount controls pass. GREEN85PASS. Match exact failure messages/sites to loading remaining true, not import/setup/console-warning/clock/native/teardown failures. Inspect reached and unreached branches in independent review.",
+    "json": "Require one exact absolute-file testResults entry, numTotalTests85, exact pass/fail counters, zero pending/todo/skipped/cancelled/unknown states, each title/fullName/ancestor identity and failureMessages consistent with the reviewed census, no missing/truncated/duplicate result file. JSON success is false for the intended RED and true for GREEN, but never sufficient alone. Nested suite totals are not assumed to equal one.",
+    "unexpectedErrors": "Keep the full default-reporter stdout/stderr and inspect unhandled errors/rejections, startup/transform/native/setup errors, close-error logs, close timeouts, still-running-test warnings, unknown console diagnostics and output-write failures. JsonReporter ignores its _errors argument and derives success only from test/suite failures; Vitest close can log 'error during close' after allSettled without changing exit. Either condition refuses package acceptance even with nominal JSON/exit.",
+    "advance": "RED advances from Node to renderer only after Node's exact intended semantic outcome is mechanically checked, raw/receipt finalization completes, no error/signal/timeout occurs and its captured session is empty; exit1 alone is insufficient. GREEN requires exact139PASS plus exit0 and the same lifecycle conditions. A failed/unknown/incomplete first primary leaves renderer permanently UNREACHED for that attempt.",
+    "packageSuccess": "After both primaries, exact cleanup and full postflight, require actual outer supervisor0 and independent full semantic/input/lifetime acceptance of the entire package. Expected RED child exits1 are kept as raw results and only the completed, independently accepted RED package can advance producer authorship. No primary success transfers to a rejected package.",
+    "attempts": "One selected attempt per RED or GREEN package. Failed preflight, unexpected result, interruption, unknown launch, incomplete output/cleanup/postflight or missing outer observation spends the attempt. No rerun, partial resume, acceptance by aggregate count, hidden retry or auto-rescue is allowed.",
+    "unchangedProhibitions": "Real Claude/Codex including --version, real user projects, frozen PR1206/1207/1208/1211/1212/1213, CI actions, workflow/package/source-size changes and unselected source work remain forbidden."
+  },
+  "sourceProofs": [
+    {
+      "label": "single fork and isolation flags",
+      "gitBlob": "437f31f0af0c6b2b8efc4703578ad6763eb17aa1",
+      "firstLine": 638,
+      "lastLine": 664,
+      "text": "const poolThreadsCommands = {\n\tisolate: { description: \"Isolate tests in threads pool (default: `true`)\" },\n\tsingleThread: { description: \"Run tests inside a single thread (default: `false`)\" },\n\tmaxThreads: {\n\t\tdescription: \"Maximum number or percentage of threads to run tests in\",\n\t\targument: \"<workers>\"\n\t},\n\tminThreads: {\n\t\tdescription: \"Minimum number or percentage of threads to run tests in\",\n\t\targument: \"<workers>\"\n\t},\n\tuseAtomics: { description: \"Use Atomics to synchronize threads. This can improve performance in some cases, but might cause segfault in older Node versions (default: `false`)\" },\n\texecArgv: null\n};\nconst poolForksCommands = {\n\tisolate: { description: \"Isolate tests in forks pool (default: `true`)\" },\n\tsingleFork: { description: \"Run tests inside a single child_process (default: `false`)\" },\n\tmaxForks: {\n\t\tdescription: \"Maximum number or percentage of processes to run tests in\",\n\t\targument: \"<workers>\"\n\t},\n\tminForks: {\n\t\tdescription: \"Minimum number or percentage of processes to run tests in\",\n\t\targument: \"<workers>\"\n\t},\n\texecArgv: null\n};"
+    },
+    {
+      "label": "reporter array and dotted outputFile",
+      "gitBlob": "437f31f0af0c6b2b8efc4703578ad6763eb17aa1",
+      "firstLine": 722,
+      "lastLine": 734,
+      "text": "\treporters: {\n\t\talias: \"reporter\",\n\t\tdescription: `Specify reporters (${Object.keys(ReportersMap).join(\", \")})`,\n\t\targument: \"<name>\",\n\t\tsubcommands: null,\n\t\tarray: true\n\t},\n\toutputFile: {\n\t\targument: \"<filename/-s>\",\n\t\tdescription: \"Write test results to a file when supporter reporter is also specified, use cac's dot notation for individual outputs of multiple reporters (example: `--outputFile.tap=./tap.txt`)\",\n\t\tsubcommands: null\n\t},\n\tcoverage: {"
+    },
+    {
+      "label": "workers and refusal flags",
+      "gitBlob": "437f31f0af0c6b2b8efc4703578ad6763eb17aa1",
+      "firstLine": 951,
+      "lastLine": 968,
+      "text": "\tfileParallelism: { description: \"Should all test files run in parallel. Use `--no-file-parallelism` to disable (default: `true`)\" },\n\tmaxWorkers: {\n\t\tdescription: \"Maximum number or percentage of workers to run tests in\",\n\t\targument: \"<workers>\"\n\t},\n\tminWorkers: {\n\t\tdescription: \"Minimum number or percentage of workers to run tests in\",\n\t\targument: \"<workers>\"\n\t},\n\tenvironment: {\n\t\tdescription: \"Specify runner environment, if not running in the browser (default: `node`)\",\n\t\targument: \"<name>\",\n\t\tsubcommands: null\n\t},\n\tpassWithNoTests: { description: \"Pass when no tests are found\" },\n\tlogHeapUsage: { description: \"Show the size of heap for each test when running in node\" },\n\tallowOnly: { description: \"Allow tests and suites that are marked as only (default: `!process.env.CI`)\" },\n\tdangerouslyIgnoreUnhandledErrors: { description: \"Ignore any unhandled errors that occur\" },"
+    },
+    {
+      "label": "boolean no-cache",
+      "gitBlob": "437f31f0af0c6b2b8efc4703578ad6763eb17aa1",
+      "firstLine": 1137,
+      "lastLine": 1147,
+      "text": "\tcache: {\n\t\tdescription: \"Enable cache\",\n\t\targument: \"\",\n\t\tsubcommands: { dir: null },\n\t\tdefault: true,\n\t\ttransform(cache) {\n\t\t\tif (typeof cache !== \"boolean\" && cache) throw new Error(\"--cache.dir is deprecated\");\n\t\t\tif (cache) return {};\n\t\t\treturn cache;\n\t\t}\n\t},"
+    },
+    {
+      "label": "run and bundle loader",
+      "gitBlob": "437f31f0af0c6b2b8efc4703578ad6763eb17aa1",
+      "firstLine": 1187,
+      "lastLine": 1197,
+      "text": "\trun: { description: \"Disable watch mode\" },\n\tcolor: {\n\t\tdescription: \"Removes colors from the console output\",\n\t\talias: \"no-color\"\n\t},\n\tclearScreen: { description: \"Clear terminal screen when re-running tests during watch mode (default: `true`)\" },\n\tconfigLoader: {\n\t\tdescription: \"Use `bundle` to bundle the config with esbuild or `runner` (experimental) to process it on the fly. This is only available in vite version 6.1.0 and above. (default: `bundle`)\",\n\t\targument: \"<loader>\"\n\t},\n\tstandalone: { description: \"Start Vitest without running tests. File filters will be ignored, tests will be running only on change (default: `false`)\" },"
+    },
+    {
+      "label": "exact reporter-specific output",
+      "gitBlob": "d3a49f9aaf44ad73d44bbe231b312c3281f4ba31",
+      "firstLine": 75,
+      "lastLine": 79,
+      "text": "function getOutputFile(config, reporter) {\n\tif (!config?.outputFile) return;\n\tif (typeof config.outputFile === \"string\") return config.outputFile;\n\treturn config.outputFile[reporter];\n}"
+    },
+    {
+      "label": "JSON counts and success do not account for unhandled errors",
+      "gitBlob": "490fd49e092fb68f5413e2e721f1f82004f2def7",
+      "firstLine": 1699,
+      "lastLine": 1711,
+      "text": "\t\tconst suites = getSuites(files);\n\t\tconst numTotalTestSuites = suites.length;\n\t\tconst tests = getTests(files);\n\t\tconst numTotalTests = tests.length;\n\t\tconst numFailedTestSuites = suites.filter((s) => s.result?.state === \"fail\").length;\n\t\tconst numPendingTestSuites = suites.filter((s) => s.result?.state === \"run\" || s.result?.state === \"queued\" || s.mode === \"todo\").length;\n\t\tconst numPassedTestSuites = numTotalTestSuites - numFailedTestSuites - numPendingTestSuites;\n\t\tconst numFailedTests = tests.filter((t) => t.result?.state === \"fail\").length;\n\t\tconst numPassedTests = tests.filter((t) => t.result?.state === \"pass\").length;\n\t\tconst numPendingTests = tests.filter((t) => t.result?.state === \"run\" || t.result?.state === \"queued\" || t.mode === \"skip\" || t.result?.state === \"skip\").length;\n\t\tconst numTodoTests = tests.filter((t) => t.mode === \"todo\").length;\n\t\tconst testResults = [];\n\t\tconst success = !!(files.length > 0 || this.ctx.config.passWithNoTests) && numFailedTestSuites === 0 && numFailedTests === 0;"
+    },
+    {
+      "label": "JSON ignores _errors; writes actual result file",
+      "gitBlob": "490fd49e092fb68f5413e2e721f1f82004f2def7",
+      "firstLine": 1751,
+      "lastLine": 1783,
+      "text": "\t\t\tnumPendingTestSuites,\n\t\t\tnumTotalTests,\n\t\t\tnumPassedTests,\n\t\t\tnumFailedTests,\n\t\t\tnumPendingTests,\n\t\t\tnumTodoTests,\n\t\t\tsnapshot: this.ctx.snapshot.summary,\n\t\t\tstartTime: this.start,\n\t\t\tsuccess,\n\t\t\ttestResults,\n\t\t\tcoverageMap\n\t\t};\n\t\tawait this.writeReport(JSON.stringify(result));\n\t}\n\tasync onFinished(files = this.ctx.state.getFiles(), _errors = [], coverageMap) {\n\t\tawait this.logTasks(files, coverageMap);\n\t}\n\t/**\n\t* Writes the report to an output file if specified in the config,\n\t* or logs it to the console otherwise.\n\t* @param report\n\t*/\n\tasync writeReport(report) {\n\t\tconst outputFile = this.options.outputFile ?? getOutputFile(this.ctx.config, \"json\");\n\t\tif (outputFile) {\n\t\t\tconst reportFile = resolve(this.ctx.config.root, outputFile);\n\t\t\tconst outputDirectory = dirname(reportFile);\n\t\t\tif (!existsSync(outputDirectory)) await promises.mkdir(outputDirectory, { recursive: true });\n\t\t\tawait promises.writeFile(reportFile, report, \"utf-8\");\n\t\t\tthis.ctx.logger.log(`JSON report written to ${reportFile}`);\n\t\t} else this.ctx.logger.log(report);\n\t}\n}"
+    },
+    {
+      "label": "close logs rejection without setting exit",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+      "firstLine": 9911,
+      "lastLine": 9934,
+      "text": "\tasync close() {\n\t\tif (!this.closingPromise) this.closingPromise = (async () => {\n\t\t\tconst teardownProjects = [...this.projects];\n\t\t\tif (this.coreWorkspaceProject && !teardownProjects.includes(this.coreWorkspaceProject)) teardownProjects.push(this.coreWorkspaceProject);\n\t\t\t// do teardown before closing the server\n\t\t\tfor (const project of teardownProjects.reverse()) await project._teardownGlobalSetup();\n\t\t\tconst closePromises = this.projects.map((w) => w.close());\n\t\t\t// close the core workspace server only once\n\t\t\t// it's possible that it's not initialized at all because it's not running any tests\n\t\t\tif (this.coreWorkspaceProject && !this.projects.includes(this.coreWorkspaceProject)) closePromises.push(this.coreWorkspaceProject.close().then(() => this._vite = void 0));\n\t\t\tif (this.pool) closePromises.push((async () => {\n\t\t\t\tawait this.pool?.close?.();\n\t\t\t\tthis.pool = void 0;\n\t\t\t})());\n\t\t\tclosePromises.push(...this._onClose.map((fn) => fn()));\n\t\t\treturn Promise.allSettled(closePromises).then((results) => {\n\t\t\t\tresults.forEach((r) => {\n\t\t\t\t\tif (r.status === \"rejected\") this.logger.error(\"error during close\", r.reason);\n\t\t\t\t});\n\t\t\t});\n\t\t})();\n\t\treturn this.closingPromise;\n\t}\n\t/**"
+    },
+    {
+      "label": "positional file selector is a substring/prefix selector",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+      "firstLine": 7226,
+      "lastLine": 7239,
+      "text": "\tfilterFiles(testFiles, filters, dir) {\n\t\tif (filters.length && process.platform === \"win32\") filters = filters.map((f) => slash(f));\n\t\tif (filters.length) return testFiles.filter((t) => {\n\t\t\tconst testFile = relative(dir, t).toLocaleLowerCase();\n\t\t\treturn filters.some((f) => {\n\t\t\t\t// if filter is a full file path, we should include it if it's in the same folder\n\t\t\t\tif (isAbsolute(f) && t.startsWith(f)) return true;\n\t\t\t\tconst relativePath = f.endsWith(\"/\") ? join(relative(dir, f), \"/\") : relative(dir, f);\n\t\t\t\treturn testFile.includes(f.toLocaleLowerCase()) || testFile.includes(relativePath.toLocaleLowerCase());\n\t\t\t});\n\t\t});\n\t\treturn testFiles;\n\t}\n\t_parentBrowser;"
+    },
+    {
+      "label": "project transform directory under os.tmpdir",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+      "firstLine": 6942,
+      "lastLine": 6946,
+      "text": "\t/**\n\t* Temporary directory for the project. This is unique for each project. Vitest stores transformed content here.\n\t*/\n\ttmpDir = join(tmpdir(), nanoid());\n\t/** @internal */ vitenode;"
+    },
+    {
+      "label": "best-effort transform cleanup",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+      "firstLine": 7335,
+      "lastLine": 7339,
+      "text": "\tasync clearTmpDir() {\n\t\ttry {\n\t\t\tawait rm(this.tmpDir, { recursive: true });\n\t\t} catch {}\n\t}"
+    },
+    {
+      "label": "CI and UPDATE_SNAPSHOT interaction",
+      "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+      "firstLine": 3704,
+      "lastLine": 3714,
+      "text": "\tresolved.testNamePattern = resolved.testNamePattern ? resolved.testNamePattern instanceof RegExp ? resolved.testNamePattern : new RegExp(resolved.testNamePattern) : void 0;\n\tif (resolved.snapshotFormat && \"plugins\" in resolved.snapshotFormat) resolved.snapshotFormat.plugins = [];\n\tconst UPDATE_SNAPSHOT = resolved.update || process.env.UPDATE_SNAPSHOT;\n\tresolved.snapshotOptions = {\n\t\texpand: resolved.expandSnapshotDiff ?? false,\n\t\tsnapshotFormat: resolved.snapshotFormat || {},\n\t\tupdateSnapshot: isCI && !UPDATE_SNAPSHOT ? \"none\" : UPDATE_SNAPSHOT ? \"all\" : \"new\",\n\t\tresolveSnapshotPath: options.resolveSnapshotPath,\n\t\tsnapshotEnvironment: null\n\t};\n\tresolved.snapshotSerializers ??= [];"
+    },
+    {
+      "label": "worker conditions and effective environment",
+      "gitBlob": "d2c98ebd58552fa3006c35aac57ca6496c024da7",
+      "firstLine": 3309,
+      "lastLine": 3352,
+      "text": "function createPool(ctx) {\n\tconst pools = {\n\t\tforks: null,\n\t\tthreads: null,\n\t\tbrowser: null,\n\t\tvmThreads: null,\n\t\tvmForks: null,\n\t\ttypescript: null\n\t};\n\t// in addition to resolve.conditions Vite also adds production/development,\n\t// see: https://github.com/vitejs/vite/blob/af2aa09575229462635b7cbb6d248ca853057ba2/packages/vite/src/node/plugins/resolve.ts#L1056-L1080\n\tconst viteMajor = Number(version.split(\".\")[0]);\n\tconst potentialConditions = new Set(viteMajor >= 6 ? ctx.vite.config.ssr.resolve?.conditions ?? [] : [\n\t\t\"production\",\n\t\t\"development\",\n\t\t...ctx.vite.config.resolve.conditions\n\t]);\n\tconst conditions = [...potentialConditions].filter((condition) => {\n\t\tif (condition === \"production\") return ctx.vite.config.isProduction;\n\t\tif (condition === \"development\") return !ctx.vite.config.isProduction;\n\t\treturn true;\n\t}).map((condition) => {\n\t\tif (viteMajor >= 6 && condition === \"development|production\") return ctx.vite.config.isProduction ? \"production\" : \"development\";\n\t\treturn condition;\n\t}).flatMap((c) => [\"--conditions\", c]);\n\t// Instead of passing whole process.execArgv to the workers, pick allowed options.\n\t// Some options may crash worker, e.g. --prof, --title. nodejs/node#41103\n\tconst execArgv = process.execArgv.filter((execArg) => execArg.startsWith(\"--cpu-prof\") || execArg.startsWith(\"--heap-prof\") || execArg.startsWith(\"--diagnostic-dir\"));\n\tasync function executeTests(method, files, invalidate) {\n\t\tconst options = {\n\t\t\texecArgv: [...execArgv, ...conditions],\n\t\t\tenv: {\n\t\t\t\tTEST: \"true\",\n\t\t\t\tVITEST: \"true\",\n\t\t\t\tNODE_ENV: process.env.NODE_ENV || \"test\",\n\t\t\t\tVITEST_MODE: ctx.config.watch ? \"WATCH\" : \"RUN\",\n\t\t\t\tFORCE_TTY: isatty(1) ? \"true\" : \"\",\n\t\t\t\t...process.env,\n\t\t\t\t...ctx.config.env\n\t\t\t}\n\t\t};\n\t\t// env are case-insensitive on Windows, but spawned processes don't support it\n\t\tif (isWindows) for (const name in options.env) options.env[name.toUpperCase()] = options.env[name];\n\t\tconst poolConcurrentPromises = /* @__PURE__ */ new Map();"
+    },
+    {
+      "label": "owned bundle directory, fallback, write, self-unlink",
+      "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a",
+      "firstLine": 49755,
+      "lastLine": 49789,
+      "text": "async function loadConfigFromBundledFile(fileName, bundledCode, isESM) {\n  if (isESM) {\n    let nodeModulesDir = typeof process.versions.deno === \"string\" ? void 0 : findNearestNodeModules(path$c.dirname(fileName));\n    if (nodeModulesDir) {\n      try {\n        await fsp.mkdir(path$c.resolve(nodeModulesDir, \".vite-temp/\"), {\n          recursive: true\n        });\n      } catch (e) {\n        if (e.code === \"EACCES\") {\n          nodeModulesDir = void 0;\n        } else {\n          throw e;\n        }\n      }\n    }\n    const hash = `timestamp-${Date.now()}-${Math.random().toString(16).slice(2)}`;\n    const tempFileName = nodeModulesDir ? path$c.resolve(\n      nodeModulesDir,\n      `.vite-temp/${path$c.basename(fileName)}.${hash}.mjs`\n    ) : `${fileName}.${hash}.mjs`;\n    await fsp.writeFile(tempFileName, bundledCode);\n    try {\n      return (await import(pathToFileURL$1(tempFileName).href)).default;\n    } finally {\n      fs__default.unlink(tempFileName, () => {\n      });\n    }\n  } else {\n    const extension = path$c.extname(fileName);\n    const realFileName = await promisifiedRealpath(fileName);\n    const loaderExt = extension in _require.extensions ? extension : \".js\";\n    const defaultLoader = _require.extensions[loaderExt];\n    _require.extensions[loaderExt] = (module, filename) => {\n      if (filename === realFileName) {"
+    },
+    {
+      "label": "Vite6 default server conditions excluding module",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+      "firstLine": 6624,
+      "lastLine": 6637,
+      "text": "function getDefaultResolveOptions() {\n\treturn {\n\t\tmainFields: [],\n\t\tconditions: getDefaultServerConditions()\n\t};\n}\nfunction getDefaultServerConditions() {\n\tconst viteMajor = Number(version.split(\".\")[0]);\n\tif (viteMajor >= 6) {\n\t\tconst conditions = vite.defaultServerConditions;\n\t\treturn conditions.filter((c) => c !== \"module\");\n\t}\n\treturn [\"node\"];\n}"
+    },
+    {
+      "label": "client environment transformed defines",
+      "gitBlob": "fc939d0f3ca84098e0feefab59e5e8e20862fb5a",
+      "firstLine": 41318,
+      "lastLine": 41329,
+      "text": "  const getDefineReplacer = perEnvironmentState((environment) => {\n    const userDefine = {};\n    for (const key in environment.config.define) {\n      if (!key.startsWith(\"import.meta.env.\")) {\n        userDefine[key] = environment.config.define[key];\n      }\n    }\n    const serializedDefines = serializeDefine(userDefine);\n    const definesReplacement = () => serializedDefines;\n    return (code) => code.replace(`__DEFINES__`, definesReplacement);\n  });\n  return {"
+    },
+    {
+      "label": "TEST/VITEST/NODE_ENV preparation and environment package check",
+      "gitBlob": "8730a5c19229dc14e527146a458341e13340ad9f",
+      "firstLine": 10544,
+      "lastLine": 10557,
+      "text": "async function prepareVitest(mode, options = {}, viteOverrides, vitestOptions) {\n\tprocess.env.TEST = \"true\";\n\tprocess.env.VITEST = \"true\";\n\tprocess.env.NODE_ENV ??= \"test\";\n\tif (options.run) options.watch = false;\n\t// this shouldn't affect _application root_ that can be changed inside config\n\tconst root = resolve(options.root || process.cwd());\n\tconst ctx = await createVitest(mode, options, viteOverrides, vitestOptions);\n\tconst environmentPackage = getEnvPackageName(ctx.config.environment);\n\tif (environmentPackage && !await ctx.packageInstaller.ensureInstalled(environmentPackage, root)) {\n\t\tprocess.exitCode = 1;\n\t\treturn ctx;\n\t}\n\treturn ctx;"
+    }
+  ],
+  "reviewerActions": {
+    "gitDataReadsOnly": true,
+    "existingSourceChanged": false,
+    "configChanged": false,
+    "testOrProducerOrRunnerAuthored": false,
+    "r1Authored": false,
+    "runtimeOrArgvSelected": false,
+    "targetCodeEvaluated": false,
+    "providerOrCiInvoked": false,
+    "refsMutated": false,
+    "bareReportOnly": true
+  }
+}
