@@ -1,6 +1,6 @@
 # Human-only final approval and AI review handoff
 
-Status: proposed implementation plan. This PR changes documentation only.
+Status: reviewed implementation contract. Implementation must meet the acceptance checks below before the PR is ready.
 
 ## Problem and outcome
 
@@ -25,8 +25,13 @@ review_request_changes behavior remains unchanged. With it enabled:
 
 1. The owner completes the work: Done.
 2. review_request assigns the same task to a reviewer: Review.
-3. The reviewer calls review_start, checks the result, then either requests
-   changes or calls the new review_complete command.
+3. review_request appends a durable review_requested event with a unique ID and
+   puts that ID in the assigned reviewer's notification. review_start also returns
+   `reviewRequestId` **in addition to** its existing `ok`, `taskId`, `displayId`,
+   and `column` fields, so resumed reviewers can obtain the same ID. The
+   reviewer must preserve that ID from the cycle being reviewed (never fetch
+   the latest ID only at completion), then either requests changes or calls
+   review_complete with `expectedReviewRequestId`.
 4. review_complete closes AI review and returns the task to Done, recording its
    outcome and notifying Lead. The human can inspect the review note/history.
 5. Only a human action moves the task to Approved. Human rejection can request
@@ -52,12 +57,16 @@ rules as other review decisions. The command is available independently of the
 policy; prompts select review_approve in the default workflow and review_complete
 in human-only mode. Return the actual resulting workflow state to callers.
 
-For retries, the same already-completed cycle is a no-op without duplicate
-history, intervals, or notifications. A retry must never close a newer review
-cycle: carry/validate the expected review request ID for review_complete. A fresh
-review_request after review_completed starts a new cycle and invalidates earlier
-review evidence. Reopening work resets reviewed state and the human acceptance
-indicator. Deleted and unfinished tasks reject review completion.
+For retries, completing the same already-completed cycle with its original
+`expectedReviewRequestId` returns `alreadyCompleted: true` and the resulting Done
+state, without duplicate history, intervals, or notifications. A missing,
+unknown, or stale ID (including one from a cycle superseded by review_request,
+reopening, or deletion) fails explicitly **without any mutation**; it must never
+close a newer cycle. A fresh review_request after review_completed starts a new
+cycle and invalidates earlier review evidence. Reopening work resets reviewed
+state and the human acceptance indicator. Deleted and unfinished tasks reject
+review completion. Preserve the request ID in event history and the review
+completion result; do not add a second persistent cycle-ID field.
 
 ## Enforcement and trust boundary
 
@@ -81,10 +90,13 @@ mint an approval; it may only restore placement already authorized by history.
 This is an application workflow policy, not filesystem security against agents
 that have arbitrary write access to the user's files.
 
-Read policy and validate/write the transition under the existing team board
-lock. A concurrent settings change must not allow approval based on a stale
-renderer snapshot. Surface validation/persistence failures and restore the
-checkbox to the persisted value.
+Use the existing controller team-board lock for both the policy write and
+all approval decisions. The main-process UI command calls that controller
+mutation; it must not update kanban-state.json through an independent read/write
+or renderer snapshot. A concurrent settings change must not allow approval
+based on stale state. Surface validation/persistence failures, reload the
+persisted policy, and restore the checkbox on error. Keep unrelated kanban
+writes from dropping the new property.
 
 ## Dependencies and compatibility
 
@@ -106,10 +118,24 @@ Update all review history parsers, task readers/workers, projections, activity
 interval consumers, logs and i18n that exhaustively recognize review states or
 events. Keep terminal AI review distinct from human approval in user-facing text.
 
+## Three design-review passes and decisions
+
+- **Workflow/state:** no extra task, column, status, or approval dependency
+  gate. `reviewed` is a review state on a completed Done task; only a new
+  review request or reopening invalidates it.
+- **Identity/concurrency:** the review-request event ID is the cycle token;
+  deliver it at assignment and via review_start; require it unchanged on
+  completion, and reject stale decisions under the same board lock.
+- **Integration/security:** treat desktop UI approval/settings as privileged
+  commands, not caller-provided `from`/boolean claims. Protect every mutation
+  and repair path; keep the default policy false and preserve unknown-free
+  backwards-compatible reads and backup round trips.
+
 ## Implementation sequence
 
 1. Add reviewed/review_completed contracts, history derivation, cycle closure,
-   command validation/idempotency, dependency notifications, and focused tests.
+   request-ID delivery/validation, command idempotency, dependency notifications,
+   and focused tests, including stale-event rejection.
 2. Add persisted policy and trusted human approval/settings commands; cover
    controller, MCP/CLI rejection, repair paths, and transport trust boundaries.
 3. Wire the Approved header menu through the app API abstraction. Reuse
@@ -126,8 +152,9 @@ events. Keep terminal AI review distinct from human approval in user-facing text
   Lead receives the review result and Reviewer has no outstanding obligation.
 - Agent review_approve and alternative mutation paths cannot create Approved;
   a genuine human action can approve reviewed Done and request changes from it.
-- Test retry after success, retry after a newer review request, wrong reviewer,
-  deleted/reopened task, concurrent setting update, and failed persistence.
+- Test duplicate completion for the same ID, missing/stale ID after a newer
+  request, wrong reviewer, deleted/reopened task, concurrent policy change,
+  and failed persistence. Confirm failure paths do not change task or board.
 - Test dependencies release at Done after AI review, not after human approval.
 - Restart and backup/restore preserve the policy; old data remains default-off.
 - Cover keyboard/menu interaction, both layouts, indicator and error rollback.
@@ -135,9 +162,10 @@ events. Keep terminal AI review distinct from human approval in user-facing text
   pnpm lint:fast:files -- <changed files>, pnpm typecheck, full pnpm lint for
   the cross-process implementation, and repository-required CI.
 
-Estimated implementation: 600-1,050 changed/added lines including focused tests,
-excluding generated translations/types. This estimate is provisional until the
-complete review-state consumer and transport trust-boundary audit is finished.
+Implementation budget: prefer reuse of the existing controller, board lock,
+review events, IPC and UI primitives over new services or persistence tables.
+Reassess changed-line estimates after auditing all review-state readers; no
+arbitrary line target should justify omitting a trust-boundary or regression test.
 
 ## Separate bugfix
 
