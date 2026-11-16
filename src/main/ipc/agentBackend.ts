@@ -623,8 +623,7 @@ export function registerDesktopAgentBackend(options: BackendShellOptions): void 
       if (!feature.authorizeHandle(current.contextId, { handleId })) return;
       const window = options.getMainWindow();
       const contents = window && !window.isDestroyed() ? window.webContents : null;
-      if (contents && !contents.isDestroyed() &&
-          withoutHash(contents.getURL()) === withoutHash(expectedRendererUrl)) {
+      if (contents && !contents.isDestroyed() && withoutHash(contents.getURL()) === withoutHash(expectedRendererUrl)) {
         safeSendToRenderer(window, NATIVE_NEXT_PROMPT_UPDATED, candidate);
       }
       try { options.publishHttpNativePromptSuggestion?.(candidate); }
