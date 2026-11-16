@@ -111,8 +111,9 @@ describe('human-only review approval', () => {
     board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
     const cycle = events(task.id, 'review_requested')[0].id;
     board.completeReview(task.id, { from: 'alice', expectedReviewRequestId: cycle });
-    expect(() => board.requestChanges(task.id, { from: 'alice', comment: 'Fix this' }))
-      .toThrow(/must be in review/);
+    expect(() => board.requestChanges(task.id, {
+      from: 'alice', comment: 'Fix this', expectedReviewRequestId: cycle,
+    })).toThrow(/must be in review/);
     const changed = board.requestChangesAsHuman(task.id, { comment: 'Needs a fix' });
     expect(changed).toMatchObject({ status: 'pending', reviewState: 'needsFix' });
     expect(events(task.id, 'review_changes_requested').at(-1)).toMatchObject({
@@ -120,6 +121,32 @@ describe('human-only review approval', () => {
     });
     expect(() => board.requestChangesAsHuman(task.id, { comment: 'Again' }))
       .toThrow(/Human rejection requires/);
+  });
+
+  it('rejects stale or missing reviewer rejection tokens without changing the board', () => {
+    const task = board.createTask({ subject: 'Reject stale review decision', owner: 'bob' });
+    board.completeTask(task.id, 'bob');
+    board.setHumanOnlyApproval(true);
+    board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+    const cycle = events(task.id, 'review_requested')[0].id;
+    const beforeTask = fs.readFileSync(taskFile(task.id), 'utf8');
+    const beforeBoard = fs.readFileSync(kanbanFile(), 'utf8');
+    expect(() => board.requestChanges(task.id, { from: 'alice', comment: 'No token' }))
+      .toThrow(/Stale review request/);
+    expect(() => board.requestChanges(task.id, {
+      from: 'alice', comment: 'Stale token', expectedReviewRequestId: 'unknown',
+    })).toThrow(/Stale review request/);
+    expect(fs.readFileSync(taskFile(task.id), 'utf8')).toBe(beforeTask);
+    expect(fs.readFileSync(kanbanFile(), 'utf8')).toBe(beforeBoard);
+    board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+    expect(() => board.requestChanges(task.id, {
+      from: 'alice', expectedReviewRequestId: cycle,
+    })).toThrow(/Stale review request/);
+    expect(board.getTask(task.id).status).toBe('completed');
+    const currentCycle = events(task.id, 'review_requested').at(-1).id;
+    expect(board.requestChanges(task.id, {
+      from: 'alice', expectedReviewRequestId: currentCycle, comment: 'Fix this',
+    })).toMatchObject({ status: 'pending', reviewState: 'needsFix' });
   });
 
   it('preserves settings through kanban writes and fails closed for corrupt stored policy', () => {

@@ -274,6 +274,14 @@ describe('agent-teams-mcp tools', () => {
     }
   );
 
+  it('accepts request-changes cycle IDs for human-only review decisions', () => {
+    const schema = getTool('review_request_changes').parameters;
+    expect(schema?.safeParse({
+      teamName: 'fixture', taskId: 'task-1', from: 'bob',
+      expectedReviewRequestId: 'original-review-id',
+    }).success).toBe(true);
+  });
+
   it('requires the original review request ID and never exposes human acceptance tools', () => {
     const schema = getTool('review_complete').parameters;
     expect(schema?.safeParse({ teamName: 'fixture', taskId: 'task-1' }).success).toBe(false);

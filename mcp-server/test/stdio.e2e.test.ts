@@ -2014,6 +2014,15 @@ describe('agent-teams-mcp stdio e2e', () => {
         'kanban_set_column', { ...context, taskId: task.id, column: 'approved' }, 215
       );
       expect(errorText(bypass)).toContain('must already be approved');
+      const staleRejection = await client.callTool('review_request_changes', {
+        ...context, taskId: task.id, from: 'bob', comment: 'Stale changes',
+        expectedReviewRequestId: 'stale',
+      }, 221);
+      expect(errorText(staleRejection)).toContain('Stale review request');
+      const missingTokenRejection = await client.callTool('review_request_changes', {
+        ...context, taskId: task.id, from: 'bob', comment: 'Missing token',
+      }, 222);
+      expect(errorText(missingTokenRejection)).toContain('Stale review request');
       const stale = await client.callTool('review_complete', {
         ...context, taskId: task.id, from: 'bob', expectedReviewRequestId: 'stale',
       }, 216);

@@ -30,8 +30,9 @@ review_request_changes behavior remains unchanged. With it enabled:
    `reviewRequestId` **in addition to** its existing `ok`, `taskId`, `displayId`,
    and `column` fields, so resumed reviewers can obtain the same ID. The
    reviewer must preserve that ID from the cycle being reviewed (never fetch
-   the latest ID only at completion), then either requests changes or calls
-   review_complete with `expectedReviewRequestId`.
+   the latest ID only at completion), then either calls
+   review_request_changes or review_complete with `expectedReviewRequestId`.
+   In human-only mode both agent decisions require that same cycle ID.
 4. review_complete closes AI review and returns the task to Done, recording its
    outcome and notifying Lead. The human can inspect the review note/history.
 5. Only a human action moves the task to Approved. Human rejection can request
@@ -58,11 +59,13 @@ policy; prompts select review_approve in the default workflow and review_complet
 in human-only mode. Return the actual resulting workflow state to callers.
 
 For retries, completing the same already-completed cycle with its original
-`expectedReviewRequestId` returns `alreadyCompleted: true` and the resulting Done
-state, without duplicate history, intervals, or notifications. A missing,
+`expectedReviewRequestId` returns `alreadyCompleted: true` and the **actual**
+current state (Done/reviewed, or Approved if a human has subsequently accepted),
+without duplicate history, intervals, or notifications. A missing,
 unknown, or stale ID (including one from a cycle superseded by review_request,
 reopening, or deletion) fails explicitly **without any mutation**; it must never
-close a newer cycle. A fresh review_request after review_completed starts a new
+close a newer cycle. Under human-only policy, review_request_changes must also
+reject missing/stale IDs without changing task status. A fresh review_request after review_completed starts a new
 cycle and invalidates earlier review evidence. Reopening work resets reviewed
 state and the human acceptance indicator. Deleted and unfinished tasks reject
 review completion. Preserve the request ID in event history and the review
@@ -90,8 +93,9 @@ mint an approval; it may only restore placement already authorized by history.
 This is an application workflow policy, not filesystem security against agents
 that have arbitrary write access to the user's files.
 
-Use the existing controller team-board lock for both the policy write and
-all approval decisions. The main-process UI command calls that controller
+Use the existing controller team-board lock for policy writes, review_request,
+review_complete, review_request_changes, and work reopening; each must validate
+its cycle ID and commit its state changes while holding that same lock. The main-process UI command calls that controller
 mutation; it must not update kanban-state.json through an independent read/write
 or renderer snapshot. A concurrent settings change must not allow approval
 based on stale state. Surface validation/persistence failures, reload the
@@ -152,8 +156,9 @@ events. Keep terminal AI review distinct from human approval in user-facing text
   Lead receives the review result and Reviewer has no outstanding obligation.
 - Agent review_approve and alternative mutation paths cannot create Approved;
   a genuine human action can approve reviewed Done and request changes from it.
-- Test duplicate completion for the same ID, missing/stale ID after a newer
-  request, wrong reviewer, deleted/reopened task, concurrent policy change,
+- Test duplicate completion for the same ID (including after human Approved),
+  missing/stale ID for completion and request-changes after a newer request,
+  wrong reviewer, deleted/reopened task, concurrent policy change,
   and failed persistence. Confirm failure paths do not change task or board.
 - Test dependencies release at Done after AI review, not after human approval.
 - Restart and backup/restore preserve the policy; old data remains default-off.
