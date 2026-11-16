@@ -1,0 +1,145 @@
+{
+  "stage": "green",
+  "sourceHead": "bfdaf13bd2592a2b82b4fd57fbc4bb7e12e8bbe8",
+  "sourceTree": "4ae22efeff8a67c2fc03a0eb75cf902ef11f98d4",
+  "parent": "da645f2c3e8e9ae3052f969ed2f17faae409bde1",
+  "publishedR1": "2479c17426c3f09bfce093f78741495e0cb058a6",
+  "startedAt": "2026-11-16T03:03:12.846451+00:00",
+  "statusBefore": "clean",
+  "sourceFiles": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "gitBlob": "44cf93706a5b92be4296119810c7c07264cb4ccd",
+      "bytes": 119240,
+      "physicalLines": 1960,
+      "sha256": "c8c37d98de5700d2fa21afc46b61108235bb80f2c45505b73907ac33764b9a10"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts",
+      "gitBlob": "342fab2bf377b7ca6acd6dbd180a946382c00c1a",
+      "bytes": 9713,
+      "physicalLines": 186,
+      "sha256": "2446a157fd921c868c7b6963a991f6ca664ab17ea84d33523fd1e9863ff70ca5"
+    }
+  ],
+  "nodeExecutable": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeVersion": "v24.21.0",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "pnpmVersion": "11.22.0",
+  "AGENT_TEAMS_INSTALL_PROFILE": "node-ci",
+  "AGENT_BACKEND_TEST_NODE": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "resourceFlags": {
+    "NODE_OPTIONS": null,
+    "GOMAXPROCS": null,
+    "GOMEMLIMIT": null
+  },
+  "buildReuse": {
+    "newBuildAttempts": 0,
+    "verifiedHostBuildSource": "67c7135fb4e7d656c8cb4d96ad07a04d33bec263",
+    "allInterveningNonDocsPaths": [
+      "packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts",
+      "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts"
+    ],
+    "compiledDependencyInputsUnchanged": true,
+    "privacyHelperArtifactBytes": 8412,
+    "privacyHelperArtifactSha256": "5cb7e0122cbd8d9ebb3e224c7d0b2322df349c1f0a8092fe7aeaf8a19fd2d581"
+  },
+  "steps": [
+    {
+      "name": "provider-receipt-green-whole-file.log",
+      "argv": [
+        "node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "startedAt": "2026-11-16T03:03:13.006089+00:00",
+      "finishedAt": "2026-11-16T03:03:18.824635+00:00",
+      "durationSeconds": 5.81855045100383,
+      "exitCode": 0,
+      "bytes": 5714,
+      "sha256": "44a7002fdf0d5105611560c80e0067116543b6eca20626a68b016a44fd8bff17"
+    },
+    {
+      "name": "provider-receipt-green-scoped-lint.log",
+      "argv": [
+        "pnpm",
+        "lint:fast:files",
+        "packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "startedAt": "2026-11-16T03:03:18.825266+00:00",
+      "finishedAt": "2026-11-16T03:03:21.189853+00:00",
+      "durationSeconds": 2.3646058790036477,
+      "exitCode": 0,
+      "bytes": 234,
+      "sha256": "806a46e161855e225715d6317bc49728aeb31e768828abccdd2491e3a61fb1a0"
+    },
+    {
+      "name": "provider-receipt-green-source-size.log",
+      "argv": [
+        "pnpm",
+        "guard:source-file-size"
+      ],
+      "startedAt": "2026-11-16T03:03:21.190435+00:00",
+      "finishedAt": "2026-11-16T03:03:22.045555+00:00",
+      "durationSeconds": 0.8551365009916481,
+      "exitCode": 0,
+      "bytes": 249,
+      "sha256": "26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f"
+    },
+    {
+      "name": "provider-receipt-green-provisioning.log",
+      "argv": [
+        "pnpm",
+        "guard:team-provisioning-architecture"
+      ],
+      "startedAt": "2026-11-16T03:03:22.045926+00:00",
+      "finishedAt": "2026-11-16T03:03:22.635059+00:00",
+      "durationSeconds": 0.5892003689950798,
+      "exitCode": 0,
+      "bytes": 245,
+      "sha256": "7fe70e1bdd916d7a5694ada6ab418b58456de8373f0f8a9f560e5efcfb90f79c"
+    },
+    {
+      "name": "provider-receipt-green-source-diff.log",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "2479c17426c3f09bfce093f78741495e0cb058a6",
+        "bfdaf13bd2592a2b82b4fd57fbc4bb7e12e8bbe8",
+        "--",
+        "packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "startedAt": "2026-11-16T03:03:22.635641+00:00",
+      "finishedAt": "2026-11-16T03:03:22.642372+00:00",
+      "durationSeconds": 0.006733839007210918,
+      "exitCode": 0,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "provider-receipt-green-source-closure.log",
+      "argv": [
+        "node",
+        "--input-type=module",
+        "-e",
+        "import assert from 'node:assert/strict';\nimport {existsSync,readFileSync} from 'node:fs';\nimport {createHash} from 'node:crypto';\nimport {desktopProofSources} from './scripts/legacy-agent-host/desktop-proof-sources.ts';\nimport {desktopProofWindowsRetrySources} from './scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts';\nconst file='scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts',source=readFileSync(file,'utf8');\nconst blocks=[...source.matchAll(/const sources = \\[\\.\\.\\.new Set\\(\\[\\.\\.\\.desktopProofSources,([\\s\\S]*?)\\]\\)\\];/g)];\nassert.equal(blocks.length,1);\nconst extras=[...blocks[0][1].matchAll(/'([^']+)'/g)].map(m=>m[1]);\nassert.deepEqual(extras,[file,'packages/legacy-agent-host/tests/opencode-v1-version-source.ts','scripts/e2e/comment-notification/cdp.mjs']);\nconst common=[...new Set(desktopProofSources)].sort(),windows=[...new Set([...common,...desktopProofWindowsRetrySources])].sort(),packaged=[...new Set([...common,...extras])].sort();\nconst rows=[['common',common,1757,'2e4566fa4aafd7b6db99195177385ffa96c2b1e50b72f260dd13fb61181473eb'],['windows',windows,1798,'2c8ba366802fe193a354ec13a4ec39b2231e6bfccbd3462f6fec0b60797dc9f6'],['packaged',packaged,1760,'c33360dbea805e11577d133b488682a9f3b7de83686801ab656eafcec1b94625']];\nfor(const[name,paths,count,digest]of rows){const raw=JSON.stringify(paths)+'\\n',actual=createHash('sha256').update(raw).digest('hex');assert.equal(paths.length,count);assert.equal(actual,digest);for(const p of paths)assert.ok(existsSync(p),p);console.log(JSON.stringify({name,count,bytes:Buffer.byteLength(raw),sha256:actual,allPathsExist:true}));}\n"
+      ],
+      "startedAt": "2026-11-16T03:03:22.642746+00:00",
+      "finishedAt": "2026-11-16T03:03:22.722382+00:00",
+      "durationSeconds": 0.07965371099999174,
+      "exitCode": 0,
+      "bytes": 432,
+      "sha256": "2c53b68d58c40380f407657ef9eab248acbe9cb729aeea3e378509fb2497d247"
+    }
+  ],
+  "qualification": "Receipt compatibility regression only; semantic RED/GREEN review and all resulting-source Desktop/platform/cleanup qualification remain separate.",
+  "statusAfter": "",
+  "finishedAt": "2026-11-16T03:03:22.743530+00:00",
+  "allExecutedStepsExitZero": true,
+  "allAuthorizedStepsExecuted": true
+}

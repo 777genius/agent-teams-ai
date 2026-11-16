@@ -1,0 +1,70 @@
+{
+  "stage": "red",
+  "sourceHead": "da645f2c3e8e9ae3052f969ed2f17faae409bde1",
+  "sourceTree": "385f2796e1d65197cef5e5aaead9b29b9be415ab",
+  "parent": "2479c17426c3f09bfce093f78741495e0cb058a6",
+  "publishedR1": "2479c17426c3f09bfce093f78741495e0cb058a6",
+  "startedAt": "2026-11-16T02:59:21.572794+00:00",
+  "statusBefore": "clean",
+  "sourceFiles": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "gitBlob": "44cf93706a5b92be4296119810c7c07264cb4ccd",
+      "bytes": 119240,
+      "physicalLines": 1960,
+      "sha256": "c8c37d98de5700d2fa21afc46b61108235bb80f2c45505b73907ac33764b9a10"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts",
+      "gitBlob": "a370b8c16f18b21c34699114cd7d92ae801841b6",
+      "bytes": 9435,
+      "physicalLines": 181,
+      "sha256": "18481ee186a0f37843ffa45c894ddd702760887222a788be17a177694b969f58"
+    }
+  ],
+  "nodeExecutable": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeVersion": "v24.21.0",
+  "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "pnpmVersion": "11.22.0",
+  "AGENT_TEAMS_INSTALL_PROFILE": "node-ci",
+  "AGENT_BACKEND_TEST_NODE": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "resourceFlags": {
+    "NODE_OPTIONS": null,
+    "GOMAXPROCS": null,
+    "GOMEMLIMIT": null
+  },
+  "buildReuse": {
+    "newBuildAttempts": 0,
+    "verifiedHostBuildSource": "67c7135fb4e7d656c8cb4d96ad07a04d33bec263",
+    "allInterveningNonDocsPaths": [
+      "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts"
+    ],
+    "compiledDependencyInputsUnchanged": true,
+    "privacyHelperArtifactBytes": 8412,
+    "privacyHelperArtifactSha256": "5cb7e0122cbd8d9ebb3e224c7d0b2322df349c1f0a8092fe7aeaf8a19fd2d581"
+  },
+  "steps": [
+    {
+      "name": "provider-receipt-red-whole-file.log",
+      "argv": [
+        "node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "startedAt": "2026-11-16T02:59:21.786358+00:00",
+      "finishedAt": "2026-11-16T02:59:27.608192+00:00",
+      "durationSeconds": 5.82184106099885,
+      "exitCode": 1,
+      "bytes": 8590,
+      "sha256": "7da2ff652a9ea5436e556fdda1d2a6632dff11143fdd4b7568f131930df242ed"
+    }
+  ],
+  "qualification": "Receipt compatibility regression only; semantic RED/GREEN review and all resulting-source Desktop/platform/cleanup qualification remain separate.",
+  "stoppedAfterNonzero": "provider-receipt-red-whole-file.log",
+  "statusAfter": "",
+  "finishedAt": "2026-11-16T02:59:27.626902+00:00",
+  "allExecutedStepsExitZero": false,
+  "allAuthorizedStepsExecuted": true
+}

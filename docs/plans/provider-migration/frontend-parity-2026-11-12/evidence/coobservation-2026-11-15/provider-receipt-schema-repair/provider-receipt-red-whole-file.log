@@ -1,0 +1,113 @@
+✔ captured UI discovery waits for Main admission and actual mount while early diagnostics remain active (204.699995ms)
+✔ the original remaining startup deadline rejects a pending snapshot without late discovery or a reset (500.369877ms)
+✔ packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin (3.689364ms)
+✔ HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted (2.02801ms)
+✔ isolated shell fixture emits the actual framed environment and refuses shell effects (132.390302ms)
+✔ original in-progress Task comment prerequisite requires its exact stage without an assignment control (7.668207ms)
+✔ Task attachment comment waits for its original focused owner after one click before inserting text (210.207885ms)
+✔ original Task assignment prerequisite refuses receipt-only, pending and stale renderer state (4.097391ms)
+✔ original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface (2.482287ms)
+✔ original desktop click waits for stable target geometry, without repeating input (300.968211ms)
+✔ original Task hover waits through layout and unavailability before its one physical move (602.017345ms)
+✔ original desktop click refuses a constantly moving target before dispatch (1513.29195ms)
+✔ original owner-qualified click rereads its full expression through unavailability at unchanged coordinates (302.813813ms)
+✔ login failure facts retain only bounded original attempts and confirmed milestones (1.898737ms)
+✔ finite readiness failure summaries keep only bounded states and never private snapshot data (1.086478ms)
+✔ Taskboard failure summaries compare retained identities without exposing private snapshot values (1.493504ms)
+✔ installer failure summaries preserve original wait sites and attempts without inferring installation effects (1.962532ms)
+✔ installer failure projection does not invoke input getters and leaves oversized observations unknown (0.492964ms)
+✔ installer CDP and cleanup projection retains only exact finite observations (0.812319ms)
+✔ Selection target summaries retain the exact original phase and six closed facts (0.796676ms)
+✔ Selection target projection rejects unknown or malformed facts without exposing text or invoking getters (0.477872ms)
+✔ Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input (0.846891ms)
+✔ original desktop click refuses a target unavailable during the final ownership check (201.997629ms)
+✔ original desktop click refuses a target moved during the final ownership check (202.224228ms)
+✔ original default scroll preserves a disabled control before its readiness wait (1.147599ms)
+✔ original scroll opt-in reveals a covered checkbox with one bounded wheel (101.817512ms)
+✔ original desktop click rechecks owner after its pending final target read (201.584115ms)
+✔ original desktop click rechecks cutoff after its pending final target read (201.719508ms)
+✔ original clarification lookup admits its retained read without completing the assignment prerequisite (2.826809ms)
+✔ original clarification lookup refuses changed owner, revision, refresh and retained-read joins (17.395811ms)
+✔ original owner availability admits three captured A Teams through its actual first DOM read (2.247226ms)
+✔ original owner availability retains singleton, subset and duplicate-row cardinality semantics (1.726701ms)
+✔ original owner availability refuses foreign identities and preserves its existing aggregate guards (20.128129ms)
+✔ original owner availability refuses invalid captured discovery before navigation (0.575867ms)
+✔ owner availability admits every captured A Team through the actual first observation (0.38267ms)
+✔ owner availability refuses healthy B in unavailable A rows (0.282772ms)
+✔ owner availability refuses captured foreign owner in unavailable A rows (0.222892ms)
+✔ owner availability refuses unknown Team in unavailable A rows (0.364863ms)
+✔ owner availability refuses malformed Team in unavailable A rows (0.279005ms)
+✔ owner availability refuses missing selected A before original navigation (0.300017ms)
+✔ owner availability refuses non-string A handle before original navigation (0.143374ms)
+✔ owner availability refuses empty A handle before original navigation (0.158887ms)
+✔ owner availability refuses duplicate A handle before original navigation (0.09434ms)
+✔ owner availability refuses over-bound capture before original navigation (0.118897ms)
+✔ passive input keeps its actual Team target and three separate original navigation samples (2.502235ms)
+✔ passive navigation preserves non-card events, the original ring bounds and null or non-Team state (2.258723ms)
+✔ passive navigation refuses malformed target and store facts without losing original callbacks (23.489244ms)
+✔ passive navigation remains bounded and cannot interrupt original writes on diagnostic failure (3.270199ms)
+✔ passive navigation uses only the callable store own method and ignores unrelated card surfaces (1.970273ms)
+✖ the selected provider receipt digest matches the actual manifest-selected archive bytes (5.670413ms)
+✖ provider receipt legacy, current and equal-dual implementation digests preserve manifest authority (3.64025ms)
+✖ every present provider implementation digest must be valid and both recognized fields must agree (3.425281ms)
+✔ provider receipt shape, package selection and original file or JSON errors remain strict (11.726169ms)
+ℹ tests 53
+ℹ suites 0
+ℹ pass 50
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5778.431775
+
+✖ failing tests:
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:1853:1
+✖ the selected provider receipt digest matches the actual manifest-selected archive bytes (5.670413ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(typeof sha256 === 'string' && /^[a-f0-9]{64}$/.test(sha256))
+  
+      at readNativeProviderArtifact (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts:23:10)
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:1863:20)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:1866:1
+✖ provider receipt legacy, current and equal-dual implementation digests preserve manifest authority (3.64025ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(typeof sha256 === 'string' && /^[a-f0-9]{64}$/.test(sha256))
+  
+      at readNativeProviderArtifact (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts:23:10)
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:1886:22)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:1890:1
+✖ every present provider implementation digest must be valid and both recognized fields must agree (3.425281ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection: {"newSha256":"a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1","sha256":"b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"}
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:1912:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { code: 'ERR_ASSERTION' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
