@@ -1,0 +1,468 @@
+{
+  "schema": "c714-corrected-title-r1-root-actual-publication-v1",
+  "reviewer": "root",
+  "at": "2026-11-16T23:08:09.848Z",
+  "verdict": "ACCEPTED exact actual R1 publication; independent actual report remains required before control authorship",
+  "commit": "c2402ee9d4d7e7fbd863991bfa5d7aacfea88b74",
+  "soleParent": "80ab67811c66d03b885bb72745cc91484078f6ac",
+  "tree": "1c641c48082b89f0937da2f897c5d7013ee25dfe",
+  "docsTree": "bd5470093f86808c5963a67410f0b9fbaf218c3a",
+  "manifest": {
+    "bytes": 8080,
+    "sha256": "f9ceeb71d979315803ef9997fb37085849783af23fea86152d1c1d4eb165b4b4",
+    "gitBlob": "93c6c13493864c33b91a34638c7f6978e914e6d9"
+  },
+  "r1": {
+    "bytes": 99012,
+    "sha256": "0efc555482f0088cb2d45a8efd07039ccfcf089b67d5cca7f46ff30cbe71378c",
+    "gitBlob": "2fbac18b3ce8f6703b1e328b266e25954f45ddb8"
+  },
+  "method": "Fresh actual commit/ref/root plus complete recursive docs tree and all14 changed full bodies; exact53 unchanged non-doc root entries join the already accepted complete80ab census. Unchanged source subtrees are not represented as freshly re-enumerated here.",
+  "census": {
+    "leaves": 11837,
+    "docs": 3039,
+    "nonDocs": 8798,
+    "workflows": 42,
+    "docsTreeEntries": 3445
+  },
+  "delta": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "status": "modified",
+      "before": {
+        "sha": "1050796efbbb561e5db91788055bb31be4629897",
+        "mode": "100644"
+      },
+      "after": {
+        "sha": "8b5a474058caccc916882d422cc56e84eaad06af",
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "status": "modified",
+      "before": {
+        "sha": "f269fe29cb7b3bcbe7be6ff67936bc91a44c0b62",
+        "mode": "100644"
+      },
+      "after": {
+        "sha": "8e02ed0ef00a7a6a06aec571e4a9f38dc675b2ee",
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "status": "modified",
+      "before": {
+        "sha": "e7e28e7c9d7032fe1034b128bae2953002fc2c88",
+        "mode": "100644"
+      },
+      "after": {
+        "sha": "416da59c368a721136a2fa5dcfecd886cf3f418c",
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/canonical-typecheck-build-dependency-followup-20261116.json",
+      "status": "added",
+      "after": {
+        "sha": "fda4f3212f58cdbfa62c331646ab8b7a314421df",
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/canonical-typecheck-root-tsc-shim-read-20261116.json",
+      "status": "added",
+      "after": {
+        "sha": "9a781b05ed5e5356ca2a3f94cd308a7f0cc10bea",
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-20261116.json",
+      "status": "added",
+      "after": {
+        "sha": "2fbac18b3ce8f6703b1e328b266e25954f45ddb8",
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-binding-review-20261116.json",
+      "status": "added",
+      "after": {
+        "sha": "c1c1ace034643b96bf4cd4e9234a87dbd28822bc",
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-guard-review-20261116.json",
+      "status": "added",
+      "after": {
+        "sha": "097d04fa9d0fa693c31a3c1d14bc47758defc760",
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-publication-manifest-20261116.json",
+      "status": "added",
+      "after": {
+        "sha": "93c6c13493864c33b91a34638c7f6978e914e6d9",
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-root-review-20261116.json",
+      "status": "added",
+      "after": {
+        "sha": "4f9cb5b2a3ed52f0c140f6f6b5a6cd02e65db15a",
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-semantic-review-20261116.json",
+      "status": "added",
+      "after": {
+        "sha": "ca250c5c83647d5d6956d205c5ceb9791b9634ea",
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-actual-independent-publication-20261116.json",
+      "status": "added",
+      "after": {
+        "sha": "6b01764af5385a487e2632bde0e8592584c8515c",
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-actual-root-publication-20261116.json",
+      "status": "added",
+      "after": {
+        "sha": "9855604ffea7ef83a09ff72af0ee37efc5de4e9c",
+        "mode": "100644"
+      }
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-d-pr8-8d471b51-full-source-assessment-20261116.json",
+      "status": "added",
+      "after": {
+        "sha": "5ffc7e19909d5374a6b7a1f11318e026fedcaebd",
+        "mode": "100644"
+      }
+    }
+  ],
+  "bodyReadbacks": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-20261116.json",
+      "bytes": 99012,
+      "sha256": "0efc555482f0088cb2d45a8efd07039ccfcf089b67d5cca7f46ff30cbe71378c",
+      "gitBlob": "2fbac18b3ce8f6703b1e328b266e25954f45ddb8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-root-review-20261116.json",
+      "bytes": 8892,
+      "sha256": "cd7787c97b0a2e3ce7574ead6ca9ce9b83f59266079d5afa315fb0c9eb9d7867",
+      "gitBlob": "4f9cb5b2a3ed52f0c140f6f6b5a6cd02e65db15a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-binding-review-20261116.json",
+      "bytes": 61763,
+      "sha256": "d24e61f10818e156fec7eadccd7f9d04607bd2f6e0095b72b070af2ef9ae3406",
+      "gitBlob": "c1c1ace034643b96bf4cd4e9234a87dbd28822bc"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-guard-review-20261116.json",
+      "bytes": 59821,
+      "sha256": "42f0bc02651b061669e9b54eb572561904ec33098ad15257c4f0cb3ca91ef5b3",
+      "gitBlob": "097d04fa9d0fa693c31a3c1d14bc47758defc760"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-actual-root-publication-20261116.json",
+      "bytes": 637745,
+      "sha256": "eee92688c33d0e13f1ec52248aa3e9b28bbdc3fec380b986109423f7bdb0921e",
+      "gitBlob": "9855604ffea7ef83a09ff72af0ee37efc5de4e9c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-actual-independent-publication-20261116.json",
+      "bytes": 203042,
+      "sha256": "4ddc471061fa4231fbca397c1a7ab9310a84df51069701d44b5591e98d4e6f27",
+      "gitBlob": "6b01764af5385a487e2632bde0e8592584c8515c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-d-pr8-8d471b51-full-source-assessment-20261116.json",
+      "bytes": 622743,
+      "sha256": "c42a392f73cce6658fd6e564c0502b084ff76dd69363943128258a2293946bff",
+      "gitBlob": "5ffc7e19909d5374a6b7a1f11318e026fedcaebd"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/canonical-typecheck-build-dependency-followup-20261116.json",
+      "bytes": 28558,
+      "sha256": "67730e8ad30453e7de76f949cb7a8128360848ad12908fef16d155321dc36e93",
+      "gitBlob": "fda4f3212f58cdbfa62c331646ab8b7a314421df"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/canonical-typecheck-root-tsc-shim-read-20261116.json",
+      "bytes": 3887,
+      "sha256": "2e0488fb876f49ba94da8204f9843dbf9da4680004b289920030dba8a0583129",
+      "gitBlob": "9a781b05ed5e5356ca2a3f94cd308a7f0cc10bea"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-semantic-review-20261116.json",
+      "bytes": 72429,
+      "sha256": "b158a9a257fe0ae01af6741630aeac2d37de0be52264902df0972297b12e5f5a",
+      "gitBlob": "ca250c5c83647d5d6956d205c5ceb9791b9634ea"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "bytes": 2544199,
+      "sha256": "185252e8eba2f0320d27ecef6551cd08ccfd4870e9c3b30a8b4791ef204be6fc",
+      "gitBlob": "8b5a474058caccc916882d422cc56e84eaad06af"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "bytes": 40419,
+      "sha256": "94411c608cdb7b9a524a274f1ee9089eba3cf2b300bd0c9de9476ea00011f7eb",
+      "gitBlob": "8e02ed0ef00a7a6a06aec571e4a9f38dc675b2ee"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "bytes": 142872,
+      "sha256": "ea288295a3c5598558eb3910a39ac98d0054c9d3ca67ed1e9ad0a74f8a3dea55",
+      "gitBlob": "416da59c368a721136a2fa5dcfecd886cf3f418c"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-publication-manifest-20261116.json",
+      "bytes": 8080,
+      "sha256": "f9ceeb71d979315803ef9997fb37085849783af23fea86152d1c1d4eb165b4b4",
+      "gitBlob": "93c6c13493864c33b91a34638c7f6978e914e6d9"
+    }
+  ],
+  "bodyCount": 14,
+  "bodyBytes": 4533462,
+  "checks": [
+    {
+      "name": "Actual pushed commit/sole parent",
+      "pass": true
+    },
+    {
+      "name": "Exact complete root/docs trees",
+      "pass": true
+    },
+    {
+      "name": "All53 non-doc root entries unchanged",
+      "pass": true
+    },
+    {
+      "name": "Complete exact14 docs delta11adds3mods",
+      "pass": true,
+      "detail": {
+        "parentLeavesChecked": 3028,
+        "unchangedParentDocs": 3025
+      }
+    },
+    {
+      "name": "Complete resulting census",
+      "pass": true
+    },
+    {
+      "name": "Actual full body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Actual full body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-root-review-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Actual full body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-binding-review-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Actual full body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-guard-review-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Actual full body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-actual-root-publication-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Actual full body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-actual-independent-publication-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Actual full body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-d-pr8-8d471b51-full-source-assessment-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Actual full body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/canonical-typecheck-build-dependency-followup-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Actual full body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/canonical-typecheck-root-tsc-shim-read-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Actual full body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-semantic-review-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Actual full body docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "pass": true
+    },
+    {
+      "name": "Actual full body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "pass": true
+    },
+    {
+      "name": "Actual full body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-retention-catalog-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Actual full body docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-publication-manifest-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Complete unchanged parent prefix docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "pass": true
+    },
+    {
+      "name": "Complete unchanged parent prefix docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/continuation-status-20261116.md",
+      "pass": true
+    },
+    {
+      "name": "All27 original bundles/totals literal-value preserved",
+      "pass": true
+    },
+    {
+      "name": "All other prior catalog fields preserved",
+      "pass": true,
+      "detail": {
+        "keys": [
+          "kind",
+          "schemaVersion",
+          "parentCandidate",
+          "source",
+          "baselineIndex",
+          "baselineActualPublication",
+          "baselineIndependentPublication",
+          "late06ActualPublication",
+          "late06IndependentPublication",
+          "bundles",
+          "conversationBinding",
+          "localEnvironment",
+          "remainingRuntimeBudgets",
+          "totals",
+          "incomingDeliveryAudit",
+          "environmentObservations",
+          "historicalLocalEnvironment",
+          "freshConversationBinding",
+          "originalCiFinal",
+          "freshRecoveryCheckpoint",
+          "originalArtifactAnalyses",
+          "totalsQualification",
+          "freshRecoveryEvidenceFiles",
+          "freshRunnerR2",
+          "currentConversationStage",
+          "originalP09ArtifactReview",
+          "priorConversationStageAtProducerPublication",
+          "crossCloseProspectiveScope",
+          "incomingDeliveryUpdates",
+          "currentCrossCloseStage",
+          "priorCrossCloseStageAtTestPublication",
+          "priorCrossCloseStageAtRedControlsPublication",
+          "priorCrossCloseStageAtGreenBindingPublication",
+          "priorCrossCloseStageAtRecoveryR1Publication",
+          "crossValidationRecoveryEvidenceFiles",
+          "incomingDeliveryLatestSourceAssessment",
+          "priorCrossCloseStageAtRecoveryControlsPublication",
+          "crossValidationRecoveryControlEvidenceFiles",
+          "priorCrossCloseStageAtRecoveryCompletion",
+          "crossValidationRecoveryCompletionEvidenceFiles",
+          "combined139Renderer85R1EvidenceFiles",
+          "priorCombinedNodeRendererStageAtTestPublication",
+          "combined139Renderer85TestEvidenceFiles",
+          "priorCombinedNodeRendererStageAtControlsPublication",
+          "combined139Renderer85ControlEvidenceFiles",
+          "priorCombinedNodeRendererStageAtTestMaterialization",
+          "combined139Renderer85TestMaterializationEvidenceFiles",
+          "priorCombinedNodeRendererStageAtRefusedRed",
+          "combined139Renderer85RefusedRedEvidenceFiles",
+          "incomingDeliveryAtRefusedCombinedRed"
+        ]
+      }
+    },
+    {
+      "name": "Prior refused stage archived exactly",
+      "pass": true
+    },
+    {
+      "name": "Current catalog exactbody join docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Current catalog exactbody join docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-root-review-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Current catalog exactbody join docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-binding-review-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Current catalog exactbody join docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-guard-review-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Current catalog exactbody join docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-actual-root-publication-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Current catalog exactbody join docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-red-refused-actual-independent-publication-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Current catalog exactbody join docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-d-pr8-8d471b51-full-source-assessment-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Current catalog exactbody join docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/canonical-typecheck-build-dependency-followup-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Current catalog exactbody join docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/canonical-typecheck-root-tsc-shim-read-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Current catalog exactbody join docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-semantic-review-20261116.json",
+      "pass": true
+    },
+    {
+      "name": "Scope selected while runtime/control/producer remain uncreated",
+      "pass": true
+    },
+    {
+      "name": "Exact R1 selected",
+      "pass": true
+    },
+    {
+      "name": "All3 exact accepted independent R1 reviews",
+      "pass": true
+    },
+    {
+      "name": "D audit is source-only and unadopted",
+      "pass": true
+    },
+    {
+      "name": "Canonical follow-up selects no preparation or runtime",
+      "pass": true
+    }
+  ],
+  "checkCount": 39,
+  "originalRefusedAttempt": {
+    "outer": 2,
+    "spent": true,
+    "resultsTransfer": false
+  },
+  "currentControlsAuthored": false,
+  "producerAuthored": false,
+  "currentRuntimeExecuted": false,
+  "next": "Complete independent actual publication readback, read it fully, then close the R1 control-authorship gate. No runtime or producer permission is inferred."
+}

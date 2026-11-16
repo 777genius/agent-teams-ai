@@ -223,3 +223,11 @@ Prospective R1 v2 2fbac18b is accepted by Guard097d04fa, bindingc1c1ace0 and sem
 No new test materialization is allowed. Historical f542/906d/f7 evidence retains original identities and false/null runtime fields; the new RED must freshly read the complete current six-overlay source and full runtime inputs. All deadlines, cleanup, currentness, census and no-replay requirements remain. No descendant runner/binding or producer postimage has been authored and no new primary has run. Complete actual publication readbacks precede control authorship; controlR2/publication/readbacks precede execution; accepted new RED/publication/readbacks precede producer fixes.
 
 D diagnostic source review5ffc7e19 is complete without runtime/adoption qualification. Canonical MCP dependency/shim/peer closure remains incomplete; root tsc routes to7.0.2 while module TypeScript5.9.3 exists. Platform/GUI/integration/canonical build and whole E2E remainOPEN.
+
+## Exact corrected controls reviewed; new RED pending
+
+Runner 7a79af4f and full binding a5c9e9c3 are accepted by Guard 4f347c09 (177 checks), binding 5377837f (252), semantic ecfeea25 (214), and root static review 87aeef52 (172). Proposal dc31f576 proves the complete five-edit forward/inverse and all 52 unchanged functions. The c240 R1 actual gate closed before both authoring timestamps; root 39858618 and independent ab99273c reports are now retained.
+
+Only six expected renderer titles change. Whole 139/85 tests, 139 Node names, other 79 renderer names, exact current nine-row vector, all clocks and full boundaries remain unchanged. RED rematerialization is forbidden; the original runner/binding/f542 receipt join the fresh 13-control census as historical evidence. Original outer2 stays REFUSED/SPENT. GREEN keeps its own producer-materialization gate.
+
+No new staging/runtime/producer change yet. Next: complete actual control-publication root and independent readbacks, exclusive staging, then one complete fresh corrected RED. Producer authorship remains closed until that RED is accepted and published/read back. Native/platform/GUI/integration/canonical typecheck/build and whole E2E remain open.

@@ -2484,49 +2484,75 @@
     }
   ],
   "currentCombinedNodeRendererStage": {
-    "stage": "exact corrected-title prospective R1 reviewed; actual publication readbacks and descendant control authorship pending",
+    "stage": "exact corrected-title control R2 accepted; actual control-publication readbacks and new RED pending",
     "r1": {
       "bytes": 99012,
       "sha256": "0efc555482f0088cb2d45a8efd07039ccfcf089b67d5cca7f46ff30cbe71378c",
       "gitBlob": "2fbac18b3ce8f6703b1e328b266e25954f45ddb8"
     },
+    "r1Publication": "c2402ee9d4d7e7fbd863991bfa5d7aacfea88b74",
+    "r1ActualGate": {
+      "kind": "corrected-title-r1-control-authorship-gate-closed",
+      "at": "2026-11-16T23:12:38.378Z",
+      "r1": {
+        "bytes": 99012,
+        "sha256": "0efc555482f0088cb2d45a8efd07039ccfcf089b67d5cca7f46ff30cbe71378c",
+        "gitBlob": "2fbac18b3ce8f6703b1e328b266e25954f45ddb8"
+      },
+      "commit": "c2402ee9d4d7e7fbd863991bfa5d7aacfea88b74",
+      "tree": "1c641c48082b89f0937da2f897c5d7013ee25dfe",
+      "root": {
+        "bytes": 20615,
+        "sha256": "771c21e1e7f582d6983e2070bf93602ad3d24cfd4c737bdb1dda3e71ae14c255",
+        "gitBlob": "3985861870b7ebd448978d83e4ea7577c4d0eb58"
+      },
+      "independent": {
+        "bytes": 74113,
+        "sha256": "ec3023dae83daed61ef312d10d106c73aa222b2e0016061a0b627383f14779ff",
+        "gitBlob": "ab99273cdb4da1f27d6650242755cb24e5d0c3a6"
+      },
+      "rootFullReadIndependent": true,
+      "allowedNow": "Minimal descendant runner and full binding authorship only under exact R1 v2. No staging/runtime before R2 and complete publication/readbacks; no producer postimages before accepted new RED and publication/readbacks.",
+      "newControlsAuthoredBeforeGate": false,
+      "producerPostimagesAuthored": false,
+      "originalAttempt": "outer2 REFUSED/SPENT"
+    },
+    "runner": {
+      "bytes": 94938,
+      "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+      "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+    },
+    "binding": {
+      "bytes": 5856749,
+      "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+      "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+    },
+    "proposal": {
+      "bytes": 58466,
+      "sha256": "d1c9f8b3d8f29bf2fa29612c7e21d1d2329f910c4028cc5b9284dd691d2539be",
+      "gitBlob": "dc31f57655d839d6d2eb3ad83c611cb043d9979d"
+    },
     "rootStaticReview": {
-      "bytes": 8892,
-      "sha256": "cd7787c97b0a2e3ce7574ead6ca9ce9b83f59266079d5afa315fb0c9eb9d7867",
-      "gitBlob": "4f9cb5b2a3ed52f0c140f6f6b5a6cd02e65db15a"
+      "bytes": 49177,
+      "sha256": "8b00e75b9dfb838acd925b17b9b087ce5c63504856020e7805d52bab700facfd",
+      "gitBlob": "87aeef526f6170a13de8ced95a9b85a307b39faa"
     },
     "independentReviews": {
       "guard": {
-        "bytes": 59821,
-        "sha256": "42f0bc02651b061669e9b54eb572561904ec33098ad15257c4f0cb3ca91ef5b3",
-        "gitBlob": "097d04fa9d0fa693c31a3c1d14bc47758defc760"
+        "bytes": 39860,
+        "sha256": "63c90b7e8ef47a82770d6c02d8ed76abbd6efd552d1c2bdb37abd7fed356ab40",
+        "gitBlob": "4f347c09efe4338f876a87effa321af13f8a75ae"
       },
       "binding": {
-        "bytes": 61763,
-        "sha256": "d24e61f10818e156fec7eadccd7f9d04607bd2f6e0095b72b070af2ef9ae3406",
-        "gitBlob": "c1c1ace034643b96bf4cd4e9234a87dbd28822bc"
+        "bytes": 94562,
+        "sha256": "02da8d8d4729e516e5815185e7325677ea7e5d798c1d3f0630d6264c26ac7ed8",
+        "gitBlob": "5377837fca3784833df224d4b926f3e83767f2f8"
       },
       "semantic": {
-        "bytes": 72429,
-        "sha256": "b158a9a257fe0ae01af6741630aeac2d37de0be52264902df0972297b12e5f5a",
-        "gitBlob": "ca250c5c83647d5d6956d205c5ceb9791b9634ea"
+        "bytes": 68522,
+        "sha256": "1e36d41e920cd47e4df65ca15b89208010dadb3b66ccf6074951932eec57c80b",
+        "gitBlob": "ecfeea25b954547564439477e3fd11f38876293f"
       }
-    },
-    "refusedOriginalPublication": {
-      "commit": "80ab67811c66d03b885bb72745cc91484078f6ac",
-      "root": {
-        "bytes": 637745,
-        "sha256": "eee92688c33d0e13f1ec52248aa3e9b28bbdc3fec380b986109423f7bdb0921e",
-        "gitBlob": "9855604ffea7ef83a09ff72af0ee37efc5de4e9c"
-      },
-      "independent": {
-        "bytes": 203042,
-        "sha256": "4ddc471061fa4231fbca397c1a7ab9310a84df51069701d44b5591e98d4e6f27",
-        "gitBlob": "6b01764af5385a487e2632bde0e8592584c8515c"
-      },
-      "originalOuter": 2,
-      "originalAttempt": "REFUSED/SPENT",
-      "primaryTransfer": false
     },
     "currentTests": {
       "node": {
@@ -2557,8 +2583,7 @@
       "fullC5IndexLeaves": 11567,
       "qualification": "Historical exact source-after reference only; fresh complete current source/runtime inputs remain required before and after the new package."
     },
-    "correctedOld80NameSha256": "44190c52c6792220519c4468b9c936671015276dcee08883a1cac966f27ff9f9",
-    "correctionOrdinals": [
+    "exactSixTitleCorrections": [
       1,
       2,
       3,
@@ -2566,18 +2591,33 @@
       5,
       6
     ],
-    "testMaterializationAttempts": 0,
-    "newRedAttempts": 1,
-    "newGreenAttempts": 1,
-    "replacementScopeSelected": true,
-    "r1Reviewed": true,
-    "controlsAuthored": false,
+    "unchangedFullFunctions": 52,
+    "fullEmbeddedReviewBodies": 43,
+    "original33ReviewRecordsLiteralIdentical": true,
+    "fullOverlayInstances": 18,
+    "currentControlCensus": 13,
+    "originalAttempt": {
+      "classification": "REFUSED/SPENT",
+      "observedOuterExit": 2,
+      "replayed": false,
+      "primaryTransfer": false
+    },
+    "attempts": {
+      "materializeTests": 0,
+      "redPackage": 1,
+      "materializeProducers": 1,
+      "greenPackage": 1,
+      "validationPackage": 1
+    },
+    "controlsAuthored": true,
+    "controlsR2Accepted": true,
     "controlsStaged": false,
     "runtimeExecuted": false,
     "acceptedCombinedRed": null,
+    "acceptedCombinedGreen": null,
     "producerAuthorshipGateOpened": false,
     "producerPostimagesAuthored": false,
-    "next": "Complete actual R1 publication readbacks, then author only the minimal exact descendant controls. ControlR2/publication/readbacks before staging/execution. Fresh accepted new RED plus publication/readbacks before three producer postimages. Original attempt remains spent."
+    "next": "Complete root and independent actual readbacks of this exact publication, then exclusive staging and the one complete fresh corrected RED. No test rematerialization. Accepted new RED plus publication/readbacks precede producer postimages. Broader E2E remains open."
   },
   "priorCombinedNodeRendererStageAtTestPublication": {
     "stage": "exact R1 published; complete actual readback required before authorship",
@@ -3264,5 +3304,157 @@
     "fastmcpAndTsupPayloadsPresent": false,
     "canonicalTypecheckOrBuildExecuted": false,
     "newPreparationScopeSelected": false
-  }
+  },
+  "priorCombinedNodeRendererStageAtCorrectedControls": {
+    "stage": "exact corrected-title prospective R1 reviewed; actual publication readbacks and descendant control authorship pending",
+    "r1": {
+      "bytes": 99012,
+      "sha256": "0efc555482f0088cb2d45a8efd07039ccfcf089b67d5cca7f46ff30cbe71378c",
+      "gitBlob": "2fbac18b3ce8f6703b1e328b266e25954f45ddb8"
+    },
+    "rootStaticReview": {
+      "bytes": 8892,
+      "sha256": "cd7787c97b0a2e3ce7574ead6ca9ce9b83f59266079d5afa315fb0c9eb9d7867",
+      "gitBlob": "4f9cb5b2a3ed52f0c140f6f6b5a6cd02e65db15a"
+    },
+    "independentReviews": {
+      "guard": {
+        "bytes": 59821,
+        "sha256": "42f0bc02651b061669e9b54eb572561904ec33098ad15257c4f0cb3ca91ef5b3",
+        "gitBlob": "097d04fa9d0fa693c31a3c1d14bc47758defc760"
+      },
+      "binding": {
+        "bytes": 61763,
+        "sha256": "d24e61f10818e156fec7eadccd7f9d04607bd2f6e0095b72b070af2ef9ae3406",
+        "gitBlob": "c1c1ace034643b96bf4cd4e9234a87dbd28822bc"
+      },
+      "semantic": {
+        "bytes": 72429,
+        "sha256": "b158a9a257fe0ae01af6741630aeac2d37de0be52264902df0972297b12e5f5a",
+        "gitBlob": "ca250c5c83647d5d6956d205c5ceb9791b9634ea"
+      }
+    },
+    "refusedOriginalPublication": {
+      "commit": "80ab67811c66d03b885bb72745cc91484078f6ac",
+      "root": {
+        "bytes": 637745,
+        "sha256": "eee92688c33d0e13f1ec52248aa3e9b28bbdc3fec380b986109423f7bdb0921e",
+        "gitBlob": "9855604ffea7ef83a09ff72af0ee37efc5de4e9c"
+      },
+      "independent": {
+        "bytes": 203042,
+        "sha256": "4ddc471061fa4231fbca397c1a7ab9310a84df51069701d44b5591e98d4e6f27",
+        "gitBlob": "6b01764af5385a487e2632bde0e8592584c8515c"
+      },
+      "originalOuter": 2,
+      "originalAttempt": "REFUSED/SPENT",
+      "primaryTransfer": false
+    },
+    "currentTests": {
+      "node": {
+        "bytes": 164965,
+        "sha256": "852bedb85c83dbc4b488dffb4a9ffebbe398adc53e85f5a3cea8ca36b146cbf7",
+        "gitBlob": "896c587e077da56a98a314a175fb3cba0353d6ee"
+      },
+      "renderer": {
+        "bytes": 187890,
+        "sha256": "b6f11896e60014aac785968d42390afde38716d47de9bba9562522235db048c9",
+        "gitBlob": "76495189c992fcda47cd7a43a0c697190b5acbb3"
+      }
+    },
+    "currentSourceVector": {
+      "bytes": 2118,
+      "sha256": "f2574559a378b3bc537fdcedbde161003c8344a5485dfff9322214f6fda2a90c",
+      "gitBlob": "f6446bdc2bbdb511206c729a1f03717871baea6d"
+    },
+    "currentSource": {
+      "identity": {
+        "bytes": 2478745,
+        "sha256": "238e6f8dc2cd570845441ff537242103449056bcb68ad7089e169e2d530840c5",
+        "gitBlob": "499fe05449dfd5b2e4e46d4a4629c24b2fcc696d"
+      },
+      "sourceRows": 8798,
+      "physicalOverlays": 6,
+      "workflowLeaves": 42,
+      "fullC5IndexLeaves": 11567,
+      "qualification": "Historical exact source-after reference only; fresh complete current source/runtime inputs remain required before and after the new package."
+    },
+    "correctedOld80NameSha256": "44190c52c6792220519c4468b9c936671015276dcee08883a1cac966f27ff9f9",
+    "correctionOrdinals": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "testMaterializationAttempts": 0,
+    "newRedAttempts": 1,
+    "newGreenAttempts": 1,
+    "replacementScopeSelected": true,
+    "r1Reviewed": true,
+    "controlsAuthored": false,
+    "controlsStaged": false,
+    "runtimeExecuted": false,
+    "acceptedCombinedRed": null,
+    "producerAuthorshipGateOpened": false,
+    "producerPostimagesAuthored": false,
+    "next": "Complete actual R1 publication readbacks, then author only the minimal exact descendant controls. ControlR2/publication/readbacks before staging/execution. Fresh accepted new RED plus publication/readbacks before three producer postimages. Original attempt remains spent."
+  },
+  "combined139Renderer85CorrectedControlEvidenceFiles": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-runner-20261116.py",
+      "bytes": 94938,
+      "sha256": "320e7cb7f352391270768109ba03f1289bb4972692c46fc06541f70485d84559",
+      "gitBlob": "7a79af4fcc4c178d8c57e41a21c410a6c78f7e59"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-red-binding-20261116.json",
+      "bytes": 5856749,
+      "sha256": "9bb126a4c4c935981f06ed90a7f22d6648864a048546a63c93d55f18a1b3189a",
+      "gitBlob": "a5c9e9c337b0140fa9f3b8b764a22663c5f11c03"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-control-r2-proposal-20261116.json",
+      "bytes": 58466,
+      "sha256": "d1c9f8b3d8f29bf2fa29612c7e21d1d2329f910c4028cc5b9284dd691d2539be",
+      "gitBlob": "dc31f57655d839d6d2eb3ad83c611cb043d9979d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-control-root-review-20261116.json",
+      "bytes": 49177,
+      "sha256": "8b00e75b9dfb838acd925b17b9b087ce5c63504856020e7805d52bab700facfd",
+      "gitBlob": "87aeef526f6170a13de8ced95a9b85a307b39faa"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-control-guard-review-20261116.json",
+      "bytes": 39860,
+      "sha256": "63c90b7e8ef47a82770d6c02d8ed76abbd6efd552d1c2bdb37abd7fed356ab40",
+      "gitBlob": "4f347c09efe4338f876a87effa321af13f8a75ae"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-control-binding-review-20261116.json",
+      "bytes": 94562,
+      "sha256": "02da8d8d4729e516e5815185e7325677ea7e5d798c1d3f0630d6264c26ac7ed8",
+      "gitBlob": "5377837fca3784833df224d4b926f3e83767f2f8"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-control-semantic-review-20261116.json",
+      "bytes": 68522,
+      "sha256": "1e36d41e920cd47e4df65ca15b89208010dadb3b66ccf6074951932eec57c80b",
+      "gitBlob": "ecfeea25b954547564439477e3fd11f38876293f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-actual-root-publication-20261116.json",
+      "bytes": 20615,
+      "sha256": "771c21e1e7f582d6983e2070bf93602ad3d24cfd4c737bdb1dda3e71ae14c255",
+      "gitBlob": "3985861870b7ebd448978d83e4ea7577c4d0eb58"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/combined139-renderer85-corrected-title-r1-actual-independent-publication-20261116.json",
+      "bytes": 74113,
+      "sha256": "ec3023dae83daed61ef312d10d106c73aa222b2e0016061a0b627383f14779ff",
+      "gitBlob": "ab99273cdb4da1f27d6650242755cb24e5d0c3a6"
+    }
+  ]
 }
