@@ -96,7 +96,7 @@ function fixture(options: { allowB?: boolean; sameHome?: boolean; creation?: boo
     ownerRevision: context.owner.revision, contextId: 'TEST-context-A', projectPath: options.creation ? seed.cwd : null, runtimeId: provider,
     profileId: seed.profileId, configRevision: seed.configRevision, teamScopes: [scope('A'), ...(options.allowB ? [scope('B')] : [])] },
     commandId: 'TEST-publish-A', expectedRevision: 'd'.repeat(64), candidate: { sourceKind: 'app-managed', executable: next,
-      nativeCli: { executable: next, version }, ...(options.openCode ? { openCodePreferences: preferences } : {}) } });
+      nativeCli: { executable: next, version, ...(options.openCode ? { generation: 'v1' as const } : {}) }, ...(options.openCode ? { openCodePreferences: preferences } : {}) } });
   input.expectedRevision = runtimeDigest({ grant: input.grant, seed });
   const store = new FileManagementCommandStore(root);
   const publish = (request: typeof input) => {
@@ -112,7 +112,7 @@ function fixture(options: { allowB?: boolean; sameHome?: boolean; creation?: boo
     return record;
   };
   const retained = options.retainOriginal ? publish({ ...input, commandId: 'TEST-publish-original',
-    candidate: { ...input.candidate, executable: original, nativeCli: { executable: original, version } } }) : undefined;
+    candidate: { ...input.candidate, executable: original, nativeCli: { executable: original, version, ...(options.openCode ? { generation: 'v1' as const } : {}) } } }) : undefined;
   if (retained) input.expectedRevision = retained.revision;
   const record = publish(input);
   const profile = (name: 'A' | 'B'): SelectedWindowsProcessProfile => {
