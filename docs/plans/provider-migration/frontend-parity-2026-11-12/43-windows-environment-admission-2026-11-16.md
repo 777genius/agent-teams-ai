@@ -58,7 +58,7 @@ Use existing prepare/resume verification and immutable encoded-spec continuity. 
 | src/features/agent-backend/main/infrastructure/CapturedWindowsRuntimeSources.ts | `c841e367d7c10c6dcc4c5abe752daf03aa571928` | 246 |
 | src/features/agent-backend/main/infrastructure/capturedWindowsSourceAssociation.ts | `c732bec2232fca83f033ea378dfcd11a2d14b31f` | 76 |
 
-The two new helper files are expected to remain below roughly 350 and 320 lines respectively. **Every new or changed file must remain at or below 800 LOC.** No size-budget baseline increase, code compression or architectural split merely to evade that limit is part of this cut.
+The two new helper files are expected to remain below roughly 350 and 320 lines respectively. **Every new or changed production source file must remain at or below 800 LOC.** No size-budget baseline increase, code compression or architectural split merely to evade that limit is part of this cut.
 
 Planning envelope after the MCP/model review: about 170–230 existing source lines moved and 250–400 net source lines, plus 200–320 test lines. This is an estimate, not a completed patch. The narrow default capture belongs in the listed existing Main capture path. If actual implementation needs another source path, revise the concrete inventory before touching it instead of adding generic exceptions.
 
@@ -95,3 +95,5 @@ The original Host Team lane already runs complete typed lint for `src/features`,
 - `test/features/agent-backend/capturedWindowsSourceHistory.test.ts`
 
 The changed Codex/Coordination/Selection paths are already in the original operand list. Append `test/features/agent-backend/capturedWindowsSourcePending.test.ts` only if that planned existing test is actually changed. Preserve every original operand in its original order, all commands, full typechecks/typed lint, steps, selectors, jobs, failure conditions and deadlines. This is one additional validation-only path; the eight existing production paths and two planned pure helpers are unchanged. Independent source R2 must verify the exact operand-only diff before publication. No manual CI action is selected.
+
+The CI YAML already contains 1,351 lines and is outside the repository's production-source file-size guard. The selected operand-only result has 1,356 lines: before Git blob `bdafbc763a97fee129c0ee576beddf402b4faf4a`, after `0107fe66a86e21f00c3a51ecb6ef637be1f0fc9f`, SHA256 `a80b3170e2414616a8024b03c7e7c875894505806f6bfaf493caf09baa697799`. Independent R2 verified the complete before/after bytes and all 108 original operands; only the five listed operands and required terminal continuation change. This clarification preserves the established 800-line production-source limit and every baseline; it creates no code-size exception.
