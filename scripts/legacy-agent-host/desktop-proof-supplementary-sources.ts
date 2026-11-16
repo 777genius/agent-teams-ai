@@ -281,6 +281,11 @@ export const desktopProofSupplementarySources = [
   'src/features/agent-backend/main/infrastructure/matchesWindowsLaunchEnvironment.ts',
   'src/renderer/hooks/useMentionDetection.ts',
   'src/renderer/components/ui/MentionableTextarea.tsx',
+  'src/renderer/components/team/useTeamProvisioningPresentation.ts',
+  'src/renderer/store/team/teamDataSelectors.ts',
+  'src/renderer/components/team/TeamProvisioningPanel.tsx',
+  'src/renderer/components/team/TeamProvisioningBanner.tsx',
+  'test/renderer/components/team/TeamProvisioningBanner.test.ts',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */
