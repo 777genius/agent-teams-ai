@@ -648,7 +648,7 @@ describe('ProviderModelBadges', () => {
       configurable: true,
       get() {
         offsetTopReads += 1;
-        const siblings = Array.from(this.parentElement?.children ?? []);
+        const siblings = Array.from(this.parentElement?.children ?? []) as HTMLElement[];
         const index = Math.max(0, siblings.indexOf(this));
         const narrowRows = siblings.some((item) => item.textContent?.includes('very-long-model'));
         return Math.floor(index / (narrowRows ? 3 : 30)) * 20;
