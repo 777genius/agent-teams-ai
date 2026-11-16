@@ -1,0 +1,274 @@
+{
+  "schema": "independent-conversation-producer-exact-r2-v1",
+  "reviewer": "/root/parity_audit",
+  "repository": "777genius/agent-teams-ai",
+  "result": "ACCEPTED for the exact two bare producer postimages; no application or runtime qualification",
+  "publishedR1": "f3fb3ead0315508901531e8f54b75f21518492a7",
+  "sourceAuthor": "/root",
+  "envelope": {
+    "bytes": 62129,
+    "sha256": "c0ca3e91f00a50bb2f62b5cbf7ff3fff533ac976877ed8563e4434e387df09ac",
+    "gitBlob": "84b0727b4ca5e6ac2776cfc7f58193626cdd4f9c"
+  },
+  "sourceFiles": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "forwardExact": true,
+      "inverseExact": true,
+      "uniqueEdits": 3,
+      "before": {
+        "bytes": 28741,
+        "sha256": "9d5233b82df6a7dfa0d735b27c11f39f130824f3947c38896a0d052ca549cba4",
+        "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78"
+      },
+      "after": {
+        "bytes": 28974,
+        "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+        "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+      },
+      "beforeLines": 493,
+      "afterLines": 494
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "forwardExact": true,
+      "inverseExact": true,
+      "uniqueEdits": 6,
+      "before": {
+        "bytes": 24630,
+        "sha256": "20163a0e2b654c5ff3c778ffe4a3cd2138716172eb90e6aa5aa4fe6550864c43",
+        "gitBlob": "dcd0cc29a73a46a24126ec3552714fa1b057aaf4"
+      },
+      "after": {
+        "bytes": 24759,
+        "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+        "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+      },
+      "beforeLines": 298,
+      "afterLines": 298
+    }
+  ],
+  "exactNineEdits": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "oldText": "  const target = (selector: string, text?: string): string => `(() => {",
+      "newText": "  const target = (selector: string, text?: string, requiredContent?: string): string => `(() => {"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "oldText": "    if(elements.length!==1)return {unavailableTarget:true,matches:Math.min(elements.length,256)};",
+      "newText": "    if(elements.length!==1)return {unavailableTarget:true,matches:Math.min(elements.length,256)};${requiredContent === undefined ? '' : `\n    if(!elements[0].textContent.includes(${desktopJsLiteral(requiredContent)}))return {unavailableTarget:true,matches:1};`}"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "oldText": "  const click = (selector: string, label: string, text?: string): Promise<void> =>\n    clickExpression(target(selector, text), label, selector, text);",
+      "newText": "  const click = (selector: string, label: string, text?: string, requiredContent?: string): Promise<void> =>\n    clickExpression(target(selector, text, requiredContent), label, selector, text);"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "oldText": "  const openChat = async (live: Live) => {",
+      "newText": "  const openChat = async (live: Live, expectedReply: string) => {"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "oldText": "    await ui.scrollTo(selector, 'original lead conversation'); await ui.click(selector, 'open original lead conversation');",
+      "newText": "    await ui.scrollTo(selector, 'original lead conversation'); await ui.click(selector, 'open original lead conversation', undefined, expectedReply);"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "oldText": "  await openChat(liveA); await visible('TEST boot ready');",
+      "newText": "  await openChat(liveA, 'TEST boot ready'); await visible('TEST boot ready');"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "oldText": "  await openChat(liveB); await visible('TEST boot ready');",
+      "newText": "  await openChat(liveB, 'TEST boot ready'); await visible('TEST boot ready');"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "oldText": "  await openTeam(a); await openChat(liveA);",
+      "newText": "  await openTeam(a); await openChat(liveA, 'TEST boot ready');"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "oldText": "  await openChat(liveA); await visible('TEST stream partial');",
+      "newText": "  await openChat(liveA, 'TEST stream partial'); await visible('TEST stream partial');"
+    }
+  ],
+  "structuralProof": {
+    "defaultUndefinedTemplateProjection": {
+      "exact": true,
+      "bodyIdentity": {
+        "bytes": 999,
+        "sha256": "1e60f7d99f4c89e0df6794bafdf820e47263e044251e4ae9d516cd473704ef30",
+        "gitBlob": "d3a33db2b53979b9dd4a45f6a4e0cdafd0b8f3a4"
+      },
+      "explanation": "With requiredContent undefined, the sole new interpolation selects the empty string. Removing that interpolation and the optional TypeScript parameter restores the entire original target builder byte-for-byte, including all original selector/text interpolation positions. No target code was evaluated."
+    },
+    "unchangedClickExpression": {
+      "exact": true,
+      "identity": {
+        "bytes": 6234,
+        "sha256": "255f42a70b7595f09d7a630ccacda9830bfd88c40fab16daad5dd6b56c5912de",
+        "gitBlob": "f831acb1570515d7f56419c604287198a33e1b5c"
+      }
+    },
+    "unchangedWaitRead": {
+      "exact": true,
+      "identity": {
+        "bytes": 793,
+        "sha256": "a1b1d26ea3873cf48398642707799c26e672be2dcb1b59b146b425baae8c7d6c",
+        "gitBlob": "8e9e8df6ea7a3a9eb06536beb4c6056cfaa93262"
+      }
+    },
+    "cardinalityBeforeContent": true,
+    "selectedElementOnly": true,
+    "desktopJsLiteralMarker": true,
+    "originalCallsiteCounts": {
+      "controls": {
+        "options.assertOwnedRenderer()": 8,
+        "cdp.evaluate(": 5,
+        "cdp.send(": 11,
+        "setTimeout(": 5,
+        "Date.now(": 2,
+        "await ui.scrollTo(": 0,
+        "await ui.click(": 0
+      },
+      "selection": {
+        "options.assertOwnedRenderer()": 0,
+        "cdp.evaluate(": 5,
+        "cdp.send(": 5,
+        "setTimeout(": 1,
+        "Date.now(": 2,
+        "await ui.scrollTo(": 16,
+        "await ui.click(": 21
+      },
+      "unchanged": true,
+      "qualification": "Static callsite equality, not a claim that the strengthened readiness predicate makes identical total polling iterations or elapsed time."
+    },
+    "fourForwards": [
+      {
+        "line": 176,
+        "text": "  await openChat(liveA, 'TEST boot ready'); await visible('TEST boot ready');"
+      },
+      {
+        "line": 260,
+        "text": "  await openChat(liveB, 'TEST boot ready'); await visible('TEST boot ready');"
+      },
+      {
+        "line": 267,
+        "text": "  await openTeam(a); await openChat(liveA, 'TEST boot ready');"
+      },
+      {
+        "line": 285,
+        "text": "  await openChat(liveA, 'TEST stream partial'); await visible('TEST stream partial');"
+      }
+    ],
+    "testUnchanged": {
+      "bytes": 136700,
+      "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+      "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+    },
+    "noExecution": true
+  },
+  "testIdentity": {
+    "bytes": 136700,
+    "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+    "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+  },
+  "actualRedPrerequisite": {
+    "combinedAcceptedBeforeAuthoring": true,
+    "rootRecordedAcceptanceAt": "2026-11-16 14:57:12 UTC",
+    "actualEnvelope": {
+      "bytes": 127239,
+      "sha256": "579adc7808c0b2631812a55dff1adc22490ad0e38d9bded299640aab1d00e57f",
+      "gitBlob": "8b5c5cc552d03984cdb9507dd205c181d64abbd8"
+    },
+    "actualReceipt": {
+      "bytes": 24560,
+      "sha256": "49a6904e03440f258031f3bf751c6d00399de46f7a21a32536433bef6bc12ae4",
+      "gitBlob": "51ded8a75f03a28669dad09ff66a1f7b2f1ec278"
+    },
+    "completeSemanticReview": {
+      "gitBlob": "5f316e969bc382cb7ed49fa824955fb939b989ef",
+      "bytes": 82638,
+      "sha256": "34246564207ef1bb1654440c6e446d9ab55792f91f6232da94339875331efc5b"
+    },
+    "finalParitySupplement": {
+      "bytes": 11211,
+      "sha256": "03b9c2a3061a49b68a43b2c7a3b2566bb65c4cc31f8b98601449a206260c0e2e",
+      "gitBlob": "4cda111a657915dbf0c61662a4b07f66a8cd22cd"
+    },
+    "independentGuardActualReview": {
+      "gitBlob": "f2695e2c8ae5381a6175127fa240eef7b289c390",
+      "bytes": 37920,
+      "sha256": "d6540f6d76342894028c3d5624e382ecb88aa6dc08ad65c7e98286118d7850ec",
+      "acceptanceAndFullReadbackReportedBy": "/root/guard_review"
+    },
+    "outcome": {
+      "cases": 97,
+      "pass": 87,
+      "fail": 10,
+      "preserved78Pass": 78,
+      "addedControlsPass": 9,
+      "designatedSemanticFail": 10,
+      "skipped": 0,
+      "cancelled": 0,
+      "todo": 0,
+      "primaryExit": 1,
+      "outerExit": 0
+    },
+    "sourceBeforeProducers": {
+      "commit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+      "tree": "3239e6e6c8182f3d8e45ee671efc9108500b5137"
+    }
+  },
+  "semanticAssessment": [
+    {
+      "subject": "Eligibility and singleton precedence",
+      "finding": "The original positive-size/exact-text filter remains byte-identical. The complete original singleton refusal executes before the optional content check. Two eligible rows still refuse even if only one has the expected marker; the new condition does not select or substitute a different row."
+    },
+    {
+      "subject": "Selected-row and literal-data boundary",
+      "finding": "Only elements[0].textContent is inspected after singleton admission. The expected content is serialized through the unchanged desktopJsLiteral helper. No body/neighbor search, arbitrary code hook, new dispatch or private-state mutation is introduced. Missing content returns the existing unavailableTarget shape with matches:1."
+    },
+    {
+      "subject": "Default path",
+      "finding": "When requiredContent is undefined, the new interpolation is the empty string. Pure textual projection restores the complete original private target builder; its selector/text interpolation and emitted expression are identical. This proof used source text only, not package/test/function evaluation."
+    },
+    {
+      "subject": "Existing click boundaries",
+      "finding": "The complete clickExpression and waitRead bodies are byte-identical. Every original read phase and final direct read use the same generated expression, so revocation at unchanged coordinates reaches the existing unavailable guard. Original ownership checks, exact final geometry equality, one hover and one press/release sequence, uncertainty refusal, timers and deadlines remain unchanged."
+    },
+    {
+      "subject": "Timing and currentness",
+      "finding": "The source introduces no new wait, timer, CDP request, ownership query or deadline callsite. The stronger predicate can require more iterations of an existing readPoint; no total-call-count, elapsed-time or whole-click30-second equivalence is claimed. Existing per-readPoint30-second bounds,100-ms cadence,15-sample ceiling,two stable comparisons,75-second native poll and60-second post-click waits remain exactly as before."
+    },
+    {
+      "subject": "Selection forwarding and postconditions",
+      "finding": "The actual openChat helper retains its selector and original scroll, and forwards expectedReply only as the fourth click argument with undefined in the text slot. Calls176/260/267 carry TEST boot ready;285 carries TEST stream partial. Original visible checks, explicit absence of TEST stream partial complete, captured owner/session/native/input/census checks, screenshots, installer effects and ordering remain unchanged."
+    },
+    {
+      "subject": "Frozen test parity",
+      "finding": "The complete97-case efd test is unchanged, including the exact78-case prefix and19 additions. The19 additions cover delayed hydration at the retained coordinates, default geometry refusal, wrong/body/neighbor/empty/absent/zero/disabled/covered/duplicate target conditions, literal escaping, final content revocation, owner/movement refusal and actual openChat ordinary/lead boot/partial forwarding. This R2 predicts repair behavior only; actual GREEN is still required."
+    },
+    {
+      "subject": "Scope and type shape",
+      "finding": "Only the private builder and inferred click signature gain optional string data, while the local openChat signature gains a required string supplied at all four real callsites. No import/export or separate clickExpression signature changes. Controls grows493→494 physical lines and Selection stays298, within the published20/10-line bounds. No new source file, workflow, dependency, ignore rule or size exception is proposed."
+    }
+  ],
+  "limits": [
+    "This is complete source/postimage R2, not a fresh full-tree composition or published-ref readback. Root must compose only these two reviewed deltas on the exact fresh branch head and preserve all other leaves.",
+    "Exact immediate-push publication and independent full published readback precede local application and one authorized whole97 GREEN.",
+    "The three scoped guards remain conditional on genuine GREEN; RED is consumed and not repeated.",
+    "No later GUI/native/vendor/platform/full-E2E success is inferred.",
+    "Reviewer performed only immutable Git reads, pure string/hash analysis and creation of this bare documentary review; no target code or tests were evaluated."
+  ],
+  "remainingAttempts": {
+    "red": 0,
+    "green": 1,
+    "lint": 1,
+    "sourceSize": 1,
+    "diffCheck": 1
+  }
+}

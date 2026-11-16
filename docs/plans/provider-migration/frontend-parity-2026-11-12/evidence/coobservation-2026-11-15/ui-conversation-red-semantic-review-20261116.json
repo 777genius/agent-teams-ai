@@ -1,0 +1,1082 @@
+{
+  "schema": "independent-whole97-actual-red-semantic-review-v1",
+  "reviewer": "/root/parity_audit",
+  "repository": "777genius/agent-teams-ai",
+  "result": "ACCEPTED for complete raw, case-census and semantic-failure scope only",
+  "overallProducerAuthoringGate": "HELD pending immutable actual receipt/input/cleanup/outer-supervisor evidence and independent Guard closure; this record alone does not authorize producer authorship or execution",
+  "reviewedInputs": {
+    "actualRaw": {
+      "bytes": 19194,
+      "sha256": "2517761f8aa85c0bdc536fb132c7101421e39359464dac39f44626d8d52d5539",
+      "gitBlob": "a9f4a5a2e351fb7c9898679a0d69846fb02bc01e"
+    },
+    "acceptedRunner": {
+      "gitBlob": "6af0ac85f09ef02488ce15331828713882a73d13",
+      "bytes": 35916,
+      "sha256": "495fac79660eb36f0795f74ff14bd665d79ac3e43534349c2f65234bda89d0f5"
+    },
+    "acceptedRedBinding": {
+      "gitBlob": "04d501260b4ac275bf52d6381d6d2e7d93bb973e",
+      "bytes": 306274,
+      "sha256": "b118c22fea2bc63c402fa4e6e86e9244d8ee7ec1a54f8ac965e9cafa05cca77f"
+    },
+    "selectedSourceCommit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+    "selectedSourceTree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+    "test": {
+      "bytes": 136700,
+      "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+      "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+    },
+    "preservedOld78Prefix": {
+      "bytes": 127790,
+      "sha256": "10803ce752a05140acbfa8270e97e782c452213f39589d52991a503e29db5c17",
+      "gitBlob": "3e5d5a5a765b503943bd72f68b2877311ee34479"
+    },
+    "additiveSuffix": {
+      "bytes": 8910,
+      "sha256": "e1c52971337871d30c53a93c6f7a537f529fc1297a330edb150c3a3f1ec10f95",
+      "gitBlob": "74a180307f8d0cd975903de54d4fcb2ba264fa76"
+    },
+    "publicationCheckpoint": "87e10f42ddfe9d426ad64d26d93a15e525e4b2e1",
+    "actualExecutionInputEquality": "pending the separate immutable runtime-input/lifetime review; source identities here are the accepted binding and reviewed source bodies"
+  },
+  "procedure": {
+    "fullRawRead": true,
+    "fullRawByteHashAndGitRecomputed": true,
+    "caseSection": "Only the initial result section before '✖ failing tests:' is counted. The ten repeated detailed failure summaries are not counted as additional cases.",
+    "everyCaseNameOrderAndStatusComparedToFrozenStaticLedger": true,
+    "all97NamesUnique": true,
+    "all10DetailedFailureNamesAndDefinitionLinesMatched": true,
+    "exactWholeOld78PrefixPreserved": true,
+    "sourceOrPackageEvaluationByReviewer": false,
+    "runtimeActionsByReviewer": false
+  },
+  "actualRawTotals": {
+    "tests": 97,
+    "suites": 0,
+    "pass": 87,
+    "fail": 10,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "duration_ms": 10689.896134
+  },
+  "census": {
+    "preservedOldCases": {
+      "total": 78,
+      "pass": 78,
+      "fail": 0
+    },
+    "addedCases": {
+      "total": 19,
+      "pass": 9,
+      "fail": 10
+    },
+    "designatedFailureOrdinals": [
+      79,
+      81,
+      82,
+      83,
+      84,
+      91,
+      94,
+      95,
+      96,
+      97
+    ],
+    "addedPositiveControlOrdinals": [
+      80,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      92,
+      93
+    ],
+    "completeOrderedCaseLedger": [
+      {
+        "ordinal": 1,
+        "status": "pass",
+        "name": "captured UI discovery waits for Main admission and actual mount while early diagnostics remain active",
+        "durationMs": 216.224385,
+        "definitionLine": 63,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 2,
+        "status": "pass",
+        "name": "the original remaining startup deadline rejects a pending snapshot without late discovery or a reset",
+        "durationMs": 502.147541,
+        "definitionLine": 79,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 3,
+        "status": "pass",
+        "name": "packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin",
+        "durationMs": 11.668332,
+        "definitionLine": 124,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 4,
+        "status": "pass",
+        "name": "HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted",
+        "durationMs": 6.522559,
+        "definitionLine": 139,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 5,
+        "status": "pass",
+        "name": "isolated shell fixture emits the actual framed environment and refuses shell effects",
+        "durationMs": 425.906804,
+        "definitionLine": 149,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 6,
+        "status": "pass",
+        "name": "original in-progress Task comment prerequisite requires its exact stage without an assignment control",
+        "durationMs": 28.846571,
+        "definitionLine": 337,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 7,
+        "status": "pass",
+        "name": "Task attachment comment waits for its original focused owner after one click before inserting text",
+        "durationMs": 216.612672,
+        "definitionLine": 372,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 8,
+        "status": "pass",
+        "name": "original Task assignment prerequisite refuses receipt-only, pending and stale renderer state",
+        "durationMs": 5.562517,
+        "definitionLine": 546,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 9,
+        "status": "pass",
+        "name": "original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface",
+        "durationMs": 6.473176,
+        "definitionLine": 583,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 10,
+        "status": "pass",
+        "name": "original desktop click waits for stable target geometry, without repeating input",
+        "durationMs": 303.725905,
+        "definitionLine": 613,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 11,
+        "status": "pass",
+        "name": "original Task hover waits through layout and unavailability before its one physical move",
+        "durationMs": 603.265161,
+        "definitionLine": 641,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 12,
+        "status": "pass",
+        "name": "original desktop click refuses a constantly moving target before dispatch",
+        "durationMs": 1533.252942,
+        "definitionLine": 667,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 13,
+        "status": "pass",
+        "name": "original owner-qualified click rereads its full expression through unavailability at unchanged coordinates",
+        "durationMs": 306.065921,
+        "definitionLine": 685,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 14,
+        "status": "pass",
+        "name": "login failure facts retain only bounded original attempts and confirmed milestones",
+        "durationMs": 3.473175,
+        "definitionLine": 715,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 15,
+        "status": "pass",
+        "name": "finite readiness failure summaries keep only bounded states and never private snapshot data",
+        "durationMs": 3.491602,
+        "definitionLine": 770,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 16,
+        "status": "pass",
+        "name": "Taskboard failure summaries compare retained identities without exposing private snapshot values",
+        "durationMs": 2.814267,
+        "definitionLine": 808,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 17,
+        "status": "pass",
+        "name": "installer failure summaries preserve original wait sites and attempts without inferring installation effects",
+        "durationMs": 3.650747,
+        "definitionLine": 896,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 18,
+        "status": "pass",
+        "name": "installer failure projection does not invoke input getters and leaves oversized observations unknown",
+        "durationMs": 0.970717,
+        "definitionLine": 952,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 19,
+        "status": "pass",
+        "name": "installer CDP and cleanup projection retains only exact finite observations",
+        "durationMs": 1.267743,
+        "definitionLine": 985,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 20,
+        "status": "pass",
+        "name": "Selection target summaries retain the exact original phase and six closed facts",
+        "durationMs": 1.495369,
+        "definitionLine": 1038,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 21,
+        "status": "pass",
+        "name": "Selection target projection rejects unknown or malformed facts without exposing text or invoking getters",
+        "durationMs": 1.02018,
+        "definitionLine": 1073,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 22,
+        "status": "pass",
+        "name": "Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input",
+        "durationMs": 3.12218,
+        "definitionLine": 1102,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 23,
+        "status": "pass",
+        "name": "original desktop click refuses a target unavailable during the final ownership check",
+        "durationMs": 204.234741,
+        "definitionLine": 1198,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 24,
+        "status": "pass",
+        "name": "original desktop click refuses a target moved during the final ownership check",
+        "durationMs": 204.168553,
+        "definitionLine": 1198,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 25,
+        "status": "pass",
+        "name": "original default scroll preserves a disabled control before its readiness wait",
+        "durationMs": 3.675483,
+        "definitionLine": 1228,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 26,
+        "status": "pass",
+        "name": "original scroll opt-in reveals a covered checkbox with one bounded wheel",
+        "durationMs": 104.173463,
+        "definitionLine": 1228,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 27,
+        "status": "pass",
+        "name": "original desktop click rechecks owner after its pending final target read",
+        "durationMs": 203.216739,
+        "definitionLine": 1280,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 28,
+        "status": "pass",
+        "name": "original desktop click rechecks cutoff after its pending final target read",
+        "durationMs": 204.117228,
+        "definitionLine": 1280,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 29,
+        "status": "pass",
+        "name": "original clarification lookup admits its retained read without completing the assignment prerequisite",
+        "durationMs": 5.566803,
+        "definitionLine": 1324,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 30,
+        "status": "pass",
+        "name": "original clarification lookup refuses changed owner, revision, refresh and retained-read joins",
+        "durationMs": 43.492084,
+        "definitionLine": 1347,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 31,
+        "status": "pass",
+        "name": "original owner availability admits three captured A Teams through its actual first DOM read",
+        "durationMs": 6.025879,
+        "definitionLine": 1464,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 32,
+        "status": "pass",
+        "name": "original owner availability retains singleton, subset and duplicate-row cardinality semantics",
+        "durationMs": 4.816891,
+        "definitionLine": 1480,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 33,
+        "status": "pass",
+        "name": "original owner availability refuses foreign identities and preserves its existing aggregate guards",
+        "durationMs": 50.160007,
+        "definitionLine": 1494,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 34,
+        "status": "pass",
+        "name": "original owner availability refuses invalid captured discovery before navigation",
+        "durationMs": 1.547615,
+        "definitionLine": 1541,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 35,
+        "status": "pass",
+        "name": "owner availability admits every captured A Team through the actual first observation",
+        "durationMs": 1.436121,
+        "definitionLine": 1610,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 36,
+        "status": "pass",
+        "name": "owner availability refuses healthy B in unavailable A rows",
+        "durationMs": 1.210269,
+        "definitionLine": 1628,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 37,
+        "status": "pass",
+        "name": "owner availability refuses captured foreign owner in unavailable A rows",
+        "durationMs": 0.679469,
+        "definitionLine": 1628,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 38,
+        "status": "pass",
+        "name": "owner availability refuses unknown Team in unavailable A rows",
+        "durationMs": 0.817342,
+        "definitionLine": 1628,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 39,
+        "status": "pass",
+        "name": "owner availability refuses malformed Team in unavailable A rows",
+        "durationMs": 0.855107,
+        "definitionLine": 1628,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 40,
+        "status": "pass",
+        "name": "owner availability refuses missing selected A before original navigation",
+        "durationMs": 0.590388,
+        "definitionLine": 1638,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 41,
+        "status": "pass",
+        "name": "owner availability refuses non-string A handle before original navigation",
+        "durationMs": 0.390424,
+        "definitionLine": 1638,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 42,
+        "status": "pass",
+        "name": "owner availability refuses empty A handle before original navigation",
+        "durationMs": 0.614793,
+        "definitionLine": 1638,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 43,
+        "status": "pass",
+        "name": "owner availability refuses duplicate A handle before original navigation",
+        "durationMs": 0.293662,
+        "definitionLine": 1638,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 44,
+        "status": "pass",
+        "name": "owner availability refuses over-bound capture before original navigation",
+        "durationMs": 0.451574,
+        "definitionLine": 1638,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 45,
+        "status": "pass",
+        "name": "passive input keeps its actual Team target and three separate original navigation samples",
+        "durationMs": 6.492925,
+        "definitionLine": 1722,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 46,
+        "status": "pass",
+        "name": "passive navigation preserves non-card events, the original ring bounds and null or non-Team state",
+        "durationMs": 64.4308,
+        "definitionLine": 1747,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 47,
+        "status": "pass",
+        "name": "passive navigation refuses malformed target and store facts without losing original callbacks",
+        "durationMs": 77.262468,
+        "definitionLine": 1767,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 48,
+        "status": "pass",
+        "name": "passive navigation remains bounded and cannot interrupt original writes on diagnostic failure",
+        "durationMs": 7.519433,
+        "definitionLine": 1813,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 49,
+        "status": "pass",
+        "name": "passive navigation uses only the callable store own method and ignores unrelated card surfaces",
+        "durationMs": 5.532192,
+        "definitionLine": 1835,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 50,
+        "status": "pass",
+        "name": "the selected provider receipt digest matches the actual manifest-selected archive bytes",
+        "durationMs": 24.08416,
+        "definitionLine": 1853,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 51,
+        "status": "pass",
+        "name": "provider receipt legacy, current and equal-dual implementation digests preserve manifest authority",
+        "durationMs": 9.950041,
+        "definitionLine": 1866,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 52,
+        "status": "pass",
+        "name": "every present provider implementation digest must be valid and both recognized fields must agree",
+        "durationMs": 77.201603,
+        "definitionLine": 1890,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 53,
+        "status": "pass",
+        "name": "provider receipt shape, package selection and original file or JSON errors remain strict",
+        "durationMs": 36.13568,
+        "definitionLine": 1916,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 54,
+        "status": "pass",
+        "name": "saved Launch uses three stable actual DOM samples before its original settings action",
+        "durationMs": 12.544481,
+        "definitionLine": 2042,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 55,
+        "status": "pass",
+        "name": "saved Launch resets exact geometry when the original button shifts by a quarter pixel",
+        "durationMs": 5.15558,
+        "definitionLine": 2047,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 56,
+        "status": "pass",
+        "name": "saved Launch restarts its three samples after changed identity",
+        "durationMs": 9.115089,
+        "definitionLine": 2060,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 57,
+        "status": "pass",
+        "name": "saved Launch restarts its three samples after changed expanded state",
+        "durationMs": 11.609747,
+        "definitionLine": 2060,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 58,
+        "status": "pass",
+        "name": "saved Launch restarts its three samples after changed horizontal position",
+        "durationMs": 14.043784,
+        "definitionLine": 2060,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 59,
+        "status": "pass",
+        "name": "saved Launch restarts its three samples after changed width",
+        "durationMs": 11.925391,
+        "definitionLine": 2060,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 60,
+        "status": "pass",
+        "name": "saved Launch restarts its three samples after changed height",
+        "durationMs": 12.39444,
+        "definitionLine": 2060,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 61,
+        "status": "pass",
+        "name": "saved Launch resets its original readiness after absent target",
+        "durationMs": 16.618715,
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 62,
+        "status": "pass",
+        "name": "saved Launch resets its original readiness after ambiguous target",
+        "durationMs": 15.153081,
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 63,
+        "status": "pass",
+        "name": "saved Launch resets its original readiness after wrong model",
+        "durationMs": 7.944308,
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 64,
+        "status": "pass",
+        "name": "saved Launch resets its original readiness after absent identity",
+        "durationMs": 8.492554,
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 65,
+        "status": "pass",
+        "name": "saved Launch resets its original readiness after empty identity",
+        "durationMs": 8.260583,
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 66,
+        "status": "pass",
+        "name": "saved Launch resets its original readiness after invalid expansion",
+        "durationMs": 12.012208,
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 67,
+        "status": "pass",
+        "name": "saved Launch resets its original readiness after missing owning dialog",
+        "durationMs": 10.957357,
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 68,
+        "status": "pass",
+        "name": "saved Launch resets its original readiness after nonfinite x",
+        "durationMs": 10.235987,
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 69,
+        "status": "pass",
+        "name": "saved Launch resets its original readiness after nonfinite y",
+        "durationMs": 8.87702,
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 70,
+        "status": "pass",
+        "name": "saved Launch resets its original readiness after zero width",
+        "durationMs": 10.931239,
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 71,
+        "status": "pass",
+        "name": "saved Launch resets its original readiness after negative height",
+        "durationMs": 6.761359,
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 72,
+        "status": "pass",
+        "name": "saved Launch resets its original readiness after running own animation",
+        "durationMs": 7.159745,
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 73,
+        "status": "pass",
+        "name": "saved Launch resets its original readiness after paused own animation",
+        "durationMs": 7.128129,
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 74,
+        "status": "pass",
+        "name": "saved Launch resets its original readiness after pending own animation",
+        "durationMs": 9.762552,
+        "definitionLine": 2077,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 75,
+        "status": "pass",
+        "name": "saved Launch allows finished own animation without inspecting descendant spinners or model status",
+        "durationMs": 4.633542,
+        "definitionLine": 2083,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 76,
+        "status": "pass",
+        "name": "saved Launch allows idle own animation without inspecting descendant spinners or model status",
+        "durationMs": 4.36023,
+        "definitionLine": 2083,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 77,
+        "status": "pass",
+        "name": "saved Launch exhausts its one original deadline with no matching model and no settings action",
+        "durationMs": 257.125626,
+        "definitionLine": 2092,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 78,
+        "status": "pass",
+        "name": "saved Launch exhausts its one original deadline with unsettled own dialog and no settings action",
+        "durationMs": 308.830814,
+        "definitionLine": 2092,
+        "group": "preserved78",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 79,
+        "status": "fail",
+        "name": "original conversation waits for its own reply before one click at the hydrated coordinates",
+        "durationMs": 6.467388,
+        "definitionLine": 2146,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure"
+      },
+      {
+        "ordinal": 80,
+        "status": "pass",
+        "name": "default conversation click retains its original final geometry refusal without a preview predicate",
+        "durationMs": 5.018958,
+        "definitionLine": 2158,
+        "group": "added19",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 81,
+        "status": "fail",
+        "name": "original conversation refuses body-only reply within its unchanged first read deadline",
+        "durationMs": 5.068821,
+        "definitionLine": 2173,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure"
+      },
+      {
+        "ordinal": 82,
+        "status": "fail",
+        "name": "original conversation refuses neighbor-only reply within its unchanged first read deadline",
+        "durationMs": 4.778704,
+        "definitionLine": 2173,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure"
+      },
+      {
+        "ordinal": 83,
+        "status": "fail",
+        "name": "original conversation refuses different required reply within its unchanged first read deadline",
+        "durationMs": 5.672208,
+        "definitionLine": 2173,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure"
+      },
+      {
+        "ordinal": 84,
+        "status": "fail",
+        "name": "original conversation refuses empty preview within its unchanged first read deadline",
+        "durationMs": 5.612941,
+        "definitionLine": 2173,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure"
+      },
+      {
+        "ordinal": 85,
+        "status": "pass",
+        "name": "original conversation refuses missing target within its unchanged first read deadline",
+        "durationMs": 468.758152,
+        "definitionLine": 2173,
+        "group": "added19",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 86,
+        "status": "pass",
+        "name": "original conversation refuses zero-size target within its unchanged first read deadline",
+        "durationMs": 257.80102,
+        "definitionLine": 2173,
+        "group": "added19",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 87,
+        "status": "pass",
+        "name": "original conversation refuses disabled target within its unchanged first read deadline",
+        "durationMs": 383.685047,
+        "definitionLine": 2173,
+        "group": "added19",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 88,
+        "status": "pass",
+        "name": "original conversation refuses covered target within its unchanged first read deadline",
+        "durationMs": 267.589084,
+        "definitionLine": 2173,
+        "group": "added19",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 89,
+        "status": "pass",
+        "name": "original conversation refuses two eligible rows with only the second ready within its unchanged first read deadline",
+        "durationMs": 268.612851,
+        "definitionLine": 2173,
+        "group": "added19",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 90,
+        "status": "pass",
+        "name": "original conversation serializes its required preview as literal data",
+        "durationMs": 6.200997,
+        "definitionLine": 2182,
+        "group": "added19",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 91,
+        "status": "fail",
+        "name": "original conversation rereads a revoked preview at unchanged final coordinates before input",
+        "durationMs": 6.204682,
+        "definitionLine": 2189,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure"
+      },
+      {
+        "ordinal": 92,
+        "status": "pass",
+        "name": "original conversation still refuses final owner despite a ready preview",
+        "durationMs": 7.19629,
+        "definitionLine": 2200,
+        "group": "added19",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 93,
+        "status": "pass",
+        "name": "original conversation still refuses final movement despite a ready preview",
+        "durationMs": 7.088392,
+        "definitionLine": 2200,
+        "group": "added19",
+        "predictedBaseline": "pass"
+      },
+      {
+        "ordinal": 94,
+        "status": "fail",
+        "name": "actual openChat forwards TEST boot ready for alice",
+        "durationMs": 50.063469,
+        "definitionLine": 2219,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure"
+      },
+      {
+        "ordinal": 95,
+        "status": "fail",
+        "name": "actual openChat forwards TEST stream partial for alice",
+        "durationMs": 8.439888,
+        "definitionLine": 2219,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure"
+      },
+      {
+        "ordinal": 96,
+        "status": "fail",
+        "name": "actual openChat forwards TEST boot ready for team-lead",
+        "durationMs": 4.246433,
+        "definitionLine": 2219,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure"
+      },
+      {
+        "ordinal": 97,
+        "status": "fail",
+        "name": "actual openChat forwards TEST stream partial for team-lead",
+        "durationMs": 41.309859,
+        "definitionLine": 2219,
+        "group": "added19",
+        "predictedBaseline": "semantic-failure"
+      }
+    ]
+  },
+  "semanticFindings": [
+    {
+      "ordinals": [
+        79
+      ],
+      "kind": "original final geometry assertion",
+      "actual": [
+        169.5,
+        186.5,
+        "BUTTON"
+      ],
+      "expected": [
+        169.5,
+        178,
+        "BUTTON"
+      ],
+      "source": "scripts/legacy-agent-host/desktop-ui-controls.ts:325",
+      "meaning": "The finite actual-controls fixture updates its preview and coordinates at the original ownership check. The unchanged control reaches and rejects at its final exact geometry assertion before the original press/release. This is the designated behavioral baseline failure.",
+      "unreached": "Assertions after the awaited click in this failing case are not executed and are not counted as independently passing controls."
+    },
+    {
+      "ordinals": [
+        81,
+        82,
+        83,
+        84
+      ],
+      "kind": "Missing expected rejection",
+      "expectedMessage": "UI target read failed: TEST original conversation",
+      "meaning": "The existing click method does not consume the fourth required-reply argument. The actual finite invocation resolves instead of refusing body-only, neighbor-only, different-required-reply and empty-preview conditions.",
+      "unreached": "Following count/no-input assertions in each failing test are unreached."
+    },
+    {
+      "ordinals": [
+        91
+      ],
+      "kind": "Missing expected rejection",
+      "expectedMessage": "Original UI target unavailable after ownership check",
+      "meaning": "The old target expression does not bind the required preview and accepts unchanged final geometry after the fixture revokes that preview.",
+      "unreached": "Following count/no-input assertions in this failing test are unreached."
+    },
+    {
+      "ordinals": [
+        94,
+        95,
+        96,
+        97
+      ],
+      "kind": "actual openChat argument mismatch",
+      "assertion": "one original scroll and one original click carrying the expected reply as data",
+      "meaning": "The test successfully extracts and runs the actual unchanged openChat function against a finite mock. Both original calls and the proper alice/team-lead selector are observed, but the click argument list lacks the undefined text slot and required boot/partial reply data expected by the new tests."
+    }
+  ],
+  "limits": [
+    "Every actual failure is one of the designated behavioral assertion failures. There is no import, setup, marker-extraction, compiler, timeout, cancellation or skipped-test failure in this complete raw.",
+    "The literal '... Skipped lines' in deep-equality diff formatting is not a skipped test; the reporter's skipped count is zero.",
+    "Passing finite cases qualify only their executed assertions. This is not Desktop, GUI, native, provider or real-model execution qualification.",
+    "Root reported primary Node exit 1 and outer supervisor exit 0. This record does not substitute those reports for the separate immutable receipt/session/input audit.",
+    "No producer source or test postimage was authored, applied or executed by this reviewer."
+  ],
+  "completeRaw": "✔ captured UI discovery waits for Main admission and actual mount while early diagnostics remain active (216.224385ms)\n✔ the original remaining startup deadline rejects a pending snapshot without late discovery or a reset (502.147541ms)\n✔ packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin (11.668332ms)\n✔ HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted (6.522559ms)\n✔ isolated shell fixture emits the actual framed environment and refuses shell effects (425.906804ms)\n✔ original in-progress Task comment prerequisite requires its exact stage without an assignment control (28.846571ms)\n✔ Task attachment comment waits for its original focused owner after one click before inserting text (216.612672ms)\n✔ original Task assignment prerequisite refuses receipt-only, pending and stale renderer state (5.562517ms)\n✔ original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface (6.473176ms)\n✔ original desktop click waits for stable target geometry, without repeating input (303.725905ms)\n✔ original Task hover waits through layout and unavailability before its one physical move (603.265161ms)\n✔ original desktop click refuses a constantly moving target before dispatch (1533.252942ms)\n✔ original owner-qualified click rereads its full expression through unavailability at unchanged coordinates (306.065921ms)\n✔ login failure facts retain only bounded original attempts and confirmed milestones (3.473175ms)\n✔ finite readiness failure summaries keep only bounded states and never private snapshot data (3.491602ms)\n✔ Taskboard failure summaries compare retained identities without exposing private snapshot values (2.814267ms)\n✔ installer failure summaries preserve original wait sites and attempts without inferring installation effects (3.650747ms)\n✔ installer failure projection does not invoke input getters and leaves oversized observations unknown (0.970717ms)\n✔ installer CDP and cleanup projection retains only exact finite observations (1.267743ms)\n✔ Selection target summaries retain the exact original phase and six closed facts (1.495369ms)\n✔ Selection target projection rejects unknown or malformed facts without exposing text or invoking getters (1.02018ms)\n✔ Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input (3.12218ms)\n✔ original desktop click refuses a target unavailable during the final ownership check (204.234741ms)\n✔ original desktop click refuses a target moved during the final ownership check (204.168553ms)\n✔ original default scroll preserves a disabled control before its readiness wait (3.675483ms)\n✔ original scroll opt-in reveals a covered checkbox with one bounded wheel (104.173463ms)\n✔ original desktop click rechecks owner after its pending final target read (203.216739ms)\n✔ original desktop click rechecks cutoff after its pending final target read (204.117228ms)\n✔ original clarification lookup admits its retained read without completing the assignment prerequisite (5.566803ms)\n✔ original clarification lookup refuses changed owner, revision, refresh and retained-read joins (43.492084ms)\n✔ original owner availability admits three captured A Teams through its actual first DOM read (6.025879ms)\n✔ original owner availability retains singleton, subset and duplicate-row cardinality semantics (4.816891ms)\n✔ original owner availability refuses foreign identities and preserves its existing aggregate guards (50.160007ms)\n✔ original owner availability refuses invalid captured discovery before navigation (1.547615ms)\n✔ owner availability admits every captured A Team through the actual first observation (1.436121ms)\n✔ owner availability refuses healthy B in unavailable A rows (1.210269ms)\n✔ owner availability refuses captured foreign owner in unavailable A rows (0.679469ms)\n✔ owner availability refuses unknown Team in unavailable A rows (0.817342ms)\n✔ owner availability refuses malformed Team in unavailable A rows (0.855107ms)\n✔ owner availability refuses missing selected A before original navigation (0.590388ms)\n✔ owner availability refuses non-string A handle before original navigation (0.390424ms)\n✔ owner availability refuses empty A handle before original navigation (0.614793ms)\n✔ owner availability refuses duplicate A handle before original navigation (0.293662ms)\n✔ owner availability refuses over-bound capture before original navigation (0.451574ms)\n✔ passive input keeps its actual Team target and three separate original navigation samples (6.492925ms)\n✔ passive navigation preserves non-card events, the original ring bounds and null or non-Team state (64.4308ms)\n✔ passive navigation refuses malformed target and store facts without losing original callbacks (77.262468ms)\n✔ passive navigation remains bounded and cannot interrupt original writes on diagnostic failure (7.519433ms)\n✔ passive navigation uses only the callable store own method and ignores unrelated card surfaces (5.532192ms)\n✔ the selected provider receipt digest matches the actual manifest-selected archive bytes (24.08416ms)\n✔ provider receipt legacy, current and equal-dual implementation digests preserve manifest authority (9.950041ms)\n✔ every present provider implementation digest must be valid and both recognized fields must agree (77.201603ms)\n✔ provider receipt shape, package selection and original file or JSON errors remain strict (36.13568ms)\n✔ saved Launch uses three stable actual DOM samples before its original settings action (12.544481ms)\n✔ saved Launch resets exact geometry when the original button shifts by a quarter pixel (5.15558ms)\n✔ saved Launch restarts its three samples after changed identity (9.115089ms)\n✔ saved Launch restarts its three samples after changed expanded state (11.609747ms)\n✔ saved Launch restarts its three samples after changed horizontal position (14.043784ms)\n✔ saved Launch restarts its three samples after changed width (11.925391ms)\n✔ saved Launch restarts its three samples after changed height (12.39444ms)\n✔ saved Launch resets its original readiness after absent target (16.618715ms)\n✔ saved Launch resets its original readiness after ambiguous target (15.153081ms)\n✔ saved Launch resets its original readiness after wrong model (7.944308ms)\n✔ saved Launch resets its original readiness after absent identity (8.492554ms)\n✔ saved Launch resets its original readiness after empty identity (8.260583ms)\n✔ saved Launch resets its original readiness after invalid expansion (12.012208ms)\n✔ saved Launch resets its original readiness after missing owning dialog (10.957357ms)\n✔ saved Launch resets its original readiness after nonfinite x (10.235987ms)\n✔ saved Launch resets its original readiness after nonfinite y (8.87702ms)\n✔ saved Launch resets its original readiness after zero width (10.931239ms)\n✔ saved Launch resets its original readiness after negative height (6.761359ms)\n✔ saved Launch resets its original readiness after running own animation (7.159745ms)\n✔ saved Launch resets its original readiness after paused own animation (7.128129ms)\n✔ saved Launch resets its original readiness after pending own animation (9.762552ms)\n✔ saved Launch allows finished own animation without inspecting descendant spinners or model status (4.633542ms)\n✔ saved Launch allows idle own animation without inspecting descendant spinners or model status (4.36023ms)\n✔ saved Launch exhausts its one original deadline with no matching model and no settings action (257.125626ms)\n✔ saved Launch exhausts its one original deadline with unsettled own dialog and no settings action (308.830814ms)\n✖ original conversation waits for its own reply before one click at the hydrated coordinates (6.467388ms)\n✔ default conversation click retains its original final geometry refusal without a preview predicate (5.018958ms)\n✖ original conversation refuses body-only reply within its unchanged first read deadline (5.068821ms)\n✖ original conversation refuses neighbor-only reply within its unchanged first read deadline (4.778704ms)\n✖ original conversation refuses different required reply within its unchanged first read deadline (5.672208ms)\n✖ original conversation refuses empty preview within its unchanged first read deadline (5.612941ms)\n✔ original conversation refuses missing target within its unchanged first read deadline (468.758152ms)\n✔ original conversation refuses zero-size target within its unchanged first read deadline (257.80102ms)\n✔ original conversation refuses disabled target within its unchanged first read deadline (383.685047ms)\n✔ original conversation refuses covered target within its unchanged first read deadline (267.589084ms)\n✔ original conversation refuses two eligible rows with only the second ready within its unchanged first read deadline (268.612851ms)\n✔ original conversation serializes its required preview as literal data (6.200997ms)\n✖ original conversation rereads a revoked preview at unchanged final coordinates before input (6.204682ms)\n✔ original conversation still refuses final owner despite a ready preview (7.19629ms)\n✔ original conversation still refuses final movement despite a ready preview (7.088392ms)\n✖ actual openChat forwards TEST boot ready for alice (50.063469ms)\n✖ actual openChat forwards TEST stream partial for alice (8.439888ms)\n✖ actual openChat forwards TEST boot ready for team-lead (4.246433ms)\n✖ actual openChat forwards TEST stream partial for team-lead (41.309859ms)\nℹ tests 97\nℹ suites 0\nℹ pass 87\nℹ fail 10\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 10689.896134\n\n✖ failing tests:\n\ntest at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2146:1\n✖ original conversation waits for its own reply before one click at the hydrated coordinates (6.467388ms)\n  AssertionError [ERR_ASSERTION]: Original UI target moved after ownership check\n  + actual - expected\n  \n    [\n      169.5,\n  +   186.5,\n  -   178,\n      'BUTTON'\n    ]\n  \n      at clickExpression (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-ui-controls.ts:325:12)\n      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2150:48)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: [ 169.5, 186.5, 'BUTTON' ],\n    expected: [ 169.5, 178, 'BUTTON' ],\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }\n\ntest at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2173:1\n✖ original conversation refuses body-only reply within its unchanged first read deadline (5.068821ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2175:3)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /UI target read failed: TEST original conversation/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\ntest at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2173:1\n✖ original conversation refuses neighbor-only reply within its unchanged first read deadline (4.778704ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2175:3)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /UI target read failed: TEST original conversation/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\ntest at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2173:1\n✖ original conversation refuses different required reply within its unchanged first read deadline (5.672208ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2175:3)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /UI target read failed: TEST original conversation/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\ntest at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2173:1\n✖ original conversation refuses empty preview within its unchanged first read deadline (5.612941ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2175:3)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /UI target read failed: TEST original conversation/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\ntest at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2189:1\n✖ original conversation rereads a revoked preview at unchanged final coordinates before input (6.204682ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2193:3)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /Original UI target unavailable after ownership check/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\ntest at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2219:1\n✖ actual openChat forwards TEST boot ready for alice (50.063469ms)\n  AssertionError [ERR_ASSERTION]: one original scroll and one original click carrying the expected reply as data\n  + actual - expected\n  ... Skipped lines\n  \n    [\n      {\n        args: [\n          'button[aria-label^=\"alice,\"]',\n          'original lead conversation'\n  ...\n          'open original lead conversation',\n  -       undefined,\n  -       'TEST boot ready'\n        ],\n        method: 'click'\n      }\n    ]\n  \n      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2234:10)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],\n    expected: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }\n\ntest at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2219:1\n✖ actual openChat forwards TEST stream partial for alice (8.439888ms)\n  AssertionError [ERR_ASSERTION]: one original scroll and one original click carrying the expected reply as data\n  + actual - expected\n  ... Skipped lines\n  \n    [\n      {\n        args: [\n          'button[aria-label^=\"alice,\"]',\n          'original lead conversation'\n  ...\n          'open original lead conversation',\n  -       undefined,\n  -       'TEST stream partial'\n        ],\n        method: 'click'\n      }\n    ]\n  \n      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2234:10)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],\n    expected: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }\n\ntest at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2219:1\n✖ actual openChat forwards TEST boot ready for team-lead (4.246433ms)\n  AssertionError [ERR_ASSERTION]: one original scroll and one original click carrying the expected reply as data\n  + actual - expected\n  ... Skipped lines\n  \n    [\n      {\n        args: [\n          'button[aria-label^=\"lead,\"]',\n          'original lead conversation'\n  ...\n          'open original lead conversation',\n  -       undefined,\n  -       'TEST boot ready'\n        ],\n        method: 'click'\n      }\n    ]\n  \n      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2234:10)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],\n    expected: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }\n\ntest at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2219:1\n✖ actual openChat forwards TEST stream partial for team-lead (41.309859ms)\n  AssertionError [ERR_ASSERTION]: one original scroll and one original click carrying the expected reply as data\n  + actual - expected\n  ... Skipped lines\n  \n    [\n      {\n        args: [\n          'button[aria-label^=\"lead,\"]',\n          'original lead conversation'\n  ...\n          'open original lead conversation',\n  -       undefined,\n  -       'TEST stream partial'\n        ],\n        method: 'click'\n      }\n    ]\n  \n      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2234:10)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],\n    expected: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }\n",
+  "completeFailureSummaries": [
+    "test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2146:1\n✖ original conversation waits for its own reply before one click at the hydrated coordinates (6.467388ms)\n  AssertionError [ERR_ASSERTION]: Original UI target moved after ownership check\n  + actual - expected\n  \n    [\n      169.5,\n  +   186.5,\n  -   178,\n      'BUTTON'\n    ]\n  \n      at clickExpression (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-ui-controls.ts:325:12)\n      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2150:48)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: [ 169.5, 186.5, 'BUTTON' ],\n    expected: [ 169.5, 178, 'BUTTON' ],\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }\n\n",
+    "test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2173:1\n✖ original conversation refuses body-only reply within its unchanged first read deadline (5.068821ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2175:3)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /UI target read failed: TEST original conversation/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\n",
+    "test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2173:1\n✖ original conversation refuses neighbor-only reply within its unchanged first read deadline (4.778704ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2175:3)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /UI target read failed: TEST original conversation/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\n",
+    "test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2173:1\n✖ original conversation refuses different required reply within its unchanged first read deadline (5.672208ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2175:3)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /UI target read failed: TEST original conversation/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\n",
+    "test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2173:1\n✖ original conversation refuses empty preview within its unchanged first read deadline (5.612941ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2175:3)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /UI target read failed: TEST original conversation/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\n",
+    "test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2189:1\n✖ original conversation rereads a revoked preview at unchanged final coordinates before input (6.204682ms)\n  AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2193:3)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: /Original UI target unavailable after ownership check/,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n\n",
+    "test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2219:1\n✖ actual openChat forwards TEST boot ready for alice (50.063469ms)\n  AssertionError [ERR_ASSERTION]: one original scroll and one original click carrying the expected reply as data\n  + actual - expected\n  ... Skipped lines\n  \n    [\n      {\n        args: [\n          'button[aria-label^=\"alice,\"]',\n          'original lead conversation'\n  ...\n          'open original lead conversation',\n  -       undefined,\n  -       'TEST boot ready'\n        ],\n        method: 'click'\n      }\n    ]\n  \n      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2234:10)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],\n    expected: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }\n\n",
+    "test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2219:1\n✖ actual openChat forwards TEST stream partial for alice (8.439888ms)\n  AssertionError [ERR_ASSERTION]: one original scroll and one original click carrying the expected reply as data\n  + actual - expected\n  ... Skipped lines\n  \n    [\n      {\n        args: [\n          'button[aria-label^=\"alice,\"]',\n          'original lead conversation'\n  ...\n          'open original lead conversation',\n  -       undefined,\n  -       'TEST stream partial'\n        ],\n        method: 'click'\n      }\n    ]\n  \n      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2234:10)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],\n    expected: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }\n\n",
+    "test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2219:1\n✖ actual openChat forwards TEST boot ready for team-lead (4.246433ms)\n  AssertionError [ERR_ASSERTION]: one original scroll and one original click carrying the expected reply as data\n  + actual - expected\n  ... Skipped lines\n  \n    [\n      {\n        args: [\n          'button[aria-label^=\"lead,\"]',\n          'original lead conversation'\n  ...\n          'open original lead conversation',\n  -       undefined,\n  -       'TEST boot ready'\n        ],\n        method: 'click'\n      }\n    ]\n  \n      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2234:10)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],\n    expected: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }\n\n",
+    "test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2219:1\n✖ actual openChat forwards TEST stream partial for team-lead (41.309859ms)\n  AssertionError [ERR_ASSERTION]: one original scroll and one original click carrying the expected reply as data\n  + actual - expected\n  ... Skipped lines\n  \n    [\n      {\n        args: [\n          'button[aria-label^=\"lead,\"]',\n          'original lead conversation'\n  ...\n          'open original lead conversation',\n  -       undefined,\n  -       'TEST stream partial'\n        ],\n        method: 'click'\n      }\n    ]\n  \n      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2234:10)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],\n    expected: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }\n"
+  ],
+  "supportingReviewedSourcePassages": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "identity": {
+        "bytes": 136700,
+        "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+        "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+      },
+      "fromLine": 2105,
+      "toLine": 2236,
+      "content": "function conversationPreviewFixture(t: import('node:test').TestContext,\n  onOwned: (state: ConversationPreviewState, check: number) => void = () => undefined) {\n  const selector = 'button[aria-label^=\"alice,\"]', label = 'TEST original conversation';\n  const state: ConversationPreviewState = { content: 'alice TEST boot ready', centerY: 178, count: 1,\n    width: 200, disabled: false, covered: false, duplicateHit: false, bodyText: '', neighborText: '' };\n  let now = 0, owned = 0, reads = 0, bodyReads = 0, front = 0;\n  const waits: number[] = [], expressions: string[] = [], events: Record<string, unknown>[] = [];\n  t.mock.method(Date, 'now', () => now);\n  t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {\n    assert.equal(delay, 100); waits.push(delay); now += delay; queueMicrotask(callback);\n    return 1 as unknown as NodeJS.Timeout;\n  });\n  const row = { get textContent() { return state.content; }, tagName: 'BUTTON',\n    getBoundingClientRect: () => ({ x: 69.5, y: state.centerY - 16, width: state.width, height: 32 }),\n    matches(actual: string) { assert.equal(actual, ':disabled'); return state.disabled; },\n    contains: () => false, getAttribute: () => null };\n  const duplicate = { ...row, textContent: 'alice TEST boot ready' };\n  const document = {\n    get body() { bodyReads++; return { textContent: state.content + state.bodyText + state.neighborText }; },\n    querySelectorAll(actual: string) {\n      assert.equal(actual, selector); return Array.from({ length: state.count }, (_, i) => i ? duplicate : row);\n    },\n    elementFromPoint: () => state.covered ? {} : state.duplicateHit ? duplicate : row,\n  };\n  const ui = createDesktopUiControls({\n    async evaluate(expression: string) {\n      reads++; expressions.push(expression);\n      return runInNewContext(expression, { document, innerWidth: 1000, innerHeight: 800,\n        getComputedStyle: () => ({ pointerEvents: 'auto' }) });\n    },\n    async send(method: string, params: Record<string, unknown> = {}) {\n      assert.ok(method === 'Page.bringToFront' || method === 'Input.dispatchMouseEvent');\n      if (method === 'Page.bringToFront') front++; else events.push({ ...params });\n      return {};\n    },\n  }, { assertOwnedRenderer() { onOwned(state, ++owned); }, step() {} });\n  return { state, events, expressions, waits,\n    run: (marker?: string) => Reflect.apply(ui.click, undefined, [selector, label, undefined, marker]) as Promise<void>,\n    counts: () => ({ now, owned, reads, bodyReads, front }) };\n}\n\ntest('original conversation waits for its own reply before one click at the hydrated coordinates', async t => {\n  const f = conversationPreviewFixture(t, (state, check) => {\n    if (check === 6) { state.content = 'alice TEST boot ready'; state.centerY = 186.5; }\n  });\n  f.state.content = 'alice You: TEST_UI_BOOT'; await f.run('TEST boot ready');\n  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]),\n    [['mouseMoved', 169.5, 186.5], ['mousePressed', 169.5, 186.5], ['mouseReleased', 169.5, 186.5]]);\n  assert.deepEqual(f.counts(), { now: 700, owned: 12, reads: 10, bodyReads: 0, front: 1 });\n  assert.deepEqual(f.waits, Array.from({ length: 7 }, () => 100));\n  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'same full predicate in every original phase');\n});\n\ntest('default conversation click retains its original final geometry refusal without a preview predicate', async t => {\n  const f = conversationPreviewFixture(t, (state, check) => { if (check === 6) state.centerY = 186.5; });\n  await assert.rejects(f.run(), /Original UI target moved after ownership check/);\n  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);\n  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, bodyReads: 0, front: 1 });\n});\n\nfor (const [label, invalid] of [\n  ['body-only reply', { content: 'alice You: TEST_UI_BOOT', bodyText: 'TEST boot ready' }],\n  ['neighbor-only reply', { content: 'alice You: TEST_UI_BOOT', neighborText: 'bob TEST boot ready' }],\n  ['different required reply', { content: 'alice TEST stream partial' }],\n  ['empty preview', { content: '' }], ['missing target', { count: 0 }], ['zero-size target', { width: 0 }],\n  ['disabled target', { disabled: true }], ['covered target', { covered: true }],\n  ['two eligible rows with only the second ready', { content: 'alice You: TEST_UI_BOOT', count: 2, duplicateHit: true }],\n] satisfies readonly (readonly [string, Partial<ConversationPreviewState>])[])\ntest('original conversation refuses ' + label + ' within its unchanged first read deadline', async t => {\n  const f = conversationPreviewFixture(t); Object.assign(f.state, invalid);\n  await assert.rejects(f.run('TEST boot ready'), /UI target read failed: TEST original conversation/);\n  assert.deepEqual(f.events, [], 'no hover or physical click on an ineligible original target');\n  assert.deepEqual(f.counts(), { now: 30_000, owned: 300, reads: 300, bodyReads: 0, front: 1 });\n  assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));\n  assert.ok(f.expressions.every(value => value === f.expressions[0]));\n});\n\ntest('original conversation serializes its required preview as literal data', async t => {\n  const marker = 'TEST \"quoted\" \\\\ \\u2028 </script> $' + '{notCode} ready';\n  const f = conversationPreviewFixture(t); f.state.content = 'alice ' + marker; await f.run(marker);\n  assert.deepEqual(f.events.map(({ type }) => type), ['mouseMoved', 'mousePressed', 'mouseReleased']);\n  assert.deepEqual(f.counts(), { now: 200, owned: 7, reads: 5, bodyReads: 0, front: 1 });\n});\n\ntest('original conversation rereads a revoked preview at unchanged final coordinates before input', async t => {\n  const f = conversationPreviewFixture(t, (state, check) => {\n    if (check === 6) state.content = 'alice You: TEST_UI_BOOT';\n  });\n  await assert.rejects(f.run('TEST boot ready'), /Original UI target unavailable after ownership check/);\n  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);\n  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, bodyReads: 0, front: 1 });\n  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'final direct read includes the readiness literal');\n});\n\nfor (const kind of ['owner', 'movement'] as const)\ntest('original conversation still refuses final ' + kind + ' despite a ready preview', async t => {\n  const refusal = new Error('TEST original renderer owner lost');\n  const f = conversationPreviewFixture(t, (state, check) => {\n    if (check !== 6) return;\n    if (kind === 'owner') throw refusal;\n    state.centerY = 186.5;\n  });\n  await assert.rejects(f.run('TEST boot ready'), error => {\n    if (kind === 'owner') assert.equal(error, refusal);\n    else assert.match(String(error), /Original UI target moved after ownership check/);\n    return true;\n  });\n  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);\n  assert.equal(f.counts().reads, kind === 'owner' ? 4 : 5);\n  assert.equal(f.counts().owned, 6);\n});\n\nfor (const memberName of ['alice', 'team-lead'])\nfor (const expectedReply of ['TEST boot ready', 'TEST stream partial'])\ntest('actual openChat forwards ' + expectedReply + ' for ' + memberName, async () => {\n  const { desktopJsLiteral } = await import('./desktop-ui-controls.ts');\n  const source = await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8');\n  const first = 'const openChat =', last = 'const assertSameLive =';\n  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);\n  const begin = source.indexOf(first), end = source.indexOf(last, begin); assert.ok(end > begin);\n  const actual = source.slice(begin, end).replace(/: Live\\b/g, '').replace(/: string\\b/g, '');\n  const calls: { method: string; args: unknown[] }[] = [];\n  const run = runInNewContext('(async () => { ' + actual + ' return openChat(live, expectedReply); })',\n    { live: { memberName }, expectedReply, literal: desktopJsLiteral, ui: {\n      async scrollTo(...args: unknown[]) { calls.push({ method: 'scrollTo', args }); },\n      async click(...args: unknown[]) { calls.push({ method: 'click', args }); },\n    } }) as () => Promise<void>;\n  await run();\n  const selector = 'button[aria-label^=' + desktopJsLiteral((memberName === 'team-lead' ? 'lead' : memberName) + ',') + ']';\n  assert.deepEqual(calls, [\n    { method: 'scrollTo', args: [selector, 'original lead conversation'] },\n    { method: 'click', args: [selector, 'open original lead conversation', undefined, expectedReply] },\n"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "identity": {
+        "bytes": 28741,
+        "sha256": "9d5233b82df6a7dfa0d735b27c11f39f130824f3947c38896a0d052ca549cba4",
+        "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78"
+      },
+      "fromLine": 211,
+      "toLine": 356,
+      "content": "  const target = (selector: string, text?: string): string => `(() => {\n    const elements = [...document.querySelectorAll(${desktopJsLiteral(selector)})].filter(e => {\n      const r=e.getBoundingClientRect(); return r.width>0&&r.height>0${text === undefined ? '' : `&&e.textContent.trim()===${desktopJsLiteral(text)}`};\n    });\n    if(elements.length!==1)return {unavailableTarget:true,matches:Math.min(elements.length,256)};\n    const e=elements[0], r=e.getBoundingClientRect(), x=r.x+r.width/2,y=r.y+r.height/2;\n    const hit=document.elementFromPoint(x,y), disabled=e.matches(':disabled');\n    if(!hit||!(hit===e||e.contains(hit))||disabled)return {\n      unavailableTarget:true,matches:1,disabled,ariaDisabled:e.getAttribute('aria-disabled')==='true',\n      pointerEventsNone:getComputedStyle(e).pointerEvents==='none',\n      centerInViewport:x>=0&&y>=0&&x<innerWidth&&y<innerHeight,hitPresent:Boolean(hit)\n    };\n    return {x,y,text:e.textContent.trim().slice(0,300),tag:e.tagName};\n  })()`;\n  const clickExpression = async (\n    expression: string,\n    label: string,\n    selector?: string,\n    text?: string\n  ): Promise<void> => {\n    await cdp.send('Page.bringToFront');\n    // Reuse the original passive reads and deadline. Retain only closed facts,\n    // never DOM text, attributes, HTML or another request after a failed click.\n    const readPoint = async (phase: string): Promise<Record<string, unknown>> => {\n      const bootstrapRead = phase === label && label === 'open existing More menu' &&\n        selector === 'button[aria-label=\"More actions\"]';\n      const readExpression = bootstrapRead\n        ? `(() => {\n            const point = ${expression};\n            if (!point || point.unavailableTarget !== true) return point;\n            try {\n              const root = document.getElementById('root'), splash = document.getElementById('splash');\n              const bounds = splash?.getBoundingClientRect(), child = root?.firstElementChild;\n              return { ...point, bootstrapFacts: {\n                rawMatches: Math.min(document.querySelectorAll(${desktopJsLiteral(selector)}).length, 256),\n                rootPresent: root !== null, rootChildren: Math.min(root?.childElementCount ?? 0, 16),\n                uiInitialized: window.__claudeTeamsUiDidInit === true,\n                splashPresent: splash !== null, splashPositiveSize: Boolean(bounds && bounds.width > 0 && bounds.height > 0),\n                splashError: splash?.classList.contains('splash-status-error') === true,\n                splashSlow: splash?.classList.contains('splash-status-slow') === true,\n                documentComplete: document.readyState === 'complete',\n                languageEnglish: document.documentElement.lang === 'en',\n                languageEmpty: document.documentElement.lang === '',\n                rootFallbackShape: Boolean(root?.childElementCount === 1 &&\n                  child?.matches('div.flex.h-screen.flex-col.items-center.justify-center') &&\n                  child.querySelector(':scope > div > h1.text-2xl.font-semibold') &&\n                  child.querySelector(':scope > div > svg.size-10.text-red-500'))\n              } };\n            } catch { return point; }\n          })()`\n        : expression;\n      let facts: Record<string, boolean | number> | undefined;\n      try {\n        return record(await waitRead(readExpression, phase, 30_000, value => {\n          if (value && typeof value === 'object' && !Array.isArray(value)) {\n            const row = value as Record<string, unknown>;\n            if (row.unavailableTarget === true) {\n              facts = {\n                matches: Number.isSafeInteger(row.matches) && Number(row.matches) >= 0\n                  ? Math.min(Number(row.matches), 256) : 0,\n                disabled: row.disabled === true, ariaDisabled: row.ariaDisabled === true,\n                pointerEventsNone: row.pointerEventsNone === true,\n                centerInViewport: row.centerInViewport === true, hitPresent: row.hitPresent === true,\n              };\n              if (bootstrapRead && row.bootstrapFacts && typeof row.bootstrapFacts === 'object' &&\n                  !Array.isArray(row.bootstrapFacts)) {\n                const bootstrap = row.bootstrapFacts as Record<string, unknown>;\n                for (const key of ['rootPresent', 'uiInitialized', 'splashPresent', 'splashPositiveSize',\n                  'splashError', 'splashSlow', 'documentComplete', 'languageEnglish', 'languageEmpty',\n                  'rootFallbackShape']) {\n                  if (typeof bootstrap[key] === 'boolean') facts[key] = bootstrap[key];\n                }\n                for (const [key, limit] of [['rawMatches', 256], ['rootChildren', 16]] as const) {\n                  if (Number.isSafeInteger(bootstrap[key]) && Number(bootstrap[key]) >= 0)\n                    facts[key] = Math.min(Number(bootstrap[key]), limit);\n                }\n              }\n              return false;\n            }\n          }\n          return Boolean(value);\n        }));\n      } catch (error) {\n        if (facts) throw new Error(`UI target read failed: ${phase}; facts=${JSON.stringify(facts)}`, { cause: error });\n        throw error;\n      }\n    };\n    let point = await readPoint(label);\n    options.assertOwnedRenderer();\n    step({ action: 'mouseMoved', label: 'hover ' + label, selector, target: point });\n    await cdp.send('Input.dispatchMouseEvent', {\n      type: 'mouseMoved',\n      x: point.x,\n      y: point.y,\n    });\n    point = await readPoint(label + ' after pointer enter');\n    // Async Host hydration can shift the DOM after hover. Check the original\n    // target is stable before ONE physical click, never replay an uncertain click.\n    let stableSamples = 0;\n    for (let sample = 0; sample < 15 && stableSamples < 2; sample++) {\n      await new Promise<void>((done) => setTimeout(done, 100));\n      const next = await readPoint(label + ' stable target');\n      stableSamples =\n        next.x === point.x && next.y === point.y && next.tag === point.tag\n          ? stableSamples + 1\n          : 0;\n      point = next;\n    }\n    assert.ok(stableSamples === 2, 'Original UI target did not settle before one click');\n    assert.equal(typeof point.x, 'number');\n    assert.equal(typeof point.y, 'number');\n    options.assertOwnedRenderer();\n    const finalPoint = record(await cdp.evaluate(expression));\n    assert.notEqual(finalPoint.unavailableTarget, true, 'Original UI target unavailable after ownership check');\n    assert.deepEqual(\n      [finalPoint.x, finalPoint.y, finalPoint.tag],\n      [point.x, point.y, point.tag],\n      'Original UI target moved after ownership check'\n    );\n    options.assertOwnedRenderer();\n    step({\n      action: 'mouseClick',\n      label,\n      selector,\n      expectedText: text,\n      target: point,\n      state: 'attempted',\n    });\n    // Never repeat a click after an uncertain response.\n    await cdp.send('Input.dispatchMouseEvent', {\n      type: 'mousePressed',\n      x: point.x,\n      y: point.y,\n      button: 'left',\n      clickCount: 1,\n    });\n    await cdp.send('Input.dispatchMouseEvent', {\n      type: 'mouseReleased',\n      x: point.x,\n      y: point.y,\n      button: 'left',\n      clickCount: 1,\n    });\n  };\n  const click = (selector: string, label: string, text?: string): Promise<void> =>\n    clickExpression(target(selector, text), label, selector, text);\n"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "identity": {
+        "bytes": 24630,
+        "sha256": "20163a0e2b654c5ff3c778ffe4a3cd2138716172eb90e6aa5aa4fe6550864c43",
+        "gitBlob": "dcd0cc29a73a46a24126ec3552714fa1b057aaf4"
+      },
+      "fromLine": 140,
+      "toLine": 148,
+      "content": "      memberName: String(members[0]!.name) };\n  };\n  type Live = Awaited<ReturnType<typeof launch>>;\n  const openChat = async (live: Live) => {\n    const name = live.memberName === 'team-lead' ? 'lead' : live.memberName;\n    const selector = `button[aria-label^=${literal(name + ',')}]`;\n    await ui.scrollTo(selector, 'original lead conversation'); await ui.click(selector, 'open original lead conversation');\n  };\n  const assertSameLive = async (live: Live, phase: string, originalInputs: boolean) => {\n"
+    }
+  ]
+}

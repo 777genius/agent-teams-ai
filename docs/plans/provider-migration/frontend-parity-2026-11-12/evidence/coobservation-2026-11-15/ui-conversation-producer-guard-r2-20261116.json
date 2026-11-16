@@ -1,0 +1,378 @@
+{
+  "schemaVersion": 1,
+  "kind": "c714-conversation-readiness-producer-independent-R2",
+  "reviewer": "/root/guard_review",
+  "reviewedAt": "2026-11-16T15:03:53.918Z",
+  "repository": "777genius/agent-teams-ai",
+  "verdict": "ACCEPTED for the two exact bounded producer candidates only. Publication/readback, exact GREEN binding review and the remaining actual executions are still required.",
+  "exactCandidate": {
+    "envelope": {
+      "bytes": 62129,
+      "sha256": "c0ca3e91f00a50bb2f62b5cbf7ff3fff533ac976877ed8563e4434e387df09ac",
+      "gitBlob": "84b0727b4ca5e6ac2776cfc7f58193626cdd4f9c"
+    },
+    "files": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "preimage": {
+          "bytes": 28741,
+          "sha256": "9d5233b82df6a7dfa0d735b27c11f39f130824f3947c38896a0d052ca549cba4",
+          "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78"
+        },
+        "postimage": {
+          "bytes": 28974,
+          "sha256": "7626e479a6662242009cb050e7e5af612a29e4205d62666d15274d5c30f91386",
+          "gitBlob": "ed57cb0fe7d57ef076a591621289eb77667c63ad"
+        },
+        "edits": 3,
+        "beforeLines": 493,
+        "afterLines": 494,
+        "forwardExact": true,
+        "reverseExact": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "preimage": {
+          "bytes": 24630,
+          "sha256": "20163a0e2b654c5ff3c778ffe4a3cd2138716172eb90e6aa5aa4fe6550864c43",
+          "gitBlob": "dcd0cc29a73a46a24126ec3552714fa1b057aaf4"
+        },
+        "postimage": {
+          "bytes": 24759,
+          "sha256": "d15b7eea14c0951194310aee34ddc5c477879c759a97a4e2f4e9fce1f956ce9b",
+          "gitBlob": "cf93da72a198dac636658e512093eef7828b5927"
+        },
+        "edits": 6,
+        "beforeLines": 298,
+        "afterLines": 298,
+        "forwardExact": true,
+        "reverseExact": true
+      }
+    ],
+    "completeBothPostimagesRead": true,
+    "allNineForwardAndReverseEditsExact": true,
+    "fullRemoteCandidateBodiesRehashed": true,
+    "unchangedTest": {
+      "bytes": 136700,
+      "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+      "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+    },
+    "noUnlistedEditInsideEitherCandidateBody": true
+  },
+  "authorizationAndSequence": {
+    "publishedR1": "f3fb3ead0315508901531e8f54b75f21518492a7",
+    "originalSourceCommit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+    "sourceAuthor": "/root",
+    "combinedActualRedAcceptanceAt": "2026-11-16 14:57:12 UTC",
+    "actualRedEnvelope": {
+      "bytes": 127239,
+      "sha256": "579adc7808c0b2631812a55dff1adc22490ad0e38d9bded299640aab1d00e57f",
+      "gitBlob": "8b5c5cc552d03984cdb9507dd205c181d64abbd8"
+    },
+    "actualRedReceipt": {
+      "bytes": 24560,
+      "sha256": "49a6904e03440f258031f3bf751c6d00399de46f7a21a32536433bef6bc12ae4",
+      "gitBlob": "51ded8a75f03a28669dad09ff66a1f7b2f1ec278"
+    },
+    "independentSemanticAcceptance": {
+      "bytes": 82638,
+      "sha256": "34246564207ef1bb1654440c6e446d9ab55792f91f6232da94339875331efc5b",
+      "gitBlob": "5f316e969bc382cb7ed49fa824955fb939b989ef"
+    },
+    "completeActualInputLifetimeAcceptance": {
+      "bytes": 37920,
+      "sha256": "d6540f6d76342894028c3d5624e382ecb88aa6dc08ad65c7e98286118d7850ec",
+      "gitBlob": "f2695e2c8ae5381a6175127fa240eef7b289c390"
+    },
+    "combinedAcceptanceCommunicatedBeforeProducerAuthorship": true,
+    "historicalPendingField": "The candidate envelope preserves bareRecordPending=true at the earlier combined-acceptance capture. Full acceptance was already communicated then; the subsequently frozen exact actual review f2695e2c records that closed gate. This historical field is not overwritten or treated as a current pending gate.",
+    "sourcePostimagesBeforeCombinedActualAcceptance": 0,
+    "postimagesLocallyMaterialized": false,
+    "producerExecuted": false,
+    "greenExecuted": false,
+    "reviewerActions": "Immutable Git reads and pure in-memory source/hash/delta analysis; this bare evidence JSON only. No shell, target source evaluation, source application, test execution, compiler, native/GUI, ref/commit/PR/CI action."
+  },
+  "scopeAndSize": {
+    "sourcePaths": [
+      "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts"
+    ],
+    "editsByFile": {
+      "controls": 3,
+      "selection": 6
+    },
+    "physicalLines": {
+      "controlsBefore": 493,
+      "controlsAfter": 494,
+      "selectionBefore": 298,
+      "selectionAfter": 298
+    },
+    "byteGrowth": {
+      "controls": 233,
+      "selection": 129
+    },
+    "originalAddedLineCaps": {
+      "controls": 20,
+      "selection": 10
+    },
+    "onlyNineRecordedExactEdits": true,
+    "newImportsInCandidateBodies": 0,
+    "dependencyWorkflowOrTestPostimagesInCandidate": 0,
+    "fullPublishedTreeReadbackStillRequired": true
+  },
+  "exactEdits": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "oldText": "  const target = (selector: string, text?: string): string => `(() => {",
+      "newText": "  const target = (selector: string, text?: string, requiredContent?: string): string => `(() => {"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "oldText": "    if(elements.length!==1)return {unavailableTarget:true,matches:Math.min(elements.length,256)};",
+      "newText": "    if(elements.length!==1)return {unavailableTarget:true,matches:Math.min(elements.length,256)};${requiredContent === undefined ? '' : `\n    if(!elements[0].textContent.includes(${desktopJsLiteral(requiredContent)}))return {unavailableTarget:true,matches:1};`}"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "oldText": "  const click = (selector: string, label: string, text?: string): Promise<void> =>\n    clickExpression(target(selector, text), label, selector, text);",
+      "newText": "  const click = (selector: string, label: string, text?: string, requiredContent?: string): Promise<void> =>\n    clickExpression(target(selector, text, requiredContent), label, selector, text);"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "oldText": "  const openChat = async (live: Live) => {",
+      "newText": "  const openChat = async (live: Live, expectedReply: string) => {"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "oldText": "    await ui.scrollTo(selector, 'original lead conversation'); await ui.click(selector, 'open original lead conversation');",
+      "newText": "    await ui.scrollTo(selector, 'original lead conversation'); await ui.click(selector, 'open original lead conversation', undefined, expectedReply);"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "oldText": "  await openChat(liveA); await visible('TEST boot ready');",
+      "newText": "  await openChat(liveA, 'TEST boot ready'); await visible('TEST boot ready');"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "oldText": "  await openChat(liveB); await visible('TEST boot ready');",
+      "newText": "  await openChat(liveB, 'TEST boot ready'); await visible('TEST boot ready');"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "oldText": "  await openTeam(a); await openChat(liveA);",
+      "newText": "  await openTeam(a); await openChat(liveA, 'TEST boot ready');"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "oldText": "  await openChat(liveA); await visible('TEST stream partial');",
+      "newText": "  await openChat(liveA, 'TEST stream partial'); await visible('TEST stream partial');"
+    }
+  ],
+  "selectedRowReadiness": {
+    "api": "ui.click(selector, label, text?, requiredContent?) forwards the optional string to target(selector, text?, requiredContent?). Existing parameters and diagnostic text meanings are preserved.",
+    "sequence": [
+      "Run the original selector query and original positive-size/optional exact-text eligibility filter.",
+      "Apply the original eligible-row singleton refusal first.",
+      "Only for an explicitly supplied requiredContent, read textContent of that single selected element and require includes(desktopJsLiteral(requiredContent)).",
+      "If absent, return the existing bounded unavailableTarget shape with matches:1.",
+      "Otherwise continue the original point calculation, center-hit/disabled checks and target result."
+    ],
+    "cardinality": "The marker is not used to filter an ambiguous set into one row. Two eligible rows still refuse even when only the second contains the required marker.",
+    "authority": "Only the selected element text is used. Body text, neighboring rows, attributes, another Team or an alternative matching row do not satisfy this predicate.",
+    "dataSerialization": "The required value passes through unchanged desktopJsLiteral JSON serialization and existing control-character/angle-bracket escaping; it is not accepted as JavaScript source.",
+    "undefinedDefault": "The conditional adds an empty string when requiredContent is undefined. Removing the optional signature addition and projecting that empty branch reproduces the complete original target expression byte-for-byte.",
+    "finalRevalidation": "clickExpression reuses the same strengthened expression in every original read and the final direct evaluation. A revoked marker at unchanged coordinates reaches the unchanged unavailable-target assertion before press/release.",
+    "stageQualification": "This substring is a necessary readiness condition for the selected row. It is not treated as proof of terminal completion or current held-stream state; the original receipt/currentness/post-click assertions remain required."
+  },
+  "unchangedBehavior": {
+    "completeByteExactBlocks": [
+      {
+        "name": "waitRead",
+        "exact": true,
+        "identity": {
+          "bytes": 793,
+          "sha256": "a1b1d26ea3873cf48398642707799c26e672be2dcb1b59b146b425baae8c7d6c",
+          "gitBlob": "8e9e8df6ea7a3a9eb06536beb4c6056cfaa93262"
+        }
+      },
+      {
+        "name": "clickExpression",
+        "exact": true,
+        "identity": {
+          "bytes": 6234,
+          "sha256": "255f42a70b7595f09d7a630ccacda9830bfd88c40fab16daad5dd6b56c5912de",
+          "gitBlob": "f831acb1570515d7f56419c604287198a33e1b5c"
+        }
+      },
+      {
+        "name": "hoverAndScrollAndSidebar",
+        "exact": true,
+        "identity": {
+          "bytes": 6731,
+          "sha256": "d19c4d7ca12542b040485edcae122ebfb64157d5b331df88409a2009aaa46e80",
+          "gitBlob": "f6aee30f93278edd82cce8cbf4d74c6c3dc44366"
+        }
+      },
+      {
+        "name": "literalSerializer",
+        "exact": true,
+        "identity": {
+          "bytes": 628,
+          "sha256": "ed1ecbd90b9af0d091f27e80b99ad98d9a2c00dce05ac0f0bc4209852bc649ba",
+          "gitBlob": "9e502036305b2e023afc280531f4f81ae706ccec"
+        }
+      }
+    ],
+    "selectionBlocks": [
+      {
+        "name": "launchSettings",
+        "exact": true,
+        "identity": {
+          "bytes": 3127,
+          "sha256": "585d2e1b59e2586d5b74370ce650fb39f170eb1b2382794334fe5ab055f13c70",
+          "gitBlob": "01d8fae4f09da1551a6135b1455097d93d34b79e"
+        }
+      },
+      {
+        "name": "liveCustodyAndStop",
+        "exact": true,
+        "identity": {
+          "bytes": 2099,
+          "sha256": "13a91c6f28f35dea1590374d1ac7abf46b7711793cc7f484d2b46946e1833dff",
+          "gitBlob": "402110e61c7c7ee05ffc43638205ec4d76798e08"
+        }
+      },
+      {
+        "name": "postStream",
+        "exact": true,
+        "identity": {
+          "bytes": 1336,
+          "sha256": "ebd5af808fa8c100be4e2b4c39d23896e5ebc6c79e3d4283bea608c9769b4b87",
+          "gitBlob": "7a4850867b9c1a025b90a21d2890648bc5a258b6"
+        }
+      }
+    ],
+    "clickExpression": "Entire6,234-byte block is unchanged, including original readPoint calls, ownership guards, two stable samples within the15-sample loop, exact final[x,y,tag] equality, one original hover and one mousePressed/mouseReleased pair.",
+    "waitRead": "Entire793-byte block is unchanged, including original timeout parameters and100ms cadence. No new sampling loop, read call site, timeout reset, widened deadline or input retry is added.",
+    "timingQualification": "The stronger predicate may cause additional evaluations within an existing read loop. This static review does not claim equal total poll counts, elapsed time or a new strict whole-operation wall-time limit.",
+    "otherControls": "The entire hover/scroll/sidebar6,731-byte block and628-byte literal serializer are unchanged. Default clicks without a marker retain the original target expression.",
+    "diagnostics": "The missing-marker branch uses the existing bounded unavailableTarget fact shape; it adds no arbitrary snapshot, preview body or private data to failure summaries.",
+    "savedLaunch": "The entire3,127-byte openLaunch block remains exact, preserving the previously retained saved Launch behavior and its25 finite source cases.",
+    "custody": "The complete2,099-byte live-custody/Stop block remains exact. No effect replay, alternate owner, altered capture identity or relaxed completion condition is introduced.",
+    "postStream": "The complete1,336-byte suffix beginning at the held-partial completion-absence assertion remains exact."
+  },
+  "callSites": {
+    "actualFourCalls": [
+      {
+        "line": 176,
+        "text": "await openChat(liveA, 'TEST boot ready'); await visible('TEST boot ready');"
+      },
+      {
+        "line": 260,
+        "text": "await openChat(liveB, 'TEST boot ready'); await visible('TEST boot ready');"
+      },
+      {
+        "line": 267,
+        "text": "await openTeam(a); await openChat(liveA, 'TEST boot ready');"
+      },
+      {
+        "line": 285,
+        "text": "await openChat(liveA, 'TEST stream partial'); await visible('TEST stream partial');"
+      }
+    ],
+    "bootReadyCalls": 3,
+    "heldPartialCalls": 1,
+    "definitionCount": 1,
+    "helper": "openChat retains the same memberName mapping (team-lead to lead), exact selector, original scroll and one original click. It forwards undefined in the existing optional exact-text slot and expectedReply in the new fourth slot.",
+    "orderPreserved": true,
+    "allExistingPostClickVisibleAssertionsPreserved": true,
+    "originalPartialCompletionAbsenceAssertionPreserved": true,
+    "originalReleaseStreamAndTerminalCompletionChecksPreserved": true
+  },
+  "staticCaseImplications": [
+    {
+      "caseOrdinals": [
+        79
+      ],
+      "expected": "The selected-row predicate prevents initial acceptance before that row contains the reply, so the original fixture can settle at the hydrated point before the existing hover/stability/final guards.",
+      "qualification": "Static expected behavior only; not a GREEN result."
+    },
+    {
+      "caseOrdinals": [
+        80
+      ],
+      "expected": "Undefined optional data leaves the exact original geometry-refusal behavior unchanged."
+    },
+    {
+      "caseOrdinals": [
+        81,
+        82,
+        83,
+        84
+      ],
+      "expected": "Body-only, neighbor-only, wrong-marker and empty-preview conditions remain unavailable inside the existing read loop."
+    },
+    {
+      "caseOrdinals": [
+        85,
+        86,
+        87,
+        88,
+        89
+      ],
+      "expected": "Original missing/zero-size/disabled/covered/cardinality refusals remain in force; marker presence cannot weaken them."
+    },
+    {
+      "caseOrdinals": [
+        90
+      ],
+      "expected": "Required text is serialized as literal data through the unchanged serializer."
+    },
+    {
+      "caseOrdinals": [
+        91
+      ],
+      "expected": "Final evaluation of the same expression refuses a marker revoked after earlier readiness, without retrying physical input."
+    },
+    {
+      "caseOrdinals": [
+        92,
+        93
+      ],
+      "expected": "Original late-owner and final-movement refusal remain unchanged even if the marker is present."
+    },
+    {
+      "caseOrdinals": [
+        94,
+        95,
+        96,
+        97
+      ],
+      "expected": "Actual openChat helper now forwards the expected boot/partial marker in the intended fourth argument while retaining its one scroll and one click."
+    }
+  ],
+  "actualEvidenceBoundary": {
+    "priorRedActualCases": 97,
+    "priorRedPass": 87,
+    "priorRedDesignatedSemanticFail": 10,
+    "original78AllPassedInRed": true,
+    "nineAddedControlsPassedInRed": true,
+    "postimageWhole97Executions": 0,
+    "noGreenClaim": true,
+    "noLiveInstallerSelectionGuiNativeOrRealProviderQualification": true,
+    "noHistoricalEFailureDeclaredFixedFromStaticReview": true
+  },
+  "nextRequiredGates": [
+    "Exact future GREEN binding and materialization review using this unchanged whole97 test and accepted actual RED receipt.",
+    "Immediate-push source/document publication and complete actual readback before local application.",
+    "One original whole97 GREEN run with full actual source/input/raw/lifetime/cutoff/outer-exit review.",
+    "One each of the original remaining scoped lint, source-size and diff-check commands with equivalent evidence."
+  ],
+  "remainingAttempts": {
+    "red": 0,
+    "green": 1,
+    "lint": 1,
+    "sourceSize": 1,
+    "diffCheck": 1
+  },
+  "remainingIssues": []
+}

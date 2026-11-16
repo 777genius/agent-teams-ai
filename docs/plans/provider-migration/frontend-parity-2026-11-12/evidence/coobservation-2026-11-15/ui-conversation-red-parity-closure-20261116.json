@@ -1,0 +1,238 @@
+{
+  "schema": "independent-whole97-red-final-evidence-join-v1",
+  "reviewer": "/root/parity_audit",
+  "repository": "777genius/agent-teams-ai",
+  "result": "ACCEPTED: the published finite test-first RED prerequisite is fully closed",
+  "semanticReview": {
+    "gitBlob": "5f316e969bc382cb7ed49fa824955fb939b989ef",
+    "bytes": 82638,
+    "sha256": "34246564207ef1bb1654440c6e446d9ab55792f91f6232da94339875331efc5b"
+  },
+  "evidence": {
+    "envelope": {
+      "bytes": 127239,
+      "sha256": "579adc7808c0b2631812a55dff1adc22490ad0e38d9bded299640aab1d00e57f",
+      "gitBlob": "8b5c5cc552d03984cdb9507dd205c181d64abbd8"
+    },
+    "finalReceipt": {
+      "bytes": 24560,
+      "sha256": "49a6904e03440f258031f3bf751c6d00399de46f7a21a32536433bef6bc12ae4",
+      "gitBlob": "51ded8a75f03a28669dad09ff66a1f7b2f1ec278"
+    },
+    "raw": {
+      "bytes": 19194,
+      "sha256": "2517761f8aa85c0bdc536fb132c7101421e39359464dac39f44626d8d52d5539",
+      "gitBlob": "a9f4a5a2e351fb7c9898679a0d69846fb02bc01e"
+    },
+    "completeActualSource": {
+      "bytes": 2478329,
+      "sha256": "abbf2b325ec7c0b40fd4c37bd6f7ee65ce69273723230032e150f3e8e0af3089",
+      "gitBlob": "454b6d6c6141a3926635d46b63aa6c3ac62ec551"
+    },
+    "completeActualIndex": {
+      "bytes": 1492874,
+      "sha256": "07ccf6af3b7849e0f8259ffb9164537ab8f26e83f4a112cfd06c66a1f0c0b8db",
+      "gitBlob": "bb3caf365d224fcdddc50ea0dab2b751cd54f6d8"
+    }
+  },
+  "directChecks": {
+    "fullIndexRows": 11567,
+    "allIndexEntriesEqual": true,
+    "sourceRows": 8798,
+    "allSourceRowsEqual": true,
+    "workflowLeaves": 42,
+    "semanticSourceRows": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "mode": "100644",
+        "bytes": 136700,
+        "sha256": "8382b5cde1fb4fdeb919a2cca33da52989acc6ea642018db024225af499677a3",
+        "gitBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "mode": "100644",
+        "bytes": 28741,
+        "sha256": "9d5233b82df6a7dfa0d735b27c11f39f130824f3947c38896a0d052ca549cba4",
+        "gitBlob": "1e94339df46ef3bb963555fc3cc7253055766a78"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+        "mode": "100644",
+        "bytes": 24630,
+        "sha256": "20163a0e2b654c5ff3c778ffe4a3cd2138716172eb90e6aa5aa4fe6550864c43",
+        "gitBlob": "dcd0cc29a73a46a24126ec3552714fa1b057aaf4"
+      }
+    ],
+    "smallBodies": 58,
+    "metadataChildren": 14,
+    "primaryChildren": 1,
+    "census": {
+      "files": 68,
+      "bytes": 90199049,
+      "uniqueBodies": 42
+    }
+  },
+  "actualSource": {
+    "commit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+    "tree": "3239e6e6c8182f3d8e45ee671efc9108500b5137"
+  },
+  "actualRunner": {
+    "bytes": 35916,
+    "sha256": "495fac79660eb36f0795f74ff14bd665d79ac3e43534349c2f65234bda89d0f5",
+    "gitBlob": "6af0ac85f09ef02488ce15331828713882a73d13"
+  },
+  "actualBinding": {
+    "bytes": 306274,
+    "sha256": "b118c22fea2bc63c402fa4e6e86e9244d8ee7ec1a54f8ac965e9cafa05cca77f",
+    "gitBlob": "04d501260b4ac275bf52d6381d6d2e7d93bb973e"
+  },
+  "execution": {
+    "primaryArgv": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--test",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+    ],
+    "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+    "attempt": 1,
+    "actualOuterSession": 9990,
+    "observedOuterResult": {
+      "chunk_id": "ffeb53",
+      "wall_time_seconds": 0.00002437,
+      "exit_code": 0,
+      "original_token_count": 279,
+      "output": "{\"command\": \"red\", \"action\": \"run\", \"exitCode\": 1, \"exitSignal\": null, \"timedOut\": false, \"executionError\": null, \"postflightError\": null, \"inputsPreserved\": true, \"commandCompletedNormally\": true, \"scopeCompleted\": true, \"preflightSeconds\": 87.44422481999936, \"commandPhaseSeconds\": 10.936913047999042, \"cleanupSeconds\": 0, \"postflightSeconds\": 37.172338766000394, \"totalInvocationSeconds\": 135.55453583099916, \"rawCombinedOutput\": {\"path\": \"/tmp/c714-ui-conversation-evidence/red-command-1.log\", \"bytes\": 19194, \"sha256\": \"2517761f8aa85c0bdc536fb132c7101421e39359464dac39f44626d8d52d5539\", \"gitBlob\": \"a9f4a5a2e351fb7c9898679a0d69846fb02bc01e\"}, \"cleanup\": {\"capturedSessionMembersAfter\": [], \"newTestTempsRemaining\": [], \"scope\": \"Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof.\"}, \"signalAdmissionCutoff\": {\"at\": \"2026-11-16T14:44:01.282174+00:00\", \"pendingSignals\": [], \"supervisorExitZeroRequired\": true, \"scope\": \"Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission.\"}}\n"
+    },
+    "primaryExit": 1,
+    "primarySignal": null,
+    "timedOut": false,
+    "normalCompletion": true,
+    "scopeCompleted": true,
+    "inputsPreserved": true,
+    "interruptions": [],
+    "signalAdmissionCutoff": {
+      "at": "2026-11-16T14:44:01.282174+00:00",
+      "pendingSignals": [],
+      "supervisorExitZeroRequired": true,
+      "scope": "Managed-signal pending snapshot while blocked; later signals are outside this receipt and require separate outer-exit admission."
+    },
+    "cleanup": {
+      "capturedSessionMembersAfter": [],
+      "newTestTempsRemaining": [],
+      "scope": "Captured command session/group and TEST-prefixed task temps; no universal escaped-child/native custody proof."
+    },
+    "startedAt": "2026-11-16T14:41:45.726862+00:00",
+    "primaryStartedAt": "2026-11-16T14:43:13.172950+00:00",
+    "primaryFinishedAt": "2026-11-16T14:43:24.109573+00:00",
+    "finishedAt": "2026-11-16T14:44:01.282196+00:00",
+    "preflightSeconds": 87.44422481999936,
+    "commandPhaseSeconds": 10.936913047999042,
+    "cleanupSeconds": 0,
+    "postflightSeconds": 37.172338766000394,
+    "totalInvocationSeconds": 135.55453583099916,
+    "commandLimitSeconds": 180,
+    "timingQualification": "The 180-second limit applies to the original primary command phase; input preflight and postflight are reported separately. Cleanup time is a subset of commandPhaseSeconds."
+  },
+  "outcome": {
+    "total": 97,
+    "pass": 87,
+    "fail": 10,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "preserved78Pass": 78,
+    "addedControlsPass": 9,
+    "designatedRegressionFailures": 10
+  },
+  "remainingAttempts": {
+    "red": 0,
+    "green": 1,
+    "lint": 1,
+    "sourceSize": 1,
+    "diffCheck": 1
+  },
+  "inputPreservation": {
+    "all8798ActualSourceRowsEqualReviewedFreshInput": true,
+    "all11567StageZeroIndexRowsEqualSelectedC5Tree": true,
+    "bothSourceSnapshotsSameCompleteIdentity": true,
+    "dependencies": {
+      "rows": 122773,
+      "before": {
+        "path": "/tmp/c714-ui-conversation-evidence/red-before-dependencies.json",
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "after": {
+        "path": "/tmp/c714-ui-conversation-evidence/red-after-dependencies.json",
+        "bytes": 39168001,
+        "sha256": "d1783002ecd168fcfb0b691addc2d0a3486d6cc1c10859d0c775034fec27659b",
+        "gitBlob": "8fb1a488520c95d3651098a81ad0160c6b049cf7"
+      },
+      "join": "Exact identity of complete fresh bootstrap dependency body; full partition reconstruction belongs to the separately accepted Guard input audit."
+    },
+    "compiled": {
+      "rows": 1454,
+      "before": {
+        "path": "/tmp/c714-ui-conversation-evidence/red-before-compiled.json",
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      },
+      "after": {
+        "path": "/tmp/c714-ui-conversation-evidence/red-after-compiled.json",
+        "bytes": 400300,
+        "sha256": "bdd4a09c5c64a85736b19c40eea927536b9dece4c968a19bed5c95150216ad85",
+        "gitBlob": "224ff561f65772393140302de26b584bf08b06d9"
+      }
+    },
+    "toolsEnvironmentProvidersCacheBeforeAfterIdentical": true,
+    "providerRegularMemberEquality": [
+      {
+        "name": "@agent-teams/provider-implementations",
+        "archive": {
+          "bytes": 186398,
+          "sha256": "a3ee7632c9685fafb4ccc57cb5548503c476fc9ed608bd13438ed74e5329f9d8",
+          "gitBlob": "f05a05edba53aa07364d9bbd5510f468dfe7ebe3"
+        },
+        "regularMembers": 253,
+        "allRegularMembersEqual": true
+      },
+      {
+        "name": "@agent-teams/provider-session-contracts",
+        "archive": {
+          "bytes": 6230,
+          "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+          "gitBlob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8"
+        },
+        "regularMembers": 12,
+        "allRegularMembersEqual": true
+      }
+    ],
+    "fourteenMetadataReceiptsAllExitZeroAndNoSessionDebt": true,
+    "primaryReceiptHasNoSessionDebtOrInterruption": true,
+    "all58SmallBodiesRehashedAndJoinedTo68FileCensus": true
+  },
+  "limitations": [
+    "The earlier semantic-only review remains unchanged and is supplemented by this immutable execution/input join.",
+    "This proves the published finite test-first RED prerequisite only. It does not prove the future producer, GREEN, Desktop, native, real-provider or broad E2E outcome.",
+    "Downstream assertions after the ten failing assertions remain unreached, as recorded in the semantic review.",
+    "Captured session/group and TEST-temp cleanup is not universal escaped-child or native-process custody.",
+    "The signal-admission receipt has an explicit cutoff; observed outer exit0 is checked separately. No post-cutoff signal coverage is inferred from the receipt alone.",
+    "No source/test/runner code was authored, applied or executed by this reviewer."
+  ],
+  "overallProducerAuthoringGate": {
+    "closed": true,
+    "allowedNextStage": "Only the already-published bounded conversation producer postimage authorship and independent R2 review",
+    "remainingPrerequisites": "Producer R2, exact publication and full readback before one authorized whole97 GREEN and the remaining scoped guards",
+    "semanticAcceptedBy": "/root/parity_audit",
+    "lifetimeAndCompleteInputAcceptedBy": "/root/guard_review",
+    "parentInformedBeforeSupplement": true
+  },
+  "guardAcceptance": {
+    "reviewer": "/root/guard_review",
+    "accepted": true,
+    "message": "Actual RED lifetime/full-input/outer-exit gate is CLOSED and accepted to root. All58 literal bodies/all68-file90,199,049B census, complete8798source/11567index,10 large whole-body joins,14 metadata children, primary1/outer0 and all18 printed fields are exact. All265 provider members match accepted dependency rows; tool/config/cache/temps and cutoff clean. Entire raw joins your5f316 and97 ledger; no remaining producer gate in my lane.",
+    "attribution": "Explicit independent acceptance delivered by /root/guard_review and acknowledged by /root before this supplemental record. The separate Guard review body is retained by the parent independently."
+  }
+}

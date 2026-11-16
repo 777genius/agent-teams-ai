@@ -341,7 +341,7 @@
   },
   "localEnvironment": "The independently reviewed fresh bootstrap completed all four stages on exact c5ff sources with Node24.22.1 and pnpm11.22.0. Full actual inventories and separate SDK/MCP import reviews are accepted. Historical old binding remains unexecutable here. The separately reviewed fresh whole97 runner still requires this checkpoint's complete actual publication readback; no test or producer has executed/changed at this checkpoint.",
   "remainingRuntimeBudgets": {
-    "red": 1,
+    "red": 0,
     "green": 1,
     "lint": 1,
     "sourceSize": 1,
@@ -765,5 +765,67 @@
       "No original CI ref/action changes; no native/real-provider/full-E2E qualification inferred"
     ],
     "allExactReviewBodiesFetchedAndRehashed": true
+  },
+  "currentConversationStage": {
+    "state": "Actual semantic RED accepted; exact two producers reviewed for publication; local application/GREEN not yet performed",
+    "actualRed": {
+      "bytes": 127239,
+      "sha256": "579adc7808c0b2631812a55dff1adc22490ad0e38d9bded299640aab1d00e57f",
+      "gitBlob": "8b5c5cc552d03984cdb9507dd205c181d64abbd8"
+    },
+    "actualReceipt": {
+      "bytes": 24560,
+      "sha256": "49a6904e03440f258031f3bf751c6d00399de46f7a21a32536433bef6bc12ae4",
+      "gitBlob": "51ded8a75f03a28669dad09ff66a1f7b2f1ec278"
+    },
+    "semanticReview": {
+      "bytes": 82638,
+      "sha256": "34246564207ef1bb1654440c6e446d9ab55792f91f6232da94339875331efc5b",
+      "gitBlob": "5f316e969bc382cb7ed49fa824955fb939b989ef"
+    },
+    "guardActualReview": {
+      "bytes": 37920,
+      "sha256": "d6540f6d76342894028c3d5624e382ecb88aa6dc08ad65c7e98286118d7850ec",
+      "gitBlob": "f2695e2c8ae5381a6175127fa240eef7b289c390"
+    },
+    "parityClosure": {
+      "bytes": 11211,
+      "sha256": "03b9c2a3061a49b68a43b2c7a3b2566bb65c4cc31f8b98601449a206260c0e2e",
+      "gitBlob": "4cda111a657915dbf0c61662a4b07f66a8cd22cd"
+    },
+    "producerCandidate": {
+      "bytes": 62129,
+      "sha256": "c0ca3e91f00a50bb2f62b5cbf7ff3fff533ac976877ed8563e4434e387df09ac",
+      "gitBlob": "84b0727b4ca5e6ac2776cfc7f58193626cdd4f9c"
+    },
+    "producerGuardR2": {
+      "bytes": 17586,
+      "sha256": "e89f7bfe24a9c62f8711775c9b875197187dd2cec25f1dc6558f5e84ada8343c",
+      "gitBlob": "4fdf2166e60a3c1a8b3f77df96c9469583895d10"
+    },
+    "producerParityR2": {
+      "bytes": 13822,
+      "sha256": "348c310f0824f86afa8ddd9c5350e18666b4b05cd1ace4ed84fbbea7ff9dad85",
+      "gitBlob": "404567a784213ac16cfc7f94ad98969c70cbf598"
+    },
+    "outcomePath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-producer-reviewed-outcome-20261116.json"
+  },
+  "originalP09ArtifactReview": {
+    "x64": {
+      "bytes": 130500,
+      "sha256": "7ceebfec788ca68ce6f93d325a87b5229f09984c7542cdb641ee485a6dd5096f",
+      "gitBlob": "47bd44b7bf25b9c54b3fb741abe084caddfafdaf"
+    },
+    "arm64": {
+      "bytes": 130480,
+      "sha256": "453bff87f588c51c745ed342794845232f0dd6669f53c0d048031f6e6139a484",
+      "gitBlob": "8c895bf8310f8890e354d61c4b7f9091bb474097"
+    },
+    "independent": {
+      "bytes": 34786,
+      "sha256": "477bf2f39792b1cbf7e43a60648f9c648ee758e4be19875f6078ce5750882395",
+      "gitBlob": "2ed811c6e71c4031486f2a1f139cec474618d1e0"
+    },
+    "strictQualification": false
   }
 }

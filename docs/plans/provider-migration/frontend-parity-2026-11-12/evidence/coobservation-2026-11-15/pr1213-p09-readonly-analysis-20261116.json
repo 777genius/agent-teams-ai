@@ -1,0 +1,908 @@
+{
+  "schemaVersion": 1,
+  "kind": "READ_ONLY_ORIGINAL_DARWIN_P09_ASSESSMENT",
+  "summary": "The original strict P09 refusal is established. No production adapter defect or safe producer correction is established, and no diagnostic work or future execution is selected by this record.",
+  "source": {
+    "commit": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+    "tree": "6addcdaf71094340d366dc8a97258d68aaa7a47b",
+    "currentReviewedCommit": "87e10f42ddfe9d426ad64d26d93a15e525e4b2e1",
+    "currentReviewedTree": "895171e964520294b62b99e30018f546a990b261",
+    "pins": [
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+        "sha": "19aca56c55a666654b04827b3c2446d2ad03ad8d",
+        "bytes": 21219,
+        "mode": "100644",
+        "exactCurrent": true,
+        "sha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+        "gitBlob": "19aca56c55a666654b04827b3c2446d2ad03ad8d"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+        "sha": "f1e1d1145898e201723be343fa8768d73332fcb1",
+        "bytes": 27709,
+        "mode": "100644",
+        "exactCurrent": true,
+        "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e",
+        "gitBlob": "f1e1d1145898e201723be343fa8768d73332fcb1"
+      },
+      {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "sha": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+        "bytes": 36013,
+        "mode": "100644",
+        "exactCurrent": true,
+        "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14",
+        "gitBlob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e"
+      }
+    ]
+  },
+  "originalRun": {
+    "id": 43834444738,
+    "attempt": 1,
+    "step": 24
+  },
+  "authority": {
+    "readOnlyGitAndEvidence": true,
+    "newCiQueries": false,
+    "shellOrRuntime": false,
+    "sourceOrR1Postimages": false,
+    "refOrPrActions": false,
+    "archiveByteCrcVerification": "root",
+    "completePublishedTextWrapperAndMemberHashReview": "pr_graph",
+    "bareEvidenceBlobOnly": true,
+    "rootPublicationRequired": true
+  },
+  "sourceAnchors": {
+    "fixture": {
+      "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+      "signingWitness": "205-242",
+      "rewrite": "249-269",
+      "identityAndPreMutationWitness": "360-382",
+      "mutationAndOriginalResume": "384-394",
+      "cleanupAndReceipt": "395-410",
+      "existingHashSubprocess": "114-159"
+    },
+    "reader": {
+      "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+      "assertions": "469-503",
+      "retainFirstFailure": "506-527",
+      "writeIncompleteReceiptAndRethrow": "538-545"
+    },
+    "workflow": {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "originalStep": 24,
+      "stepName": "Observe POSIX original-path exec and explicit mutation counterexamples",
+      "lines": "597-604"
+    }
+  },
+  "evidence": [
+    {
+      "arch": "x64",
+      "jobId": 133187477312,
+      "jobConclusion": "failure",
+      "firstFailingStep": 24,
+      "osBuild": "24G830",
+      "nodeVersion": "v24.21.0",
+      "originalRaw": {
+        "name": "pr1213-stage1-darwinx64-raw",
+        "bytes": 115939,
+        "sha256": "73fc634062ef717c9d3673057ffcbc6b9566b8d9ea88244de4b8862ab2181bc4",
+        "gitBlob": "1ec6cea423560b0f51ad774b62db7261f84b5935"
+      },
+      "retainedRawBundle": {
+        "gitBlob": "36098a3c0016e41bfec2bfa176a4db08ab32e5b8",
+        "bytes": 506322,
+        "sha256": "6a20487abd764059700b08c1b2b8a566f22ad68f30f3722995bc8e668caa38b1"
+      },
+      "recoveredWrapper": {
+        "bytes": 130500,
+        "sha256": "7ceebfec788ca68ce6f93d325a87b5229f09984c7542cdb641ee485a6dd5096f",
+        "gitBlob": "47bd44b7bf25b9c54b3fb741abe084caddfafdaf"
+      },
+      "artifactId": 14211269160,
+      "originalArchive": {
+        "bytes": 10545,
+        "sha256": "2f56428580670888afd0aa7e49ff43e0f54a5e287d205328f04d10c818a29186",
+        "gitBlob": "e6c78cc7736c176a8ea796b9ffb96d74a5303d32"
+      },
+      "archiveVerificationAttribution": "Root verified original ZIP bytes/SHA/CRC/safe-member census; pr_graph independently rehashed complete immutable wrapper and every literal text member.",
+      "members": [
+        {
+          "path": "opencode-v2-embedded-inputs.json",
+          "bytes": 2370,
+          "sha256": "ae978c8426f0c4e4314df59090a2cd8615a92314b99e2262299b6ca22a5da88b",
+          "gitBlob": "32c0c83742120d83aeb53d552fd6c2b0cbb45311",
+          "crc32": 595322533
+        },
+        {
+          "path": "opencode-v2-darwin-custody.json",
+          "bytes": 1450,
+          "sha256": "b3d46650496b43405a785b8b5658d6029e3eff2521d3a6bd31081fd2d76c1a31",
+          "gitBlob": "ee70650acca315c19ece91282b1fe293ce04e70a",
+          "crc32": 4228579659
+        },
+        {
+          "path": "opencode-v2-embedded-host.json",
+          "bytes": 95033,
+          "sha256": "a6e71a356724cdc84d34365273843fa9f10a6026190b8117252861bc905ede74",
+          "gitBlob": "b66d6df428a8a7e7733767c910e27f02ebb76b9f",
+          "crc32": 307490826
+        },
+        {
+          "path": "opencode-v2-posix-exec.json",
+          "bytes": 14545,
+          "sha256": "fbe4d651e4eed6ea49fd99689e1d667e2fe286b45b05a3e2c6ce15e84b936169",
+          "gitBlob": "5bab1184ec36b1c48372e83cea04571def937646",
+          "crc32": 3549984092
+        }
+      ],
+      "posixReceipt": {
+        "bytes": 14545,
+        "sha256": "fbe4d651e4eed6ea49fd99689e1d667e2fe286b45b05a3e2c6ce15e84b936169",
+        "gitBlob": "5bab1184ec36b1c48372e83cea04571def937646"
+      },
+      "runtimeInputIdentities": {
+        "tools": {
+          "compiler": "7f30f076d0e9c38f772a76449fca9da8cf97f6a3d43b94c90a00e4f9ce7ad39e",
+          "hashTool": "0812595f981a26f813d98dc380af14d4af427626c9339eda29eb849ae13de1e3",
+          "node": "7abcf39bd37ab251015337ff75304d7555f0d8e88c6e0fbf04bce8ce34636f49"
+        },
+        "adhocSignerSha256": "1ee421cb4ddc493c4a5312294a36c4f76742381abdd7e46d745ecd62db9839b5",
+        "binaryDigests": {
+          "controller": "f7661275e39afe25c698b38d3043443ba1c9b89db57a6be1c8474270b5759ca7",
+          "compiler-default/libTESTsibling.dylib": "6ec8d7457f544f151511c007d8b581b13bafebe2a1f4fa8c0b421870f4edb508",
+          "compiler-default/A": "2f8774269bc3fdc8c7d44013bd150ec31106b910298b4c85d03212ecfd750960",
+          "compiler-default/B": "a4f590d15b8128697aa54862b3361f3da824eeb78aa438c62612a070c1d0ee31",
+          "adhoc-test-only/libTESTsibling.dylib": "0961cacba11ec53bdf51726717297b49075828aeae1717d70d100da105e8a2a7",
+          "adhoc-test-only/A": "a8184464f0f405d87d520f47e8273c2c2c9dc06dc7e28d40fe35d5dab991b7fc",
+          "adhoc-test-only/B": "9b86c008e495915f378389cc9215c9160cdd5b88f5084e5ef6de36b1c35cddf3"
+        }
+      },
+      "outcome": {
+        "counts": {
+          "PASS": 6,
+          "INCOMPLETE": 3,
+          "COUNTEREXAMPLE": 1
+        },
+        "totalCases": 10,
+        "status": "INCOMPLETE",
+        "cleanup": true,
+        "nativeFixtureQualified": false,
+        "productQualified": false,
+        "installedRuntimeQualified": false,
+        "customExecutableQualified": false,
+        "scriptQualified": false
+      },
+      "observations": [
+        {
+          "label": "compiler-default:plain",
+          "result": "PASS",
+          "stage": "plain-exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 0,
+          "stoppedBeforeUser": false,
+          "payloadMarkersAbsentBeforeGate": false,
+          "kernelImageObserved": false,
+          "imageMatched": false,
+          "resumed": true,
+          "mutationAfterCheckErrno": -1,
+          "markerLines": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "outputBytes": 314,
+          "outputSha256": "8f099597280918c3d6f237264b24331b5fc60fd34581d5e997be27f2e647c31f",
+          "exitCode": 0,
+          "exitSignal": 0,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        {
+          "label": "compiler-default:baseline",
+          "result": "INCOMPLETE",
+          "stage": "kernel-image-validity",
+          "errno": 13,
+          "execErrno": 0,
+          "codeSigningError": -67062,
+          "codeSigningFlags": 0,
+          "stoppedBeforeUser": true,
+          "payloadMarkersAbsentBeforeGate": true,
+          "kernelImageObserved": false,
+          "imageMatched": false,
+          "resumed": false,
+          "mutationAfterCheckErrno": -1,
+          "markerLines": [],
+          "outputBytes": 0,
+          "outputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "exitCode": -1,
+          "exitSignal": 9,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        {
+          "label": "adhoc-test-only:plain",
+          "result": "PASS",
+          "stage": "plain-exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 0,
+          "stoppedBeforeUser": false,
+          "payloadMarkersAbsentBeforeGate": false,
+          "kernelImageObserved": false,
+          "imageMatched": false,
+          "resumed": true,
+          "mutationAfterCheckErrno": -1,
+          "markerLines": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "outputBytes": 314,
+          "outputSha256": "a81963e3c786369910c4677f06f11647fe12cfeec22ed2cc081417c95f159c6d",
+          "exitCode": 0,
+          "exitSignal": 0,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        {
+          "label": "adhoc-test-only:baseline",
+          "result": "PASS",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 570425345,
+          "stoppedBeforeUser": true,
+          "payloadMarkersAbsentBeforeGate": true,
+          "kernelImageObserved": true,
+          "imageMatched": true,
+          "resumed": true,
+          "mutationAfterCheckErrno": -1,
+          "markerLines": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "outputBytes": 314,
+          "outputSha256": "1943a518b10fb4d79b305c64b894a1aabaf0773d2c1ca48c24a9f267612b2f5c",
+          "exitCode": 0,
+          "exitSignal": 0,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        {
+          "label": "adhoc-test-only:rename",
+          "result": "PASS",
+          "stage": "rejected-image",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 570425345,
+          "stoppedBeforeUser": true,
+          "payloadMarkersAbsentBeforeGate": true,
+          "kernelImageObserved": true,
+          "imageMatched": false,
+          "resumed": false,
+          "mutationAfterCheckErrno": -1,
+          "markerLines": [],
+          "outputBytes": 0,
+          "outputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "exitCode": -1,
+          "exitSignal": 9,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        {
+          "label": "adhoc-test-only:inplace",
+          "result": "PASS",
+          "stage": "rejected-image",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 570425345,
+          "stoppedBeforeUser": true,
+          "payloadMarkersAbsentBeforeGate": true,
+          "kernelImageObserved": true,
+          "imageMatched": false,
+          "resumed": false,
+          "mutationAfterCheckErrno": -1,
+          "markerLines": [],
+          "outputBytes": 0,
+          "outputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "exitCode": -1,
+          "exitSignal": 9,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        {
+          "label": "adhoc-test-only:after-check",
+          "result": "INCOMPLETE",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 570425345,
+          "stoppedBeforeUser": true,
+          "payloadMarkersAbsentBeforeGate": true,
+          "kernelImageObserved": true,
+          "imageMatched": true,
+          "resumed": true,
+          "mutationAfterCheckErrno": 0,
+          "markerLines": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "outputBytes": 314,
+          "outputSha256": "b40f86bd6b07d5fd2d5dc086dce017041b164bf2658640f686620f07e384cafe",
+          "exitCode": 0,
+          "exitSignal": 0,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        {
+          "label": "adhoc-test-only:writer-open",
+          "result": "INCOMPLETE",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 570425345,
+          "stoppedBeforeUser": true,
+          "payloadMarkersAbsentBeforeGate": true,
+          "kernelImageObserved": true,
+          "imageMatched": true,
+          "resumed": true,
+          "mutationAfterCheckErrno": 0,
+          "markerLines": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "outputBytes": 314,
+          "outputSha256": "0371e3ac311bea57bf0d01d56893bd58ef6034fd0633b01dfdbaa5d9d1232211",
+          "exitCode": 0,
+          "exitSignal": 0,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        {
+          "label": "script:plain",
+          "result": "PASS",
+          "stage": "plain-exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 0,
+          "stoppedBeforeUser": false,
+          "payloadMarkersAbsentBeforeGate": false,
+          "kernelImageObserved": false,
+          "imageMatched": false,
+          "resumed": true,
+          "mutationAfterCheckErrno": -1,
+          "markerLines": [
+            "SCRIPT:A"
+          ],
+          "outputBytes": 303,
+          "outputSha256": "614a0252510affea08dc681272285e99f7262b6fe31176a0e80ebf7df2e857bb",
+          "exitCode": 0,
+          "exitSignal": 0,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        {
+          "label": "script:script-negative",
+          "result": "COUNTEREXAMPLE",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 637618177,
+          "stoppedBeforeUser": true,
+          "payloadMarkersAbsentBeforeGate": true,
+          "kernelImageObserved": true,
+          "imageMatched": false,
+          "resumed": true,
+          "mutationAfterCheckErrno": 0,
+          "markerLines": [
+            "SCRIPT:B"
+          ],
+          "outputBytes": 303,
+          "outputSha256": "d96babc005ac804377373f7238c274caffedbbe54cae87b8cb23c09cc7c00a04",
+          "exitCode": 0,
+          "exitSignal": 0,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        }
+      ]
+    },
+    {
+      "arch": "arm64",
+      "jobId": 133187477216,
+      "jobConclusion": "failure",
+      "firstFailingStep": 24,
+      "osBuild": "24H232",
+      "nodeVersion": "v24.21.0",
+      "originalRaw": {
+        "name": "pr1213-stage1-darwinarm-raw",
+        "bytes": 106845,
+        "sha256": "88eefdd57930e3d3b4f24113504ebefb850aab3a9fad31a8ed370df79785fd75",
+        "gitBlob": "1d8185203bf14cb979c0200ec126b4b1f63ad351"
+      },
+      "retainedRawBundle": {
+        "gitBlob": "5f1c273ee579545b9cd036657871f347d1211b9c",
+        "bytes": 238249,
+        "sha256": "f94056ff7452e9bc10ce610414fa1c5738ac092debb10db9e19f88abfa82eedc"
+      },
+      "recoveredWrapper": {
+        "bytes": 130480,
+        "sha256": "453bff87f588c51c745ed342794845232f0dd6669f53c0d048031f6e6139a484",
+        "gitBlob": "8c895bf8310f8890e354d61c4b7f9091bb474097"
+      },
+      "artifactId": 14213008828,
+      "originalArchive": {
+        "bytes": 10455,
+        "sha256": "29ceeb0f0fdb4d4281d7a3747904c2e0896a52488926847425b6252301b5ee56",
+        "gitBlob": "626e8b0052a61f7fee889e542964252e44f8c894"
+      },
+      "archiveVerificationAttribution": "Root verified original ZIP bytes/SHA/CRC/safe-member census; pr_graph independently rehashed complete immutable wrapper and every literal text member.",
+      "members": [
+        {
+          "path": "opencode-v2-darwin-custody.json",
+          "bytes": 1440,
+          "sha256": "11d61f04957abcacdb022ee19d8c7121ab026d537b4ef0523926e951b589fb34",
+          "gitBlob": "81f597a1c14a1fb52738fe01af7d5921968a5719",
+          "crc32": 480460481
+        },
+        {
+          "path": "opencode-v2-embedded-host.json",
+          "bytes": 94987,
+          "sha256": "1650e94a849142be78371b39485e650583cad4cf798a3180f4dc728fb3803beb",
+          "gitBlob": "dafadaf6b2da4b54c5a946f082ca7deac63c8eb4",
+          "crc32": 2671136332
+        },
+        {
+          "path": "opencode-v2-posix-exec.json",
+          "bytes": 14566,
+          "sha256": "6bc2b4d48b2991d95539d9cd26baeed758ee08e2a7f843119d003cfcef8861da",
+          "gitBlob": "a81868b4f7f02d1de34872324c2d590ccda943fe",
+          "crc32": 2145615689
+        },
+        {
+          "path": "opencode-v2-embedded-inputs.json",
+          "bytes": 2374,
+          "sha256": "8c46a882a6cea63142d3bb30b76444d93c88e0d1c6b62100cae0a4def62240bc",
+          "gitBlob": "06ae8d4fd9d144f2cef846fb07c396f258a759ca",
+          "crc32": 3502376214
+        }
+      ],
+      "posixReceipt": {
+        "bytes": 14566,
+        "sha256": "6bc2b4d48b2991d95539d9cd26baeed758ee08e2a7f843119d003cfcef8861da",
+        "gitBlob": "a81868b4f7f02d1de34872324c2d590ccda943fe"
+      },
+      "runtimeInputIdentities": {
+        "tools": {
+          "compiler": "8291fbbbaa75761bb649970a16af2ef84b4afd5da0bc133f4d8915f0f2f63e98",
+          "hashTool": "0812595f981a26f813d98dc380af14d4af427626c9339eda29eb849ae13de1e3",
+          "node": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b"
+        },
+        "adhocSignerSha256": "1cdff754c0405ff031983ade8791ad0835777ae5787957d8d63090da0e159f88",
+        "binaryDigests": {
+          "controller": "9d85ae33319e73b5b2ef6909ab98242628459b56f98409196ffc62a21e2b00ac",
+          "compiler-default/libTESTsibling.dylib": "b596b12c77adb18889648ded97949ab9898b22f906d1be51748da12536a2475f",
+          "compiler-default/A": "5c17398ef659a177b7aea12d5ebf0bff9ba58c423b2714d1f1b06464608943ed",
+          "compiler-default/B": "54792f013e9a44b319b355bd745c217e8641b098cd82e5794d4ebf84e760d08a",
+          "adhoc-test-only/libTESTsibling.dylib": "83ff2404aa7ab6197c156ddff410b613d2472a0210762a701499e1885088cf87",
+          "adhoc-test-only/A": "43d50cc89b399cecbe95b66d34f8f25854c70153a1e60ae5e1e4288c9c3fa7aa",
+          "adhoc-test-only/B": "eaf3485b57fa0e9926937ef55d4d8701bb7d704eb59e461e1198b4f18068f158"
+        }
+      },
+      "outcome": {
+        "counts": {
+          "PASS": 7,
+          "INCOMPLETE": 2,
+          "COUNTEREXAMPLE": 1
+        },
+        "totalCases": 10,
+        "status": "INCOMPLETE",
+        "cleanup": true,
+        "nativeFixtureQualified": false,
+        "productQualified": false,
+        "installedRuntimeQualified": false,
+        "customExecutableQualified": false,
+        "scriptQualified": false
+      },
+      "observations": [
+        {
+          "label": "compiler-default:plain",
+          "result": "PASS",
+          "stage": "plain-exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 0,
+          "stoppedBeforeUser": false,
+          "payloadMarkersAbsentBeforeGate": false,
+          "kernelImageObserved": false,
+          "imageMatched": false,
+          "resumed": true,
+          "mutationAfterCheckErrno": -1,
+          "markerLines": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "outputBytes": 314,
+          "outputSha256": "2c768a3285af7432511bc77c14cf64b0cabb85645d93498a62732e2444547762",
+          "exitCode": 0,
+          "exitSignal": 0,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        {
+          "label": "compiler-default:baseline",
+          "result": "PASS",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 570556417,
+          "stoppedBeforeUser": true,
+          "payloadMarkersAbsentBeforeGate": true,
+          "kernelImageObserved": true,
+          "imageMatched": true,
+          "resumed": true,
+          "mutationAfterCheckErrno": -1,
+          "markerLines": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "outputBytes": 314,
+          "outputSha256": "dc677edeeee6c8b41937e5b9ab4d64760a9fecc6d0001e5cb7b25afb79620501",
+          "exitCode": 0,
+          "exitSignal": 0,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        {
+          "label": "adhoc-test-only:plain",
+          "result": "PASS",
+          "stage": "plain-exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 0,
+          "stoppedBeforeUser": false,
+          "payloadMarkersAbsentBeforeGate": false,
+          "kernelImageObserved": false,
+          "imageMatched": false,
+          "resumed": true,
+          "mutationAfterCheckErrno": -1,
+          "markerLines": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "outputBytes": 314,
+          "outputSha256": "67c6c1065d557ecac2f078b57ae9bcd815e9531d2ee0bc3d034973e7a3369d3f",
+          "exitCode": 0,
+          "exitSignal": 0,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        {
+          "label": "adhoc-test-only:baseline",
+          "result": "PASS",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 570425345,
+          "stoppedBeforeUser": true,
+          "payloadMarkersAbsentBeforeGate": true,
+          "kernelImageObserved": true,
+          "imageMatched": true,
+          "resumed": true,
+          "mutationAfterCheckErrno": -1,
+          "markerLines": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "outputBytes": 314,
+          "outputSha256": "9bb3b8553b529dcde67ee54d86d6489f9c7f133df3485275ab1faf9c2f6f289f",
+          "exitCode": 0,
+          "exitSignal": 0,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        {
+          "label": "adhoc-test-only:rename",
+          "result": "PASS",
+          "stage": "rejected-image",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 570425345,
+          "stoppedBeforeUser": true,
+          "payloadMarkersAbsentBeforeGate": true,
+          "kernelImageObserved": true,
+          "imageMatched": false,
+          "resumed": false,
+          "mutationAfterCheckErrno": -1,
+          "markerLines": [],
+          "outputBytes": 0,
+          "outputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "exitCode": -1,
+          "exitSignal": 9,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        {
+          "label": "adhoc-test-only:inplace",
+          "result": "PASS",
+          "stage": "rejected-image",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 570425345,
+          "stoppedBeforeUser": true,
+          "payloadMarkersAbsentBeforeGate": true,
+          "kernelImageObserved": true,
+          "imageMatched": false,
+          "resumed": false,
+          "mutationAfterCheckErrno": -1,
+          "markerLines": [],
+          "outputBytes": 0,
+          "outputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "exitCode": -1,
+          "exitSignal": 9,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        {
+          "label": "adhoc-test-only:after-check",
+          "result": "INCOMPLETE",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 570425345,
+          "stoppedBeforeUser": true,
+          "payloadMarkersAbsentBeforeGate": true,
+          "kernelImageObserved": true,
+          "imageMatched": true,
+          "resumed": true,
+          "mutationAfterCheckErrno": 0,
+          "markerLines": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "outputBytes": 314,
+          "outputSha256": "d2ee8db578a186e1ae2f2a7756e09a7833681ffdb7553d58624678d87ecbc33c",
+          "exitCode": 0,
+          "exitSignal": 0,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        {
+          "label": "adhoc-test-only:writer-open",
+          "result": "INCOMPLETE",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 570425345,
+          "stoppedBeforeUser": true,
+          "payloadMarkersAbsentBeforeGate": true,
+          "kernelImageObserved": true,
+          "imageMatched": true,
+          "resumed": true,
+          "mutationAfterCheckErrno": 0,
+          "markerLines": [
+            "LIB",
+            "BIN:A",
+            "MAIN:A"
+          ],
+          "outputBytes": 314,
+          "outputSha256": "4bbbf33c14419db80dc456339f95c39bad26533612f814462271edd71dff6d17",
+          "exitCode": 0,
+          "exitSignal": 0,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        {
+          "label": "script:plain",
+          "result": "PASS",
+          "stage": "plain-exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 0,
+          "stoppedBeforeUser": false,
+          "payloadMarkersAbsentBeforeGate": false,
+          "kernelImageObserved": false,
+          "imageMatched": false,
+          "resumed": true,
+          "mutationAfterCheckErrno": -1,
+          "markerLines": [
+            "SCRIPT:A"
+          ],
+          "outputBytes": 303,
+          "outputSha256": "d04d0e7cec67af62e1895290716bd6e00018e7a300ba48706ef2c3e3d3134688",
+          "exitCode": 0,
+          "exitSignal": 0,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        },
+        {
+          "label": "script:script-negative",
+          "result": "COUNTEREXAMPLE",
+          "stage": "exit",
+          "errno": 0,
+          "execErrno": 0,
+          "codeSigningError": 0,
+          "codeSigningFlags": 637601793,
+          "stoppedBeforeUser": true,
+          "payloadMarkersAbsentBeforeGate": true,
+          "kernelImageObserved": true,
+          "imageMatched": false,
+          "resumed": true,
+          "mutationAfterCheckErrno": 0,
+          "markerLines": [
+            "SCRIPT:B"
+          ],
+          "outputBytes": 303,
+          "outputSha256": "f3edc83a1c71d8e7a1acfbce69c387f92920326d19152bd5a60f130c9c25fe54",
+          "exitCode": 0,
+          "exitSignal": 0,
+          "originalReaped": true,
+          "originalGroupAbsent": true,
+          "cleanup": true,
+          "controllerInterrupted": false
+        }
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "x64-default-signing",
+      "conclusion": "The original compiler-default baseline is rejected by the chosen signed-code witness as unsigned; EACCES 13 is the fixture's failure mapping, not evidence of a filesystem permission error.",
+      "source": "posix-exec-native.c:205-242, especially initialized EACCES and SecCodeCheckValidity",
+      "observed": {
+        "stage": "kernel-image-validity",
+        "errno": 13,
+        "codeSigningError": -67062,
+        "resumed": false,
+        "markers": []
+      },
+      "limits": "Compiler-default plain execution passes and the separately adhoc-signed baseline passes; this does not establish an unusable Darwin environment or justify changing the original case."
+    },
+    {
+      "id": "signed-postcheck-counterexamples",
+      "conclusion": "On both architectures, successful post-check overwrite is followed by the original process's LIB/BIN:A/MAIN:A output and normal exit. This violates the existing strict no-output/no-normal-exit oracle.",
+      "source": "posix-exec-native.c:376-394; registered-process-executable.native.ts:469-503",
+      "observed": {
+        "cases": [
+          "adhoc-test-only:after-check",
+          "adhoc-test-only:writer-open"
+        ],
+        "mutationAfterCheckErrno": 0,
+        "imageMatchedBeforeWrite": true,
+        "resumed": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ],
+        "exitCode": 0,
+        "exitSignal": 0
+      },
+      "limits": "The retained image hashes and signing status precede mutation. No post-write FD hash or mapped-page observation is present. The output proves A ran; it does not prove B ran or a particular cache/VM cause."
+    },
+    {
+      "id": "cleanup-and-qualification",
+      "conclusion": "All original cases in both receipts finish with reaped original processes, absent original groups and cleanup true. The two native-fixture receipts nevertheless remain INCOMPLETE and all broader qualification fields false.",
+      "limits": "Earlier signed-Bun custody and embedded-Host PASS receipts are separate scopes and do not repair P09."
+    },
+    {
+      "id": "implementation-boundary",
+      "conclusion": "The failing actor is explicitly TEST-only. The evidence establishes failure of this attempted continuing byte-stability proof, without identifying a production adapter defect or a safe production correction."
+    }
+  ],
+  "primaryCodeSigningReference": {
+    "url": "https://raw.githubusercontent.com/apple-oss-distributions/Security/main/OSX/libsecurity_codesigning/lib/CSCommon.h",
+    "metadata": {
+      "bytes": 22431,
+      "sha256": "f67ea0a42d5bb3fb9812206c421e0942ee54a002bd48a0659fee36a794cf4a4f",
+      "gitBlob": "e58b6a31731e225ed6a4f1c6a48077bdd7ed3e79"
+    },
+    "exactEnum": "errSecCSUnsigned = -67062",
+    "line": 74
+  },
+  "apiReference": {
+    "url": "https://developer.apple.com/documentation/security/seccodecheckvalidity(_:_:_:).md",
+    "limit": "API dynamic signed-code validity documentation supplies no guarantee for this experiment's later adversarial write."
+  },
+  "alreadyDiscussedProspectiveLimits": {
+    "status": "Previously discussed limits only; this record selects no further diagnostic work, R1, source change or execution.",
+    "noCodeRequiredForCurrentConclusion": true,
+    "smallestOptionalDiagnostic": "Preserve existing write-result bookkeeping and, if further distinction is needed, record bounded post-exit stat/hash information through the already held selected file descriptor before it is closed, after the original process has been reaped.",
+    "possiblePaths": [
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+        "preimage": "19aca56c55a666654b04827b3c2446d2ad03ad8d"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+        "preimage": "f1e1d1145898e201723be343fa8768d73332fcb1"
+      }
+    ],
+    "hardInvariants": [
+      "Keep the original ten case order, compiler-default and adhoc cases, strict marker/exit assertions and original error precedence.",
+      "Keep original PID/birth/audit-token/parent/process-group/session ownership, one resume and original cleanup.",
+      "Do not insert a pre-SIGCONT validation and claim the old experiment is unchanged.",
+      "Do not accept A markers as qualification, replace the unsigned case, add a skip, or weaken any custody assertion.",
+      "Preserve original C controller 15000ms, enclosing 100000ms deadline and 120000ms test timeout, per-actor/cleanup reserves and 4KiB/8KiB/64KiB record bounds.",
+      "Any added hash uses a subprocess in current hash_fd; a future R1 must count its exact invocation/read/cleanup scope and preserve the original deadline rather than call it cost-free.",
+      "Diagnostic failure must remain non-authoritative and must not mask the original failure or leave a child/group debt.",
+      "Use finite actual-reader malformed, unavailable and bound tests; no source-marker oracle.",
+      "No production signing, compiler flags, workflow, platform qualification or local exhausted-budget change is inferred.",
+      "Any future native execution needs separately reviewed resulting-source action authority; no original CI retry is selected."
+    ],
+    "evidentiaryLimit": "A final held-FD hash could establish final on-disk bytes, but cannot establish which pages the kernel mapped or supply continuous custody. A production repair requires a separately demonstrated primitive that prevents mutation or safely retains the suspended state."
+  },
+  "completeBodyReview": {
+    "bundleInstances": 15,
+    "bundleBodyBytes": 699146,
+    "archiveMembers": 8,
+    "archiveMemberBytes": 226765,
+    "fullSourcePinsRead": 3
+  }
+}

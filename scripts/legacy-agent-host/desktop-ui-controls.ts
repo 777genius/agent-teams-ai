@@ -208,11 +208,12 @@ export function createDesktopUiControls(
     throw new Error(`UI read timed out: ${label}; no mutation retry`);
   };
   // Each expression is a read-only DOM lookup returning at most one exact target.
-  const target = (selector: string, text?: string): string => `(() => {
+  const target = (selector: string, text?: string, requiredContent?: string): string => `(() => {
     const elements = [...document.querySelectorAll(${desktopJsLiteral(selector)})].filter(e => {
       const r=e.getBoundingClientRect(); return r.width>0&&r.height>0${text === undefined ? '' : `&&e.textContent.trim()===${desktopJsLiteral(text)}`};
     });
-    if(elements.length!==1)return {unavailableTarget:true,matches:Math.min(elements.length,256)};
+    if(elements.length!==1)return {unavailableTarget:true,matches:Math.min(elements.length,256)};${requiredContent === undefined ? '' : `
+    if(!elements[0].textContent.includes(${desktopJsLiteral(requiredContent)}))return {unavailableTarget:true,matches:1};`}
     const e=elements[0], r=e.getBoundingClientRect(), x=r.x+r.width/2,y=r.y+r.height/2;
     const hit=document.elementFromPoint(x,y), disabled=e.matches(':disabled');
     if(!hit||!(hit===e||e.contains(hit))||disabled)return {
@@ -352,8 +353,8 @@ export function createDesktopUiControls(
       clickCount: 1,
     });
   };
-  const click = (selector: string, label: string, text?: string): Promise<void> =>
-    clickExpression(target(selector, text), label, selector, text);
+  const click = (selector: string, label: string, text?: string, requiredContent?: string): Promise<void> =>
+    clickExpression(target(selector, text, requiredContent), label, selector, text);
   const hoverExpression = async (expression: string, label: string): Promise<void> => {
     let previous: { x: number; y: number } | undefined, stable = 0;
     // Canonical effects can settle before their renderer layout. Sample the

@@ -140,10 +140,10 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
       memberName: String(members[0]!.name) };
   };
   type Live = Awaited<ReturnType<typeof launch>>;
-  const openChat = async (live: Live) => {
+  const openChat = async (live: Live, expectedReply: string) => {
     const name = live.memberName === 'team-lead' ? 'lead' : live.memberName;
     const selector = `button[aria-label^=${literal(name + ',')}]`;
-    await ui.scrollTo(selector, 'original lead conversation'); await ui.click(selector, 'open original lead conversation');
+    await ui.scrollTo(selector, 'original lead conversation'); await ui.click(selector, 'open original lead conversation', undefined, expectedReply);
   };
   const assertSameLive = async (live: Live, phase: string, originalInputs: boolean) => {
     assert.deepEqual(array((await live.owner()).runtimeCaptures), [live.capture]);
@@ -173,7 +173,7 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
 
   await ui.observeInput(); await ui.clickSidebar(fixture.uiSeed.subject);
   await openLaunch(a, true); const liveA = await launch(a);
-  await openChat(liveA); await visible('TEST boot ready');
+  await openChat(liveA, 'TEST boot ready'); await visible('TEST boot ready');
   proof.aLaunchScreenshot = await screenshot('a-launch'); proof.a = { capture: liveA.capture, definition: liveA.definition, thread: liveA.thread };
   if (installer) {
     const originalInvocation = (await readDesktopEmulatedCodexInstallerLog(installer.invocationLog)).filter(row => row.pid === liveA.thread.pid && row.kind === 'app-server');
@@ -257,14 +257,14 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
     assert.equal(nextSources[0]!.memberId, record(liveB.initial.binding).memberId);
     proof.bInvocation = nextInvocation[0]; proof.bSource = nextSources[0];
   }
-  await openChat(liveB); await visible('TEST boot ready');
+  await openChat(liveB, 'TEST boot ready'); await visible('TEST boot ready');
   proof.bLaunchScreenshot = await screenshot('b-launch'); proof.b = { capture: liveB.capture, definition: liveB.definition, thread: liveB.thread };
   await assertSameLive(liveA, 'after-next-launch', true);
   if (installer) record(proof.installer).settings = await readDesktopEmulatedCodexInstallerSettingsUi(cdp, { fixture, ui,
     assertOwnedRenderer: options.assertOwnedRenderer, expectedStatus: record(record(proof.installer).installedStatus),
     assertPriorRuntime: async phase => { await assertSameLive(liveA, phase, true); await assertSameLive(liveB, phase, true); } });
 
-  await openTeam(a); await openChat(liveA);
+  await openTeam(a); await openChat(liveA, 'TEST boot ready');
   const before = new Set((await a.commands()).map(row => row.commandId));
   await fill('.message-composer-flat-layout textarea', 'TEST_UI_STREAM');
   await ui.click('button.message-composer-send-button', 'send original held stream once', 'Send');
@@ -282,7 +282,7 @@ export async function runDesktopEmulatedSelectionUi(cdp: UiCdpPort, options: {
   await openTeam(a);
   await ui.scrollTo('button[aria-label="Back to chats"]', 'original A conversation list after B Stop');
   await ui.click('button[aria-label="Back to chats"]', 'return to original A chats after B Stop');
-  await openChat(liveA); await visible('TEST stream partial');
+  await openChat(liveA, 'TEST stream partial'); await visible('TEST stream partial');
   assert.equal(await cdp.evaluate(`document.body.innerText.includes('TEST stream partial complete')`), false);
   proof.aSurvivedScreenshot = await screenshot('a-survived');
   await writeFile(join(fixture.emulatedRuntime.peers[0]!.root, 'release-stream'), 'TEST release once\n', { mode: 0o600, flag: 'wx' });

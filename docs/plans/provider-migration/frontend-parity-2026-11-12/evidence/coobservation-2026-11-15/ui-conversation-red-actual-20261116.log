@@ -1,0 +1,325 @@
+✔ captured UI discovery waits for Main admission and actual mount while early diagnostics remain active (216.224385ms)
+✔ the original remaining startup deadline rejects a pending snapshot without late discovery or a reset (502.147541ms)
+✔ packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin (11.668332ms)
+✔ HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted (6.522559ms)
+✔ isolated shell fixture emits the actual framed environment and refuses shell effects (425.906804ms)
+✔ original in-progress Task comment prerequisite requires its exact stage without an assignment control (28.846571ms)
+✔ Task attachment comment waits for its original focused owner after one click before inserting text (216.612672ms)
+✔ original Task assignment prerequisite refuses receipt-only, pending and stale renderer state (5.562517ms)
+✔ original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface (6.473176ms)
+✔ original desktop click waits for stable target geometry, without repeating input (303.725905ms)
+✔ original Task hover waits through layout and unavailability before its one physical move (603.265161ms)
+✔ original desktop click refuses a constantly moving target before dispatch (1533.252942ms)
+✔ original owner-qualified click rereads its full expression through unavailability at unchanged coordinates (306.065921ms)
+✔ login failure facts retain only bounded original attempts and confirmed milestones (3.473175ms)
+✔ finite readiness failure summaries keep only bounded states and never private snapshot data (3.491602ms)
+✔ Taskboard failure summaries compare retained identities without exposing private snapshot values (2.814267ms)
+✔ installer failure summaries preserve original wait sites and attempts without inferring installation effects (3.650747ms)
+✔ installer failure projection does not invoke input getters and leaves oversized observations unknown (0.970717ms)
+✔ installer CDP and cleanup projection retains only exact finite observations (1.267743ms)
+✔ Selection target summaries retain the exact original phase and six closed facts (1.495369ms)
+✔ Selection target projection rejects unknown or malformed facts without exposing text or invoking getters (1.02018ms)
+✔ Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input (3.12218ms)
+✔ original desktop click refuses a target unavailable during the final ownership check (204.234741ms)
+✔ original desktop click refuses a target moved during the final ownership check (204.168553ms)
+✔ original default scroll preserves a disabled control before its readiness wait (3.675483ms)
+✔ original scroll opt-in reveals a covered checkbox with one bounded wheel (104.173463ms)
+✔ original desktop click rechecks owner after its pending final target read (203.216739ms)
+✔ original desktop click rechecks cutoff after its pending final target read (204.117228ms)
+✔ original clarification lookup admits its retained read without completing the assignment prerequisite (5.566803ms)
+✔ original clarification lookup refuses changed owner, revision, refresh and retained-read joins (43.492084ms)
+✔ original owner availability admits three captured A Teams through its actual first DOM read (6.025879ms)
+✔ original owner availability retains singleton, subset and duplicate-row cardinality semantics (4.816891ms)
+✔ original owner availability refuses foreign identities and preserves its existing aggregate guards (50.160007ms)
+✔ original owner availability refuses invalid captured discovery before navigation (1.547615ms)
+✔ owner availability admits every captured A Team through the actual first observation (1.436121ms)
+✔ owner availability refuses healthy B in unavailable A rows (1.210269ms)
+✔ owner availability refuses captured foreign owner in unavailable A rows (0.679469ms)
+✔ owner availability refuses unknown Team in unavailable A rows (0.817342ms)
+✔ owner availability refuses malformed Team in unavailable A rows (0.855107ms)
+✔ owner availability refuses missing selected A before original navigation (0.590388ms)
+✔ owner availability refuses non-string A handle before original navigation (0.390424ms)
+✔ owner availability refuses empty A handle before original navigation (0.614793ms)
+✔ owner availability refuses duplicate A handle before original navigation (0.293662ms)
+✔ owner availability refuses over-bound capture before original navigation (0.451574ms)
+✔ passive input keeps its actual Team target and three separate original navigation samples (6.492925ms)
+✔ passive navigation preserves non-card events, the original ring bounds and null or non-Team state (64.4308ms)
+✔ passive navigation refuses malformed target and store facts without losing original callbacks (77.262468ms)
+✔ passive navigation remains bounded and cannot interrupt original writes on diagnostic failure (7.519433ms)
+✔ passive navigation uses only the callable store own method and ignores unrelated card surfaces (5.532192ms)
+✔ the selected provider receipt digest matches the actual manifest-selected archive bytes (24.08416ms)
+✔ provider receipt legacy, current and equal-dual implementation digests preserve manifest authority (9.950041ms)
+✔ every present provider implementation digest must be valid and both recognized fields must agree (77.201603ms)
+✔ provider receipt shape, package selection and original file or JSON errors remain strict (36.13568ms)
+✔ saved Launch uses three stable actual DOM samples before its original settings action (12.544481ms)
+✔ saved Launch resets exact geometry when the original button shifts by a quarter pixel (5.15558ms)
+✔ saved Launch restarts its three samples after changed identity (9.115089ms)
+✔ saved Launch restarts its three samples after changed expanded state (11.609747ms)
+✔ saved Launch restarts its three samples after changed horizontal position (14.043784ms)
+✔ saved Launch restarts its three samples after changed width (11.925391ms)
+✔ saved Launch restarts its three samples after changed height (12.39444ms)
+✔ saved Launch resets its original readiness after absent target (16.618715ms)
+✔ saved Launch resets its original readiness after ambiguous target (15.153081ms)
+✔ saved Launch resets its original readiness after wrong model (7.944308ms)
+✔ saved Launch resets its original readiness after absent identity (8.492554ms)
+✔ saved Launch resets its original readiness after empty identity (8.260583ms)
+✔ saved Launch resets its original readiness after invalid expansion (12.012208ms)
+✔ saved Launch resets its original readiness after missing owning dialog (10.957357ms)
+✔ saved Launch resets its original readiness after nonfinite x (10.235987ms)
+✔ saved Launch resets its original readiness after nonfinite y (8.87702ms)
+✔ saved Launch resets its original readiness after zero width (10.931239ms)
+✔ saved Launch resets its original readiness after negative height (6.761359ms)
+✔ saved Launch resets its original readiness after running own animation (7.159745ms)
+✔ saved Launch resets its original readiness after paused own animation (7.128129ms)
+✔ saved Launch resets its original readiness after pending own animation (9.762552ms)
+✔ saved Launch allows finished own animation without inspecting descendant spinners or model status (4.633542ms)
+✔ saved Launch allows idle own animation without inspecting descendant spinners or model status (4.36023ms)
+✔ saved Launch exhausts its one original deadline with no matching model and no settings action (257.125626ms)
+✔ saved Launch exhausts its one original deadline with unsettled own dialog and no settings action (308.830814ms)
+✖ original conversation waits for its own reply before one click at the hydrated coordinates (6.467388ms)
+✔ default conversation click retains its original final geometry refusal without a preview predicate (5.018958ms)
+✖ original conversation refuses body-only reply within its unchanged first read deadline (5.068821ms)
+✖ original conversation refuses neighbor-only reply within its unchanged first read deadline (4.778704ms)
+✖ original conversation refuses different required reply within its unchanged first read deadline (5.672208ms)
+✖ original conversation refuses empty preview within its unchanged first read deadline (5.612941ms)
+✔ original conversation refuses missing target within its unchanged first read deadline (468.758152ms)
+✔ original conversation refuses zero-size target within its unchanged first read deadline (257.80102ms)
+✔ original conversation refuses disabled target within its unchanged first read deadline (383.685047ms)
+✔ original conversation refuses covered target within its unchanged first read deadline (267.589084ms)
+✔ original conversation refuses two eligible rows with only the second ready within its unchanged first read deadline (268.612851ms)
+✔ original conversation serializes its required preview as literal data (6.200997ms)
+✖ original conversation rereads a revoked preview at unchanged final coordinates before input (6.204682ms)
+✔ original conversation still refuses final owner despite a ready preview (7.19629ms)
+✔ original conversation still refuses final movement despite a ready preview (7.088392ms)
+✖ actual openChat forwards TEST boot ready for alice (50.063469ms)
+✖ actual openChat forwards TEST stream partial for alice (8.439888ms)
+✖ actual openChat forwards TEST boot ready for team-lead (4.246433ms)
+✖ actual openChat forwards TEST stream partial for team-lead (41.309859ms)
+ℹ tests 97
+ℹ suites 0
+ℹ pass 87
+ℹ fail 10
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10689.896134
+
+✖ failing tests:
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2146:1
+✖ original conversation waits for its own reply before one click at the hydrated coordinates (6.467388ms)
+  AssertionError [ERR_ASSERTION]: Original UI target moved after ownership check
+  + actual - expected
+  
+    [
+      169.5,
+  +   186.5,
+  -   178,
+      'BUTTON'
+    ]
+  
+      at clickExpression (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-ui-controls.ts:325:12)
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2150:48)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ 169.5, 186.5, 'BUTTON' ],
+    expected: [ 169.5, 178, 'BUTTON' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2173:1
+✖ original conversation refuses body-only reply within its unchanged first read deadline (5.068821ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2175:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /UI target read failed: TEST original conversation/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2173:1
+✖ original conversation refuses neighbor-only reply within its unchanged first read deadline (4.778704ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2175:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /UI target read failed: TEST original conversation/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2173:1
+✖ original conversation refuses different required reply within its unchanged first read deadline (5.672208ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2175:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /UI target read failed: TEST original conversation/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2173:1
+✖ original conversation refuses empty preview within its unchanged first read deadline (5.612941ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2175:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /UI target read failed: TEST original conversation/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2189:1
+✖ original conversation rereads a revoked preview at unchanged final coordinates before input (6.204682ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2193:3)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /Original UI target unavailable after ownership check/,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2219:1
+✖ actual openChat forwards TEST boot ready for alice (50.063469ms)
+  AssertionError [ERR_ASSERTION]: one original scroll and one original click carrying the expected reply as data
+  + actual - expected
+  ... Skipped lines
+  
+    [
+      {
+        args: [
+          'button[aria-label^="alice,"]',
+          'original lead conversation'
+  ...
+          'open original lead conversation',
+  -       undefined,
+  -       'TEST boot ready'
+        ],
+        method: 'click'
+      }
+    ]
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2234:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],
+    expected: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2219:1
+✖ actual openChat forwards TEST stream partial for alice (8.439888ms)
+  AssertionError [ERR_ASSERTION]: one original scroll and one original click carrying the expected reply as data
+  + actual - expected
+  ... Skipped lines
+  
+    [
+      {
+        args: [
+          'button[aria-label^="alice,"]',
+          'original lead conversation'
+  ...
+          'open original lead conversation',
+  -       undefined,
+  -       'TEST stream partial'
+        ],
+        method: 'click'
+      }
+    ]
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2234:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],
+    expected: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2219:1
+✖ actual openChat forwards TEST boot ready for team-lead (4.246433ms)
+  AssertionError [ERR_ASSERTION]: one original scroll and one original click carrying the expected reply as data
+  + actual - expected
+  ... Skipped lines
+  
+    [
+      {
+        args: [
+          'button[aria-label^="lead,"]',
+          'original lead conversation'
+  ...
+          'open original lead conversation',
+  -       undefined,
+  -       'TEST boot ready'
+        ],
+        method: 'click'
+      }
+    ]
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2234:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],
+    expected: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2219:1
+✖ actual openChat forwards TEST stream partial for team-lead (41.309859ms)
+  AssertionError [ERR_ASSERTION]: one original scroll and one original click carrying the expected reply as data
+  + actual - expected
+  ... Skipped lines
+  
+    [
+      {
+        args: [
+          'button[aria-label^="lead,"]',
+          'original lead conversation'
+  ...
+          'open original lead conversation',
+  -       undefined,
+  -       'TEST stream partial'
+        ],
+        method: 'click'
+      }
+    ]
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/c714-fresh-20261116/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:2234:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],
+    expected: [ { method: 'scrollTo', args: [Array] }, { method: 'click', args: [Array] } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
