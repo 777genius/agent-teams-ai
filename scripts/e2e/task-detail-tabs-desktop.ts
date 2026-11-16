@@ -420,16 +420,12 @@ try {
           : '[data-testid="kanban-approved-settings"]';
         const b = document.querySelector(selector);
         if (!(b instanceof HTMLButtonElement)) throw Error('Approved settings missing');
-        b.focus();
+        // Wide grids keep the Approved column off-screen; bring it into view first.
+        b.scrollIntoView({ block: 'center', inline: 'center' });
+        // Radix PopoverTrigger opens from the click event (the dropdown trigger used keydown).
+        b.click();
       })()`
     );
-    // Radix PopoverTrigger opens on Enter/pointerdown, not DOM HTMLElement.click().
-    await cdp!.send('Input.dispatchKeyEvent', {
-      type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
-    });
-    await cdp!.send('Input.dispatchKeyEvent', {
-      type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
-    });
     await until(() => cdp!.evaluate(
       "!!document.querySelector('[data-testid=\"kanban-review-flow-panel\"]')"
     ), `${layout} review flow panel opened`);
