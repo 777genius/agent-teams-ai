@@ -49,7 +49,7 @@ vi.mock('@agent-teams/legacy-agent-host/owned-process', async importOriginal => 
 // All descriptors, private bytes, hashes and native-profile lexical checks remain original.
 vi.mock('node:fs', async importOriginal => {
   const original = await importOriginal<typeof import('node:fs')>();
-  const canonical = (read: typeof original.realpathSync, args: Parameters<typeof original.realpathSync>) => {
+  const canonical = (read: typeof original.realpathSync.native, args: Parameters<typeof original.realpathSync>) => {
     const selected = args[0];
     if (typeof selected === 'string') args[0] = inspection.paths.get(selected) ?? selected;
     const value = read(...args);

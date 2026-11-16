@@ -96,7 +96,7 @@ describe('useMentionDetection current input and availability', () => {
     await act(async () => root.render(createElement(Probe, rules)));
   };
   const selectEvent = () =>
-    ({ currentTarget: textarea, target: textarea }) as SyntheticEvent<HTMLTextAreaElement>;
+    ({ currentTarget: textarea, target: textarea }) as unknown as SyntheticEvent<HTMLTextAreaElement>;
   const change = async (text: string) => {
     textarea.value = text;
     textarea.setSelectionRange(text.length, text.length);

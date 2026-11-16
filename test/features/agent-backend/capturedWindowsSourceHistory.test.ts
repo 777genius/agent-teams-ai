@@ -26,6 +26,11 @@ import type { NativeProcessProfile, ResolvedLaunchSpec, RuntimeSourceProcessOrig
 const roots: string[] = [];
 afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true }); });
 
+function assertV1Fixture<T extends { provider: string }>(profile: T): asserts profile is T & { nativeGeneration?: 'v1' } {
+  if ('nativeGeneration' in profile && profile.nativeGeneration !== undefined && profile.nativeGeneration !== 'v1')
+    throw new Error('TEST expected V1 fixture');
+}
+
 /** Original journals and Main policy; inert bytes are never executed and no native broker is opened. */
 function fixture(options: { allowB?: boolean; sameHome?: boolean; creation?: boolean;
   openCode?: boolean; retainOriginal?: boolean; environment?: Record<string, string>;
@@ -61,6 +66,7 @@ function fixture(options: { allowB?: boolean; sameHome?: boolean; creation?: boo
     profileId: 'TEST-management-A', configRevision: 'TEST-config-A', accountBinding: 'TEST-account-A',
     cwd: homeA, executable: original, environment: { ...environment(homeA), ...options.managementEnvironment },
     timeoutMs: 1000, windowsBroker: broker });
+  assertV1Fixture(seed);
   const member = (name: 'A' | 'B') => {
     const value = runtimeMemberProfileSchema.parse({
     provider, protocolRevision: version, executable: original, windowsBroker: broker,
@@ -76,6 +82,7 @@ function fixture(options: { allowB?: boolean; sameHome?: boolean; creation?: boo
     });
     if (!options.openCode && value.provider !== 'codex') throw new Error('TEST expected Codex recipe');
     if (options.openCode && value.provider !== 'opencode') throw new Error('TEST expected V1 recipe');
+    assertV1Fixture(value);
     return value;
   };
   const template = { ...member('A'), teamId: 'TEST-template', memberId: 'TEST-template' };
@@ -309,7 +316,7 @@ it('published V1 general coordination uses its actual pure builders and keeps im
   const isolated = buildOpenCodeCoordinationEnvironment(probe.environment, paths);
   const config = buildOpenCodeCoordinationConfig(probe, input, provider,
     { url: 'http://127.0.0.1:14322/coordination', bearerToken: 'c'.repeat(43) });
-  const environment = buildOpenCodeManagementEnvironment(isolated, config,
+  const environment: Record<string, string> = buildOpenCodeManagementEnvironment(isolated, config,
     { password: 'p'.repeat(43), witnessAgent: 'management_' + 'a'.repeat(24), witness: 'w'.repeat(43), coordination: true });
   expect(environment.HOME).not.toBe(f.seed.environment.HOME);
   expect(environment.NODE_OPTIONS).toBe(f.seed.environment.NODE_OPTIONS);
