@@ -1,0 +1,436 @@
+{
+  "kind": "plan62-independent-prospective-r2-v2",
+  "reviewer": "/root/frontend_gaps",
+  "decision": "ACCEPT_PROSPECTIVE_SOURCE_SCOPE",
+  "findings": [],
+  "plan": {
+    "localPath": "/workspace/scratch/20ba97c23d57/retained-provider-proposal/plan.md",
+    "publicationPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/62-windows-retained-provider-test-completion-2026-11-16.md",
+    "sha256": "767505513a51a092d8dca560c65cf0aa9acd019c63b2c07b475256cc0fb338ae",
+    "gitBlob": "74c8b4dadac0d444a2649a7dd165740af064eae8",
+    "bytes": 27385,
+    "lines": 100,
+    "read": "Full revision1 plus exact three-paragraph final wording delta; final whole bytes hashed"
+  },
+  "previousDraft": {
+    "path": "/workspace/scratch/20ba97c23d57/retained-provider-proposal/plan-revision1.md",
+    "sha256": "d805e36841db9df3b1fa53c732bc5d929bb332ff91c9bdbab9862d0dcd60e686",
+    "wordingChangedLines": [
+      30,
+      92,
+      100
+    ]
+  },
+  "sourceBase": {
+    "officialRetainedHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+    "rootConfirmedCurrentHead": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "latestHeadBinding": "Root independently verified full11133-leaf tree and all7 preimages plus helper absence and retained config at75cf. Reviewer rehashed retained official c5d bytes; no duplicate remote reads."
+  },
+  "originalPlan": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/08-windows-provider-runtime.md",
+    "gitBlob": "fb05c432887dd9db5dedab8d0e24544cf3ac842d",
+    "sha256": "31f18c2b0fd9b3ba63a529b91ca808cc0e114672744de56d15ff22a2d9f8aebc",
+    "sections": [
+      "16.1–16.9",
+      "17.1–17.5"
+    ]
+  },
+  "currentBindings": [
+    {
+      "path": "tools/owned-process-broker/nativeVendorInputs.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "9e6a4756d79defb424cb18967089afeb221d077d",
+      "sha256": "b9e80eec40a2d74dfc5b1f5fa0c80e7b1f487e5362c1ab03b4926b1f77e2680f",
+      "bytes": 5428,
+      "lines": 94
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "d7a56276a6baa63ee65a357a98fc52c7cfe03bdd",
+      "sha256": "72eb24e9aca12f4bf283625a311cd60ce58c9c5b5c2e7beeaecc3a1b2185f8cc",
+      "bytes": 25732,
+      "lines": 614
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "f7c6d8f6a637f55b4cd1a142add89443207efc40",
+      "sha256": "e353f4db836026a95633d36c581c3ad035ce8f6d5638ef867a4771c24354ca83",
+      "bytes": 35180,
+      "lines": 524
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+      "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+      "bytes": 557,
+      "lines": 6
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+      "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+      "bytes": 393,
+      "lines": 6
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "7f9ea9b1ac8804ece51735e23f169ea4db86f97e",
+      "sha256": "3d680cffe94fa083bbe6cb034f4f2384b757c5be2e4bc88206651b0cb55d31d7",
+      "bytes": 29544,
+      "lines": 715
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "ff0aeba42e3a4e845428146969360dff91c25de8",
+      "sha256": "f25659fe4c89e30072e9c2bc923fcdf6f1a3dd2efdca81387659e485170c74c3",
+      "bytes": 38584,
+      "lines": 753
+    },
+    {
+      "path": ".github/workflows/sentry-owned-process-native.yml",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "1188fa5b89d59b739d927082d1b6954a57181819",
+      "sha256": "2d84faae57ad758575935dc760df6561d219f16ee8c0bd615006ca3d88837357",
+      "bytes": 39878,
+      "lines": 495
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "3e0d1ae7a3aa852fb5772821f7df1059edd7cead",
+      "sha256": "e54fda9c30ec3d53f20027d59faf81f59c75fd3ad3987593bd4cd64315a17d3a",
+      "bytes": 36898,
+      "lines": 719
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+      "sha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+      "bytes": 30721,
+      "lines": 600
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/commandRecords.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "9cd092f5d78e9a80cb922d65a29be5f2b7b96976",
+      "sha256": "f3e800d921048965922f8d112cb620c386f22234228865f829f50969313e8015",
+      "bytes": 15840,
+      "lines": 321
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/teamLaunchModelProbe.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "7e377e0b51ea453e90f4f2dde5c9bb782c983c99",
+      "sha256": "4e8f91bf7231f41a9cdc80ec40fc36d75bf41ef2573ec432967f039e05c5f2c7",
+      "bytes": 17385,
+      "lines": 386
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/ProviderModelProbePreparation.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "e55795dcfd065139c0e798fa4e062f4e3ffcc6c6",
+      "sha256": "299bc0e774ab00d38271c652ad04e76843ac8886c0ac256fadd793aef7f4d137",
+      "bytes": 8891,
+      "lines": 166
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/initialRuntimeModelAdmission.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "e709df02ff4ce926c6d1721b5549024f6c945949",
+      "sha256": "64bbdecdee4113344cda0ab3810e416fde750f80ca45ca563550752137479010",
+      "bytes": 23951,
+      "lines": 345
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+      "sha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d",
+      "bytes": 30469,
+      "lines": 757
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createProviderManagementMethods.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "708d880bb9be0dcaae978b97b0686b548b7873a3",
+      "sha256": "7854ee3a07c27b95294b2e49fd5b4d39cffa00c8040eb6de15d1c231a1b3d927",
+      "bytes": 4523,
+      "lines": 88
+    }
+  ],
+  "checks": [
+    {
+      "kind": "bytes",
+      "name": "Final full plan and preserved revision1 match; exactly3 selected wording paragraphs differ",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Retained official current source: tools/owned-process-broker/nativeVendorInputs.ts",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Retained official current source: tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Retained official current source: tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Retained official current source: tools/owned-process-broker/tsconfig.json",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Retained official current source: tools/owned-process-broker/tsconfig.retained-host.json",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Retained official current source: packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Retained official current source: packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Retained official current source: .github/workflows/sentry-owned-process-native.yml",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Retained official current source: packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Retained official current source: packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Retained official current source: packages/legacy-agent-host/src/management/commandRecords.ts",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Retained official current source: packages/legacy-agent-host/src/composition/teamLaunchModelProbe.ts",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Retained official current source: packages/legacy-agent-host/src/composition/ProviderModelProbePreparation.ts",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Retained official current source: packages/legacy-agent-host/src/composition/initialRuntimeModelAdmission.ts",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Retained official current source: packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Retained official current source: packages/legacy-agent-host/src/composition/createProviderManagementMethods.ts",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Exact new helper path has retained official404 at c5d",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Qualified current archive member: package/package.json",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Qualified current archive member: package/dist/codex.js",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Qualified current archive member: package/dist/codex.d.ts",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Qualified current archive member: package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-factory.js",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Qualified current archive member: package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-session.js",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Qualified current archive member: package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-config.js",
+      "pass": true
+    },
+    {
+      "kind": "bytes",
+      "name": "Original P08 sections16/16.8/17 source binding",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "scope",
+      "detail": "Exactly7 existing TEST/build/workflow paths plus1 new TEST helper. All8 landed production forwarding paths remain read-only. No W05/W07, UI, V2, routing or activation extension.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "donor",
+      "detail": "Corrected0099 is a semantic source only. Current Gate d7a56276 min-cutoff, pre/post checks, diagnostic clipping and terminal-read cutoff are explicitly preserved.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "compiler",
+      "detail": "Only helper exclusion is appended to current4936675a. Later nativeEmulated/nativeWindowsAppFixture exclusions and strict options remain. Retained-host905f1a14 remains byte-identical and covers imports.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "models",
+      "detail": "V1 configuredLaunchPreparation, configuredProbe arm, shared replyOpenCodeModelProbe and returned port remain. Old donor SSE responder is excluded. Retained opt-in is mutually exclusive; original defaults, decoders, failure seals and counters stay.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "public dependency",
+      "detail": "Current c930 public entry and declarations expose the selected catalog/policy helpers. Existing installed public target remains; no root dependency, private export, alias or SPI change.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "inputs",
+      "detail": "Four archive SHA/size/version/arch pins and Codex PE hashes agree with P08. Fresh wx selections,60s/256MiB/512MiB bounds, safeZIP/PE checks and captured Bash/Node remain; no PATH/version/install substitute or binary download here.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "initial authority",
+      "detail": "P08 section16.8 overrides earlier B2 wording. Standalone V1 management probe is separate authority; native-bootstrap initial path has zero probes and no borrowed receipt/locator.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "management route",
+      "detail": "Current raw management.probe.start/read routes support the prelude; read is control. One command, at most128 reads only while running, completed/ok required. No Team envelope or private purpose/context/limits/origin.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "management record",
+      "detail": "Current ordinary fingerprint is managementDigest(input). Target binds exact profile and namespace path/dev/ino, including XDG_DATA_HOME resourceId. Stored success follows close, writer, target/fence settlement and resourceHeld false.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "private reader",
+      "detail": "Only own bounded command-hash receipt is read through original identity/digest/schema guards. No store/list/write; private readiness fields must remain absent.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "clock",
+      "detail": "One existing45s opening cutoff spans prelude/Open/ready/custody; callbacks compute remaining from the same clock. Existing reserveEndpoint setTimeout(remaining(deadline)) plus close/finally stays. No new independent clock or repeated full budget.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "business",
+      "detail": "One input yields four POST including terminal. Native shell spawns two actors, original call/result and nonce files precede two process_register calls. No TEST spawn, registry write, duplicate/latest result or fallback action.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "census",
+      "detail": "Current F configuration, D open, mandatory D post-open readiness, F RuntimeOwner readiness and D pre-submit readiness retain five genuine census. F probe is currentness only; synthetic empty catalog is no native evidence.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "arithmetic",
+      "detail": "Codex:7 roots/6 released short/4 business POST. V1:2 roots/1 released short/1 standalone+0 initial+4 business POST. New cases have1 input/terminal and0 notifications; old Claude notification branch stays.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "custody",
+      "detail": "Every allocation has decoded immutable body/role/capability and independent suspended HANDLE witness. Short roots confirm Stop/drain/release/absence; member is not inferred from latest PID or counts with exclusions.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "cold",
+      "detail": "Same-Main two-service warm/cold scenario preserves original refs and tuple guards. Successor allocations/input writes/captures stay0; capture2/stop2/settle2/coldSettle1 and query bounds remain.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "cleanup",
+      "detail": "Original Main cleanup, Job drain/release/zero-membership, all witness absence and unrelated sentinel remain. Unknown cleanup stays INCOMPLETE; signalAccepted unknown does not become true. No PID adoption/taskkill/secondary owner.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "workflow",
+      "detail": "Two sequential cases append after the old Claude scoped validator in existing x64/ARM64 jobs. Draft gate, prerequisites, triggers, matrix, artifacts and canonical compiler/test commands remain.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "size",
+      "detail": "Current715/753-line models fit stated natural estimates. Cap800 remains; actual postimages/LOC and preservation require later independent source R2. Estimates are not execution proof.",
+      "pass": true
+    },
+    {
+      "kind": "manual-plan-and-bounded-source-review",
+      "name": "qualification",
+      "detail": "Prospective source scope only. No genuine Claude/Codex, provider, compiler, project, GUI, CI action or remote mutation. Future exact-head original native receipts remain required when execution is authorized. W05/W07 remain separate.",
+      "pass": true
+    }
+  ],
+  "checkSummary": {
+    "count": 45,
+    "allPassed": true,
+    "automaticByteChecks": 25,
+    "manualSourceChecks": 20
+  },
+  "qualification": {
+    "sourceAfterimagesReviewed": false,
+    "sourceAfterimagesCreated": false,
+    "projectOrCompilerOrTestsExecuted": false,
+    "providerOrGuiExecuted": false,
+    "ciPollingOrAction": false,
+    "remoteMutation": false,
+    "nativeQualification": false
+  },
+  "residualRequirements": [
+    "Publish/read back selected plan before inert source cut.",
+    "Review actual eight-path postimages and preservation; natural LOC cap without compression.",
+    "Original native Windows x64/ARM64 receipts require authorized execution; genuine CLI prohibition remains.",
+    "No W05/W07 composition or new activation selected."
+  ]
+}

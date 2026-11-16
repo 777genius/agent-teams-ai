@@ -1,0 +1,564 @@
+{
+  "kind": "PLAN62_PROSPECTIVE_R1_SOURCE_ONLY",
+  "decision": "READY_FOR_INDEPENDENT_PLAN_REVIEW_AND_ROOT_SELECTION",
+  "plan": {
+    "proposedRepoPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/62-windows-retained-provider-test-completion-2026-11-16.md",
+    "sha256": "767505513a51a092d8dca560c65cf0aa9acd019c63b2c07b475256cc0fb338ae",
+    "gitBlob": "74c8b4dadac0d444a2649a7dd165740af064eae8",
+    "bytes": 27385,
+    "lines": 100,
+    "historicalRevision1Sha256": "d805e36841db9df3b1fa53c732bc5d929bb332ff91c9bdbab9862d0dcd60e686",
+    "revision2DeltaSha256": "952c6e6e50310f8b48d847a08e75c7de206f5e7c64d5c43412c867f7a4f344d6"
+  },
+  "sourceBasis": {
+    "officialReadHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+    "latestParentReportedAndTreeVerifiedByRoot": "75cf2dcbfe2b540325ea50a022cb5195306a8c59",
+    "parentRebindLimit": "Root confirms unrelated Plan61 source/review publication leaves all Plan62 paths unchanged; root must recheck current branch/tree before publication.",
+    "p08Blob": "fb05c432887dd9db5dedab8d0e24544cf3ac842d",
+    "semanticDonor": "0099a7636013e78c3b35e1e5c3870b12ef81559d",
+    "oldFailedDonor": "c04761a8b45e31ff0c08e69fe5c628b9d555f528"
+  },
+  "scope": {
+    "existingTestBuildWorkflowPaths": 7,
+    "newTestHelpers": 1,
+    "productionPaths": 0,
+    "newPath": "tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+    "readOnlyBuildConfig": "tools/owned-process-broker/tsconfig.retained-host.json",
+    "noAfterimages": true,
+    "newJobs": 0,
+    "newMatrixRows": 0,
+    "newUnitSuites": 0,
+    "estimatedMaximumNaturalSourceLines": 800
+  },
+  "currentSourceBindings": [
+    {
+      "path": "tools/owned-process-broker/nativeVendorInputs.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "9e6a4756d79defb424cb18967089afeb221d077d",
+      "sha256": "b9e80eec40a2d74dfc5b1f5fa0c80e7b1f487e5362c1ab03b4926b1f77e2680f",
+      "bytes": 5428,
+      "lines": 94
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "d7a56276a6baa63ee65a357a98fc52c7cfe03bdd",
+      "sha256": "72eb24e9aca12f4bf283625a311cd60ce58c9c5b5c2e7beeaecc3a1b2185f8cc",
+      "bytes": 25732,
+      "lines": 614
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "f7c6d8f6a637f55b4cd1a142add89443207efc40",
+      "sha256": "e353f4db836026a95633d36c581c3ad035ce8f6d5638ef867a4771c24354ca83",
+      "bytes": 35180,
+      "lines": 524
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+      "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+      "bytes": 557,
+      "lines": 6
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+      "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+      "bytes": 393,
+      "lines": 6
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "7f9ea9b1ac8804ece51735e23f169ea4db86f97e",
+      "sha256": "3d680cffe94fa083bbe6cb034f4f2384b757c5be2e4bc88206651b0cb55d31d7",
+      "bytes": 29544,
+      "lines": 715
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "ff0aeba42e3a4e845428146969360dff91c25de8",
+      "sha256": "f25659fe4c89e30072e9c2bc923fcdf6f1a3dd2efdca81387659e485170c74c3",
+      "bytes": 38584,
+      "lines": 753
+    },
+    {
+      "path": ".github/workflows/sentry-owned-process-native.yml",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "1188fa5b89d59b739d927082d1b6954a57181819",
+      "sha256": "2d84faae57ad758575935dc760df6561d219f16ee8c0bd615006ca3d88837357",
+      "bytes": 39878,
+      "lines": 495
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "3e0d1ae7a3aa852fb5772821f7df1059edd7cead",
+      "sha256": "e54fda9c30ec3d53f20027d59faf81f59c75fd3ad3987593bd4cd64315a17d3a",
+      "bytes": 36898,
+      "lines": 719
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "a870a9c2c213b802ae43a3dee9a0694a67feda7e",
+      "sha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+      "bytes": 30721,
+      "lines": 600
+    },
+    {
+      "path": "packages/legacy-agent-host/src/management/commandRecords.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "9cd092f5d78e9a80cb922d65a29be5f2b7b96976",
+      "sha256": "f3e800d921048965922f8d112cb620c386f22234228865f829f50969313e8015",
+      "bytes": 15840,
+      "lines": 321
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/teamLaunchModelProbe.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "7e377e0b51ea453e90f4f2dde5c9bb782c983c99",
+      "sha256": "4e8f91bf7231f41a9cdc80ec40fc36d75bf41ef2573ec432967f039e05c5f2c7",
+      "bytes": 17385,
+      "lines": 386
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/ProviderModelProbePreparation.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "e55795dcfd065139c0e798fa4e062f4e3ffcc6c6",
+      "sha256": "299bc0e774ab00d38271c652ad04e76843ac8886c0ac256fadd793aef7f4d137",
+      "bytes": 8891,
+      "lines": 166
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/initialRuntimeModelAdmission.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "e709df02ff4ce926c6d1721b5549024f6c945949",
+      "sha256": "64bbdecdee4113344cda0ab3810e416fde750f80ca45ca563550752137479010",
+      "bytes": 23951,
+      "lines": 345
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+      "sha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d",
+      "bytes": 30469,
+      "lines": 757
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createProviderManagementMethods.ts",
+      "sourceHead": "c5d07911e5fa047bcd141f43227e2b3e41ad128e",
+      "gitBlob": "708d880bb9be0dcaae978b97b0686b548b7873a3",
+      "sha256": "7854ee3a07c27b95294b2e49fd5b4d39cffa00c8040eb6de15d1c231a1b3d927",
+      "bytes": 4523,
+      "lines": 88
+    }
+  ],
+  "historicalDonorBindings": [
+    {
+      "path": "tools/owned-process-broker/nativeVendorInputs.ts",
+      "sourceHead": "0099a7636013e78c3b35e1e5c3870b12ef81559d",
+      "gitBlob": "c46fe3a59d8676cbc921171f5683da03c0247f36",
+      "sha256": "fe74eda0b65b286e862e7b72362117616174dd0f19d3da682a0cac541fe85a91",
+      "bytes": 11979,
+      "lines": 201
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedHostGate.ts",
+      "sourceHead": "0099a7636013e78c3b35e1e5c3870b12ef81559d",
+      "gitBlob": "f90ac7253d33ed46ef563e8e77403e56ab2d25e8",
+      "sha256": "a9d9e832102c9f4459e9fdb349274734ad030d3b3be4a7c8dbdc171fc68235de",
+      "bytes": 28116,
+      "lines": 642
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+      "sourceHead": "0099a7636013e78c3b35e1e5c3870b12ef81559d",
+      "gitBlob": "fce5ce7418b8ff4581fcadf0fc47e6118917af49",
+      "sha256": "865c5baf02f113b4e46a3b12b812bd970bac3295678f05e1e199c5ce27436640",
+      "bytes": 36616,
+      "lines": 541
+    },
+    {
+      "path": "tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+      "sourceHead": "0099a7636013e78c3b35e1e5c3870b12ef81559d",
+      "gitBlob": "09971225cc43125424e72bc6ffcf267d52d5d99a",
+      "sha256": "87ca146d9835de136c88439f7721900c2a78fcba610b1f9ec16b9ae583a91435",
+      "bytes": 38878,
+      "lines": 531
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+      "sourceHead": "0099a7636013e78c3b35e1e5c3870b12ef81559d",
+      "gitBlob": "02c6f7cff1655272888047a637ea9286585688a0",
+      "sha256": "8b81665d2633d639b6450aba0a2c57a68a996e2ec36351a977bccace8b9cb708",
+      "bytes": 32330,
+      "lines": 769
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "sourceHead": "0099a7636013e78c3b35e1e5c3870b12ef81559d",
+      "gitBlob": "f49a5b22f1cb58c7a23e560061019b5fa8fd0940",
+      "sha256": "527d1cc37e20ceec4dec09422bd6817fab9b86c66d0133ae71129e9186fe699e",
+      "bytes": 41067,
+      "lines": 800
+    },
+    {
+      "path": ".github/workflows/sentry-owned-process-native.yml",
+      "sourceHead": "0099a7636013e78c3b35e1e5c3870b12ef81559d",
+      "gitBlob": "ea58acfd0f9bc17578376ff2863b030b5f4bf3dd",
+      "sha256": "c8d92192f66bcf30cd2991c75f201aacc5fabc482fec9d116525b01543117190",
+      "bytes": 46332,
+      "lines": 520
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "sourceHead": "0099a7636013e78c3b35e1e5c3870b12ef81559d",
+      "gitBlob": "ffa71d12592f0449f7000cf0d43f75db6e05c5a4",
+      "sha256": "b0fcc7416920e022c815ca1429827e38f9eb6135406c0ee1b119f3b4495903f0",
+      "bytes": 397,
+      "lines": 6
+    }
+  ],
+  "currentProviderArchive": {
+    "archiveBytes": 186425,
+    "archiveSha256": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41",
+    "sourceCommit": "c930d3c8b9a213762528d6e28c9ed0172ab1fa27"
+  },
+  "providerMemberBindings": [
+    {
+      "member": "package/package.json",
+      "gitBlob": "735998e54f0df2ff1812e78d910c86753cbe891b",
+      "sha256": "352e52211f8ab50b0c3133babd7dc54c574b588811a69c2701d26afd22e72472",
+      "bytes": 2342,
+      "lines": 65
+    },
+    {
+      "member": "package/dist/codex.js",
+      "gitBlob": "5ff2d27bb1169626dd4efdbbeda41503ca80687e",
+      "sha256": "6d84de0e4e4645834aeb036f6e9b4cd15ed908ce7726dd6e8b4bb313df96da65",
+      "bytes": 1265,
+      "lines": 12
+    },
+    {
+      "member": "package/dist/codex.d.ts",
+      "gitBlob": "d44e683c5bb3d12030230e512010550077e694eb",
+      "sha256": "a62f45eea9fb0088722b6ae63edff5ba2f3626a75d3b270e880d4e4cf0c12362",
+      "bytes": 3532,
+      "lines": 28
+    },
+    {
+      "member": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-factory.js",
+      "gitBlob": "dc1d1a269d33c22a61bd9f793e04df3bc63df25d",
+      "sha256": "708f3427816e4ba07fcf7d5bcb9f5b6d42fb0c419074fb448b9e19bb51d9d6a2",
+      "bytes": 3144,
+      "lines": 66
+    },
+    {
+      "member": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-session.js",
+      "gitBlob": "24d352b690bc31c123784cdbd2fc63d2c5c960c5",
+      "sha256": "720e7a0c93d06c5694750ddf759bc3cf1d09f2df23079de96cf166461e4d68bc",
+      "bytes": 21029,
+      "lines": 424
+    },
+    {
+      "member": "package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-config.js",
+      "gitBlob": "5ed1726a6923e2a57d8e7890ac01baca44905869",
+      "sha256": "75912d243cf293162dcd2edf66102a68d4da03f02082f7a51f94dc0fc02944c8",
+      "bytes": 10069,
+      "lines": 172
+    }
+  ],
+  "meaningfulRebinds": [
+    {
+      "path": "nativeRetainedHostGate.ts",
+      "mustPreserve": "Exact current d7a56276 min(cutoff, requestTimeout), two deadline checks, remaining callback, bounded diagnostic and original terminal-read cutoff. Donor RPC body is not a candidate."
+    },
+    {
+      "path": "native-opencode-team/model.ts",
+      "mustPreserve": "Configured preparation construction/request/predicate/return port and shared replyOpenCodeModelProbe. No historical inline SSE reintroduction."
+    },
+    {
+      "path": "tsconfig.json",
+      "mustPreserve": "Every current exclusion and strict flag; append only new helper exclusion. Retained-host config byte-identical."
+    },
+    {
+      "path": "nativeRetainedProviderFixture.ts",
+      "mustPreserve": "P08 §17 installed public dependency entry, original empty catalog, actual memberTools/provider guards, and remainingMs callbacks. No private decoder/API or production changes."
+    },
+    {
+      "path": "current D",
+      "mustPreserve": "Actual c930 archive and five independent native census. Historical91350 tar is not restored."
+    }
+  ],
+  "semanticFindings": [
+    {
+      "finding": "Production forwarding already landed",
+      "evidence": "Existing accepted p08-v1-windows-feasibility/review.json SHA2566c5bab2d41cd6b0f0ea1e9f86256f527e3264f574f9bb374b670082a0557041f; eight production paths are read-only."
+    },
+    {
+      "finding": "Ordinary management receipt remains compatible",
+      "evidence": "Current raw ordinary ModelProbeOwner fingerprint is managementDigest(input), target hashes exact profile plus canonical HOME/XDG identities, completion requires clean close/writer/target/fence. No prepared/private fields are introduced."
+    },
+    {
+      "finding": "V1 no-limits ordinary probe still one managed process",
+      "evidence": "ProviderModelProbePreparation e55795dc no-limits arm invokes existing host.probeModel and retireHost; fixture supplies no managedPreferences/private purpose. Initial native-bootstrap receives no prepared locator."
+    },
+    {
+      "finding": "Codex five-census sequence",
+      "evidence": "Current F167e9748 config verification, current D dc1d1a26/24d352b6 open and mandatory readiness, current RuntimeOwner a566efc5 readiness and D pre-submit readiness. F probe itself only currentness."
+    },
+    {
+      "finding": "Counts separated at exact stages",
+      "evidence": "Codex opening6/short5; original submit adds fifth census to7/short6 before first native tool response. V1 standalone1+member1=2, one standalone model POST+zero initial/B2+four business."
+    },
+    {
+      "finding": "Strict same-Main scoped Stop, not W05/W07",
+      "evidence": "Original two registrations, warm primary Stop, Host-A loss while Main/member retained, same-Main Host-B cold neighbor Stop; epoch2 zero allocations/input/captures. Original physical witnesses/cleanup are mandatory."
+    },
+    {
+      "finding": "Execution restriction unchanged",
+      "evidence": "Existing Sentry Draft gate and old Claude prerequisites remain. Source preparation cannot execute genuine Claude/Codex or substitute finite/V2/Darwin evidence for actual Windows native cases."
+    }
+  ],
+  "validation": {
+    "kind": "INERT_BYTES_AND_SOURCE_CHECKS_ONLY",
+    "passed": 51,
+    "total": 51,
+    "checks": [
+      {
+        "name": "current-source-bytes:tools/owned-process-broker/nativeVendorInputs.ts",
+        "passed": true
+      },
+      {
+        "name": "current-source-bytes:tools/owned-process-broker/nativeRetainedHostGate.ts",
+        "passed": true
+      },
+      {
+        "name": "current-source-bytes:tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+        "passed": true
+      },
+      {
+        "name": "current-source-bytes:tools/owned-process-broker/tsconfig.json",
+        "passed": true
+      },
+      {
+        "name": "current-source-bytes:tools/owned-process-broker/tsconfig.retained-host.json",
+        "passed": true
+      },
+      {
+        "name": "current-source-bytes:packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+        "passed": true
+      },
+      {
+        "name": "current-source-bytes:packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+        "passed": true
+      },
+      {
+        "name": "current-source-bytes:.github/workflows/sentry-owned-process-native.yml",
+        "passed": true
+      },
+      {
+        "name": "current-source-bytes:packages/legacy-agent-host/src/composition/ProviderManagementCoordinator.ts",
+        "passed": true
+      },
+      {
+        "name": "current-source-bytes:packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+        "passed": true
+      },
+      {
+        "name": "current-source-bytes:packages/legacy-agent-host/src/management/commandRecords.ts",
+        "passed": true
+      },
+      {
+        "name": "current-source-bytes:packages/legacy-agent-host/src/composition/teamLaunchModelProbe.ts",
+        "passed": true
+      },
+      {
+        "name": "current-source-bytes:packages/legacy-agent-host/src/composition/ProviderModelProbePreparation.ts",
+        "passed": true
+      },
+      {
+        "name": "current-source-bytes:packages/legacy-agent-host/src/composition/initialRuntimeModelAdmission.ts",
+        "passed": true
+      },
+      {
+        "name": "current-source-bytes:packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+        "passed": true
+      },
+      {
+        "name": "current-source-bytes:packages/legacy-agent-host/src/composition/createProviderManagementMethods.ts",
+        "passed": true
+      },
+      {
+        "name": "current-bindings-count-and-unique-paths",
+        "passed": true
+      },
+      {
+        "name": "historical-donor-bytes:tools/owned-process-broker/nativeVendorInputs.ts",
+        "passed": true
+      },
+      {
+        "name": "historical-donor-bytes:tools/owned-process-broker/nativeRetainedHostGate.ts",
+        "passed": true
+      },
+      {
+        "name": "historical-donor-bytes:tools/owned-process-broker/nativeRetainedServiceScenario.ts",
+        "passed": true
+      },
+      {
+        "name": "historical-donor-bytes:tools/owned-process-broker/nativeRetainedProviderFixture.ts",
+        "passed": true
+      },
+      {
+        "name": "historical-donor-bytes:packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts",
+        "passed": true
+      },
+      {
+        "name": "historical-donor-bytes:packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+        "passed": true
+      },
+      {
+        "name": "historical-donor-bytes:.github/workflows/sentry-owned-process-native.yml",
+        "passed": true
+      },
+      {
+        "name": "historical-donor-bytes:tools/owned-process-broker/tsconfig.json",
+        "passed": true
+      },
+      {
+        "name": "historical-donor-count",
+        "passed": true
+      },
+      {
+        "name": "original-p08-blob",
+        "passed": true
+      },
+      {
+        "name": "current-helper-exact-path-404",
+        "passed": true
+      },
+      {
+        "name": "current-c930-original-archive",
+        "passed": true
+      },
+      {
+        "name": "archive-member-bytes:package/package.json",
+        "passed": true
+      },
+      {
+        "name": "archive-member-bytes:package/dist/codex.js",
+        "passed": true
+      },
+      {
+        "name": "archive-member-bytes:package/dist/codex.d.ts",
+        "passed": true
+      },
+      {
+        "name": "archive-member-bytes:package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-factory.js",
+        "passed": true
+      },
+      {
+        "name": "archive-member-bytes:package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-session.js",
+        "passed": true
+      },
+      {
+        "name": "archive-member-bytes:package/dist/features/provider-session-implementation/adapters/codex-protocol/driver-config.js",
+        "passed": true
+      },
+      {
+        "name": "actual-public-codex-entry",
+        "passed": true
+      },
+      {
+        "name": "actual-public-codex-functions",
+        "passed": true
+      },
+      {
+        "name": "exact-current-low-level-boundary",
+        "passed": true
+      },
+      {
+        "name": "existing-retained-host-entry-coverage",
+        "passed": true
+      },
+      {
+        "name": "current-rpc-cutoff-and-prepost-checks",
+        "passed": true
+      },
+      {
+        "name": "current-terminal-read-cutoff",
+        "passed": true
+      },
+      {
+        "name": "v1-current-configured-preparation-shared-reply",
+        "passed": true
+      },
+      {
+        "name": "corrected-donor-public-entry-and-empty-catalog",
+        "passed": true
+      },
+      {
+        "name": "corrected-donor-real-narrowing-and-callbacks",
+        "passed": true
+      },
+      {
+        "name": "donor-standalone-receipt-join",
+        "passed": true
+      },
+      {
+        "name": "current-management-digest-and-close-contract",
+        "passed": true
+      },
+      {
+        "name": "current-draft-matrix-and-budget",
+        "passed": true
+      },
+      {
+        "name": "current-workflow-native-prerequisites-and-compilers",
+        "passed": true
+      },
+      {
+        "name": "immutable-revision1-and-final-plan",
+        "passed": true
+      },
+      {
+        "name": "only-selected-wording-lines-changed",
+        "passed": true
+      },
+      {
+        "name": "no-proposed-source-afterimages",
+        "passed": true
+      }
+    ]
+  },
+  "execution": {
+    "projectCommandsRun": false,
+    "compilerRun": false,
+    "testsRun": false,
+    "providerRun": false,
+    "nativeRun": false,
+    "ciPolledOrMutated": false,
+    "gitMutated": false,
+    "providerBinariesDownloaded": false,
+    "sourceAfterimagesCreated": false
+  },
+  "remainingRequiredGates": [
+    "Independent prospective R2 of exact final plan",
+    "Root selected-plan publication/readback before source",
+    "Future exact eight-path source full forward/inverse R1/R2 and size checks",
+    "Original Host build and both unchanged compiler projects plus existing protocol suite when permitted",
+    "Original Windows x64 and ARM64 exact-head provider receipts with full physical cleanup only when genuine execution is authorized"
+  ],
+  "limits": [
+    "This is a plan/source compatibility review, not executable validation.",
+    "Natural source size estimates are not afterimages and do not permit cap changes.",
+    "No Windows W01, W05/W07, native SDK cold conversation, Desktop or release qualification follows from this report."
+  ]
+}
