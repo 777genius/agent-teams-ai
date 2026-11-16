@@ -3,14 +3,20 @@ import { createRoot } from 'react-dom/client';
 
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import { hasCapturedTeamLaunchReadiness } from '@renderer/components/team/dialogs/capturedTeamLaunchReadiness';
-import { getPendingProviderPreflightIds } from '@renderer/components/team/dialogs/optionalProviderPreflight';
+import {
+  createProviderSubmissionFence,
+  getPendingProviderPreflightIds,
+} from '@renderer/components/team/dialogs/optionalProviderPreflight';
 import { createLaunchGuard } from '@renderer/components/team/dialogs/providerLaunchAuthority';
 import { ProviderLaunchAuthorityNotice } from '@renderer/components/team/dialogs/ProviderLaunchAuthorityNotice';
+import { useCapturedTeamLaunchReadiness } from '@renderer/components/team/dialogs/useCapturedTeamLaunchReadiness';
+import { capturedTeamSelectionSignature } from '@shared/utils/capturedTeamReadiness';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ProvisioningProviderCheck } from '@renderer/components/team/dialogs/provisioningProviderChecks';
 import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
+import type { Mock } from 'vitest';
 
 vi.mock('@renderer/api', () => ({
   isElectronMode: () => true,
@@ -840,5 +846,139 @@ describe('ProviderActivityStatusStrip', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('reuses render observation time until the real captured readiness owner expires', async () => {
+    const now = 2_000_000_000_000;
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+    const fence = createProviderSubmissionFence();
+    const selectedModelChecks = [{ providerId: 'codex' as const, model: 'TEST-model' }];
+    const cwd = '/tmp/TEST-captured-readiness';
+    let checks: ProvisioningProviderCheck[] = [];
+    const observed: {
+      readiness?: ReturnType<typeof useCapturedTeamLaunchReadiness>;
+      permits?: Mock<(providerId: string, at: number) => boolean>;
+      rerenderChild?: () => void;
+    } = {};
+    const provider = createProvider({
+      providerId: 'codex',
+      displayName: 'Codex',
+      verificationState: 'error',
+    });
+    const cliStatus = createMultimodelStatus([provider]);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const chip = () => host.querySelector('[data-testid="provider-activity-status-codex"]');
+    function Child({
+      permits,
+    }: {
+      permits: ReturnType<typeof useCapturedTeamLaunchReadiness>['permits'];
+    }): React.JSX.Element {
+      const [, invalidate] = React.useState(0);
+      React.useLayoutEffect(() => {
+        observed.rerenderChild = () => invalidate((value) => value + 1);
+      }, []);
+      return React.createElement(ProviderActivityStatusStrip, {
+        cliStatus,
+        sourceCliStatus: cliStatus,
+        cliStatusLoading: false,
+        // A child render must invalidate the provider-state memo, not only its label.
+        cliProviderStatusLoading: {},
+        multimodelEnabled: true,
+        hasCapturedTeamReadiness: permits,
+        showReadyProviders: true,
+        readyStatusText: 'Ready',
+      });
+    }
+    function Harness(): React.JSX.Element {
+      const readiness = useCapturedTeamLaunchReadiness({
+        sourceRevision: 'TEST-source',
+        open: true,
+        teamName: 'host-team:TEST-handle',
+        preparationId: fence.preparationId,
+        cwd,
+        selectedModelChecks,
+        limitContext: false,
+        draft: 'TEST-current-draft',
+        checks,
+        fence,
+      });
+      const permits = React.useMemo(() => vi.fn(readiness.permits), [readiness.permits]);
+      React.useLayoutEffect(() => {
+        observed.readiness = readiness;
+        observed.permits = permits;
+      });
+      return React.createElement(Child, { permits });
+    }
+    try {
+      await act(async () => root.render(React.createElement(Harness)));
+      expect(chip()?.getAttribute('data-tone')).toBe('error');
+      checks = [
+        {
+          providerId: 'codex',
+          status: 'ready',
+          details: [],
+          capturedTeamDraftSignature: observed.readiness!.draftSignature,
+          capturedTeamReadiness: {
+            handleId: 'TEST-handle',
+            preparationId: fence.preparationId,
+            selectionSignature: capturedTeamSelectionSignature({
+              cwd,
+              selectedModelChecks,
+              limitContext: false,
+            }),
+            launchId: 'TEST-launch',
+            rosterRevision: 'TEST-roster',
+            expiresAt: now + 1_000,
+          },
+        },
+      ];
+      await act(async () => root.render(React.createElement(Harness)));
+      expect(chip()?.getAttribute('data-tone')).toBe('checked');
+      const originalPermits = observed.permits!;
+      originalPermits.mockClear();
+      await act(async () => {
+        vi.advanceTimersByTime(250);
+        observed.rerenderChild!();
+      });
+      expect(observed.permits).toBe(originalPermits);
+      expect(originalPermits.mock.calls.length).toBeGreaterThan(0);
+      expect(
+        originalPermits.mock.calls.every(([providerId, at]) => providerId === 'codex' && at === now)
+      ).toBe(true);
+      expect(chip()?.getAttribute('data-tone')).toBe('checked');
+      const guard = createLaunchGuard(
+        ['codex'],
+        new Map([['codex' as const, provider]]),
+        undefined,
+        observed.readiness
+      );
+      expect(guard.blocked(true)).toBe(false);
+      await act(async () => {
+        vi.advanceTimersByTime(750);
+      });
+      expect(Date.now()).toBe(now + 1_000);
+      // The original expiry+1 callback is still pending; action-time authority already refuses.
+      expect(guard.blocked(true)).toBe(true);
+      expect(observed.permits).toBe(originalPermits);
+      expect(chip()?.getAttribute('data-tone')).toBe('checked');
+      await act(async () => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(observed.permits).not.toBe(originalPermits);
+      expect(chip()?.getAttribute('data-tone')).toBe('error');
+      expect(chip()?.textContent).not.toContain('Ready');
+      expect(
+        observed.permits!.mock.calls.some(
+          ([providerId, at]) => providerId === 'codex' && at === now + 1_001
+        )
+      ).toBe(true);
+      expect(guard.blocked(true)).toBe(true);
+    } finally {
+      await act(async () => root.unmount());
+      vi.useRealTimers();
+    }
   });
 });

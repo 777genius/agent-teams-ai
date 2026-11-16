@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
@@ -112,6 +112,17 @@ function useProviderActivityDisplay({
   shouldRender: boolean;
 } {
   const [cycleProviderIds, setCycleProviderIds] = useState<CliProviderId[]>([]);
+  const [capturedReadinessSnapshot, setCapturedReadinessSnapshot] = useState<{
+    predicate: NonNullable<ProviderActivityStatusStripProps['hasCapturedTeamReadiness']>;
+    observedAt: number;
+  } | null>(null);
+  useLayoutEffect(() => {
+    setCapturedReadinessSnapshot(
+      hasCapturedTeamReadiness
+        ? { predicate: hasCapturedTeamReadiness, observedAt: Date.now() }
+        : null
+    );
+  }, [hasCapturedTeamReadiness]);
   const renderCliStatus = useMemo(
     () =>
       !cliStatus && cliStatusLoading && multimodelEnabled
@@ -165,11 +176,19 @@ function useProviderActivityDisplay({
         error:
           !loading &&
           !scopedOpenCodeReady &&
-          hasCapturedTeamReadiness?.(provider.providerId, Date.now()) !== true &&
+          !(
+            capturedReadinessSnapshot !== null &&
+            capturedReadinessSnapshot.predicate === hasCapturedTeamReadiness &&
+            capturedReadinessSnapshot.predicate(
+              provider.providerId,
+              capturedReadinessSnapshot.observedAt
+            ) === true
+          ) &&
           !hasEffectiveProviderLaunchAuthority(provider),
       };
     });
   }, [
+    capturedReadinessSnapshot,
     cliProviderStatusLoading,
     codexSnapshotPending,
     forcedLoadingProviderIdSet,
