@@ -81,8 +81,8 @@ import {
   registerSubagentHandlers,
   removeSubagentHandlers,
 } from './subagents';
-import { initializeTeamHandlers, registerTeamHandlers, removeTeamHandlers } from './teams';
 import { createTeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
+import { initializeTeamHandlers, registerTeamHandlers, removeTeamHandlers } from './teams';
 import { registerTelemetryHandlers, removeTelemetryHandlers } from './telemetry';
 import {
   initializeTerminalHandlers,
