@@ -29,6 +29,7 @@ import { runDesktopNativeQuitMode, verifyDesktopNativeQuitAfterShutdown, capture
 import { prepareDesktopMixedNativeFixture, reserveMixedOpenCodeEndpoint } from './desktop-mixed-native-fixture.ts';
 import { runDesktopMixedCreateLaunchUiSmoke } from './desktop-mixed-create-launch-ui-smoke.ts';
 import { runDesktopLiveMembershipUiSmoke } from './desktop-live-membership-ui-smoke.ts';
+import { desktopFiniteV2MembershipSelected, prepareDesktopFiniteMembershipFixture, captureDesktopFiniteMembershipScope, observeDesktopFiniteMembershipCleanup } from './desktop-live-membership-controlled.ts';
 import type { DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
 import { desktopProofEvidence, captureDesktopProofScope, projectDesktopProofReceiptSummary, verifyDesktopProofInputsAfterCleanup, assertDesktopProofCompleted } from './desktop-proof-evidence.ts';
 import { runDesktopNativeReview } from './desktop-native-review-compose.ts';
@@ -109,7 +110,8 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const packedRelaunchMode = process.env.LEGACY_DESKTOP_PROOF_MODE === 'packed-app-relaunch-ui';
   const mode = packedRelaunchMode ? 'native-launch-ui' : process.env.LEGACY_DESKTOP_PROOF_MODE ?? 'bridge-diagnostics';
   const codexAccountMode = ['codex-account-read', 'codex-account-auth', 'codex-login-ui'].includes(mode);
-  assertDesktopProofEnvironment(mode === 'process-cold-ui' || codexAccountMode);
+  const finiteMembership = desktopFiniteV2MembershipSelected();
+  assertDesktopProofEnvironment(mode === 'process-cold-ui' || codexAccountMode || finiteMembership);
   const emulatedOnly = process.env.LEGACY_DESKTOP_EMULATED_ONLY === '1';
   const emulatedManagementMode = ['emulated-management-ui', 'emulated-codex-login-ui'].includes(mode);
   const emulatedRuntimeProvider = ['emulated-codex-runtime-ui', 'emulated-selection-ui', 'emulated-installer-ui'].includes(mode) ? 'codex' : ['emulated-claude-runtime-ui', 'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui', 'emulated-extensions-ui', 'emulated-import-ui'].includes(mode) ? 'claude' : mode === 'emulated-opencode-runtime-ui' ? 'opencode' : undefined;
@@ -142,13 +144,14 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   openCodeLifecycleModel = selectedOpenCodeModel; openCodeReviewModel = selectedOpenCodeReviewModel;
   capturedMcpModel = selectedCapturedMcpModel;
   const nativeInputs = codexAccountMode ? await captureDesktopCodexAccountInput(process.env.LEGACY_DESKTOP_CODEX_PATH!)
-    : mixedMode || codexResumeMode ? await captureDesktopCodexNativeInputs(process.env.LEGACY_DESKTOP_CODEX_PATH!) : [];
+    : !finiteMembership && (mixedMode || codexResumeMode) ? await captureDesktopCodexNativeInputs(process.env.LEGACY_DESKTOP_CODEX_PATH!) : [];
   const pnpm = await realpath(process.env.LEGACY_DESKTOP_PNPM_PATH ?? '/opt/homebrew/bin/pnpm');
   const emulatedManagementFixture = emulatedManagementMode ? await prepareDesktopEmulatedManagementFixture(repo, pnpm, mode === 'emulated-codex-login-ui' ? 'codex-login' : undefined) : undefined;
   const emulatedRuntimeFixture = mode === 'emulated-extensions-ui' ? await prepareDesktopEmulatedExtensionsFixture(repo, pnpm)
     : mode === 'emulated-import-ui' ? await prepareDesktopEmulatedImportFixture(repo, pnpm)
     : emulatedRuntimeProvider ? await prepareDesktopEmulatedRuntimeFixture(repo, pnpm, emulatedRuntimeProvider, mode === 'emulated-collaboration-ui' ? 'collaboration' : mode === 'emulated-claude-lifecycle-ui' ? 'lifecycle' : mode === 'emulated-selection-ui' ? 'selection' : mode === 'emulated-installer-ui' ? 'installer' : undefined) : undefined;
-  const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = emulatedRuntimeFixture ?? emulatedManagementFixture ?? (questionUiMode ? await prepareDesktopBackendFixture(repo, {
+  const finiteBase = finiteMembership ? await prepareDesktopFiniteMembershipFixture(repo, pnpm) : undefined;
+  const baseFixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>> = finiteBase ?? emulatedRuntimeFixture ?? emulatedManagementFixture ?? (questionUiMode ? await prepareDesktopBackendFixture(repo, {
     seedUiTask: true, pnpmEntry: pnpm, nativeClaude: { path: process.env.LEGACY_DESKTOP_CLAUDE_PATH!,
       sha256: 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f', modelUrl: questionModel!.url },
   }) : await prepareDesktopProofFixture(repo, mode, pnpm, {
@@ -159,15 +162,16 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   const processReadbackSource = processReadbackMode ? await verifyNativeProcessReadbackSource(baseFixture.root, object(JSON.parse(await readFile(join(baseFixture.root, 'desktop-backend-receipt.json'), 'utf8')))) : undefined;
   if (mixedModels) await mixedModels.retainEvidenceAt(baseFixture.root);
   let fixture = questionUiMode ? await prepareDesktopCodexQuestionFixture(baseFixture, { executable: process.env.LEGACY_DESKTOP_CODEX_PATH!, model: questionModel! }) : mixedMode ? await prepareDesktopMixedNativeFixture(baseFixture, {
-    models: selectedMixedModels!, codexPath: process.env.LEGACY_DESKTOP_CODEX_PATH!, openCodePath: process.env.LEGACY_DESKTOP_OPENCODE_PATH!,
+    models: selectedMixedModels!, codexPath: finiteBase?.finiteInitialPeers.codex.executable.path ?? process.env.LEGACY_DESKTOP_CODEX_PATH!, openCodePath: process.env.LEGACY_DESKTOP_OPENCODE_PATH!,
+    ...(finiteBase ? { finiteInitialPeers: finiteBase.finiteInitialPeers } : {}),
     ...(process.env.LEGACY_DESKTOP_OPENCODE_GENERATION === 'v2' ? {
       openCodeV2: { bunPath: process.env.OPENCODE_V2_EMBEDDED_BUN!,
         bunSha256: process.env.OPENCODE_V2_EMBEDDED_BUN_SHA256!,
         engineDirectory: process.env.OPENCODE_V2_EMBEDDED_GRAPH!,
-        processCustody: {
+        ...(finiteMembership ? {} : { processCustody: {
           directory: process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_DIRECTORY!,
           manifestSha256: process.env.OPENCODE_V2_EMBEDDED_PROCESS_CUSTODY_MANIFEST_SHA256!,
-        } },
+        } }) },
     } : {}),
     openCodeEndpoint: await reserveMixedOpenCodeEndpoint(),
     openCodeManagementEndpoint: await reserveMixedOpenCodeEndpoint(),
@@ -237,6 +241,7 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
   if (scheduleUiMode) evidence.scope = 'Original Schedule controls, actual finite Claude and task-first native Bash/MCP, Stop, history and reload; localhost inference only';
   captureDesktopProofScope(evidence, { repo, mode, emulatedOnly,
     emulatedManagementMode: emulatedManagementMode || mode === 'skills-ui', emulatedRuntimeMode });
+  if (finiteBase) captureDesktopFiniteMembershipScope(evidence, finiteBase.finiteInitialPeers);
   if (donorSavedOnly) evidence.scope = 'Exact donor UI saves genuine settings/roster, ordinary Quit and absence, then current original import/dialog/reload; zero native business input';
   if (quitScenario === 'pending-open') {
     evidence.scope = 'Actual native provider open pending, zero inputs, guarded existing Quit API and physical cleanup; explicit TEST setup';
@@ -723,14 +728,14 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
         .map((line) => object(JSON.parse(line) as unknown));
       const preQuitCount =
         typeof evidence.preQuitSentinelCount === 'number' ? evidence.preQuitSentinelCount : null;
-      if ((packed || emulatedOnly) && census.some(row => !permittedSentinelObservation(row))) evidence.status = 'INCOMPLETE';
+      if ((packed || emulatedOnly || finiteMembership) && census.some(row => !permittedSentinelObservation(row))) evidence.status = 'INCOMPLETE';
       evidence.finalSentinelCensus = {
         invocations: census,
         preQuitCount,
         postQuitOrCleanupInvocations: preQuitCount === null ? null : census.slice(preQuitCount),
         refusedInvocations: census.filter((row) => row.allowed !== true),
         qualification: packed ? 'All legacy executable calls refuse, including version discovery. Only nonessential version attempts and the isolated shell-environment fixture are admitted observations; any agent/control fallback before or after Quit makes this packed proof incomplete.' :
-          emulatedOnly ? 'Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete.' :
+          emulatedOnly || finiteMembership ? 'Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete.' :
           'Sentinels refuse nonversion commands without launching providers. Post-Quit/cleanup refusals are retained legacy maintenance gaps; they do not prove native execution or full fork-free/P5 qualification.',
       };
     } catch (error) {
@@ -765,10 +770,12 @@ async function main(): Promise<DesktopOwnerRoutingContinuation | undefined> {
       }
     }
     await verifyDesktopProofInputsAfterCleanup(nativeInputs, fixture, evidence);
+    if (finiteBase) await observeDesktopFiniteMembershipCleanup(finiteBase.finiteInitialPeers, evidence);
     await writeFile(receiptPath, JSON.stringify(evidence, null, 2), { mode: 0o600 });
     console.log(JSON.stringify(projectDesktopProofReceiptSummary(evidence, { receiptPath, mode, mixedMode })));
     assertDesktopProofCompleted(evidence, { packed: Boolean(packed), emulatedOnly, controlledProcessMode,
       mode, scheduleUiMode, capturedMcpUiMode, cleanupFailure, remaining });
+    if (finiteMembership) assert.equal(evidence.status, 'PASS', 'original finite-peer V2 membership and cleanup must both pass');
   }
   if (mode === 'task-board-cross-team-ui') {
     assert.equal(evidence.status, 'PASS', 'original Taskboard proof and cleanup must finish before owner continuation');

@@ -209,7 +209,12 @@ jobs:
             tools/owned-process-broker/nativeDebugServiceScenario.ts \
             scripts/e2e/teams-create-page-desktop.mjs \
             tools/owned-process-broker/nativeWindowsAppFixture.ts \
-            test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts
+            test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts \
+            scripts/legacy-agent-host/desktop-backend-smoke.ts \
+            scripts/legacy-agent-host/desktop-live-membership-controlled.ts \
+            scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts \
+            scripts/legacy-agent-host/desktop-mixed-native-fixture.ts \
+            scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts
           pnpm typecheck:workspace
           node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json
           pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main
@@ -488,6 +493,22 @@ jobs:
       - name: Verify original OpenCode V2 UI receipts and physical cleanup
         if: ${{ !cancelled() && steps.inputs.outcome == 'success' && matrix.lane == 'opencode-v2-management' }}
         run: node scripts/legacy-agent-host/verify-desktop-v2-management-receipt.ts
+      - name: Exercise original V2 live Team Add Remove Restore Stop and cold history
+        if: matrix.lane == 'opencode-v2-management'
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: native-mixed-create-launch-ui
+          LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI: '1'
+          LEGACY_DESKTOP_OPENCODE_GENERATION: v2
+          LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP: '1'
+        run: |
+          set -euo pipefail
+          unset LEGACY_DESKTOP_EMULATED_ONLY
+          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-opencode-v2-live-membership-ui.log"
+      - name: Verify original V2 membership receipts and physical cleanup
+        if: ${{ !cancelled() && steps.inputs.outcome == 'success' && matrix.lane == 'opencode-v2-management' }}
+        run: node scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts
       - name: Verify exact source, original screenshots, receipts and cleanup
         if: ${{ !cancelled() && steps.inputs.outcome == 'success' && matrix.lane != 'opencode-v2-management' }}
         run: |
@@ -1182,6 +1203,7 @@ jobs:
           name: host-emulated-${{ matrix.platform || 'linux-x64' }}-${{ github.event.pull_request.head.sha || github.sha }}-${{ matrix.lane }}
           retention-days: 14
           if-no-files-found: warn
+          include-hidden-files: ${{ matrix.lane == 'opencode-v2-management' }}
           path: |
             ${{ runner.temp }}/host-emulated-*.json
             ${{ runner.temp }}/host-emulated-*.log
@@ -1191,6 +1213,12 @@ jobs:
             ${{ runner.temp }}/TEST-emulated-ui-inputs-*/process-custody/manifest.json
             ${{ runner.temp }}/TEST-emulated-ui-inputs-*/process-custody/registered-process.node
             ${{ runner.temp }}/TEST-desktop-backend-*/desktop-backend-receipt.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/mixed-models.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/workspace/opencode.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-created-native-mixed/.host-owner/state.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/test-created-native-mixed/.host-owner/launches/*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/cold-membership-epoch1-bundles/**
+            ${{ runner.temp }}/TEST-desktop-backend-*/userData/logs/app-errors*.ndjson
             ${{ runner.temp }}/TEST-desktop-backend-*/desktop-app.log
             ${{ runner.temp }}/TEST-desktop-backend-*/desktop-backend-app.log
             ${{ runner.temp }}/TEST-desktop-backend-*/owner-routing-*.log

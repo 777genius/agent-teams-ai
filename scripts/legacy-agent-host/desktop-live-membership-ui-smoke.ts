@@ -19,6 +19,8 @@ import { openOriginalCreateForm } from './desktop-create-config-ui-smoke.ts';
 import { checked, replace } from './desktop-mixed-dialog-settings.ts';
 import { mixedDesktopTeamName, readMixedLiveMembershipIdentity } from './desktop-mixed-native-fixture.ts';
 import type { DesktopLiveMemberSelection, DesktopMixedModels } from './desktop-mixed-native-fixture.ts';
+import { readDesktopFiniteMembershipPeers, desktopFiniteMembershipProcesses } from './desktop-live-membership-controlled.ts';
+import type { DesktopFiniteMembership } from './desktop-live-membership-controlled.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
 import { captureDesktopSourceMetadataLineage, desktopMetadataProfileHash } from './desktop-opencode-metadata-lineage.ts';
 import type { DesktopSourceMetadataLineage } from './desktop-opencode-metadata-lineage.ts';
@@ -62,6 +64,7 @@ async function read(path: string, maximum = 1024 * 1024): Promise<Row> {
 export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   fixture: Awaited<ReturnType<typeof prepareDesktopBackendFixture>> & {
     membershipProject?: { path: string; sha256: string; dev: number; ino: number };
+    finiteInitialPeers?: DesktopFiniteMembership;
   };
   models: DesktopMixedModels;
   capturedGroup(): number;
@@ -73,8 +76,11 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   assert.equal(process.env.LEGACY_DESKTOP_PROOF_MODE, 'native-mixed-create-launch-ui');
   const { fixture, models } = options, membership = models.membership, project = fixture.membershipProject;
   assert.ok(membership && project);
+  const finite = fixture.finiteInitialPeers;
+  const physical = () => desktopFiniteMembershipProcesses(options.capturedGroup(), { ...fixture, finiteInitialPeers: finite! });
+  const peerProbeCountsNow = async () => (await readDesktopFiniteMembershipPeers(finite!)).probeCounts;
   const steps: Row[] = [], proof: Row = { status: 'INCOMPLETE', kind: 'mixed-live-membership',
-    openCodeGeneration: models.openCodeGeneration, steps };
+    openCodeGeneration: models.openCodeGeneration, ...(finite ? { initialPeers: finite.kind, fullMixedNativeQualification: false } : {}), steps };
   options.evidence.liveMembershipProof = proof;
   const modelRows = [models.claude, models.codex, models.opencode];
   const current = () => {
@@ -192,7 +198,7 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   const v1MetadataCommand = v2 ? '' : text(openCodeExecutable.path) + ' serve --hostname 127.0.0.1 --port ' +
     new URL(text(metadataProfile.endpoint)).port;
   const observe = async (providers: readonly Provider[]) => {
-    current(); await pins(); const sources = await sourceProfiles(), table = processFacts();
+    current(); await pins(); const sources = await sourceProfiles(), table = finite ? await physical() : processFacts();
     const found = table.filter(row => row.groupId === options.capturedGroup() && command(row.pid) === fixture.node + ' ' + fixture.hostEntry);
     assert.equal(found.length, 1); if (host) assert.deepEqual(found[0], host); else host = found[0]!;
     const children = table.filter(row => row.parentPid === host!.pid);
@@ -215,14 +221,21 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
       assert.ok(metadataBirths.length <= 128);
     }
     const natives = children.filter(row => !metadata.some(birth => birth.pid === row.pid));
+    const peerEffects = finite ? (await readDesktopFiniteMembershipPeers(finite)).effects : undefined;
     assert.equal(natives.length, providers.length, 'every remaining original Host child is one expected Runtime');
     const selected = new Map<Provider, ProcessFact>();
     for (const provider of providers) {
       const executable = text(record(recipe(provider).executable).path);
-      const matches = natives.filter(row => row.command === executable);
+      const finitePeer = finite?.peers.find(row => row.provider === provider);
+      const matches = natives.filter(row => row.command === (finitePeer ? fixture.node : executable) &&
+        (!finitePeer || command(row.pid).startsWith(fixture.node + ' ' + executable + ' ')));
       assert.equal(matches.length, 1); const birth = matches[0]!;
       assert.equal(birth.groupId, birth.pid);
-      assert.ok(command(birth.pid).startsWith(executable + ' '));
+      assert.ok(command(birth.pid).startsWith((finitePeer ? fixture.node + ' ' : '') + executable + ' '));
+      if (finitePeer) {
+        assert.ok(peerEffects!.some(row => row.provider === provider && row.role === 'runtime' && row.event === 'launch' && row.pid === birth.pid && row.parentPid === host!.pid));
+        assert.ok(peerEffects!.some(row => row.provider === provider && row.role === 'runtime' && row.pid === birth.pid && row.event === (provider === 'claude' ? 'mcp-connected' : 'connected')));
+      }
       if (provider === 'opencode' && !v2) assert.equal(command(birth.pid),
         executable + ' serve --hostname 127.0.0.1 --port ' + new URL(text(recipe(provider).endpoint)).port);
       selected.set(provider, { ...birth });
@@ -233,7 +246,7 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
     return selected;
   };
   const releasedEpoch = async () => {
-    assert.ok(host); const table = processFacts(); assert.ok(!table.some(row => row.pid === host!.pid));
+    assert.ok(host); const table = finite ? await physical() : processFacts(); assert.ok(!table.some(row => row.pid === host!.pid));
     if (v2) {
       assert.ok(lineage);
       lineage = captureDesktopSourceMetadataLineage({ root: fixture.root, host,
@@ -252,8 +265,8 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   await ui.scrollTo(leadToggle, 'original explicit lead model');
   if (!await cdp.evaluate('Boolean(document.querySelector(' + literal(create + ' #lead-effort') + '))'))
     await ui.click(leadToggle, 'expand original lead model');
-  const opus = create + ' [data-testid="team-model-selector-model-option"][aria-label^="Opus 4.6"]';
-  await ui.scrollTo(opus, 'original Opus4.6 choice'); await ui.click(opus, 'select original Opus4.6');
+  const opus = create + ' [data-testid="team-model-selector-model-option"][aria-label^=' + literal(finite ? 'TEST Claude Sonnet' : 'Opus 4.6') + ']';
+  await ui.scrollTo(opus, finite ? 'finite initial Sonnet choice' : 'original Opus4.6 choice'); await ui.click(opus, finite ? 'select finite initial Sonnet' : 'select original Opus4.6');
   await ui.scrollTo(create + ' button', 'original Medium effort', 'Medium');
   await ui.click(create + ' button', 'select original Medium effort', 'Medium');
   await ui.scrollTo(leadToggle, 'original configured lead model');
@@ -270,7 +283,7 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'a', code: 'KeyA', modifiers: 4, commands: ['selectAll'] });
   await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'a', code: 'KeyA', modifiers: 4 });
   await cdp.send('Input.insertText', { text: JSON.stringify([{ name: 'bob', providerId: 'codex',
-    model: 'mock-model', role: 'developer', workflow: 'TEST mixed codex workflow: use only the supplied business input.' }], null, 2) });
+    model: finite ? 'TEST-model' : 'mock-model', role: 'developer', workflow: 'TEST mixed codex workflow: use only the supplied business input.' }], null, 2) });
   await ui.waitRead('(() => {const rows=[...document.querySelectorAll(' +
     literal(create + ' [data-role="member-row"] input[aria-label^="Member "]') +
     ')];return rows.length===1&&rows[0].value==="bob"})()', 'one original Codex teammate');
@@ -281,13 +294,13 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   assert.deepEqual(rows(saved.members).map(row => [row.name, row.role]), [['team-lead', 'lead'], ['bob', 'member']]);
   assert.equal(record(saved.savedSettings).cwd, workspace);
   assert.equal(record(saved.savedSettings).providerId, 'anthropic');
-  assert.equal(record(saved.savedSettings).model, 'claude-opus-4-6');
+  assert.equal(record(saved.savedSettings).model, finite ? 'sonnet' : 'claude-opus-4-6');
   assert.equal(record(saved.savedSettings).effort, 'medium');
   assert.equal(record(saved.savedSettings).prompt, '');
   assert.equal(record(saved.savedSettings).skipPermissions, true);
   assert.equal(record(saved.savedSettings).syncModelsWithLead, false);
   assert.equal(record(rows(saved.members)[1]!.settings).providerId, 'codex');
-  assert.equal(record(rows(saved.members)[1]!.settings).model, 'mock-model');
+  assert.equal(record(rows(saved.members)[1]!.settings).model, finite ? 'TEST-model' : 'mock-model');
   assert.equal(rows(saved.runtimeCaptures ?? []).length, 0);
   assert.ok(rows(saved.members).every(row => row.delivery === undefined));
   assert.equal(models.opencode.probes.length, 0);
@@ -324,12 +337,12 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
   const peerProviders = ['claude', 'codex'] as const, initialPhysical = await observe(peerProviders);
   const peers = peerProviders.map(provider => ({ provider, identity: readMixedLiveMembershipIdentity(fixture.root, provider),
     physical: initialPhysical.get(provider)! }));
-  const peerProbeCounts = [models.claude.probes.length, models.codex.probes.length];
+  const peerProbeCounts = finite ? await peerProbeCountsNow() : [models.claude.probes.length, models.codex.probes.length];
   assert.ok(peerProbeCounts[0]! >= 1 && peerProbeCounts[0]! <= 9 && peerProbeCounts[1]! >= 1 && peerProbeCounts[1]! <= 8);
   proof.initial = { handleId, capture, sessions: initialSessions, peers, probeCounts: peerProbeCounts,
     source: await sourceProfiles(), project: { path: project.path, sha256: project.sha256 } };
   const assertPeers = async (physical?: Map<Provider, ProcessFact>) => {
-    current(); assert.deepEqual([models.claude.probes.length, models.codex.probes.length], peerProbeCounts);
+    current(); assert.deepEqual(finite ? await peerProbeCountsNow() : [models.claude.probes.length, models.codex.probes.length], peerProbeCounts);
     const selected = await sessions();
     for (const peer of peers) {
       assert.deepEqual(readMixedLiveMembershipIdentity(fixture.root, peer.provider), peer.identity);
@@ -547,7 +560,7 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
     'both original user input histories visible without sending');
   assert.deepEqual(readMixedLiveMembershipIdentity(fixture.root, 'opencode', restored.target), restoredReady.identity);
   assert.deepEqual([models.opencode.probes.length, models.opencode.observations.length], [2, 4]);
-  assert.deepEqual([models.claude.probes.length, models.codex.probes.length], peerProbeCounts);
+  assert.deepEqual(finite ? await peerProbeCountsNow() : [models.claude.probes.length, models.codex.probes.length], peerProbeCounts);
   assert.deepEqual(await sessions(), stopped); await observe([]); await pins();
   const screenshot = record(await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true }));
   const screenshotPath = join(fixture.root, 'ui-original-live-membership.png');
@@ -561,7 +574,7 @@ export async function runDesktopLiveMembershipUiSmoke(cdp: UiCdpPort, options: {
     for (const model of [models.claude, models.codex]) {
       assert.equal(model.observations.length, 0); assert.equal(model.notificationObservations?.length ?? 0, 0);
     }
-    assert.deepEqual([models.claude.probes.length, models.codex.probes.length], peerProbeCounts);
+    assert.deepEqual(finite ? await peerProbeCountsNow() : [models.claude.probes.length, models.codex.probes.length], peerProbeCounts);
     assert.deepEqual([models.opencode.probes.length, models.opencode.observations.length], [2, 4]);
     assert.deepEqual(await sessions(), stopped); assert.deepEqual(await sourceProfiles(), beforeColdSource);
     assert.deepEqual(await probeLedger(), afterQuitProbes);

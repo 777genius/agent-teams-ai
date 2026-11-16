@@ -2505,3 +2505,89 @@ test('original initial conversation refuses missing wrong or duplicate terminal 
     assert.deepEqual(f.budgets, [{ label: 'original lead BOOT preview', ms: 60_000 }]);
   }
 });
+
+async function finiteMembershipFunction(begin: string, end: string, name: string, environment: Record<string, unknown>) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = (await readFile(new URL('./desktop-live-membership-controlled.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one private finite P11 source boundary');
+  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)).replace(/^export /u, ''));
+  return Function('environment', `'use strict';const {assert,process,processFacts,command,readFile,realpath,join,dirname}=environment;
+    ${actual}
+    return ${name};`)(environment) as (...args: unknown[]) => unknown;
+}
+
+test('finite V2 P11 admission rejects mixed selectors before any fixture or process observation', async () => {
+  const allowed = { LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP: '1', LEGACY_DESKTOP_BACKEND_GO: '1',
+    LEGACY_DESKTOP_PROOF_MODE: 'native-mixed-create-launch-ui', LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI: '1',
+    LEGACY_DESKTOP_OPENCODE_GENERATION: 'v2', OPENCODE_V2_EMBEDDED_BUN: '/TEST-bun',
+    OPENCODE_V2_EMBEDDED_GRAPH: '/TEST-graph', OPENCODE_V2_EMBEDDED_BUN_SHA256: 'a'.repeat(64) };
+  const select = async (env: Record<string, string | undefined>, platform = 'linux', arch = 'x64') => {
+    const actual = await finiteMembershipFunction('export function desktopFiniteV2MembershipSelected()',
+      '/** One existing private owner;', 'desktopFiniteV2MembershipSelected', { assert, process: { env, platform, arch } });
+    return actual();
+  };
+  assert.equal(await select({}), false); assert.equal(await select(allowed), true);
+  for (const override of [{ LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP: 'yes' }, { LEGACY_DESKTOP_BACKEND_GO: '0' },
+    { LEGACY_DESKTOP_PROOF_MODE: 'team-ui' }, { LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI: undefined },
+    { LEGACY_DESKTOP_OPENCODE_GENERATION: 'v1' }, { LEGACY_DESKTOP_EMULATED_ONLY: '1' },
+    { LEGACY_DESKTOP_CLAUDE_PATH: '/TEST-unselected' }, { LEGACY_DESKTOP_CODEX_PATH: '/TEST-unselected' },
+    { LEGACY_DESKTOP_PACKED_CAPTURE_PATH: '/TEST-other.json' }, { OPENCODE_V2_EMBEDDED_GRAPH: undefined },
+    { OPENCODE_V2_EMBEDDED_BUN_SHA256: 'bad' }])
+    await assert.rejects(select({ ...allowed, ...override }), assert.AssertionError);
+  await assert.rejects(select(allowed, 'darwin'), assert.AssertionError);
+  await assert.rejects(select(allowed, 'linux', 'arm64'), assert.AssertionError);
+});
+
+test('finite V2 P11 Linux projection keeps exact kernel identity and refuses changed or foreign children', async () => {
+  const { dirname, join } = await import('node:path');
+  const host = { pid: 200, parentPid: 100, groupId: 100, birth: 'original ps host', command: 'node' };
+  const peer = { pid: 201, parentPid: 200, groupId: 201, birth: 'original ps peer', command: 'node' };
+  const native = { pid: 202, parentPid: 200, groupId: 202, birth: 'original ps V2', command: 'bun' };
+  const unrelated = { pid: 300, parentPid: 1, groupId: 300, birth: 'original other', command: 'other' };
+  const exercise = async (variant: 'ready' | 'no-host' | 'changed-birth' | 'foreign-executable' | 'foreign-wrapper' | 'wrong-parent') => {
+    const reads: string[] = [], stats = new Map<number, number>(); let censuses = 0;
+    const table = variant === 'no-host' ? [unrelated] : [host, peer, native, unrelated];
+    const fixture = { node: '/TEST/node', hostEntry: '/TEST/host/cli.js', finiteInitialPeers: {
+      peers: [{ provider: 'claude', executable: { path: '/TEST/peer' } }] } };
+    const actual = await finiteMembershipFunction('export async function desktopFiniteMembershipProcesses(',
+      'export function captureDesktopFiniteMembershipScope(', 'desktopFiniteMembershipProcesses', {
+        assert, process: { platform: 'linux', env: { OPENCODE_V2_EMBEDDED_BUN: '/TEST/bun' } }, dirname, join,
+        processFacts() { censuses++; return table; },
+        command(pid: number) { assert.equal(pid, 200); return '/TEST/node /TEST/host/cli.js'; },
+        async realpath(path: string) {
+          reads.push(path); const pid = Number(path.split('/')[2]);
+          assert.equal(path, `/proc/${pid}/exe`);
+          return variant === 'foreign-executable' && pid === 201 ? '/TEST/foreign' : pid === 202 ? '/TEST/bun' : '/TEST/node';
+        },
+        async readFile(path: string) {
+          reads.push(path); const pid = Number(path.split('/')[2]), row = table.find(value => value.pid === pid); assert.ok(row);
+          if (path.endsWith('/stat')) {
+            const count = (stats.get(pid) ?? 0) + 1; stats.set(pid, count);
+            const fields = Array<string>(20).fill('0'); fields[0] = 'S';
+            fields[1] = String(variant === 'wrong-parent' && pid === 201 ? 299 : row.parentPid);
+            fields[2] = String(row.groupId); fields[19] = String(pid * 10 + (variant === 'changed-birth' && pid === 201 && count === 2 ? 1 : 0));
+            return `${pid} (TEST name with ) bracket) ${fields.join(' ')}`;
+          }
+          assert.equal(path, `/proc/${pid}/cmdline`);
+          const args = pid === 200 ? ['/TEST/node', '/TEST/host/cli.js'] : pid === 201
+            ? ['/TEST/node', variant === 'foreign-wrapper' ? '/TEST/other' : '/TEST/peer', '--original']
+            : ['/TEST/bun', '--no-env-file', '--config=/dev/null', '--no-install', '/TEST/host/adapters/providers/OpenCodeV2EmbeddedChild.js'];
+          return Buffer.from(args.join('\0') + '\0');
+        },
+      });
+    const promise = actual(100, fixture) as Promise<unknown>;
+    if (variant !== 'ready' && variant !== 'no-host') await assert.rejects(promise, assert.AssertionError);
+    else {
+      const result = await promise;
+      assert.deepEqual(result, variant === 'no-host' ? table : [
+        { ...host, birth: 'linux-starttime:2000', command: '/TEST/node' },
+        { ...peer, birth: 'linux-starttime:2010', command: '/TEST/node' },
+        { ...native, birth: 'linux-starttime:2020', command: '/TEST/bun' }, unrelated]);
+      assert.equal(censuses, 1); assert.ok(reads.every(path => !path.includes('/300/')));
+      assert.equal(reads.length, variant === 'no-host' ? 0 : 12);
+    }
+    assert.deepEqual(table, variant === 'no-host' ? [unrelated] : [host, peer, native, unrelated]);
+  };
+  for (const variant of ['ready', 'no-host', 'changed-birth', 'foreign-executable', 'foreign-wrapper', 'wrong-parent'] as const)
+    await exercise(variant);
+});
