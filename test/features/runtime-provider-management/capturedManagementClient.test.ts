@@ -3,7 +3,9 @@ import { expect, it, vi } from 'vitest';
 
 import { CapturedRuntimeSourceError } from '../../../src/features/agent-backend/main';
 import { parseManagementCatalog } from '../../../src/features/runtime-provider-management/main/adapters/output/capturedManagementCatalog';
+import * as managementPreferences from '../../../src/features/runtime-provider-management/main/adapters/output/capturedManagementPreferences';
 import { createCapturedRuntimeProviderManagementClient } from '../../../src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient';
+import * as logging from '../../../src/shared/utils/logger';
 
 import type {
   CapturedProviderManagement,
@@ -387,5 +389,220 @@ it('preserves native model declarations through the captured catalog without inv
     });
     expect(result.models?.models[0]?.declaredInputModalities).toEqual(expected);
     expect(f.capture).toHaveBeenCalledWith('/TEST/recipient-project');
+  }
+});
+
+function observeViewDiagnostics(flag: string | undefined) {
+  const previous = process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS;
+  if (flag === undefined) delete process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS;
+  else process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS = flag;
+  const records: logging.LogSinkEntry[] = [];
+  const remove = logging.addLogSink((entry) => {
+    if (entry.namespace === 'Host:ProviderView') records.push(entry);
+  });
+  return {
+    records,
+    restore: () => {
+      remove();
+      if (previous === undefined) delete process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS;
+      else process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS = previous;
+    },
+  };
+}
+
+function deferredViewStage() {
+  let release!: () => void;
+  const promise = new Promise<void>((done) => {
+    release = done;
+  });
+  return { promise, release };
+}
+
+it('observes the three original view awaits without another catalog or currentness read', async () => {
+  const observation = observeViewDiagnostics('1');
+  try {
+    const f = fixture();
+    const captureBlock = deferredViewStage();
+    const captureEntered = deferredViewStage();
+    const catalogBlock = deferredViewStage();
+    const catalogEntered = deferredViewStage();
+    const preferencesBlock = deferredViewStage();
+    const preferencesEntered = deferredViewStage();
+    const current = vi.fn((): boolean => true);
+    f.target.isCurrent = current;
+    f.capture.mockImplementationOnce(async () => {
+      captureEntered.release();
+      await captureBlock.promise;
+      return f.target;
+    });
+    const originalRequest = f.target.request.bind(f.target);
+    f.target.request = (operation, payload) => {
+      catalogEntered.release();
+      return originalRequest(operation, payload);
+    };
+    f.setBarrier(catalogBlock.promise);
+    const originalPreferences = managementPreferences.selectedPreferences;
+    const preferences = vi.spyOn(managementPreferences, 'selectedPreferences')
+      .mockImplementation(async (target, nativeDefault) => {
+        preferencesEntered.release();
+        await preferencesBlock.promise;
+        return originalPreferences(target, nativeDefault);
+      });
+    const pending = f.port.loadView({ runtimeId: 'opencode', projectPath: '/TEST/private-project' });
+    try {
+      await captureEntered.promise;
+      expect(observation.records).toHaveLength(1);
+      captureBlock.release();
+      await catalogEntered.promise;
+      expect(observation.records).toHaveLength(2);
+      catalogBlock.release();
+      await preferencesEntered.promise;
+      expect(observation.records).toHaveLength(3);
+      expect(current).not.toHaveBeenCalled();
+      preferencesBlock.release();
+      expect((await pending).view).toBeDefined();
+      expect(f.capture).toHaveBeenCalledTimes(1);
+      expect(f.capture).toHaveBeenCalledWith('/TEST/private-project');
+      expect(f.calls).toEqual([{ operation: 'catalog', payload: {} }]);
+      expect(preferences).toHaveBeenCalledTimes(1);
+      expect(preferences).toHaveBeenCalledWith(f.target, null);
+      expect(current).toHaveBeenCalledTimes(2);
+      expect(observation.records.map((entry) => entry.args)).toEqual(
+        ['capture', 'catalog', 'preferences', 'resolved'].map((stage) => [
+          'Runtime provider view stage',
+          { kind: 'runtime-provider-view-stage-v1', view: 1, stage, scope: 'project' },
+        ])
+      );
+    } finally {
+      captureBlock.release();
+      catalogBlock.release();
+      preferencesBlock.release();
+      await pending.catch(() => undefined);
+      preferences.mockRestore();
+    }
+  } finally {
+    observation.restore();
+  }
+});
+
+it('keeps disabled views silent and bounds observations to the first 32 enabled views per port', async () => {
+  const observation = observeViewDiagnostics(undefined);
+  try {
+    const f = fixture();
+    expect((await f.port.loadView({ runtimeId: 'opencode' })).view).toBeDefined();
+    process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS = 'true';
+    expect((await f.port.loadView({ runtimeId: 'opencode' })).view).toBeDefined();
+    expect(observation.records).toEqual([]);
+    process.env.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS = '1';
+    for (let index = 0; index < 33; index++)
+      expect((await f.port.loadView({ runtimeId: 'opencode' })).view).toBeDefined();
+    expect(f.capture).toHaveBeenCalledTimes(35);
+    expect(f.calls).toEqual(Array.from({ length: 35 }, () => ({ operation: 'catalog', payload: {} })));
+    expect(observation.records).toHaveLength(128);
+    const stages = ['capture', 'catalog', 'preferences', 'resolved'];
+    observation.records.forEach((entry, index) => {
+      expect(entry.level).toBe('diagnostic');
+      expect(entry.args).toEqual([
+        'Runtime provider view stage',
+        { kind: 'runtime-provider-view-stage-v1', view: Math.floor(index / 4) + 1,
+          stage: stages[index % 4], scope: 'global' },
+      ]);
+    });
+    const other = fixture();
+    expect((await other.port.loadView({
+      runtimeId: 'opencode', projectPath: '/TEST/private-other-project',
+    })).view).toBeDefined();
+    expect(observation.records.slice(128).map((entry) => entry.args)).toEqual(
+      stages.map((stage) => [
+        'Runtime provider view stage',
+        { kind: 'runtime-provider-view-stage-v1', view: 1, stage, scope: 'project' },
+      ])
+    );
+    for (const secret of ['TEST-private', '/TEST/', binding.profileId, binding.configRevision,
+      'a'.repeat(64), 'TEST-secret'])
+      expect(JSON.stringify(observation.records)).not.toContain(secret);
+  } finally {
+    observation.restore();
+  }
+});
+
+it('keeps original view failures and their call boundaries without recording raw errors', async () => {
+  const observation = observeViewDiagnostics('1');
+  try {
+    for (const failure of ['capture', 'catalog', 'preferences', 'final-current'] as const) {
+      const f = fixture();
+      const current = vi.fn((): boolean => true);
+      f.target.isCurrent = current;
+      if (failure === 'capture')
+        f.capture.mockRejectedValueOnce(new CapturedRuntimeSourceError('configuration-invalid'));
+      else if (failure === 'catalog') f.fail();
+      else if (failure === 'preferences') current.mockReturnValue(false);
+      else current.mockReturnValueOnce(true).mockReturnValue(false);
+      const start = observation.records.length;
+      const result = await f.port.loadView({ runtimeId: 'opencode' });
+      expect(result.error?.code).toBe(
+        failure === 'capture' ? 'runtime-misconfigured' : 'runtime-unhealthy'
+      );
+      expect(result.view).toBeUndefined();
+      expect(f.capture).toHaveBeenCalledTimes(1);
+      expect(f.calls).toEqual(
+        failure === 'capture' ? [] : [{ operation: 'catalog', payload: {} }]
+      );
+      expect(current).toHaveBeenCalledTimes(
+        failure === 'preferences' ? 1 : failure === 'final-current' ? 2 : 0
+      );
+      const stages = failure === 'capture' ? ['capture', 'rejected']
+        : failure === 'catalog' ? ['capture', 'catalog', 'rejected']
+          : ['capture', 'catalog', 'preferences', 'rejected'];
+      expect(observation.records.slice(start).map((entry) => entry.args)).toEqual(
+        stages.map((stage) => [
+          'Runtime provider view stage',
+          { kind: 'runtime-provider-view-stage-v1', view: 1, stage, scope: 'global' },
+        ])
+      );
+    }
+    for (const secret of ['TEST-api-key-raw', binding.profileId, binding.configRevision, 'TEST-secret'])
+      expect(JSON.stringify(observation.records)).not.toContain(secret);
+  } finally {
+    observation.restore();
+  }
+});
+
+it('contains throwing diagnostic sinks and observer creation without changing the original view', async () => {
+  const observation = observeViewDiagnostics('1');
+  let removeThrowingSink: (() => void) | undefined;
+  try {
+    const baseline = await fixture().port.loadView({ runtimeId: 'opencode' });
+    const f = fixture();
+    let sinkCalls = 0;
+    removeThrowingSink = logging.addLogSink((entry) => {
+      if (entry.namespace === 'Host:ProviderView') {
+        sinkCalls++;
+        throw new Error('TEST-observer-secret');
+      }
+    });
+    expect(await f.port.loadView({ runtimeId: 'opencode' })).toEqual(baseline);
+    expect(sinkCalls).toBe(4);
+    expect(f.capture).toHaveBeenCalledTimes(1);
+    expect(f.calls).toEqual([{ operation: 'catalog', payload: {} }]);
+    removeThrowingSink();
+    removeThrowingSink = undefined;
+    const other = fixture();
+    const logger = vi.spyOn(logging, 'createLogger').mockImplementation(() => {
+      throw new Error('TEST-logger-factory-secret');
+    });
+    try {
+      expect(await other.port.loadView({ runtimeId: 'opencode' })).toEqual(baseline);
+      expect(logger).toHaveBeenCalledTimes(4);
+      expect(other.capture).toHaveBeenCalledTimes(1);
+      expect(other.calls).toEqual([{ operation: 'catalog', payload: {} }]);
+    } finally {
+      logger.mockRestore();
+    }
+    expect(JSON.stringify(observation.records)).not.toContain('TEST-observer-secret');
+    expect(JSON.stringify(observation.records)).not.toContain('TEST-logger-factory-secret');
+  } finally {
+    removeThrowingSink?.();
+    observation.restore();
   }
 });

@@ -286,6 +286,9 @@ export const desktopProofSupplementarySources = [
   'src/renderer/components/team/TeamProvisioningPanel.tsx',
   'src/renderer/components/team/TeamProvisioningBanner.tsx',
   'test/renderer/components/team/TeamProvisioningBanner.test.ts',
+  'test/features/runtime-provider-management/capturedManagementClient.test.ts',
+  'src/features/runtime-provider-management/renderer/hooks/refreshRuntimeProviderConnection.ts',
+  'src/shared/utils/logger.ts',
 ];
 
 /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */

@@ -72,6 +72,7 @@ async function main() {
     console.log(JSON.stringify({ phase: 'prepared', receipt: receiptPath }));
     const log = createWriteStream(join(fixture.root, 'desktop-backend-app.log'), { mode: 0o600 });
     const invocation = [fixture.node, pnpm, 'dev:mcp', '--remoteDebuggingPort', String(selectedCdpPort), '--noSandbox'];
+    fixture.appEnvironment.LEGACY_DESKTOP_STARTUP_DIAGNOSTICS = '1';
     const app = spawn(invocation[0]!, invocation.slice(1), { cwd: repo, env: fixture.appEnvironment,
       detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
     let spawnError = false, appIdentity = '', quitRequested = false;
