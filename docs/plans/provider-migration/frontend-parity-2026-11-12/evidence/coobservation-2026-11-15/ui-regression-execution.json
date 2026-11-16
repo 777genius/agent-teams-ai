@@ -1573,5 +1573,962 @@
     "allOtherNonDocsAnd42WorkflowsUnchanged": true,
     "greenExecuted": false,
     "compilerOrGuiQualification": false
+  },
+  "completedLocalRegression": {
+    "sourceCommit": "574e0bddd237f605bf5581721a0a3b9f1cecbfa7",
+    "sourceTree": "099d5dbf0bf590a3a49f5646a8390e4c9f406738",
+    "resultIndex": {
+      "schemaVersion": 1,
+      "kind": "actual-published-source-finite-regression-and-scoped-guards",
+      "sourceCommit": "574e0bddd237f605bf5581721a0a3b9f1cecbfa7",
+      "sourceTree": "099d5dbf0bf590a3a49f5646a8390e4c9f406738",
+      "publishedR1": "1929d64351d2356ceb05e907401cfae06b19fcb5",
+      "actualLocalGitHead": "47d9f29602bae778f20ae8cc133ca332e458e59a",
+      "binding": {
+        "bytes": 1271203,
+        "sha256": "14f4b2e7e0f114368b661d02e032a2f184807747921de68e5c78e7e1283e8aa9",
+        "gitBlob": "1c844a6c3908e2b26e5e2a6e9a91d949d6ce2af4"
+      },
+      "runner": {
+        "bytes": 19692,
+        "sha256": "5ac6bb60411196a2f6906f3a11abb0c81353fd4762e90dc5c5ab8a9680ca2758",
+        "gitBlob": "41060e08824dcefab62500097da2289b98a732d3"
+      },
+      "materialization": {
+        "gitBlob": "b4b594a46ff818c96e7eec7133f5590e19f2d0ba",
+        "bytes": 6313722,
+        "sha256": "51e4dd7e148393b58f7d40743defd3f0795b43754ace45ea734ab52a13950cfa",
+        "writtenPaths": [
+          "scripts/legacy-agent-host/desktop-backend-observations.ts",
+          "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts"
+        ]
+      },
+      "receipt": {
+        "gitBlob": "c84039731095a0fc4884ce97dffc2da25330f267",
+        "bytes": 6316894,
+        "sha256": "a808a922dc4d13139d3fbf5a4774aff5806c5a76b8258ba2d9dcbbd790cfa4e5"
+      },
+      "raw": {
+        "path": "/workspace/scratch/c714f5bce554/ui-regression-evidence/green.log",
+        "bytes": 13880,
+        "sha256": "13566b7b884109fee23257d627b6462080c3be7eb7bd2b720bfab33b304a0715",
+        "gitBlob": "897bf2f62ae81034bd5cf4bdca52b690a7cd911b"
+      },
+      "startedAt": "2026-11-16T08:15:27.917922+00:00",
+      "finishedAt": "2026-11-16T08:15:34.607171+00:00",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts"
+      ],
+      "durationSeconds": 6.649064001001534,
+      "results": [
+        {
+          "pass": true,
+          "name": "offline Desktop admission refuses inherited native selections before preparing a fixture"
+        },
+        {
+          "pass": true,
+          "name": "TEST management admission retains only the exact direct detached Host peer without signaling"
+        },
+        {
+          "pass": true,
+          "name": "Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder"
+        },
+        {
+          "pass": true,
+          "name": "Linux zero-group rows remain observable without becoming owned app groups; malformed census stays an error"
+        },
+        {
+          "pass": true,
+          "name": "the same original-root oracle uses each existing caller deadline after a long provider phase, without renewing reads"
+        },
+        {
+          "pass": true,
+          "name": "read-only discovery survives navigation during the actual IPC read, then reads the new context"
+        },
+        {
+          "pass": true,
+          "name": "unregistered initial discovery waits, but owner failures are never hidden as navigation"
+        },
+        {
+          "pass": true,
+          "name": "initial discovery passes only its remaining captured budget to the IPC await"
+        },
+        {
+          "pass": true,
+          "name": "exhausted initial observation never dispatches the backend IPC"
+        },
+        {
+          "pass": true,
+          "name": "other discovery callers retain the default CDP budget"
+        },
+        {
+          "pass": true,
+          "name": "an explicit IPC observation budget lets the same read settle after30s within60s"
+        },
+        {
+          "pass": true,
+          "name": "default CDP evaluations still reject at30s without a resend"
+        },
+        {
+          "pass": true,
+          "name": "macOS original Node zombie is the same unreaped harness child, never a changed live command"
+        },
+        {
+          "pass": true,
+          "name": "live stat can become original defunct before the guard; only original child reap and whole-group absence settle it"
+        },
+        {
+          "pass": true,
+          "name": "changed command/start, wrong child/group and initial descendants never authorize a recovery observation"
+        },
+        {
+          "pass": true,
+          "name": "an already observed original natural exit still requires fresh group and captured Host absence"
+        },
+        {
+          "pass": true,
+          "name": "original crash/signal and process-table failures remain debt"
+        },
+        {
+          "pass": true,
+          "name": "the original deadline is not renewed after initial settlement consumed it"
+        },
+        {
+          "pass": true,
+          "name": "numeric group absence without this original child exit observation expires within the remaining original budget"
+        },
+        {
+          "pass": true,
+          "name": "a process-table read that crosses the original deadline cannot qualify natural exit"
+        },
+        {
+          "pass": true,
+          "name": "an already reaped original child waits for actual descendant and original Host absence"
+        },
+        {
+          "pass": true,
+          "name": "an orphan descendant, moved captured descendant or original Host cannot be cleared by an expired budget"
+        },
+        {
+          "pass": true,
+          "name": "absent leader observation rejects wrong child, live/crashed/signaled child and invalid captured identities"
+        },
+        {
+          "pass": true,
+          "name": "a reused leader PID and unavailable full process census retain debt without signaling"
+        },
+        {
+          "pass": true,
+          "name": "absent leader observation never renews the original deadline or accepts a late census"
+        },
+        {
+          "pass": true,
+          "name": "original peer observation accepts later-row only with its retained launch row"
+        },
+        {
+          "pass": true,
+          "name": "original peer observation accepts exit only with its retained launch row"
+        },
+        {
+          "pass": true,
+          "name": "original peer observation refuses reuse without admitting the census PID"
+        },
+        {
+          "pass": true,
+          "name": "original peer observation refuses reparent without admitting the census PID"
+        },
+        {
+          "pass": true,
+          "name": "original peer observation refuses argv without admitting the census PID"
+        },
+        {
+          "pass": true,
+          "name": "original peer observation refuses duplicate without admitting the census PID"
+        },
+        {
+          "pass": true,
+          "name": "original peer observation refuses missing without admitting the census PID"
+        },
+        {
+          "pass": true,
+          "name": "original peer observation refuses late without admitting the census PID"
+        },
+        {
+          "pass": true,
+          "name": "empty peer observation validates the original healthy-empty journal before-first-team-read"
+        },
+        {
+          "pass": true,
+          "name": "empty peer observation validates the original retained-failure journal before-first-team-read"
+        },
+        {
+          "pass": true,
+          "name": "empty peer observation validates the original malformed-json journal before-first-team-read"
+        },
+        {
+          "pass": true,
+          "name": "empty peer observation validates the original wrong-provider journal before-first-team-read"
+        },
+        {
+          "pass": true,
+          "name": "empty peer observation validates the original healthy-empty journal after-team-read"
+        },
+        {
+          "pass": true,
+          "name": "empty peer observation validates the original retained-failure journal after-team-read"
+        },
+        {
+          "pass": true,
+          "name": "empty peer observation validates the original malformed-json journal after-team-read"
+        },
+        {
+          "pass": true,
+          "name": "empty peer observation validates the original wrong-provider journal after-team-read"
+        },
+        {
+          "pass": true,
+          "name": "empty peer census preserves no-child-provider-mismatch through the original journal oracle"
+        },
+        {
+          "pass": true,
+          "name": "empty peer census preserves zero-host-failure through the original journal oracle"
+        },
+        {
+          "pass": true,
+          "name": "empty peer census preserves zero-host-clean through the original journal oracle"
+        },
+        {
+          "pass": true,
+          "name": "captured Linux original Node wrapper admits only its exact retained MainThread zombie tuple"
+        },
+        {
+          "pass": true,
+          "name": "Linux wrapper identity refuses changed custody, birth, invocation and other platform display forms"
+        },
+        {
+          "pass": true,
+          "name": "actual owner epoch cleans the captured Linux zombie group only after original close and fresh identity guards"
+        },
+        {
+          "pass": true,
+          "name": "actual Linux owner cleanup retains debt and zero signals for wrong state"
+        },
+        {
+          "pass": true,
+          "name": "actual Linux owner cleanup retains debt and zero signals for wrong birth"
+        },
+        {
+          "pass": true,
+          "name": "actual Linux owner cleanup retains debt and zero signals for wrong child"
+        },
+        {
+          "pass": true,
+          "name": "actual Linux owner cleanup retains debt and zero signals for wrong group"
+        },
+        {
+          "pass": true,
+          "name": "actual Linux owner cleanup retains debt and zero signals for wrong parent"
+        },
+        {
+          "pass": true,
+          "name": "actual Linux owner cleanup retains debt and zero signals for wrong leader"
+        },
+        {
+          "pass": true,
+          "name": "actual Linux owner cleanup retains debt and zero signals for wrong invocation"
+        },
+        {
+          "pass": true,
+          "name": "actual Linux owner cleanup retains debt and zero signals for wrong display"
+        },
+        {
+          "pass": true,
+          "name": "actual Linux owner cleanup keeps final group-debt as failure after its one guarded signal"
+        },
+        {
+          "pass": true,
+          "name": "actual Linux owner cleanup keeps final host-debt as failure after its one guarded signal"
+        },
+        {
+          "pass": true,
+          "name": "actual Linux owner cleanup keeps final port-debt as failure after its one guarded signal"
+        },
+        {
+          "pass": true,
+          "name": "captured UI discovery waits for Main admission and actual mount while early diagnostics remain active"
+        },
+        {
+          "pass": true,
+          "name": "the original remaining startup deadline rejects a pending snapshot without late discovery or a reset"
+        },
+        {
+          "pass": true,
+          "name": "packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin"
+        },
+        {
+          "pass": true,
+          "name": "HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted"
+        },
+        {
+          "pass": true,
+          "name": "isolated shell fixture emits the actual framed environment and refuses shell effects"
+        },
+        {
+          "pass": true,
+          "name": "original in-progress Task comment prerequisite requires its exact stage without an assignment control"
+        },
+        {
+          "pass": true,
+          "name": "Task attachment comment waits for its original focused owner after one click before inserting text"
+        },
+        {
+          "pass": true,
+          "name": "original Task assignment prerequisite refuses receipt-only, pending and stale renderer state"
+        },
+        {
+          "pass": true,
+          "name": "original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface"
+        },
+        {
+          "pass": true,
+          "name": "original desktop click waits for stable target geometry, without repeating input"
+        },
+        {
+          "pass": true,
+          "name": "original Task hover waits through layout and unavailability before its one physical move"
+        },
+        {
+          "pass": true,
+          "name": "original desktop click refuses a constantly moving target before dispatch"
+        },
+        {
+          "pass": true,
+          "name": "original owner-qualified click rereads its full expression through unavailability at unchanged coordinates"
+        },
+        {
+          "pass": true,
+          "name": "login failure facts retain only bounded original attempts and confirmed milestones"
+        },
+        {
+          "pass": true,
+          "name": "finite readiness failure summaries keep only bounded states and never private snapshot data"
+        },
+        {
+          "pass": true,
+          "name": "Taskboard failure summaries compare retained identities without exposing private snapshot values"
+        },
+        {
+          "pass": true,
+          "name": "installer failure summaries preserve original wait sites and attempts without inferring installation effects"
+        },
+        {
+          "pass": true,
+          "name": "installer failure projection does not invoke input getters and leaves oversized observations unknown"
+        },
+        {
+          "pass": true,
+          "name": "installer CDP and cleanup projection retains only exact finite observations"
+        },
+        {
+          "pass": true,
+          "name": "Selection target summaries retain the exact original phase and six closed facts"
+        },
+        {
+          "pass": true,
+          "name": "Selection target projection rejects unknown or malformed facts without exposing text or invoking getters"
+        },
+        {
+          "pass": true,
+          "name": "Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input"
+        },
+        {
+          "pass": true,
+          "name": "original desktop click refuses a target unavailable during the final ownership check"
+        },
+        {
+          "pass": true,
+          "name": "original desktop click refuses a target moved during the final ownership check"
+        },
+        {
+          "pass": true,
+          "name": "original default scroll preserves a disabled control before its readiness wait"
+        },
+        {
+          "pass": true,
+          "name": "original scroll opt-in reveals a covered checkbox with one bounded wheel"
+        },
+        {
+          "pass": true,
+          "name": "original desktop click rechecks owner after its pending final target read"
+        },
+        {
+          "pass": true,
+          "name": "original desktop click rechecks cutoff after its pending final target read"
+        },
+        {
+          "pass": true,
+          "name": "original clarification lookup admits its retained read without completing the assignment prerequisite"
+        },
+        {
+          "pass": true,
+          "name": "original clarification lookup refuses changed owner, revision, refresh and retained-read joins"
+        },
+        {
+          "pass": true,
+          "name": "original owner availability admits three captured A Teams through its actual first DOM read"
+        },
+        {
+          "pass": true,
+          "name": "original owner availability retains singleton, subset and duplicate-row cardinality semantics"
+        },
+        {
+          "pass": true,
+          "name": "original owner availability refuses foreign identities and preserves its existing aggregate guards"
+        },
+        {
+          "pass": true,
+          "name": "original owner availability refuses invalid captured discovery before navigation"
+        },
+        {
+          "pass": true,
+          "name": "owner availability admits every captured A Team through the actual first observation"
+        },
+        {
+          "pass": true,
+          "name": "owner availability refuses healthy B in unavailable A rows"
+        },
+        {
+          "pass": true,
+          "name": "owner availability refuses captured foreign owner in unavailable A rows"
+        },
+        {
+          "pass": true,
+          "name": "owner availability refuses unknown Team in unavailable A rows"
+        },
+        {
+          "pass": true,
+          "name": "owner availability refuses malformed Team in unavailable A rows"
+        },
+        {
+          "pass": true,
+          "name": "owner availability refuses missing selected A before original navigation"
+        },
+        {
+          "pass": true,
+          "name": "owner availability refuses non-string A handle before original navigation"
+        },
+        {
+          "pass": true,
+          "name": "owner availability refuses empty A handle before original navigation"
+        },
+        {
+          "pass": true,
+          "name": "owner availability refuses duplicate A handle before original navigation"
+        },
+        {
+          "pass": true,
+          "name": "owner availability refuses over-bound capture before original navigation"
+        },
+        {
+          "pass": true,
+          "name": "passive input keeps its actual Team target and three separate original navigation samples"
+        },
+        {
+          "pass": true,
+          "name": "passive navigation preserves non-card events, the original ring bounds and null or non-Team state"
+        },
+        {
+          "pass": true,
+          "name": "passive navigation refuses malformed target and store facts without losing original callbacks"
+        },
+        {
+          "pass": true,
+          "name": "passive navigation remains bounded and cannot interrupt original writes on diagnostic failure"
+        },
+        {
+          "pass": true,
+          "name": "passive navigation uses only the callable store own method and ignores unrelated card surfaces"
+        },
+        {
+          "pass": true,
+          "name": "the selected provider receipt digest matches the actual manifest-selected archive bytes"
+        },
+        {
+          "pass": true,
+          "name": "provider receipt legacy, current and equal-dual implementation digests preserve manifest authority"
+        },
+        {
+          "pass": true,
+          "name": "every present provider implementation digest must be valid and both recognized fields must agree"
+        },
+        {
+          "pass": true,
+          "name": "provider receipt shape, package selection and original file or JSON errors remain strict"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch uses three stable actual DOM samples before its original settings action"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch resets exact geometry when the original button shifts by a quarter pixel"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch restarts its three samples after changed identity"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch restarts its three samples after changed expanded state"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch restarts its three samples after changed horizontal position"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch restarts its three samples after changed width"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch restarts its three samples after changed height"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch resets its original readiness after absent target"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch resets its original readiness after ambiguous target"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch resets its original readiness after wrong model"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch resets its original readiness after absent identity"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch resets its original readiness after empty identity"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch resets its original readiness after invalid expansion"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch resets its original readiness after missing owning dialog"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch resets its original readiness after nonfinite x"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch resets its original readiness after nonfinite y"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch resets its original readiness after zero width"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch resets its original readiness after negative height"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch resets its original readiness after running own animation"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch resets its original readiness after paused own animation"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch resets its original readiness after pending own animation"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch allows finished own animation without inspecting descendant spinners or model status"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch allows idle own animation without inspecting descendant spinners or model status"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch exhausts its one original deadline with no matching model and no settings action"
+        },
+        {
+          "pass": true,
+          "name": "saved Launch exhausts its one original deadline with unsettled own dialog and no settings action"
+        }
+      ],
+      "counts": {
+        "tests": 136,
+        "pass": 136,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "allOriginal97Pass": true,
+        "inputsPreserved": true,
+        "cleanupEmpty": true
+      },
+      "exitCode": 0,
+      "exitSignal": null,
+      "timedOut": false,
+      "executionError": null,
+      "postflightError": null,
+      "sourceRowsPerSnapshot": 8798,
+      "compiledRowsPerSnapshot": 1504,
+      "providerMembersPerSnapshot": 265,
+      "inputsPreserved": true,
+      "cleanup": {
+        "capturedSessionMembersAfter": [],
+        "newTestTempsRemaining": [],
+        "scope": "Actual captured command session/group and TEST-prefixed temp census, not universal escaped-child or native custody proof."
+      },
+      "guards": [
+        {
+          "phase": "lint",
+          "startedAt": "2026-11-16T08:16:12.097087+00:00",
+          "finishedAt": "2026-11-16T08:16:16.131703+00:00",
+          "duration": 3.9842974729981506,
+          "raw": "$ eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content scripts/legacy-agent-host/desktop-backend-observations.ts scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-emulated-selection-ui.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts\n\n/workspace/scratch/c714f5bce554/agent-teams-reconciled-local/scripts/legacy-agent-host/desktop-backend-observations.ts\n  337:38  warning  Unexpected control character(s) in regular expression: \\x00, \\x1f  no-control-regex\n\n✖ 1 problem (0 errors, 1 warning)\n\n",
+          "identities": [
+            {
+              "file": "lint.log",
+              "bytes": 605,
+              "sha256": "0855f2298e4c93df03cc1f02c2262890f78e8c0f8a6bc138ad48c8a755ff1be3",
+              "gitBlob": "b27979c3aecb83534d6ebed30cc524230679c6e4"
+            },
+            {
+              "file": "lint-receipt.json",
+              "bytes": 6317020,
+              "sha256": "75879dd034fd684e8fb6067162bccf1374180b5087cabdd8dbce9fdd2f4ce3b8",
+              "gitBlob": "cf246be3eb78ee0bc8fc2582c165248e5e607b26"
+            },
+            {
+              "file": "lint.attempt",
+              "bytes": 33,
+              "sha256": "8529c61c1f3db91ac4de41a440fff7c84dfb5544484f0ce1ee0f9ef1408b4d37",
+              "gitBlob": "f292e358cc3c405370d059b56d07daebd2872dc1"
+            }
+          ],
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "inputsPreserved": true,
+          "cleanup": {
+            "capturedSessionMembersAfter": [],
+            "newTestTempsRemaining": []
+          }
+        },
+        {
+          "phase": "source-size",
+          "startedAt": "2026-11-16T08:17:14.701668+00:00",
+          "finishedAt": "2026-11-16T08:17:15.338954+00:00",
+          "duration": 0.5802999479928985,
+          "raw": "$ node ./scripts/ci/check-source-file-size.mjs\nSource file size guard passed: 5020 production files checked, 141 frozen legacy exceptions, 800-line limit.\n86 legacy file(s) are below their frozen caps; lower those caps when committing the refactor.\n",
+          "identities": [
+            {
+              "file": "source-size.log",
+              "bytes": 249,
+              "sha256": "26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f",
+              "gitBlob": "399a78f77777d0669218be2d4dae5360657308fa"
+            },
+            {
+              "file": "source-size-receipt.json",
+              "bytes": 6316777,
+              "sha256": "d44eeeb72cf4a480b4ce8fc2cb0880ab1b955f77fa6e8599297a67c5ecddd9b2",
+              "gitBlob": "bd705b26e2c09d5aacae924678ebadcd159254a5"
+            },
+            {
+              "file": "source-size.attempt",
+              "bytes": 33,
+              "sha256": "b091ff0988dd9e31da5432c11646c3aaf9ec032598b775761fb92af212dee6b3",
+              "gitBlob": "7e5c5fedd599b3c6de5d149c9c151b4adc26abc6"
+            }
+          ],
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "inputsPreserved": true,
+          "cleanup": {
+            "capturedSessionMembersAfter": [],
+            "newTestTempsRemaining": []
+          }
+        },
+        {
+          "phase": "diff-check",
+          "startedAt": "2026-11-16T08:17:31.217348+00:00",
+          "finishedAt": "2026-11-16T08:17:31.291638+00:00",
+          "duration": 0.045176336003351025,
+          "raw": "",
+          "identities": [
+            {
+              "file": "diff-check.log",
+              "bytes": 0,
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+            },
+            {
+              "file": "diff-check-receipt.json",
+              "bytes": 6317003,
+              "sha256": "451b305bb87b91efc8040d5e9f2d31a63e0e9ae0d4fe685be4e0d1f4e2c4ab01",
+              "gitBlob": "baf2aec18c0a60453a328487a9b2ad4eea93f761"
+            },
+            {
+              "file": "diff-check.attempt",
+              "bytes": 33,
+              "sha256": "70b16491756b0340ab7a9aa44d43fe168c2de7a51ee5c3a2fc982158bcdee606",
+              "gitBlob": "f3d957fc845459d94bb104ccc9d6bb46c8783703"
+            }
+          ],
+          "exitCode": 0,
+          "exitSignal": null,
+          "timedOut": false,
+          "inputsPreserved": true,
+          "cleanup": {
+            "capturedSessionMembersAfter": [],
+            "newTestTempsRemaining": []
+          }
+        }
+      ],
+      "independentReviews": {
+        "semantic": "provider_e2e accepted all136 ordered RED/GREEN names and original actual producer/caller paths",
+        "fullSourceAndLifecycle": "pr_graph accepted complete actual command and materialization receipts; guard_review independently accepted all three complete guard receipts and six source/dependency snapshots.",
+        "scopedGuards": {
+          "reviewer": "guard_review",
+          "accepted": true,
+          "completeReceipts": [
+            "cf246be3eb78ee0bc8fc2582c165248e5e607b26",
+            "bd705b26e2c09d5aacae924678ebadcd159254a5",
+            "baf2aec18c0a60453a328487a9b2ad4eea93f761"
+          ],
+          "sourceRowsPerSnapshot": 8798,
+          "snapshots": 6,
+          "allCompiledAndProviderAndToolingInputsEqualGreen": true,
+          "unchangedLintWarningOriginalContext": "ed93d7422ab7a846a568a2b72437ec75931ba03b"
+        }
+      },
+      "limits": [
+        "Exactly one joint RED and one joint GREEN, followed by exactly one invocation of each of the three prescribed scoped guards.",
+        "The earlier absent fixed Node input was a pre-materialization setup refusal; the separately published exact-byte recovery did not execute a provider or consume a test attempt.",
+        "Finite actual-source regression evidence only. No new build, compiler, GUI, native provider or platform qualification.",
+        "No result transfers to an earlier failed historical run. Full resulting-source CI, Windows15s, P09 strict acceptance, native P11, genuine M16 and the original Stage1 credential cleanup gate remain open.",
+        "All old proposal and not-yet-run fields in earlier published documents remain historical snapshots. This completed record is the actual current finite result."
+      ]
+    },
+    "resultIndexIdentity": {
+      "bytes": 26688,
+      "sha256": "93a2049bb9f38aaf7306863aea99fabbadf9b3cc445e27955ff2b56018ae2bc9",
+      "gitBlob": "c3fd25c202eaf9a87b10098e2702f14e1ab88d29"
+    },
+    "losslessArchive": {
+      "schemaVersion": 1,
+      "archive": {
+        "bytes": 5092317,
+        "sha256": "aa17924599645827ee9a83c49687c8a78a4017723a96cbd86774c9bb610c8352",
+        "gitBlob": "1af01578bb27596e30703020bc02d14407248d06"
+      },
+      "localPath": "/workspace/scratch/c714f5bce554/ui-regression-complete-evidence.zip",
+      "members": [
+        {
+          "name": "diff-check-receipt.json",
+          "bytes": 6317003,
+          "sha256": "451b305bb87b91efc8040d5e9f2d31a63e0e9ae0d4fe685be4e0d1f4e2c4ab01",
+          "gitBlob": "baf2aec18c0a60453a328487a9b2ad4eea93f761"
+        },
+        {
+          "name": "diff-check.attempt",
+          "bytes": 33,
+          "sha256": "70b16491756b0340ab7a9aa44d43fe168c2de7a51ee5c3a2fc982158bcdee606",
+          "gitBlob": "f3d957fc845459d94bb104ccc9d6bb46c8783703"
+        },
+        {
+          "name": "diff-check.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "gitBlob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+        },
+        {
+          "name": "green-binding.json",
+          "bytes": 1271203,
+          "sha256": "14f4b2e7e0f114368b661d02e032a2f184807747921de68e5c78e7e1283e8aa9",
+          "gitBlob": "1c844a6c3908e2b26e5e2a6e9a91d949d6ce2af4"
+        },
+        {
+          "name": "green-index.json",
+          "bytes": 26688,
+          "sha256": "93a2049bb9f38aaf7306863aea99fabbadf9b3cc445e27955ff2b56018ae2bc9",
+          "gitBlob": "c3fd25c202eaf9a87b10098e2702f14e1ab88d29"
+        },
+        {
+          "name": "green-materialization.json",
+          "bytes": 6313722,
+          "sha256": "51e4dd7e148393b58f7d40743defd3f0795b43754ace45ea734ab52a13950cfa",
+          "gitBlob": "b4b594a46ff818c96e7eec7133f5590e19f2d0ba"
+        },
+        {
+          "name": "green-receipt.json",
+          "bytes": 6316894,
+          "sha256": "a808a922dc4d13139d3fbf5a4774aff5806c5a76b8258ba2d9dcbbd790cfa4e5",
+          "gitBlob": "c84039731095a0fc4884ce97dffc2da25330f267"
+        },
+        {
+          "name": "green.attempt",
+          "bytes": 33,
+          "sha256": "3047fa753da8830ad654258612cd5c37294d297791d4632877b8d4ed87e8ea49",
+          "gitBlob": "7514721de44fdecb871611f24c2aa20ec79f35d4"
+        },
+        {
+          "name": "green.log",
+          "bytes": 13880,
+          "sha256": "13566b7b884109fee23257d627b6462080c3be7eb7bd2b720bfab33b304a0715",
+          "gitBlob": "897bf2f62ae81034bd5cf4bdca52b690a7cd911b"
+        },
+        {
+          "name": "lint-receipt.json",
+          "bytes": 6317020,
+          "sha256": "75879dd034fd684e8fb6067162bccf1374180b5087cabdd8dbce9fdd2f4ce3b8",
+          "gitBlob": "cf246be3eb78ee0bc8fc2582c165248e5e607b26"
+        },
+        {
+          "name": "lint.attempt",
+          "bytes": 33,
+          "sha256": "8529c61c1f3db91ac4de41a440fff7c84dfb5544484f0ce1ee0f9ef1408b4d37",
+          "gitBlob": "f292e358cc3c405370d059b56d07daebd2872dc1"
+        },
+        {
+          "name": "lint.log",
+          "bytes": 605,
+          "sha256": "0855f2298e4c93df03cc1f02c2262890f78e8c0f8a6bc138ad48c8a755ff1be3",
+          "gitBlob": "b27979c3aecb83534d6ebed30cc524230679c6e4"
+        },
+        {
+          "name": "manifest.json",
+          "bytes": 2241,
+          "sha256": "ef4222ac9995bd7fdcddcc7dc70e628f5fb340cba9c6c2ae583ad7d772ea3aa4",
+          "gitBlob": "9187487ad09422ba3aaf3f0d1d58e763ab46930c"
+        },
+        {
+          "name": "missing-node-preflight.json",
+          "bytes": 1958,
+          "sha256": "8fac6bdf902e1693e4d63c4f68bd50988bcce3e8a2d70dece30b02a8119caef7",
+          "gitBlob": "98124fe69fadb23b06bf5a517d032ebe928f95f4"
+        },
+        {
+          "name": "node-restoration-receipt.json",
+          "bytes": 1577,
+          "sha256": "893c95887d106ed2a306aaa6ef0b13865ce4a14bd43a06b0d3a324acf596522f",
+          "gitBlob": "3e8cf0a4e6a1320a54807678054cd0bc33cd1471"
+        },
+        {
+          "name": "node-restoration.py",
+          "bytes": 4186,
+          "sha256": "68e592a2a8182c82857f08a5e388477bb66e6a92601c2c329dbcabe008d82cec",
+          "gitBlob": "67ed653bd29a56b98db710e861b7391266807260"
+        },
+        {
+          "name": "red-binding.json",
+          "bytes": 607554,
+          "sha256": "64f8f76225ff896099ce02ba208fcc2b8c6b579b09c963a1254b9ed8f1350ba8",
+          "gitBlob": "4d9b3be8ad6ff4ad63498bd9ce67b1ac4ff1d2fe"
+        },
+        {
+          "name": "red-index.json",
+          "bytes": 19800,
+          "sha256": "a9fe6397f5e963a333f833e35c9c9b8d5744f8acc052c86c0ecd5bfe042b9e64",
+          "gitBlob": "f367d50f412877e9ffa209c6727ead29057ec5a7"
+        },
+        {
+          "name": "red-materialization.json",
+          "bytes": 6312308,
+          "sha256": "506eeb365f4b97abc02c9a5e9798b84de0d5759f07ff783b94c2d5e2de23c989",
+          "gitBlob": "86e8ca28471ec7c9d10e16ad2f620a01b086fbe2"
+        },
+        {
+          "name": "red-receipt.json",
+          "bytes": 6316395,
+          "sha256": "07a7b36ae267687f7f3a97ddd9515658c17b962de63728f5039331d8d9efd2f5",
+          "gitBlob": "f9cbfeffea4aeb48409e9408dd09edc85359e1a5"
+        },
+        {
+          "name": "red.attempt",
+          "bytes": 33,
+          "sha256": "d5cebf3a41e393f1bc268167ed638d66a9d6c0dfa7bab28ef1827bb3a6e619aa",
+          "gitBlob": "3c074962af31296f49bb338e34eb1e1d88e6767b"
+        },
+        {
+          "name": "red.log",
+          "bytes": 61299,
+          "sha256": "0c21198d99ab0b763af0464cd47feca6aba27bc9beb91b81dd20eae1075604bc",
+          "gitBlob": "6d6dcebd2e8c827beff235cb54bbd53fede50ea2"
+        },
+        {
+          "name": "runner.py",
+          "bytes": 19692,
+          "sha256": "5ac6bb60411196a2f6906f3a11abb0c81353fd4762e90dc5c5ab8a9680ca2758",
+          "gitBlob": "41060e08824dcefab62500097da2289b98a732d3"
+        },
+        {
+          "name": "source-size-receipt.json",
+          "bytes": 6316777,
+          "sha256": "d44eeeb72cf4a480b4ce8fc2cb0880ab1b955f77fa6e8599297a67c5ecddd9b2",
+          "gitBlob": "bd705b26e2c09d5aacae924678ebadcd159254a5"
+        },
+        {
+          "name": "source-size.attempt",
+          "bytes": 33,
+          "sha256": "b091ff0988dd9e31da5432c11646c3aaf9ec032598b775761fb92af212dee6b3",
+          "gitBlob": "7e5c5fedd599b3c6de5d149c9c151b4adc26abc6"
+        },
+        {
+          "name": "source-size.log",
+          "bytes": 249,
+          "sha256": "26d985dc51edb883e841d35c68e6a80cf07fcf9010c2e308b499cbe832f8eb3f",
+          "gitBlob": "399a78f77777d0669218be2d4dae5360657308fa"
+        },
+        {
+          "name": "complete-manifest.json",
+          "bytes": 8343,
+          "sha256": "bfb140d029fc9b08280ca9e4fe987b58bb18ed3a380487d65cec7297e9cb60c4",
+          "gitBlob": "6409826e6f4b62dccc5cfe3262c7e187ad3b0040"
+        }
+      ],
+      "memberCount": 27,
+      "originalRedMembersPreserved": 11,
+      "originalRedArchive": {
+        "bytes": 3435079,
+        "sha256": "18a2cdfa322351a1e86d200da0b5a7b577e84beec57b8f289b58eb4f8bf7420c",
+        "gitBlob": "a0c1489dd9fa00c60316893a692b223c7394e0ab"
+      },
+      "fullCrcAndBytesVerified": true,
+      "totalOriginalMemberBytes": 46249559,
+      "greenIndex": {
+        "bytes": 26688,
+        "sha256": "93a2049bb9f38aaf7306863aea99fabbadf9b3cc445e27955ff2b56018ae2bc9",
+        "gitBlob": "c3fd25c202eaf9a87b10098e2702f14e1ab88d29"
+      }
+    },
+    "archiveTreePath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-regression-local.zip",
+    "allPreviousFieldsPreservedAsHistoricalSnapshots": true,
+    "allCurrentNonDocsAnd42WorkflowsRemainSourceCommit": true,
+    "remainingCommandsUnderFourPathR1": 0,
+    "independentReviewComplete": {
+      "actualSemanticGreen": "provider_e2e",
+      "fullActualGreenSourceAndLifecycle": "pr_graph",
+      "fullThreeGuardReceiptsAndInputs": "guard_review",
+      "archiveCrcAndEveryOriginalByte": "root"
+    },
+    "qualification": "Actual finite whole-file RED/GREEN and three scoped guards only. Full resulting-source types, actual GUI/native/platform qualification and remaining named acceptance gates remain open.",
+    "nextAction": "A separate published exact action binding and full independent readback must precede any fresh fixed-head Draft CI venue."
   }
 }
