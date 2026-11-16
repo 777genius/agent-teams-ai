@@ -1,0 +1,385 @@
+{
+  "kind": "original-pr1213-evidence-retention-catalog",
+  "schemaVersion": 1,
+  "parentCandidate": "b44ae06110e262ef82cb29291e97a10c94c585d9",
+  "source": {
+    "repository": "777genius/agent-teams-ai",
+    "originalSource": "3e41e39b101ccc06bb24203be245ac55dcf1502f",
+    "originalTree": "6addcdaf71094340d366dc8a97258d68aaa7a47b",
+    "pullRequest": 1213,
+    "syntheticMerge": "f3b85ffd9ad11674a45ab5716da5c732d3292938",
+    "originalBase": "b3e3bc604e2053b70de75d3d5307f408a04920a4",
+    "event": "opened",
+    "attempt": 1,
+    "originalRunCount": 9,
+    "refAndMetadataChanges": 0,
+    "reruns": 0,
+    "cancellations": 0,
+    "dispatches": 0
+  },
+  "baselineIndex": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-terminal-retention-index-20261116.json",
+    "bytes": 1064521,
+    "sha256": "c693adbf5b94c82cd3694b517384a8807f0613ecff623c24a72e7ee85103a663",
+    "gitBlob": "8052c61a0659e36d70fe3505b0b543ac7ce3efba"
+  },
+  "baselineActualPublication": {
+    "commit": "d703352dce86fe2f6040fbff76b2468a12f31d1d",
+    "parent": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+    "tree": "67da103d11e98627c4599095dd447586b07a11bd",
+    "refExact": true,
+    "fullTreeExact": true,
+    "leaves": 11594,
+    "accepted": true,
+    "fullActualBodiesRead": 28,
+    "fullActualBodyBytes": 21763023,
+    "allIdentitiesMatch": true,
+    "source8798Unchanged": true,
+    "workflow42Unchanged": true,
+    "producerAuthoring": false,
+    "localExecution": false
+  },
+  "baselineIndependentPublication": {
+    "accepted": true,
+    "reviewer": "/root/parity_audit",
+    "commit": "d703352dce86fe2f6040fbff76b2468a12f31d1d",
+    "parent": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+    "tree": "67da103d11e98627c4599095dd447586b07a11bd",
+    "refExact": true,
+    "fullTreeLeaves": 11594,
+    "fullBodies": 28,
+    "fullBodyBytes": 21763023,
+    "allFullBodiesByteIdentical": true,
+    "planFullPrefixExact": true,
+    "source8798Unchanged": true,
+    "workflow42Unchanged": true
+  },
+  "late06ActualPublication": {
+    "accepted": true,
+    "commit": "b44ae06110e262ef82cb29291e97a10c94c585d9",
+    "parent": "d703352dce86fe2f6040fbff76b2468a12f31d1d",
+    "tree": "a55672802acdf3c72459d3eab9108951a84b17e3",
+    "refExact": true,
+    "all11595LeavesExact": true,
+    "fullPublishedBodies": 3,
+    "fullPublishedBodyBytes": 2991285,
+    "allBodyIdentitiesExact": true,
+    "source8798Unchanged": true,
+    "workflow42Unchanged": true
+  },
+  "late06IndependentPublication": {
+    "accepted": true,
+    "reviewer": "/root/pr_graph",
+    "commit": "b44ae06110e262ef82cb29291e97a10c94c585d9",
+    "parent": "d703352dce86fe2f6040fbff76b2468a12f31d1d",
+    "tree": "a55672802acdf3c72459d3eab9108951a84b17e3",
+    "refExact": true,
+    "full11595LeafTreeExact": true,
+    "fullThreePublishedBodiesExact": true,
+    "fullNineInnerBodiesRehashed": true,
+    "planAndStatusPrefixesExact": true,
+    "source8798Unchanged": true,
+    "workflow42Unchanged": true
+  },
+  "bundles": [
+    {
+      "key": "host-01",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-host-01-20261116.json",
+      "bytes": 2654247,
+      "sha256": "1d2fb02dcf3dc34b985b0ea3cc7c6cd279925596e85731bd9b42cd5392704c7b",
+      "gitBlob": "2b1679b8fa427473ad476cd1d5041dcd2a963494",
+      "payloadInstances": 15,
+      "payloadBytes": 2241245
+    },
+    {
+      "key": "host-02",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-host-02-20261116.json",
+      "bytes": 1040861,
+      "sha256": "aed74b5bcdf93c96943fb0ebccd7b6a1c1698f53162a44145250433a90bd1010",
+      "gitBlob": "2e0375a3b2530cb33d30bef0f6d237cc925ff822",
+      "payloadInstances": 7,
+      "payloadBytes": 912304
+    },
+    {
+      "key": "host-03",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-host-03-20261116.json",
+      "bytes": 3379388,
+      "sha256": "2d5b08629d445c88b08d746958f37c3d68cb29779c24c03c676541126271fdb8",
+      "gitBlob": "522aeccf7d2020b423533de553c2c25ff579d7a2",
+      "payloadInstances": 6,
+      "payloadBytes": 3242828
+    },
+    {
+      "key": "host-04",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-host-04-20261116.json",
+      "bytes": 1114398,
+      "sha256": "5effcfcbb29530280b6cc750757f559e6624734be4c7cf501c82b0a66488b5be",
+      "gitBlob": "9dc5d5e1969803676fe649cc2c8d085d5923f351",
+      "payloadInstances": 11,
+      "payloadBytes": 968640
+    },
+    {
+      "key": "host-05",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-host-05-20261116.json",
+      "bytes": 326985,
+      "sha256": "309852d73d4c6de2fe7d95e2bf569d6030d3577f3e96cbfb88fbb278b024c361",
+      "gitBlob": "a5c593481a06952739f8bd6bb7f671d50bcade38",
+      "payloadInstances": 5,
+      "payloadBytes": 286355
+    },
+    {
+      "key": "owned-01",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-owned-01-20261116.json",
+      "bytes": 811271,
+      "sha256": "5fbde4d455c4aa982bd02dcdc15ade1f18760e59f0c752d8f2f34d2c892b16ed",
+      "gitBlob": "f38d132b660bc943ff0a0a02acb0444311925aca",
+      "payloadInstances": 14,
+      "payloadBytes": 749462
+    },
+    {
+      "key": "owned-02",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-owned-02-20261116.json",
+      "bytes": 635681,
+      "sha256": "c26ee669ab5aba35f8719367c2e6876156d60cd1aa6abcc8dd686f3aad8b6442",
+      "gitBlob": "a00a554cc2be4143872b673bc9c08bb9d9fe3184",
+      "payloadInstances": 7,
+      "payloadBytes": 540813
+    },
+    {
+      "key": "owned-03",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-owned-03-20261116.json",
+      "bytes": 652087,
+      "sha256": "0da14bcfd814b1cbc500a2bc20bb321d9fd9582dd6eed31682d8dacf42f3a570",
+      "gitBlob": "cbba7f893aae203c26f74b54e2b5a64ca9e3a1b3",
+      "payloadInstances": 9,
+      "payloadBytes": 577420
+    },
+    {
+      "key": "owned-04",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-owned-04-20261116.json",
+      "bytes": 622233,
+      "sha256": "f3876f5c72cb84eac8d64655ea69a4687261a5985d6a68054e46ea879b7d9d46",
+      "gitBlob": "bfaca6d77608d2a06ef7436310b663733769d532",
+      "payloadInstances": 14,
+      "payloadBytes": 566371
+    },
+    {
+      "key": "owned-05",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-owned-05-20261116.json",
+      "bytes": 407030,
+      "sha256": "f107798b58f1da2d21b2a92aacbd6fafd49540d76d00838e096637cbd3d8ea52",
+      "gitBlob": "fa895db5bfdb3201ac65f9ca1a9c70e1b0cb8e9c",
+      "payloadInstances": 7,
+      "payloadBytes": 375974
+    },
+    {
+      "key": "process-stage1-01",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-process-stage1-01-20261116.json",
+      "bytes": 639253,
+      "sha256": "2b72c71be629004bcd522ffe7e9c3f97a408a24019e5c9032f505c6c957e8f46",
+      "gitBlob": "6ef95fcb3724d5a60b285391f65ac3defc9915b6",
+      "payloadInstances": 6,
+      "payloadBytes": 562678
+    },
+    {
+      "key": "process-stage1-02",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-process-stage1-02-20261116.json",
+      "bytes": 735697,
+      "sha256": "f428f83de2528b005a30a29a33f3de0defbe00b1848dff7e792fb4c071197285",
+      "gitBlob": "a886764b445456044172cfd91943bd2446e221dd",
+      "payloadInstances": 9,
+      "payloadBytes": 652292
+    },
+    {
+      "key": "process-stage1-03",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-process-stage1-03-20261116.json",
+      "bytes": 506322,
+      "sha256": "6a20487abd764059700b08c1b2b8a566f22ad68f30f3722995bc8e668caa38b1",
+      "gitBlob": "36098a3c0016e41bfec2bfa176a4db08ab32e5b8",
+      "payloadInstances": 9,
+      "payloadBytes": 476727
+    },
+    {
+      "key": "process-stage1-04",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-process-stage1-04-20261116.json",
+      "bytes": 238249,
+      "sha256": "f94056ff7452e9bc10ce610414fa1c5738ac092debb10db9e19f88abfa82eedc",
+      "gitBlob": "5f1c273ee579545b9cd036657871f347d1211b9c",
+      "payloadInstances": 6,
+      "payloadBytes": 222419
+    },
+    {
+      "key": "process-stage1-05",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-process-stage1-05-20261116.json",
+      "bytes": 222998,
+      "sha256": "e9893c4c6b8e203bca1b7bdfbd16ef2531aac31b1ecb863a95aeb844006c98aa",
+      "gitBlob": "bcd3abdac88aaec11ab0b9bce0335eee6a241f2a",
+      "payloadInstances": 5,
+      "payloadBytes": 205077
+    },
+    {
+      "key": "process-stage1-06",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-process-stage1-06-20261116.json",
+      "bytes": 267461,
+      "sha256": "156268b9dc8bf74821b35a74b258b35d94c3fad58ace4448017f4eaee0e135ff",
+      "gitBlob": "f83e95750d6a7cb8dee9aaa55ae37a75aba23f26",
+      "payloadInstances": 13,
+      "payloadBytes": 223465
+    },
+    {
+      "key": "process-stage1-07",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-process-stage1-07-20261116.json",
+      "bytes": 254619,
+      "sha256": "041d3f7f2ee0ee206c0a43153f0803513328447d6e96ba833fe351d98258207b",
+      "gitBlob": "ef49196be47e2009090bb29cdf584c115eb8339c",
+      "payloadInstances": 5,
+      "payloadBytes": 230828
+    },
+    {
+      "key": "process-stage1-08",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-process-stage1-08-20261116.json",
+      "bytes": 979223,
+      "sha256": "71828609479cfff5fef2b0e2e5c0dfed0012f728c337133832024a4619fd9721",
+      "gitBlob": "1fcff4956035da94565487bbd9b20a7a7784a98c",
+      "payloadInstances": 12,
+      "payloadBytes": 813927
+    },
+    {
+      "key": "process-stage1-09",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-process-stage1-09-20261116.json",
+      "bytes": 195455,
+      "sha256": "a8d99c65e698b40c1e450bac50c2d9495482a823f4d28359cfe106bbc5bf80ff",
+      "gitBlob": "9bbd5ba565b3d42a81318a997cefa0b8bf019017",
+      "payloadInstances": 5,
+      "payloadBytes": 173244
+    },
+    {
+      "key": "process-stage1-10",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-process-stage1-10-20261116.json",
+      "bytes": 203956,
+      "sha256": "eabb2c0950afbe0a293f849f560b1a03f54f920c22172a53ea4828f96dd938a4",
+      "gitBlob": "70ced1c304f3eb2c6c68608e270e6cd35f984b93",
+      "payloadInstances": 7,
+      "payloadBytes": 180528
+    },
+    {
+      "key": "process-stage1-11",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-process-stage1-11-20261116.json",
+      "bytes": 318430,
+      "sha256": "a9ffeb9f87126bb5347847fa67a29ac799170ffbd0a841ef1ba6c381ef39bea5",
+      "gitBlob": "18a5611a18f024d4b4d150df9f03438a05140472",
+      "payloadInstances": 9,
+      "payloadBytes": 277256
+    },
+    {
+      "key": "teams-01",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-teams-01-20261116.json",
+      "bytes": 228271,
+      "sha256": "5478be690f37231728e97176552699d495d8deb5e247d5d17ac605850c524538",
+      "gitBlob": "3e1655790d75cd843c985f60ea5295e66f3ff0d9",
+      "payloadInstances": 5,
+      "payloadBytes": 190979
+    },
+    {
+      "key": "teams-02",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-teams-02-20261116.json",
+      "bytes": 130374,
+      "sha256": "36661fbba17c0ccc5247c6c623a63e1eff9228018a30513d340aa55d8a08b3c7",
+      "gitBlob": "6f2300339e12b0cfb4b353f1a3166a14a573f55d",
+      "payloadInstances": 4,
+      "payloadBytes": 108943
+    },
+    {
+      "key": "owned-06",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-owned-06-20261116.json",
+      "bytes": 491703,
+      "sha256": "706d9ded302a288814d51160bcf270009ed9692e6a11949cb3136564e61fb1e0",
+      "gitBlob": "634495e5b5a6b6189843f25773104feaa319258d",
+      "payloadInstances": 9,
+      "payloadBytes": 423193
+    },
+    {
+      "key": "owned-07",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-owned-07-20261116.json",
+      "bytes": 472715,
+      "sha256": "19d99a1c2c11a2c747a498404807f680a215c9600bc8ae65bb66493078a4fb56",
+      "gitBlob": "ae88ea664fc09c132ef3d564e7a9523e22c1b8db",
+      "payloadInstances": 8,
+      "payloadBytes": 399395
+    },
+    {
+      "key": "owned-08",
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/pr1213-owned-08-20261116.json",
+      "bytes": 79011,
+      "sha256": "103c9e74f367eb5094a44dd7e645d54929b13ca55e138779e4b0c44d27b306c8",
+      "gitBlob": "80ac4f671cacb856431cbf7d4af05137c996e84d",
+      "payloadInstances": 2,
+      "payloadBytes": 63378,
+      "evidenceState": "nonterminal-queued-census"
+    }
+  ],
+  "conversationBinding": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/ui-conversation-red-binding.json",
+    "bytes": 1341706,
+    "sha256": "829ae1dffdef369f449a675902bb24435173f6188fa33cc2ab0608adfe9414fd",
+    "gitBlob": "4cb0285e828f9eb1c2ede1eac999e87d7991e2aa",
+    "originalCases": 78,
+    "addedCases": 19,
+    "plannedWholeCases": 97,
+    "executedNewCases": 0
+  },
+  "localEnvironment": "Read-only probes at 2026-11-16 12:06–12:36 UTC established a usable replacement bash environment and repository network access. The previous checkout, dependencies, compiled inputs and direct TEST Node are absent. No recovered input or old RED binding is admitted for execution. A separate concrete fresh bootstrap R1 is required.",
+  "remainingRuntimeBudgets": {
+    "red": 1,
+    "green": 1,
+    "lint": 1,
+    "sourceSize": 1,
+    "diffCheck": 1
+  },
+  "totals": {
+    "bundles": 26,
+    "outerBytes": 17607918,
+    "payloadInstances": 209,
+    "payloadBytes": 15665741
+  },
+  "incomingDeliveryAudit": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/coobservation-2026-11-15/incoming-delivery-p11-readonly-audit-20261116.json",
+    "bytes": 6221623,
+    "sha256": "396bfcee86bb14eaace4eff8e623128df81a670c95c86adc8c646a372ea960c6",
+    "gitBlob": "a5e6923a6f6a2747b6e0a84dff1afe3791621ccf",
+    "rootReadback": {
+      "accepted": true,
+      "blob": "a5e6923a6f6a2747b6e0a84dff1afe3791621ccf",
+      "bodies": 33,
+      "bytes": 16137725,
+      "allLiteralAndDerivedExact": true
+    },
+    "independentReadback": {
+      "accepted": true,
+      "reviewer": "/root/parity_audit",
+      "blob": "a5e6923a6f6a2747b6e0a84dff1afe3791621ccf",
+      "decodedBodies": 33,
+      "decodedBytes": 16137725,
+      "allSixDerivationsVerified": true,
+      "soleSourceDelta88BytesTwoLines": true,
+      "actualA123_120pass_3fail": true,
+      "current97Unrun": true,
+      "noSourceAdoption": true
+    }
+  },
+  "environmentObservations": {
+    "workingShell": "bash",
+    "requiredWorkingDirectory": "/",
+    "advertisedOldWorkingDirectoryMissing": true,
+    "oldQualifiedInputsAbsent": true,
+    "newPrimaryNode": {
+      "version": "24.22.1",
+      "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d"
+    },
+    "newBootstrapSelectedForProspectiveReview": true,
+    "bootstrapExecutions": 0,
+    "sourceChanges": 0,
+    "testExecutions": 0,
+    "providerExecutions": 0
+  }
+}

@@ -1,0 +1,550 @@
+{
+  "schemaVersion": 1,
+  "kind": "prospective-fresh-environment-bootstrap-r1",
+  "preparedAtUtc": "2026-11-16 12:42:39 UTC",
+  "author": "/root",
+  "parent": {
+    "commit": "b44ae06110e262ef82cb29291e97a10c94c585d9",
+    "tree": "a55672802acdf3c72459d3eab9108951a84b17e3",
+    "branch": "fix/frontend-parity-coobservation-c714-20261115"
+  },
+  "source": {
+    "repository": "777genius/agent-teams-ai",
+    "url": "https://github.com/777genius/agent-teams-ai.git",
+    "commit": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+    "tree": "3239e6e6c8182f3d8e45ee671efc9108500b5137",
+    "leafCount": 11567,
+    "nonDocumentLeafCount": 8798,
+    "workflowLeafCount": 42
+  },
+  "paths": {
+    "root": "/workspace/scratch/c714-fresh-20261116",
+    "source": "/workspace/scratch/c714-fresh-20261116/source",
+    "toolchain": "/workspace/scratch/c714-fresh-20261116/toolchain",
+    "bin": "/workspace/scratch/c714-fresh-20261116/bin",
+    "evidence": "/workspace/scratch/c714-fresh-20261116/evidence",
+    "tmp": "/workspace/scratch/c714-fresh-20261116/tmp",
+    "store": "/workspace/scratch/c714-fresh-20261116/store",
+    "cache": "/workspace/scratch/c714-fresh-20261116/cache",
+    "state": "/workspace/scratch/c714-fresh-20261116/state",
+    "config": "/workspace/scratch/c714-fresh-20261116/config",
+    "data": "/workspace/scratch/c714-fresh-20261116/data"
+  },
+  "tools": {
+    "node": {
+      "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "version": "v24.22.1",
+      "bytes": 126939688,
+      "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d"
+    },
+    "git": {
+      "path": "/usr/local/bin/git",
+      "bytes": 19295504,
+      "sha256": "8a2ae22e7898e163330a96319b541f92ed6f90fc87576414f72c5a89aa1dc352"
+    },
+    "python": {
+      "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+      "realPath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12",
+      "bytes": 30894944,
+      "sha256": "fa67443527ed9647f760d807e2a38f26340757123e643c4639cf273ed15d5ea7"
+    },
+    "pnpm": {
+      "version": "11.22.0",
+      "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621",
+      "archiveUrl": "https://registry.npmjs.org/pnpm/-/pnpm-11.22.0.tgz",
+      "archiveSha512": "1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621",
+      "registryMetadataSha256": "d7838c3582e9357885e5cacdbc85201712b19a6debcf97c9d8753fc30768525d",
+      "executable": "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+      "launcher": "/workspace/scratch/c714-fresh-20261116/bin/pnpm",
+      "expectedPackageJsonName": "pnpm",
+      "expectedPackageJsonVersion": "11.22.0",
+      "archiveMaxBytes": 67108864,
+      "unpackedMaxBytes": 134217728,
+      "maximumMembers": 10000
+    },
+    "scriptShell": {
+      "path": "/bin/sh",
+      "realPath": "/usr/bin/dash",
+      "bytes": 129736,
+      "sha256": "a6f559e00b69a4aa4d8cb607be18d9386c5aee55c509e2c075549dcf00e00fc7"
+    }
+  },
+  "sourcePins": [
+    {
+      "path": ".npmrc",
+      "mode": "100644",
+      "gitBlob": "b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad",
+      "bytes": 19
+    },
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "gitBlob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "bytes": 26839
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "mode": "100644",
+      "gitBlob": "42093f5cb1be431e383a2bbf97223a2bd8d54b49",
+      "bytes": 12355
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "mode": "100644",
+      "gitBlob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "bytes": 456
+    },
+    {
+      "path": "packages/task-change-ledger/package.json",
+      "mode": "100644",
+      "gitBlob": "0fac5843889e1b28d53712f353bce1b0bae855a4",
+      "bytes": 2714
+    },
+    {
+      "path": "packages/task-change-ledger/tsconfig.json",
+      "mode": "100644",
+      "gitBlob": "ff7683dc99c69dbf8c884ba138382468c9c86314",
+      "bytes": 378
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "mode": "100644",
+      "gitBlob": "9d2ce04a1bbf743e49403d2520873134b08b68de",
+      "bytes": 956788
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "mode": "100644",
+      "gitBlob": "a049a862742a85ba77faafea329fc221b3e500e4",
+      "bytes": 6946
+    },
+    {
+      "path": "scripts/ci/enforce-pnpm-install.mjs",
+      "mode": "100644",
+      "gitBlob": "fb33357b9d8b38c2d133593791153aa2fe0bdcf0",
+      "bytes": 312
+    },
+    {
+      "path": "scripts/postinstall-electron.cjs",
+      "mode": "100644",
+      "gitBlob": "71d2e9fc938c082bac2b6f5f0d66b6cc4eb9e78b",
+      "bytes": 1841
+    }
+  ],
+  "environment": {
+    "preservedHome": "/home/agent",
+    "absentConfigFiles": [
+      "/home/agent/.npmrc",
+      "/home/agent/.pnpmrc",
+      "/home/agent/.config/pnpm/rc",
+      "/etc/npmrc",
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/etc/npmrc"
+    ],
+    "inheritedPackageConfigKeys": [
+      "npm_config_audit",
+      "npm_config_fund",
+      "npm_config_http_proxy",
+      "npm_config_https_proxy",
+      "npm_config_noproxy",
+      "npm_config_prefix",
+      "npm_config_proxy"
+    ],
+    "inheritedPackageConfigCanonicalSha256": "6c84e43e6f0716f4994310ecbdfb3ac8077efef040e3624206f334be25206d8c",
+    "reportConfigValues": false,
+    "assignments": {
+      "PATH": "/workspace/scratch/c714-fresh-20261116/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/usr/local/bin:/usr/bin:/bin",
+      "TMPDIR": "/workspace/scratch/c714-fresh-20261116/tmp",
+      "XDG_CACHE_HOME": "/workspace/scratch/c714-fresh-20261116/cache",
+      "XDG_STATE_HOME": "/workspace/scratch/c714-fresh-20261116/state",
+      "AGENT_TEAMS_INSTALL_PROFILE": "node-ci",
+      "CI": "true",
+      "GIT_CONFIG_NOSYSTEM": "1",
+      "GIT_CONFIG_GLOBAL": "/dev/null",
+      "GIT_TERMINAL_PROMPT": "0",
+      "XDG_CONFIG_HOME": "/workspace/scratch/c714-fresh-20261116/config",
+      "XDG_DATA_HOME": "/workspace/scratch/c714-fresh-20261116/data",
+      "PNPM_HOME": "/workspace/scratch/c714-fresh-20261116/bin",
+      "PNPM_CONFIG_PM_ON_FAIL": "error",
+      "PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN": "false",
+      "PNPM_CONFIG_ENGINE_STRICT": "true",
+      "PNPM_CONFIG_ENABLE_PRE_POST_SCRIPTS": "true",
+      "PNPM_CONFIG_IGNORE_PNPMFILE": "true",
+      "PNPM_CONFIG_STORE_DIR": "/workspace/scratch/c714-fresh-20261116/store",
+      "PNPM_CONFIG_ENABLE_GLOBAL_VIRTUAL_STORE": "false",
+      "PNPM_CONFIG_UPDATE_NOTIFIER": "false",
+      "PNPM_CONFIG_SCRIPT_SHELL": "/bin/sh"
+    },
+    "unset": [
+      "NODE_OPTIONS",
+      "NODE_PATH",
+      "NODE_V8_COVERAGE",
+      "GOMAXPROCS",
+      "GOMEMLIMIT",
+      "NODE_ENV",
+      "ELECTRON_RUN_AS_NODE",
+      "LEGACY_PROCESS_COLD_UI_GO",
+      "LEGACY_M19_PROVIDER_UI_GO",
+      "LEGACY_M19_ORIGINAL_HOST_CRASH_GO",
+      "PNPM_SCRIPT_SRC_DIR",
+      "ENV",
+      "BASH_ENV",
+      "ZDOTDIR",
+      "SHELLOPTS",
+      "BASHOPTS",
+      "GIT_EXEC_PATH",
+      "GIT_TEMPLATE_DIR"
+    ],
+    "unsetPrefixes": [
+      "LEGACY_DESKTOP_",
+      "GIT_CONFIG_KEY_",
+      "GIT_CONFIG_VALUE_"
+    ],
+    "additionalUnset": [
+      "GIT_CONFIG_COUNT",
+      "GIT_CONFIG_PARAMETERS",
+      "GIT_DIR",
+      "GIT_WORK_TREE",
+      "GIT_INDEX_FILE",
+      "GIT_OBJECT_DIRECTORY",
+      "GIT_ALTERNATE_OBJECT_DIRECTORIES"
+    ],
+    "priorXdgConfig": "/home/agent/.config",
+    "removePackageConfigOverridesBeforeExplicitAssignments": true,
+    "removeUnreviewedPnpmEnvironment": true
+  },
+  "stages": [
+    {
+      "id": "source-restore",
+      "attempts": 1,
+      "outerSeconds": 600,
+      "cwd": "/workspace/scratch/c714-fresh-20261116",
+      "argvs": [
+        [
+          "/usr/local/bin/git",
+          "-c",
+          "core.hooksPath=/dev/null",
+          "-c",
+          "core.autocrlf=false",
+          "init",
+          "--template=",
+          "/workspace/scratch/c714-fresh-20261116/source"
+        ],
+        [
+          "/usr/local/bin/git",
+          "-C",
+          "/workspace/scratch/c714-fresh-20261116/source",
+          "remote",
+          "add",
+          "origin",
+          "https://github.com/777genius/agent-teams-ai.git"
+        ],
+        [
+          "/usr/local/bin/git",
+          "-C",
+          "/workspace/scratch/c714-fresh-20261116/source",
+          "-c",
+          "core.hooksPath=/dev/null",
+          "fetch",
+          "--no-tags",
+          "--depth=1",
+          "origin",
+          "c5ff4fc283e58d486c58147b4dfb00144ca10d34"
+        ],
+        [
+          "/usr/local/bin/git",
+          "-C",
+          "/workspace/scratch/c714-fresh-20261116/source",
+          "-c",
+          "core.hooksPath=/dev/null",
+          "-c",
+          "core.autocrlf=false",
+          "checkout",
+          "--detach",
+          "c5ff4fc283e58d486c58147b4dfb00144ca10d34"
+        ]
+      ]
+    },
+    {
+      "id": "tool-stage",
+      "attempts": 1,
+      "outerSeconds": 120,
+      "operation": "One HTTPS GET of exact pnpm tarball, no retry. Verify full SHA512 before safe task-only extraction of regular members/directories, reject traversal/links/special/duplicate entries, capture complete inventory, verify manifest name/version/bin before any execution; create one task-local pnpm symlink. No npm/global install or pnpm version command."
+    },
+    {
+      "id": "install",
+      "attempts": 1,
+      "outerSeconds": 600,
+      "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+      "argv": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "--filter",
+        "agent-teams-ai",
+        "--filter",
+        "@agent-teams/legacy-agent-host...",
+        "install",
+        "--frozen-lockfile",
+        "--ignore-scripts",
+        "--store-dir",
+        "/workspace/scratch/c714-fresh-20261116/store",
+        "--reporter",
+        "append-only",
+        "--fetch-retries=0"
+      ],
+      "optionalDependencies": true,
+      "productionOnly": false,
+      "persistentScriptSuppression": false
+    },
+    {
+      "id": "host-build",
+      "attempts": 1,
+      "outerSeconds": 180,
+      "cwd": "/workspace/scratch/c714-fresh-20261116/source",
+      "argv": [
+        "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "/workspace/scratch/c714-fresh-20261116/toolchain/package/bin/pnpm.mjs",
+        "--config.pm-on-fail=error",
+        "--config.verify-deps-before-run=false",
+        "--config.engine-strict=true",
+        "--filter",
+        "@agent-teams/legacy-agent-host",
+        "build"
+      ],
+      "underlyingCompilerInvocations": 2,
+      "underlyingScripts": [
+        {
+          "package": "@agent-teams/legacy-agent-host",
+          "script": "prebuild",
+          "value": "pnpm --filter @agent-teams/task-change-ledger build"
+        },
+        {
+          "package": "@agent-teams/task-change-ledger",
+          "script": "build",
+          "value": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json"
+        },
+        {
+          "package": "@agent-teams/legacy-agent-host",
+          "script": "build",
+          "value": "node node_modules/@typescript/native/bin/tsc -p tsconfig.json"
+        }
+      ]
+    }
+  ],
+  "scopeText": "## R1 — recover exact conversation-regression inputs in the replacement environment\n\n### Why a new input route is necessary\nThe prior published f3fb/c5ff conversation scope remains the source/test authority. This R1 changes its lost local execution venue and input preparation, not the behavioral proposal. Read-only replacement-environment probes established that bash works with an existing cwd, Git can read the own branch, and primary Node24.22.1 exists at the pinned path. The old checkout, old1504 compiled outputs, old installed packages and the old direct Node24.21 binary are absent. The old RED binding4cb0285 is retained as unexecuted history and cannot be used on this filesystem. Primary tooling Node24.22.1 is an explicit new TEST runtime selection, not an assertion that it equals old direct Node24.21.\nNo fresh bootstrap/test/build/provider process has been executed at preparation. The old five RED/GREEN/lint/source-size/diff budgets remain1 each. The Driver.close diagnostic stays dormant because the unchanged original Linux credential gate passed. No incoming P11/Stop-convergence source is adopted.\n\n### Exact restoration and configuration\nOnly root may create the new absent task root and its enumerated task-only children, after publication of this concrete R1 and complete independent actual published readback, followed by independent exact runner/binding R2. Restore the exact c5ff commit/tree from the canonical repository with the listed Git commands. No ref is moved and no source postimage is authored by restoration. Checkout is detached. Disable hooks, template imports and CRLF conversion; ignore system/global Git configuration for these task commands only. Do not use sparse checkout, submodules, LFS substitution, another actor's checkout, alternate source, or local overlays. The trusted c5ff tree and all11567 leaf paths/modes/Git blobs must match; verify all8798 non-document worktree files and all42 workflows before install and after each stage. No tracked file/lock/config/patch change, staged file, or unexpected nonignored untracked file is admitted.\n\nRead and verify the exact primary Node, Git, Python and /bin/sh→/usr/bin/dash executable identities before launch and after preparation. Pin the existing package-script shell to /bin/sh and strip shell startup variables plus Git exec/template overrides. Stage pnpm11.22.0 only from the listed official public tarball with the full root packageManager SHA512; no npm/global install or version invocation. The single GET has the listed wall budget, bounded bytes and no retry. Safe extraction is confined to the new toolchain directory, rejects absolute/traversal/duplicate/link/special members and preserves regular executable modes. Record every extracted file's path/mode/size/SHA256 and package manifest/bin/engine fields before selecting the task-local pnpm symlink. Never invoke an archive member before verification.\n\nPreserve HOME and CODEX_HOME. The process-local PATH starts with the sole task pnpm shim and pinned Node, then the listed system directories. Use fresh task-only XDG config/data/cache/state and PNPM_HOME locations, TMPDIR, and the existing node-ci profile. These are new command-local directories, not edits to the user's configuration. Bind and recheck the original inherited npm/pnpm config key set and canonical value hash without publishing proxy values or credentials; strip those overrides before explicitly retaining only the reviewed network/proxy/audit/fund/prefix entries. Strip Node preload/coverage paths, production NODE_ENV, provider/UI selectors, and Git configuration redirection overrides. Unknown package-manager/PNPM overrides fail preflight.\nThe exact current root package, lock, workspace, .npmrc, all workspace manifests and patches remain immutable input. Explicit engine strictness is necessary because pnpm11's .npmrc admission alone does not establish it. Explicit pm-on-fail=error prevents package-manager download/delegation, and verify-deps-before-run=false prevents an implicit install before build. Propagate these exact settings to nested pnpm. Explicit enable-pre-post-scripts=true retains the Host ledger prebuild; ignore-pnpmfile=true blocks install hooks from pnpmfile. Pin the task store for nested invocations, disable the global virtual store and update notifier, and keep the existing task cache/state directories. No new permanent ignore or settings file is added.\n\n### Four finite bootstrap stages\nThe listed source-restore, tool-stage, install and host-build each have one attempt and their listed absolute monotonic outer budget; no automatic replay, alternative command, retry wrapper or budget transfer is admitted. Source-restore has one600-second budget across its four commands. pnpm staging has120 seconds. The single install has600 seconds and fetch-retries0. Host build has180 seconds. These are setup budgets, independent of the original180-second test/guard budgets and original UI/native deadlines. A failed or timed-out preparation remains failed with full raw/receipt, and authorizes no repair loop.\nThe install selects root agent-teams-ai dev+runtime dependencies for the future existing lint guard plus the Host dependency closure. It uses the unchanged frozen lock, command-local ignore-scripts, optional dependencies retained, task-local store and append-only full output. Do not suppress optional dependencies: the actual native TypeScript compiler is optional. Installing an applicable pinned SDK native payload is permitted as data; invoking a real provider payload is not.\nOnly the existing Host build is selected. Its existing prebuild invokes the ledger build, then the Host compiler runs: exactly two native TypeScript compiler invocations, not one. Ignore-scripts is not persisted into this stage so that its required ledger prebuild remains intact. Do not invoke root prebuild/build, Linux C helper, pricing fetch, controller bundle, MCP bundle, Electron install/runtime, dev server, GUI, provider detection/version, or a project test. The whole97-case test is not part of bootstrap.\n\n### Runner and retained evidence\nAfter complete actual R1 readback, root may author one task-only Python bootstrap supervisor, at most650 physical lines, plus a data binding. Its complete exact independent R2 must precede local materialization or execution. It must verify its own bytes and the published R1/binding, require the selected fresh paths, use exclusive attempt files before any command/GET, capture complete stdout+stderr and actual exit/signal/timeout, and keep receipts even on exceptions. Use original retained-child/session-group supervision, bounded kill and reap of only that actual captured command group on interruption or timeout, and final process/session census; no global process-name/PID cleanup or claim of escaped-child proof.\nBefore source creation require at least4GiB free on the task filesystem; before subsequent stages recheck at least1GiB. Capture initial and final source/tool/config/process/task-temp inventories. All actual success conclusions require the child to exit normally, all relevant pre/post identities to match, and the captured session/group to be absent. A zero exit alone is not qualification. No skipped/cancelled/killed/unreached/unknown result is PASS. A failed stage stops later stages. Keep download/source/install/build raw output and failed states; never erase or overwrite an attempt receipt.\n\nAfter successful setup, data-only read/hash/archive inspection may inventory all installed files/symlinks/package metadata and compiled outputs, including all current provider/SPI regular archive members and generated wrappers. Verify exact installed member bytes against the pinned source archives and preserve source/lock/workspace/patch identities. Resolve and bind actual dependencies from fresh bytes; do not assume the historical1504 compiled or253+12 archive counts as fresh observations. Inventory symbolic links without following paths outside the task dependency boundary; bind external tools explicitly. No installed provider/SDK CLI shim is executed.\nThe actual upstream Claude SDK entry and its full executed static module closure need independent read-only inspection before any module import or whole-file test. D /codex eagerly reexports a shared module that imports SDK query, so package installation with scripts disabled is not sufficient proof about import behavior. Capture exact package.json/export map, entry code, selected platform loader/optional manifest and referenced assets; no real provider invocation, even --version, is allowed.\n\n### Resuming the unchanged behavioral sequence\nOnly after bootstrap evidence, exact fresh source/tool/config/dependency/compiled census and SDK import review are independently accepted may root author a replacement bounded whole-file runner and data binding for the already published c5ff97-case test. Preserve the original runner's complete source-preservation, attempt, raw-output, interruption and cleanup safeguards and outer180 seconds; bind fresh c5ff clean HEAD and fresh inventories instead of the lost47d9+17 overlay environment. Maximum650 physical lines. Its exact independent R2 and actual published readback must precede execution. This replaces an unused local route; it does not add test attempts.\nRun the same pinned Node --test scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts with all78 preexisting cases and19 published additions, no filter/shard/skips. A semantic RED must preserve all78 old passes and exhibit the intended new behavioral failure; import/setup/compile errors, timeout and unexecuted cases never satisfy RED. Obtain independent complete raw/receipt/current-input/cleanup acceptance before authoring or selecting any producer. The original controls+20/selection+10/test+180/24 caps, 800 production cap/141 exceptions/5020 production census, serialized marker semantics, original timeouts/final owner and exact geometry guard, no extra timers/callsites/replay, exact producer R2/publication, one GREEN and three guards remain unchanged.\nNo fresh GUI/native/platform/full-workspace/typed frontend qualification is claimed by this input bootstrap or finite whole-file check.\n\n### Publication and remaining boundaries\nPublish documentary R1 on the own branch with exact b44 parent, immediate commit→push in one orchestration call, force=false and exact lease. Independent full actual commit/tree/ref/all changed-body readback must precede runner authorship. The same immediate-push rule applies to every future commit.\nDo not modify frozen PR1206/1207/1208/1211/1212/1213, rerun/cancel/dispatch their jobs, or reinterpret original E results for fresh c5ff source/runtime. No new CI venue, Ready, release/default activation, main/default merge, Stage2 or blanket vendor qualification is selected. A later CI venue needs its own concrete exact action R1. Windows Process15s, Packaged10s, strict DarwinP09, live P11 and genuineM16 remain open. Root is the only executor/source author; children are read-only reviewers/monitors.\n",
+  "newRunnerPostimages": 0,
+  "newSourcePostimages": 0,
+  "newSetupExecutions": 0,
+  "newTestExecutions": 0,
+  "observations": {
+    "replacementToolFiles": {
+      "runtimePaths": {
+        "CODEX_PRIMARY_RUNTIME_BUNDLE_VERSION": "26.1112.11217",
+        "CODEX_PRIMARY_RUNTIME_ROOT": "/opt/codex/runtimes/codex-primary-runtime",
+        "CODEX_PRIMARY_RUNTIME_NODE": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+        "CODEX_PRIMARY_RUNTIME_NODE_MODULES": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules",
+        "CODEX_PRIMARY_RUNTIME_PYTHON": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3"
+      },
+      "tools": [
+        {
+          "tool": "node",
+          "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "realPath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+          "bytes": 126939688,
+          "sha256": "61ab14cd750fc24d5db53490ec5fc40f756e4b6e136b78cf7004265471d9bd1d"
+        },
+        {
+          "tool": "pnpm",
+          "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/bin/fallback/pnpm",
+          "realPath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/bin/fallback/pnpm",
+          "bytes": 238,
+          "sha256": "cbed0a17e28f10bc29cfd6ea913043aac47a3169ed39a6e5290f0b4b1cc7dae8"
+        },
+        {
+          "tool": "git",
+          "path": "/usr/local/bin/git",
+          "realPath": "/usr/local/bin/git",
+          "bytes": 19295504,
+          "sha256": "8a2ae22e7898e163330a96319b541f92ed6f90fc87576414f72c5a89aa1dc352"
+        },
+        {
+          "tool": "python3",
+          "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+          "realPath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12",
+          "bytes": 30894944,
+          "sha256": "fa67443527ed9647f760d807e2a38f26340757123e643c4639cf273ed15d5ea7"
+        },
+        {
+          "tool": "npm",
+          "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/npm",
+          "realPath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/lib/node_modules/npm/bin/npm-cli.js",
+          "bytes": 54,
+          "sha256": "8e5f6f3429f8cdbe693cdc29904e9d5a7b127a494bd15c804bd54c7403bfcbe7"
+        },
+        {
+          "tool": "rg",
+          "path": "/opt/codex/codex-path/rg",
+          "realPath": "/opt/codex/codex-path/rg",
+          "bytes": 5408904,
+          "sha256": "e62198eb19b136b88c330af83647b5a962cb99b6b1f066758568f12de1974849"
+        }
+      ],
+      "workspaceDisk": {
+        "total": 67586535424,
+        "used": 580743168,
+        "free": 63553044480
+      },
+      "tmpDisk": {
+        "total": 5225713664,
+        "used": 335872,
+        "free": 5225377792
+      }
+    },
+    "inheritedConfig": {
+      "configFiles": [
+        {
+          "path": "/home/agent/.npmrc",
+          "exists": false
+        },
+        {
+          "path": "/home/agent/.pnpmrc",
+          "exists": false
+        },
+        {
+          "path": "/home/agent/.config/pnpm/rc",
+          "exists": false
+        },
+        {
+          "path": "/etc/npmrc",
+          "exists": false
+        },
+        {
+          "path": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/etc/npmrc",
+          "exists": false
+        }
+      ],
+      "configEnvironmentKeys": [
+        "npm_config_audit",
+        "npm_config_fund",
+        "npm_config_http_proxy",
+        "npm_config_https_proxy",
+        "npm_config_noproxy",
+        "npm_config_prefix",
+        "npm_config_proxy"
+      ],
+      "configEnvironmentSha256": "6c84e43e6f0716f4994310ecbdfb3ac8077efef040e3624206f334be25206d8c",
+      "home": "/home/agent",
+      "taskRootAbsent": true,
+      "rootPackageName": "source lookup performed separately"
+    },
+    "priorGlobalPnpmConfig": {
+      "configFiles": [
+        {
+          "path": "/home/agent/.config/pnpm/config.yaml",
+          "exists": false,
+          "isSymlink": false
+        },
+        {
+          "path": "/home/agent/.config/pnpm/pnpmfile.cjs",
+          "exists": false,
+          "isSymlink": false
+        },
+        {
+          "path": "/home/agent/.config/pnpm/pnpmfile.mjs",
+          "exists": false,
+          "isSymlink": false
+        },
+        {
+          "path": "/home/agent/.config/pnpm/.pnpmfile.cjs",
+          "exists": false,
+          "isSymlink": false
+        },
+        {
+          "path": "/home/agent/.config/pnpm/.pnpmfile.mjs",
+          "exists": false,
+          "isSymlink": false
+        },
+        {
+          "path": "/etc/pnpmrc",
+          "exists": false,
+          "isSymlink": false
+        },
+        {
+          "path": "/etc/pnpm/config.yaml",
+          "exists": false,
+          "isSymlink": false
+        }
+      ],
+      "relevantEnvironmentKeys": [
+        "GIT_PAGER",
+        "HOME",
+        "NODE_PATH",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+        "XDG_RUNTIME_DIR",
+        "XDG_STATE_HOME"
+      ],
+      "home": "/home/agent",
+      "xdgConfig": "/home/agent/.config"
+    },
+    "pnpmRegistry": {
+      "metadataUrl": "https://registry.npmjs.org/pnpm/11.22.0",
+      "responseBytes": 2991,
+      "responseSha256": "d7838c3582e9357885e5cacdbc85201712b19a6debcf97c9d8753fc30768525d",
+      "name": "pnpm",
+      "version": "11.22.0",
+      "engines": {
+        "node": ">=22.13"
+      },
+      "bin": {
+        "pn": "bin/pnpm.mjs",
+        "pnx": "bin/pnpx.mjs",
+        "pnpm": "bin/pnpm.mjs",
+        "pnpx": "bin/pnpx.mjs"
+      },
+      "dist": {
+        "shasum": "c824bce7ddda0454998313c86fcb3d613d3f18bc",
+        "tarball": "https://registry.npmjs.org/pnpm/-/pnpm-11.22.0.tgz",
+        "fileCount": 891,
+        "integrity": "sha512-H/hwxMYTPf2I+yr8Rt0T1H8JyXlLQ4xv20fKmMrzvBY4HuC+k6CRuOOCTPAfiJ9G19niCRD7C+GrD7W6qA3WIQ==",
+        "signatures": [
+          {
+            "sig": "MEUCIAi3dSkrg4btOGMlTBrKFPJrnYaRLym1ylWVkKd/qndJAiEAwYA4HkbkWuBrpdEKkLr8a6zLSeG1WSR5aedGSnyLQ/E=",
+            "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+          }
+        ],
+        "attestations": {
+          "url": "https://registry.npmjs.org/-/npm/v1/attestations/pnpm@11.22.0",
+          "provenance": {
+            "predicateType": "https://slsa.dev/provenance/v1"
+          }
+        },
+        "unpackedSize": 38187995
+      },
+      "rootIntegrityMatched": true
+    },
+    "previousSourceAuthority": {
+      "r1": "f3fb3ead0315508901531e8f54b75f21518492a7",
+      "testPublication": "c5ff4fc283e58d486c58147b4dfb00144ca10d34",
+      "testBlob": "efd876b86db16cc4faf63a9ba8e309503ca7b985",
+      "cases": 97,
+      "oldCases": 78,
+      "addedCases": 19,
+      "controls": "1e94339df46ef3bb963555fc3cc7253055766a78",
+      "selection": "dcd0cc29a73a46a24126ec3552714fa1b057aaf4"
+    },
+    "historiesDoNotAuthorizeOldBinding": true,
+    "scriptShell": {
+      "shell": {
+        "path": "/bin/sh",
+        "realPath": "/usr/bin/dash",
+        "bytes": 129736,
+        "sha256": "a6f559e00b69a4aa4d8cb607be18d9386c5aee55c509e2c075549dcf00e00fc7"
+      },
+      "gitExecPath": "/usr/local/libexec/git-core"
+    }
+  }
+}
