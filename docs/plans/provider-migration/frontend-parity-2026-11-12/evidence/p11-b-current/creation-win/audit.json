@@ -1,0 +1,1153 @@
+{
+  "kind": "AUTHOR_ORIGINAL_E3_WINDOWS_CREATION_AUDIT",
+  "auditedAtUTC": "2026-11-16T09:12:25.442039+00:00",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "sourceTree": "de80fbfbffb3fe4daabf6cc9be258cc8df534524",
+  "runId": 43831885626,
+  "jobId": 133178909857,
+  "status": "PASS",
+  "originalLog": {
+    "path": "ci-72e6ec/creation-windows/job.log",
+    "bytes": 91368,
+    "blob": "14b4d07df64b0ba6069c87c7512a06ec9967f5f7",
+    "sha256": "8a862a4181fb2f6254b00469b00e3546981a05a192d0d632d90c917dc12db225"
+  },
+  "originalLogResponse": {
+    "path": "ci-72e6ec/creation-windows/job-original-response.json",
+    "bytes": 95397,
+    "blob": "feb9bd877b1cb85289357cec4db211c20461187c",
+    "sha256": "a988e53ec01b0c21d058daaace2f696ee782497ff713326b37764c69b108ff83"
+  },
+  "rawUtf8ExactMcpContent": true,
+  "rawCRLFCount": 956,
+  "rawRetentionCorrection": {
+    "path": "ci-72e6ec/creation-windows/raw-serialization-correction.json",
+    "bytes": 888,
+    "blob": "0a4dcaf5a468062faa36ae0e2a9aeb4c4a8f2b68",
+    "sha256": "ffadb19e5f1cf78c58b481a01d8b69e827ab9f28127a7e67e1356a75ec15686e"
+  },
+  "originalZip": {
+    "path": "ci-72e6ec/creation-windows/artifact-14210737149.zip",
+    "bytes": 1855760,
+    "blob": "76359758be6647344ccc80ee16d342e61fcd19a1",
+    "sha256": "7dce234f53c223dc6bc90e5ad5ac9adbb2fec2b4e2925f2821cdd92e201659cf"
+  },
+  "officialArtifact": {
+    "id": 14210737149,
+    "name": "teams-create-page-windows-latest-72e6ec04444969d343d73834c70bc4e261100fc9",
+    "size_in_bytes": 1855760,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14210737149",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14210737149/zip",
+    "expired": false,
+    "created_at": "2026-11-16T08:57:41Z",
+    "expires_at": "2026-11-30T08:57:39Z",
+    "updated_at": "2026-11-16T08:57:41Z",
+    "digest": "sha256:7dce234f53c223dc6bc90e5ad5ac9adbb2fec2b4e2925f2821cdd92e201659cf",
+    "workflow_run": {
+      "id": 43831885626,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "72e6ec04444969d343d73834c70bc4e261100fc9"
+    }
+  },
+  "officialArtifactsResponse": {
+    "path": "ci-72e6ec/official-creation-artifacts-0902.json",
+    "bytes": 2964,
+    "blob": "1e44352d00f6bdf605b218b9a0c1a500e5c70c3e",
+    "sha256": "c743b4599746d95a365a92da25379e951acc94a2066daf829545bc44c53d6bbe"
+  },
+  "terminalJob": {
+    "id": 133178909857,
+    "name": "Creation page (windows-latest)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43831885626,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Prepare Linux virtual display and zh-TW font fallback",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 6
+      },
+      {
+        "name": "Install frozen dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build isolated Host before Electron startup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Stage pinned terminal-platform runtime before Electron startup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Ensure Electron binary before UI E2E",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Verify owned Windows process census and fail-closed teardown invariants",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Exercise actual Electron Create/Back/Resume/Copy/Launch",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 12
+      },
+      {
+        "name": "Upload sanitized evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 25
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 26
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 27
+      }
+    ]
+  },
+  "terminalJobsResponse": {
+    "path": "ci-72e6ec/owned-jobs-0901.json",
+    "bytes": 28320,
+    "blob": "7df01c7737c81079c8cd9a769980ef9b261751db",
+    "sha256": "a01b63a279d4a475196866cc31b12e0ca59f288f36375aebcfdaf760bc4662ab"
+  },
+  "archiveRetention": {
+    "path": "ci-72e6ec/creation-windows/archive-retention.json",
+    "bytes": 11048,
+    "blob": "4b2abaee7c25b26fbc827068111e00d723be2250",
+    "sha256": "281a7ecc3aad872b508c1c1e8be86a2640cba2e2cf1585379e15619d6f844006"
+  },
+  "archiveMembers": [
+    {
+      "path": "teams-create-config-only-created.png",
+      "bytes": 35256,
+      "blob": "470799ebc34261363c8487ad4dc258bebd2522c3",
+      "sha256": "43c20c2dca9420870389e5a6d50707719f1ca899719b4595114f334a2e154894",
+      "crc32": "e0514028",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-css-zoom-200.png",
+      "bytes": 45913,
+      "blob": "901747545dad13cede61e7dce2c3eed82c95343f",
+      "sha256": "49bb4e31678963668c4234fd184c1d3657982cea21ea9c3018f4b9f7386601e6",
+      "crc32": "dcfd8def",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-copy-resumed-edits.png",
+      "bytes": 52064,
+      "blob": "29f68f691e5a6aac1d13b29beae7d16cd526e4a8",
+      "sha256": "e0cefc60c3aa89337e45fba3f41c3a30aa49b7249aa34a08e8375685827b6775",
+      "crc32": "a58f07ca",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-edited.png",
+      "bytes": 52900,
+      "blob": "0878d90a7f36b2bcedbc66253787ee61c03478df",
+      "sha256": "57d68ec8fee72b81596b9d94b237a8d85cda79ebfd849a8e5a042fbe52c2e77c",
+      "crc32": "88fb80d5",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-launch-controls-loaded.png",
+      "bytes": 54799,
+      "blob": "f2c12e4b4707204c1c8c213ff0e592f7a78cb51a",
+      "sha256": "701db49ace09e22ee5b9c5c4f6b6b22f6345e8526567b0c2012102314a986fd1",
+      "crc32": "34261706",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-launch-still-modal.png",
+      "bytes": 54789,
+      "blob": "8fb8fc1bb0c88c6a5e5327a2b629645b6a1ef87d",
+      "sha256": "1d9369ec21c1bc149b31d9c9c43b28b4af3c02158737f0d5d65940114e37e74f",
+      "crc32": "9efa80fc",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-missing-cli-value-validated.png",
+      "bytes": 52760,
+      "blob": "eec06d724ec113add2b06408730e36102a206fb9",
+      "sha256": "5d5462e976969872968a5537fe0c9972fcedebfc7b8814507ef2f3f68b6194b8",
+      "crc32": "fb81b9d1",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-native-electron-zoom-200.png",
+      "bytes": 51030,
+      "blob": "235c38e96d3c3d621c2892a55238e6c155b89ffb",
+      "sha256": "5d1a5033361f1b91ecdb8fce6a0e78c5b08920d23048b90a71684b090618a628",
+      "crc32": "3effd842",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-opened.png",
+      "bytes": 49009,
+      "blob": "a79d403ad3e0a8f657415996649ab91ee4903fa5",
+      "sha256": "fac4ace463718dbdf1c1021392e0a7678dc54979170e40d18608df2d7ae4897a",
+      "crc32": "b5721a23",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-organization-created.png",
+      "bytes": 27825,
+      "blob": "87dcaeddf79632d984c9bfe258d7d06e37324627",
+      "sha256": "7e97bad4b934059305d1f8af84f9fa1be5b98e9deddce0ead4e6fa67cd70e7ff",
+      "crc32": "dd9b0bdd",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-organization-entry.png",
+      "bytes": 53541,
+      "blob": "646ff4b393e2fdb0050128a3f7aa009ab83f336d",
+      "sha256": "0d4e70e7a4a19649f4c150bf6ffde58e6c530635c9547803d73ec8358925b9be",
+      "crc32": "ec147778",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-page-result.json",
+      "bytes": 2915,
+      "blob": "1368d3069b8ab89f5d37a4445029d5ab819e5796",
+      "sha256": "cc1adae9b863e27f2cd3a838a8e3d49094e0079400c8c7e943c38ccd50ba257f",
+      "crc32": "a2547d12"
+    },
+    {
+      "path": "teams-create-provider-refreshed.png",
+      "bytes": 54206,
+      "blob": "e449311bb07641e24f6abef2ddf3844b73715465",
+      "sha256": "d608bf7fbfdacee9553c32283b9ee3fbb8384ded265108bab51af4b9de899b21",
+      "crc32": "e93e1b92",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-restarted.png",
+      "bytes": 49635,
+      "blob": "398e08563f0efb47457529c04cf09777b1d80770",
+      "sha256": "e461c0b3cbb91e46b8cc80437c835c6e993feccf5c962da4f553309dc55385e2",
+      "crc32": "c6c01941",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-resumed.png",
+      "bytes": 56037,
+      "blob": "fed49da5311fccb339d78853042adcc221a221cf",
+      "sha256": "b98434871497074490d7efe3db7ee55b1c19d0cc5fb75971efabb09ab4101d40",
+      "crc32": "494ad1ac",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-save-rejected.png",
+      "bytes": 41978,
+      "blob": "ac8fb46168875000b09d4c8a42f68476f84d68c1",
+      "sha256": "82d384a79bb5f569714d8888edfc3bb4e9b16bc1dfe1e25b97b9763ae823f2a1",
+      "crc32": "12518da6",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-schedules-delete-confirm.png",
+      "bytes": 45490,
+      "blob": "13c048119c71364bbaf6b8d7b4855b88d78e8a4d",
+      "sha256": "9f21c8f9f9bc262654184a4322b4ecf7f383b139c529db443b8be6fc0057a804",
+      "crc32": "651d2e5b",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-schedules-deleted.png",
+      "bytes": 32619,
+      "blob": "6874daabb965d574db0f8ef8d05039116200472e",
+      "sha256": "6c403e88b5715a31c0f3877910f5001807a25e3a1708ff2db11f92782e14fda0",
+      "crc32": "b64dbef4",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-schedules-edit.png",
+      "bytes": 47669,
+      "blob": "45b9224e30e7f44d119e9ac725923dc8c3cfc2d4",
+      "sha256": "4d9fcba5e5579fb5b88d7d7c4b5a14f1f95a3a9e05dec42344eb864819997d1a",
+      "crc32": "f559b4cb",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-schedules-editor-opened.png",
+      "bytes": 45815,
+      "blob": "d6bd836c536ab4fcbea6c22fdd53c64a7fcf9e61",
+      "sha256": "7ea56e4ff7f813fe10dee869e6d021f478fb94359fddeac214de3ffb3158e1f9",
+      "crc32": "c820c9fe",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-schedules-invalid-cron.png",
+      "bytes": 49659,
+      "blob": "2f1f43bc2f8c94e8c1871d3c89c49f1fd0d19869",
+      "sha256": "b219e86a3878169b6189f44f734a9b142c7a83badc312c665cff7d18ee71f070",
+      "crc32": "9288c763",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-schedules-list-dark.png",
+      "bytes": 34442,
+      "blob": "a9a7279f82f87e3cd1195e927b2a7cbad71c4118",
+      "sha256": "4adc3aeb5b52a0a4416c4e7fa052668fc37e18efb3b66288b89bee09275cc500",
+      "crc32": "6b228e70",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-schedules-list-light.png",
+      "bytes": 34349,
+      "blob": "59361d809defc00a962a73a8e128cad715d3bdd6",
+      "sha256": "10fa713973e2649b070ed39bbe966029b48342c66eca3f8b94d73c63a69695af",
+      "crc32": "5f31a866",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-schedules-list-narrow-700.png",
+      "bytes": 31258,
+      "blob": "8140330b81edd8ab47a81361b63a3462baeb7cbe",
+      "sha256": "da4e7c727bb778d04e3d455e114629e4d818e1c87091036941ac73f45c063bb5",
+      "crc32": "8109095c",
+      "dimensions": [
+        700,
+        760
+      ]
+    },
+    {
+      "path": "teams-create-schedules-list-native-electron-zoom-200.png",
+      "bytes": 54173,
+      "blob": "5741803f62311af23a37f3a431977ba85b6000f7",
+      "sha256": "6930ef6ec19fc55372c2bc8dcffc1735637164a63bd2bf59210b1faea48e773d",
+      "crc32": "449df583",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-schedules-old-prompt-review.png",
+      "bytes": 49329,
+      "blob": "7c3331b7bd248393e8cb270e536fc99e6484fd24",
+      "sha256": "816dca3312c0255fef32f8ce02b8e0749ed6348700e9eb2462bc3b37fa449948",
+      "crc32": "59890b75",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-schedules-paused.png",
+      "bytes": 37054,
+      "blob": "1163a75fca315dd556aa11ae97caf3edd8103fe4",
+      "sha256": "ca458cd813773fc1e5d891785976f3d927dc921baa1d0af8bc231358f4d2212f",
+      "crc32": "c3f3ec56",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-schedules-ready-to-create.png",
+      "bytes": 41526,
+      "blob": "b0febdaf04f86939facb4ed2b2d0247ea9c9c64d",
+      "sha256": "cfa346286be80351a4e550508ab9a8184472f176bd2a0cb5df41991a926cf222",
+      "crc32": "ab3ceda4",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-schedules-pristine-submit-validation.png",
+      "bytes": 41915,
+      "blob": "ab96eeecfdc85c9636be9738069d7df69297c970",
+      "sha256": "f8fe0a0e3f2d8a074d5e4f2085d3a4a61884beec8eedddf412aa966511ed7fea",
+      "crc32": "7ddc4c52",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-schedules-resumed.png",
+      "bytes": 35222,
+      "blob": "255ac749caac2b0d734a25196bc3e284e0976d7b",
+      "sha256": "ac2538a0cf45f3861a3d4e6cd551ce49c2ada71336534bb1d2d0605e109a8201",
+      "crc32": "332d6e55",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-schedules-run-history.png",
+      "bytes": 38594,
+      "blob": "0d5390211d6fb059f85e896788f2214caf1435ac",
+      "sha256": "cdc22b857901d4c3d9318e28f1294aca9280f761fb8a55213b179150a9cbd3f1",
+      "crc32": "a422b67f",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-schedules-run-log.png",
+      "bytes": 44446,
+      "blob": "b7a592cb50e68d9e65075bcaed30fb612cdc2d00",
+      "sha256": "59dee5d902a28ba969c73aa4ba6f301fd9dc6da467f4b24373895fb79351a649",
+      "crc32": "81cb2968",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-split-pane.png",
+      "bytes": 78805,
+      "blob": "4313204fa3954fa584c28b2d11bc145d7a0fe4cb",
+      "sha256": "7b6caf44645ef25dd7a2d05b6c98819daf3afb4ad47649883df37d7ddae39278",
+      "crc32": "d5f8efeb",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-teammate-mode-override.png",
+      "bytes": 53650,
+      "blob": "b3bfbcb657272531e963bdad743be2a0ca599b68",
+      "sha256": "f02caffd7e763678e8f20af1f1c9b3d9dcde2a4adc358724a9019448f6eb8057",
+      "crc32": "8b5e7ff1",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-teammate-mode-validated.png",
+      "bytes": 53784,
+      "blob": "d67fca24c1dff28c0c65b5f9424a6c7e16b947a8",
+      "sha256": "81e24974690556bd2b5540d3a7b7a7480c2b6619e145b4b6fef0427b716cf690",
+      "crc32": "e86032b2",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-template-confirmed.png",
+      "bytes": 61385,
+      "blob": "f68ad4310212346fee25709111720e7874e85094",
+      "sha256": "b1f9347150f9cedb2191830d5630da57c740ffcf80b16d77dd2140378efaa726",
+      "crc32": "5c54f48b",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-theme-dark.png",
+      "bytes": 53753,
+      "blob": "6ba79dbf4a4e7382c98be0a357f2ed8ef758fab2",
+      "sha256": "4c4cd15eb5371aced69090137267be58cacbcef7536988a98315138b04baeb8b",
+      "crc32": "02455523",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-theme-light.png",
+      "bytes": 53845,
+      "blob": "a9800412280e5ebb50985269b3d5d83317da2d32",
+      "sha256": "914426a270b6dcad719347ae240adc4998360ddb8ba38597a4efdb4cead136d4",
+      "crc32": "bbb5f236",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+      "bytes": 66416,
+      "blob": "efbaaf62cc5d40e5300416ad2429711599b3ab10",
+      "sha256": "275b877f25e9a18fdb2ab2e0f8ef28ad0b51f9a3b4b78528cef3a8e3ed133b11",
+      "crc32": "35127d50",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-zh-tw-task-detail-dialog.png",
+      "bytes": 99770,
+      "blob": "b1c18e3852b6d37563772e046066594239fa247e",
+      "sha256": "e22b5817ae1b1bb923b91cea3a994b1dfc8e882378fb6b287b1778fe81f02484",
+      "crc32": "7c9352e0",
+      "dimensions": [
+        1024,
+        720
+      ]
+    },
+    {
+      "path": "teams-create-zh-tw-task-detail-tab.png",
+      "bytes": 44382,
+      "blob": "2af2dd8aa439f83a7f70e2455ae6d7b1735ec428",
+      "sha256": "2a82d99703bb12b32a6d44f229726c843a989d347329cfa3737ee76837b5c879",
+      "crc32": "64cc8178",
+      "dimensions": [
+        1024,
+        720
+      ]
+    }
+  ],
+  "allSafeUniqueNonSymlinkCrcAndExtractedBytes": true,
+  "sourceProof": {
+    "path": "ci-72e6ec/creation-windows/source-proof.json",
+    "bytes": 16363,
+    "blob": "d2507569210b321f8ab3d58b8a159ccfee90e8c1",
+    "sha256": "544d3f4566d98d015798f70795e45ca32de8a696b108bc3ada24460dd4f8a15b"
+  },
+  "sourceFiles": [
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "bytes": 6522,
+      "blob": "72c1a8f760a99c53ce7d279c7bb9d5e3ddaa7298",
+      "sha256": "3cb53bb19e4ee77c51947c5ce39fa4efb8cccbcaa648c6da0293129c92effdaa",
+      "byteExactE2Comparison": true,
+      "lines": 130
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-desktop.mjs",
+      "bytes": 103360,
+      "blob": "764d42763c8eab6592235acf75073253538cfe38",
+      "sha256": "e1c09e6efffa777bd7f042c813f49cb93d20957d07bed45582474a2930312c1e",
+      "byteExactE2Comparison": true,
+      "lines": 2105
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-owned-processes.mjs",
+      "bytes": 1349,
+      "blob": "d73d56bdbc40e3abc70b53ad5db1690c53ed4c5a",
+      "sha256": "4acd26c18441682b134edc480b6659c72f9033904bf5b1110d73285f2f65bc69",
+      "byteExactE2Comparison": true,
+      "lines": 30
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-owned-processes.test.mjs",
+      "bytes": 1404,
+      "blob": "d3779ede535583c88f81fa5e747d008f45863c48",
+      "sha256": "67c040e8c87f11ce09ce56d3dfe2734bc6f352c0dc170073fa4861ee2794938a",
+      "byteExactE2Comparison": true,
+      "lines": 28
+    }
+  ],
+  "checkoutRows": [
+    {
+      "line": 104,
+      "text": "2026-11-16T08:50:46.4552920Z 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 225,
+      "text": "2026-11-16T08:50:50.9165739Z 72e6ec04444969d343d73834c70bc4e261100fc9"
+    }
+  ],
+  "sourceQualification": "Four fresh exact Git bodies and original checkout/build records. No 1757 Desktop census, full built payload inventory or independent rebuild.",
+  "originalCommands": [
+    {
+      "line": 320,
+      "text": "2026-11-16T08:51:51.6457400Z ##[group]Run node ./scripts/ci/install-dependencies-with-retry.mjs"
+    },
+    {
+      "line": 321,
+      "text": "2026-11-16T08:51:51.6458508Z \u001b[36;1mnode ./scripts/ci/install-dependencies-with-retry.mjs\u001b[0m"
+    },
+    {
+      "line": 703,
+      "text": "2026-11-16T08:53:30.5452583Z ##[group]Run pnpm --filter @agent-teams/legacy-agent-host build"
+    },
+    {
+      "line": 704,
+      "text": "2026-11-16T08:53:30.5453318Z \u001b[36;1mpnpm --filter @agent-teams/legacy-agent-host build\u001b[0m"
+    },
+    {
+      "line": 717,
+      "text": "2026-11-16T08:53:35.6031662Z ##[group]Run node ./scripts/stage-terminal-platform-runtime.mjs --ensure"
+    },
+    {
+      "line": 718,
+      "text": "2026-11-16T08:53:35.6032244Z \u001b[36;1mnode ./scripts/stage-terminal-platform-runtime.mjs --ensure\u001b[0m"
+    },
+    {
+      "line": 728,
+      "text": "2026-11-16T08:53:40.6996294Z ##[group]Run node ./scripts/ensure-electron-install.cjs --strict"
+    },
+    {
+      "line": 729,
+      "text": "2026-11-16T08:53:40.6996997Z \u001b[36;1mnode ./scripts/ensure-electron-install.cjs --strict\u001b[0m"
+    },
+    {
+      "line": 736,
+      "text": "2026-11-16T08:53:51.0978192Z ##[group]Run node --test scripts/e2e/teams-create-page-owned-processes.test.mjs"
+    },
+    {
+      "line": 737,
+      "text": "2026-11-16T08:53:51.0978861Z \u001b[36;1mnode --test scripts/e2e/teams-create-page-owned-processes.test.mjs\u001b[0m"
+    },
+    {
+      "line": 756,
+      "text": "2026-11-16T08:53:51.6152299Z \u001b[36;1m  xvfb-run -a node scripts/e2e/teams-create-page-desktop.mjs\u001b[0m"
+    },
+    {
+      "line": 758,
+      "text": "2026-11-16T08:53:51.6153200Z \u001b[36;1m  node scripts/e2e/teams-create-page-desktop.mjs\u001b[0m"
+    }
+  ],
+  "originalToolchain": {
+    "node": "26.12.1",
+    "pnpm": "11.22.0"
+  },
+  "originalPrerequisite": {
+    "argv": "node --test scripts/e2e/teams-create-page-owned-processes.test.mjs",
+    "counts": {
+      "tests": [
+        3
+      ],
+      "pass": [
+        3
+      ],
+      "fail": [
+        0
+      ],
+      "cancelled": [
+        0
+      ],
+      "skipped": [
+        0
+      ],
+      "duration_ms": [
+        90.1725
+      ]
+    }
+  },
+  "result": {
+    "path": "ci-72e6ec/creation-windows/extracted/teams-create-page-result.json",
+    "bytes": 2915,
+    "blob": "1368d3069b8ab89f5d37a4445029d5ab819e5796",
+    "sha256": "cc1adae9b863e27f2cd3a838a8e3d49094e0079400c8c7e943c38ccd50ba257f"
+  },
+  "printedResultEqualsArchivedObject": true,
+  "resultObject": {
+    "success": true,
+    "scheduleUiEvidence": {
+      "scheduleLabel": "schedule-visual-e2e-51b5d12f",
+      "scheduleId": "834b392b-042f-4fcc-8df9-66845a146c93",
+      "createdAndDeleted": true
+    },
+    "zhTwMcpUiEvidence": {
+      "locale": "zh-TW",
+      "taskDetailUiEvidence": {
+        "taskId": "77",
+        "locale": "zh-TW",
+        "dialogOpenTabAction": "在獨立分頁中開啟",
+        "dialogScreenshot": "teams-create-zh-tw-task-detail-dialog.png",
+        "tabScreenshot": "teams-create-zh-tw-task-detail-tab.png",
+        "nativeTaskTabVisible": true
+      },
+      "strictAllowlistVisible": true,
+      "placeholder": "github, sentry",
+      "parsedServerNames": [
+        "github",
+        "sentry"
+      ],
+      "screenshot": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+      "controlEditedThroughNativeCdp": true
+    },
+    "unique": "create-page-e2e-7eb118de",
+    "retainedAcrossBack": true,
+    "retainedAcrossTabSwitch": true,
+    "manageProvidersNavigationRetainsDraft": true,
+    "retainedAcrossProcessRestart": true,
+    "advancedCliRetainedAcrossRename": true,
+    "teammateModeOverridePersistedThroughNativeUi": true,
+    "teammateModeOverrideValidatedThroughNativeUi": true,
+    "missingRequiredCliValueRejectedThroughNativeUi": true,
+    "advancedCliRetainedAcrossPaneSplit": true,
+    "advancedCliRetainedAcrossBackRemount": true,
+    "advancedCliRestoresUneditedDefaults": true,
+    "unnamedAdvancedCliEditsRetained": true,
+    "launchStillModal": true,
+    "launchContentLoaded": true,
+    "configOnlyCreatedThroughUi": true,
+    "nativeConfigOnlyRejectionKeepsDraft": true,
+    "copiedTeamUsesSharedEditor": true,
+    "copiedDraftDoesNotReplaySeed": true,
+    "templateReplacementCancelledAndConfirmed": true,
+    "organizationPlacementPersistedViaNativeApi": true,
+    "duplicateNameValidationRecovered": true,
+    "themeDarkLightRendered": true,
+    "cssZoom200Rendered": true,
+    "nativeElectronZoom200Rendered": true,
+    "splitPaneSingleEditor": true,
+    "macInputSelectionFallbackCount": 0,
+    "sandboxRoot": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\teams-create-page-e2e-oVRAph",
+    "cleanup": {
+      "processGroupAbsent": null,
+      "windowsTaskkillExitedZero": true,
+      "windowsExactOwnedProcessesAbsent": true,
+      "windowsTeardowns": [
+        {
+          "launcherPid": 8116,
+          "taskkillAttempted": true,
+          "taskkillExitCode": 0,
+          "observedIdentityCount": 17,
+          "exactOwnedProcessesAbsent": true,
+          "cdpPortAbsent": true
+        },
+        {
+          "launcherPid": 2092,
+          "taskkillAttempted": true,
+          "taskkillExitCode": 0,
+          "observedIdentityCount": 17,
+          "exactOwnedProcessesAbsent": true,
+          "cdpPortAbsent": true
+        },
+        {
+          "launcherPid": 860,
+          "taskkillAttempted": true,
+          "taskkillExitCode": 0,
+          "observedIdentityCount": 17,
+          "exactOwnedProcessesAbsent": true,
+          "cdpPortAbsent": true
+        }
+      ],
+      "temporaryProfileRemoved": true
+    }
+  },
+  "behaviorFlags": {
+    "retainedAcrossBack": true,
+    "retainedAcrossTabSwitch": true,
+    "manageProvidersNavigationRetainsDraft": true,
+    "retainedAcrossProcessRestart": true,
+    "advancedCliRetainedAcrossRename": true,
+    "teammateModeOverridePersistedThroughNativeUi": true,
+    "teammateModeOverrideValidatedThroughNativeUi": true,
+    "missingRequiredCliValueRejectedThroughNativeUi": true,
+    "advancedCliRetainedAcrossPaneSplit": true,
+    "advancedCliRetainedAcrossBackRemount": true,
+    "advancedCliRestoresUneditedDefaults": true,
+    "unnamedAdvancedCliEditsRetained": true,
+    "launchStillModal": true,
+    "launchContentLoaded": true,
+    "configOnlyCreatedThroughUi": true,
+    "nativeConfigOnlyRejectionKeepsDraft": true,
+    "copiedTeamUsesSharedEditor": true,
+    "copiedDraftDoesNotReplaySeed": true,
+    "templateReplacementCancelledAndConfirmed": true,
+    "organizationPlacementPersistedViaNativeApi": true,
+    "duplicateNameValidationRecovered": true,
+    "themeDarkLightRendered": true,
+    "cssZoom200Rendered": true,
+    "nativeElectronZoom200Rendered": true,
+    "splitPaneSingleEditor": true
+  },
+  "originalActionMarkers": [
+    {
+      "line": 766,
+      "timestamp": "2026-11-16T08:53:52.1550309Z",
+      "step": "start isolated Electron profile"
+    },
+    {
+      "line": 769,
+      "timestamp": "2026-11-16T08:55:02.2343335Z",
+      "step": "click real Create Team button"
+    },
+    {
+      "line": 770,
+      "timestamp": "2026-11-16T08:55:06.2870152Z",
+      "step": "restore unedited Advanced CLI defaults for a saved team name"
+    },
+    {
+      "line": 771,
+      "timestamp": "2026-11-16T08:55:06.8238953Z",
+      "step": "edit Advanced CLI while the team name is explicitly empty"
+    },
+    {
+      "line": 772,
+      "timestamp": "2026-11-16T08:55:06.9382396Z",
+      "step": "naming and renaming a team preserves in-progress Advanced CLI overrides"
+    },
+    {
+      "line": 773,
+      "timestamp": "2026-11-16T08:55:07.1782008Z",
+      "step": "Back to Teams and resume saved draft"
+    },
+    {
+      "line": 774,
+      "timestamp": "2026-11-16T08:55:07.7624947Z",
+      "step": "open Providers Settings through the real model picker and resume the draft"
+    },
+    {
+      "line": 775,
+      "timestamp": "2026-11-16T08:55:07.8563945Z",
+      "step": "click provider refresh and verify native-store checks in the isolated Electron session"
+    },
+    {
+      "line": 776,
+      "timestamp": "2026-11-16T08:55:09.3279460Z",
+      "step": "render creation page in both themes and at 200% CSS zoom"
+    },
+    {
+      "line": 777,
+      "timestamp": "2026-11-16T08:55:09.9492157Z",
+      "step": "verify actual BrowserWindow.zoomFactor=2 in isolated Electron main process"
+    },
+    {
+      "line": 778,
+      "timestamp": "2026-11-16T08:55:10.1560519Z",
+      "step": "split into two panes and prevent duplicate creation editors"
+    },
+    {
+      "line": 779,
+      "timestamp": "2026-11-16T08:55:10.6488644Z",
+      "step": "restart real Electron process retaining the same isolated data root"
+    },
+    {
+      "line": 784,
+      "timestamp": "2026-11-16T08:56:16.9704424Z",
+      "step": "Launch existing sandbox team must still open a modal"
+    },
+    {
+      "line": 785,
+      "timestamp": "2026-11-16T08:56:18.3512889Z",
+      "step": "close launch dialog without starting the deny-all runtime"
+    },
+    {
+      "line": 786,
+      "timestamp": "2026-11-16T08:56:18.3690312Z",
+      "step": "create an actual config-only team from the restored screen"
+    },
+    {
+      "line": 787,
+      "timestamp": "2026-11-16T08:56:20.4281810Z",
+      "step": "native config-only save rejection retains the editor and its working directory"
+    },
+    {
+      "line": 788,
+      "timestamp": "2026-11-16T08:56:21.2584476Z",
+      "step": "copy an existing sandbox team using the real Teams card"
+    },
+    {
+      "line": 789,
+      "timestamp": "2026-11-16T08:56:22.7016876Z",
+      "step": "template replacement must be cancelable without losing copied draft"
+    },
+    {
+      "line": 790,
+      "timestamp": "2026-11-16T08:56:23.4868383Z",
+      "step": "create from actual Organization Map and verify native placement"
+    },
+    {
+      "line": 791,
+      "timestamp": "2026-11-16T08:56:30.6170678Z",
+      "step": "duplicate team-name validation and recovery in organization editor"
+    },
+    {
+      "line": 792,
+      "timestamp": "2026-11-16T08:56:31.6037762Z",
+      "step": "reject invalid cron and timezone at the actual native IPC boundary"
+    },
+    {
+      "line": 793,
+      "timestamp": "2026-11-16T08:56:31.6212213Z",
+      "step": "open real Schedules UI in isolated Electron"
+    },
+    {
+      "line": 794,
+      "timestamp": "2026-11-16T08:56:32.8055619Z",
+      "step": "select the fixture team and review its saved one-time startup prompt"
+    },
+    {
+      "line": 795,
+      "timestamp": "2026-11-16T08:56:33.0893072Z",
+      "step": "invalid cron is field-level visible and blocks Save"
+    },
+    {
+      "line": 796,
+      "timestamp": "2026-11-16T08:56:33.4730672Z",
+      "step": "exercise list presentation in dark/light and native Electron 200% zoom"
+    },
+    {
+      "line": 797,
+      "timestamp": "2026-11-16T08:56:33.8765407Z",
+      "step": "capture the schedule UI at a genuinely narrow viewport"
+    },
+    {
+      "line": 798,
+      "timestamp": "2026-11-16T08:56:33.9942092Z",
+      "step": "edit the real schedule without migrating its task-first semantics"
+    },
+    {
+      "line": 799,
+      "timestamp": "2026-11-16T08:56:34.4830523Z",
+      "step": "pause and resume the schedule through the real actions menu"
+    },
+    {
+      "line": 800,
+      "timestamp": "2026-11-16T08:56:34.8053644Z",
+      "step": "run now and inspect the actual schedule run history"
+    },
+    {
+      "line": 801,
+      "timestamp": "2026-11-16T08:56:35.1213464Z",
+      "step": "destructive action demands confirmation and Cancel preserves the record"
+    },
+    {
+      "line": 802,
+      "timestamp": "2026-11-16T08:56:35.6483791Z",
+      "step": "restart isolated native Electron in zh-TW for member MCP UI qualification"
+    },
+    {
+      "line": 807,
+      "timestamp": "2026-11-16T08:57:35.4834653Z",
+      "step": "inspect native zh-TW task detail dialog and separate task tab"
+    }
+  ],
+  "sameOrdered32MarkersAsE2": true,
+  "scopeOfFlags": "Original Create/editor persistence, config-only save/rejection, modal loading, template/copy/organization, theme/zoom, schedule presentation and Traditional Chinese task/MCP controls. The original driver closes Launch modal without starting the deny-all runtime.",
+  "visualReview": [
+    {
+      "path": "teams-create-restarted.png",
+      "bytes": 49635,
+      "blob": "398e08563f0efb47457529c04cf09777b1d80770",
+      "sha256": "e461c0b3cbb91e46b8cc80437c835c6e993feccf5c962da4f553309dc55385e2",
+      "crc32": "c6c01941",
+      "dimensions": [
+        1024,
+        720
+      ],
+      "actuallyViewed": true,
+      "viewMethod": "Original PNG opened singly via view_image; full1024x720 frame inspected",
+      "scope": "The original restarted Create Team editor shows create-page-e2e-7eb118de, lead Opus4.8, checked Run command after create, collapsed Optional launch settings and an empty Tasks sidebar. The project selector reports no projects; this frame does not prove provider readiness."
+    },
+    {
+      "path": "teams-create-copy-resumed-edits.png",
+      "bytes": 52064,
+      "blob": "29f68f691e5a6aac1d13b29beae7d16cd526e4a8",
+      "sha256": "e0cefc60c3aa89337e45fba3f41c3a30aa49b7249aa34a08e8375685827b6775",
+      "crc32": "a58f07ca",
+      "dimensions": [
+        1024,
+        720
+      ],
+      "actuallyViewed": true,
+      "viewMethod": "Original PNG opened singly via view_image; full1024x720 frame inspected",
+      "scope": "The resumed copied editor shows the exact edited name copy-edited-e2e-b5d2cb19, Lead prompt and Description chips, checked Run command after create and the original draft tab. The collapsed prompt/description body values are not visible in this frame."
+    },
+    {
+      "path": "teams-create-launch-controls-loaded.png",
+      "bytes": 54799,
+      "blob": "f2c12e4b4707204c1c8c213ff0e592f7a78cb51a",
+      "sha256": "701db49ace09e22ee5b9c5c4f6b6b22f6345e8526567b0c2012102314a986fd1",
+      "crc32": "34261706",
+      "dimensions": [
+        1024,
+        720
+      ],
+      "actuallyViewed": true,
+      "viewMethod": "Original PNG opened singly via view_image; full1024x720 frame inspected",
+      "scope": "The loaded Launch Team modal shows sandbox-project, OpenCode and test-model, with provider Checking and a disabled Launch team control. It is an observation of the loaded modal, not a runtime launch or readiness success."
+    }
+  ],
+  "totalPngBytesAndCrcChecked": 40,
+  "totalPngActuallyViewed": 3,
+  "cleanupQualification": {
+    "threeTeardowns": [
+      {
+        "launcherPid": 8116,
+        "taskkillAttempted": true,
+        "taskkillExitCode": 0,
+        "observedIdentityCount": 17,
+        "exactOwnedProcessesAbsent": true,
+        "cdpPortAbsent": true
+      },
+      {
+        "launcherPid": 2092,
+        "taskkillAttempted": true,
+        "taskkillExitCode": 0,
+        "observedIdentityCount": 17,
+        "exactOwnedProcessesAbsent": true,
+        "cdpPortAbsent": true
+      },
+      {
+        "launcherPid": 860,
+        "taskkillAttempted": true,
+        "taskkillExitCode": 0,
+        "observedIdentityCount": 17,
+        "exactOwnedProcessesAbsent": true,
+        "cdpPortAbsent": true
+      }
+    ],
+    "exactProcessAndCdpAbsenceRequiredTogether": true,
+    "birthIdentityGuarded": true,
+    "observedIdentityCountIsPerTeardownNotGlobalDistinct": true,
+    "forceTermination": true,
+    "naturalExitQualified": false,
+    "productStopQualified": false,
+    "nativeProviderCustodyQualified": false,
+    "limits": "Each of the three original disposable launchers receives forced taskkill after birth/ownership checks. Exact retained owned-process identities and the CDP endpoint are then absent. No per-process exit codes or globally unique51-process census is archived; original temporary profile removal is source-bound."
+  },
+  "comparison": {
+    "priorE2Source": "57885c055a18b27c180c304762643eac632513ad",
+    "fourSourceBodiesEqual": true,
+    "priorResultsNotTransferred": true,
+    "sameCohortMacCreationFailureSeparate": true
+  },
+  "qualification": {
+    "originalWindowsCreation": true,
+    "whole18Desktop": false,
+    "currentTeamOrP11": false,
+    "allFourFrontend": false,
+    "providerRuntimeLaunch": false,
+    "realVendor": false,
+    "naturalShutdown": false,
+    "packagedNativeOrRelease": false
+  },
+  "limits": [
+    "Only3 named PNGs actually viewed;37 others verified as exact safe CRC members with original hashes/dimensions.",
+    "Three original helper cases passed; this job does not run the current P11 whole8 command or Team/static validation.",
+    "SUCCESS25flags/32markers does not qualify native provider launch; actual Launch screenshot remains Checking and disabled.",
+    "Cleanup is forced disposable Windows tree cleanup, not natural or product Stop/provider custody.",
+    "No current E3 macOS failure or other platform is overwritten by this Windows result.",
+    "No project execution, source/ref/CI change, retry or original action replay by author."
+  ]
+}

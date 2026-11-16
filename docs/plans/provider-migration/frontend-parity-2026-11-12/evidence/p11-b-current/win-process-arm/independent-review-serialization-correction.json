@@ -1,0 +1,14 @@
+{
+  "kind": "UNPUBLISHED_REVIEW_SERIALIZER_FIELD_CORRECTION",
+  "recordedAtUTC": "2026-11-16T09:45:09.194795+00:00",
+  "initial": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/native/process-windows-arm64/independent-original-review.initial-reader.json",
+    "bytes": 84928,
+    "blob": "8603f6f88d0f91adebc2b7309863a9309099618d",
+    "sha256": "6aa8db2188fa13a18eb295793a9ea6126d08195bfb5724d398c6a1dcd9f1ec7d"
+  },
+  "cause": "The review serializer used cleanupAfter.get(retained,[]) instead of the actual retainedCapabilities key. Its narrative correctly said nine capabilities; the derived array was empty. The independent byte-source proof and all original files were correct and unchanged.",
+  "correction": "Canonical review now copies each full nine-element retainedCapabilities array from the already verified proof; no other semantic field changes.",
+  "projectOrCIExecution": false,
+  "originalRefetch": false
+}

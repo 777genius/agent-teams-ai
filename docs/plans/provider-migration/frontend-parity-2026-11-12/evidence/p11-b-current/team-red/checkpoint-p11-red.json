@@ -1,0 +1,63 @@
+{
+  "kind": "E3_TEAM_ORIGINAL_P11_RED_AUTHOR_CHECKPOINT",
+  "frozenAtUTC": "2026-11-16T09:36:32.230972+00:00",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "runId": 43831885807,
+  "jobId": 133178913364,
+  "payloads": [
+    {
+      "path": "ci-72e6ec/team/job.log",
+      "bytes": 95536,
+      "blob": "ec5cd1206ef7b7bf3fae604f3a9ffdd74ab003ad",
+      "sha256": "2091b79602e5ee3fa595e89c99f2bac1942efc9ff5ee4dd16f912e2f5ec0aaa0"
+    },
+    {
+      "path": "ci-72e6ec/team/job-original-response.json",
+      "bytes": 97211,
+      "blob": "0a528aea660212e3d46f6722a6e411772690b050",
+      "sha256": "6ca71c4736e21f6145c9e303c2c8d4a3c040fcdb281e99287892e79b8bec9c33"
+    },
+    {
+      "path": "ci-72e6ec/owned-jobs-0934.json",
+      "bytes": 173818,
+      "blob": "19202bc3231bb7690ed34812e301518888de372a",
+      "sha256": "17de841d51e8f963b40c69e3ecb8cf7502dda7411df7e90094823d8cae331e52"
+    },
+    {
+      "path": "ci-72e6ec/official-host-artifacts-0935.json",
+      "bytes": 3850,
+      "blob": "26cd8b1765d289c4912b9f1f6ffaf29bcaece945",
+      "sha256": "c82a51b3cee928abaddbe7a19e19e11f3ca105fed7bbc729dbc463c069d38540"
+    },
+    {
+      "path": "ci-72e6ec/team/p11-team-red-audit.json",
+      "bytes": 45553,
+      "blob": "760d51346092215eff54f5be6ed10f2fef035f16",
+      "sha256": "dcf89866f351e5b45229d91708c0bd3745a37c7c72701fe46ab7aba18e9c7088"
+    },
+    {
+      "path": "ci-72e6ec/team/Plan29-p11-team-original-red-appendix.md",
+      "bytes": 3009,
+      "blob": "12d290aa7a22f3e426d7cd1a7692bae9c9ec3427",
+      "sha256": "361cd9a8c3f27be67d4cc5a9fb26dd3c503ea7fc959ca86c2a77e7103de9ea43"
+    }
+  ],
+  "payloadBytes": 418977,
+  "sameSourceProofReferences": [
+    {
+      "path": "ci-72e6ec/taskboard/p11-byte-source-proof.json",
+      "bytes": 235220,
+      "blob": "b4afc9cc262342c97aa2f996e65b4608cd6215e3",
+      "sha256": "175f1567827552d2038a039510458e823b8225d6561724ddbc9a9c00c495d4df"
+    },
+    {
+      "path": "external-primary-0833/initial-api-and-fetch.json",
+      "bytes": 1230559,
+      "blob": "c06fa9afb4bce716cc66c872aca533c10fba4fec",
+      "sha256": "a79ff970d4b9bf71483168e870519182f44c1be53f16595519659b2607c52b5b"
+    }
+  ],
+  "result": "123 total/120PASS/3 P11 semanticFAIL/0SKIP; downstream Team179/static/UI NOTRUN.",
+  "independentReview": "Pending separate Native R2 at freeze",
+  "noSourceOrProjectOrCIMutation": true
+}

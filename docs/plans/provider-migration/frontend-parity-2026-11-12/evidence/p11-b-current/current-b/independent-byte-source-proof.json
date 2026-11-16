@@ -1,0 +1,1046 @@
+{
+  "kind": "INDEPENDENT_CURRENT_P11_B_SOURCE_AND_VENUE_PROOF",
+  "reviewer": "/root/native_failures",
+  "createdAtUTC": "2026-11-16T09:46:43.155310+00:00",
+  "base": "fc580db9bafbe7d9f28dc86edd484af3e151de6f",
+  "baseTree": "fb5a7bb3cfd8f8bcd48628e1bc93232868a559bd",
+  "soleParent": "9286c1009a3b6348598a7ded7b93cfc582d18d6d",
+  "allSevenFrozenCandidateInputs": [
+    {
+      "path": "p11-b-current-fc580/candidate-metadata.json",
+      "bytes": 34878,
+      "lines": 957,
+      "blob": "14665c362e87082daeefffdb2dab836ee60110da",
+      "sha256": "691687d0b63573812485029b26ad6a85292dbaa49cfd5a38d334263c4e5554cf"
+    },
+    {
+      "path": "p11-b-current-fc580/R1-current-p11-deadline-fix.md",
+      "bytes": 13255,
+      "lines": 54,
+      "blob": "2b335707039efabbba75f223a7a1bbcf1a12ed34",
+      "sha256": "8d6d65a17d8ecc074a91fb8848fc4a63078b4d78b7fb7e4385dbceed1a70c85d"
+    },
+    {
+      "path": "p11-b-current-fc580/candidate.patch",
+      "bytes": 727,
+      "lines": 13,
+      "blob": "8161a1b342e71ed0c46ea0f40cb70bdfdb01846d",
+      "sha256": "80fb75f384686fcabc2bf076069d3e9864204f86a4ba04f43ae15528eddc7890"
+    },
+    {
+      "path": "p11-b-current-fc580/reverse.patch",
+      "bytes": 727,
+      "lines": 13,
+      "blob": "f9750ecc069b632ec6184ad684e127d1fe8985d9",
+      "sha256": "a3378eeca1759fdd77a8e548295b414a1fa56a31126a1181cb135bec2d3cea06"
+    },
+    {
+      "path": "p11-b-current-fc580/unchanged-p11-regression-suffix.txt",
+      "bytes": 4264,
+      "lines": 62,
+      "blob": "08699c4890b2ef83bcbda53094c450c6a9c3b366",
+      "sha256": "a299b6ec1497dc542f675fd7868a430d8e9d4d0503199c9ff0343a7187b5312d"
+    },
+    {
+      "path": "p11-b-current-fc580/preimage/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "bytes": 45707,
+      "lines": 570,
+      "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+    },
+    {
+      "path": "p11-b-current-fc580/candidate/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "bytes": 45795,
+      "lines": 572,
+      "blob": "5026f0ec6165bb092717ddc989043848a25081dc",
+      "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b"
+    }
+  ],
+  "allNinePublicationAndActualRedReferences": [
+    {
+      "path": "models-a-publication/root-actual-source-readback.json",
+      "bytes": 188693,
+      "lines": 3817,
+      "blob": "df521f590b7e0090bc121b57655df54bc862f604",
+      "sha256": "9acffb3827b9c9cbd4b964f445fd8c66d8b57a04dc533a0676dcec2a4b1a1aad"
+    },
+    {
+      "path": "models-a-independent-actual-source-readback.json",
+      "bytes": 442485,
+      "lines": 8554,
+      "blob": "00172da203762f1b63378aa5128fa5cf28c40e5b",
+      "sha256": "7115fddfc1e5322de47bd460b8c3c4034678a0050d484084ff9209d91fe1e97b"
+    },
+    {
+      "path": "ci-72e6ec/taskboard/checkpoint-p11-red.json",
+      "bytes": 5107,
+      "lines": 133,
+      "blob": "179f6df904447ce891d0965216870e21257bd85b",
+      "sha256": "6dc71e46a35f72e3c9b731c743e6a80e1b223920d2b1b07cc83262683d7c2e1c"
+    },
+    {
+      "path": "ci-72e6ec/taskboard/p11-semantic-red-audit.json",
+      "bytes": 7407,
+      "lines": 166,
+      "blob": "5c20c2b25f44c5e04d25c9500c60191c9c061e10",
+      "sha256": "3d5a4ae078378506bf0ebfbcd1fc3cd5c62f069c04f7ae07a7e0f1fdf216c80a"
+    },
+    {
+      "path": "ci-72e6ec/taskboard/p11-byte-source-proof.json",
+      "bytes": 235220,
+      "lines": 5372,
+      "blob": "b4afc9cc262342c97aa2f996e65b4608cd6215e3",
+      "sha256": "175f1567827552d2038a039510458e823b8225d6561724ddbc9a9c00c495d4df"
+    },
+    {
+      "path": "ci-72e6ec/taskboard/independent-p11-semantic-red-review.json",
+      "bytes": 34053,
+      "lines": 969,
+      "blob": "fb7f28180bd65d164a3e22990c76a898fb3d1666",
+      "sha256": "410d5f5b7cc8235f0ab241fdb2be17455d5661ea44bf5049270f21178f692a4e"
+    },
+    {
+      "path": "ci-72e6ec/taskboard/independent-p11-red-byte-source-proof.json",
+      "bytes": 228325,
+      "lines": 5305,
+      "blob": "129018c8b20eecc6887ec6ecef1600132cace7af",
+      "sha256": "c5127207772b4f14a1e333268320674ad719cda75fb7e9188a77453a1abf996b"
+    },
+    {
+      "path": "ci-72e6ec/team/checkpoint-p11-red.json",
+      "bytes": 2381,
+      "lines": 63,
+      "blob": "d200e98ea29280e8018e26d6e777a445da2bc6a8",
+      "sha256": "f57117929d2cad3b1f1e40b5c6cc704d57b537add57db20d8094fe2196901627"
+    },
+    {
+      "path": "ci-72e6ec/team/independent-p11-team-red-review.json",
+      "bytes": 7561,
+      "lines": 158,
+      "blob": "0fff8c06b5aadf10fe91aa6129f52338f3bb613a",
+      "sha256": "661a9629161b1b26d415fb3f76180af13953cfc45c0989418432081172283f5a"
+    }
+  ],
+  "all48FreshGitPins": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "mode": "100644",
+      "bytes": 101741,
+      "lines": 1312,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": ".node-version",
+      "mode": "100644",
+      "bytes": 8,
+      "lines": 1,
+      "blob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": ".npmrc",
+      "mode": "100644",
+      "bytes": 19,
+      "lines": 1,
+      "blob": "b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad",
+      "sha256": "7151cf397def0c2cb0ab65643701d27d335a72c90f775675b5f826bc7005818a",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "agent-teams-controller/package.json",
+      "mode": "100644",
+      "bytes": 526,
+      "lines": 23,
+      "blob": "293fb7e08df5e9cc00663e0e5454dfde6ecfb103",
+      "sha256": "7da9c6dae6931016efbdd571ed858529851268a5b965d955a9d4c76ed1395a2e",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "agent-teams-controller/scripts/build.mjs",
+      "mode": "100644",
+      "bytes": 990,
+      "lines": 31,
+      "blob": "bf2ce41041a9aee92261319e86cf802d82004739",
+      "sha256": "a7afb7428749efcd15c45acf9b4da03ce4d529ff663b57af876a55b373b97399",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "eslint.config.js",
+      "mode": "100644",
+      "bytes": 37840,
+      "lines": 1166,
+      "blob": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+      "sha256": "d9f0cf7c33672b9304fc524bbc028e07939bcab4583bb1e7c94b99fd773eb597",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": false
+    },
+    {
+      "path": "eslint.fast.config.js",
+      "mode": "100644",
+      "bytes": 7268,
+      "lines": 258,
+      "blob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": false
+    },
+    {
+      "path": "eslint.feature-overrides.mts",
+      "mode": "100644",
+      "bytes": 657,
+      "lines": 19,
+      "blob": "9c6450d54b87ce33f7d799f900226c316e367937",
+      "sha256": "a90a4b08c1d5f56021c50fe5f5ababa70c3de0732acec173624da51254dc883e",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": false
+    },
+    {
+      "path": "mcp-server/package.json",
+      "mode": "100644",
+      "bytes": 1279,
+      "lines": 54,
+      "blob": "febb21f74d77d21e157039f76380cfd5795d359c",
+      "sha256": "b6b245a0062d111cee110ec7222ce00c3730e03a70cf99a29b92bfda245efa5f",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "mcp-server/tsup.config.ts",
+      "mode": "100644",
+      "bytes": 1491,
+      "lines": 43,
+      "blob": "c7de6f562687ef92f3fcdaf12eb8493864d14f37",
+      "sha256": "691c8486f95f360f0ac8985ad42ba17e81100cac6989317bfb75981552833321",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "package.json",
+      "mode": "100644",
+      "bytes": 26839,
+      "lines": 580,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "mode": "100644",
+      "bytes": 12355,
+      "lines": 304,
+      "blob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+      "mode": "100644",
+      "bytes": 8310,
+      "lines": 172,
+      "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": false
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+      "mode": "100644",
+      "bytes": 16208,
+      "lines": 278,
+      "blob": "ce5c3a7511009501ca057f01957008a8ce3ef67b",
+      "sha256": "e52a7a6ec9af567c1ff9b8e5c82136d538b3ccffbb0803cdf1c5c9db909b2ae5",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": false
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "mode": "100644",
+      "bytes": 456,
+      "lines": 19,
+      "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "packages/task-change-ledger/package.json",
+      "mode": "100644",
+      "bytes": 2714,
+      "lines": 90,
+      "blob": "0fac5843889e1b28d53712f353bce1b0bae855a4",
+      "sha256": "a0db21117b905b414e825862d8bc93cfe9280975c8b91e1afa6cca2e1570a132",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "packages/task-change-ledger/tsconfig.json",
+      "mode": "100644",
+      "bytes": 378,
+      "lines": 17,
+      "blob": "ff7683dc99c69dbf8c884ba138382468c9c86314",
+      "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "mode": "100644",
+      "bytes": 956788,
+      "lines": 26665,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "mode": "100644",
+      "bytes": 6946,
+      "lines": 169,
+      "blob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "scripts/build/buildLinuxNodeExec.mjs",
+      "mode": "100644",
+      "bytes": 4125,
+      "lines": 82,
+      "blob": "f0ed24053ad252e8e348090c535b0818100a5a80",
+      "sha256": "fc7e6f68bd899b1109df035d0c903d0df50d9613b5a6c7f1543b763727d8b927",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "scripts/ci/check-source-file-size.mjs",
+      "mode": "100644",
+      "bytes": 8145,
+      "lines": 231,
+      "blob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+      "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": false
+    },
+    {
+      "path": "scripts/ci/install-dependencies-with-retry.mjs",
+      "mode": "100644",
+      "bytes": 5259,
+      "lines": 128,
+      "blob": "cbf2463eb47d22c3d87d9eec001edad26dd68ff0",
+      "sha256": "c8dc0b63fc490fd5a9a1b4abf0631b66c30e1ccda2199094c86e49a6e250d01e",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "scripts/ci/source-file-size-baseline.json",
+      "mode": "100644",
+      "bytes": 9635,
+      "lines": 146,
+      "blob": "e827bccf455235b1ff7871e7b93450cdaa53eb54",
+      "sha256": "82080bdf23e0fae3ea087e8aea8c3622fa63a734fa9874e7d07e9d568087f072",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": false
+    },
+    {
+      "path": "scripts/ensure-electron-install.cjs",
+      "mode": "100644",
+      "bytes": 4585,
+      "lines": 158,
+      "blob": "6e82478a6347cde01cbc5d52ae71ef79cb38f290",
+      "sha256": "9bd7bd4a400eeb7ef4987189ffc9d64774677576a9198e417839989401bf4edb",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "mode": "100644",
+      "bytes": 53683,
+      "lines": 1019,
+      "blob": "e2b96672feefb924a39e20131514e0db5e347311",
+      "sha256": "ba36a5c01c6f670bcba92e6a155683385cd3eb33c871f94b8191b378b226f9d9",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "mode": "100644",
+      "bytes": 2115,
+      "lines": 46,
+      "blob": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+      "sha256": "26da6d6f0ad5e089fb59b6a57e7d102e434ea442cb5a1b9ef089f1362a139f21",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+      "mode": "100644",
+      "bytes": 20305,
+      "lines": 283,
+      "blob": "b8b6760f5623f55387dba4fec288947bce707bc7",
+      "sha256": "8d19cb46ef2729e862a37f13c32c0239d0fd7e0148b15873c1f0d1fad87cc6e7",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "mode": "100644",
+      "bytes": 24968,
+      "lines": 333,
+      "blob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+      "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "mode": "100644",
+      "bytes": 45707,
+      "lines": 570,
+      "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "mode": "100644",
+      "bytes": 20040,
+      "lines": 306,
+      "blob": "13229f20c93226ee5b3f4d07516d16f94b0d48d5",
+      "sha256": "460743df044eef3901653a6c4331a14bdf977ca644513a22386bf34907aaf13e",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+      "mode": "100644",
+      "bytes": 3804,
+      "lines": 67,
+      "blob": "7c84fc0167171b2d0cce7c002c660a93060444b8",
+      "sha256": "cb6cd06a6773f9533357c501d551f3ed04144900787f39291caba0abc1980290",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "mode": "100644",
+      "bytes": 123149,
+      "lines": 2072,
+      "blob": "1b0ad5b15b056857817858d1e85f6dfe81f6e782",
+      "sha256": "c73b55cbd07ef632b174609e99e05e536d584b8dae9c124c2fc1a14e1c76c4da",
+      "sameOriginalRedSource": false,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "bytes": 28094,
+      "lines": 506,
+      "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+      "sha256": "67a1e7413eff11ddc087f35a64cd3c8b242c061988b2fbd661497a9f6b5dfd11",
+      "sameOriginalRedSource": false,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+      "mode": "100644",
+      "bytes": 8676,
+      "lines": 164,
+      "blob": "e7731fd8ca546fd14ac6992d74ea78f3ad8e7981",
+      "sha256": "de8552ab68f316a41901b304e7315128c33ad848a059fd0d14a60de7d6bd4b9e",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient.ts",
+      "mode": "100644",
+      "bytes": 23900,
+      "lines": 580,
+      "blob": "6849549eacb871ea1342a37f4cecd27ed7795c32",
+      "sha256": "fe9b1bdc4e4dfb4eba417e1bb4a3b29987cbd1ccfdbf9766582e2d49a7a53568",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": false
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderConnectionTelemetry.ts",
+      "mode": "100644",
+      "bytes": 2114,
+      "lines": 61,
+      "blob": "c6cbbb42e62b4c7b762e0a09fb9ade4c01f42964",
+      "sha256": "1fde6ed2109d906c54bb0a48be47082a167f601a1752ef8bcad54e9b67b48875",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": false
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "mode": "100644",
+      "bytes": 6382,
+      "lines": 161,
+      "blob": "1738fe12e51e14b9a5288313b8a253d1fdf3823e",
+      "sha256": "47c561887a1ea9a499f131a073c805be07a9a17343c1115b32ec173dcdf894c9",
+      "sameOriginalRedSource": false,
+      "wasIn29OriginalRedPins": false
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "mode": "100644",
+      "bytes": 74351,
+      "lines": 2068,
+      "blob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+      "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": false
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderProjectContext.ts",
+      "mode": "100644",
+      "bytes": 1300,
+      "lines": 35,
+      "blob": "33744a0abc543ab39e13d0b5a784de719e40ec58",
+      "sha256": "94e4ebc5b9e343b12ebc40f5251bab30372d9668aab295a57930653b20b6730f",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": false
+    },
+    {
+      "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+      "mode": "100644",
+      "bytes": 97366,
+      "lines": 2584,
+      "blob": "176344903eaee49ced9607a29f28a3c556e59f6e",
+      "sha256": "11871dd43b1c704230c83e722577ba4cdd4f4fd6c2eebce89cab02457b52b81a",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": false
+    },
+    {
+      "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "mode": "100644",
+      "bytes": 8707,
+      "lines": 264,
+      "blob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+      "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": false
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/RuntimeProviderConnectErrorPresentation.test.ts",
+      "mode": "100644",
+      "bytes": 720,
+      "lines": 15,
+      "blob": "fa761c43af6d414b0f2be0338869891dc059f640",
+      "sha256": "7591962fa6f0b58294543c674ab2fd6a590b406159a9cb8ed7b8b7e8f6be9440",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": false
+    },
+    {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "mode": "100644",
+      "bytes": 188073,
+      "lines": 5843,
+      "blob": "48bf7f181ae6836a9003ebe687abab0a0ae2db20",
+      "sha256": "d52e9af5bef20bd8fa99f10ddfb25b2287b9d643ecaf3f448c43dd6cc75fd8ee",
+      "sameOriginalRedSource": false,
+      "wasIn29OriginalRedPins": false
+    },
+    {
+      "path": "tsconfig.json",
+      "mode": "100644",
+      "bytes": 1235,
+      "lines": 40,
+      "blob": "568952f5025a88c16b0568c7279d8e85a4288b43",
+      "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": false
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "mode": "100644",
+      "bytes": 646,
+      "lines": 20,
+      "blob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": false
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+      "mode": "100644",
+      "bytes": 185996,
+      "lines": 1462,
+      "blob": "7130609dd29851148c9e2106e2764b75982739b1",
+      "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "mode": "100644",
+      "bytes": 6230,
+      "lines": 52,
+      "blob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+      "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": true
+    },
+    {
+      "path": "vitest.config.ts",
+      "mode": "100644",
+      "bytes": 1187,
+      "lines": 34,
+      "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+      "sameOriginalRedSource": true,
+      "wasIn29OriginalRedPins": false
+    }
+  ],
+  "fullOriginalRed48SourceComparisons": [
+    {
+      "bytes": 101741,
+      "lines": 1312,
+      "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+      "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+    },
+    {
+      "bytes": 8,
+      "lines": 1,
+      "blob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5"
+    },
+    {
+      "bytes": 19,
+      "lines": 1,
+      "blob": "b6f27f135954640c8cc5bfd7b8c9922ca6eb2aad",
+      "sha256": "7151cf397def0c2cb0ab65643701d27d335a72c90f775675b5f826bc7005818a"
+    },
+    {
+      "bytes": 526,
+      "lines": 23,
+      "blob": "293fb7e08df5e9cc00663e0e5454dfde6ecfb103",
+      "sha256": "7da9c6dae6931016efbdd571ed858529851268a5b965d955a9d4c76ed1395a2e"
+    },
+    {
+      "bytes": 990,
+      "lines": 31,
+      "blob": "bf2ce41041a9aee92261319e86cf802d82004739",
+      "sha256": "a7afb7428749efcd15c45acf9b4da03ce4d529ff663b57af876a55b373b97399"
+    },
+    {
+      "bytes": 37840,
+      "lines": 1166,
+      "blob": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+      "sha256": "d9f0cf7c33672b9304fc524bbc028e07939bcab4583bb1e7c94b99fd773eb597"
+    },
+    {
+      "bytes": 7268,
+      "lines": 258,
+      "blob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88"
+    },
+    {
+      "bytes": 657,
+      "lines": 19,
+      "blob": "9c6450d54b87ce33f7d799f900226c316e367937",
+      "sha256": "a90a4b08c1d5f56021c50fe5f5ababa70c3de0732acec173624da51254dc883e"
+    },
+    {
+      "bytes": 1279,
+      "lines": 54,
+      "blob": "febb21f74d77d21e157039f76380cfd5795d359c",
+      "sha256": "b6b245a0062d111cee110ec7222ce00c3730e03a70cf99a29b92bfda245efa5f"
+    },
+    {
+      "bytes": 1491,
+      "lines": 43,
+      "blob": "c7de6f562687ef92f3fcdaf12eb8493864d14f37",
+      "sha256": "691c8486f95f360f0ac8985ad42ba17e81100cac6989317bfb75981552833321"
+    },
+    {
+      "bytes": 26839,
+      "lines": 580,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+    },
+    {
+      "bytes": 12355,
+      "lines": 304,
+      "blob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b"
+    },
+    {
+      "bytes": 8310,
+      "lines": 172,
+      "blob": "0b0fc2a68fe678ebbce24227bf6e6002d12701d9",
+      "sha256": "10da3dd44dedec7e1230e1821f5ff75d9b6ec3aeb7a8352cb6820c26e40528c7"
+    },
+    {
+      "bytes": 16208,
+      "lines": 278,
+      "blob": "ce5c3a7511009501ca057f01957008a8ce3ef67b",
+      "sha256": "e52a7a6ec9af567c1ff9b8e5c82136d538b3ccffbb0803cdf1c5c9db909b2ae5"
+    },
+    {
+      "bytes": 456,
+      "lines": 19,
+      "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab"
+    },
+    {
+      "bytes": 2714,
+      "lines": 90,
+      "blob": "0fac5843889e1b28d53712f353bce1b0bae855a4",
+      "sha256": "a0db21117b905b414e825862d8bc93cfe9280975c8b91e1afa6cca2e1570a132"
+    },
+    {
+      "bytes": 378,
+      "lines": 17,
+      "blob": "ff7683dc99c69dbf8c884ba138382468c9c86314",
+      "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c"
+    },
+    {
+      "bytes": 956788,
+      "lines": 26665,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c"
+    },
+    {
+      "bytes": 6946,
+      "lines": 169,
+      "blob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea"
+    },
+    {
+      "bytes": 4125,
+      "lines": 82,
+      "blob": "f0ed24053ad252e8e348090c535b0818100a5a80",
+      "sha256": "fc7e6f68bd899b1109df035d0c903d0df50d9613b5a6c7f1543b763727d8b927"
+    },
+    {
+      "bytes": 8145,
+      "lines": 231,
+      "blob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+      "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2"
+    },
+    {
+      "bytes": 5259,
+      "lines": 128,
+      "blob": "cbf2463eb47d22c3d87d9eec001edad26dd68ff0",
+      "sha256": "c8dc0b63fc490fd5a9a1b4abf0631b66c30e1ccda2199094c86e49a6e250d01e"
+    },
+    {
+      "bytes": 9635,
+      "lines": 146,
+      "blob": "e827bccf455235b1ff7871e7b93450cdaa53eb54",
+      "sha256": "82080bdf23e0fae3ea087e8aea8c3622fa63a734fa9874e7d07e9d568087f072"
+    },
+    {
+      "bytes": 4585,
+      "lines": 158,
+      "blob": "6e82478a6347cde01cbc5d52ae71ef79cb38f290",
+      "sha256": "9bd7bd4a400eeb7ef4987189ffc9d64774677576a9198e417839989401bf4edb"
+    },
+    {
+      "bytes": 53683,
+      "lines": 1019,
+      "blob": "e2b96672feefb924a39e20131514e0db5e347311",
+      "sha256": "ba36a5c01c6f670bcba92e6a155683385cd3eb33c871f94b8191b378b226f9d9"
+    },
+    {
+      "bytes": 2115,
+      "lines": 46,
+      "blob": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+      "sha256": "26da6d6f0ad5e089fb59b6a57e7d102e434ea442cb5a1b9ef089f1362a139f21"
+    },
+    {
+      "bytes": 20305,
+      "lines": 283,
+      "blob": "b8b6760f5623f55387dba4fec288947bce707bc7",
+      "sha256": "8d19cb46ef2729e862a37f13c32c0239d0fd7e0148b15873c1f0d1fad87cc6e7"
+    },
+    {
+      "bytes": 24968,
+      "lines": 333,
+      "blob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+      "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6"
+    },
+    {
+      "bytes": 45707,
+      "lines": 570,
+      "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+    },
+    {
+      "bytes": 20040,
+      "lines": 306,
+      "blob": "13229f20c93226ee5b3f4d07516d16f94b0d48d5",
+      "sha256": "460743df044eef3901653a6c4331a14bdf977ca644513a22386bf34907aaf13e"
+    },
+    {
+      "bytes": 3804,
+      "lines": 67,
+      "blob": "7c84fc0167171b2d0cce7c002c660a93060444b8",
+      "sha256": "cb6cd06a6773f9533357c501d551f3ed04144900787f39291caba0abc1980290"
+    },
+    {
+      "bytes": 115936,
+      "lines": 1958,
+      "blob": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+      "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076"
+    },
+    {
+      "bytes": 27188,
+      "lines": 489,
+      "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+      "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+    },
+    {
+      "bytes": 8676,
+      "lines": 164,
+      "blob": "e7731fd8ca546fd14ac6992d74ea78f3ad8e7981",
+      "sha256": "de8552ab68f316a41901b304e7315128c33ad848a059fd0d14a60de7d6bd4b9e"
+    },
+    {
+      "bytes": 23900,
+      "lines": 580,
+      "blob": "6849549eacb871ea1342a37f4cecd27ed7795c32",
+      "sha256": "fe9b1bdc4e4dfb4eba417e1bb4a3b29987cbd1ccfdbf9766582e2d49a7a53568"
+    },
+    {
+      "bytes": 2114,
+      "lines": 61,
+      "blob": "c6cbbb42e62b4c7b762e0a09fb9ade4c01f42964",
+      "sha256": "1fde6ed2109d906c54bb0a48be47082a167f601a1752ef8bcad54e9b67b48875"
+    },
+    {
+      "bytes": 6481,
+      "lines": 161,
+      "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+      "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+    },
+    {
+      "bytes": 74351,
+      "lines": 2068,
+      "blob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+      "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575"
+    },
+    {
+      "bytes": 1300,
+      "lines": 35,
+      "blob": "33744a0abc543ab39e13d0b5a784de719e40ec58",
+      "sha256": "94e4ebc5b9e343b12ebc40f5251bab30372d9668aab295a57930653b20b6730f"
+    },
+    {
+      "bytes": 97366,
+      "lines": 2584,
+      "blob": "176344903eaee49ced9607a29f28a3c556e59f6e",
+      "sha256": "11871dd43b1c704230c83e722577ba4cdd4f4fd6c2eebce89cab02457b52b81a"
+    },
+    {
+      "bytes": 8707,
+      "lines": 264,
+      "blob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+      "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10"
+    },
+    {
+      "bytes": 720,
+      "lines": 15,
+      "blob": "fa761c43af6d414b0f2be0338869891dc059f640",
+      "sha256": "7591962fa6f0b58294543c674ab2fd6a590b406159a9cb8ed7b8b7e8f6be9440"
+    },
+    {
+      "bytes": 180091,
+      "lines": 5678,
+      "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+    },
+    {
+      "bytes": 1235,
+      "lines": 40,
+      "blob": "568952f5025a88c16b0568c7279d8e85a4288b43",
+      "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a"
+    },
+    {
+      "bytes": 646,
+      "lines": 20,
+      "blob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306"
+    },
+    {
+      "bytes": 185996,
+      "lines": 1462,
+      "blob": "7130609dd29851148c9e2106e2764b75982739b1",
+      "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+    },
+    {
+      "bytes": 6230,
+      "lines": 52,
+      "blob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+      "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc"
+    },
+    {
+      "bytes": 1187,
+      "lines": 34,
+      "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc"
+    }
+  ],
+  "changedOriginal29Pins": [
+    "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "scripts/legacy-agent-host/desktop-ui-controls.ts"
+  ],
+  "completePrefixIdentity": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "bytes": 2130841,
+    "lines": 9227,
+    "blob": "237c4b2ed5aac8fdca85da31222b3f95c3c1bb9b",
+    "sha256": "a0e61e7070ab3452f816797343993883ebcfe5d55152e63029ab60d0efd5d6f0"
+  },
+  "fullDriverBefore": {
+    "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+    "bytes": 45707,
+    "lines": 570,
+    "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+    "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+  },
+  "fullDriverAfter": {
+    "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+    "bytes": 45795,
+    "lines": 572,
+    "blob": "5026f0ec6165bb092717ddc989043848a25081dc",
+    "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b"
+  },
+  "completeStrictForwardReverse": true,
+  "actualPollBefore": "  const poll = async <T>(observe: () => Promise<T>, accepts: (value: T) => boolean, label: string) => {\n    const cutoff = Date.now() + 90_000; let value = await observe();\n    while (!accepts(value) && Date.now() < cutoff) {\n      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();\n    }\n    assert.ok(accepts(value), label); return value;\n  };\n",
+  "selectedPollAfter": "  const poll = async <T>(observe: () => Promise<T>, accepts: (value: T) => boolean, label: string) => {\n    const cutoff = Date.now() + 90_000; let value = await observe();\n    assert.ok(Date.now() < cutoff, label);\n    while (!accepts(value) && Date.now() < cutoff) {\n      current(); await new Promise<void>(resolve => setTimeout(resolve, 100)); value = await observe();\n      assert.ok(Date.now() < cutoff, label);\n    }\n    assert.ok(accepts(value), label); return value;\n  };\n",
+  "onlyAddedLines": [
+    "    assert.ok(Date.now() < cutoff, label);\n",
+    "      assert.ok(Date.now() < cutoff, label);\n"
+  ],
+  "wholeP11Suffix": {
+    "bytes": 4264,
+    "lines": 62,
+    "blob": "08699c4890b2ef83bcbda53094c450c6a9c3b366",
+    "sha256": "a299b6ec1497dc542f675fd7868a430d8e9d4d0503199c9ff0343a7187b5312d"
+  },
+  "wholeCurrentTeamTest": {
+    "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "bytes": 123149,
+    "lines": 2072,
+    "blob": "1b0ad5b15b056857817858d1e85f6dfe81f6e782",
+    "sha256": "c73b55cbd07ef632b174609e99e05e536d584b8dae9c124c2fc1a14e1c76c4da"
+  },
+  "fullTreeLeafCount": 11573,
+  "nonDocs": 8798,
+  "baseNonDocMap": "2b7c2c128f6169308531d2bd4797089b8bcac107c78a01e5579d0d9791e954b3",
+  "projectedNonDocMap": "15486b81750d93df49ccf4e374ba006dadfb21f779b530c8876ea16e7e6fd812",
+  "other8797Unchanged": true,
+  "wholeOriginalCommand": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+  "fast93Paths": [
+    "packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts",
+    "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+    "packages/legacy-agent-host/tests/opencode-configuration-source.test.ts",
+    "scripts/e2e/opencode-diagnostics/platform.mjs",
+    "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+    "scripts/legacy-agent-host/desktop-backend-fixture.ts",
+    "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+    "scripts/legacy-agent-host/desktop-captured-app.ts",
+    "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+    "scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts",
+    "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+    "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+    "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+    "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+    "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+    "scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts",
+    "scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts",
+    "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+    "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+    "scripts/legacy-agent-host/desktop-task-comment-input-target.ts",
+    "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts",
+    "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+    "scripts/legacy-agent-host/run-packaged-opencode-v2.ts",
+    "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+    "src/features/agent-backend/renderer/createHostMemberSpawnStatuses.ts",
+    "src/features/agent-backend/renderer/createHostTeamChanges.ts",
+    "src/features/agent-backend/renderer/createHostTeamProvisioning.ts",
+    "src/features/agent-backend/renderer/index.ts",
+    "src/renderer/store/slices/teamSlice.ts",
+    "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+    "test/features/agent-backend/capturedWindowsSelection.test.ts",
+    "test/features/agent-backend/hostMemberSpawnStatuses.test.ts",
+    "test/features/agent-backend/runtimeActivityFacade.test.ts",
+    "test/renderer/store/teamRuntimeRunAdoption.test.ts",
+    "test/renderer/store/teamSlice.test.ts",
+    "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+    "packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts",
+    "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+    "packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts",
+    "packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts",
+    "packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts",
+    "packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts",
+    "packages/legacy-agent-host/src/composition/HostScheduledRuns.ts",
+    "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+    "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+    "packages/legacy-agent-host/src/composition/readTeamActivity.ts",
+    "packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts",
+    "packages/legacy-agent-host/src/composition/scheduledRunProjection.ts",
+    "packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts",
+    "packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts",
+    "packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts",
+    "packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts",
+    "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+    "packages/legacy-agent-host/src/runtime/activityContracts.ts",
+    "packages/legacy-agent-host/src/runtime/normalizeActivity.ts",
+    "packages/legacy-agent-host/src/runtime/providerActivityContracts.ts",
+    "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+    "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+    "packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts",
+    "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+    "packages/legacy-agent-host/tests/member-process-stderr.test.ts",
+    "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+    "packages/legacy-agent-host/tests/native-claude-host.native.ts",
+    "packages/legacy-agent-host/tests/native-codex-team.native.ts",
+    "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+    "packages/legacy-agent-host/tests/runtime-activity.test.ts",
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+    "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+    "packages/legacy-agent-host/tests/team-activity-read.test.ts",
+    "scripts/legacy-agent-host/desktop-activity-ui-smoke.ts",
+    "src/features/agent-backend/contracts/operations.ts",
+    "src/features/agent-backend/main/adapters/output/projectBackendResult.ts",
+    "src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts",
+    "src/features/agent-backend/renderer/createHostTaskActivityApi.ts",
+    "src/renderer/components/team/ClaudeLogsPanel.tsx",
+    "src/renderer/components/team/ClaudeLogsSection.tsx",
+    "src/renderer/components/team/members/HostMemberActivityLog.tsx",
+    "src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx",
+    "src/renderer/components/team/members/MemberLogsTab.tsx",
+    "src/shared/types/teamActivity.ts",
+    "src/shared/utils/diagnosticsRedaction.ts",
+    "src/shared/utils/redactDiagnosticAssignments.ts",
+    "src/shared/utils/runtimeDiagnosticText.ts",
+    "test/features/agent-backend/hostTaskActivity.test.ts",
+    "test/renderer/components/team/ClaudeLogsSection.test.ts",
+    "test/renderer/components/team/members/MemberLogsPolling.test.ts",
+    "test/renderer/components/team/members/hostLogStatsTabs.test.tsx",
+    "test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx",
+    "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+    "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+    "tools/owned-process-broker/nativeDebugServiceScenario.ts"
+  ],
+  "driverFastLintIncluded": false,
+  "scriptsCompilerWildcard": "scripts/legacy-agent-host/**/*.ts",
+  "allOriginalInputsPostflightUnchanged": true,
+  "noProjectExecutionSourceRefOrCiActions": true
+}

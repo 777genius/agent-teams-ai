@@ -1,0 +1,46 @@
+{
+  "kind": "DERIVED_RETENTION_METADATA_ONLY_CORRECTION",
+  "cases": [
+    {
+      "shard": 1,
+      "originalDerivedMetadata": {
+        "path": "ci-72e6ec/frontend1/archive-retention.initial-metadata-only.json.txt",
+        "bytes": 2429,
+        "blob": "6b655ddef58d9575bc270c7e751111bcfeb489e5",
+        "sha256": "b0f348b0e6fe37368ad0be821f0f775e89f29f1ca6e8e4871e36e61a65c15833"
+      },
+      "canonicalDerivedMetadata": {
+        "path": "ci-72e6ec/frontend1/archive-retention.json",
+        "bytes": 2827,
+        "blob": "3924afffe98cd3912d897e9842bd82d618bb971b",
+        "sha256": "049423f8a3a59ad7f04895c4b8cb8b907394ef6e9ebb30bfd71df8389757ad13"
+      },
+      "unchangedOriginalBytesSha256AndLengthsVerified": true,
+      "originalIncorrectBlobPrefix": "ASCII backslash followed by zero rather than NUL",
+      "originalInvalidFinalTerminator": "literal backslash-n rather than newline",
+      "noOriginalRawZipOrMcpMutation": true,
+      "noRefetch": true
+    },
+    {
+      "shard": 2,
+      "originalDerivedMetadata": {
+        "path": "ci-72e6ec/frontend2/archive-retention.initial-metadata-only.json.txt",
+        "bytes": 2431,
+        "blob": "b6e37fa2a99aabfb85f4970cd12e6b0c6a43172d",
+        "sha256": "13a78215dbcfd92137c437cff5131548c238615abb623377db47720c4538f163"
+      },
+      "canonicalDerivedMetadata": {
+        "path": "ci-72e6ec/frontend2/archive-retention.json",
+        "bytes": 2829,
+        "blob": "02963170c02e7b8a9e3b2a34b742ae828dfe4b7f",
+        "sha256": "c3c0ab6c6567d9f1f22c378e24c2865fd003701556b2c5e7d9a1c272f4f50506"
+      },
+      "unchangedOriginalBytesSha256AndLengthsVerified": true,
+      "originalIncorrectBlobPrefix": "ASCII backslash followed by zero rather than NUL",
+      "originalInvalidFinalTerminator": "literal backslash-n rather than newline",
+      "noOriginalRawZipOrMcpMutation": true,
+      "noRefetch": true
+    }
+  ],
+  "limits": "The two initial files remain preserved, but their Git blob identifiers and JSON terminators are not canonical. Original full MCP/raw/ZIP/extracted bytes and SHA256 were unchanged. No CI, project, native or test failure is invented."
+}

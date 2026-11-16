@@ -1,0 +1,166 @@
+{
+  "kind": "AUTHOR_E3_ORIGINAL_WHOLE_EIGHT_P11_SEMANTIC_RED",
+  "createdAtUTC": "2026-11-16T09:32:41.556587+00:00",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "runId": 43831885807,
+  "jobId": 133178913159,
+  "proof": {
+    "path": "ci-72e6ec/taskboard/p11-byte-source-proof.json",
+    "bytes": 235220,
+    "blob": "b4afc9cc262342c97aa2f996e65b4608cd6215e3",
+    "sha256": "175f1567827552d2038a039510458e823b8225d6561724ddbc9a9c00c495d4df"
+  },
+  "originals": [
+    {
+      "path": "ci-72e6ec/taskboard/job.log",
+      "bytes": 94289,
+      "blob": "4f7af0d5218f6c2b34457e63a4dcce05f4f2ce84",
+      "sha256": "79164ffcbff3edb86387a7d11786602b5e24f2e8fd159fb5b8cf409e4c1c9d97"
+    },
+    {
+      "path": "ci-72e6ec/taskboard/job-original-response.json",
+      "bytes": 95941,
+      "blob": "b2194f1a0c9d9d8324c9486c78e328c9f5f82b1f",
+      "sha256": "f8c470c3afdb9e65c652f6949cb2702bcaf03b3d63b65e698e42d7e893ed20cf"
+    },
+    {
+      "path": "ci-72e6ec/owned-jobs-0928.json",
+      "bytes": 74851,
+      "blob": "5c294c70948c2487c20a1f9431b93729cee10afb",
+      "sha256": "adefc03b39da44b4e23177fc655032683fc1e2ab05252cdd0d07a09fc4d0c46e"
+    },
+    {
+      "path": "ci-72e6ec/official-host-artifacts-0929.json",
+      "bytes": 3850,
+      "blob": "26cd8b1765d289c4912b9f1f6ffaf29bcaece945",
+      "sha256": "c82a51b3cee928abaddbe7a19e19e11f3ca105fed7bbc729dbc463c069d38540"
+    },
+    {
+      "path": "external-primary-0833/initial-api-and-fetch.json",
+      "bytes": 1230559,
+      "blob": "c06fa9afb4bce716cc66c872aca533c10fba4fec",
+      "sha256": "a79ff970d4b9bf71483168e870519182f44c1be53f16595519659b2607c52b5b"
+    }
+  ],
+  "outcome": {
+    "job": "FAILURE",
+    "step": 8,
+    "commandExit": 1,
+    "tests": 123,
+    "pass": 120,
+    "fail": 3,
+    "skip": 0,
+    "cancelled": 0,
+    "originalOldCasesPassed": 119,
+    "newDeadlineCasesFailed": 3,
+    "newControlPassed": 1
+  },
+  "command": {
+    "literal": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "argv": [
+      "node",
+      "--test",
+      "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+      "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+      "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+      "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts"
+    ],
+    "focusFilter": null,
+    "concurrencyFlagAdded": false,
+    "originalMatrixLane": "taskboard",
+    "nodeVersion": "24.21.0",
+    "pnpmVersion": "11.22.0",
+    "elapsedReporterMs": 9107.032314
+  },
+  "failures": [
+    {
+      "line": 830,
+      "outcome": "FAIL",
+      "name": "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+      "durationMs": 1.281537,
+      "assertion": "Missing expected rejection.",
+      "location": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:1937:3",
+      "laterChecksExecuted": false
+    },
+    {
+      "line": 831,
+      "outcome": "FAIL",
+      "name": "P11 keeps the original 90-second cutoff for first result after the cutoff",
+      "durationMs": 1.749049,
+      "assertion": "Missing expected rejection.",
+      "location": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:1937:3",
+      "laterChecksExecuted": false
+    },
+    {
+      "line": 832,
+      "outcome": "FAIL",
+      "name": "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+      "durationMs": 1.069523,
+      "assertion": "Missing expected rejection.",
+      "location": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts:1937:3",
+      "laterChecksExecuted": false
+    }
+  ],
+  "meaning": "Each failure occurs at assert.rejects after the actual extracted original poll resolved on a late true observation. The source extractor/setup succeeded; the post-assertion per-case read/trace/delay checks were not reached. This is a finite source-closure semantic counterexample, not an actual 90-second wall-clock Desktop run.",
+  "positiveControl": {
+    "passed": true,
+    "cases": [
+      "first true at89999ms",
+      "false then timely true with100ms cadence",
+      "same original read Error object",
+      "same currentness Error object",
+      "first false at cutoff rejects"
+    ],
+    "scope": "All straight-line assertions in this one successful original control case completed."
+  },
+  "source": {
+    "test": {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 115936,
+      "blob": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+      "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076",
+      "equals578": false
+    },
+    "driver": {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "bytes": 45707,
+      "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159",
+      "equals578": true
+    },
+    "full578TestPrefixExact": true,
+    "allSevenOtherHelperFilesExact578": true,
+    "current72Only": true,
+    "followupBfcGeometryCopyNotQualified": true
+  },
+  "setupAndBuild": {
+    "checkoutAndTupleStep5": "SUCCESS",
+    "frozenWorkspaceElectronStep7": "SUCCESS",
+    "originalLinuxExecHostLedgerControllerMcpCommandsReachedBeforeTests": true,
+    "sameStepBuildCommandsReturnedUnderSetE": true,
+    "warningsRetained": [
+      "pnpm v10 layout warning",
+      "two pre-build missing legacy-agent-host dist/cli.js bin warnings",
+      "native-addon deprecation/cast warnings",
+      "experimental TypeScript strip warning"
+    ],
+    "limits": "Original CI build output is retained; this is not an independent rebuild, binary hash qualification or installed payload census. Both pre-build bin warnings precede the successful Host build and the actual test run."
+  },
+  "downstream": {
+    "installerHelper7": "NOT RUN after set-e stopped at whole8",
+    "teamWhole10_179AndStderr24": "NOT RUN; lane=taskboard and step9 SKIPPED",
+    "workspaceBackendTypesFast93TypedScopes": "NOT RUN; step10 SKIPPED",
+    "inputCaptureDesktopTaskboardNativeUI": "NOT RUN; steps11 through30 SKIPPED",
+    "archive": "No Taskboard artifact in retained official response; original upload step31 reports no files. No receipt, PNG, action or cleanup witness is invented."
+  },
+  "limits": [
+    "No Team/static/renderer/native/Desktop/P11 end-to-end PASS is inferred.",
+    "No future PhaseB/C or ModelsA selection/application is made.",
+    "Source head72 remains distinct from unpublished-to-primary followup geometry/copy bytes.",
+    "All observations are original CI; evidence reader only reads stored bytes and Git and performs no local project/test/provider/install/CI operation."
+  ]
+}

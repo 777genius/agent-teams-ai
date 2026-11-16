@@ -1,0 +1,3344 @@
+{
+  "kind": "E3_72E_ORIGINAL_COMPLETE_FOUR_FRONTEND_SHARDS_AUTHOR_AGGREGATE",
+  "author": "/root/ui_failures",
+  "createdAtUTC": "2026-11-16T09:22:00.238378+00:00",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "sourceTree": "de80fbfbffb3fe4daabf6cc9be258cc8df534524",
+  "runId": 43831885807,
+  "counts": {
+    "filesTotal": 2162,
+    "filesPassed": 2155,
+    "filesWhollySkipped": 7,
+    "assertionsTotal": 25870,
+    "assertionsPassed": 25832,
+    "assertionsSkipped": 38,
+    "assertionsFailed": 0
+  },
+  "originals": [
+    {
+      "shard": 1,
+      "jobId": 133178913131,
+      "artifactId": 14211011775,
+      "officialJob": {
+        "id": 133178913131,
+        "name": "Offline frontend tests (1/4)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43831885807,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Verify source and capture the original Host test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Prepare original test prerequisites",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run the complete safe frontend shard",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Preserve original test results, including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Post Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19
+          }
+        ]
+      },
+      "officialArtifact": {
+        "id": 14211011775,
+        "name": "host-offline-tests-72e6ec04444969d343d73834c70bc4e261100fc9-1",
+        "size_in_bytes": 294350,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14211011775",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14211011775/zip",
+        "expired": false,
+        "created_at": "2026-11-16T09:02:22Z",
+        "expires_at": "2026-11-30T09:02:21Z",
+        "updated_at": "2026-11-16T09:02:22Z",
+        "digest": "sha256:b701ce8ae4ae5dcc7050b3519aa791eb30fc40a21bf11b60567df99fa4ed67fe",
+        "workflow_run": {
+          "id": 43831885807,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "72e6ec04444969d343d73834c70bc4e261100fc9"
+        }
+      },
+      "artifactApiFile": "ci-72e6ec/official-host-artifacts-0918.json",
+      "rawOriginal": {
+        "path": "ci-72e6ec/frontend1/job.log",
+        "bytes": 167703,
+        "blob": "6da586893c9e96c97e7e02c6074ab6204e72a553",
+        "sha256": "106a783f66b111a333ff64880ec19568a2d3e41b6456f37a2e76612763e7878c"
+      },
+      "fullOriginalResponse": {
+        "path": "ci-72e6ec/frontend1/job-original-response.json",
+        "bytes": 206619,
+        "blob": "ec4711d7299c81b942b0da0653e87bf2422e8761",
+        "sha256": "cd63bc0e7789009440fba8ee652a339cb2f7ba9a0beaa14a7ad8a8a0ac07fbcc"
+      },
+      "fullRawEqualsMcpContent": true,
+      "archive": {
+        "path": "ci-72e6ec/frontend1/artifact-14211011775.zip",
+        "bytes": 294350,
+        "blob": "6a6ca4a308844f30805c03bcb539681057d5993f",
+        "sha256": "b701ce8ae4ae5dcc7050b3519aa791eb30fc40a21bf11b60567df99fa4ed67fe"
+      },
+      "archiveMembers": [
+        {
+          "member": "host-offline-tests-1.json",
+          "bytes": 2168436,
+          "blob": "69d55c66a3069f79ca85fed8f8e04849dffd999a",
+          "sha256": "beeb628661a4012850965bcc4c1fa97d524d5d11775740e4f6b65152e838e9e8",
+          "crc32": "4c29bf93",
+          "extractedPath": "ci-72e6ec/frontend1/extracted/host-offline-tests-1.json",
+          "extractedFullBytesEqual": true
+        },
+        {
+          "member": "host-offline-tests-1.log",
+          "bytes": 97577,
+          "blob": "1b44b1ab12f0468d3650383e21c9273993cbc9a0",
+          "sha256": "7c6f4680f844e36a952fa56b50986def311797566a9a2191ef21f55a2bd7280c",
+          "crc32": "213d074d",
+          "extractedPath": "ci-72e6ec/frontend1/extracted/host-offline-tests-1.log",
+          "extractedFullBytesEqual": true
+        }
+      ],
+      "teeJoin": {
+        "method": "Remove only GitHub timestamp prefixes; preserve ANSI/blank lines and complete original tee bytes.",
+        "rawLineStart1Based": 586,
+        "rawLineEnd1BasedInclusive": 1290,
+        "allLines": 705,
+        "wholeByteSequenceExactOnce": true
+      },
+      "originalJson": {
+        "path": "ci-72e6ec/frontend1/extracted/host-offline-tests-1.json",
+        "bytes": 2168436,
+        "blob": "69d55c66a3069f79ca85fed8f8e04849dffd999a",
+        "sha256": "beeb628661a4012850965bcc4c1fa97d524d5d11775740e4f6b65152e838e9e8"
+      },
+      "counts": {
+        "filesTotal": 541,
+        "filesPassed": 541,
+        "filesWhollySkipped": 0,
+        "assertionsTotal": 6228,
+        "assertionsPassed": 6222,
+        "assertionsSkipped": 6,
+        "assertionsFailed": 0
+      },
+      "reportedJsonCounters": {
+        "numTotalTestSuites": 1356,
+        "numPassedTestSuites": 1356,
+        "numFailedTestSuites": 0,
+        "numPendingTestSuites": 0,
+        "numTotalTests": 6228,
+        "numPassedTests": 6222,
+        "numFailedTests": 0,
+        "numPendingTests": 6,
+        "numTodoTests": 0
+      },
+      "snapshot": {
+        "added": 0,
+        "failure": false,
+        "filesAdded": 0,
+        "filesRemoved": 0,
+        "filesRemovedList": [],
+        "filesUnmatched": 0,
+        "filesUpdated": 0,
+        "matched": 0,
+        "total": 0,
+        "unchecked": 0,
+        "uncheckedKeysByFile": [],
+        "unmatched": 0,
+        "updated": 0,
+        "didUpdate": false
+      },
+      "fileSummary": "Test Files  541 passed (541)",
+      "assertionSummary": "Tests  6222 passed | 6 skipped (6228)",
+      "reportedDurationLine": "Duration  245.01s (transform 22.25s, setup 9.13s, collect 195.86s, tests 141.75s, environment 67.91s, prepare 21.44s)",
+      "reportedDurationSeconds": 245.01,
+      "reportedStartTime": "Start at  08:58:15",
+      "jsonStartTime": 1794819495780,
+      "claimBearingRawMarkers": [
+        {
+          "line": 113,
+          "original": "2026-11-16T08:57:35.9669547Z 72e6ec04444969d343d73834c70bc4e261100fc9"
+        },
+        {
+          "line": 141,
+          "original": "2026-11-16T08:57:36.9333914Z 72e6ec04444969d343d73834c70bc4e261100fc9"
+        },
+        {
+          "line": 220,
+          "original": "2026-11-16T08:57:43.2712757Z node: v24.21.0"
+        },
+        {
+          "line": 259,
+          "original": "2026-11-16T08:57:47.1175138Z node: v26.12.1"
+        },
+        {
+          "line": 319,
+          "original": "2026-11-16T08:58:02.3490149Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 320,
+          "original": "2026-11-16T08:58:02.3491268Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 548,
+          "original": "2026-11-16T08:58:12.0690219Z [better-sqlite3-node] Node ABI rebuild verified"
+        },
+        {
+          "line": 549,
+          "original": "2026-11-16T08:58:12.3353459Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 550,
+          "original": "2026-11-16T08:58:12.3356711Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 561,
+          "original": "2026-11-16T08:58:12.7996451Z \u001b[32mESM\u001b[39m ⚡️ Build success in 252ms"
+        },
+        {
+          "line": 562,
+          "original": "2026-11-16T08:58:13.0869272Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 563,
+          "original": "2026-11-16T08:58:13.0872662Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 565,
+          "original": "2026-11-16T08:58:13.3557060Z .                                        | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 566,
+          "original": "2026-11-16T08:58:13.3561204Z ../task-change-ledger                    | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 567,
+          "original": "2026-11-16T08:58:13.3706745Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json"
+        },
+        {
+          "line": 568,
+          "original": "2026-11-16T08:58:13.6311924Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json"
+        },
+        {
+          "line": 587,
+          "original": "2026-11-16T08:58:15.7804460Z \u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv3.2.6 \u001b[39m\u001b[90m/home/runner/work/agent-teams-ai/agent-teams-ai\u001b[39m"
+        },
+        {
+          "line": 1285,
+          "original": "2026-11-16T09:02:20.7961915Z \u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m541 passed\u001b[39m\u001b[22m\u001b[90m (541)\u001b[39m"
+        },
+        {
+          "line": 1286,
+          "original": "2026-11-16T09:02:20.7988021Z \u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m6222 passed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[33m6 skipped\u001b[39m\u001b[90m (6228)\u001b[39m"
+        },
+        {
+          "line": 1288,
+          "original": "2026-11-16T09:02:20.8009592Z \u001b[2m   Duration \u001b[22m 245.01s\u001b[2m (transform 22.25s, setup 9.13s, collect 195.86s, tests 141.75s, environment 67.91s, prepare 21.44s)\u001b[22m"
+        },
+        {
+          "line": 1290,
+          "original": "2026-11-16T09:02:20.8195446Z JSON report written to /home/runner/work/_temp/host-offline-tests-1.json"
+        }
+      ]
+    },
+    {
+      "shard": 2,
+      "jobId": 133178913038,
+      "artifactId": 14211385485,
+      "officialJob": {
+        "id": 133178913038,
+        "name": "Offline frontend tests (2/4)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43831885807,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Verify source and capture the original Host test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Prepare original test prerequisites",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run the complete safe frontend shard",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Preserve original test results, including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Post Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19
+          }
+        ]
+      },
+      "officialArtifact": {
+        "id": 14211385485,
+        "name": "host-offline-tests-72e6ec04444969d343d73834c70bc4e261100fc9-2",
+        "size_in_bytes": 312595,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14211385485",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14211385485/zip",
+        "expired": false,
+        "created_at": "2026-11-16T09:02:32Z",
+        "expires_at": "2026-11-30T09:02:31Z",
+        "updated_at": "2026-11-16T09:02:32Z",
+        "digest": "sha256:f2ed1a880bb9464d646cf37c4e51c0f587411bc268f592fba45b2234bccd8a3e",
+        "workflow_run": {
+          "id": 43831885807,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "72e6ec04444969d343d73834c70bc4e261100fc9"
+        }
+      },
+      "artifactApiFile": "ci-72e6ec/official-host-artifacts-0918.json",
+      "rawOriginal": {
+        "path": "ci-72e6ec/frontend2/job.log",
+        "bytes": 181018,
+        "blob": "448fd06d32f0ca67bfd8addbf7a18a8d54838ee0",
+        "sha256": "a27ca8fbcd4214a0cc059a4784f335c10c8f0b2f11749a5c3ecea5d6557b004d"
+      },
+      "fullOriginalResponse": {
+        "path": "ci-72e6ec/frontend2/job-original-response.json",
+        "bytes": 222582,
+        "blob": "5b2e6feb2f78ec4bbe67c756e410c623c850e017",
+        "sha256": "b4d6c8c835bb7b3de4a4ff2f80129f9cc1ba683e39ac6a889d12c69f8aee261d"
+      },
+      "fullRawEqualsMcpContent": true,
+      "archive": {
+        "path": "ci-72e6ec/frontend2/artifact-14211385485.zip",
+        "bytes": 312595,
+        "blob": "f4ab1a2f721eeae9e121bfec38d9b9052f72538d",
+        "sha256": "f2ed1a880bb9464d646cf37c4e51c0f587411bc268f592fba45b2234bccd8a3e"
+      },
+      "archiveMembers": [
+        {
+          "member": "host-offline-tests-2.json",
+          "bytes": 2388212,
+          "blob": "b69210f5a26e27bc13686ba87f83f78cf1f2cf51",
+          "sha256": "65552ffed16f3f6e85f24f684895f3f4696f6ddbc8bbfd856fb86aa4d402a8a9",
+          "crc32": "624b0d38",
+          "extractedPath": "ci-72e6ec/frontend2/extracted/host-offline-tests-2.json",
+          "extractedFullBytesEqual": true
+        },
+        {
+          "member": "host-offline-tests-2.log",
+          "bytes": 107466,
+          "blob": "32c0403e49510e428dda0846d958ae827df7728e",
+          "sha256": "1afe0b2bbf08af202f01c4c01e7ddf422259ffb9d0fb08ebd324d1b7c9a935ac",
+          "crc32": "9874eae7",
+          "extractedPath": "ci-72e6ec/frontend2/extracted/host-offline-tests-2.log",
+          "extractedFullBytesEqual": true
+        }
+      ],
+      "teeJoin": {
+        "method": "Remove only GitHub timestamp prefixes; preserve ANSI/blank lines and complete original tee bytes.",
+        "rawLineStart1Based": 605,
+        "rawLineEnd1BasedInclusive": 1382,
+        "allLines": 778,
+        "wholeByteSequenceExactOnce": true
+      },
+      "originalJson": {
+        "path": "ci-72e6ec/frontend2/extracted/host-offline-tests-2.json",
+        "bytes": 2388212,
+        "blob": "b69210f5a26e27bc13686ba87f83f78cf1f2cf51",
+        "sha256": "65552ffed16f3f6e85f24f684895f3f4696f6ddbc8bbfd856fb86aa4d402a8a9"
+      },
+      "counts": {
+        "filesTotal": 541,
+        "filesPassed": 539,
+        "filesWhollySkipped": 2,
+        "assertionsTotal": 6757,
+        "assertionsPassed": 6739,
+        "assertionsSkipped": 18,
+        "assertionsFailed": 0
+      },
+      "reportedJsonCounters": {
+        "numTotalTestSuites": 1292,
+        "numPassedTestSuites": 1292,
+        "numFailedTestSuites": 0,
+        "numPendingTestSuites": 0,
+        "numTotalTests": 6757,
+        "numPassedTests": 6739,
+        "numFailedTests": 0,
+        "numPendingTests": 18,
+        "numTodoTests": 0
+      },
+      "snapshot": {
+        "added": 0,
+        "failure": false,
+        "filesAdded": 0,
+        "filesRemoved": 0,
+        "filesRemovedList": [],
+        "filesUnmatched": 0,
+        "filesUpdated": 0,
+        "matched": 0,
+        "total": 0,
+        "unchecked": 0,
+        "uncheckedKeysByFile": [],
+        "unmatched": 0,
+        "updated": 0,
+        "didUpdate": false
+      },
+      "fileSummary": "Test Files  539 passed | 2 skipped (541)",
+      "assertionSummary": "Tests  6739 passed | 18 skipped (6757)",
+      "reportedDurationLine": "Duration  331.88s (transform 29.32s, setup 19.22s, collect 244.18s, tests 212.17s, environment 92.53s, prepare 28.75s)",
+      "reportedDurationSeconds": 331.88,
+      "reportedStartTime": "Start at  08:56:58",
+      "jsonStartTime": 1794819418552,
+      "claimBearingRawMarkers": [
+        {
+          "line": 113,
+          "original": "2026-11-16T08:56:04.8019518Z 72e6ec04444969d343d73834c70bc4e261100fc9"
+        },
+        {
+          "line": 157,
+          "original": "2026-11-16T08:56:05.9473155Z 72e6ec04444969d343d73834c70bc4e261100fc9"
+        },
+        {
+          "line": 236,
+          "original": "2026-11-16T08:56:15.4161453Z node: v24.21.0"
+        },
+        {
+          "line": 275,
+          "original": "2026-11-16T08:56:20.1902261Z node: v26.12.1"
+        },
+        {
+          "line": 334,
+          "original": "2026-11-16T08:56:38.1928490Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 335,
+          "original": "2026-11-16T08:56:38.1930487Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 567,
+          "original": "2026-11-16T08:56:53.1956665Z [better-sqlite3-node] Node ABI rebuild verified"
+        },
+        {
+          "line": 568,
+          "original": "2026-11-16T08:56:53.5512930Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 569,
+          "original": "2026-11-16T08:56:53.5518411Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 580,
+          "original": "2026-11-16T08:56:54.1435170Z \u001b[32mESM\u001b[39m ⚡️ Build success in 322ms"
+        },
+        {
+          "line": 581,
+          "original": "2026-11-16T08:56:54.5120815Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 582,
+          "original": "2026-11-16T08:56:54.5126757Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 584,
+          "original": "2026-11-16T08:56:54.8812063Z .                                        | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 585,
+          "original": "2026-11-16T08:56:54.8817124Z ../task-change-ledger                    | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 586,
+          "original": "2026-11-16T08:56:54.9039998Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json"
+        },
+        {
+          "line": 587,
+          "original": "2026-11-16T08:56:55.2445365Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json"
+        },
+        {
+          "line": 606,
+          "original": "2026-11-16T08:56:58.5522673Z \u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv3.2.6 \u001b[39m\u001b[90m/home/runner/work/agent-teams-ai/agent-teams-ai\u001b[39m"
+        },
+        {
+          "line": 1377,
+          "original": "2026-11-16T09:02:30.4406291Z \u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m539 passed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[33m2 skipped\u001b[39m\u001b[90m (541)\u001b[39m"
+        },
+        {
+          "line": 1378,
+          "original": "2026-11-16T09:02:30.4416165Z \u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m6739 passed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[33m18 skipped\u001b[39m\u001b[90m (6757)\u001b[39m"
+        },
+        {
+          "line": 1380,
+          "original": "2026-11-16T09:02:30.4438382Z \u001b[2m   Duration \u001b[22m 331.88s\u001b[2m (transform 29.32s, setup 19.22s, collect 244.18s, tests 212.17s, environment 92.53s, prepare 28.75s)\u001b[22m"
+        },
+        {
+          "line": 1382,
+          "original": "2026-11-16T09:02:30.4705919Z JSON report written to /home/runner/work/_temp/host-offline-tests-2.json"
+        }
+      ]
+    },
+    {
+      "shard": 3,
+      "jobId": 133178912777,
+      "artifactId": 14211070806,
+      "officialJob": {
+        "id": 133178912777,
+        "name": "Offline frontend tests (3/4)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43831885807,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Verify source and capture the original Host test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Prepare original test prerequisites",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run the complete safe frontend shard",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Preserve original test results, including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Post Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19
+          }
+        ]
+      },
+      "officialArtifact": {
+        "id": 14211070806,
+        "name": "host-offline-tests-72e6ec04444969d343d73834c70bc4e261100fc9-3",
+        "size_in_bytes": 297362,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14211070806",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14211070806/zip",
+        "expired": false,
+        "created_at": "2026-11-16T09:01:31Z",
+        "expires_at": "2026-11-30T09:01:30Z",
+        "updated_at": "2026-11-16T09:01:31Z",
+        "digest": "sha256:dee2f72593c18a0655c3374cc22dd07f397b1b3fd1b41c6e3cf275538096635f",
+        "workflow_run": {
+          "id": 43831885807,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "72e6ec04444969d343d73834c70bc4e261100fc9"
+        }
+      },
+      "artifactApiFile": "ci-72e6ec/official-host-artifacts-0918.json",
+      "rawOriginal": {
+        "path": "ci-72e6ec/frontend3/job.log",
+        "bytes": 166348,
+        "blob": "01944e05a22df6cdd795223d88aadbd1fbca32f9",
+        "sha256": "9714c0b32e787c148ba1a29a7e43a386220771a84142b7b415bf31f594d1764d"
+      },
+      "fullOriginalResponse": {
+        "path": "ci-72e6ec/frontend3/job-original-response.json",
+        "bytes": 204620,
+        "blob": "88e2995bc6de8c1ab43e66c22d952bf2149c187d",
+        "sha256": "35583d6b4b18199eeae45f9d69f9065d56a165192e1872e27f3bcf5c8f1a9673"
+      },
+      "fullRawEqualsMcpContent": true,
+      "archive": {
+        "path": "ci-72e6ec/frontend3/artifact-14211070806.zip",
+        "bytes": 297362,
+        "blob": "a40097fd89dc374dc2ce0b4155c35430d503c3ce",
+        "sha256": "dee2f72593c18a0655c3374cc22dd07f397b1b3fd1b41c6e3cf275538096635f"
+      },
+      "archiveMembers": [
+        {
+          "member": "host-offline-tests-3.json",
+          "bytes": 2190351,
+          "blob": "3253c7541c72b637e8d2627dab80f6f75ed5154e",
+          "sha256": "703c92341feecc6652321d5a8a9bcc2bdf889296b29822f1c434d6adb3880dba",
+          "crc32": "ddbd6bfc",
+          "extractedPath": "ci-72e6ec/frontend3/extracted/host-offline-tests-3.json",
+          "extractedFullBytesEqual": true
+        },
+        {
+          "member": "host-offline-tests-3.log",
+          "bytes": 95556,
+          "blob": "d89e8ce42c948a3ee34bc393f0dc75dd9883d82a",
+          "sha256": "17c00a4bac12e96cb7698eec7b1893399a32a020bdbe4cd8977524d4d8c4c702",
+          "crc32": "64b6d9a6",
+          "extractedPath": "ci-72e6ec/frontend3/extracted/host-offline-tests-3.log",
+          "extractedFullBytesEqual": true
+        }
+      ],
+      "teeJoin": {
+        "method": "Remove only GitHub timestamp prefixes; preserve ANSI/blank lines and complete original tee bytes.",
+        "rawLineStart1Based": 605,
+        "rawLineEnd1BasedInclusive": 1287,
+        "allLines": 683,
+        "wholeByteSequenceExactOnce": true
+      },
+      "originalJson": {
+        "path": "ci-72e6ec/frontend3/extracted/host-offline-tests-3.json",
+        "bytes": 2190351,
+        "blob": "3253c7541c72b637e8d2627dab80f6f75ed5154e",
+        "sha256": "703c92341feecc6652321d5a8a9bcc2bdf889296b29822f1c434d6adb3880dba"
+      },
+      "counts": {
+        "filesTotal": 541,
+        "filesPassed": 538,
+        "filesWhollySkipped": 3,
+        "assertionsTotal": 6264,
+        "assertionsPassed": 6257,
+        "assertionsSkipped": 7,
+        "assertionsFailed": 0
+      },
+      "reportedJsonCounters": {
+        "numTotalTestSuites": 1316,
+        "numPassedTestSuites": 1316,
+        "numFailedTestSuites": 0,
+        "numPendingTestSuites": 0,
+        "numTotalTests": 6264,
+        "numPassedTests": 6257,
+        "numFailedTests": 0,
+        "numPendingTests": 7,
+        "numTodoTests": 0
+      },
+      "snapshot": {
+        "added": 0,
+        "failure": false,
+        "filesAdded": 0,
+        "filesRemoved": 0,
+        "filesRemovedList": [],
+        "filesUnmatched": 0,
+        "filesUpdated": 0,
+        "matched": 0,
+        "total": 0,
+        "unchecked": 0,
+        "uncheckedKeysByFile": [],
+        "unmatched": 0,
+        "updated": 0,
+        "didUpdate": false
+      },
+      "fileSummary": "Test Files  538 passed | 3 skipped (541)",
+      "assertionSummary": "Tests  6257 passed | 7 skipped (6264)",
+      "reportedDurationLine": "Duration  306.45s (transform 27.12s, setup 14.64s, collect 249.28s, tests 161.95s, environment 94.92s, prepare 27.95s)",
+      "reportedDurationSeconds": 306.45,
+      "reportedStartTime": "Start at  08:56:23",
+      "jsonStartTime": 1794819383213,
+      "claimBearingRawMarkers": [
+        {
+          "line": 113,
+          "original": "2026-11-16T08:55:31.7261199Z 72e6ec04444969d343d73834c70bc4e261100fc9"
+        },
+        {
+          "line": 157,
+          "original": "2026-11-16T08:55:32.8749713Z 72e6ec04444969d343d73834c70bc4e261100fc9"
+        },
+        {
+          "line": 236,
+          "original": "2026-11-16T08:55:41.8217202Z node: v24.21.0"
+        },
+        {
+          "line": 275,
+          "original": "2026-11-16T08:55:45.8865186Z node: v26.12.1"
+        },
+        {
+          "line": 334,
+          "original": "2026-11-16T08:56:03.7606911Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 335,
+          "original": "2026-11-16T08:56:03.7608919Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 567,
+          "original": "2026-11-16T08:56:18.2030813Z [better-sqlite3-node] Node ABI rebuild verified"
+        },
+        {
+          "line": 568,
+          "original": "2026-11-16T08:56:18.5521743Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 569,
+          "original": "2026-11-16T08:56:18.5527976Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 580,
+          "original": "2026-11-16T08:56:19.1678576Z \u001b[32mESM\u001b[39m ⚡️ Build success in 317ms"
+        },
+        {
+          "line": 581,
+          "original": "2026-11-16T08:56:19.5344143Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 582,
+          "original": "2026-11-16T08:56:19.5349323Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 584,
+          "original": "2026-11-16T08:56:19.9102083Z .                                        | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 585,
+          "original": "2026-11-16T08:56:19.9108048Z ../task-change-ledger                    | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 586,
+          "original": "2026-11-16T08:56:19.9299159Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json"
+        },
+        {
+          "line": 587,
+          "original": "2026-11-16T08:56:20.2816432Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json"
+        },
+        {
+          "line": 606,
+          "original": "2026-11-16T08:56:23.2135366Z \u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv3.2.6 \u001b[39m\u001b[90m/home/runner/work/agent-teams-ai/agent-teams-ai\u001b[39m"
+        },
+        {
+          "line": 1282,
+          "original": "2026-11-16T09:01:29.6682696Z \u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m538 passed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[33m3 skipped\u001b[39m\u001b[90m (541)\u001b[39m"
+        },
+        {
+          "line": 1283,
+          "original": "2026-11-16T09:01:29.6697615Z \u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m6257 passed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[33m7 skipped\u001b[39m\u001b[90m (6264)\u001b[39m"
+        },
+        {
+          "line": 1285,
+          "original": "2026-11-16T09:01:29.6719246Z \u001b[2m   Duration \u001b[22m 306.45s\u001b[2m (transform 27.12s, setup 14.64s, collect 249.28s, tests 161.95s, environment 94.92s, prepare 27.95s)\u001b[22m"
+        },
+        {
+          "line": 1287,
+          "original": "2026-11-16T09:01:29.6969702Z JSON report written to /home/runner/work/_temp/host-offline-tests-3.json"
+        }
+      ]
+    },
+    {
+      "shard": 4,
+      "jobId": 133178913127,
+      "artifactId": 14212311060,
+      "officialJob": {
+        "id": 133178913127,
+        "name": "Offline frontend tests (4/4)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 43831885807,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Verify source and capture the original Host test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Prepare original test prerequisites",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run the complete safe frontend shard",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Preserve original test results, including failures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Post Setup the original workspace test runtime",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/setup-node@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Post Run actions/checkout@v6",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19
+          }
+        ]
+      },
+      "officialArtifact": {
+        "id": 14212311060,
+        "name": "host-offline-tests-72e6ec04444969d343d73834c70bc4e261100fc9-4",
+        "size_in_bytes": 318098,
+        "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14212311060",
+        "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14212311060/zip",
+        "expired": false,
+        "created_at": "2026-11-16T09:16:39Z",
+        "expires_at": "2026-11-30T09:16:38Z",
+        "updated_at": "2026-11-16T09:16:39Z",
+        "digest": "sha256:31cf3af774436a2f8bf0764808b1a025e8ddf696cf7d519874bcd72a83a8fcfb",
+        "workflow_run": {
+          "id": 43831885807,
+          "repository_id": 1163183284,
+          "head_repository_id": 1163183284,
+          "head_branch": "fix/frontend-parity-completion-20261113",
+          "head_sha": "72e6ec04444969d343d73834c70bc4e261100fc9"
+        }
+      },
+      "artifactApiFile": "ci-72e6ec/official-host-artifacts-0918.json",
+      "rawOriginal": {
+        "path": "ci-72e6ec/frontend4/job.log",
+        "bytes": 194766,
+        "blob": "2474ba3b47339f97de2f6d9eaadd8296f8310923",
+        "sha256": "c2ce574968509bf9f25f49c224d99fcb8cb7bd9d94464fd880cf2f4e9504e34d"
+      },
+      "fullOriginalResponse": {
+        "path": "ci-72e6ec/frontend4/job-original-response.json",
+        "bytes": 238688,
+        "blob": "01337d953fd1c1bd0c47f4975c1616e14db21f21",
+        "sha256": "a4a7d0e14ef0a60e4121909f253f5a550db80f152e4a0b6c4d204575041fe02c"
+      },
+      "fullRawEqualsMcpContent": true,
+      "archive": {
+        "path": "ci-72e6ec/frontend4/artifact-14212311060.zip",
+        "bytes": 318098,
+        "blob": "c52949825a74ef3655a435a0be4b842c67c2b26a",
+        "sha256": "31cf3af774436a2f8bf0764808b1a025e8ddf696cf7d519874bcd72a83a8fcfb"
+      },
+      "archiveMembers": [
+        {
+          "member": "host-offline-tests-4.json",
+          "bytes": 2329327,
+          "blob": "2cde3926a0511c6b130fab41859c8a810cdac9e5",
+          "sha256": "def156f48f226bd2ff2017a0ef1e12d03d71f22ae02e48b6f9ad0af6dff92ba0",
+          "crc32": "ab14092a",
+          "extractedPath": "ci-72e6ec/frontend4/extracted/host-offline-tests-4.json",
+          "extractedFullBytesEqual": true
+        },
+        {
+          "member": "host-offline-tests-4.log",
+          "bytes": 117947,
+          "blob": "ed15b0703f687f225d986885649ebb1d5489f969",
+          "sha256": "1f674f0a31bb18262b467ba872bab59a0857c4c5c8caeb0120c872cfda090d88",
+          "crc32": "4672b3ea",
+          "extractedPath": "ci-72e6ec/frontend4/extracted/host-offline-tests-4.log",
+          "extractedFullBytesEqual": true
+        }
+      ],
+      "teeJoin": {
+        "method": "Remove only GitHub timestamp prefixes; preserve ANSI/blank lines and complete original tee bytes.",
+        "rawLineStart1Based": 629,
+        "rawLineEnd1BasedInclusive": 1469,
+        "allLines": 841,
+        "wholeByteSequenceExactOnce": true
+      },
+      "originalJson": {
+        "path": "ci-72e6ec/frontend4/extracted/host-offline-tests-4.json",
+        "bytes": 2329327,
+        "blob": "2cde3926a0511c6b130fab41859c8a810cdac9e5",
+        "sha256": "def156f48f226bd2ff2017a0ef1e12d03d71f22ae02e48b6f9ad0af6dff92ba0"
+      },
+      "counts": {
+        "filesTotal": 539,
+        "filesPassed": 537,
+        "filesWhollySkipped": 2,
+        "assertionsTotal": 6621,
+        "assertionsPassed": 6614,
+        "assertionsSkipped": 7,
+        "assertionsFailed": 0
+      },
+      "reportedJsonCounters": {
+        "numTotalTestSuites": 1349,
+        "numPassedTestSuites": 1349,
+        "numFailedTestSuites": 0,
+        "numPendingTestSuites": 0,
+        "numTotalTests": 6621,
+        "numPassedTests": 6614,
+        "numFailedTests": 0,
+        "numPendingTests": 7,
+        "numTodoTests": 0
+      },
+      "snapshot": {
+        "added": 0,
+        "failure": false,
+        "filesAdded": 0,
+        "filesRemoved": 0,
+        "filesRemovedList": [],
+        "filesUnmatched": 0,
+        "filesUpdated": 0,
+        "matched": 0,
+        "total": 0,
+        "unchecked": 0,
+        "uncheckedKeysByFile": [],
+        "unmatched": 0,
+        "updated": 0,
+        "didUpdate": false
+      },
+      "fileSummary": "Test Files  537 passed | 2 skipped (539)",
+      "assertionSummary": "Tests  6614 passed | 7 skipped (6621)",
+      "reportedDurationLine": "Duration  383.29s (transform 37.89s, setup 17.37s, collect 318.15s, tests 227.06s, environment 101.38s, prepare 32.54s)",
+      "reportedDurationSeconds": 383.29,
+      "reportedStartTime": "Start at  09:10:14",
+      "jsonStartTime": 1794820214680,
+      "claimBearingRawMarkers": [
+        {
+          "line": 113,
+          "original": "2026-11-16T09:09:25.3581987Z 72e6ec04444969d343d73834c70bc4e261100fc9"
+        },
+        {
+          "line": 184,
+          "original": "2026-11-16T09:09:26.6671747Z 72e6ec04444969d343d73834c70bc4e261100fc9"
+        },
+        {
+          "line": 263,
+          "original": "2026-11-16T09:09:35.2625109Z node: v24.21.0"
+        },
+        {
+          "line": 302,
+          "original": "2026-11-16T09:09:39.9498254Z node: v26.12.1"
+        },
+        {
+          "line": 360,
+          "original": "2026-11-16T09:09:55.7435821Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 361,
+          "original": "2026-11-16T09:09:55.7440335Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 591,
+          "original": "2026-11-16T09:10:08.7833953Z [better-sqlite3-node] Node ABI rebuild verified"
+        },
+        {
+          "line": 592,
+          "original": "2026-11-16T09:10:09.1902736Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 593,
+          "original": "2026-11-16T09:10:09.1910058Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 604,
+          "original": "2026-11-16T09:10:09.9045358Z \u001b[32mESM\u001b[39m ⚡️ Build success in 394ms"
+        },
+        {
+          "line": 605,
+          "original": "2026-11-16T09:10:10.3316757Z packages/legacy-agent-host               | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 606,
+          "original": "2026-11-16T09:10:10.3325154Z packages/task-change-ledger              | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 608,
+          "original": "2026-11-16T09:10:10.7716626Z .                                        | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 609,
+          "original": "2026-11-16T09:10:10.7724486Z ../task-change-ledger                    | [WARN] Unsupported engine: wanted: {\"node\":\">=24.21.0 <25\"} (current: {\"node\":\"v26.12.1\",\"pnpm\":\"11.22.0\"})"
+        },
+        {
+          "line": 610,
+          "original": "2026-11-16T09:10:10.7940941Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json"
+        },
+        {
+          "line": 611,
+          "original": "2026-11-16T09:10:11.1738072Z $ node node_modules/@typescript/native/bin/tsc -p tsconfig.json"
+        },
+        {
+          "line": 630,
+          "original": "2026-11-16T09:10:14.6806769Z \u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv3.2.6 \u001b[39m\u001b[90m/home/runner/work/agent-teams-ai/agent-teams-ai\u001b[39m"
+        },
+        {
+          "line": 1464,
+          "original": "2026-11-16T09:16:37.9815062Z \u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m537 passed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[33m2 skipped\u001b[39m\u001b[90m (539)\u001b[39m"
+        },
+        {
+          "line": 1465,
+          "original": "2026-11-16T09:16:37.9851579Z \u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m6614 passed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[33m7 skipped\u001b[39m\u001b[90m (6621)\u001b[39m"
+        },
+        {
+          "line": 1467,
+          "original": "2026-11-16T09:16:37.9880640Z \u001b[2m   Duration \u001b[22m 383.29s\u001b[2m (transform 37.89s, setup 17.37s, collect 318.15s, tests 227.06s, environment 101.38s, prepare 32.54s)\u001b[22m"
+        },
+        {
+          "line": 1469,
+          "original": "2026-11-16T09:16:38.0181720Z JSON report written to /home/runner/work/_temp/host-offline-tests-4.json"
+        }
+      ]
+    }
+  ],
+  "terminalSnapshot": {
+    "path": "ci-72e6ec/owned-jobs-0917.json",
+    "bytes": 19581,
+    "blob": "1144213a3a4eda43baba2458820917005589ef02",
+    "sha256": "ff3b8a3ea8dc11a945bf9c81bb003a3507658bad694582f29f9bbf7a8abdd928"
+  },
+  "initialRunSnapshot": {
+    "path": "external-primary-0833/initial-api-and-fetch.json",
+    "bytes": 1230559,
+    "blob": "c06fa9afb4bce716cc66c872aca533c10fba4fec",
+    "sha256": "a79ff970d4b9bf71483168e870519182f44c1be53f16595519659b2607c52b5b"
+  },
+  "completeByteSourceProof": {
+    "path": "ci-72e6ec/frontend-all-shards/byte-source-proof.json",
+    "bytes": 1637819,
+    "blob": "2d27d954b990f5a4fae52e87b7a4e24d36ef018c",
+    "sha256": "35b08d164689126742ec5e34cd7f22db60126307d2c93164e2c782fe1ec2f2cd"
+  },
+  "archiveCount": 4,
+  "archiveMemberCount": 8,
+  "allPhysicalPathsUnique": true,
+  "allAssertionArraysRecounted": true,
+  "sourceDiscovery": {
+    "configIncludes": [
+      "test/**/*.test.ts",
+      "test/**/*.test.tsx",
+      "src/**/*.test.ts",
+      "src/**/*.test.tsx"
+    ],
+    "cliExclusions": [
+      "**/*.live.test.*",
+      "**/*.live-e2e.test.*",
+      "**/*.native.test.*"
+    ],
+    "configuredTrackedTestPathCount": 2195,
+    "excludedTrackedPathCount": 33,
+    "actualPhysicalPathCount": 2162,
+    "exactSetEquality": true,
+    "allActualShardPathSetsDisjoint": true,
+    "excludedSourceLeaves": [
+      {
+        "path": "test/features/codex-account/main/createCodexAccountFeature.live.test.ts",
+        "mode": "100644",
+        "bytes": 1817,
+        "blob": "1841b5d1fa7564fafb6b005bfc744136e95b9c11",
+        "sha256": "e20c527a618ee673bd0fa549fe91602ef2bf55c79e1b1103ca6c27f8d0dd0c60"
+      },
+      {
+        "path": "test/features/runtime-provider-management/capturedClaudeModelProbe.native.test.ts",
+        "mode": "100644",
+        "bytes": 28795,
+        "blob": "4891b5303e6a4db5baa73d179d10ef878ed0afa8",
+        "sha256": "5b17385d5c99f9f9388e1cb3974bfcbacee05f8dfa450b2e8cfe6deb1b7c46ad"
+      },
+      {
+        "path": "test/features/runtime-provider-management/capturedClaudeStatus.native.test.ts",
+        "mode": "100644",
+        "bytes": 10127,
+        "blob": "825cbed9965c7c1f9584c714819f97a1396c9ca8",
+        "sha256": "b033c7e84b639932fc080724e8815f9b8fc92f0d249f1929885dd1bfc82c57c3"
+      },
+      {
+        "path": "test/features/team-runtime-recovery/main/TeamRuntimeRecoveryFeature.live-e2e.test.ts",
+        "mode": "100644",
+        "bytes": 15217,
+        "blob": "099b8c066ddebf3841832d98d7e8178e7a20609c",
+        "sha256": "6c0c2e2ac343aefbcf8504bb6e81f330ae9aab0d3ae58db0e40193d8b16b8142"
+      },
+      {
+        "path": "test/main/services/team/AgentDeletion258.live-e2e.test.ts",
+        "mode": "100644",
+        "bytes": 21357,
+        "blob": "048f6ed9f1347637912c48ae45bd35414bd75f44",
+        "sha256": "2b2dd47289a90f41bdb19948bf8d67a55fc24d4f1501b61a5de55c0e38cbc374"
+      },
+      {
+        "path": "test/main/services/team/AnthropicLaunchSelection.live.test.ts",
+        "mode": "100644",
+        "bytes": 23298,
+        "blob": "e0fcb4dae596ddf51eac4a959322aa53001a44b2",
+        "sha256": "880292ae366140496c75ac43b74b323ba567feffaac8d90ce269a00375cfdfb8"
+      },
+      {
+        "path": "test/main/services/team/AnthropicRuntimeMemory.live.test.ts",
+        "mode": "100644",
+        "bytes": 9344,
+        "blob": "09f97f437d598bc155bd0de4202c29953c862811",
+        "sha256": "8fd549047f9e1ed4005c2f7f7ed09923750da152e9861c32d51ad79c6d0c008c"
+      },
+      {
+        "path": "test/main/services/team/BoardTaskLogStream.live.test.ts",
+        "mode": "100644",
+        "bytes": 2703,
+        "blob": "0d149631a70cfa6d8031642fe46aa369dbb2d727",
+        "sha256": "9ce28e8af61b9ccc26e4c6a4e87c8ee90497eef94544ac526c21358810f62bc1"
+      },
+      {
+        "path": "test/main/services/team/MemberWorkSyncClaudeStopHook.live.test.ts",
+        "mode": "100644",
+        "bytes": 28385,
+        "blob": "8274b04a5599cdeb7dde905fc906fcdfe2694064",
+        "sha256": "b1e789c6cbbc6816014c61b6a040a68f5931e718f95e09a5ffda3dfeebfbf80b"
+      },
+      {
+        "path": "test/main/services/team/MemberWorkSyncCodex.live.test.ts",
+        "mode": "100644",
+        "bytes": 64451,
+        "blob": "817bb647f7305d174e595ea7c85b5ba31ae6867f",
+        "sha256": "19c72c37c640dfa84a4d67227bfcf379c84aad9fbe169f56fbc2279d2b9b3731"
+      },
+      {
+        "path": "test/main/services/team/MemberWorkSyncOpenCode.live.test.ts",
+        "mode": "100644",
+        "bytes": 19201,
+        "blob": "75804a38e8a242ef3c9bb40f381e95c8a07dbfc3",
+        "sha256": "1e5fa7198fae67622f2b5b1ef62fb4422b3a87f26bff4f2928e5a016867a28e3"
+      },
+      {
+        "path": "test/main/services/team/MemberWorkSyncRecovery.live.test.ts",
+        "mode": "100644",
+        "bytes": 71500,
+        "blob": "8e626837615ba7a097e44bf8a964fdea236ae0d3",
+        "sha256": "d8327f9fa7dddf00078ef96c7b8259d49c7565060c1d9376eedd3c28cbe9ed9d"
+      },
+      {
+        "path": "test/main/services/team/MemberWorkSyncRecoveryClaude.live.test.ts",
+        "mode": "100644",
+        "bytes": 42025,
+        "blob": "da6c34a4b82138901bef7d51216ce68bca55fce5",
+        "sha256": "f429f100722cb60ece6e32529a8ecea4280c847c4f502180bbd8e2d9d2d942b6"
+      },
+      {
+        "path": "test/main/services/team/MemberWorkSyncRecoveryCodexTeammate.live.test.ts",
+        "mode": "100644",
+        "bytes": 76240,
+        "blob": "744d43f7988b2a75f87764874a6b3ed20910ea49",
+        "sha256": "f80683ea5b2866481022c1a222a9f2bdfe82865dfe05e934db8aa36c4c47f04b"
+      },
+      {
+        "path": "test/main/services/team/MemberWorkSyncRecoveryOpenCode.live.test.ts",
+        "mode": "100644",
+        "bytes": 28790,
+        "blob": "b8fd4c58f731db35b0488a2fc1321b13456043de",
+        "sha256": "1160c25f14e760824d0baf9d72a04a75d4c9cb2ad897c78e33ca29352747578e"
+      },
+      {
+        "path": "test/main/services/team/MemberWorkSyncRecoveryOpenCodeLifecycle.live.test.ts",
+        "mode": "100644",
+        "bytes": 22745,
+        "blob": "d5ac93ba4f64423a134ec12207c1d7247d3d1ea2",
+        "sha256": "f434ac9263eb894bb88b4828d8165cb6a9ac84df333f5b36b89b37cbba54511c"
+      },
+      {
+        "path": "test/main/services/team/MixedProviderTeamLaunch.live.test.ts",
+        "mode": "100644",
+        "bytes": 25269,
+        "blob": "4ac5f01fb02b7eafa0f12b5b7443669ab5a65b55",
+        "sha256": "ec9ed1cd11e43a080e2a195fcdd97995d5cb11e3dd2d196257ee46e754608d5b"
+      },
+      {
+        "path": "test/main/services/team/OpenCodeAcceptFastDelivery.live-e2e.test.ts",
+        "mode": "100644",
+        "bytes": 15745,
+        "blob": "2d234a2809c043f14fd6efd24aa2c1dd025f64f4",
+        "sha256": "4e96b40819ed621ec510c68660b5c5538401faa01d0e5cd7f4dbbcd86d5dcd25"
+      },
+      {
+        "path": "test/main/services/team/OpenCodeDefaultModelResolution.live-e2e.test.ts",
+        "mode": "100644",
+        "bytes": 6013,
+        "blob": "b5ec4a49aeb8411d4701695fe9e694dfb1bf57ea",
+        "sha256": "1bfae7473213614bbfb64632342b6c396a43b7ddb0bbf9489cf3b5118a110258"
+      },
+      {
+        "path": "test/main/services/team/OpenCodeFullTeamCollaboration.live.test.ts",
+        "mode": "100644",
+        "bytes": 31120,
+        "blob": "e2dd21f54cd37b4e3f16e7b83e0e159be034fe9c",
+        "sha256": "06b8e6ea4e9e520f21ae25cff35ef8a9c626fad7d8c004b5ae5e2681cc89a2d1"
+      },
+      {
+        "path": "test/main/services/team/OpenCodeLocalProviderAppLaunch.live.test.ts",
+        "mode": "100644",
+        "bytes": 23564,
+        "blob": "6be57077db6bc045c4fd74adde34d1fa684e3b8e",
+        "sha256": "81c160028f4bf01f284434b3da3f9aa605e0e28e69c81434882522fd8fe5936b"
+      },
+      {
+        "path": "test/main/services/team/OpenCodeMixedRecovery.live.test.ts",
+        "mode": "100644",
+        "bytes": 18026,
+        "blob": "16355cd9b5aba7734ce79ea10a82338d11ab0b67",
+        "sha256": "869296b41802ddaa71bb9c5c1d97b000d1ebfb6fb92ed3497173926966c80266"
+      },
+      {
+        "path": "test/main/services/team/OpenCodeMixedTeamCollaboration.live.test.ts",
+        "mode": "100644",
+        "bytes": 33203,
+        "blob": "7550a29c0bb8f578f7f839f41513acfba23c91c2",
+        "sha256": "79a837f8b15d259f16434b2071aebbb6b595aee31594c16dfb02defed892df71"
+      },
+      {
+        "path": "test/main/services/team/OpenCodePaidPlanMixedTeam.live-e2e.test.ts",
+        "mode": "100644",
+        "bytes": 9118,
+        "blob": "b173aedbd9c0492ee42a9f28f2c6052a179da146",
+        "sha256": "155b903936e21c43eca7cc60b74553701e25cde6ff3154d664170fd7dc1f4072"
+      },
+      {
+        "path": "test/main/services/team/OpenCodeSemanticMessaging.live.test.ts",
+        "mode": "100644",
+        "bytes": 20827,
+        "blob": "8beb974966b9243e754d942bf4fe44739893bbbf",
+        "sha256": "95c8a31139453bdf2528f48bd1e9c42014a5c44205d2bb3bc1c07feaa9d4cb36"
+      },
+      {
+        "path": "test/main/services/team/OpenCodeSemanticModelGauntlet.live.test.ts",
+        "mode": "100644",
+        "bytes": 74249,
+        "blob": "8eee3b1fb8f67a0af5e5ce14404e576604c6dc03",
+        "sha256": "e3fb4f1d4e0dc55903e298ad1d36e1a9ee5cd58110dd4f157f9f4f2a6f56cc6f"
+      },
+      {
+        "path": "test/main/services/team/OpenCodeSemanticModelMatrix.live.test.ts",
+        "mode": "100644",
+        "bytes": 19292,
+        "blob": "e9985b10ef27f7be56d6b683c7abe295a48bafd2",
+        "sha256": "1a32a12622929a08f9857bbdb052553f56dff567da8b46e4e9e67a3cb2f5f626"
+      },
+      {
+        "path": "test/main/services/team/OpenCodeTeamProvisioning.live.test.ts",
+        "mode": "100644",
+        "bytes": 22889,
+        "blob": "b7304d8491a9bd1af32c9b49b3ebd9bbb6062e62",
+        "sha256": "53ffe96955cf8a657b9c971867629674ff8afec977aa8eea4159420c50761ce4"
+      },
+      {
+        "path": "test/main/services/team/OpenCodeVisualization.live.test.ts",
+        "mode": "100644",
+        "bytes": 15651,
+        "blob": "8a76d13e5177dffd4848daf082f569b4369051ed",
+        "sha256": "8f35a0e93457df2c0deab00f17ae5dc841dfa2a24725a2fd6912a106a74ba511"
+      },
+      {
+        "path": "test/main/services/team/ProviderLaunchStress.live-e2e.test.ts",
+        "mode": "100644",
+        "bytes": 37941,
+        "blob": "8b574707498b079c9e60a94be3e198a270ccf7ef",
+        "sha256": "21df7a78444c23c0af61e7061efed84b46dbb74cda6d53c915a5d242e76753c3"
+      },
+      {
+        "path": "test/main/services/team/TeamMemberRuntimeAdvisoryService.live.test.ts",
+        "mode": "100644",
+        "bytes": 2806,
+        "blob": "bed4efe6ac261de2a435a3a69c219975a846cb88",
+        "sha256": "7228f84cc290cf1ee8bd37feba7785523a72b6b3165ed1be5d152a1880945d2d"
+      },
+      {
+        "path": "test/main/utils/AgentCliLaunch.live-e2e.test.ts",
+        "mode": "100644",
+        "bytes": 5700,
+        "blob": "476c28aebfec274d40df025259377239d73383e0",
+        "sha256": "74ad8490fbc56dcab1c0988dc1697db7b0f730251ea230a6b5e195ee574254df"
+      },
+      {
+        "path": "test/renderer/components/team/taskLogs/TaskLogStreamSection.live.test.ts",
+        "mode": "100644",
+        "bytes": 3887,
+        "blob": "07cc3323db309fbad21b1f47aaecd50e99ccb166",
+        "sha256": "0353e6b269b19d3713bd77917ca3ef353af94d93645059db68bf0dd87d418cdf"
+      }
+    ]
+  },
+  "command": {
+    "literal": "pnpm exec vitest run --maxWorkers=2 --shard=\"$HOST_TEST_SHARD/4\" \\\n            --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' \\\n            --reporter=default --reporter=json --outputFile \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json\" \\\n            2>&1 | tee \"$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log\"",
+    "shell": "bash --noprofile --norc -e -o pipefail",
+    "workerLimitPerShard": 2,
+    "originalJobTimeoutMinutes": 45,
+    "defaultTestTimeoutMs": 15000,
+    "environment": "happy-dom",
+    "setupFile": "test/setup.ts",
+    "packageManager": "pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621",
+    "sourceInputs": [
+      {
+        "path": ".github/workflows/host-emulated-acceptance.yml",
+        "mode": "100644",
+        "bytes": 101741,
+        "blob": "dad3e0ac73e98ba2a2dd5e7c3a790ef70749ecf6",
+        "sha256": "9cc71794af2452495c0e9674c8da53d17f71ca248c2ace516ce12b1da3b1114b"
+      },
+      {
+        "path": ".node-version",
+        "mode": "100644",
+        "bytes": 8,
+        "blob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+        "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5"
+      },
+      {
+        "path": "vitest.config.ts",
+        "mode": "100644",
+        "bytes": 1187,
+        "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+        "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc"
+      },
+      {
+        "path": "test/setup.ts",
+        "mode": "100644",
+        "bytes": 5297,
+        "blob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c",
+        "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b"
+      },
+      {
+        "path": "package.json",
+        "mode": "100644",
+        "bytes": 26839,
+        "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+        "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "mode": "100644",
+        "bytes": 956788,
+        "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+        "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c"
+      },
+      {
+        "path": "pnpm-workspace.yaml",
+        "mode": "100644",
+        "bytes": 6946,
+        "blob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+        "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea"
+      },
+      {
+        "path": "scripts/ci/install-dependencies-with-retry.mjs",
+        "mode": "100644",
+        "bytes": 5259,
+        "blob": "cbf2463eb47d22c3d87d9eec001edad26dd68ff0",
+        "sha256": "c8dc0b63fc490fd5a9a1b4abf0631b66c30e1ccda2199094c86e49a6e250d01e"
+      },
+      {
+        "path": "scripts/ci/rebuild-better-sqlite3-node.cjs",
+        "mode": "100644",
+        "bytes": 1448,
+        "blob": "df40c15cd67fb1c01f4150696d39ee550f0520f5",
+        "sha256": "60bcc353dc6d1b09af05faa10f83bc013dfb0820e2ea8e1147d3caf413f89539"
+      },
+      {
+        "path": "mcp-server/package.json",
+        "mode": "100644",
+        "bytes": 1279,
+        "blob": "febb21f74d77d21e157039f76380cfd5795d359c",
+        "sha256": "b6b245a0062d111cee110ec7222ce00c3730e03a70cf99a29b92bfda245efa5f"
+      },
+      {
+        "path": "mcp-server/tsup.config.ts",
+        "mode": "100644",
+        "bytes": 1491,
+        "blob": "c7de6f562687ef92f3fcdaf12eb8493864d14f37",
+        "sha256": "691c8486f95f360f0ac8985ad42ba17e81100cac6989317bfb75981552833321"
+      },
+      {
+        "path": "mcp-server/tsconfig.json",
+        "mode": "100644",
+        "bytes": 514,
+        "blob": "2bd3eb89a37f0eb93bf33c6eb0b4fe175699f2e6",
+        "sha256": "5b8733555d297f0d9d9cd355e3b441ce71ca07ec58d1fd40ccc1d3c457c05d62"
+      },
+      {
+        "path": "packages/legacy-agent-host/package.json",
+        "mode": "100644",
+        "bytes": 12355,
+        "blob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+        "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b"
+      },
+      {
+        "path": "packages/legacy-agent-host/tsconfig.json",
+        "mode": "100644",
+        "bytes": 456,
+        "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+        "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab"
+      },
+      {
+        "path": "packages/task-change-ledger/package.json",
+        "mode": "100644",
+        "bytes": 2714,
+        "blob": "0fac5843889e1b28d53712f353bce1b0bae855a4",
+        "sha256": "a0db21117b905b414e825862d8bc93cfe9280975c8b91e1afa6cca2e1570a132"
+      },
+      {
+        "path": "packages/task-change-ledger/tsconfig.json",
+        "mode": "100644",
+        "bytes": 378,
+        "blob": "ff7683dc99c69dbf8c884ba138382468c9c86314",
+        "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+        "mode": "100644",
+        "bytes": 74351,
+        "blob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+        "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575"
+      },
+      {
+        "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+        "mode": "100644",
+        "bytes": 6481,
+        "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+        "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+      }
+    ]
+  },
+  "all38SkippedAssertions": [
+    {
+      "path": "test/scripts/opencodeNativeTestNode.test.ts",
+      "shard": 1,
+      "jsonTestResultIndex": 8,
+      "assertionIndex": 5,
+      "fullName": "TEST Node dependency staging without execution accepts a real inherited-ACL-style Windows metadata transition on the owned fake copy",
+      "title": "accepts a real inherited-ACL-style Windows metadata transition on the owned fake copy",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/ipc/review.test.ts",
+      "shard": 1,
+      "jsonTestResultIndex": 75,
+      "assertionIndex": 94,
+      "fullName": "review IPC path confinement authorizes a saved case-only rename path through its published transaction target",
+      "title": "authorizes a saved case-only rename path through its published transaction target",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "shard": 1,
+      "jsonTestResultIndex": 247,
+      "assertionIndex": 2,
+      "fullName": "actual app client / packaged Windows runtime (Unavailable: actual Windows execution is required) backfills empty, attributed history, and duplicate replay: ascii",
+      "title": "backfills empty, attributed history, and duplicate replay: ascii",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "shard": 1,
+      "jsonTestResultIndex": 247,
+      "assertionIndex": 3,
+      "fullName": "actual app client / packaged Windows runtime (Unavailable: actual Windows execution is required) backfills empty, attributed history, and duplicate replay: spaces",
+      "title": "backfills empty, attributed history, and duplicate replay: spaces",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "shard": 1,
+      "jsonTestResultIndex": 247,
+      "assertionIndex": 4,
+      "fullName": "actual app client / packaged Windows runtime (Unavailable: actual Windows execution is required) backfills empty, attributed history, and duplicate replay: unicode",
+      "title": "backfills empty, attributed history, and duplicate replay: unicode",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeTaskLogStreamSource.fixture-e2e.test.ts",
+      "shard": 1,
+      "jsonTestResultIndex": 252,
+      "assertionIndex": 1,
+      "fullName": "OpenCodeTaskLogStreamSource real OpenCode fixture e2e reads native persistence through the actual SDK read-only reader and projector without preparing a profile",
+      "title": "reads native persistence through the actual SDK read-only reader and projector without preparing a profile",
+      "status": "skipped"
+    },
+    {
+      "path": "test/scripts/opencodeNativeRealTaskPrompt.test.ts",
+      "shard": 2,
+      "jsonTestResultIndex": 8,
+      "assertionIndex": 12,
+      "fullName": "cross-shell Windows verifier invocation executes the unchanged verifier in PowerShell and cmd",
+      "title": "executes the unchanged verifier in PowerShell and cmd",
+      "status": "skipped"
+    },
+    {
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "shard": 2,
+      "jsonTestResultIndex": 16,
+      "assertionIndex": 2,
+      "fullName": "applyElectronDevPathOverrides uses absolute APPDATA when Electron cannot return appData before ready on Windows",
+      "title": "uses absolute APPDATA when Electron cannot return appData before ready on Windows",
+      "status": "skipped"
+    },
+    {
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "shard": 2,
+      "jsonTestResultIndex": 16,
+      "assertionIndex": 3,
+      "fullName": "applyElectronDevPathOverrides uses regular APPDATA when userData is unavailable before Windows Electron ready",
+      "title": "uses regular APPDATA when userData is unavailable before Windows Electron ready",
+      "status": "skipped"
+    },
+    {
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "shard": 2,
+      "jsonTestResultIndex": 16,
+      "assertionIndex": 10,
+      "fullName": "applyElectronDevPathOverrides rejects a case-only alias of a nonexistent legacy profile",
+      "title": "rejects a case-only alias of a nonexistent legacy profile",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/ReviewFileTransaction.safe-e2e.test.ts",
+      "shard": 2,
+      "jsonTestResultIndex": 27,
+      "assertionIndex": 1,
+      "fullName": "review file transaction safe E2E classifies a published equal-content case-only Undo using its owned inode",
+      "title": "classifies a published equal-content case-only Undo using its owned inode",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "shard": 2,
+      "jsonTestResultIndex": 30,
+      "assertionIndex": 0,
+      "fullName": "Windows CLI shell fallback round trip preserves adversarial argv through execCli for a spaced non-ASCII executable path",
+      "title": "preserves adversarial argv through execCli for a spaced non-ASCII executable path",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "shard": 2,
+      "jsonTestResultIndex": 30,
+      "assertionIndex": 1,
+      "fullName": "Windows CLI shell fallback round trip preserves adversarial argv through spawnCli for a spaced non-ASCII executable path",
+      "title": "preserves adversarial argv through spawnCli for a spaced non-ASCII executable path",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "shard": 2,
+      "jsonTestResultIndex": 30,
+      "assertionIndex": 2,
+      "fullName": "Windows CLI shell fallback round trip preserves adversarial argv through a batch launcher that forwards %*",
+      "title": "preserves adversarial argv through a batch launcher that forwards %*",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "shard": 2,
+      "jsonTestResultIndex": 30,
+      "assertionIndex": 3,
+      "fullName": "Windows CLI shell fallback round trip preserves safe argv through batch parameter modifiers",
+      "title": "preserves safe argv through batch parameter modifiers",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "shard": 2,
+      "jsonTestResultIndex": 30,
+      "assertionIndex": 4,
+      "fullName": "Windows CLI shell fallback round trip rejects shell syntax before a batch launcher can reparse positional arguments",
+      "title": "rejects shell syntax before a batch launcher can reparse positional arguments",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "shard": 2,
+      "jsonTestResultIndex": 39,
+      "assertionIndex": 5,
+      "fullName": "shellEnv actual installed shells zsh reads real login and interactive startup exports with exact edge values",
+      "title": "reads real login and interactive startup exports with exact edge values",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "shard": 2,
+      "jsonTestResultIndex": 39,
+      "assertionIndex": 6,
+      "fullName": "shellEnv actual installed shells zsh ignores startup banners and accepts a completed dump before a failing real logout",
+      "title": "ignores startup banners and accepts a completed dump before a failing real logout",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "shard": 2,
+      "jsonTestResultIndex": 39,
+      "assertionIndex": 7,
+      "fullName": "shellEnv actual installed shells zsh falls back from a failing real login profile to the real interactive rc",
+      "title": "falls back from a failing real login profile to the real interactive rc",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "shard": 2,
+      "jsonTestResultIndex": 39,
+      "assertionIndex": 8,
+      "fullName": "shellEnv actual installed shells zsh keeps its framing independent of an rc-defined printf function",
+      "title": "keeps its framing independent of an rc-defined printf function",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "shard": 2,
+      "jsonTestResultIndex": 39,
+      "assertionIndex": 9,
+      "fullName": "shellEnv actual installed shells zsh keeps its framing independent of an rc-defined printf alias",
+      "title": "keeps its framing independent of an rc-defined printf alias",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts",
+      "shard": 2,
+      "jsonTestResultIndex": 145,
+      "assertionIndex": 1,
+      "fullName": "OpenCode nvm-windows runtime resolution safe e2e selects the native OpenCode executable behind an nvm cmd shim",
+      "title": "selects the native OpenCode executable behind an nvm cmd shim",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+      "shard": 2,
+      "jsonTestResultIndex": 208,
+      "assertionIndex": 0,
+      "fullName": "Team runtime memory safe e2e reports RSS for a bootstrap-confirmed Anthropic teammate discovered from the real process table",
+      "title": "reports RSS for a bootstrap-confirmed Anthropic teammate discovered from the real process table",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+      "shard": 2,
+      "jsonTestResultIndex": 208,
+      "assertionIndex": 1,
+      "fullName": "Team runtime memory safe e2e reports RSS for a real Anthropic teammate CLI process",
+      "title": "reports RSS for a real Anthropic teammate CLI process",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/utils/windowsProcessProbe.integration.test.ts",
+      "shard": 3,
+      "jsonTestResultIndex": 82,
+      "assertionIndex": 0,
+      "fullName": "real Windows process identity readers observes this Node process through both table transports and its birth reader",
+      "title": "observes this Node process through both table transports and its birth reader",
+      "status": "skipped"
+    },
+    {
+      "path": "test/features/member-work-sync/main/JsonMemberWorkSyncReportJournal.test.ts",
+      "shard": 3,
+      "jsonTestResultIndex": 171,
+      "assertionIndex": 17,
+      "fullName": "strict JSON report journal returns commit_unknown if a Windows retry cannot sync the existing journal file",
+      "title": "returns commit_unknown if a Windows retry cannot sync the existing journal file",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/runtime/AnthropicAutoShellEnv.safe-e2e.test.ts",
+      "shard": 3,
+      "jsonTestResultIndex": 225,
+      "assertionIndex": 2,
+      "fullName": "Anthropic Auto GUI shell safe e2e uses the native runtime to authenticate a cold shell configuration and infer with both models",
+      "title": "uses the native runtime to authenticate a cold shell configuration and infer with both models",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/OpenCodeReviewPickup.live.tmp.test.ts",
+      "shard": 3,
+      "jsonTestResultIndex": 266,
+      "assertionIndex": 0,
+      "fullName": "OpenCode review pickup live e2e delivers review pickup when the current unread review request is still in the foreground inbox",
+      "title": "delivers review pickup when the current unread review request is still in the foreground inbox",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/services/team/ReviewApplierService.test.ts",
+      "shard": 3,
+      "jsonTestResultIndex": 273,
+      "assertionIndex": 48,
+      "fullName": "ReviewApplierService ledger canonical-equivalent rename keeps the sole inode on a real temporary filesystem",
+      "title": "ledger canonical-equivalent rename keeps the sole inode on a real temporary filesystem",
+      "status": "skipped"
+    },
+    {
+      "path": "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.ollama-live.test.ts",
+      "shard": 3,
+      "jsonTestResultIndex": 432,
+      "assertionIndex": 0,
+      "fullName": "OpenCodeLocalProviderConnector live Ollama probes, configures into a sandbox, and keeps the catalog model after an empty overlay",
+      "title": "probes, configures into a sandbox, and keeps the catalog model after an empty overlay",
+      "status": "skipped"
+    },
+    {
+      "path": "src/main/services/infrastructure/codexAppServer/__tests__/CodexBinaryResolver.real.test.ts",
+      "shard": 3,
+      "jsonTestResultIndex": 446,
+      "assertionIndex": 3,
+      "fullName": "CodexBinaryResolver live local Codex smoke resolves and versions the current local Codex binary",
+      "title": "resolves and versions the current local Codex binary",
+      "status": "skipped"
+    },
+    {
+      "path": "test/scripts/fixtures/opencodeProofBoundary.test.ts",
+      "shard": 4,
+      "jsonTestResultIndex": 155,
+      "assertionIndex": 0,
+      "fullName": "preserves wrapper ownership across real Vitest setup",
+      "title": "preserves wrapper ownership across real Vitest setup",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "shard": 4,
+      "jsonTestResultIndex": 170,
+      "assertionIndex": 0,
+      "fullName": "tmux installer macOS host e2e resolves the current host as native macOS",
+      "title": "resolves the current host as native macOS",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "shard": 4,
+      "jsonTestResultIndex": 170,
+      "assertionIndex": 1,
+      "fullName": "tmux installer macOS host e2e chooses Homebrew as the macOS install strategy on this machine",
+      "title": "chooses Homebrew as the macOS install strategy on this machine",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "shard": 4,
+      "jsonTestResultIndex": 170,
+      "assertionIndex": 2,
+      "fullName": "tmux installer macOS host e2e finds the real tmux binary on this macOS host",
+      "title": "finds the real tmux binary on this macOS host",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "shard": 4,
+      "jsonTestResultIndex": 170,
+      "assertionIndex": 3,
+      "fullName": "tmux installer macOS host e2e reports tmux as runtime-ready for the live macOS host path",
+      "title": "reports tmux as runtime-ready for the live macOS host path",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "shard": 4,
+      "jsonTestResultIndex": 170,
+      "assertionIndex": 4,
+      "fullName": "tmux installer macOS host e2e keeps the current platform on the tmux runtime path",
+      "title": "keeps the current platform on the tmux runtime path",
+      "status": "skipped"
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "shard": 4,
+      "jsonTestResultIndex": 170,
+      "assertionIndex": 5,
+      "fullName": "tmux installer macOS host e2e runs a real isolated tmux session on macOS and executes a shell command in it",
+      "title": "runs a real isolated tmux session on macOS and executes a shell command in it",
+      "status": "skipped"
+    }
+  ],
+  "all20SkipGuardSources": [
+    {
+      "path": "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.ollama-live.test.ts",
+      "mode": "100644",
+      "bytes": 4045,
+      "blob": "39141ae707e6d2b7032563ca466ac29eb79bc9e1",
+      "sha256": "4f02a0e5cc2a5ad66d75aa3ada27b166597156d096d167dddcd26ddaf650a43c",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 1,
+      "sourceGuard": "Original LIVE_OLLAMA=1 opt-in; one skipped live case.",
+      "guardSnippets": [
+        {
+          "line": 13,
+          "text": "const LIVE_ENABLED = process.env.LIVE_OLLAMA === '1';"
+        },
+        {
+          "line": 15,
+          "text": "const liveDescribe = LIVE_ENABLED ? describe : describe.skip;"
+        }
+      ]
+    },
+    {
+      "path": "src/main/services/infrastructure/codexAppServer/__tests__/CodexBinaryResolver.real.test.ts",
+      "mode": "100644",
+      "bytes": 5081,
+      "blob": "e1e93fd32288ca463fda5513688e364e180d1b7f",
+      "sha256": "45c8961b91b3c622f9771899c3aea71f4843b202deae738ab14afb0fdbc24ed8",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 1,
+      "sourceGuard": "Original LIVE_CODEX_BINARY_RESOLVER_SMOKE=1 opt-in; one skipped real-binary case.",
+      "guardSnippets": [
+        {
+          "line": 23,
+          "text": "const describePosix = process.platform === 'win32' ? describe.skip : describe;"
+        },
+        {
+          "line": 24,
+          "text": "const LIVE_CODEX_BINARY_SMOKE = process.env.LIVE_CODEX_BINARY_RESOLVER_SMOKE === '1';"
+        },
+        {
+          "line": 25,
+          "text": "const describeLive = LIVE_CODEX_BINARY_SMOKE ? describe : describe.skip;"
+        }
+      ]
+    },
+    {
+      "path": "src/main/utils/electronDevPathOverrides.test.ts",
+      "mode": "100644",
+      "bytes": 20989,
+      "blob": "b341bea23d1292cc1b8249cad50a313450865f3b",
+      "sha256": "146cda04ed1d3ec6a66d3505926531bfeb37e456a7c61fc69e9cfedbbb1f35d6",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 3,
+      "sourceGuard": "Two Windows-only APPDATA cases and one Darwin-or-Windows case-only nonexistent alias case.",
+      "guardSnippets": [
+        {
+          "line": 108,
+          "text": "  it.skipIf(process.platform !== 'win32')("
+        },
+        {
+          "line": 157,
+          "text": "  it.skipIf(process.platform !== 'win32')("
+        },
+        {
+          "line": 319,
+          "text": "  it.skipIf(process.platform !== 'darwin' && process.platform !== 'win32')("
+        },
+        {
+          "line": 360,
+          "text": "  it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)("
+        }
+      ]
+    },
+    {
+      "path": "test/features/member-work-sync/main/JsonMemberWorkSyncReportJournal.test.ts",
+      "mode": "100644",
+      "bytes": 18671,
+      "blob": "7c4341d26d8e3328ea8807dfd845a608eaf2586a",
+      "sha256": "b31daa14c5d5dc9ee910581f9cb44bc0f1ca99bffdbe0cb1f5b8a113bd9629e1",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 1,
+      "sourceGuard": "Original Windows-only retry/fsync case.",
+      "guardSnippets": [
+        {
+          "line": 315,
+          "text": "  it.skipIf(process.platform !== 'win32')("
+        },
+        {
+          "line": 324,
+          "text": "  it.skipIf(process.platform === 'win32')("
+        }
+      ]
+    },
+    {
+      "path": "test/main/features/tmux-installer/TmuxInstallerMacOsHostE2E.test.ts",
+      "mode": "100644",
+      "bytes": 5057,
+      "blob": "3568c399d93a9a7231899845f373f33ee91c1577",
+      "sha256": "b9c6174fc5135af0162436a8d4ac2190e87826e33000d7a2cb80942914c0b01d",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 6,
+      "sourceGuard": "Original outer Darwin-only suite plus inner Homebrew/tmux availability guards; all six skipped.",
+      "guardSnippets": [
+        {
+          "line": 18,
+          "text": "const isDarwin = process.platform === 'darwin';"
+        },
+        {
+          "line": 39,
+          "text": "describe.runIf(isDarwin)('tmux installer macOS host e2e', () => {"
+        },
+        {
+          "line": 55,
+          "text": "  it.skipIf(!brewPath)('chooses Homebrew as the macOS install strategy on this machine', async () => {"
+        },
+        {
+          "line": 65,
+          "text": "  it.skipIf(!tmuxPath)('finds the real tmux binary on this macOS host', async () => {"
+        },
+        {
+          "line": 73,
+          "text": "  it.skipIf(!tmuxPath)('reports tmux as runtime-ready for the live macOS host path', async () => {"
+        },
+        {
+          "line": 86,
+          "text": "  it.skipIf(!tmuxPath)('keeps the current platform on the tmux runtime path', async () => {"
+        },
+        {
+          "line": 90,
+          "text": "  it.skipIf(!tmuxPath)('runs a real isolated tmux session on macOS and executes a shell command in it', async () => {"
+        }
+      ]
+    },
+    {
+      "path": "test/main/ipc/review.test.ts",
+      "mode": "100644",
+      "bytes": 220074,
+      "blob": "3d8a88c573fbb5e773379d8cc593de98eb0d32f6",
+      "sha256": "bca6e5bc6d30e0747cac57d9e15d8efc9c92c13228b022f00d33ad01c8cf9c28",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 1,
+      "sourceGuard": "Darwin-only saved case-only rename: it.runIf(process.platform === darwin).",
+      "guardSnippets": [
+        {
+          "line": 6374,
+          "text": "  it.skipIf(process.platform !== 'linux')("
+        },
+        {
+          "line": 6755,
+          "text": "  it.runIf(process.platform === 'darwin')("
+        }
+      ]
+    },
+    {
+      "path": "test/main/services/runtime/AnthropicAutoShellEnv.safe-e2e.test.ts",
+      "mode": "100644",
+      "bytes": 22427,
+      "blob": "b848b741a71d70676af7cd65cd745244e0dde1c8",
+      "sha256": "333a56feffedaa1b86a9c2deb7e5fc8572684319d7e745a191c39da03a9eb4a7",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 1,
+      "sourceGuard": "Original native-runtime-path opt-in; one skipped real-runtime case.",
+      "guardSnippets": [
+        {
+          "line": 55,
+          "text": "const nativeRuntimePath = process.env.AGENT_TEAMS_TEST_ANTHROPIC_RUNTIME_PATH?.trim();"
+        },
+        {
+          "line": 125,
+          "text": "describe.skipIf(process.platform === 'win32')('Anthropic Auto GUI shell safe e2e', () => {"
+        },
+        {
+          "line": 294,
+          "text": "  it.skipIf(!nativeRuntimePath)("
+        }
+      ]
+    },
+    {
+      "path": "test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts",
+      "mode": "100644",
+      "bytes": 10516,
+      "blob": "6a124efaccfb0b876640ac0076d343acd1946639",
+      "sha256": "f421cbfacc5c74f43aacabf1a0b9afd340fcda8235a86d1b8a02d00a42b39553",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 1,
+      "sourceGuard": "Original describeWindows platform guard; native OpenCode behind nvm Windows shim.",
+      "guardSnippets": [
+        {
+          "line": 32,
+          "text": "const describePosix = process.platform === 'win32' ? describe.skip : describe;"
+        },
+        {
+          "line": 33,
+          "text": "const describeWindows = process.platform === 'win32' ? describe : describe.skip;"
+        }
+      ]
+    },
+    {
+      "path": "test/main/services/team/OpenCodePackagedBackfill.windows.test.ts",
+      "mode": "100644",
+      "bytes": 20452,
+      "blob": "57083b1e030958ff4279ea15fffd3a0e7deecad0",
+      "sha256": "b2d86e9ce908930fa1f0da0662d31c9eb6354a578ef69c94a9e581f414d3efbf",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 3,
+      "sourceGuard": "Original unavailableReason and describe.skipIf(Boolean(unavailable)); three labels explicitly say actual Windows execution is required.",
+      "guardSnippets": [
+        {
+          "line": 51,
+          "text": "const unavailable = unavailableReason(process.platform, binaryInput);"
+        },
+        {
+          "line": 142,
+          "text": "describe.skipIf(Boolean(unavailable))("
+        }
+      ]
+    },
+    {
+      "path": "test/main/services/team/OpenCodeReviewPickup.live.tmp.test.ts",
+      "mode": "100644",
+      "bytes": 12237,
+      "blob": "0ddcdc4a76f2a479eb8794fdecd462ba3d1642be",
+      "sha256": "99b6f114be36aa164b7fdb64c8f71f44e7066c8d1f82d2795de2d726a99907b4",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 1,
+      "sourceGuard": "Original combined OPENCODE_E2E and OPENCODE_E2E_REVIEW_PICKUP opt-ins; filename does not match the narrower CLI live.test exclusion.",
+      "guardSnippets": [
+        {
+          "line": 47,
+          "text": "  process.env.OPENCODE_E2E === '1' && process.env.OPENCODE_E2E_REVIEW_PICKUP === '1'"
+        },
+        {
+          "line": 49,
+          "text": "    : describe.skip;"
+        }
+      ]
+    },
+    {
+      "path": "test/main/services/team/OpenCodeTaskLogStreamSource.fixture-e2e.test.ts",
+      "mode": "100644",
+      "bytes": 54209,
+      "blob": "11258da72033129867e19e6d9e70d67cb9e8c749",
+      "sha256": "1d874ebb370b98f9fdfa640425548b206bbb3a3c8b8841497cc13b2606be1f2d",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 1,
+      "sourceGuard": "Original it.skipIf requires both OPENCODE_NATIVE_DIAGNOSTIC_SDK_ROOT and OPENCODE_NATIVE_DIAGNOSTIC_BUN_PATH.",
+      "guardSnippets": [
+        {
+          "line": 217,
+          "text": "  it.skipIf("
+        }
+      ]
+    },
+    {
+      "path": "test/main/services/team/ReviewApplierService.test.ts",
+      "mode": "100644",
+      "bytes": 118855,
+      "blob": "f60d3dfbe2f9fdb9774cd010e7ede2b27081b121",
+      "sha256": "7435d0a3e0fab3657d2b3b52a9cc669a77cc5c0f83f9b7ddb77d3820f3b0f650",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 1,
+      "sourceGuard": "Original Darwin-only canonical-equivalent rename case.",
+      "guardSnippets": [
+        {
+          "line": 2002,
+          "text": "  it.runIf(process.platform === 'darwin')("
+        }
+      ]
+    },
+    {
+      "path": "test/main/services/team/TeamRuntimeMemory.safe-e2e.test.ts",
+      "mode": "100644",
+      "bytes": 9090,
+      "blob": "de39bc8dadaa1b641446df676b4be51651ec69f1",
+      "sha256": "848c758424bfc954980af1751eaa8709c0244c182409f3dd7a8fd8cef8ea28f7",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 2,
+      "sourceGuard": "Original native-process-table and real CLI opt-ins; two skipped cases, no live runtime memory qualification.",
+      "guardSnippets": [
+        {
+          "line": 34,
+          "text": "  const nativeProcessTableIt ="
+        },
+        {
+          "line": 36,
+          "text": "      ? it.skip"
+        },
+        {
+          "line": 39,
+          "text": "  nativeProcessTableIt('reports RSS for a bootstrap-confirmed Anthropic teammate discovered from the real process table', async () => {"
+        },
+        {
+          "line": 98,
+          "text": "  const cliSmokeIt ="
+        },
+        {
+          "line": 103,
+          "text": "      : it.skip;"
+        },
+        {
+          "line": 105,
+          "text": "  cliSmokeIt('reports RSS for a real Anthropic teammate CLI process', async () => {"
+        }
+      ]
+    },
+    {
+      "path": "test/main/utils/ReviewFileTransaction.safe-e2e.test.ts",
+      "mode": "100644",
+      "bytes": 24576,
+      "blob": "0e2a3b4b1e7ee8b6f07db619cf8a082c22b2c6f3",
+      "sha256": "3624f5260790a6f35ac3cdb1e05f15a96af28a611ec0e1d0ff045c6aee943c42",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 1,
+      "sourceGuard": "Original Darwin-only case-only Undo transaction.",
+      "guardSnippets": [
+        {
+          "line": 67,
+          "text": "  it.runIf(process.platform === 'darwin')("
+        },
+        {
+          "line": 139,
+          "text": "  it.runIf(process.platform === 'linux')("
+        }
+      ]
+    },
+    {
+      "path": "test/main/utils/childProcess.windows.test.ts",
+      "mode": "100644",
+      "bytes": 5876,
+      "blob": "1ac15d2da663de52b3ff6f7a300fec99fb7570ff",
+      "sha256": "ce1945d9a69349cb5920129d946b7d6cc4db6958ff739b5b21fa731e0d9f7695",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 5,
+      "sourceGuard": "Original Windows-only describe guard; five CLI argv/shell fallback cases.",
+      "guardSnippets": [
+        {
+          "line": 57,
+          "text": "describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round trip', () => {"
+        }
+      ]
+    },
+    {
+      "path": "test/main/utils/shellEnv.real-shell.integration.test.ts",
+      "mode": "100644",
+      "bytes": 7795,
+      "blob": "84f1c9337b050bc66c6d16d8dd9ab5c24f54e23a",
+      "sha256": "27bdfdfd316a78c01e1d4252c235ece9177d60fc963b185d0f480ae1f0102a0e",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 5,
+      "sourceGuard": "Original POSIX suite and per-shell executable guard; five zsh cases are skipped. No independent runner zsh census is archived.",
+      "guardSnippets": [
+        {
+          "line": 46,
+          "text": "describe.skipIf(process.platform === 'win32')('shellEnv actual installed shells', () => {"
+        },
+        {
+          "line": 48,
+          "text": "    describe.skipIf(process.platform !== 'darwin' && !isExecutable(shell.executable))("
+        }
+      ]
+    },
+    {
+      "path": "test/main/utils/windowsProcessProbe.integration.test.ts",
+      "mode": "100644",
+      "bytes": 2479,
+      "blob": "802cee3658310ab29b473d098b02f3e6b3ed9857",
+      "sha256": "1428b98babd00b724d3a849ff516303c8735fb4217d075c6cd2db6cba0088435",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 1,
+      "sourceGuard": "Original Windows-only real process-identity suite.",
+      "guardSnippets": [
+        {
+          "line": 28,
+          "text": "describe.skipIf(process.platform !== 'win32')('real Windows process identity readers', () => {"
+        }
+      ]
+    },
+    {
+      "path": "test/scripts/fixtures/opencodeProofBoundary.test.ts",
+      "mode": "100644",
+      "bytes": 1460,
+      "blob": "f38bf3ce8d0da096d6f57dd011af71e696345618",
+      "sha256": "5a5cf6bf1538221c02ea907d23a6b11a870ec1e8efc2d4070253e71b18a91325",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 1,
+      "sourceGuard": "Original OPENCODE_E2E=1 fixture probe guard; ordinary run skips the case.",
+      "guardSnippets": [
+        {
+          "line": 14,
+          "text": "it.skipIf(process.env.OPENCODE_E2E !== '1')('preserves wrapper ownership across real Vitest setup', async () => {"
+        }
+      ]
+    },
+    {
+      "path": "test/scripts/opencodeNativeRealTaskPrompt.test.ts",
+      "mode": "100644",
+      "bytes": 7357,
+      "blob": "777c7f32761786e80ff8b4bb8671647873dd99bb",
+      "sha256": "51c90cf6eb4b9e6158ca78ea83a171db2b6bf4a1b2f0db393918d76559849d89",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 1,
+      "sourceGuard": "Original Windows-only PowerShell/cmd verifier case.",
+      "guardSnippets": [
+        {
+          "line": 125,
+          "text": "  it.skipIf(process.platform !== 'win32')('executes the unchanged verifier in PowerShell and cmd', async () => {"
+        }
+      ]
+    },
+    {
+      "path": "test/scripts/opencodeNativeTestNode.test.ts",
+      "mode": "100644",
+      "bytes": 8953,
+      "blob": "96a33e0e0d68480ab3359baa06a2b9ae3a9f44ab",
+      "sha256": "b2e3f6c83342b6b72230f19eafe50a2c3ee0ab1595c5f64734619d00963d5514",
+      "unchangedFromHistorical0660GitBytes": true,
+      "comparisonHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "skippedAssertionCount": 1,
+      "sourceGuard": "Original Windows-only inherited-ACL metadata-transition case.",
+      "guardSnippets": [
+        {
+          "line": 94,
+          "text": "  it.skipIf(process.platform !== 'win32')("
+        }
+      ]
+    }
+  ],
+  "modelsBaseline": {
+    "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+    "shard": 2,
+    "counts": {
+      "passed": 80
+    },
+    "all80OriginalCases": [
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'connect' (null, full=false)",
+        "status": "passed",
+        "title": "refreshes shared provider metadata after filtered 'connect' (null, full=false)",
+        "duration": 35.930951999999934,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=false)",
+        "status": "passed",
+        "title": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=false)",
+        "duration": 8.410606000000143,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=true)",
+        "status": "passed",
+        "title": "refreshes shared provider metadata after filtered 'connect' ('/tmp/TEST-connected-provider-cache', full=true)",
+        "duration": 7.43027300000017,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'forget' (null, full=false)",
+        "status": "passed",
+        "title": "refreshes shared provider metadata after filtered 'forget' (null, full=false)",
+        "duration": 4.854379000000108,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=false)",
+        "status": "passed",
+        "title": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=false)",
+        "duration": 4.078899999999976,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=true)",
+        "status": "passed",
+        "title": "refreshes shared provider metadata after filtered 'forget' ('/tmp/TEST-connected-provider-cache', full=true)",
+        "duration": 3.708351999999877,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement skips unsupported shared directory reads after connect without a refresh warning",
+        "status": "passed",
+        "title": "skips unsupported shared directory reads after connect without a refresh warning",
+        "duration": 55.33714699999996,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement skips unsupported shared directory reads after forget without a refresh warning",
+        "status": "passed",
+        "title": "skips unsupported shared directory reads after forget without a refresh warning",
+        "duration": 2.5298069999998916,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement cancels all active probe attempts when startConnect closes the picker",
+        "status": "passed",
+        "title": "cancels all active probe attempts when startConnect closes the picker",
+        "duration": 3.460023999999976,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement cancels all active probe attempts when startReconnect closes the picker",
+        "status": "passed",
+        "title": "cancels all active probe attempts when startReconnect closes the picker",
+        "duration": 2.0994490000000496,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement cancels all active probe attempts when closeModelPicker closes the picker",
+        "status": "passed",
+        "title": "cancels all active probe attempts when closeModelPicker closes the picker",
+        "duration": 1.7128560000001016,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement cancels all active probe attempts when switchProvider closes the picker",
+        "status": "passed",
+        "title": "cancels all active probe attempts when switchProvider closes the picker",
+        "duration": 1.9182399999999689,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement stops only one probe and ignores its late response after immediate restart",
+        "status": "passed",
+        "title": "stops only one probe and ignores its late response after immediate restart",
+        "duration": 6.466036000000031,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement keeps the probe running when stop is rejected",
+        "status": "passed",
+        "title": "keeps the probe running when stop is rejected",
+        "duration": 2.3467149999999037,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement uses a clicked model as the app default for new teams without a global success banner",
+        "status": "passed",
+        "title": "uses a clicked model as the app default for new teams without a global success banner",
+        "duration": 2.161591000000044,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement opens only the public GitHub device-login URL from OAuth progress",
+        "status": "passed",
+        "title": "opens only the public GitHub device-login URL from OAuth progress",
+        "duration": 1.6349410000000262,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement passes projectPath to the runtime provider management API",
+        "status": "passed",
+        "title": "passes projectPath to the runtime provider management API",
+        "duration": 2.0798509999999624,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement defers the full managed view until explicitly requested",
+        "status": "passed",
+        "title": "defers the full managed view until explicitly requested",
+        "duration": 54.15177700000004,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement opens a deep-linked provider setup after the directory row is ready",
+        "status": "passed",
+        "title": "opens a deep-linked provider setup after the directory row is ready",
+        "duration": 60.439693000000034,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement reloads a requested Models view when native runtime identity settles",
+        "status": "passed",
+        "title": "reloads a requested Models view when native runtime identity settles",
+        "duration": 3.8962900000001355,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement reopens a pending deep-linked Connect when native runtime identity settles",
+        "status": "passed",
+        "title": "reopens a pending deep-linked Connect when native runtime identity settles",
+        "duration": 56.091169000000036,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement hydrates the full provider directory without a catalog refresh",
+        "status": "passed",
+        "title": "hydrates the full provider directory without a catalog refresh",
+        "duration": 4.093112000000019,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement keeps summary providers when the full catalog comes back empty",
+        "status": "passed",
+        "title": "keeps summary providers when the full catalog comes back empty",
+        "duration": 2.5401519999998072,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement paints same-scope curated cache while summary IPC is pending and retains errors",
+        "status": "passed",
+        "title": "paints same-scope curated cache while summary IPC is pending and retains errors",
+        "duration": 2.256952000000183,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement never emits a previous-project provider in the transition render",
+        "status": "passed",
+        "title": "never emits a previous-project provider in the transition render",
+        "duration": 2.0245689999999286,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement does not project cached summary credentials into another project or global scope",
+        "status": "passed",
+        "title": "does not project cached summary credentials into another project or global scope",
+        "duration": 57.129686999999876,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement recovers directory support when a newer OpenCode runtime replaces an unsupported one",
+        "status": "passed",
+        "title": "recovers directory support when a newer OpenCode runtime replaces an unsupported one",
+        "duration": 54.67907300000002,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement ignores a pre-mutation directory response without changing the project",
+        "status": "passed",
+        "title": "ignores a pre-mutation directory response without changing the project",
+        "duration": 2.676623999999947,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement masks cached rows and ignores pending responses when the OpenCode binary changes",
+        "status": "passed",
+        "title": "masks cached rows and ignores pending responses when the OpenCode binary changes",
+        "duration": 53.99984100000006,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement reopens a cached full catalog without flashing the 16-provider summary",
+        "status": "passed",
+        "title": "reopens a cached full catalog without flashing the 16-provider summary",
+        "duration": 54.44254799999999,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement does not replace the cached full catalog with search results",
+        "status": "passed",
+        "title": "does not replace the cached full catalog with search results",
+        "duration": 303.6448969999999,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement reuses setup while preserving the connected auth method for reconnect",
+        "status": "passed",
+        "title": "reuses setup while preserving the connected auth method for reconnect",
+        "duration": 4.784074000000146,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement keeps provider search local until full-catalog search is explicitly requested",
+        "status": "passed",
+        "title": "keeps provider search local until full-catalog search is explicitly requested",
+        "duration": 655.3460230000001,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement clears structured errors and stale provider state when disabled",
+        "status": "passed",
+        "title": "clears structured errors and stale provider state when disabled",
+        "duration": 2.3598050000000512,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement ignores pending directory and setup-form responses after being disabled",
+        "status": "passed",
+        "title": "ignores pending directory and setup-form responses after being disabled",
+        "duration": 3.2990159999999378,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement ignores stale provider views after project context changes",
+        "status": "passed",
+        "title": "ignores stale provider views after project context changes",
+        "duration": 2.49322200000006,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement reissues a requested view after temporary project-context hydration",
+        "status": "passed",
+        "title": "reissues a requested view after temporary project-context hydration",
+        "duration": 3.166478999999981,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement restarts provider directory loading when project context changes while loading",
+        "status": "passed",
+        "title": "restarts provider directory loading when project context changes while loading",
+        "duration": 24.370120999999926,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement drops stale model probe results after project context changes",
+        "status": "passed",
+        "title": "drops stale model probe results after project context changes",
+        "duration": 2.4931229999997413,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement drops stale set-default responses after project context changes",
+        "status": "passed",
+        "title": "drops stale set-default responses after project context changes",
+        "duration": 3.243323000000146,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement clears pending provider save state after project context changes",
+        "status": "passed",
+        "title": "clears pending provider save state after project context changes",
+        "duration": 4.114052999999785,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement refreshes view and catalog after forgetting managed auth while local auth remains",
+        "status": "passed",
+        "title": "refreshes view and catalog after forgetting managed auth while local auth remains",
+        "duration": 3.4240810000001147,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement refreshes the view and catalog after a confirmed connection",
+        "status": "passed",
+        "title": "refreshes the view and catalog after a confirmed connection",
+        "duration": 4.472683999999845,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement keeps provider data visible during catalog refresh",
+        "status": "passed",
+        "title": "keeps provider data visible during catalog refresh",
+        "duration": 13.155271999999968,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement lazy-loads provider directory and ignores stale search responses",
+        "status": "passed",
+        "title": "lazy-loads provider directory and ignores stale search responses",
+        "duration": 314.0308829999999,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement keeps the API key draft when provider connect fails",
+        "status": "passed",
+        "title": "keeps the API key draft when provider connect fails",
+        "duration": 3.4973690000001625,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement explains Copilot model access separately from GitHub authentication",
+        "status": "passed",
+        "title": "explains Copilot model access separately from GitHub authentication",
+        "duration": 3.331854000000021,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement keeps setup form diagnostics available when submit is attempted after form load failure",
+        "status": "passed",
+        "title": "keeps setup form diagnostics available when submit is attempted after form load failure",
+        "duration": 2.137917000000016,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement submits a supported setup form without a secret as a null API key",
+        "status": "passed",
+        "title": "submits a supported setup form without a secret as a null API key",
+        "duration": 2.6793579999998656,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement keeps OpenCode API connect pending beyond the old UI deadline: late-success",
+        "status": "passed",
+        "title": "keeps OpenCode API connect pending beyond the old UI deadline: late-success",
+        "duration": 4.886066000000028,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement keeps OpenCode API connect pending beyond the old UI deadline: timeout",
+        "status": "passed",
+        "title": "keeps OpenCode API connect pending beyond the old UI deadline: timeout",
+        "duration": 6.738349000000198,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement keeps setup open when the backend does not confirm a connected provider",
+        "status": "passed",
+        "title": "keeps setup open when the backend does not confirm a connected provider",
+        "duration": 3.143264999999701,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement keeps the actual API credential hint when xAI refresh fails after connect",
+        "status": "passed",
+        "title": "keeps the actual API credential hint when xAI refresh fails after connect",
+        "duration": 106.43660899999986,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement refreshes provider status after a cancelled OAuth child settles",
+        "status": "passed",
+        "title": "refreshes provider status after a cancelled OAuth child settles",
+        "duration": 3.6543219999998655,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement preserves the full slow model-picker allowance: complete",
+        "status": "passed",
+        "title": "preserves the full slow model-picker allowance: complete",
+        "duration": 3.0575690000000577,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement preserves the full slow model-picker allowance: timeout",
+        "status": "passed",
+        "title": "preserves the full slow model-picker allowance: timeout",
+        "duration": 2.6789370000001327,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement clears model loading when switching from model picker to setup form",
+        "status": "passed",
+        "title": "clears model loading when switching from model picker to setup form",
+        "duration": 3.0226360000001478,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement debounces provider model search and groups superseded picker requests",
+        "status": "passed",
+        "title": "debounces provider model search and groups superseded picker requests",
+        "duration": 352.98163799999975,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement keeps Test results across a debounced catalog search reload",
+        "status": "passed",
+        "title": "keeps Test results across a debounced catalog search reload",
+        "duration": 355.12743000000046,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement appends paged provider models without duplicates",
+        "status": "passed",
+        "title": "appends paged provider models without duplicates",
+        "duration": 2.7916839999998047,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement tracks concurrent model probes independently",
+        "status": "passed",
+        "title": "tracks concurrent model probes independently",
+        "duration": 2.3045430000001943,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement drops stale model probe results after leaving the model picker",
+        "status": "passed",
+        "title": "drops stale model probe results after leaving the model picker",
+        "duration": 2.072038999999677,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement refreshes global provider status after a current model test (ok=true)",
+        "status": "passed",
+        "title": "refreshes global provider status after a current model test (ok=true)",
+        "duration": 1.3101100000003498,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement refreshes global provider status after a current model test (ok=false)",
+        "status": "passed",
+        "title": "refreshes global provider status after a current model test (ok=false)",
+        "duration": 1.2451940000000832,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement records an empty model test response as a row failure and refreshes provider status",
+        "status": "passed",
+        "title": "records an empty model test response as a row failure and refreshes provider status",
+        "duration": 1.4896959999996398,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement preserves successful model verification when its global status refresh rejects",
+        "status": "passed",
+        "title": "preserves successful model verification when its global status refresh rejects",
+        "duration": 1.3303599999999278,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement does not refresh global status from a model test after project change",
+        "status": "passed",
+        "title": "does not refresh global status from a model test after project change",
+        "duration": 1.5253990000001068,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement does not refresh global status from a model test after unmount",
+        "status": "passed",
+        "title": "does not refresh global status from a model test after unmount",
+        "duration": 1.1092829999997775,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement keeps failed model probes scoped to the model result instead of a global success banner",
+        "status": "passed",
+        "title": "keeps failed model probes scoped to the model result instead of a global success banner",
+        "duration": 1.3151669999997466,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement keeps structured runtime endpoint diagnostics on the model result",
+        "status": "passed",
+        "title": "keeps structured runtime endpoint diagnostics on the model result",
+        "duration": 1.0950919999995676,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement keeps the model-test UI watchdog outside the runtime probe transport budget",
+        "status": "passed",
+        "title": "keeps the model-test UI watchdog outside the runtime probe transport budget",
+        "duration": 1.89057000000048,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement promotes structured model probe failures to the global diagnostics alert state",
+        "status": "passed",
+        "title": "promotes structured model probe failures to the global diagnostics alert state",
+        "duration": 1.5539210000006278,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement keeps successful model probes scoped to the model card instead of a global success banner",
+        "status": "passed",
+        "title": "keeps successful model probes scoped to the model card instead of a global success banner",
+        "duration": 1.4266429999997854,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement saves a default without probing or fabricating verified model state",
+        "status": "passed",
+        "title": "saves a default without probing or fabricating verified model state",
+        "duration": 1.6026640000000043,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement keeps the effective project default selected when an all-projects default is shadowed",
+        "status": "passed",
+        "title": "keeps the effective project default selected when an all-projects default is shadowed",
+        "duration": 2.1655970000001616,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement preserves project-scoped access evidence after a neutral all-projects probe",
+        "status": "passed",
+        "title": "preserves project-scoped access evidence after a neutral all-projects probe",
+        "duration": 1.9835979999998017,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement does not clear a project override before the bundled runtime supports scoped defaults",
+        "status": "passed",
+        "title": "does not clear a project override before the bundled runtime supports scoped defaults",
+        "duration": 1.4139840000007098,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement clears a valid project override with a compatible bundled runtime",
+        "status": "passed",
+        "title": "clears a valid project override with a compatible bundled runtime",
+        "duration": 2.6463990000002013,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement keeps the clear-project watchdog beyond the 300-second main-process timeout",
+        "status": "passed",
+        "title": "keeps the clear-project watchdog beyond the 300-second main-process timeout",
+        "duration": 2.0435160000006363,
+        "failureMessages": [],
+        "meta": {}
+      },
+      {
+        "ancestorTitles": [
+          "useRuntimeProviderManagement"
+        ],
+        "fullName": "useRuntimeProviderManagement does not clear project B while its view is still refreshing after switching from A",
+        "status": "passed",
+        "title": "does not clear project B while its view is still refreshing after switching from A",
+        "duration": 1.5746320000007472,
+        "failureMessages": [],
+        "meta": {}
+      }
+    ],
+    "source": {
+      "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+      "mode": "100644",
+      "bytes": 180091,
+      "blob": "6c31165af5b91090fa56bc89ddd286a68f84c978",
+      "sha256": "859dd240e372d3aa1d742d6dbea107680d62d8d884546a91107908f29e61ed54"
+    },
+    "hookSource": {
+      "path": "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts",
+      "mode": "100644",
+      "bytes": 74351,
+      "blob": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+      "sha256": "68abe01f665b263bd8581659ea306f366428fdccbb45246f08ec42e20b9ee575"
+    },
+    "presentationSource": {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "mode": "100644",
+      "bytes": 6481,
+      "blob": "907fb16a613785324fdbd342c2993e08c8209a55",
+      "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+    }
+  },
+  "retentionMetadataProvenance": {
+    "path": "ci-72e6ec/frontend-all-shards/retention-metadata-provenance.json",
+    "bytes": 2141,
+    "blob": "ad2f6b6cb39478d047f9d111065165e11273ba0e",
+    "sha256": "aafa0f2d93f69ece95ca220a6c6a38702582fb4fd044b9e7d5464dfaa0462ea7"
+  },
+  "limits": [
+    "Original four safe frontend shards at72e6 only; no aggregate Host matrix, Desktop business UI, Team179/stderr24, P11 semanticRED, native/vendor/packaged/P08/P09/release/merge qualification.",
+    "The33 CLI-excluded files and38 skipped assertions remain unqualified. Seven physical files contain only skipped assertions although original JSON testResult.status is passed; physical counts come from assertion arrays and match the default reporter. Nested JSON suite counts are separate.",
+    "Frontend runnerNode26.12.1 is distinct from the separately captured TESTNode24.21.0. Original engine warnings remain; no warning-free or complete installed-dependency census is claimed.",
+    "Original CI installs/prerequisite compilers and SQLite ABI verification are retained. No local build, full output manifest or full transformed-module/import/process census was performed by the author.",
+    "Models80 is the actual current6c311 baseline, hook1176 and formatter907f. Later followupbfc copy67e5/1738, inert90-case Models48bf and hookfixc2faa are not qualified.",
+    "P11 PhaseA is present in the current72e source under scripts, outside this configured frontend discovery; this frontend success does not execute its required original whole8 Node helper command or establish its predicted semanticRED.",
+    "Only derived frontend1/2 metadata initially used incorrect Git-hash framing/JSON terminators. Its initial bytes are separately preserved; canonical metadata rehashes unchanged original MCP/raw/ZIP bytes. No source execution or test failure is inferred.",
+    "No current API repoll, source/ref mutation, CI action, original replay or project/native/provider execution by this aggregate reader."
+  ],
+  "independentReviewPending": true,
+  "projectExecutionByAuthor": false
+}

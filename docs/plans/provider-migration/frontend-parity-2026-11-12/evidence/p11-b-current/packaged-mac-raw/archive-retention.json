@@ -1,0 +1,82 @@
+{
+  "kind": "original-artifact-preservation-only",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "runId": 43831885834,
+  "jobId": 133207234320,
+  "artifactId": 14213456571,
+  "officialMetadata": "../official-packaged-artifacts-0943.json",
+  "zip": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/packaged-mac-arm/artifact-14213456571.zip",
+    "bytes": 1064558,
+    "sha256": "acaecb42c385121295a8739988a9d6e286690a57e49c36d8b9d70fb914df8373",
+    "gitBlob": "9147f7341e641245a7bfe79a6177e1325d561894"
+  },
+  "members": [
+    {
+      "path": "_temp/TEST-desktop-backend-AYUVsm/ui-automatic-app-relaunch-successor.png",
+      "bytes": 138348,
+      "crc32": "5f990aa0",
+      "sha256": "e0dcaaf67c5b6b55b259158b3cb2fa0cb3af5b03a09e339525614065c3164c96",
+      "gitBlob": "632482316cf7b01d158661250b1f066ceec0a003"
+    },
+    {
+      "path": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154733,
+      "crc32": "e02db821",
+      "sha256": "664085ce926eed251d0dd0e1786214a32a3cd08797846b01b16ed3eb70c62346",
+      "gitBlob": "151f08bc7ff4b985db4a49d02ecc0a1cb1da1c6d"
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-AYUVsm/ui-emulated-lifecycle-launch.png",
+      "bytes": 222245,
+      "crc32": "08ed7808",
+      "sha256": "6af0251ce6f03f713ed570d0175304e4b9badf840ce72cf032ba3017dab69c5c",
+      "gitBlob": "2c6a805bbde34fa3546121a58c8ffa9bfe7d7782"
+    },
+    {
+      "path": "_temp/TEST-desktop-backend-AYUVsm/ui-emulated-lifecycle-stopped.png",
+      "bytes": 200285,
+      "crc32": "28a32651",
+      "sha256": "63eb8ea49caa9b913e77ab5172fe8ba732dbf59593070738ac6af7dd7942011b",
+      "gitBlob": "32e20ca5f77a0054a0f28691a343e1f396c90151"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-inputs.json",
+      "bytes": 2374,
+      "crc32": "ee6f8f5d",
+      "sha256": "1c374acde95a2bd22105ab63a79af5d9f88ef060c43ccae1aa0fdb933c6a4291",
+      "gitBlob": "b2a062a02e809281968bf450243ed88a6b793c5d"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged-native.json",
+      "bytes": 5286,
+      "crc32": "aa1adb80",
+      "sha256": "e79e380144b922caf18ab228f09c6058bfd56ec2c1ef9dfe332738082c55bd30",
+      "gitBlob": "24e83e6079d52fdf1a6b5d57bd6c4e7df4f61d22"
+    },
+    {
+      "path": "_temp/opencode-v2-packaged.json",
+      "bytes": 1189,
+      "crc32": "1e8e7d6e",
+      "sha256": "7bfd2baeb80ae48e7d2a62754cdd073ed778ad1536b7face5e78ef4d8a0f886e",
+      "gitBlob": "8eca5327498af8a8bb7d53ec1f02ef36e864b114"
+    },
+    {
+      "path": "_temp/packaged-app-relaunch.app.log",
+      "bytes": 3027,
+      "crc32": "6ea36cfd",
+      "sha256": "47e605d39734ffe380bbdd0bf987bee6d48425376925101e4e3265ea746d9da6",
+      "gitBlob": "72ec2aa040d543f06bb47d975d8496834fbd6f60"
+    },
+    {
+      "path": "_temp/packaged-app-relaunch.json",
+      "bytes": 671482,
+      "crc32": "6a626d3a",
+      "sha256": "3d39a148add9860d107591f9a9c16f734d2fb1f19c25c9437a152f953c0609a9",
+      "gitBlob": "36d79edcc142851e77d62eb170490ae52afac6c8"
+    }
+  ],
+  "safeUniquePathsAndCrcAndRoundtrip": true,
+  "semanticReview": "pending",
+  "signedTransportUrlPersisted": false
+}

@@ -1,0 +1,72 @@
+{
+  "kind": "ORIGINAL_TERMINAL_RAW_RETENTION_ONLY",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "runId": 43831885807,
+  "jobId": 133178913038,
+  "retainedAtUTC": "2026-11-16T09:07:37.795462+00:00",
+  "artifact": {
+    "id": 14211385485,
+    "name": "host-offline-tests-72e6ec04444969d343d73834c70bc4e261100fc9-2",
+    "size_in_bytes": 312595,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14211385485",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14211385485/zip",
+    "expired": false,
+    "created_at": "2026-11-16T09:02:32Z",
+    "expires_at": "2026-11-30T09:02:31Z",
+    "updated_at": "2026-11-16T09:02:32Z",
+    "digest": "sha256:f2ed1a880bb9464d646cf37c4e51c0f587411bc268f592fba45b2234bccd8a3e",
+    "workflow_run": {
+      "id": 43831885807,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "72e6ec04444969d343d73834c70bc4e261100fc9"
+    }
+  },
+  "raw": {
+    "bytes": 181018,
+    "blob": "448fd06d32f0ca67bfd8addbf7a18a8d54838ee0",
+    "sha256": "a27ca8fbcd4214a0cc059a4784f335c10c8f0b2f11749a5c3ecea5d6557b004d"
+  },
+  "response": {
+    "bytes": 222582,
+    "blob": "5b2e6feb2f78ec4bbe67c756e410c623c850e017",
+    "sha256": "b4d6c8c835bb7b3de4a4ff2f80129f9cc1ba683e39ac6a889d12c69f8aee261d"
+  },
+  "rawUtf8ExactMcpContent": true,
+  "zip": {
+    "bytes": 312595,
+    "blob": "f4ab1a2f721eeae9e121bfec38d9b9052f72538d",
+    "sha256": "f2ed1a880bb9464d646cf37c4e51c0f587411bc268f592fba45b2234bccd8a3e"
+  },
+  "members": [
+    {
+      "path": "host-offline-tests-2.json",
+      "bytes": 2388212,
+      "blob": "b69210f5a26e27bc13686ba87f83f78cf1f2cf51",
+      "sha256": "65552ffed16f3f6e85f24f684895f3f4696f6ddbc8bbfd856fb86aa4d402a8a9",
+      "crc32": "624b0d38"
+    },
+    {
+      "path": "host-offline-tests-2.log",
+      "bytes": 107466,
+      "blob": "32c0403e49510e428dda0846d958ae827df7728e",
+      "sha256": "1afe0b2bbf08af202f01c4c01e7ddf422259ffb9d0fb08ebd324d1b7c9a935ac",
+      "crc32": "9874eae7"
+    }
+  ],
+  "safeCrc": true,
+  "summary": {
+    "success": true,
+    "numTotalTests": 6757,
+    "numPassedTests": 6739,
+    "numFailedTests": 0,
+    "numPendingTests": 18
+  },
+  "actualFileCount": 541,
+  "scope": "Original shard only; no all-four or independent source/guard qualification.",
+  "metadataCorrection": {
+    "initialMetadata": "ci-72e6ec/frontend2/archive-retention.initial-metadata-only.json.txt",
+    "reason": "The initial pure evidence serialization used a literal backslash-zero in its Git blob prefix and a literal backslash-n terminator. Corrected from unchanged retained raw/ZIP/extracted bytes; SHA256 and lengths unchanged. No API refetch or project execution."
+  }
+}

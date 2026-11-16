@@ -1,0 +1,88 @@
+{
+  "kind": "FROZEN_ORIGINAL_E3_UBUNTU_CREATION_AUTHOR_PACKET",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "runId": 43831885626,
+  "jobId": 133178910281,
+  "status": "PASS_WITH_FORCED_DISPOSABLE_GROUP_CLEANUP",
+  "authorAudit": {
+    "path": "ci-72e6ec/creation-ubuntu/audit.json",
+    "bytes": 36070,
+    "blob": "eeaa7158cfdba6342a96d48a60191734cdec953c",
+    "sha256": "6669fd72c141131125e7dcd6913dd3ba9cd073c525a21330b7f211783b39866a"
+  },
+  "appendix": {
+    "path": "ci-72e6ec/creation-ubuntu/Plan29-appendix.md",
+    "bytes": 3089,
+    "blob": "e77fc375db8d7f64b6efda77873fbee66e79e9b7",
+    "sha256": "f9814ee276be0338baa49e6701164f395e49fcec77935ab09291f42cd86e9b0d"
+  },
+  "sourceProof": {
+    "path": "ci-72e6ec/creation-ubuntu/source-proof.json",
+    "bytes": 11810,
+    "blob": "5e750c02f3897d8d69d4ebd319c5107f1869133d",
+    "sha256": "05e68c3b6e8878978183a60b9a28ee3a01c2e38a2e586d6cb6871e342ab76d76"
+  },
+  "payloads": [
+    {
+      "path": "ci-72e6ec/creation-ubuntu/job.log",
+      "bytes": 57426,
+      "blob": "a82a508cf05a6ec272af2bfefcf05c14211cc6ca",
+      "sha256": "bb5d87bcd1ee4755d8d1e00732bc5e48be933528be08c8ab4fa10db67b303971"
+    },
+    {
+      "path": "ci-72e6ec/creation-ubuntu/job-original-response.json",
+      "bytes": 58770,
+      "blob": "e9f9fdbef323ec812f3f66fa52c2b8a783729fdc",
+      "sha256": "a8f88c953758c38f51665fc8945ad7eced7a7760218ea597f6e9158afe5113a6"
+    },
+    {
+      "path": "ci-72e6ec/creation-ubuntu/artifact-14209850260.zip",
+      "bytes": 2867814,
+      "blob": "ef8355305fdf9ca77989df641df01153d69f3eca",
+      "sha256": "653a74a18635296b599895e8f9976723482645016f2f6ed94d3fa309b10dc109"
+    },
+    {
+      "path": "ci-72e6ec/creation-ubuntu/archive-retention.json",
+      "bytes": 12093,
+      "blob": "673fcd26a999e0e209b9ad489cdf104fa0c58f64",
+      "sha256": "14c978d3bec21a69a7ee9d81029568f41de9831ea22f970c7dcb2c89ee9a9777"
+    },
+    {
+      "path": "ci-72e6ec/official-creation-artifacts-0902.json",
+      "bytes": 2964,
+      "blob": "1e44352d00f6bdf605b218b9a0c1a500e5c70c3e",
+      "sha256": "c743b4599746d95a365a92da25379e951acc94a2066daf829545bc44c53d6bbe"
+    },
+    {
+      "path": "ci-72e6ec/owned-jobs-0901.json",
+      "bytes": 28320,
+      "blob": "7df01c7737c81079c8cd9a769980ef9b261751db",
+      "sha256": "a01b63a279d4a475196866cc31b12e0ca59f288f36375aebcfdaf760bc4662ab"
+    },
+    {
+      "path": "ci-72e6ec/creation-ubuntu/source-proof.json",
+      "bytes": 11810,
+      "blob": "5e750c02f3897d8d69d4ebd319c5107f1869133d",
+      "sha256": "05e68c3b6e8878978183a60b9a28ee3a01c2e38a2e586d6cb6871e342ab76d76"
+    },
+    {
+      "path": "ci-72e6ec/creation-ubuntu/audit.json",
+      "bytes": 36070,
+      "blob": "eeaa7158cfdba6342a96d48a60191734cdec953c",
+      "sha256": "6669fd72c141131125e7dcd6913dd3ba9cd073c525a21330b7f211783b39866a"
+    },
+    {
+      "path": "ci-72e6ec/creation-ubuntu/Plan29-appendix.md",
+      "bytes": 3089,
+      "blob": "e77fc375db8d7f64b6efda77873fbee66e79e9b7",
+      "sha256": "f9814ee276be0338baa49e6701164f395e49fcec77935ab09291f42cd86e9b0d"
+    }
+  ],
+  "payloadCount": 9,
+  "payloadBytes": 3078356,
+  "officialZipMembers": 41,
+  "pngBytesChecked": 40,
+  "pngActuallyViewed": 3,
+  "independentReviewPending": true,
+  "noProjectExecution": true
+}

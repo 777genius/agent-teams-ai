@@ -1,0 +1,158 @@
+{
+  "kind": "INDEPENDENT_E3_TEAM_ORIGINAL_P11_SEMANTIC_RED_SUPPLEMENT_REVIEW",
+  "reviewer": "/root/native_failures",
+  "reviewedAtUTC": "2026-11-16T09:41:53.039729+00:00",
+  "verdict": "APPROVE exact original Team whole-eight semantic RED and author packet; no correction.",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "sourceTree": "de80fbfbffb3fe4daabf6cc9be258cc8df534524",
+  "runId": 43831885807,
+  "runAttempt": 1,
+  "event": "pull_request",
+  "jobId": 133178913364,
+  "matrixLane": "team",
+  "authorCheckpoint": {
+    "path": "ci-72e6ec/team/checkpoint-p11-red.json",
+    "bytes": 2381,
+    "blob": "d200e98ea29280e8018e26d6e777a445da2bc6a8",
+    "sha256": "f57117929d2cad3b1f1e40b5c6cc704d57b537add57db20d8094fe2196901627"
+  },
+  "authorAudit": {
+    "path": "ci-72e6ec/team/p11-team-red-audit.json",
+    "bytes": 45553,
+    "blob": "760d51346092215eff54f5be6ed10f2fef035f16",
+    "sha256": "dcf89866f351e5b45229d91708c0bd3745a37c7c72701fe46ab7aba18e9c7088"
+  },
+  "authorAppendix": {
+    "path": "ci-72e6ec/team/Plan29-p11-team-original-red-appendix.md",
+    "bytes": 3009,
+    "blob": "12d290aa7a22f3e426d7cd1a7692bae9c9ec3427",
+    "sha256": "361cd9a8c3f27be67d4cc5a9fb26dd3c503ea7fc959ca86c2a77e7103de9ea43"
+  },
+  "independentProof": {
+    "path": "ci-72e6ec/team/independent-p11-team-red-byte-source-proof.json",
+    "bytes": 53298,
+    "blob": "faea4b980d8c5f7301b7df8dd1c874cd5f08b75d",
+    "sha256": "5b648cc02b4d131210bca10bc6ceb21745e9f3207831f905fadcbba86113269c"
+  },
+  "sameHeadSourceAndSemanticsBasis": {
+    "path": "ci-72e6ec/taskboard/independent-p11-semantic-red-review.json",
+    "bytes": 34053,
+    "blob": "fb7f28180bd65d164a3e22990c76a898fb3d1666",
+    "sha256": "410d5f5b7cc8235f0ab241fdb2be17455d5661ea44bf5049270f21178f692a4e"
+  },
+  "payloadCount": 6,
+  "payloadBytes": 418977,
+  "rawOriginal": {
+    "path": "ci-72e6ec/team/job.log",
+    "bytes": 95536,
+    "blob": "ec5cd1206ef7b7bf3fae604f3a9ffdd74ab003ad",
+    "sha256": "2091b79602e5ee3fa595e89c99f2bac1942efc9ff5ee4dd16f912e2f5ec0aaa0"
+  },
+  "fullMcpResponse": {
+    "path": "ci-72e6ec/team/job-original-response.json",
+    "bytes": 97211,
+    "blob": "0a528aea660212e3d46f6722a6e411772690b050",
+    "sha256": "6ca71c4736e21f6145c9e303c2c8d4a3c040fcdb281e99287892e79b8bec9c33"
+  },
+  "exactMcpRawByteEquality": true,
+  "actualCounts": {
+    "tests": 123,
+    "suites": 0,
+    "pass": 120,
+    "fail": 3,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "duration_ms": 10621.178682
+  },
+  "all123NamesOutcomesOrderEqualIndependentTaskboard": true,
+  "all119OldCasesPass": true,
+  "newFourRows": [
+    {
+      "line": 853,
+      "outcome": "FAIL",
+      "name": "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+      "durationMs": 18.116541
+    },
+    {
+      "line": 854,
+      "outcome": "FAIL",
+      "name": "P11 keeps the original 90-second cutoff for first result after the cutoff",
+      "durationMs": 8.602485
+    },
+    {
+      "line": 855,
+      "outcome": "FAIL",
+      "name": "P11 keeps the original 90-second cutoff for polled result after the cutoff",
+      "durationMs": 3.618667
+    },
+    {
+      "line": 856,
+      "outcome": "PASS",
+      "name": "P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity",
+      "durationMs": 3.039832
+    }
+  ],
+  "actualFailure": {
+    "registrationLine": 1935,
+    "assertRejectsLine": 1937,
+    "error": "Missing expected rejection",
+    "count": 3,
+    "operator": "rejects",
+    "actualValueReported": "undefined",
+    "actualExtractedOriginalPollAcceptedLateTrue": true,
+    "laterPerCaseReadTraceDelayAssertionsLine1938Executed": false,
+    "positiveControlActualPass": true,
+    "scope": "Finite actual source-closure observations; no real90-second Desktop run or live membership journey."
+  },
+  "sourceBinding": {
+    "test": {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 115936,
+      "blob": "3c2548f7ede3f799a6426c81bb178e4895c790c2",
+      "sha256": "0d2b04aa9ba6a7dfb2c5f316f152ca31befe36dcdf3bb8e3a5063547c4f67076"
+    },
+    "driver": {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "bytes": 45707,
+      "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+      "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+    },
+    "literalWholeEight": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "all29AuthorRechecksEqualIndependent648ObjectProof": true,
+    "sameHeadSourceProofReusedWithoutRepeatingGitCalls": {
+      "path": "ci-72e6ec/taskboard/independent-p11-red-byte-source-proof.json",
+      "bytes": 228325,
+      "blob": "129018c8b20eecc6887ec6ecef1600132cace7af",
+      "sha256": "c5127207772b4f14a1e333268320674ad719cda75fb7e9188a77453a1abf996b"
+    },
+    "host619Digest": "5c76bf6f2750c0070c59b8bf10db3dd83ea1a8c5c34aca5389c5c575bdc4a008",
+    "hostCensusScope": "Immutable Git source only; no archived dist/product hash or complete dependency census."
+  },
+  "originalSetupBuild": {
+    "node": "24.21.0",
+    "pnpm": "11.22.0",
+    "electron": "44.10.1",
+    "shell": "bash --noprofile --norc -e -o pipefail; set -euo pipefail",
+    "sourceCheckoutAndTuple": "Step5 SUCCESS, exact72e/linux-x64/team in raw.",
+    "frozenInstall": "Step7 SUCCESS; pinned existing frozen-lockfile route source-bound by same-head independent proof.",
+    "priorBuilds": "Original Linux exec builder, ledger/Host TypeScript builds, controller build and MCP tsup reached and returned before the full8 reporter under set-e.",
+    "warningsRetained": "Pre-build missing Host dist CLI bin warning, original installation/deprecation warnings, experimental TypeScript stripping warning remain in full raw.",
+    "fullBuildOutputAndDependencyInventory": false
+  },
+  "downstream": {
+    "installerSeven": "Next printed command in same set-e block; unexecuted after helper exit1.",
+    "team179AndStderr24": "matrix.lane=team selects step9 here, but prerequisite step8 failed; SKIPPED, no result.",
+    "workspaceDedicatedBackendTypesFast93TypedLint": "matrix.lane=team selects step10 here, but it is SKIPPED; no result.",
+    "differenceFromTaskboard": "Taskboard additionally excludes both steps through the team-only matrix guard; no causal conflation.",
+    "inputCaptureAndTeamUi": "Steps11–30 SKIPPED; no Team UI action, receipt, PNG or physical cleanup witness.",
+    "artifact": "Step31 upload SUCCESS with no matching files; retained official listing has only four frontend artifacts."
+  },
+  "limits": [
+    "Separate original Team matrix job, not a Taskboard rerun or local experiment.",
+    "All actual results belong to source72e; no bfc geometry/copy or later Models qualification transfer.",
+    "The actual3REDs satisfy only the intended original PhaseA evidence boundary. PhaseB/C remains unselected by this review and requires fresh prospective R1/R2.",
+    "No new source, query, API refetch, project/provider/native execution, CI mutation or ref write was performed."
+  ],
+  "allOriginalInputsPostflightUnchanged": true
+}

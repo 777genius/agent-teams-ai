@@ -1,0 +1,22 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "content": "{\"sha\":\"9286c1009a3b6348598a7ded7b93cfc582d18d6d\",\"node_id\":\"C_kwDORVTEtNoAKDkyODZjMTAwOWEzYjYzNDg1OThhN2RlZDdiOTNjZmM1ODJkMThkNmQ\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/9286c1009a3b6348598a7ded7b93cfc582d18d6d\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/9286c1009a3b6348598a7ded7b93cfc582d18d6d\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T09:37:33Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T09:37:33Z\"},\"tree\":{\"sha\":\"77bc55dc1ee21a87b4f3d3983e1903873549fc92\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/77bc55dc1ee21a87b4f3d3983e1903873549fc92\"},\"message\":\"docs: bind Models loading regression to current source\\n\\nRecord the reviewed test-only phase, its exact source and evidence, and the completed geometry and credential-copy publication before adding the regression tests.\",\"parents\":[{\"sha\":\"bfc1ceca293f2291a0deb1129fdbe6e94c7f8999\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/bfc1ceca293f2291a0deb1129fdbe6e94c7f8999\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/bfc1ceca293f2291a0deb1129fdbe6e94c7f8999\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+    "title": "9286c1009a3b6348598a7ded7b93cfc582d18d6d",
+    "modified_date": null,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/9286c1009a3b6348598a7ded7b93cfc582d18d6d",
+    "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/9286c1009a3b6348598a7ded7b93cfc582d18d6d",
+    "display_title": "9286c1009a3b6348598a7ded7b93cfc582d18d6d",
+    "structuredContent": {
+      "title": "9286c1009a3b6348598a7ded7b93cfc582d18d6d",
+      "content": "{\"sha\":\"9286c1009a3b6348598a7ded7b93cfc582d18d6d\",\"node_id\":\"C_kwDORVTEtNoAKDkyODZjMTAwOWEzYjYzNDg1OThhN2RlZDdiOTNjZmM1ODJkMThkNmQ\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/9286c1009a3b6348598a7ded7b93cfc582d18d6d\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/9286c1009a3b6348598a7ded7b93cfc582d18d6d\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T09:37:33Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T09:37:33Z\"},\"tree\":{\"sha\":\"77bc55dc1ee21a87b4f3d3983e1903873549fc92\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/77bc55dc1ee21a87b4f3d3983e1903873549fc92\"},\"message\":\"docs: bind Models loading regression to current source\\n\\nRecord the reviewed test-only phase, its exact source and evidence, and the completed geometry and credential-copy publication before adding the regression tests.\",\"parents\":[{\"sha\":\"bfc1ceca293f2291a0deb1129fdbe6e94c7f8999\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/bfc1ceca293f2291a0deb1129fdbe6e94c7f8999\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/bfc1ceca293f2291a0deb1129fdbe6e94c7f8999\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+      "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/9286c1009a3b6348598a7ded7b93cfc582d18d6d"
+    }
+  },
+  "isError": false
+}

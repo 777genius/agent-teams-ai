@@ -1,0 +1,358 @@
+{
+  "files": 42,
+  "attempted": 42,
+  "successes": 42,
+  "failures": [],
+  "receipts": [
+    {
+      "index": 3,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/root-remote-tree-review.json",
+      "blob": "441f35d7052551df39cf1719d05a91783ae0c44c",
+      "bytes": 1323,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/003-441f35d7052551df39cf1719d05a91783ae0c44c.json",
+      "success": true
+    },
+    {
+      "index": 4,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/root-actual-docs-readback.json",
+      "blob": "0919026025ce1f4fd132be6e11d9b78cc07c2185",
+      "bytes": 244203,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/004-0919026025ce1f4fd132be6e11d9b78cc07c2185.json",
+      "success": true
+    },
+    {
+      "index": 2,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/root-prepublication-byte-review.json",
+      "blob": "b9f148631b7f9f011afcfe19c7066359b432f20f",
+      "bytes": 269550,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/002-b9f148631b7f9f011afcfe19c7066359b432f20f.json",
+      "success": true
+    },
+    {
+      "index": 5,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/root-actual-source-readback.json",
+      "blob": "8094875bdd4ebae95a14d633aa2416a5c7ef2fcd",
+      "bytes": 244252,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/005-8094875bdd4ebae95a14d633aa2416a5c7ef2fcd.json",
+      "success": true
+    },
+    {
+      "index": 7,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/created-source-tree-response.json",
+      "blob": "74943e808db42dafff5ee87bc5652d2a57185a32",
+      "bytes": 195,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/007-74943e808db42dafff5ee87bc5652d2a57185a32.json",
+      "success": true
+    },
+    {
+      "index": 6,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/created-docs-tree-response.json",
+      "blob": "90bf0550674ee8ae31df29825585a270bcf81e2a",
+      "bytes": 195,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/006-90bf0550674ee8ae31df29825585a270bcf81e2a.json",
+      "success": true
+    },
+    {
+      "index": 8,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/created-docs-commit-response.json",
+      "blob": "cee016945be11e39ea0aacfcd453afb9ed12c719",
+      "bytes": 195,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/008-cee016945be11e39ea0aacfcd453afb9ed12c719.json",
+      "success": true
+    },
+    {
+      "index": 9,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/created-source-commit-response.json",
+      "blob": "0eb7c91975224a75f352be6492a22a7f63859e57",
+      "bytes": 195,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/009-0eb7c91975224a75f352be6492a22a7f63859e57.json",
+      "success": true
+    },
+    {
+      "index": 10,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/created-docs-commit-immutable-readback.json",
+      "blob": "2f1599ad6fe479fa70db86846bfe6ff608780fd8",
+      "bytes": 3878,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/010-2f1599ad6fe479fa70db86846bfe6ff608780fd8.json",
+      "success": true
+    },
+    {
+      "index": 11,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/created-source-commit-immutable-readback.json",
+      "blob": "e931373d4e353f7b0670be34ab872e67f4535905",
+      "bytes": 4662,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/011-e931373d4e353f7b0670be34ab872e67f4535905.json",
+      "success": true
+    },
+    {
+      "index": 12,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/ordinary-docs-push-response.json",
+      "blob": "bc792cbeafd69869c1bb177d2380534078196a99",
+      "bytes": 161,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/012-bc792cbeafd69869c1bb177d2380534078196a99.json",
+      "success": true
+    },
+    {
+      "index": 1,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/upload-manifest.json",
+      "blob": "22a1d162ad1631e97d9ab90f53186ca267553713",
+      "bytes": 719944,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/001-22a1d162ad1631e97d9ab90f53186ca267553713.json",
+      "success": true
+    },
+    {
+      "index": 13,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/fresh-pre-staging-guards.json",
+      "blob": "2b2363880b021de74d367f41df48bacbd21c4782",
+      "bytes": 175598,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/013-2b2363880b021de74d367f41df48bacbd21c4782.json",
+      "success": true
+    },
+    {
+      "index": 14,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/fresh-docs-precommit-guards.json",
+      "blob": "3eb926abdbf3ac340baacdaaef3e7f277e4bbc43",
+      "bytes": 175598,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/014-3eb926abdbf3ac340baacdaaef3e7f277e4bbc43.json",
+      "success": true
+    },
+    {
+      "index": 15,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/fresh-source-precommit-guards.json",
+      "blob": "8e652aedc028620b17bff50fc44c2f081b409cf2",
+      "bytes": 175598,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/015-8e652aedc028620b17bff50fc44c2f081b409cf2.json",
+      "success": true
+    },
+    {
+      "index": 18,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/actual-docs-git-fetch.json",
+      "blob": "4e6529e77207f9b9a2eebcbf8c63533cecbb5134",
+      "bytes": 650,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/018-4e6529e77207f9b9a2eebcbf8c63533cecbb5134.json",
+      "success": true
+    },
+    {
+      "index": 19,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/actual-source-git-fetch.json",
+      "blob": "3de0ef0e413d18b7a99bbb76d8718f94a30f35fb",
+      "bytes": 482,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/019-3de0ef0e413d18b7a99bbb76d8718f94a30f35fb.json",
+      "success": true
+    },
+    {
+      "index": 16,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/post-docs-push-readback.json",
+      "blob": "660b9ad7d2fc695105007b875b658e53aa44d7b5",
+      "bytes": 175658,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/016-660b9ad7d2fc695105007b875b658e53aa44d7b5.json",
+      "success": true
+    },
+    {
+      "index": 17,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/post-source-push-readback.json",
+      "blob": "2ec912e56a74432d9ddd106059ff3308780cc03d",
+      "bytes": 175660,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/017-2ec912e56a74432d9ddd106059ff3308780cc03d.json",
+      "success": true
+    },
+    {
+      "index": 20,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/blob-upload-receipts.json",
+      "blob": "47ab32b6a8cd0e24613006b0264b2ad0737631dc",
+      "bytes": 60638,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/020-47ab32b6a8cd0e24613006b0264b2ad0737631dc.json",
+      "success": true
+    },
+    {
+      "index": 21,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/e3-preinput-copy-independent-prepublication-review.json",
+      "blob": "b5103a5986405aabf37268cc22c9aff6c658540e",
+      "bytes": 33428,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/021-b5103a5986405aabf37268cc22c9aff6c658540e.json",
+      "success": true
+    },
+    {
+      "index": 23,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/e3-preinput-copy-independent-remote-tree-review.json",
+      "blob": "2f8d04c4f6526848897c02e1053b5ba9614925da",
+      "bytes": 2738,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/023-2f8d04c4f6526848897c02e1053b5ba9614925da.json",
+      "success": true
+    },
+    {
+      "index": 25,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/e3-preinput-copy-independent-actual-source-readback.json",
+      "blob": "72a9f79af9e6fc964911151a4cd7731e0c388636",
+      "bytes": 383357,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/025-72a9f79af9e6fc964911151a4cd7731e0c388636.json",
+      "success": true
+    },
+    {
+      "index": 24,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/e3-preinput-copy-independent-actual-docs-readback.json",
+      "blob": "0f33610f6f4080f8975ce17dcb1e4ba2624ea82e",
+      "bytes": 417786,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/024-0f33610f6f4080f8975ce17dcb1e4ba2624ea82e.json",
+      "success": true
+    },
+    {
+      "index": 22,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/e3-preinput-copy-independent-byte-tree-proof.json",
+      "blob": "1bf383fa92476593cca5f63612329b742bef5dbb",
+      "bytes": 510902,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/022-1bf383fa92476593cca5f63612329b742bef5dbb.json",
+      "success": true
+    },
+    {
+      "index": 29,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/after-copy-preview/candidate.patch",
+      "blob": "38345b99b1776fe844b02d6a310fc536f7079053",
+      "bytes": 8468,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/029-38345b99b1776fe844b02d6a310fc536f7079053.json",
+      "success": true
+    },
+    {
+      "index": 30,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/after-copy-preview/composition-metadata.json",
+      "blob": "37d788f8b0a175df11251cc3e75317fe1794cb01",
+      "bytes": 6045,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/030-37d788f8b0a175df11251cc3e75317fe1794cb01.json",
+      "success": true
+    },
+    {
+      "index": 28,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/historical-models/candidate-useRuntimeProviderManagement.test.ts.txt",
+      "blob": "817fe49b43aef4be13d242fd2da0367590d11ace",
+      "bytes": 188106,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/028-817fe49b43aef4be13d242fd2da0367590d11ace.json",
+      "success": true
+    },
+    {
+      "index": 31,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/after-copy-preview/composition-note.md",
+      "blob": "dc30b0a9d2a3b185ee2078c97d2da10aee8a3124",
+      "bytes": 1997,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/031-dc30b0a9d2a3b185ee2078c97d2da10aee8a3124.json",
+      "success": true
+    },
+    {
+      "index": 32,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/after-copy-preview/independent-composition-review.json",
+      "blob": "a1a25a47d756aba10bc641f35380308c73383b32",
+      "bytes": 21497,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/032-a1a25a47d756aba10bc641f35380308c73383b32.json",
+      "success": true
+    },
+    {
+      "index": 34,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/after-copy-preview/reverse.patch",
+      "blob": "21ea371b66e9f70d31fc08de990b9873e65eb0ce",
+      "bytes": 8468,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/034-21ea371b66e9f70d31fc08de990b9873e65eb0ce.json",
+      "success": true
+    },
+    {
+      "index": 33,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/after-copy-preview/models-test-after-copy-and-phase-a.ts.txt",
+      "blob": "48bf7f181ae6836a9003ebe687abab0a0ae2db20",
+      "bytes": 188073,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/033-48bf7f181ae6836a9003ebe687abab0a0ae2db20.json",
+      "success": true
+    },
+    {
+      "index": 35,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/after-copy-preview/unchanged-models-regression-suffix.ts.txt",
+      "blob": "5cf463580d32959d99d7cf7ca8e6aa15c3122e38",
+      "bytes": 8015,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/035-5cf463580d32959d99d7cf7ca8e6aa15c3122e38.json",
+      "success": true
+    },
+    {
+      "index": 36,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/current-phase-a/R1-current-models-test-only.md",
+      "blob": "c5decc6d0707c011a16d9d1082178f087b0f4f8f",
+      "bytes": 12000,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/036-c5decc6d0707c011a16d9d1082178f087b0f4f8f.json",
+      "success": true
+    },
+    {
+      "index": 37,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/current-phase-a/candidate-metadata.json",
+      "blob": "10cf429d28371468607073961c95343422987d68",
+      "bytes": 17296,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/037-10cf429d28371468607073961c95343422987d68.json",
+      "success": true
+    },
+    {
+      "index": 38,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/current-phase-a/independent-current-byte-source-proof.json",
+      "blob": "b8e1f2f3a50573f7092af90e9cfab845b889f189",
+      "bytes": 28753,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/038-b8e1f2f3a50573f7092af90e9cfab845b889f189.json",
+      "success": true
+    },
+    {
+      "index": 26,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/remote-docs-tree-response.json.gz",
+      "blob": "a98203a812af32ff3b42b95a49a4090e0a47969f",
+      "bytes": 1166488,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/026-a98203a812af32ff3b42b95a49a4090e0a47969f.json",
+      "success": true
+    },
+    {
+      "index": 40,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/current-phase-a/reverse.patch",
+      "blob": "6cd2bca1f67e9ec28bf494e6a3268a4a7c1b699e",
+      "bytes": 8468,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/040-6cd2bca1f67e9ec28bf494e6a3268a4a7c1b699e.json",
+      "success": true
+    },
+    {
+      "index": 39,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/current-phase-a/independent-current-source-r1-review.json",
+      "blob": "234760d64e1adb14da4bb9f6de458fb7d2238392",
+      "bytes": 31905,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/039-234760d64e1adb14da4bb9f6de458fb7d2238392.json",
+      "success": true
+    },
+    {
+      "index": 27,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/previous-publication/remote-source-tree-response.json.gz",
+      "blob": "fa42e389d0869d2be849104fd961a93207305755",
+      "bytes": 1166483,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/027-fa42e389d0869d2be849104fd961a93207305755.json",
+      "success": true
+    },
+    {
+      "index": 42,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/publication-index.json",
+      "blob": "24ca1eb9d34c09270e6112a5bcf34a1a6ab31ccd",
+      "bytes": 465238,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/042-24ca1eb9d34c09270e6112a5bcf34a1a6ab31ccd.json",
+      "success": true
+    },
+    {
+      "index": 41,
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+      "blob": "237c4b2ed5aac8fdca85da31222b3f95c3c1bb9b",
+      "bytes": 2130841,
+      "receiptPath": "/workspace/scratch/82d3f9ba6b85/models-a-publication/uploads/041-237c4b2ed5aac8fdca85da31222b3f95c3c1bb9b.json",
+      "success": true
+    }
+  ],
+  "workers": [
+    {
+      "status": "fulfilled"
+    },
+    {
+      "status": "fulfilled"
+    },
+    {
+      "status": "fulfilled"
+    },
+    {
+      "status": "fulfilled"
+    }
+  ]
+}

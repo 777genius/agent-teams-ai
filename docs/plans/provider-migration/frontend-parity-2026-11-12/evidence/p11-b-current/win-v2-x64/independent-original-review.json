@@ -1,0 +1,1122 @@
+{
+  "kind": "INDEPENDENT_ORIGINAL_E3_WINDOWS_V2_X64_EVIDENCE_REVIEW",
+  "reviewer": "/root/ui_failures",
+  "originalAuthor": "/root/native_failures",
+  "reviewedAtUTC": "2026-11-16T09:09:05.466851+00:00",
+  "verdict": "APPROVE_WITH_EXPLICIT_ORIGINAL_SOURCE_SCOPE",
+  "requiredAuthorCorrections": [],
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "sourceTree": "de80fbfbffb3fe4daabf6cc9be258cc8df534524",
+  "runId": 43831885742,
+  "jobId": 133178915729,
+  "scope": "Independent review of the frozen original Windows x64 V2 audit and retained original job/ZIP/receipts. No checkpoint or prose appendix was supplied separately, and neither is invented here.",
+  "authorAudit": {
+    "path": "ci-72e6ec/native/v2-windows-x64/original-v2-and-p09-audit.json",
+    "bytes": 50874,
+    "blob": "ee5bb8ad98af825b208b918a26a2b4f2c91a982e",
+    "sha256": "b1bf1e6c7c7b8317be47a6007218bddf9a9f8a2c92a284b891dccc44abff7063"
+  },
+  "independentByteSourceProof": {
+    "path": "ci-72e6ec/native/v2-windows-x64/independent-byte-source-proof.json",
+    "bytes": 263510,
+    "blob": "24b819df70c75e8f7898c5fa7d9103d8c6f147db",
+    "sha256": "49c4e8bcf4573349390b2ed561792ef7c2f38197773e164bb48296993967c4d5"
+  },
+  "evidenceReaderCorrection": {
+    "path": "ci-72e6ec/native/v2-windows-x64/independent-reader-correction.json",
+    "bytes": 796,
+    "blob": "09465e55b196386efe65598f3ad50d2a63f00921",
+    "sha256": "5a1ca1338116fa68e4b24f6bd4c29db75ec2a5b44fc92ea7445048bafee50fc7"
+  },
+  "readerCorrectionLimit": "An initially guessed extra source path did not exist, so the pure Git evidence reader stopped before writing its proof. The real closeNativeHostInput function is in already-selected native-host.ts. The corrected reader removed only the nonexistent extra path and completed every declared byte/source check. This was no product/test/native execution or test failure.",
+  "originalReferences": [
+    {
+      "path": "ci-72e6ec/native/v2-windows-x64/original-v2-and-p09-audit.json",
+      "bytes": 50874,
+      "blob": "ee5bb8ad98af825b208b918a26a2b4f2c91a982e",
+      "sha256": "b1bf1e6c7c7b8317be47a6007218bddf9a9f8a2c92a284b891dccc44abff7063"
+    },
+    {
+      "path": "ci-72e6ec/native/owned-v2-jobs-response-0848.json",
+      "bytes": 23372,
+      "blob": "719d95a9426a4a41ceaeb12a87b8c4d9cc7a258f",
+      "sha256": "5086881e777be9989557e5ebb135c4438d997690c28ef3be97552faf598b35dd"
+    },
+    {
+      "path": "ci-72e6ec/native/official-v2-artifacts-0849.json",
+      "bytes": 1061,
+      "blob": "51f90d72ded708f80ff4c98b2685917d544f23b7",
+      "sha256": "888f527f645c0c5e3ad7dbefcc49af4ee2f7f1d84ba04a025477f5b6097bfa66"
+    },
+    {
+      "path": "ci-72e6ec/native/v2-windows-x64/job-133178915729.log",
+      "bytes": 92238,
+      "blob": "9ba10a28ddc1e833889002ca3728cfc817909a00",
+      "sha256": "b2d08b1cfad63b0a3578007f3f9357874ef5bbeda43307c175d53414c1758b62"
+    },
+    {
+      "path": "ci-72e6ec/native/v2-windows-x64/original-job-log-response.json",
+      "bytes": 96155,
+      "blob": "6ad7fecb78c090d19b745efd74d4d67f111e2f37",
+      "sha256": "fd916f3e9e5ebab9e62a5e98248a7833d92b19a138fce78730f467d9b8d07c7e"
+    },
+    {
+      "path": "ci-72e6ec/native/v2-windows-x64/artifact-14209218619.zip",
+      "bytes": 13292,
+      "blob": "ac1ecf8f00379626ff20cb02097a435aee647b2b",
+      "sha256": "d71d6d5828bf0d69f9d4b0f15feb5ac1d092281a41899e5d9cf28fa76028c43e"
+    },
+    {
+      "path": "ci-72e6ec/native/v2-windows-x64/archive-retention.json",
+      "bytes": 1504,
+      "blob": "aa7cabef9d378f460b309f03ecc65c0f982953f7",
+      "sha256": "9e2213742fb4c318c7a063b96da6c8533c0feed9ab3bd5bda8035537be8ecef3"
+    },
+    {
+      "path": "ci-72e6ec/native/host-source-E3-git-audit.json",
+      "bytes": 217192,
+      "blob": "96da518a89077c1b4bceaaf6cdca1a7703d96d76",
+      "sha256": "aaf2e11d778cdb914a4c9da4a9ff67c3011f2a3c94009a5ec45e8a49be550864"
+    }
+  ],
+  "terminalAndArchive": {
+    "job": {
+      "id": 133178915729,
+      "name": "Embedded V2.1.4 original Host (win32-x64)",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 43831885742,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Enable Windows long paths",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Require immutable source HEAD and record actual runner tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Install exact source workspace dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Build original Host and its pinned provider implementation",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Check original graph and custody boundaries",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9
+        },
+        {
+          "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10
+        },
+        {
+          "name": "Prepare exact Bun, engine graph and original-process artifact",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11
+        },
+        {
+          "name": "Prove actual Darwin executable custody and adversarial cleanup",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12
+        },
+        {
+          "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13
+        },
+        {
+          "name": "Prove original Windows Job custody and surviving descendant cleanup",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14
+        },
+        {
+          "name": "Require exact Windows original-process evidence",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        },
+        {
+          "name": "Check original Desktop private recipe composition",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 16
+        },
+        {
+          "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        },
+        {
+          "name": "Exercise Windows automatic approval and cold Host Resume",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18
+        },
+        {
+          "name": "Exercise native catalog and model probe without tool allocation",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19
+        },
+        {
+          "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20
+        },
+        {
+          "name": "Exercise effective permissions and active Stop with a surviving sibling",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21
+        },
+        {
+          "name": "Exercise captured external MCP and app-only through the native Host",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22
+        },
+        {
+          "name": "Require complete native management and permission evidence",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 23
+        },
+        {
+          "name": "Require product-path Host proof after exact candidate qualification",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 24
+        },
+        {
+          "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 25
+        },
+        {
+          "name": "Preserve exact native evidence or candidate HOLD",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 26
+        },
+        {
+          "name": "Post Run actions/setup-node@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 50
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 51
+        },
+        {
+          "name": "Post Run actions/checkout@v6",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 52
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 53
+        }
+      ]
+    },
+    "officialArtifact": {
+      "id": 14209218619,
+      "name": "opencode-v2-embedded-native-win32-x64",
+      "size_in_bytes": 13292,
+      "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14209218619",
+      "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14209218619/zip",
+      "expired": false,
+      "created_at": "2026-11-16T08:44:52Z",
+      "expires_at": "2026-11-23T08:44:51Z",
+      "updated_at": "2026-11-16T08:44:52Z",
+      "digest": "sha256:d71d6d5828bf0d69f9d4b0f15feb5ac1d092281a41899e5d9cf28fa76028c43e",
+      "workflow_run": {
+        "id": 43831885742,
+        "repository_id": 1163183284,
+        "head_repository_id": 1163183284,
+        "head_branch": "fix/frontend-parity-completion-20261113",
+        "head_sha": "72e6ec04444969d343d73834c70bc4e261100fc9"
+      }
+    },
+    "rawUtf8ExactlyOriginalMcpContent": true,
+    "safeUniqueNonsymlinkZipNamesAndAllCrc": true,
+    "members": [
+      {
+        "path": "opencode-v2-embedded-inputs.json",
+        "bytes": 780,
+        "blob": "6fd5c68470728fe0243fb2733642491437395bc2",
+        "sha256": "06c64b5c5958a4971b2e879392333ee2aa582879f8ffe42e7d80a065f424e9e6",
+        "crc32": "4e28b346"
+      },
+      {
+        "path": "opencode-v2-windows-custody.json",
+        "bytes": 907,
+        "blob": "15175f9f0323a3ad9c20419c665272aeac4c903b",
+        "sha256": "35fa8cb107813b791e61b6d813a2ab57df69ff6d6083acfd0403bb77fd5eee47",
+        "crc32": "c05f449e"
+      },
+      {
+        "path": "opencode-v2-embedded-host.json",
+        "bytes": 95099,
+        "blob": "8aad55edf4b8fab2733dbd679ebd4d2830f2ba21",
+        "sha256": "921188a43a3fbccab32fb46373b4ff45b3863742d22b14ddf4a52bb43b5aa4c6",
+        "crc32": "b71f4a15"
+      },
+      {
+        "path": "opencode-v2-embedded-host-auto.json",
+        "bytes": 94913,
+        "blob": "2a70f02a1529f77b2d4d0b34f9d1582d1bbbfde0",
+        "sha256": "f1555cd4f80405a116c22e64e63ccd181ba01fa8bec8689cea02fab05c0130e1",
+        "crc32": "d4569cb7"
+      }
+    ],
+    "retainedExpandedBytes": 191699,
+    "noAdditionalDownloadOrLogFetchByReviewer": true,
+    "transportLimit": "This review joins the already-retained official metadata and full original MCP response to all raw bytes. It does not reproduce a lost earlier transport response or claim a new execution."
+  },
+  "originalCommandsAndCounts": {
+    "commands": [
+      {
+        "line": 36,
+        "text": "git config --global core.longpaths true"
+      },
+      {
+        "line": 52,
+        "text": "actions/checkout@v6"
+      },
+      {
+        "line": 271,
+        "text": "set -euo pipefail"
+      },
+      {
+        "line": 291,
+        "text": "pnpm/action-setup@v6"
+      },
+      {
+        "line": 327,
+        "text": "actions/setup-node@v6"
+      },
+      {
+        "line": 368,
+        "text": "node ./scripts/ci/install-dependencies-with-retry.mjs"
+      },
+      {
+        "line": 640,
+        "text": "pnpm --filter @agent-teams/legacy-agent-host build"
+      },
+      {
+        "line": 660,
+        "text": "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/opencode-v2-native-paths.test.ts packages/legacy-agent-host/tests/owner-scoped-backup.test.ts packages/legacy-agent-host/tests/member-attachment-delivery.test.ts"
+      },
+      {
+        "line": 744,
+        "text": "node scripts/stage-runtime.mjs --platform win32-x64"
+      },
+      {
+        "line": 766,
+        "text": "node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts"
+      },
+      {
+        "line": 783,
+        "text": "node --test packages/legacy-agent-host/tests/windows-job-custody.native.ts"
+      },
+      {
+        "line": 815,
+        "text": "node --input-type=module -e \""
+      },
+      {
+        "line": 854,
+        "text": "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts"
+      },
+      {
+        "line": 886,
+        "text": "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts"
+      },
+      {
+        "line": 919,
+        "text": "node --input-type=module -e \""
+      },
+      {
+        "line": 982,
+        "text": "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+      }
+    ],
+    "reporterBlocks": [
+      {
+        "line": 736,
+        "tests": 58,
+        "suites": 0,
+        "pass": 57,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 1,
+        "todo": 0,
+        "duration_ms": 11360.1087
+      },
+      {
+        "line": 807,
+        "tests": 1,
+        "suites": 0,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 21931.1299
+      },
+      {
+        "line": 878,
+        "tests": 1,
+        "suites": 0,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 199165.5079
+      },
+      {
+        "line": 911,
+        "tests": 1,
+        "suites": 0,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "duration_ms": 178297.7166
+      }
+    ],
+    "totals": {
+      "tests": 61,
+      "pass": 60,
+      "fail": 0,
+      "skipped": 1,
+      "cancelled": 0
+    },
+    "independentlyRecountedIndividualPassRows": 60,
+    "originalSkip": [
+      {
+        "line": 717,
+        "text": "﹣ Linux builder refuses an existing or linked output leaf before any compiler dispatch (1.2729ms) # SKIP"
+      }
+    ],
+    "runner": "Original Windows x64 Node v24.21.0 / pnpm 11.22.0 setup, workspace install, Host build and six-file prerequisite command are present in the full original job. The three subsequent native invocations are custody, manual Host and automatic-approval Host, each one passing test.",
+    "notRunHere": "No reviewer Node/project build/test/compiler/provider/native command ran. Literal CI commands are evidence, not commands invoked during this review.",
+    "skippedWorkflowStages": [
+      {
+        "number": 12,
+        "name": "Prove actual Darwin executable custody and adversarial cleanup"
+      },
+      {
+        "number": 13,
+        "name": "Require complete Darwin evidence for this exact candidate or product tuple"
+      },
+      {
+        "number": 16,
+        "name": "Check original Desktop private recipe composition"
+      },
+      {
+        "number": 19,
+        "name": "Exercise native catalog and model probe without tool allocation"
+      },
+      {
+        "number": 20,
+        "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery"
+      },
+      {
+        "number": 21,
+        "name": "Exercise effective permissions and active Stop with a surviving sibling"
+      },
+      {
+        "number": 22,
+        "name": "Exercise captured external MCP and app-only through the native Host"
+      },
+      {
+        "number": 23,
+        "name": "Require complete native management and permission evidence"
+      },
+      {
+        "number": 25,
+        "name": "Observe POSIX original-path exec and explicit mutation counterexamples"
+      }
+    ],
+    "P09": "The author audit uses a shared filename containing p09. This Windows job did not execute Darwin executable/adversarial P09 or POSIX mutation steps; its successful job/receipts cannot qualify either."
+  },
+  "sourceQualification": {
+    "freshAllHostSourceFiles": 619,
+    "LFSourceDigest": "5c76bf6f2750c0070c59b8bf10db3dd83ea1a8c5c34aca5389c5c575bdc4a008",
+    "actualWindowsCRLFSourceDigest": "95d196f87beb284995d5518b0eafc0da5e92aaac4af21d1c465e6c54d2d0d474",
+    "all619ByteEqualPrior578": true,
+    "currentSourceJoin": "Fresh git ls-tree/cat-file bytes at exact72e6 reconstructed both canonical LF and actual Windows CRLF path-NUL-bytes-NUL Host digests. The actual receipt uses CRLF95d196f8. All619 source leaves and the separately selected interpretation/config/test/archive leaves are individually recorded in the independent proof.",
+    "selectedAdditionalSourceCount": 24,
+    "selectedAdditionalSources": [
+      {
+        "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+        "bytes": 36309,
+        "blob": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+        "sha256": "6db4370dc3ee5521847cef9c039f21bddfcfc412b6dabba49dda73585985996a",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+        "bytes": 33259,
+        "blob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+        "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/windows-job-custody.native.ts",
+        "bytes": 9536,
+        "blob": "a224b47e942a337e823135d0cfca0fa11cd475bd",
+        "sha256": "88ee29496c076870605d2e2c6849c92e9286a06809f00cb10444b033757f4687",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v1-version-source.ts",
+        "bytes": 9765,
+        "blob": "78cb6f0026821785b1d0c0c1ad21ddfe76cdaee4",
+        "sha256": "0ff252732bedb1807cf428370e41628922a4d719090f479a41f25117d7227979",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+        "bytes": 15303,
+        "blob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5",
+        "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "bytes": 37181,
+        "blob": "625c6ddd74357abbdf565bf386388274cebd4068",
+        "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+        "bytes": 38584,
+        "blob": "ff0aeba42e3a4e845428146969360dff91c25de8",
+        "sha256": "f25659fe4c89e30072e9c2bc923fcdf6f1a3dd2efdca81387659e485170c74c3",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-message-image.ts",
+        "bytes": 5377,
+        "blob": "1eeab2d4ba765c683b37a3d0cf5790b21aef919b",
+        "sha256": "e8cbeabf1968baabbeedbccad60f17c281e2f5aa64a444c3f5245f6ac04421e1",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "packages/legacy-agent-host/package.json",
+        "bytes": 12355,
+        "blob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+        "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "bytes": 956788,
+        "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+        "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "runtime.lock.json",
+        "bytes": 6127,
+        "blob": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+        "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+        "bytes": 27709,
+        "blob": "f1e1d1145898e201723be343fa8768d73332fcb1",
+        "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+        "bytes": 21219,
+        "blob": "19aca56c55a666654b04827b3c2446d2ad03ad8d",
+        "sha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-opencode-v2-fixture.test.ts",
+        "bytes": 9204,
+        "blob": "2c6337c664510cd8951c2f753ddb6c55264bb9c6",
+        "sha256": "4ccac355836ed8da26b1d0a54e2d62abf2a8e323b376e2b603b39f6eac3b5dd7",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+        "bytes": 185996,
+        "blob": "7130609dd29851148c9e2106e2764b75982739b1",
+        "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+        "bytes": 6230,
+        "blob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+        "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/prepare-opencode-v2-native.ts",
+        "bytes": 9450,
+        "blob": "b6fef813e23b8f18d7f8ebae5b14f5c0a104a30c",
+        "sha256": "40c7b16a40c3efaf859dffcaa762d927d630d84945810782da2ca172c06fe16e",
+        "additionalInterpretationSource": true
+      },
+      {
+        "path": "scripts/stage-runtime.mjs",
+        "bytes": 9050,
+        "blob": "fb06c3470b93df96ec0859536f135191616db093",
+        "sha256": "7ee8a9036562728a66d5a1dcd3ce7c97abf75cabeb97092eb9b87171ed2e29be",
+        "additionalInterpretationSource": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts",
+        "bytes": 7260,
+        "blob": "f694829cdc94d27c4b47735f2af602a3f7409cae",
+        "sha256": "9ae6b2876d5e2c394eb587fe9f9f106ba61726429e8133e71fe55ebb1090fb19",
+        "additionalInterpretationSource": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/registered-process-build-selection.test.ts",
+        "bytes": 15547,
+        "blob": "d88797a15f80482027c990a1fdd75ff42264aa41",
+        "sha256": "26dd3e24a21b33fbe50067f2f73a925db82d3ae7e907cd93b2a9f0bd8fe08322",
+        "additionalInterpretationSource": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/windows-job-custody.test.ts",
+        "bytes": 19542,
+        "blob": "1ca246fe30e71394783be13dc49ccc1d9b864dbb",
+        "sha256": "1ff30c2a0b092456040fe2779a2f71325d261cccc71fd81d527722105dced469",
+        "additionalInterpretationSource": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/opencode-v2-native-paths.test.ts",
+        "bytes": 4117,
+        "blob": "bae2861cd29a7bbcd46568c2232e2a8f7a3325b8",
+        "sha256": "6ce6efc6963c65666948bd1b973be9a91192505c8c7bd33e5c18085ee1ab792a",
+        "additionalInterpretationSource": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/owner-scoped-backup.test.ts",
+        "bytes": 20777,
+        "blob": "18fce6f1f9a02501747452d798d5eabdea8c71d9",
+        "sha256": "302c621da564b70862bed193d42d909b794e140a5c9556283af34099a6ed23d3",
+        "additionalInterpretationSource": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/member-attachment-delivery.test.ts",
+        "bytes": 25614,
+        "blob": "738e093b12ff8ebcef56f586969a98d99bce2364",
+        "sha256": "0496bde63528da876b87a073a1cd3d5e3d31d90d201bd99e978bc49b6d712ff9",
+        "additionalInterpretationSource": true
+      }
+    ],
+    "runtimeInputDigests": {
+      "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+      "status": "READY",
+      "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+      "platform": "win32-x64",
+      "nodeVersion": "v24.21.0",
+      "productQualified": false,
+      "stage": "prepared",
+      "baseArchiveSha256": "fafa3d891922cb3a5df6d1bd7dec80cc105352c619b39e298761657add677f49",
+      "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "bun": {
+        "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\resources\\runtime\\bun\\bun.exe",
+        "sha256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+        "version": "1.4.3"
+      },
+      "supportArchiveSha256": "9cea106d78a0482a0ea8bd05b0a7cb44c604fcf4f6de3fdac5549a5ba552787c",
+      "manifestSha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628"
+    },
+    "custodyHostBuild": {
+      "hostSourceDigest": "95d196f87beb284995d5518b0eafc0da5e92aaac4af21d1c465e6c54d2d0d474",
+      "hostDistDigest": "7bbbd0a4afa5c633562aa8f44fdf74ae1b1035fd0764b8a5b8ee7100e32bb602",
+      "providerDigest": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+    },
+    "selectedProviderPair": [
+      {
+        "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+        "bytes": 185996,
+        "blob": "7130609dd29851148c9e2106e2764b75982739b1",
+        "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+        "lines": 716,
+        "sameBytesAsPrevious578": true
+      },
+      {
+        "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+        "bytes": 6230,
+        "blob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+        "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+        "lines": 28,
+        "sameBytesAsPrevious578": true
+      }
+    ],
+    "buildAndPayloadLimit": "The original source-pinned builder deletes stale owned ledger/Host outputs, invokes its original compilers, checks immutable source and the installed provider payload against the selected archive, and verifies build digests again. The official four-member ZIP does not archive the full Host dist, Bun executable, native fixture binary or complete runtime graph; their digests remain original captured build/input facts, not a reviewer rebuild or a complete independent binary census.",
+    "noHistoricalResultTransfer": "Equality of the selected72e6 source with578 is only a byte comparison. This review qualifies this original job; no prior result supplies a missing current gate."
+  },
+  "windowsCustody": {
+    "exactReceipt": {
+      "kind": "TEST_WINDOWS_ORIGINAL_JOB_CUSTODY",
+      "status": "PASS",
+      "cleanup": true,
+      "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+      "platform": "win32-x64",
+      "nodeVersion": "v24.21.0",
+      "bunSha256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+      "manifestSha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+      "hostBuild": {
+        "hostSourceDigest": "95d196f87beb284995d5518b0eafc0da5e92aaac4af21d1c465e6c54d2d0d474",
+        "hostDistDigest": "7bbbd0a4afa5c633562aa8f44fdf74ae1b1035fd0764b8a5b8ee7100e32bb602",
+        "providerDigest": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+      },
+      "productQualified": false,
+      "desktopQualified": false,
+      "captureBeforeInput": true,
+      "descendantSurvivedRootExit": true,
+      "originalJobCleanup": "confirmed",
+      "neighborSurvivedTargetStop": true,
+      "neighborJobCleanup": "confirmed"
+    },
+    "source": "packages/legacy-agent-host/tests/windows-job-custody.native.ts",
+    "checkedMeaning": [
+      "The original native fixture captures Windows Job ownership before private input. It starts a distinct neighboring original Job as a negative control.",
+      "The target root exits with code0 while the original descendant heartbeat survives. The target confirmation is repeated, then the original descendant heartbeat must remain unchanged across the existing100ms observation.",
+      "The neighboring Job keeps its original capture identity and its heartbeat advances across the target Stop. It is then stopped and confirmed independently.",
+      "The finally path preserves both original cleanup operations. PASS requires their cleanup confirmations; the retained booleans are source-joined assertions, not a separate full native syscall trace or exported HANDLE census."
+    ],
+    "qualifiedFalseFieldsPreserved": [
+      "productQualified",
+      "desktopQualified"
+    ]
+  },
+  "hostProductPath": {
+    "source": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+    "completeScenarioManuallyRead": true,
+    "manualAndAutomatic": [
+      {
+        "mode": "manual",
+        "receipt": {
+          "path": "ci-72e6ec/native/v2-windows-x64/extracted/opencode-v2-embedded-host.json",
+          "bytes": 95099,
+          "blob": "8aad55edf4b8fab2733dbd679ebd4d2830f2ba21",
+          "sha256": "921188a43a3fbccab32fb46373b4ff45b3863742d22b14ddf4a52bb43b5aa4c6"
+        },
+        "steps": [
+          "original_host_embedded_native_and_mcp_ready",
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+          "changed_project_config_did_not_retarget_running_native_session",
+          "original_uploaded_PNG_native_image_inference_and_public_readback",
+          "checkpoint_and_original_host_native_cleanup_confirmed",
+          "cold_host_restored_native_history_without_model_or_tool_replay"
+        ],
+        "phaseElapsedMs": {
+          "original_host_embedded_native_and_mcp_ready": 49201,
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 155620,
+          "changed_project_config_did_not_retarget_running_native_session": 155620,
+          "original_uploaded_PNG_native_image_inference_and_public_readback": 155620,
+          "checkpoint_and_original_host_native_cleanup_confirmed": 156559,
+          "cold_host_restored_native_history_without_model_or_tool_replay": 197318
+        },
+        "elapsedMs": 198824,
+        "inputObservation": {
+          "reads": 387,
+          "last": {
+            "phase": "allocated",
+            "custody": "owned",
+            "nativeReady": true,
+            "attached": true,
+            "sealed": false,
+            "diagnostic": null,
+            "inputs": [
+              {
+                "phase": "terminal",
+                "terminal": "succeeded"
+              },
+              {
+                "phase": "terminal",
+                "terminal": "succeeded"
+              }
+            ],
+            "interactions": [
+              {
+                "kind": "permission",
+                "phase": "resolved"
+              },
+              {
+                "kind": "permission",
+                "phase": "resolved"
+              }
+            ]
+          }
+        },
+        "launchObservation": {
+          "openElapsedMs": 41600,
+          "afterOpen": {
+            "available": true,
+            "status": "ready",
+            "reason": "context-applied",
+            "elapsedSinceAttemptMs": 40384,
+            "capturedTimeoutMs": 120000,
+            "claimed": true,
+            "nativeReady": true,
+            "contextApplied": true,
+            "everReady": true,
+            "usable": true,
+            "controlAvailable": true,
+            "noAllocation": false
+          }
+        },
+        "hosts": [
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          },
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          }
+        ],
+        "coordination": {
+          "status": "unqualified",
+          "cleanup": null
+        },
+        "modelRequests": 11,
+        "modelFailures": [],
+        "trace": {
+          "rows": 254,
+          "eventCounts": {
+            "child-spawn": 1,
+            "child-ready": 1,
+            "request": 105,
+            "response": 104,
+            "request-send-headers": 15,
+            "request-body-sent": 15,
+            "response-end": 12,
+            "trace-limit": 1
+          },
+          "last": {
+            "epoch": 1,
+            "event": "trace-limit",
+            "atMs": 68192,
+            "child": null,
+            "request": null,
+            "route": null,
+            "method": null,
+            "durationMs": null,
+            "status": null,
+            "contentEncoding": null,
+            "stage": null,
+            "code": null,
+            "exitCode": null,
+            "signal": null
+          },
+          "complete": false
+        },
+        "cpuScope": "original-source-host-including-cleanup"
+      },
+      {
+        "mode": "auto",
+        "receipt": {
+          "path": "ci-72e6ec/native/v2-windows-x64/extracted/opencode-v2-embedded-host-auto.json",
+          "bytes": 94913,
+          "blob": "2a70f02a1529f77b2d4d0b34f9d1582d1bbbfde0",
+          "sha256": "f1555cd4f80405a116c22e64e63ccd181ba01fa8bec8689cea02fab05c0130e1"
+        },
+        "steps": [
+          "original_host_embedded_native_and_mcp_ready",
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+          "changed_project_config_did_not_retarget_running_native_session",
+          "original_uploaded_PNG_native_image_inference_and_public_readback",
+          "checkpoint_and_original_host_native_cleanup_confirmed",
+          "cold_host_restored_native_history_without_model_or_tool_replay"
+        ],
+        "phaseElapsedMs": {
+          "original_host_embedded_native_and_mcp_ready": 49174,
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 135043,
+          "changed_project_config_did_not_retarget_running_native_session": 135043,
+          "original_uploaded_PNG_native_image_inference_and_public_readback": 135043,
+          "checkpoint_and_original_host_native_cleanup_confirmed": 135894,
+          "cold_host_restored_native_history_without_model_or_tool_replay": 176514
+        },
+        "elapsedMs": 177949,
+        "inputObservation": {
+          "reads": 309,
+          "last": {
+            "phase": "allocated",
+            "custody": "owned",
+            "nativeReady": true,
+            "attached": true,
+            "sealed": false,
+            "diagnostic": null,
+            "inputs": [
+              {
+                "phase": "terminal",
+                "terminal": "succeeded"
+              },
+              {
+                "phase": "terminal",
+                "terminal": "succeeded"
+              }
+            ],
+            "interactions": []
+          }
+        },
+        "launchObservation": {
+          "openElapsedMs": 41532,
+          "afterOpen": {
+            "available": true,
+            "status": "ready",
+            "reason": "context-applied",
+            "elapsedSinceAttemptMs": 40300,
+            "capturedTimeoutMs": 120000,
+            "claimed": true,
+            "nativeReady": true,
+            "contextApplied": true,
+            "everReady": true,
+            "usable": true,
+            "controlAvailable": true,
+            "noAllocation": false
+          }
+        },
+        "hosts": [
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          },
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          }
+        ],
+        "coordination": {
+          "status": "unqualified",
+          "cleanup": null
+        },
+        "modelRequests": 11,
+        "modelFailures": [],
+        "trace": {
+          "rows": 254,
+          "eventCounts": {
+            "child-spawn": 1,
+            "child-ready": 1,
+            "request": 105,
+            "response": 104,
+            "request-send-headers": 15,
+            "request-body-sent": 15,
+            "response-end": 12,
+            "trace-limit": 1
+          },
+          "last": {
+            "epoch": 1,
+            "event": "trace-limit",
+            "atMs": 67718,
+            "child": null,
+            "request": null,
+            "route": null,
+            "method": null,
+            "durationMs": null,
+            "status": null,
+            "contentEncoding": null,
+            "stage": null,
+            "code": null,
+            "exitCode": null,
+            "signal": null
+          },
+          "complete": false
+        },
+        "cpuScope": "original-source-host-including-cleanup"
+      }
+    ],
+    "checkedAssertions": [
+      "The exact original Host and embedded V2.1.4 native runtime communicate with a localhost scripted model. Each mode has11 actual model requests and no model failure; manual mode resolves two original permission interactions, automatic mode has none.",
+      "The original two direct messages produce the expected tool/MCP effect, one completed Task with the expected owner/comment and two replies; file bytes ONE newline TWO newline, effects, current session identity and no replay are checked by the original source.",
+      "ModelB/high and captured projectA are preserved when later project configuration becomesB. The independent comparison does not redefine current authority or infer an unretained configuration read.",
+      "The second original message uses the real Team upload and public attachment-read paths. The native model payload has exactly one image after its original text; the helper verifies canonical bytes or the allowed lossless fixture reencoding and known2x1 pixels. Public bytes and message identity are read again after cold restore.",
+      "The original checkpoint, first Host close, cold original Host and native-history restore, same-intent replay acceptance and no new model/tool execution are actually reached. A new native generation and two retained inputs are checked. The second original Stop and Host close are separately reached.",
+      "The failing tool exit7 must remain a tool-error activity event rather than being accepted as success."
+    ],
+    "inputObservationLimit": "The last running input observation is an allocated/owned/ready/attached view before cleanup; it is not a post-cleanup state. Its successful terminal inputs and resolved permission records remain distinct from later Stop/exit assertions.",
+    "closeSource": "fixtures/native-host.ts closeNativeHostInput lines100-123 and close lines324-346",
+    "closeMeaning": "The original child input is ended, then its captured disposal window plus2000ms is observed (or original12000ms before handshake). A timeout may call SIGTERM and wait the original12000ms fallback. Every completed close still requires the captured ChildProcess exitCode0, signalCode null and valid stdout. The final facts therefore establish those exact exit outcomes, but the receipt does not independently label which internal wait branch ran; this review does not claim that no terminate attempt was possible.",
+    "hostExitFacts": "Each manual/auto scenario retains two original Host close facts, all0/null with stdoutValid true. These are distinct from the bounded passive child trace and the separate standalone custody fixture.",
+    "coordinationLimit": "coordination.status is unqualified with cleanup null for both modes. The Linux-only coordination lane is not promoted by the Windows result.",
+    "explicitFalse": [
+      "vendorAuthQualified",
+      "desktopQualified",
+      "releaseQualified"
+    ]
+  },
+  "boundedDiagnostics": {
+    "source": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+    "trace": [
+      {
+        "mode": "manual",
+        "rows": 254,
+        "eventCounts": {
+          "child-spawn": 1,
+          "child-ready": 1,
+          "request": 105,
+          "response": 104,
+          "request-send-headers": 15,
+          "request-body-sent": 15,
+          "response-end": 12,
+          "trace-limit": 1
+        },
+        "last": {
+          "epoch": 1,
+          "event": "trace-limit",
+          "atMs": 68192,
+          "child": null,
+          "request": null,
+          "route": null,
+          "method": null,
+          "durationMs": null,
+          "status": null,
+          "contentEncoding": null,
+          "stage": null,
+          "code": null,
+          "exitCode": null,
+          "signal": null
+        },
+        "complete": false
+      },
+      {
+        "mode": "auto",
+        "rows": 254,
+        "eventCounts": {
+          "child-spawn": 1,
+          "child-ready": 1,
+          "request": 105,
+          "response": 104,
+          "request-send-headers": 15,
+          "request-body-sent": 15,
+          "response-end": 12,
+          "trace-limit": 1
+        },
+        "last": {
+          "epoch": 1,
+          "event": "trace-limit",
+          "atMs": 67718,
+          "child": null,
+          "request": null,
+          "route": null,
+          "method": null,
+          "durationMs": null,
+          "status": null,
+          "contentEncoding": null,
+          "stage": null,
+          "code": null,
+          "exitCode": null,
+          "signal": null
+        },
+        "complete": false
+      }
+    ],
+    "traceLimit": "Each trace has254 retained epoch1 rows and ends with trace-limit. The last row occurs before the rest of the scenario and before cold Host epoch2. It is not complete transport/process/custody coverage; later success and exits rely on distinct original assertions/receipts.",
+    "cpuArithmetic": [
+      {
+        "mode": "manual",
+        "verified": true,
+        "scope": "original-source-host-including-cleanup",
+        "epoch": 1,
+        "sampleCount": 14359,
+        "sampledUs": 150696405,
+        "profileDurationUs": 150696563,
+        "rawDiscarded": true
+      },
+      {
+        "mode": "auto",
+        "verified": true,
+        "scope": "original-source-host-including-cleanup",
+        "epoch": 1,
+        "sampleCount": 12434,
+        "sampledUs": 129963149,
+        "profileDurationUs": 129963336,
+        "rawDiscarded": true
+      }
+    ],
+    "cpuLimits": "All exclusive category, writer detail/caller and namespace subtotals were recomputed. Inclusive categories overlap. These are sampled original Host epoch1 stacks including cleanup, not invocation counts, per-query wall time, Bun CPU, later Host measurements or a causal latency diagnosis. Raw CPU profiles were deliberately discarded by the original bounded observer."
+  },
+  "finalLimitations": [
+    "Source-bound original TEST leaf results only. No current Team179/stderr24 or P11 A semantic RED, whole renderer/types/lint, Process or packaged P08 qualification.",
+    "Host source digest independently joins all619 Git source files with actual runner EOL form. Host dist/runtime/Bun/native image hashes remain captured original build/input evidence, not a local independent rebuild.",
+    "No actual vendor credential/model action or installed product/release qualification; local-scripted model only.",
+    "Manual and auto are separate original invocations; passive trace ends at254, no full trace/custody or CPU performance causal inference.",
+    "All Git source comparisons are exact72e6; historical source equality is not result transfer. No project commands or original actions repeated by auditor.",
+    "No screenshot or full Desktop UI acceptance was present in this four-member native ZIP.",
+    "No current Team full10/P11 PhaseA semantic RED, all-four frontend aggregate, typed/static gate, Process I386/FD5, packaged P08/P11, real vendor authentication or release PASS is derived here.",
+    "Full sources and raw receipts were read to the stated boundaries; the619 byte census is not a claim that every implementation line received a new semantic review."
+  ],
+  "actionsDuringReview": {
+    "readOnlyGitAndRetainedFiles": true,
+    "newProjectExecution": false,
+    "newNativeOrProviderQuery": false,
+    "newCiAction": false,
+    "sourceRefOrOriginalEvidenceChanges": false
+  }
+}

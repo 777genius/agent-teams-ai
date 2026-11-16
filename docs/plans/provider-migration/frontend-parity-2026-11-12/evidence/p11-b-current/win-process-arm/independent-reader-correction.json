@@ -1,0 +1,19 @@
+{
+  "kind": "READ_ONLY_SPEC_REPORTER_READER_CORRECTION",
+  "recordedAtUTC": "2026-11-16T09:38:52.594675+00:00",
+  "originalReader": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/native/process-windows-arm64/build-independent-byte-proof.py",
+    "bytes": 14601,
+    "blob": "089cd15f3ed2ddf0857ae56826d930c7ddff4f80",
+    "sha256": "52da6188b19202b6f0c3860ce4c39a665870cf6ce55cae947d8fc091063dd247"
+  },
+  "priorOutcome": "exit1 at line132 after raw/source/ZIP joins; summary was167/164P3S but two skip rows use # SKIP and the third uses its actual POSIX TEST shebang reason. No final proof written.",
+  "correction": "Count all three original spec reporter ﹣ rows and retain their full distinct reason text; no original/source/CI bytes changed or refetched.",
+  "correctedReader": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/native/process-windows-arm64/build-independent-byte-proof-v2.py",
+    "bytes": 14669,
+    "blob": "a216cf0fe9c05b81a361cb7324bac0e542218a2f",
+    "sha256": "b32c912d44be3f7cfe8e0233003a804ef60101ff2b33dda943645dcb85f27397"
+  },
+  "projectExecution": false
+}

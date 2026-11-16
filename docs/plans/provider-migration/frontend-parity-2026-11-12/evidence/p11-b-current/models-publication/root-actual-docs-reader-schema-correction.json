@@ -1,0 +1,18 @@
+{
+  "atUTC": "2026-11-16T09:38:21.470659+00:00",
+  "kind": "Read-only verifier manifest-schema correction",
+  "originalReader": {
+    "bytes": 8119,
+    "blob": "94a24d63400ef78a38338657f4e0952b7b809369",
+    "sha256": "c12bcc8384325b8aad6ae49232b1d25830f789df43b4d9c1467f493ce84c097d"
+  },
+  "correctedReader": {
+    "bytes": 8117,
+    "blob": "f2484b3fd8fd257967697a309ebb403b62baae2a",
+    "sha256": "a4073e36efea0587afcd0b93ccfdb011772d4354bcc0b7b90ef49dd4bea22df8"
+  },
+  "failedCommand": "python models-a-publication/verify_actual_publication.py docs 9286c1009a3b6348598a7ded7b93cfc582d18d6d",
+  "failure": "KeyError: 'originalBasePlan' at line50 after complete leaves/payload/reference verification; no report had been written.",
+  "correction": "Models fullPlanPrefix is exactly the complete bfc base Plan. Compare identity(base_plan) to that existing manifest property. Preserve original reader; no source, manifest, payload or raw API changes.",
+  "sourceOrRefMutation": false
+}

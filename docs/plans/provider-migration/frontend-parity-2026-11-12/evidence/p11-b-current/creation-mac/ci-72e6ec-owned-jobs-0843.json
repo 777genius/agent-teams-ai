@@ -1,0 +1,509 @@
+{
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "completedAt": "2026-11-16 08:43:42 UTC",
+  "results": [
+    {
+      "status": "fulfilled",
+      "value": {
+        "lane": "host",
+        "runId": 43831885807,
+        "startedAt": "2026-11-16 08:43:41 UTC",
+        "response": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Action completed."
+            }
+          ],
+          "structuredContent": {
+            "jobs": [
+              {
+                "id": 133178912777,
+                "name": "Offline frontend tests (3/4)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913038,
+                "name": "Offline frontend tests (2/4)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913127,
+                "name": "Offline frontend tests (4/4)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913131,
+                "name": "Offline frontend tests (1/4)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913159,
+                "name": "Offline Host Desktop (linux-x64, taskboard)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913321,
+                "name": "Offline Host Desktop (linux-x64, import)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913337,
+                "name": "Offline Host Desktop (linux-x64, extensions)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913340,
+                "name": "Offline Host Desktop (linux-x64, collaboration)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913364,
+                "name": "Offline Host Desktop (linux-x64, team)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913386,
+                "name": "Offline Host Desktop (linux-x64, management)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913416,
+                "name": "Offline Host Desktop (linux-x64, skills)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913429,
+                "name": "Offline Host Desktop (linux-x64, cross-team)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913482,
+                "name": "Offline Host Desktop (linux-x64, selection)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913512,
+                "name": "Offline Host Desktop (linux-x64, codex)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913514,
+                "name": "Offline Host Desktop (linux-x64, codex-login)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913523,
+                "name": "Offline Host Desktop (linux-x64, review)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913533,
+                "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913535,
+                "name": "Offline Host Desktop (linux-x64, claude)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913608,
+                "name": "Offline Host Desktop (linux-x64, processes)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913635,
+                "name": "Offline Host Desktop (darwin-arm64, installer)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178913643,
+                "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178914338,
+                "name": "Offline Host Desktop (linux-x64, opencode)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885807,
+                "logs_url": null,
+                "steps": null
+              }
+            ]
+          },
+          "isError": false
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "lane": "creation",
+        "runId": 43831885626,
+        "startedAt": "2026-11-16 08:43:41 UTC",
+        "response": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Action completed."
+            }
+          ],
+          "structuredContent": {
+            "jobs": [
+              {
+                "id": 133178909700,
+                "name": "Creation page (macos-latest)",
+                "status": "completed",
+                "conclusion": "failure",
+                "run_id": 43831885626,
+                "logs_url": null,
+                "steps": [
+                  {
+                    "name": "Set up job",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 1
+                  },
+                  {
+                    "name": "Enable Windows long paths",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 2
+                  },
+                  {
+                    "name": "Run actions/checkout@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 3
+                  },
+                  {
+                    "name": "Run pnpm/action-setup@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 4
+                  },
+                  {
+                    "name": "Run actions/setup-node@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 5
+                  },
+                  {
+                    "name": "Prepare Linux virtual display and zh-TW font fallback",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 6
+                  },
+                  {
+                    "name": "Install frozen dependencies",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 7
+                  },
+                  {
+                    "name": "Build isolated Host before Electron startup",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 8
+                  },
+                  {
+                    "name": "Stage pinned terminal-platform runtime before Electron startup",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 9
+                  },
+                  {
+                    "name": "Ensure Electron binary before UI E2E",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 10
+                  },
+                  {
+                    "name": "Verify owned Windows process census and fail-closed teardown invariants",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 11
+                  },
+                  {
+                    "name": "Exercise actual Electron Create/Back/Resume/Copy/Launch",
+                    "status": "completed",
+                    "conclusion": "failure",
+                    "number": 12
+                  },
+                  {
+                    "name": "Upload sanitized evidence",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 13
+                  },
+                  {
+                    "name": "Post Run actions/setup-node@v6",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 24
+                  },
+                  {
+                    "name": "Post Run pnpm/action-setup@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 25
+                  },
+                  {
+                    "name": "Post Run actions/checkout@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 26
+                  },
+                  {
+                    "name": "Complete job",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 27
+                  }
+                ]
+              },
+              {
+                "id": 133178909857,
+                "name": "Creation page (windows-latest)",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885626,
+                "logs_url": null,
+                "steps": null
+              },
+              {
+                "id": 133178910281,
+                "name": "Creation page (ubuntu-latest)",
+                "status": "completed",
+                "conclusion": "success",
+                "run_id": 43831885626,
+                "logs_url": null,
+                "steps": [
+                  {
+                    "name": "Set up job",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 1
+                  },
+                  {
+                    "name": "Enable Windows long paths",
+                    "status": "completed",
+                    "conclusion": "skipped",
+                    "number": 2
+                  },
+                  {
+                    "name": "Run actions/checkout@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 3
+                  },
+                  {
+                    "name": "Run pnpm/action-setup@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 4
+                  },
+                  {
+                    "name": "Run actions/setup-node@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 5
+                  },
+                  {
+                    "name": "Prepare Linux virtual display and zh-TW font fallback",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 6
+                  },
+                  {
+                    "name": "Install frozen dependencies",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 7
+                  },
+                  {
+                    "name": "Build isolated Host before Electron startup",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 8
+                  },
+                  {
+                    "name": "Stage pinned terminal-platform runtime before Electron startup",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 9
+                  },
+                  {
+                    "name": "Ensure Electron binary before UI E2E",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 10
+                  },
+                  {
+                    "name": "Verify owned Windows process census and fail-closed teardown invariants",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 11
+                  },
+                  {
+                    "name": "Exercise actual Electron Create/Back/Resume/Copy/Launch",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 12
+                  },
+                  {
+                    "name": "Upload sanitized evidence",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 13
+                  },
+                  {
+                    "name": "Post Run actions/setup-node@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 24
+                  },
+                  {
+                    "name": "Post Run pnpm/action-setup@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 25
+                  },
+                  {
+                    "name": "Post Run actions/checkout@v6",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 26
+                  },
+                  {
+                    "name": "Complete job",
+                    "status": "completed",
+                    "conclusion": "success",
+                    "number": 27
+                  }
+                ]
+              }
+            ]
+          },
+          "isError": false
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "lane": "packaged",
+        "runId": 43831885834,
+        "startedAt": "2026-11-16 08:43:41 UTC",
+        "response": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Action completed."
+            }
+          ],
+          "structuredContent": {
+            "jobs": [
+              {
+                "id": 133178920049,
+                "name": "classify packaged smoke",
+                "status": "queued",
+                "conclusion": null,
+                "run_id": 43831885834,
+                "logs_url": null,
+                "steps": null
+              }
+            ]
+          },
+          "isError": false
+        }
+      }
+    }
+  ]
+}

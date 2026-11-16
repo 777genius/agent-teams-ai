@@ -1,0 +1,3254 @@
+{
+  "kind": "INDEPENDENT_E3_WINDOWS_X64_PROCESS_ORIGINAL_R2",
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUTC": "2026-11-16T09:17:18.527412+00:00",
+  "result": "APPROVE",
+  "approvalMeaning": "Accurate retention, fresh source binding and bounded interpretation of the original failed Windows x64 Process job. This is not whole-job PASS, repair approval, or qualification of later bfc source.",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "sourceTree": "de80fbfbffb3fe4daabf6cc9be258cc8df534524",
+  "runId": 43831885690,
+  "jobId": 133178914972,
+  "jobConclusion": "failure",
+  "officialArtifactId": 14209993600,
+  "independentByteSourceProof": {
+    "path": "ci-72e6ec/native/process-windows-x64/independent-original-byte-source-proof.json",
+    "bytes": 509962,
+    "blob": "6aefd44ce430028dc916bee950ccc510af45985e",
+    "sha256": "65832faf42a745c2af4383394325d99e91e1e7233df70b6564d6f8bed6f7fa02"
+  },
+  "authorAudit": {
+    "path": "ci-72e6ec/native/process-windows-x64/original-windows-process-failure-audit.json",
+    "bytes": 383696,
+    "blob": "1f9996aecc57d0474bdc9e87ba8d0a76205a1a52",
+    "sha256": "470d0c439094ad75190b7cd21a56de6003eb3795e6f6139cf94eece4e621a91a"
+  },
+  "sourceAssessment": {
+    "path": "ci-72e6ec/native/windows-first-refusal-source-assessment.json",
+    "bytes": 66899,
+    "blob": "2b1f18c4d7cc7c271f70034b3e3a120639c22da6",
+    "sha256": "f2cdaf55f639d1a8750b21d80851de360983f62fbde9dd1e0c4455b5fcdd2ef6"
+  },
+  "originalInputs": [
+    {
+      "path": "ci-72e6ec/native/owned-process-jobs-response-0854.json",
+      "bytes": 17481,
+      "blob": "ce0f43f88d46de3ad869cc97afcaa1f9f489e25d",
+      "sha256": "e8c14d0d0213eb5c432a87d8b33ae7484605e56b1a928ca367661f8403661ef1"
+    },
+    {
+      "path": "ci-72e6ec/native/official-process-artifacts-0855.json",
+      "bytes": 2962,
+      "blob": "1d25b7f5e97b1aa399d5df5e59c3f0e4bf3a301b",
+      "sha256": "f0dabafcd72e4f4a84d46a02e5f696c5a2c171bd4af86bf8c6bbe3b64cb13032"
+    },
+    {
+      "path": "ci-72e6ec/native/process-windows-x64/original-job-log-response.json",
+      "bytes": 456617,
+      "blob": "ce49450280d239952e0dbedfa6648e2863d06e2f",
+      "sha256": "f09bd43415221b3b5c5c38a24caa167d5ce67970425c210df1f2ad907e4c83be"
+    },
+    {
+      "path": "ci-72e6ec/native/process-windows-x64/job-133178914972.log",
+      "bytes": 413025,
+      "blob": "26a0f941e1a60756e73b75b6f4cfffa3dac77357",
+      "sha256": "200fbdfbe0855fd477fdabfe19403366c570f371f171fc522714f10554c5982e"
+    },
+    {
+      "path": "ci-72e6ec/native/process-windows-x64/artifact-14209993600.zip",
+      "bytes": 56200,
+      "blob": "b22e24be2269e296d62f32b47ca436cbe916ee60",
+      "sha256": "517252be83b252c5e2e3de82e5cbe9cd20a56912dff6c73f2221ea49bccedb03"
+    }
+  ],
+  "verifiedClosure": {
+    "completeRawMCPExact": true,
+    "archive": {
+      "path": "ci-72e6ec/native/process-windows-x64/artifact-14209993600.zip",
+      "bytes": 56200,
+      "blob": "b22e24be2269e296d62f32b47ca436cbe916ee60",
+      "sha256": "517252be83b252c5e2e3de82e5cbe9cd20a56912dff6c73f2221ea49bccedb03"
+    },
+    "safeNonSymlinkCRCExtractedExactMembers": 18,
+    "fullContiguousOriginalTeeJoins": [
+      {
+        "file": {
+          "path": "ci-72e6ec/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+          "bytes": 20516,
+          "blob": "6106b50e770b5d3e7f8b65af398e3bee4d468050",
+          "sha256": "46545f16362920e229272971720f17a0cbd3f6d4c9afa2bd0ab3177eff32ba95"
+        },
+        "rawStartLine": 616,
+        "rawEndLine": 796,
+        "allLines": 181,
+        "fullContiguousExact": true,
+        "transform": "UTF-8 BOM/newline normalization and original ISO timestamp prefix removal"
+      },
+      {
+        "file": {
+          "path": "ci-72e6ec/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+          "bytes": 758,
+          "blob": "066e861aa19f936f755ac70d4fef63e9879aa0a9",
+          "sha256": "a5b67194f5e14f2d4ea3046ed92512075a0214ad70299556049f939643122004"
+        },
+        "rawStartLine": 797,
+        "rawEndLine": 808,
+        "allLines": 12,
+        "fullContiguousExact": true,
+        "transform": "UTF-8 BOM/newline normalization and original ISO timestamp prefix removal"
+      },
+      {
+        "file": {
+          "path": "ci-72e6ec/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+          "bytes": 9498,
+          "blob": "85c1e814397561fb854b2c23a65315dfc519b56e",
+          "sha256": "13cd6be391310367710975f3549198ddb5d0998f94b0ec3e270719fed465706d"
+        },
+        "rawStartLine": 809,
+        "rawEndLine": 870,
+        "allLines": 62,
+        "fullContiguousExact": true,
+        "transform": "UTF-8 BOM/newline normalization and original ISO timestamp prefix removal"
+      },
+      {
+        "file": {
+          "path": "ci-72e6ec/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+          "bytes": 89924,
+          "blob": "23fc069b9e38f4fc8d7b6e454bdffd1041ff9260",
+          "sha256": "3851d54588069498843cde709590339e5762d8c02138d244eb8e31fe067f5508"
+        },
+        "rawStartLine": 1467,
+        "rawEndLine": 1881,
+        "allLines": 415,
+        "fullContiguousExact": true,
+        "transform": "UTF-8 BOM/newline normalization and original ISO timestamp prefix removal; additionally remove retained ANSI SGR on both sides (including PowerShell red error-stream decoration)"
+      },
+      {
+        "file": {
+          "path": "ci-72e6ec/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-emulated-provider.log",
+          "bytes": 1278,
+          "blob": "1c576089a499e0cd26ecc2328c0ea020a4f05ccf",
+          "sha256": "50a904c6ed83ba95ce3c193e87cf78bbdd080cf88b4e5ee4c231c26e79007ff1"
+        },
+        "rawStartLine": 1902,
+        "rawEndLine": 1913,
+        "allLines": 12,
+        "fullContiguousExact": true,
+        "transform": "UTF-8 BOM/newline normalization and original ISO timestamp prefix removal"
+      },
+      {
+        "file": {
+          "path": "ci-72e6ec/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+          "bytes": 89865,
+          "blob": "782500118be2cdb4b0842f092dbf28db10a1f5cf",
+          "sha256": "a323f76cfc6dbc3bb2fc8b5b859c0526bcbcd1009746d5b9743d20c7db8cffc9"
+        },
+        "rawStartLine": 1032,
+        "rawEndLine": 1446,
+        "allLines": 415,
+        "fullContiguousExact": true,
+        "transform": "UTF-8 BOM/newline normalization and original ISO timestamp prefix removal; additionally remove retained ANSI SGR on both sides (including PowerShell red error-stream decoration)"
+      },
+      {
+        "file": {
+          "path": "ci-72e6ec/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-claude.log",
+          "bytes": 18897,
+          "blob": "f048696846e9c857c4cab04538f32bfcb4d0a5bb",
+          "sha256": "07229ba6e92ca49cdf0c5b608c14660bafe907186bcf93c38095d49b35ae2cae"
+        },
+        "rawStartLine": 2023,
+        "rawEndLine": 2056,
+        "allLines": 34,
+        "fullContiguousExact": true,
+        "transform": "UTF-8 BOM/newline normalization and original ISO timestamp prefix removal"
+      },
+      {
+        "file": {
+          "path": "ci-72e6ec/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex.log",
+          "bytes": 49502,
+          "blob": "d86068fbd9552569b23e90a3fc6e5a44132b5a03",
+          "sha256": "09366e2987d6a50e8703be02beb765ba07c277b3476eb33c6ae4d928c1c2ed82"
+        },
+        "rawStartLine": 1936,
+        "rawEndLine": 1999,
+        "allLines": 64,
+        "fullContiguousExact": true,
+        "transform": "UTF-8 BOM/newline normalization and original ISO timestamp prefix removal"
+      },
+      {
+        "file": {
+          "path": "ci-72e6ec/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode.log",
+          "bytes": 11314,
+          "blob": "d82531b7916bb21fcd268414155e1bff1a6e3e5a",
+          "sha256": "818874f6428df7288791be9b6e3e9bbd8c411d0f399301f26bf38e785ead5810"
+        },
+        "rawStartLine": 2080,
+        "rawEndLine": 2140,
+        "allLines": 61,
+        "fullContiguousExact": true,
+        "transform": "UTF-8 BOM/newline normalization and original ISO timestamp prefix removal; additionally remove retained ANSI SGR on both sides (including PowerShell red error-stream decoration)"
+      }
+    ],
+    "twoBinaryHashListsExactDuplicate": true,
+    "hostSourceCensus": {
+      "file": {
+        "path": "ci-72e6ec/native/host-source-E3-git-audit.json",
+        "bytes": 217192,
+        "blob": "96da518a89077c1b4bceaaf6cdca1a7703d96d76",
+        "sha256": "aaf2e11d778cdb914a4c9da4a9ff67c3011f2a3c94009a5ec45e8a49be550864"
+      },
+      "count": 619,
+      "bytes": 4114072,
+      "LF": "5c76bf6f2750c0070c59b8bf10db3dd83ea1a8c5c34aca5389c5c575bdc4a008",
+      "CRLF": "95d196f87beb284995d5518b0eafc0da5e92aaac4af21d1c465e6c54d2d0d474",
+      "allFreshCurrentGitExact": true
+    },
+    "selectedClaimPaths": 36,
+    "freshUniqueGitFiles": 648,
+    "union": "619 Host +36 selected claim paths =646 unique Git leaves; two additional Main source bodies from the assessment give648. All19 assessment excerpts match current Git.",
+    "receiptPinOccurrences": {
+      "GitCRLF": 41,
+      "digestOnly": 59,
+      "allAccounted": 100
+    }
+  },
+  "originalStepBoundaries": [
+    {
+      "name": "Set up job",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 1
+    },
+    {
+      "name": "Enable Windows long paths",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 2
+    },
+    {
+      "name": "Run actions/checkout@v7.0.1",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 3
+    },
+    {
+      "name": "Run actions/setup-node@v7.0.0",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 4
+    },
+    {
+      "name": "Select the pinned package manager with bundled Corepack",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5
+    },
+    {
+      "name": "Run actions/setup-node@v7.0.0",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 6
+    },
+    {
+      "name": "Bind exact source and actual process tuple",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 7
+    },
+    {
+      "name": "Install frozen workspace without Desktop postinstall",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 8
+    },
+    {
+      "name": "Build existing controller and Host",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 9
+    },
+    {
+      "name": "Verify process contracts and retained Main Host transport",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 10
+    },
+    {
+      "name": "Verify original POSIX Node and shell lifecycle fixtures",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 11
+    },
+    {
+      "name": "Prepare pinned Electron for native process fixtures",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 12
+    },
+    {
+      "name": "Verify Linux Node exec descriptor closure under both original parents",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 13
+    },
+    {
+      "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 14
+    },
+    {
+      "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 15
+    },
+    {
+      "name": "Build original Windows product broker and C++ fixtures",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 16
+    },
+    {
+      "name": "Qualify original Windows Job and control under Host Node",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 17
+    },
+    {
+      "name": "Qualify original Windows Job and control under Electron Node",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 18
+    },
+    {
+      "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 19
+    },
+    {
+      "name": "Qualify original codex source A B with TEST peer",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 20
+    },
+    {
+      "name": "Qualify original claude source A B with TEST peer",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 21
+    },
+    {
+      "name": "Qualify original opencode source A B with TEST peer",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 22
+    },
+    {
+      "name": "Require completed original platform receipts and unchanged source",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 23
+    },
+    {
+      "name": "Preserve original process evidence including failures",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 24
+    },
+    {
+      "name": "Post Run actions/setup-node@v7.0.0",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 46
+    },
+    {
+      "name": "Post Run actions/setup-node@v7.0.0",
+      "status": "completed",
+      "conclusion": "skipped",
+      "number": 47
+    },
+    {
+      "name": "Post Run actions/checkout@v7.0.1",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 48
+    },
+    {
+      "name": "Complete job",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 49
+    }
+  ],
+  "prerequisites": {
+    "originalWholeCommands": {
+      "host-contracts.log": {
+        "tests": 167,
+        "pass": 164,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 3,
+        "todo": 0
+      },
+      "protocol.log": {
+        "pass": 54,
+        "fail": 0,
+        "skip": 0,
+        "files": 3
+      },
+      "retained-main.log": {
+        "pass": 81,
+        "fail": 0,
+        "skip": 0,
+        "files": 8
+      }
+    },
+    "totalPass": 299,
+    "totalSkip": 3,
+    "totalFail": 0,
+    "wholeJobFailureIndependentOfPrerequisitePass": true
+  },
+  "nativeOriginals": [
+    {
+      "file": {
+        "path": "ci-72e6ec/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+        "bytes": 89865,
+        "blob": "782500118be2cdb4b0842f092dbf28db10a1f5cf",
+        "sha256": "a323f76cfc6dbc3bb2fc8b5b859c0526bcbcd1009746d5b9743d20c7db8cffc9"
+      },
+      "all415Lines414JSONRowsRead": true,
+      "completedInternalPhases": [
+        {
+          "scenario": "sentinel",
+          "phase": "complete",
+          "elapsedMs": 39
+        },
+        {
+          "scenario": "pre-resume-cancel",
+          "phase": "complete",
+          "elapsedMs": 96
+        },
+        {
+          "scenario": "facade-stdio",
+          "phase": "complete",
+          "elapsedMs": 172
+        },
+        {
+          "scenario": "facade-cancel",
+          "phase": "complete",
+          "elapsedMs": 234
+        },
+        {
+          "scenario": "capture-claude",
+          "phase": "complete",
+          "elapsedMs": 344
+        },
+        {
+          "scenario": "capture-codex",
+          "phase": "complete",
+          "elapsedMs": 421
+        },
+        {
+          "scenario": "capture-opencode",
+          "phase": "complete",
+          "elapsedMs": 500
+        },
+        {
+          "scenario": "capture-root-first",
+          "phase": "complete",
+          "elapsedMs": 640
+        },
+        {
+          "scenario": "debug-service-cancel",
+          "phase": "complete",
+          "elapsedMs": 690
+        },
+        {
+          "scenario": "debug-service",
+          "phase": "complete",
+          "elapsedMs": 1617
+        },
+        {
+          "scenario": "debug-service-wow64-root",
+          "phase": "complete",
+          "elapsedMs": 1708
+        },
+        {
+          "scenario": "debug-service-root-first",
+          "phase": "complete",
+          "elapsedMs": 1897
+        },
+        {
+          "scenario": "debug-service-admission-race",
+          "phase": "complete",
+          "elapsedMs": 2132
+        },
+        {
+          "scenario": "tree",
+          "phase": "complete",
+          "elapsedMs": 2237
+        },
+        {
+          "scenario": "root-first",
+          "phase": "complete",
+          "elapsedMs": 2456
+        },
+        {
+          "scenario": "flood",
+          "phase": "complete",
+          "elapsedMs": 2519
+        },
+        {
+          "scenario": "breakaway",
+          "phase": "complete",
+          "elapsedMs": 2565
+        },
+        {
+          "scenario": "birth-failure",
+          "phase": "complete",
+          "elapsedMs": 3096
+        },
+        {
+          "scenario": "accounting-failure",
+          "phase": "complete",
+          "elapsedMs": 3160
+        },
+        {
+          "scenario": "release",
+          "phase": "complete",
+          "elapsedMs": 3222
+        },
+        {
+          "scenario": "release-delay",
+          "phase": "complete",
+          "elapsedMs": 3346
+        },
+        {
+          "scenario": "release-contention",
+          "phase": "complete",
+          "elapsedMs": 3518
+        },
+        {
+          "scenario": "terminal-race",
+          "phase": "complete",
+          "elapsedMs": 3597
+        },
+        {
+          "scenario": "owner-eof",
+          "phase": "complete",
+          "elapsedMs": 3640
+        },
+        {
+          "scenario": "broker-crash",
+          "phase": "complete",
+          "elapsedMs": 3681
+        },
+        {
+          "scenario": "wrong-generation",
+          "phase": "complete",
+          "elapsedMs": 3723
+        },
+        {
+          "scenario": "lost-prepared",
+          "phase": "complete",
+          "elapsedMs": 3775
+        },
+        {
+          "scenario": "malformed",
+          "phase": "complete",
+          "elapsedMs": 3817
+        },
+        {
+          "scenario": "truncated",
+          "phase": "complete",
+          "elapsedMs": 3917
+        },
+        {
+          "scenario": "write-pending-complete",
+          "phase": "complete",
+          "elapsedMs": 3965
+        },
+        {
+          "scenario": "write-pending-deadline",
+          "phase": "complete",
+          "elapsedMs": 8992
+        }
+      ],
+      "i386": {
+        "line": 115,
+        "row": {
+          "nativeI386ChildObservation": {
+            "status": "observed",
+            "fixtureSha256": "f82662269ca1867f7baca327573cef625df95801ff0c49476064ba7b922b723b",
+            "child": {
+              "pid": 1952,
+              "birth": "01dd75a71fe50a59"
+            },
+            "observations": [
+              {
+                "pid": 7256,
+                "birth": "01dd75a71fde4eda",
+                "code": 2147483651,
+                "firstChance": 1,
+                "handled": 1
+              },
+              {
+                "pid": 7256,
+                "birth": "01dd75a71fde4eda",
+                "code": 1073741855,
+                "firstChance": 1,
+                "handled": 1
+              },
+              {
+                "pid": 1952,
+                "birth": "01dd75a71fe50a59",
+                "code": 2147483651,
+                "firstChance": 1,
+                "handled": 1
+              },
+              {
+                "pid": 1952,
+                "birth": "01dd75a71fe50a59",
+                "code": 1073741855,
+                "firstChance": 1,
+                "handled": 1
+              },
+              {
+                "pid": 1952,
+                "birth": "01dd75a71fe50a59",
+                "code": 1073741855,
+                "firstChance": 1,
+                "handled": 0
+              },
+              {
+                "pid": 1952,
+                "birth": "01dd75a71fe50a59",
+                "code": 1073741855,
+                "firstChance": 1,
+                "handled": 0
+              }
+            ],
+            "directI386RootLateHandler": "unqualified"
+          }
+        }
+      },
+      "pendingCreate": {
+        "line": 171,
+        "row": {
+          "nativeServicePendingCreate": {
+            "rootExited": false,
+            "activeProcesses": 0,
+            "queryError": 0,
+            "dispatchError": 0,
+            "stopReplied": false
+          }
+        }
+      },
+      "finalHelperCount": 64,
+      "finalRetainedCapabilities": 9,
+      "allOriginalHelpersClosedStreamsEndedBuffersEmpty": true,
+      "controller": {
+        "line": 415,
+        "row": {
+          "gateController": "drained",
+          "rootExitCode": 0,
+          "activeProcesses": 0
+        }
+      },
+      "gate": {
+        "gate": "owned-process-native-scenarios-only",
+        "platform": "win32",
+        "arch": "x64",
+        "versions": {
+          "node": "24.21.0",
+          "acorn": "8.18.0",
+          "ada": "4.0.0",
+          "amaro": "1.1.11",
+          "ares": "1.34.8",
+          "brotli": "1.2.0",
+          "cldr": "48.0",
+          "icu": "78.3",
+          "llhttp": "9.4.3",
+          "merve": "1.2.2",
+          "modules": "137",
+          "napi": "10",
+          "nbytes": "0.1.4",
+          "ncrypto": "0.0.1",
+          "nghttp2": "1.70.0",
+          "nghttp3": "",
+          "ngtcp2": "",
+          "openssl": "3.5.8",
+          "simdjson": "4.6.7",
+          "simdutf": "6.4.0",
+          "sqlite": "3.53.4",
+          "tz": "2026c",
+          "undici": "7.29.1",
+          "unicode": "17.0",
+          "uv": "1.52.1",
+          "uvwasi": "0.0.23",
+          "v8": "13.6.233.17-node.53",
+          "zlib": "1.3.2.1-motley-8002e91",
+          "zstd": "1.5.7"
+        },
+        "results": [
+          "tree",
+          "root-first-tail-held-pipe",
+          "blocked-output-independent-stop",
+          "breakaway-denied",
+          "pre-resume-cancel-first-nonce",
+          "facade-private-stdin-after-native-owner-tail-exit",
+          "facade-pre-resume-cancel-no-private-input",
+          "captured-provider-native-argv-env-cwd-and-stop",
+          "captured-root-first-original-descendants-and-neighbor",
+          "TEST-only-debug-service-prebirth-nested-job-feasibility",
+          "TEST-only-scoped-stop-pending-create-isolation",
+          "TEST-only-wow64-root-child-startup-and-application-exceptions",
+          "birth-failure-unknown-first-nonce",
+          "owner-eof",
+          "accounting-failure-latched-unknown-distinct-reconciliation",
+          "post-launch-pending-read-genuine-prepared",
+          "released-ack-eof-exit-zero",
+          "watcher-lock-contention-released-ack-exit-zero",
+          "failure-winner-after-complete-ack-exit-74",
+          "broker-crash",
+          "wrong-generation",
+          "malformed",
+          "truncated",
+          "lost-prepared-no-resume-first-nonce",
+          "sentinel-isolation"
+        ]
+      },
+      "negativeCases": [
+        {
+          "line": 323,
+          "row": {
+            "nativeNegative": "failure-winner-after-complete-ack",
+            "completeAck": true,
+            "brokerExit": 74
+          }
+        },
+        {
+          "line": 335,
+          "row": {
+            "nativeNegative": "owner-eof",
+            "brokerExit": {
+              "code": 70,
+              "signal": null
+            }
+          }
+        },
+        {
+          "line": 347,
+          "row": {
+            "nativeNegative": "broker-crash",
+            "brokerExit": {
+              "code": null,
+              "signal": "SIGTERM"
+            }
+          }
+        },
+        {
+          "line": 359,
+          "row": {
+            "nativeNegative": "wrong-generation",
+            "brokerExit": {
+              "code": 75,
+              "signal": null
+            }
+          }
+        },
+        {
+          "line": 372,
+          "row": {
+            "nativeNegative": "lost-prepared",
+            "brokerExit": {
+              "code": 70,
+              "signal": null
+            }
+          }
+        },
+        {
+          "line": 384,
+          "row": {
+            "nativeNegative": "malformed",
+            "brokerExit": {
+              "code": 75,
+              "signal": null
+            }
+          }
+        },
+        {
+          "line": 396,
+          "row": {
+            "nativeNegative": "truncated",
+            "brokerExit": {
+              "code": 75,
+              "signal": null
+            }
+          }
+        }
+      ],
+      "writePrimitiveRows": [
+        {
+          "line": 401,
+          "row": {
+            "nativeWritePrimitive": "complete",
+            "binarySha256": "68ea1834543e9831e5ca133a5dcae65e14bb0487878e89e1b4a04c5f2a1fa962",
+            "facts": {
+              "schema": 1,
+              "mode": 0,
+              "writerExit": 0,
+              "activeProcesses": 0,
+              "readBytes": 1048576,
+              "header": [
+                1,
+                0,
+                1,
+                0,
+                1,
+                1269812,
+                0,
+                0,
+                0,
+                0,
+                1,
+                1,
+                2,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                16,
+                0,
+                16,
+                16,
+                1048576,
+                1,
+                1,
+                1,
+                0,
+                0,
+                1,
+                0,
+                65536,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "operations": [
+                [
+                  1,
+                  1048576,
+                  0,
+                  997,
+                  1,
+                  0,
+                  996,
+                  0,
+                  0,
+                  1,
+                  0,
+                  1048576,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  1,
+                  15,
+                  1,
+                  0,
+                  2
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              ]
+            }
+          }
+        },
+        {
+          "line": 406,
+          "row": {
+            "nativeWritePrimitive": "deadline",
+            "binarySha256": "68ea1834543e9831e5ca133a5dcae65e14bb0487878e89e1b4a04c5f2a1fa962",
+            "facts": {
+              "schema": 1,
+              "mode": 1,
+              "writerExit": 74,
+              "activeProcesses": 0,
+              "readBytes": 0,
+              "header": [
+                1,
+                1,
+                1,
+                0,
+                1,
+                1269843,
+                0,
+                74,
+                74,
+                0,
+                0,
+                0,
+                4,
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "operations": [
+                [
+                  1,
+                  1048576,
+                  0,
+                  997,
+                  1,
+                  0,
+                  996,
+                  0,
+                  258,
+                  0,
+                  0,
+                  0,
+                  1,
+                  1,
+                  0,
+                  0,
+                  995,
+                  0,
+                  1,
+                  1,
+                  15,
+                  3,
+                  2,
+                  4
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "file": {
+        "path": "ci-72e6ec/native/process-windows-x64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+        "bytes": 89924,
+        "blob": "23fc069b9e38f4fc8d7b6e454bdffd1041ff9260",
+        "sha256": "3851d54588069498843cde709590339e5762d8c02138d244eb8e31fe067f5508"
+      },
+      "all415Lines414JSONRowsRead": true,
+      "completedInternalPhases": [
+        {
+          "scenario": "sentinel",
+          "phase": "complete",
+          "elapsedMs": 38
+        },
+        {
+          "scenario": "pre-resume-cancel",
+          "phase": "complete",
+          "elapsedMs": 96
+        },
+        {
+          "scenario": "facade-stdio",
+          "phase": "complete",
+          "elapsedMs": 177
+        },
+        {
+          "scenario": "facade-cancel",
+          "phase": "complete",
+          "elapsedMs": 242
+        },
+        {
+          "scenario": "capture-claude",
+          "phase": "complete",
+          "elapsedMs": 336
+        },
+        {
+          "scenario": "capture-codex",
+          "phase": "complete",
+          "elapsedMs": 415
+        },
+        {
+          "scenario": "capture-opencode",
+          "phase": "complete",
+          "elapsedMs": 510
+        },
+        {
+          "scenario": "capture-root-first",
+          "phase": "complete",
+          "elapsedMs": 663
+        },
+        {
+          "scenario": "debug-service-cancel",
+          "phase": "complete",
+          "elapsedMs": 734
+        },
+        {
+          "scenario": "debug-service",
+          "phase": "complete",
+          "elapsedMs": 1729
+        },
+        {
+          "scenario": "debug-service-wow64-root",
+          "phase": "complete",
+          "elapsedMs": 1852
+        },
+        {
+          "scenario": "debug-service-root-first",
+          "phase": "complete",
+          "elapsedMs": 2075
+        },
+        {
+          "scenario": "debug-service-admission-race",
+          "phase": "complete",
+          "elapsedMs": 2376
+        },
+        {
+          "scenario": "tree",
+          "phase": "complete",
+          "elapsedMs": 2497
+        },
+        {
+          "scenario": "root-first",
+          "phase": "complete",
+          "elapsedMs": 2734
+        },
+        {
+          "scenario": "flood",
+          "phase": "complete",
+          "elapsedMs": 2813
+        },
+        {
+          "scenario": "breakaway",
+          "phase": "complete",
+          "elapsedMs": 2860
+        },
+        {
+          "scenario": "birth-failure",
+          "phase": "complete",
+          "elapsedMs": 3380
+        },
+        {
+          "scenario": "accounting-failure",
+          "phase": "complete",
+          "elapsedMs": 3440
+        },
+        {
+          "scenario": "release",
+          "phase": "complete",
+          "elapsedMs": 3490
+        },
+        {
+          "scenario": "release-delay",
+          "phase": "complete",
+          "elapsedMs": 3591
+        },
+        {
+          "scenario": "release-contention",
+          "phase": "complete",
+          "elapsedMs": 3753
+        },
+        {
+          "scenario": "terminal-race",
+          "phase": "complete",
+          "elapsedMs": 3822
+        },
+        {
+          "scenario": "owner-eof",
+          "phase": "complete",
+          "elapsedMs": 3867
+        },
+        {
+          "scenario": "broker-crash",
+          "phase": "complete",
+          "elapsedMs": 3910
+        },
+        {
+          "scenario": "wrong-generation",
+          "phase": "complete",
+          "elapsedMs": 3959
+        },
+        {
+          "scenario": "lost-prepared",
+          "phase": "complete",
+          "elapsedMs": 4012
+        },
+        {
+          "scenario": "malformed",
+          "phase": "complete",
+          "elapsedMs": 4057
+        },
+        {
+          "scenario": "truncated",
+          "phase": "complete",
+          "elapsedMs": 4156
+        },
+        {
+          "scenario": "write-pending-complete",
+          "phase": "complete",
+          "elapsedMs": 4204
+        },
+        {
+          "scenario": "write-pending-deadline",
+          "phase": "complete",
+          "elapsedMs": 9248
+        }
+      ],
+      "i386": {
+        "line": 115,
+        "row": {
+          "nativeI386ChildObservation": {
+            "status": "observed",
+            "fixtureSha256": "f82662269ca1867f7baca327573cef625df95801ff0c49476064ba7b922b723b",
+            "child": {
+              "pid": 4564,
+              "birth": "01dd75a72615a3a1"
+            },
+            "observations": [
+              {
+                "pid": 7296,
+                "birth": "01dd75a7261320e3",
+                "code": 2147483651,
+                "firstChance": 1,
+                "handled": 1
+              },
+              {
+                "pid": 7296,
+                "birth": "01dd75a7261320e3",
+                "code": 1073741855,
+                "firstChance": 1,
+                "handled": 1
+              },
+              {
+                "pid": 4564,
+                "birth": "01dd75a72615a3a1",
+                "code": 2147483651,
+                "firstChance": 1,
+                "handled": 1
+              },
+              {
+                "pid": 4564,
+                "birth": "01dd75a72615a3a1",
+                "code": 1073741855,
+                "firstChance": 1,
+                "handled": 1
+              },
+              {
+                "pid": 4564,
+                "birth": "01dd75a72615a3a1",
+                "code": 1073741855,
+                "firstChance": 1,
+                "handled": 0
+              },
+              {
+                "pid": 4564,
+                "birth": "01dd75a72615a3a1",
+                "code": 1073741855,
+                "firstChance": 1,
+                "handled": 0
+              }
+            ],
+            "directI386RootLateHandler": "unqualified"
+          }
+        }
+      },
+      "pendingCreate": {
+        "line": 171,
+        "row": {
+          "nativeServicePendingCreate": {
+            "rootExited": false,
+            "activeProcesses": 0,
+            "queryError": 0,
+            "dispatchError": 0,
+            "stopReplied": false
+          }
+        }
+      },
+      "finalHelperCount": 64,
+      "finalRetainedCapabilities": 9,
+      "allOriginalHelpersClosedStreamsEndedBuffersEmpty": true,
+      "controller": {
+        "line": 415,
+        "row": {
+          "gateController": "drained",
+          "rootExitCode": 0,
+          "activeProcesses": 0
+        }
+      },
+      "gate": {
+        "gate": "owned-process-native-scenarios-only",
+        "platform": "win32",
+        "arch": "x64",
+        "versions": {
+          "node": "24.22.1",
+          "acorn": "8.18.0",
+          "ada": "4.0.0",
+          "amaro": "1.1.11",
+          "ares": "1.34.9",
+          "brotli": "1.2.0",
+          "cldr": "48.0",
+          "icu": "78.2",
+          "llhttp": "9.4.3",
+          "merve": "1.2.2",
+          "modules": "149",
+          "napi": "10",
+          "nbytes": "0.1.4",
+          "ncrypto": "0.0.1",
+          "nghttp2": "1.70.0",
+          "nghttp3": "",
+          "ngtcp2": "",
+          "openssl": "0.0.0",
+          "simdjson": "4.6.11",
+          "simdutf": "7.7.0",
+          "sqlite": "3.53.4",
+          "tz": "2026e",
+          "undici": "7.30.1",
+          "unicode": "17.0",
+          "uv": "1.52.1",
+          "uvwasi": "0.0.23",
+          "v8": "15.2.124.45-electron.0",
+          "zlib": "1.3.2.1-motley",
+          "zstd": "1.6.0",
+          "electron": "44.10.1",
+          "chrome": "152.0.7977.169"
+        },
+        "results": [
+          "tree",
+          "root-first-tail-held-pipe",
+          "blocked-output-independent-stop",
+          "breakaway-denied",
+          "pre-resume-cancel-first-nonce",
+          "facade-private-stdin-after-native-owner-tail-exit",
+          "facade-pre-resume-cancel-no-private-input",
+          "captured-provider-native-argv-env-cwd-and-stop",
+          "captured-root-first-original-descendants-and-neighbor",
+          "TEST-only-debug-service-prebirth-nested-job-feasibility",
+          "TEST-only-scoped-stop-pending-create-isolation",
+          "TEST-only-wow64-root-child-startup-and-application-exceptions",
+          "birth-failure-unknown-first-nonce",
+          "owner-eof",
+          "accounting-failure-latched-unknown-distinct-reconciliation",
+          "post-launch-pending-read-genuine-prepared",
+          "released-ack-eof-exit-zero",
+          "watcher-lock-contention-released-ack-exit-zero",
+          "failure-winner-after-complete-ack-exit-74",
+          "broker-crash",
+          "wrong-generation",
+          "malformed",
+          "truncated",
+          "lost-prepared-no-resume-first-nonce",
+          "sentinel-isolation"
+        ]
+      },
+      "negativeCases": [
+        {
+          "line": 323,
+          "row": {
+            "nativeNegative": "failure-winner-after-complete-ack",
+            "completeAck": true,
+            "brokerExit": 74
+          }
+        },
+        {
+          "line": 335,
+          "row": {
+            "nativeNegative": "owner-eof",
+            "brokerExit": {
+              "code": 70,
+              "signal": null
+            }
+          }
+        },
+        {
+          "line": 347,
+          "row": {
+            "nativeNegative": "broker-crash",
+            "brokerExit": {
+              "code": null,
+              "signal": "SIGTERM"
+            }
+          }
+        },
+        {
+          "line": 359,
+          "row": {
+            "nativeNegative": "wrong-generation",
+            "brokerExit": {
+              "code": 75,
+              "signal": null
+            }
+          }
+        },
+        {
+          "line": 372,
+          "row": {
+            "nativeNegative": "lost-prepared",
+            "brokerExit": {
+              "code": 70,
+              "signal": null
+            }
+          }
+        },
+        {
+          "line": 384,
+          "row": {
+            "nativeNegative": "malformed",
+            "brokerExit": {
+              "code": 75,
+              "signal": null
+            }
+          }
+        },
+        {
+          "line": 396,
+          "row": {
+            "nativeNegative": "truncated",
+            "brokerExit": {
+              "code": 75,
+              "signal": null
+            }
+          }
+        }
+      ],
+      "writePrimitiveRows": [
+        {
+          "line": 401,
+          "row": {
+            "nativeWritePrimitive": "complete",
+            "binarySha256": "68ea1834543e9831e5ca133a5dcae65e14bb0487878e89e1b4a04c5f2a1fa962",
+            "facts": {
+              "schema": 1,
+              "mode": 0,
+              "writerExit": 0,
+              "activeProcesses": 0,
+              "readBytes": 1048576,
+              "header": [
+                1,
+                0,
+                1,
+                0,
+                1,
+                1280390,
+                0,
+                0,
+                0,
+                0,
+                1,
+                1,
+                2,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                16,
+                0,
+                16,
+                16,
+                1048576,
+                1,
+                1,
+                1,
+                0,
+                0,
+                1,
+                0,
+                65536,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "operations": [
+                [
+                  1,
+                  1048576,
+                  0,
+                  997,
+                  1,
+                  0,
+                  996,
+                  0,
+                  0,
+                  1,
+                  0,
+                  1048576,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  1,
+                  15,
+                  1,
+                  0,
+                  2
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              ]
+            }
+          }
+        },
+        {
+          "line": 406,
+          "row": {
+            "nativeWritePrimitive": "deadline",
+            "binarySha256": "68ea1834543e9831e5ca133a5dcae65e14bb0487878e89e1b4a04c5f2a1fa962",
+            "facts": {
+              "schema": 1,
+              "mode": 1,
+              "writerExit": 74,
+              "activeProcesses": 0,
+              "readBytes": 0,
+              "header": [
+                1,
+                1,
+                1,
+                0,
+                1,
+                1280437,
+                0,
+                74,
+                74,
+                0,
+                0,
+                0,
+                4,
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "operations": [
+                [
+                  1,
+                  1048576,
+                  0,
+                  997,
+                  1,
+                  0,
+                  996,
+                  0,
+                  258,
+                  0,
+                  0,
+                  0,
+                  1,
+                  1,
+                  0,
+                  0,
+                  995,
+                  0,
+                  1,
+                  1,
+                  15,
+                  3,
+                  2,
+                  4
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "nativeInterpretation": [
+    "Both complete native tees have415 lines/414 JSON rows,25 result labels,31 completed internal phases,64 observed helper records and9 retained capabilities each. The64 helper records are not64 test PASS cases.",
+    "Seven expected negative cases and two write-primitive outcomes remain distinct. Expected nonzero exits and deliberate termination are retained unchanged. After the original waits, observed native helpers are closed, streams ended and buffered bytes zero; each native controller rootExitCode is0 and activeProcesses is0.",
+    "The exact pending-CREATE tuples retain rootExited:false,activeProcesses:0,queryError:0,dispatchError:0,stopReplied:false. This does not invent a Stop acknowledgement.",
+    "Both six-row I386 streams retain actual PID/birth joins, including the repeated handled:false late application entries. Direct I386 root late-handler qualification remains false; no broader exception-delivery guarantee is inferred.",
+    "Host Node24.21.0 and Electron Node24.22.1/Electron44.10.1 are distinct original venues. Their successful native steps do not override the later OpenCode source failure or the skipped final source-receipt gate."
+  ],
+  "providerReceipts": [
+    {
+      "kind": "TEST_WINDOWS_EMULATED_PROVIDER_PARITY",
+      "status": "PASS",
+      "cleanup": true,
+      "realProviderExecuted": false,
+      "desktopQualified": false,
+      "releaseQualified": false,
+      "receipt": "windows-emulated-provider-receipt.json",
+      "wrappers": [
+        "npm-node",
+        "generated-bun",
+        "opaque-cmd",
+        "positional-bat",
+        "npm-native"
+      ],
+      "providers": [
+        {
+          "provider": "codex",
+          "wrapper": "npm-node",
+          "pins": {
+            "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+            "peer": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+            "wrapper": "808f1868f1cb9649df4edf133c1f7d8da7e888b513b380868de8659ef46b90ca",
+            "cli": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+            "source": "0fa56d8664650c833244f8491284f69f387f02864f57fe060e8a4d8f0dc814f9"
+          },
+          "counts": {
+            "allocate": 1,
+            "prepare": 1,
+            "resume": 1,
+            "stop": 1,
+            "release": 1,
+            "serviceCapture": 2,
+            "serviceStop": 2,
+            "serviceSettle": 2
+          },
+          "nativeReady": true,
+          "inputCompleted": true,
+          "registeredServices": 2,
+          "scopedStops": 2,
+          "neighborSurvivedPrimary": true,
+          "providerSurvivedScopedStops": true,
+          "cleanup": true
+        },
+        {
+          "provider": "opencode",
+          "wrapper": "opaque-cmd",
+          "pins": {
+            "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+            "peer": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+            "wrapper": "fd4631ca06e32fe34da1b55f10ffac07eec775fe87127876d13592c4c983b1cf",
+            "cli": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+            "source": "d41d14e0447f17e08ee1730d5c5b9dfb231d4c68730cf17a291e1cdb963ba4fe"
+          },
+          "counts": {
+            "allocate": 1,
+            "prepare": 1,
+            "resume": 1,
+            "stop": 1,
+            "release": 1,
+            "serviceCapture": 2,
+            "serviceStop": 2,
+            "serviceSettle": 2
+          },
+          "nativeReady": true,
+          "inputCompleted": true,
+          "registeredServices": 2,
+          "scopedStops": 2,
+          "neighborSurvivedPrimary": true,
+          "providerSurvivedScopedStops": true,
+          "cleanup": true
+        }
+      ]
+    },
+    {
+      "kind": "TEST_WINDOWS_EMULATED_SOURCE_PARITY",
+      "status": "PASS",
+      "cleanup": true,
+      "realProviderExecuted": false,
+      "desktopQualified": false,
+      "releaseQualified": false,
+      "receipt": "windows-source-claude-receipt.json",
+      "provider": "claude",
+      "scenarioStatus": "PASS",
+      "stage": "complete",
+      "scenarioCleanup": true,
+      "jobsPerEpoch": [
+        8,
+        1
+      ],
+      "lastLaunchReadiness": {
+        "source": {
+          "sourceId": "7d55a7e98e4881d09d3644b0e3b40021b954ab216e47aa418d92346461a4d9da",
+          "revision": "fdee02cdd7bf07dfd61d6a7bf28fb4584e887cb744006fd75ff3e0434d1085e3"
+        },
+        "image": "B",
+        "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+        "readCount": 21,
+        "elapsedMs": 3421.6155,
+        "lastRuntimeRead": {
+          "viewDigest": "e9c711bebe8d482154970603455182c2f6ea79e5fe18e55d8428109bec781af6",
+          "memberId": "alice-id",
+          "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+          "phase": "allocated",
+          "sealed": false,
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true
+        }
+      },
+      "standaloneCompletionFieldPresent": true,
+      "lastStandaloneCompletion": {
+        "source": {
+          "sourceId": "7d55a7e98e4881d09d3644b0e3b40021b954ab216e47aa418d92346461a4d9da",
+          "revision": "fdee02cdd7bf07dfd61d6a7bf28fb4584e887cb744006fd75ff3e0434d1085e3"
+        },
+        "runId": "TEST-source-standalone-B",
+        "scheduleId": "TEST-source-schedule-B",
+        "readCount": 21,
+        "elapsedMs": 1564.6407,
+        "lastRunRead": {
+          "phase": "completed",
+          "cleanup": "confirmed",
+          "exitCode": 0
+        }
+      },
+      "allFinalCustodyFlagsTrue": true
+    },
+    {
+      "kind": "TEST_WINDOWS_EMULATED_SOURCE_PARITY",
+      "status": "PASS",
+      "cleanup": true,
+      "realProviderExecuted": false,
+      "desktopQualified": false,
+      "releaseQualified": false,
+      "receipt": "windows-source-codex-receipt.json",
+      "provider": "codex",
+      "scenarioStatus": "PASS",
+      "stage": "complete",
+      "scenarioCleanup": true,
+      "jobsPerEpoch": [
+        25,
+        0
+      ],
+      "lastLaunchReadiness": {
+        "source": {
+          "sourceId": "0d1c17e159ecba9797cde6ad31745c809656906f2d7fc7d1caefa5f3ec5c6ba4",
+          "revision": "a130535a244234fcb49369e4d1ad59c7d6de871fa160865cc72a91b1becc61e5"
+        },
+        "image": "B",
+        "launchId": "eca13de8-3599-5b26-bdf8-ae13b6dfa550",
+        "readCount": 86,
+        "elapsedMs": 10257.467200000003,
+        "lastRuntimeRead": {
+          "viewDigest": "322d611415d1de09975bb832e4f366a34c8a315a2594c0d6f7e9444463a1c6a9",
+          "memberId": "alice-id",
+          "generation": "capture-83ed1d4d-5f5f-53aa-bb2b-02b0d7bbc36c",
+          "phase": "allocated",
+          "sealed": false,
+          "custody": "owned",
+          "nativeReady": true,
+          "attached": true
+        }
+      },
+      "standaloneCompletionFieldPresent": true,
+      "lastStandaloneCompletion": {
+        "source": {
+          "sourceId": "0d1c17e159ecba9797cde6ad31745c809656906f2d7fc7d1caefa5f3ec5c6ba4",
+          "revision": "a130535a244234fcb49369e4d1ad59c7d6de871fa160865cc72a91b1becc61e5"
+        },
+        "runId": "TEST-source-standalone-B",
+        "scheduleId": "TEST-source-schedule-B",
+        "readCount": 108,
+        "elapsedMs": 10438.022300000004,
+        "lastRunRead": {
+          "phase": "completed",
+          "cleanup": "confirmed",
+          "exitCode": 0
+        }
+      },
+      "allFinalCustodyFlagsTrue": true
+    },
+    {
+      "kind": "TEST_WINDOWS_EMULATED_SOURCE_PARITY",
+      "status": "INCOMPLETE",
+      "cleanup": true,
+      "realProviderExecuted": false,
+      "desktopQualified": false,
+      "releaseQualified": false,
+      "receipt": "windows-source-opencode-receipt.json",
+      "provider": "opencode",
+      "scenarioStatus": "INCOMPLETE",
+      "stage": "Team-A",
+      "scenarioCleanup": false,
+      "jobsPerEpoch": [
+        3
+      ],
+      "lastLaunchReadiness": {
+        "source": {
+          "sourceId": "503fc365d803f23cdbc299655d7d2e29c900e1e729cba83fa3c6e01be32684bc",
+          "revision": "2f3911e033dbbb436cd9b4fb3f45823163e3a65860882efa5e66c17ae1d69446"
+        },
+        "image": "A",
+        "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+        "readCount": 74,
+        "elapsedMs": 14977.9996,
+        "lastRuntimeRead": {
+          "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+          "memberId": "alice-id",
+          "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+          "phase": "held",
+          "sealed": false,
+          "custody": "unknown",
+          "nativeReady": false,
+          "attached": false,
+          "diagnostic": "open-unknown"
+        }
+      },
+      "standaloneCompletionFieldPresent": false,
+      "allFinalCustodyFlagsTrue": false
+    }
+  ],
+  "providerInterpretation": [
+    "The finite wrapper/Main-Host fixture and Codex/Claude A/B source receipts retain their own original PASS and cleanup. Codex has25+0 original jobs across two epochs; Claude8+1, with all final custody bits checked from their original receipts. No real-vendor, Desktop or release claim follows.",
+    "OpenCode remains INCOMPLETE at Team-A with scenario cleanup:false despite outer cleanup:true. Its standalone completion field is absent, not a null successful completion. No later Team-B/standalone result is invented.",
+    "All readiness elapsed samples remain tied to current72e policies and sampling points. Earlier60/90-second policy and old E2 outcomes are not transferred."
+  ],
+  "firstFailure": {
+    "provider": "opencode",
+    "stage": "Team-A",
+    "message": "Original source Team readiness",
+    "originalPollLine": 62,
+    "predicate": "pre-read deadline",
+    "originalBudgetMs": 15000,
+    "budgetAnchor": "after original Start acknowledgement for non-Claude source lanes",
+    "readiness": {
+      "source": {
+        "sourceId": "503fc365d803f23cdbc299655d7d2e29c900e1e729cba83fa3c6e01be32684bc",
+        "revision": "2f3911e033dbbb436cd9b4fb3f45823163e3a65860882efa5e66c17ae1d69446"
+      },
+      "image": "A",
+      "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+      "readCount": 74,
+      "elapsedMs": 14977.9996,
+      "lastRuntimeRead": {
+        "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+        "memberId": "alice-id",
+        "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+        "phase": "held",
+        "sealed": false,
+        "custody": "unknown",
+        "nativeReady": false,
+        "attached": false,
+        "diagnostic": "open-unknown"
+      }
+    },
+    "runtimeProjection": {
+      "status": "observed",
+      "atomicWithFailure": false,
+      "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+      "bindingMatches": true,
+      "recordReady": false,
+      "providerReady": null,
+      "ownerCurrent": null,
+      "nativeReady": false
+    },
+    "firstRefusal": {
+      "status": "observed",
+      "observations": [
+        {
+          "kind": "consumer",
+          "actionDigest": "0999f35342307166abf6addfd3031950d31858d19f9b349ce1a23447a7d9253d",
+          "groupDigest": "66636f148a7d65f4f7a098a09ff4531288f0e0b2b616eaa42c72f995a2f2e5c3",
+          "bindingDigest": "df94da6f2644a37385104c55a7dbcd8616a7929132726c0f66ee0df93a0f7052",
+          "consumerId": "f44cdc01e2c236238d00f9d1cd380c1a71959b0e17db0574585cab1213809202",
+          "phase": "cutoff",
+          "reason": "held",
+          "cutoff": 1794819012309,
+          "observedAt": 1794819012347,
+          "currentCalls": {
+            "count": 18,
+            "totalMs": 10134,
+            "maxMs": 658,
+            "lastMs": 26,
+            "truncated": false
+          },
+          "ordinal": 1,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "503fc365d803f23cdbc299655d7d2e29c900e1e729cba83fa3c6e01be32684bc",
+            "revision": "2f3911e033dbbb436cd9b4fb3f45823163e3a65860882efa5e66c17ae1d69446"
+          }
+        },
+        {
+          "kind": "native",
+          "phase": "post-prepare",
+          "reason": "current-false",
+          "dispatched": true,
+          "staged": true,
+          "rootCaptured": true,
+          "deadlineExpired": null,
+          "ordinal": 2,
+          "source": {
+            "sourceId": "503fc365d803f23cdbc299655d7d2e29c900e1e729cba83fa3c6e01be32684bc",
+            "revision": "2f3911e033dbbb436cd9b4fb3f45823163e3a65860882efa5e66c17ae1d69446"
+          }
+        },
+        {
+          "kind": "opencode-open",
+          "bindingDigest": "df94da6f2644a37385104c55a7dbcd8616a7929132726c0f66ee0df93a0f7052",
+          "phase": "native-ready",
+          "reason": "threw",
+          "ordinal": 3,
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "source": {
+            "sourceId": "503fc365d803f23cdbc299655d7d2e29c900e1e729cba83fa3c6e01be32684bc",
+            "revision": "2f3911e033dbbb436cd9b4fb3f45823163e3a65860882efa5e66c17ae1d69446"
+          }
+        }
+      ]
+    },
+    "errorLines": [
+      {
+        "line": 2095,
+        "text": "AggregateError: TEST source scenario cleanup incomplete"
+      },
+      {
+        "line": 2101,
+        "text": "    AssertionError [ERR_ASSERTION]: Original source Team readiness"
+      },
+      {
+        "line": 2102,
+        "text": "        at poll (D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts:62:12)"
+      },
+      {
+        "line": 2114,
+        "text": "    AggregateError: TEST original source epoch cleanup incomplete"
+      },
+      {
+        "line": 2121,
+        "text": "        AssertionError [ERR_ASSERTION]: Every original physical Job retains confirmed Stop/drain/release"
+      }
+    ]
+  },
+  "firstFailureSourceInterpretation": [
+    "The original pre-read deadline assertion at nativeEmulatedSourceScenario.ts:62 failed and remains inside the original cleanup AggregateError. For this non-Claude lane, the15000ms absolute readiness deadline begins after original Start acknowledgement; the same strict post-read check remains at64.",
+    "The last completed readiness callback retains74 reads/14977.9996ms, held/unknown/unattached/nativeReady:false/open-unknown. That sample is not the failed pre-read assertion timestamp and does not bound Start/preparation work.",
+    "The Runtime projection is explicitly atomicWithFailure:false. bindingMatches:true and recordReady:false short-circuit the source expression; providerReady:null and ownerCurrent:null are unexecuted operands, not independent failed checks.",
+    "The consumer cutoff/held row retains Date observedAt1794819012347 against cutoff1794819012309, exactly+38ms. Source checks this before the nested reference read. No E2 reference/probe-expiry+232ms record is imported.",
+    "currentCalls18/total10134ms/max658ms/last26ms/truncated:false measures rounded synchronous intervals of one closure before first refusal, including its initial and failing checks. It is not RPC count, caller-route attribution, whole-launch duration or substage cost diagnosis.",
+    "The native post-prepare/current-false row has dispatched/staged/rootCaptured true. HostWindowsLaunch stores rootIdentity before the post-prepare freshness assertion. deadlineExpired:null is not an evaluated false result.",
+    "Factory setupCurrent catches readiness refusal and returns false; native assertInput rejects false without extending or caching authority. The records are compatible with this path, but lack per-invocation correlation proving that the consumer/native first refusals came from the same exact call."
+  ],
+  "cleanup": {
+    "scenarioCleanup": false,
+    "outerGateCleanup": true,
+    "firstErrorPreservedInsideAggregate": true,
+    "epochs": [
+      {
+        "mainEpoch": "e2e1c0cc-a2fc-4904-bda1-1a7ef3406f60",
+        "pending": {
+          "admitted": 1,
+          "revoked": 1
+        },
+        "serviceOperations": 0,
+        "firstCloseEntryMs": 22458.7788,
+        "jobs": [
+          {
+            "capability": "2b524654-5507-4c85-be85-3d331ffd0307",
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.10959999999977299,
+                "firstStartMs": 1859.0919,
+                "lastEndMs": 1859.2014999999997
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.5156000000006316,
+                "firstStartMs": 1861.6839999999997,
+                "lastEndMs": 1862.1996000000004
+              }
+            },
+            "origin": null,
+            "root": {
+              "pid": 2524,
+              "birth": "01dd75a7745fc2f6"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true,
+            "entryStart": 0,
+            "entryEnd": 1,
+            "threadEphemeral": []
+          },
+          {
+            "capability": "c2b4f81c-dfad-4206-be99-db518fc03ab3",
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.05029999999987922,
+                "firstStartMs": 4009.9167,
+                "lastEndMs": 4009.967
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.2076999999999316,
+                "firstStartMs": 4011.5313,
+                "lastEndMs": 4011.739
+              }
+            },
+            "origin": {
+              "sourceId": "503fc365d803f23cdbc299655d7d2e29c900e1e729cba83fa3c6e01be32684bc",
+              "revision": "2f3911e033dbbb436cd9b4fb3f45823163e3a65860882efa5e66c17ae1d69446",
+              "origin": {
+                "kind": "runtime",
+                "scope": {
+                  "teamId": "TEST-source-team-A",
+                  "projectId": "TEST-project",
+                  "workspaceId": "TEST-workspace"
+                },
+                "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg5964.tmp\\TEST-desktop-backend-opencodea99c138dd0034e3ebf8951514e8a7cca\\workspace",
+                "teamId": "TEST-source-team-A",
+                "memberId": "alice-id",
+                "recipeIdentity": "29e50ccc83b7a26e0f055bbfc5cb4626eeb4ef3ffb39ced66e7c53ab225f5981"
+              }
+            },
+            "root": {
+              "pid": 2596,
+              "birth": "01dd75a775af6997"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true,
+            "entryStart": 1,
+            "entryEnd": 2,
+            "threadEphemeral": []
+          },
+          {
+            "capability": "b592372e-2808-44f9-ba19-8067244e8b3a",
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.09869999999864376,
+                "firstStartMs": 14579.2935,
+                "lastEndMs": 14579.392199999998
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.3021999999982654,
+                "firstStartMs": 15830.1224,
+                "lastEndMs": 15830.424599999998
+              }
+            },
+            "origin": {
+              "sourceId": "503fc365d803f23cdbc299655d7d2e29c900e1e729cba83fa3c6e01be32684bc",
+              "revision": "2f3911e033dbbb436cd9b4fb3f45823163e3a65860882efa5e66c17ae1d69446",
+              "origin": {
+                "kind": "runtime",
+                "scope": {
+                  "teamId": "TEST-source-team-A",
+                  "projectId": "TEST-project",
+                  "workspaceId": "TEST-workspace"
+                },
+                "projectPath": "C:\\Users\\runneradmin\\AppData\\Local\\Temp\\opg5964.tmp\\TEST-desktop-backend-opencodea99c138dd0034e3ebf8951514e8a7cca\\workspace",
+                "teamId": "TEST-source-team-A",
+                "memberId": "alice-id",
+                "recipeIdentity": "29e50ccc83b7a26e0f055bbfc5cb4626eeb4ef3ffb39ced66e7c53ab225f5981"
+              }
+            },
+            "root": {
+              "pid": 6912,
+              "birth": "01dd75a77dd938e7"
+            },
+            "resumed": false,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": false,
+            "entryStart": 2,
+            "entryEnd": 2,
+            "threadEphemeral": []
+          }
+        ]
+      }
+    ],
+    "passiveBeforeWaitRows": [
+      {
+        "line": 2087,
+        "row": {
+          "kind": "TEST_SOURCE_CLEANUP",
+          "provider": "opencode",
+          "mainEpoch": "e2e1c0cc-a2fc-4904-bda1-1a7ef3406f60",
+          "jobSlot": 0,
+          "source": null,
+          "rootCaptured": true,
+          "witnessCaptured": true,
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": true,
+          "custodyTimings": {
+            "allocate": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.9722000000001572,
+              "firstStartMs": 1853.3537000000001,
+              "lastEndMs": 1854.3259000000003
+            },
+            "prepare": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 31.579899999999725,
+              "firstStartMs": 1864.7539000000002,
+              "lastEndMs": 1896.3337999999999
+            },
+            "resume": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 9.873999999999796,
+              "firstStartMs": 1923.7352999999998,
+              "lastEndMs": 1933.6092999999996
+            },
+            "stop": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 1.4470999999994092,
+              "firstStartMs": 2217.3794000000003,
+              "lastEndMs": 2218.8264999999997
+            },
+            "drain": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.35200000000077125,
+              "firstStartMs": 2221.9635999999996,
+              "lastEndMs": 2222.3156000000004
+            },
+            "release": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 2.312699999999495,
+              "firstStartMs": 2223.5542,
+              "lastEndMs": 2225.8668999999995
+            }
+          },
+          "stagingTimings": {
+            "launch-chunk": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.10959999999977299,
+              "firstStartMs": 1859.0919,
+              "lastEndMs": 1859.2014999999997
+            },
+            "launch-commit": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.5156000000006316,
+              "firstStartMs": 1861.6839999999997,
+              "lastEndMs": 1862.1996000000004
+            }
+          },
+          "firstCloseEntryMs": 22458.7788
+        }
+      },
+      {
+        "line": 2088,
+        "row": {
+          "kind": "TEST_SOURCE_CLEANUP",
+          "provider": "opencode",
+          "mainEpoch": "e2e1c0cc-a2fc-4904-bda1-1a7ef3406f60",
+          "jobSlot": 1,
+          "source": {
+            "sourceId": "503fc365d803f23cdbc299655d7d2e29c900e1e729cba83fa3c6e01be32684bc",
+            "revision": "2f3911e033dbbb436cd9b4fb3f45823163e3a65860882efa5e66c17ae1d69446"
+          },
+          "rootCaptured": true,
+          "witnessCaptured": true,
+          "resumed": true,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": false,
+          "custodyTimings": {
+            "allocate": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.20430000000033033,
+              "firstStartMs": 4004.855,
+              "lastEndMs": 4005.0593000000003
+            },
+            "prepare": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 81.72120000000086,
+              "firstStartMs": 4013.5588999999995,
+              "lastEndMs": 4095.2801000000004
+            },
+            "resume": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 37.369300000000294,
+              "firstStartMs": 4122.031499999999,
+              "lastEndMs": 4159.400799999999
+            },
+            "stop": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 20.844499999999243,
+              "firstStartMs": 5445.6353,
+              "lastEndMs": 5466.479799999999
+            },
+            "drain": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.11130000000048312,
+              "firstStartMs": 5467.064399999999,
+              "lastEndMs": 5467.1757
+            },
+            "release": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 1.5304000000005544,
+              "firstStartMs": 5467.627699999999,
+              "lastEndMs": 5469.158100000001
+            }
+          },
+          "stagingTimings": {
+            "launch-chunk": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.05029999999987922,
+              "firstStartMs": 4009.9167,
+              "lastEndMs": 4009.967
+            },
+            "launch-commit": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.2076999999999316,
+              "firstStartMs": 4011.5313,
+              "lastEndMs": 4011.739
+            }
+          },
+          "firstCloseEntryMs": 22458.7788
+        }
+      },
+      {
+        "line": 2089,
+        "row": {
+          "kind": "TEST_SOURCE_CLEANUP",
+          "provider": "opencode",
+          "mainEpoch": "e2e1c0cc-a2fc-4904-bda1-1a7ef3406f60",
+          "jobSlot": 2,
+          "source": {
+            "sourceId": "503fc365d803f23cdbc299655d7d2e29c900e1e729cba83fa3c6e01be32684bc",
+            "revision": "2f3911e033dbbb436cd9b4fb3f45823163e3a65860882efa5e66c17ae1d69446"
+          },
+          "rootCaptured": true,
+          "witnessCaptured": true,
+          "resumed": false,
+          "stopped": true,
+          "drained": true,
+          "released": true,
+          "originalHandleAbsent": false,
+          "custodyTimings": {
+            "allocate": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.24320000000079744,
+              "firstStartMs": 13217.062399999999,
+              "lastEndMs": 13217.3056
+            },
+            "prepare": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 64.15289999999732,
+              "firstStartMs": 17727.2514,
+              "lastEndMs": 17791.4043
+            },
+            "resume": {
+              "calls": 0,
+              "settled": 0,
+              "returned": 0,
+              "totalMs": 0,
+              "firstStartMs": null,
+              "lastEndMs": null
+            },
+            "stop": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 10.246900000001915,
+              "firstStartMs": 17904.8896,
+              "lastEndMs": 17915.1365
+            },
+            "drain": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.06970000000001164,
+              "firstStartMs": 17935.4259,
+              "lastEndMs": 17935.4956
+            },
+            "release": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 1.5267999999996391,
+              "firstStartMs": 17935.9978,
+              "lastEndMs": 17937.5246
+            }
+          },
+          "stagingTimings": {
+            "launch-chunk": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.09869999999864376,
+              "firstStartMs": 14579.2935,
+              "lastEndMs": 14579.392199999998
+            },
+            "launch-commit": {
+              "calls": 1,
+              "settled": 1,
+              "returned": 1,
+              "totalMs": 0.3021999999982654,
+              "firstStartMs": 15830.1224,
+              "lastEndMs": 15830.424599999998
+            }
+          },
+          "firstCloseEntryMs": 22458.7788
+        }
+      }
+    ],
+    "controller": {
+      "line": 2140,
+      "row": {
+        "gateController": "drained",
+        "rootExitCode": 1,
+        "activeProcesses": 0
+      }
+    },
+    "sourceController": [
+      {
+        "line": 2141,
+        "row": {
+          "kind": "TEST_SOURCE_CONTROLLER_EXIT",
+          "provider": "opencode",
+          "exitCode": 104
+        }
+      }
+    ],
+    "roles": "Scenario close asserts root+witness+resumed+Stop/drain/release before original witness.wait. Its stdout precedes wait; final receipt is populated after close. Outer gate cleanup records its own retained sentinel/temporary sandbox work and is not a substitute for scenario custody. Controller active0 is its own original enclosing Job accounting, not a missing per-root HANDLE proof."
+  },
+  "cleanupSourceInterpretation": [
+    "Current slot2 retains root6912/birth01dd75a77dd938e7 and witnessCaptured:true. Main prepare returned once; Main resume has exactly0 observed calls. E2 root:null is not the current fact.",
+    "Slot2 Stop/drain/release each returned once before firstCloseEntryMs22458.7788 on the same phase clock. resumed remainsfalse, entryStart/entryEnd both2 and originalHandleAbsent:false. Positive Stop/drain/release records do not complete the full custody predicate.",
+    "The passive cleanup row precedes the source conjunction at305, which requires root+witness+resumed+stopped+drained+released before witness.wait at307 and setting handleAbsent:true at308. Slot2 fails the resumed operand, so its mandatory HANDLE-wait confirmation is unreached.",
+    "originalHandleAbsent:false therefore means uncompleted absence confirmation. It proves neither current root liveness nor absence and is not a returned negative HANDLE-wait result.",
+    "Slot1 logged absence:false before its wait and has final receipt absence:true afterward. That original transition is preserved, not applied to slot2.",
+    "The original first readiness error and subsequent custody error both remain in AggregateError. Enclosing controller rootExitCode1/activeProcesses0, source-controller exit104 and outer-gate cleanup:true do not substitute for the original-root HANDLE proof.",
+    "Date cutoff values, callback performance intervals, phase-relative custody times and readiness elapsed samples are separate clocks/samples. Only intervals explicitly sharing the original phase clock are numerically ordered; no cross-clock or causal-duration inference is made."
+  ],
+  "sourceBindings": [
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "bytes": 22408,
+      "blob": "3b5a244c27d004af6e82fffa092fa83e1894de73",
+      "sha256": "447a3ae82ab6ce0ec866305af2cd426619df3618fbec2397931212379d945784",
+      "equals578": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/hostCustody.ts",
+      "bytes": 21129,
+      "blob": "af69d8430ffd473d471a5e663606fcaea640d2e5",
+      "sha256": "ae2bc6fe45b4dded8cff67b13daf01e8a5f5c4fc3e835ce7eb98a8c58adaf435",
+      "equals578": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "bytes": 44781,
+      "blob": "08552af73c0f67cd62fca0e5b773cde2281eb152",
+      "sha256": "eb985c1ba5f4a6d22a3816cd80795374f817645e8a59fb8ad70a1734f3e20fc3",
+      "equals578": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "bytes": 15423,
+      "blob": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d",
+      "sha256": "189b8a98f8708d22b1ffabc84ef235efd320a910bf7a9ee19c266846ccd3f1ac",
+      "equals578": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+      "bytes": 30469,
+      "blob": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+      "sha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d",
+      "equals578": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "bytes": 58249,
+      "blob": "dd1e8cd2f1ea052f0480833cfe1fca6be9b5d2e6",
+      "sha256": "442fc644470c06095932c89434cdd8d24ffb6971bdb475d2ca1a3e6257be760d",
+      "equals578": true
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "bytes": 32767,
+      "blob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+      "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138",
+      "equals578": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts",
+      "bytes": 20070,
+      "blob": "10e1a457bb65a136128eb1db5176a4701d2fe4e2",
+      "sha256": "cd06debca46ae13d02935268f4905b2ade7f3a5c8c4ed8a81139dde99de5c117",
+      "equals578": true
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/windowsBroker.ts",
+      "bytes": 28794,
+      "blob": "32b3315f04d91ae6da375bcca710e16948e09ad3",
+      "sha256": "751df6b6e8e07b717a8ade1c88b064dbe8a099e2b07ce328a9f052530dd78b79",
+      "equals578": true
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+      "bytes": 7213,
+      "blob": "e84ee4b6e2ff4cea7d468c3173bc0851c59cdeae",
+      "sha256": "f12be6e141ab12b41feb394e17d5b373e6eeb6511c6425212bb9c33bf44afb72",
+      "equals578": true
+    }
+  ],
+  "sourcePredicateReferences": [
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "lines": "59-67,205-236,290-313,470-487",
+      "meaning": "Strict readiness deadline, root/witness capture before returned prepare, returned resume flag, mandatory cleanup conjunction and non-Claude post-ACK anchor."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+      "lines": "370-387",
+      "meaning": "Prepared root precedes post-prepare assertion; original failure handling."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "lines": "334-410",
+      "meaning": "One bounded callback accumulator; Date cutoff before reference read; first refusal publication."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "lines": "137-143",
+      "meaning": "Readiness refusal converts to false with no renewal."
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+      "lines": "19-34",
+      "meaning": "Short-circuit readiness projection and unexecuted null operands."
+    }
+  ],
+  "sourceAssessmentScope": "Independently checked x64 and shared currentness/cleanup predicates against current originals and ten fresh source bodies. ARM companion claims in the generic author limits/assessment and future-observation designs are outside this review.",
+  "findings": [],
+  "limits": [
+    "Exact original72e Windows x64 job remains failed; final platform/source receipt gate step23 was skipped. No whole migration, Process job, Desktop, release, P08/P09, renderer or native-property acceptance.",
+    "No qualification transfer to bfc, another architecture/job or a future composition. Source-byte equality with578 is not execution-result equality.",
+    "Private generated profiles/peers, installed Node, compiled Host/plugin bodies and native executables are not all archived.59 receipt pins remain captured digest-only observations, not independently reopened binary bodies or a local rebuild.",
+    "No unique performance cause, production defect or safe repair is demonstrated. No deadline extension, cached authority, replay, new business action or cleanup weakening is selected.",
+    "No P11/Models RED, B selection, current frontend/types/lint result or primary advancement follows from this review.",
+    "Only retained original CI data and immutable Git were read with stdlib byte/JSON/CRC/source analysis. No project/native/provider execution, test/compiler/install, API query, CI action, source or ref mutation occurred."
+  ]
+}

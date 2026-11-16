@@ -1,0 +1,69 @@
+{
+  "kind": "ORIGINAL_TERMINAL_SHARD4_RETENTION_ONLY",
+  "retainedAtUTC": "2026-11-16T09:18:37.354218+00:00",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "runId": 43831885807,
+  "jobId": 133178913127,
+  "raw": {
+    "bytes": 194766,
+    "blob": "2474ba3b47339f97de2f6d9eaadd8296f8310923",
+    "sha256": "c2ce574968509bf9f25f49c224d99fcb8cb7bd9d94464fd880cf2f4e9504e34d"
+  },
+  "response": {
+    "bytes": 238688,
+    "blob": "01337d953fd1c1bd0c47f4975c1616e14db21f21",
+    "sha256": "a4a7d0e14ef0a60e4121909f253f5a550db80f152e4a0b6c4d204575041fe02c"
+  },
+  "fullRawEqualsOriginalMcpUtf8": true,
+  "artifact": {
+    "id": 14212311060,
+    "name": "host-offline-tests-72e6ec04444969d343d73834c70bc4e261100fc9-4",
+    "size_in_bytes": 318098,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14212311060",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14212311060/zip",
+    "expired": false,
+    "created_at": "2026-11-16T09:16:39Z",
+    "expires_at": "2026-11-30T09:16:38Z",
+    "updated_at": "2026-11-16T09:16:39Z",
+    "digest": "sha256:31cf3af774436a2f8bf0764808b1a025e8ddf696cf7d519874bcd72a83a8fcfb",
+    "workflow_run": {
+      "id": 43831885807,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "72e6ec04444969d343d73834c70bc4e261100fc9"
+    }
+  },
+  "archive": {
+    "bytes": 318098,
+    "blob": "c52949825a74ef3655a435a0be4b842c67c2b26a",
+    "sha256": "31cf3af774436a2f8bf0764808b1a025e8ddf696cf7d519874bcd72a83a8fcfb"
+  },
+  "members": [
+    {
+      "path": "host-offline-tests-4.json",
+      "bytes": 2329327,
+      "blob": "2cde3926a0511c6b130fab41859c8a810cdac9e5",
+      "sha256": "def156f48f226bd2ff2017a0ef1e12d03d71f22ae02e48b6f9ad0af6dff92ba0",
+      "crc32": "ab14092a"
+    },
+    {
+      "path": "host-offline-tests-4.log",
+      "bytes": 117947,
+      "blob": "ed15b0703f687f225d986885649ebb1d5489f969",
+      "sha256": "1f674f0a31bb18262b467ba872bab59a0857c4c5c8caeb0120c872cfda090d88",
+      "crc32": "4672b3ea"
+    }
+  ],
+  "safeCrcExtracted": true,
+  "summary": {
+    "success": true,
+    "numTotalTests": 6621,
+    "numPassedTests": 6614,
+    "numFailedTests": 0,
+    "numPendingTests": 7
+  },
+  "fileCount": 539,
+  "signedTransportUrlsRetained": false,
+  "qualification": "raw and report preservation only; whole aggregate/source/guard review pending"
+}

@@ -1,0 +1,353 @@
+{
+  "kind": "INDEPENDENT_CURRENT_CREATION_SCHEDULE_SELECTOR_CALLER_AND_SOURCE_BOUNDARY_REVIEW",
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUTC": "2026-11-16T09:43:09.186875+00:00",
+  "result": "APPROVE retained selector-identity weakness and limited caller scope; no repair or causal attribution selected",
+  "scope": "Independent source-only assessment of0df016a1 against the exact original72e and actualcurrentfc580. This is not a duplicate full ZIP/image/physical-custody audit or a proposal/source selection.",
+  "assessment": {
+    "path": "ci-72e6ec/creation-macos-selector-assessment/source-assessment.json",
+    "bytes": 43950,
+    "blob": "0df016a1cf7cb2329f62ba7298cf5ec98afb4c58",
+    "sha256": "6a13b5ed0381f09a8421077858ec5b07a7df1e1901ab291757c8bebdc77f31cb"
+  },
+  "originalSource": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "comparisonSource": "57885c055a18b27c180c304762643eac632513ad",
+  "currentFollowupSource": "fc580db9bafbe7d9f28dc86edd484af3e151de6f",
+  "originalJob": {
+    "runId": 43831885626,
+    "jobId": 133178909700
+  },
+  "basis": [
+    {
+      "path": "ci-72e6ec/creation-macos/audit.json",
+      "bytes": 24388,
+      "blob": "1a3c1c2053b4d730f63ab5b5bbf05a8954d55d28",
+      "sha256": "f11d5c8d5a7a18931d31b7fb3b1c9cc2e31248098b3934b42186cee617b46688"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/checkpoint.json",
+      "bytes": 3016,
+      "blob": "b18418a326deb78d5bf60d96910ba13115685955",
+      "sha256": "ac42555cc450724e88032acabe4d2a688d79860e4700d8cf34b2d9f2520ab6b5"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/source-proof.json",
+      "bytes": 25770,
+      "blob": "2d6d91f0d57bb0720e30651e3ded621376e65a3c",
+      "sha256": "8285c84cacb0fd622695477e6b8107269c6cf576091c0280fe3b0461c5df75c6"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/Plan29-appendix.md",
+      "bytes": 5799,
+      "blob": "615619b96184255342b95c18181e4026bd4057d5",
+      "sha256": "d26364504140b92e1301a7f08787d5fd72163936417b09ba3346575b57fa8ab8"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/independent-creation-review.json",
+      "bytes": 9055,
+      "blob": "cf967568da3c6537cf6ac0c6e7915885eb9b8767",
+      "sha256": "e0e8dd71992ef5eb3ac18e80201afaced14be1728d66db8f408d4b5fb326d606"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/job.log",
+      "bytes": 66388,
+      "blob": "be8e37438f24a2e6288a6a24be27fd181a671ff7",
+      "sha256": "49070d538c8377d29c7d16a30071c5fda6be17413f6bd4de3679fea22f004122"
+    }
+  ],
+  "completeSourcePins": [
+    {
+      "path": "scripts/e2e/teams-create-page-desktop.mjs",
+      "bytes": 103360,
+      "blob": "764d42763c8eab6592235acf75073253538cfe38",
+      "sha256": "e1c09e6efffa777bd7f042c813f49cb93d20957d07bed45582474a2930312c1e",
+      "fullBytesEqualAcross": [
+        "57885c055a18b27c180c304762643eac632513ad",
+        "72e6ec04444969d343d73834c70bc4e261100fc9",
+        "fc580db9bafbe7d9f28dc86edd484af3e151de6f"
+      ]
+    },
+    {
+      "path": "src/renderer/components/schedules/SchedulesView.tsx",
+      "bytes": 22785,
+      "blob": "afb3388174ee6b044574d945870e21b5759e067a",
+      "sha256": "255084d0c3a9847368fd3d4b6cb35a7a9e4834938a52c4f0e898c5f17951d942",
+      "fullBytesEqualAcross": [
+        "57885c055a18b27c180c304762643eac632513ad",
+        "72e6ec04444969d343d73834c70bc4e261100fc9",
+        "fc580db9bafbe7d9f28dc86edd484af3e151de6f"
+      ]
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "bytes": 132317,
+      "blob": "4bd95a0f2e5636a21d1f0d83dd45f228b054b048",
+      "sha256": "af7b6f9da352008ef014dad120b868090626e071cd5d94037fd03385e2234d40",
+      "fullBytesEqualAcross": [
+        "57885c055a18b27c180c304762643eac632513ad",
+        "72e6ec04444969d343d73834c70bc4e261100fc9",
+        "fc580db9bafbe7d9f28dc86edd484af3e151de6f"
+      ]
+    },
+    {
+      "path": "src/renderer/components/ui/combobox.tsx",
+      "bytes": 7533,
+      "blob": "b441f61b4f9ff3e31bec1ca1ed78b3933499d2ae",
+      "sha256": "494b52828660b0cd7ae06bab143a8c3b4d0949176fc61b5fa7762131cdb5b21e",
+      "fullBytesEqualAcross": [
+        "57885c055a18b27c180c304762643eac632513ad",
+        "72e6ec04444969d343d73834c70bc4e261100fc9",
+        "fc580db9bafbe7d9f28dc86edd484af3e151de6f"
+      ]
+    },
+    {
+      "path": "src/renderer/components/ui/popover.tsx",
+      "bytes": 1630,
+      "blob": "ab5c334d683c034f279db2994110b40f0e96441e",
+      "sha256": "1d847f561b6009183481859a3b289311329e09b5730f55f4c35a5ba2d667c5b8",
+      "fullBytesEqualAcross": [
+        "57885c055a18b27c180c304762643eac632513ad",
+        "72e6ec04444969d343d73834c70bc4e261100fc9",
+        "fc580db9bafbe7d9f28dc86edd484af3e151de6f"
+      ]
+    },
+    {
+      "path": "src/renderer/components/team/schedule/useSavedPromptReview.ts",
+      "bytes": 1342,
+      "blob": "d19cfb5fecd85630af7e381c2aaac7b5429b2612",
+      "sha256": "063384266f95242e78f445d96c0e2deb7aef43d97c31c468f1117e7ae992bd86",
+      "fullBytesEqualAcross": [
+        "57885c055a18b27c180c304762643eac632513ad",
+        "72e6ec04444969d343d73834c70bc4e261100fc9",
+        "fc580db9bafbe7d9f28dc86edd484af3e151de6f"
+      ]
+    },
+    {
+      "path": "src/renderer/components/team/schedule/HistoricalPromptReview.tsx",
+      "bytes": 1479,
+      "blob": "b16e01839622d05065ed727b79f9a2d2e5fdffa4",
+      "sha256": "0e031cc543df222044ddf56d7e452eee5350ad85d0f3126cc719ac6bad693392",
+      "fullBytesEqualAcross": [
+        "57885c055a18b27c180c304762643eac632513ad",
+        "72e6ec04444969d343d73834c70bc4e261100fc9",
+        "fc580db9bafbe7d9f28dc86edd484af3e151de6f"
+      ]
+    }
+  ],
+  "additionalCurrentSourceAndVenuePins": [
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "bytes": 6522,
+      "blob": "72c1a8f760a99c53ce7d279c7bb9d5e3ddaa7298",
+      "sha256": "3cb53bb19e4ee77c51947c5ce39fa4efb8cccbcaa648c6da0293129c92effdaa",
+      "currentByteExactToOriginal": true
+    },
+    {
+      "path": "package.json",
+      "bytes": 26839,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "currentByteExactToOriginal": true
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+      "currentByteExactToOriginal": true
+    },
+    {
+      "path": ".node-version",
+      "bytes": 8,
+      "blob": "63f87c20ef9fd0ace28f8d0a3b74b5ef2e24feff",
+      "sha256": "2a4a3fac7ea8694f168266bd3a930b3fc5faa6e503d577d99c024f74582e4cb5",
+      "currentByteExactToOriginal": true
+    }
+  ],
+  "originalRawBoundary": {
+    "lastActionMarker": {
+      "line": 688,
+      "text": "2026-11-16T08:41:07.7383330Z STEP: select the fixture team and review its saved one-time startup prompt"
+    },
+    "retainedBodyProjection": {
+      "line": 693,
+      "text": "2026-11-16T08:41:53.2431590Z   \"bodyText\": \"Teams\\ncreate-page-e2e-dbc00c96\\nOrganizations\\norg-team-e2e-8e8d57e5\\nSchedules\\n265\\nSchedules\\nAdd Schedule\\n\\nNo scheduled tasks\\n\\nCreate a schedule on any team to automate team task execution with cron expressions. Schedules from all teams will appear here.\\n\\nCreate Schedule\\nTasks\\nBy time\\nProject\\nNo tasks found\\nClose\\nCreate Schedule\\n\\nSchedule automatic runs for team \\\"org-team-e2e-8e8d57e5\\\"\\n\\nTeam\\norg-team-e2e-8e8d57e5\\nSCHEDULE\\nExecution\\nOne agent\\nVia team lead\\nAssign to\\nTeam lead (default)\\n\\nThe selected teammate receives a board task after the team is safely started, if needed. Busy agents are not interrupted.\\n\\nLabel (optional)\\nCron expression\\nEvery hour\\nEvery 6 hours\\nDaily at 9am\\nWeekdays at 9am\\nMonday at 9am\\nEvery 30 min\\n\\nAt 09:00, Monday through Friday\\n\\nNext runs:\\n\\nMon, Nov 16, 09:00\\nTue, Nov \""
+    },
+    "firstErrorAndFrames": [
+      {
+        "line": 695,
+        "text": "2026-11-16T08:41:54.8473610Z Error: Timed out waiting for saved prompt acknowledgement visible before Save"
+      },
+      {
+        "line": 696,
+        "text": "2026-11-16T08:41:54.8485040Z     at CdpClient.waitFor (file:///Users/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/teams-create-page-desktop.mjs:462:11)"
+      },
+      {
+        "line": 697,
+        "text": "2026-11-16T08:41:54.8486650Z     at async exerciseScheduleUx (file:///Users/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/teams-create-page-desktop.mjs:875:3)"
+      },
+      {
+        "line": 698,
+        "text": "2026-11-16T08:41:54.8488130Z     at async main (file:///Users/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/teams-create-page-desktop.mjs:2029:32)"
+      }
+    ],
+    "interpretation": "The last projection names org-team while the intended fixture has another exact identity. The original saved-prompt wait refused. No actual clicked cmdk value, option/listbox census, physical event recipient or transition history is retained.",
+    "noObservedCause": "The raw does not establish that a substring collision, different listbox, animation, geometry shift, state overwrite or missing saved-request response caused the mismatch."
+  },
+  "callerScope": {
+    "onlyCmdkSelectorOccurrence": {
+      "path": "scripts/e2e/teams-create-page-desktop.mjs",
+      "lines": [
+        871,
+        872,
+        873,
+        874,
+        875,
+        876,
+        877
+      ]
+    },
+    "scheduleCall": "main2029 calls exerciseScheduleUx833 after organization creation. This local schedule flow first opens the dialog and performs the pristine validation, then makes its original trigger click and original option click.",
+    "client": "The same standalone file defines CdpClient.click467–484 and waitFor443–465. It does not import or call scripts/legacy-agent-host/desktop-ui-controls.ts.",
+    "sharedGeometryDistinct": {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "original": {
+        "bytes": 27188,
+        "blob": "c634a6275a18c527d623e3de922634e1e75448ec",
+        "sha256": "8bcfa5a202eedfde31e3626845c634901fff1d8890a058a0a093f08d1ba4be4a"
+      },
+      "current": {
+        "bytes": 28094,
+        "blob": "76dda75f25e876e42ea6c7358827cd1128ed52fc",
+        "sha256": "67a1e7413eff11ddc087f35a64cd3c8b242c061988b2fbd661497a9f6b5dfd11"
+      },
+      "boundary": "The recently published bounded geometry helper change is a separate implementation and cannot be credited as a correction to this Creation caller."
+    },
+    "minimumPotentialScope": "If a later R1 selects an exact-option correction, the concrete weak predicate is confined to this existing schedule selection callsite. Neither changing generic CdpClient.click for all actions nor changing production Combobox state mapping is justified by the present evidence."
+  },
+  "sourceConclusions": [
+    "The old predicate searches all document cmdk items, accepts textContent.includes(full fixture name), and takes the first match. It does not establish one exact option value or ownership by the opened control.",
+    "LaunchTeamDialog sorts values by teamName but permits displayName labels and descriptions. Its actual custom renderOption includes label and description. Therefore another option can have allowed text containing the fixture name while retaining another value.",
+    "The finite another-team/description-containing-fixture counterexample in0df016a1 follows from the actual render path. It is source reasoning, not observed DOM or an executed reproduction of the macOS failure.",
+    "The seeded known description and later template description do not contain the full UUID name. No archived catalog establishes the actual org-team collision. The known counterexample does not prove historical applicability.",
+    "SchedulesView.handleCreate clears editingSchedule; its create-dialog teamName prop is undefined. The current org-team tab is not passed as that prop. LaunchTeamDialog initializes selectedTeamName empty; its only assignments are the option callback and an empty reset.",
+    "For a non-disabled item, Combobox forwards its closure-captured option.value directly to onValueChange, then closes and clears search. The launch-dialog callback stores that name. No fixture-to-org translation appears in the reviewed chain.",
+    "The saved-prompt hook receives effectiveTeamName and updates only the separate review object. It also requires open/enabled/current request and a nonempty saved prompt; the display requires the same team identity. The original result of that saved-request read is not retained.",
+    "The original button has aria-controls pointing to the PopoverContent container ID. That container holds a distinct cmdk listbox with its own ID. A future owner join must not assume the button controls the inner listbox node directly.",
+    "The Creation caller supplies no id to this team Combobox. A future test-only guard must resolve the intended dialog/control without pretending a dedicated current ID exists.",
+    "CdpClient.click first polls the expression, separately evaluates it for scroll/center, and sends one press/release. A valid element predicate alone does not make the later physical recipient or React commit atomic. There is no demonstrated global click-helper fix."
+  ],
+  "dependencySourceBoundary": {
+    "packagePin": "cmdk1.0.4 in both exactGit package.json and pnpm-lock.yaml; lock integrity sha512-AnsjfHyHpQ/EFeAnG216WY7A5LiYCoZzCSygiLvfXC3H3LFGCprErteUcszaVluGOhuOTbJS3jWHrSDYPBBygg==",
+    "localReadOnlyFile": {
+      "path": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/cmdk@1.0.4_@types+react-dom@19.2.3_@types+react@19.2.14__@types+react@19.2.14_react-dom_873084260c5a8818b51147a6df037f66/node_modules/cmdk/dist/index.js",
+      "bytes": 13044,
+      "blob": "aa01c6058e1e77871ff90fa59f91e43dce1d5b9d",
+      "sha256": "07ed822ef3943691412746639ebe89f5b0275686c121e2295858813735250c03"
+    },
+    "localPackageMetadata": {
+      "path": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/cmdk@1.0.4_@types+react-dom@19.2.3_@types+react@19.2.14__@types+react@19.2.14_react-dom_873084260c5a8818b51147a6df037f66/node_modules/cmdk/package.json",
+      "bytes": 1123,
+      "blob": "e94480387d484b1a1fc6caf8c2b47b551258d2ba",
+      "sha256": "53d7f9b27eee7a953358fc90953c50c02746cdef68e06ce76b0d5148388895a6"
+    },
+    "fragments": [
+      {
+        "marker": "k=\"data-value\"",
+        "offset": 2154,
+        "text": "k=\"data-value\",Ce=(e,n,r)=>he(e,n,r),be=o.createContext(void 0),K=()=>o.useConte"
+      },
+      {
+        "marker": "Te=o.forwardRef",
+        "offset": 7265,
+        "text": "Te=o.forwardRef((e,n)=>{var $,M;let r=(0,w.useId)(),l=o.useRef(null),a=o.useContext(Pe),u=K(),f=Ae(e),p=(M=($=f.current)==null?void 0:$.forceMount)!=null?M:a==null?void 0:a.forceMount;x(()=>{if(!p)return u.item(r,a==null?void 0:a.id)},[p]);let g=Ie(r,l,[e.value,e.children,l],e.keywords),m=oe(),d=L(E=>E.value&&E.value===g.current),v=L(E=>p||u.filter()===!1?!0:E.search?E.filtered.items.get(r)>0:!0);o.useEffect(()=>{let E=l.current;if(!(!E||e.disabled))return E.addEventListener(re,C),()=>E.removeEventListener(re,C)},[v,e.onSelect,e.disabled]);function C(){var E,S;b(),(S=(E=f.current).onSelect)==null||S.call(E,g.current)}function b(){m.setState(\"value\",g.current,!0)}if(!v)return null;let{disabled:P,value:Oe,onSelect:j,forceMount:I,keywords:ie,...B}=e;return o.createElement(T.Primitive.div,{ref:V([l,n]),...B,id:r,\"cmdk-item\":\"\",role:\"option\",\"aria-disabled\":!!P,\"aria-selected\":!!d,\"data-disabled\":!!P,\"data-selected\":!!d,onPointerMove:P||u.getDisablePointerSelection()?void 0:b,onClick:P?void 0:C},e.children)}),Me=o.forwardRef((e,n)=>{let{heading:r,children:l,forceMount:a,...u}=e,f=(0,w.useId)(),p=o.useRef(null),g=o.useRef(null),m=(0,w.useId)(),d=K(),v=L(b=>a||d.filter()===!1?!0:b.search?b.filtered.groups.has(f):!0);x(()=>d.group(f),[]),Ie(f,p,[e.value,e.heading,g]);let C=o.useMemo(()=>({id:f,forceMount:a}"
+      },
+      {
+        "marker": "function Ie(",
+        "offset": 11979,
+        "text": "function Ie(e,n,r,l=[]){let a=o.useRef(),u=K();return x(()=>{var g;let f=(()=>{var m;for(let d of r){if(typeof d==\"string\")return d.trim();if(typeof d==\"object\"&&\"current\"in d)return d.current?(m=d.current.textContent)==null?void 0:m.trim():a.current}})(),p=l.map(m=>m.trim());u.value(e,f,p),(g=n.current)==null||g.setAttribute(k,f),a.current=f}),a}var tt=()=>{let[e,n]=o.useState(),r=A(()=>new Map);return x(()=>{r.current.forEach(l=>l()),r.current=new Map},[e]),(l,a)=>{r.current.set(l,a),n({})}};function rt(e){let n=e.type;return typeof n==\"function\"?n(e.props):\"render\"in n?n.render(e.props):e}function U({asChild:e,children:n},r){return e&&o.isValidEleme"
+      }
+    ],
+    "semantics": "The inspected1.0.4 implementation sets data-value from the first supplied string (trimmed), so explicit option.value is distinct from rendered text. Item aria-selected/data-selected track cmdk internal active/highlight value, which pointer movement may change before onSelect. They are not evidence that the parent selectedTeamName committed.",
+    "limit": "This is an inspected installed dependency source and version/lock join, not a freshly verified downloaded tarball or a claim that these local dependency bytes were the loaded original CI bundle. No dependency execution or installation occurred."
+  },
+  "requirementsForAnyLaterSelectedFix": [
+    "Use a fresh exact R1/current binding before any candidate selection. This report neither supplies nor approves a patch.",
+    "Keep the same original trigger click and one option click. Select by exact fixture value within the container controlled by that intended opened trigger; require uniqueness and an eligible visible option. Do not use label/description substring or internal highlight state as identity authority.",
+    "If adding a first post-click observation, distinguish parent committed selection from cmdk highlight. Any extra DOM reads, new predicates or retained fields are explicit harness amendments, with their costs and original budget use recorded.",
+    "Preserve original45-second saved-prompt wait,80ms polling,30-second CDP command bound, all original later create/update/delete predicates and finally cleanup. The existing wait checks before the read and is not a proven strict post-read cutoff; do not silently describe it otherwise.",
+    "No retry, extra physical press/release, synthetic onSelect/event, programmatic selected-state injection, timeout increase or global production-helper modification follows from this source finding.",
+    "A narrower exact predicate can remove the demonstrated selector ambiguity and refuse earlier on mismatches. It cannot establish that the old failure cause is fixed or qualify a new source without original resulting-source outcomes."
+  ],
+  "venue": {
+    "workflow": ".github/workflows/teams-create-page-desktop-e2e.yml",
+    "originalJob": "creation-page original ubuntu/windows/macos matrix,55-minute job bound,fail-fast:false",
+    "originalCommands": [
+      "node --test scripts/e2e/teams-create-page-owned-processes.test.mjs",
+      "xvfb-run -a node scripts/e2e/teams-create-page-desktop.mjs (Linux only)",
+      "node scripts/e2e/teams-create-page-desktop.mjs (other original OS lanes)"
+    ],
+    "separateFrom": "P11 full8, Host Team179, Models frontend semantic RED, shared geometry helper qualification and native acceptance remain separate.",
+    "noCurrentQualification": "All assessed Creation callsite/product bytes are equal from578 to72e toactualfc580, but earlier pass outcomes do not qualify this original failure or a future correction."
+  },
+  "reviewedSourceExcerpts": [
+    {
+      "path": "scripts/e2e/teams-create-page-desktop.mjs",
+      "firstLine": 417,
+      "lastLine": 485,
+      "text": "  send(method, params = {}) {\n    const id = ++this.nextId;\n    return new Promise((resolve, reject) => {\n      const timer = setTimeout(() => {\n        this.pending.delete(id);\n        reject(new Error(`CDP command timed out: ${method}`));\n      }, 30_000);\n      this.pending.set(id, { resolve, reject, timer });\n      this.socket.send(JSON.stringify({ id, method, params }));\n    });\n  }\n\n  async evaluate(expression) {\n    const response = await this.send('Runtime.evaluate', {\n      expression,\n      awaitPromise: true,\n      returnByValue: true,\n    });\n    if (response.exceptionDetails) {\n      throw new Error(\n        response.exceptionDetails.exception?.description ?? 'Renderer evaluation failed'\n      );\n    }\n    return response.result.value;\n  }\n\n  async waitFor(expression, label, timeoutMs = 30_000) {\n    const deadline = Date.now() + timeoutMs;\n    let lastTransientError = null;\n    while (Date.now() < deadline) {\n      try {\n        if (await this.evaluate(`Boolean(${expression})`)) return;\n        lastTransientError = null;\n      } catch (error) {\n        if (\n          !/execution context was destroyed|cannot find (?:default )?execution context/i.test(\n            String(error)\n          )\n        ) {\n          throw error;\n        }\n        lastTransientError = error;\n      }\n      await new Promise((resolve) => setTimeout(resolve, 80));\n    }\n    throw new Error(\n      `Timed out waiting for ${label}${lastTransientError ? `: ${String(lastTransientError)}` : ''}`\n    );\n  }\n\n  async click(expression) {\n    await this.waitFor(expression, expression);\n    const target = await this.evaluate(`(() => {\n      const element = ${expression};\n      if (!element || element.disabled) return null;\n      element.scrollIntoView({ block: 'center', inline: 'nearest' });\n      const rect = element.getBoundingClientRect();\n      return rect.width > 0 && rect.height > 0\n        ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }\n        : null;\n    })()`);\n    assert(target, `Missing/disabled/hidden E2E click target: ${expression}`);\n    await this.send('Input.dispatchMouseEvent', {\n      type: 'mousePressed', x: target.x, y: target.y, button: 'left', clickCount: 1,\n    });\n    await this.send('Input.dispatchMouseEvent', {\n      type: 'mouseReleased', x: target.x, y: target.y, button: 'left', clickCount: 1,\n    });\n  }"
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-desktop.mjs",
+      "firstLine": 853,
+      "lastLine": 903,
+      "text": "  log('open real Schedules UI in isolated Electron');\n  await client.evaluate('window.__agentTeamsDevStore.getState().openSchedulesTab()');\n  await client.waitFor(createButtonExpression('Add Schedule'), 'Schedules screen ready', 45_000);\n  await client.click(createButtonExpression('Add Schedule'));\n  await client.waitFor(\"document.querySelector('[role=dialog] #schedule-label')\",\n    'actual schedule editor loaded', 45_000);\n  await captureScreenshot(client, fixture, 'schedules-editor-opened');\n  // The empty-state page also has a \"Create Schedule\" button behind the modal.\n  // Target the enabled dialog submit, not the background trigger.\n  const saveButton = \"Array.from(document.querySelectorAll('[role=dialog] button'))\" +\n    \".find(button => button.textContent?.trim() === 'Create Schedule')\";\n  await client.click(saveButton);\n  await client.waitFor(\n    \"document.querySelector('[role=dialog]')?.textContent?.includes('Team is required')\",\n    'pristine form shows a reason after Save', 20_000);\n  await captureScreenshot(client, fixture, 'schedules-pristine-submit-validation');\n\n  log('select the fixture team and review its saved one-time startup prompt');\n  await client.click(\"document.querySelector('[role=dialog] button[role=combobox]')\");\n  const teamOption = \"Array.from(document.querySelectorAll('[cmdk-item]'))\" +\n    \".find(option => option.textContent?.includes(\" + JSON.stringify(fixture.teamName) + \"))\";\n  await client.click(teamOption);\n  await client.waitFor(\n    \"document.querySelector('#schedule-saved-prompt-reviewed')\",\n    'saved prompt acknowledgement visible before Save', 45_000);\n  await captureScreenshot(client, fixture, 'schedules-old-prompt-review');\n\n  await client.fill('#schedule-label', scheduleLabel);\n  await client.fill('#dialog-prompt', 'Review the fixture project and write a short status update.');\n  log('invalid cron is field-level visible and blocks Save');\n  await client.fill('input[placeholder=\"0 9 * * 1-5\"]', 'not a cron');\n  await client.waitFor(\"(\" + saveButton + \")?.disabled === true\",\n    'invalid cron blocks the Create Schedule action');\n  await captureScreenshot(client, fixture, 'schedules-invalid-cron');\n  assert.equal(\n    (await client.evaluate('window.electronAPI.schedules.list()')).some(s => s.label === scheduleLabel),\n    false, 'Invalid cron was persisted before Save'\n  );\n\n  await client.fill('input[placeholder=\"0 9 * * 1-5\"]', '*/30 * * * *');\n  await client.click(\"document.querySelector('#schedule-saved-prompt-reviewed')\");\n  await client.waitFor(\"(\" + saveButton + \")?.disabled === false\",\n    'valid schedule and reviewed old prompt allow Save', 45_000);\n  await captureScreenshot(client, fixture, 'schedules-ready-to-create');\n  await client.click(saveButton);\n  await client.waitFor(\"!document.querySelector('[role=dialog]')\",\n    'schedule saved through the actual UI', 45_000);\n  const savedSchedules = await client.evaluate('window.electronAPI.schedules.list()');\n  const scheduled = savedSchedules.find(s => s.label === scheduleLabel);\n  assert(scheduled?.taskFirst === true && scheduled.teamName === fixture.teamName,\n    'New UI schedule did not persist its selected team and task-first mode');"
+    },
+    {
+      "path": "src/renderer/components/ui/combobox.tsx",
+      "firstLine": 54,
+      "lastLine": 101,
+      "text": "  const [open, setOpen] = React.useState(false);\n  const [search, setSearch] = React.useState('');\n  const listboxId = React.useId();\n\n  const selectedOption = options.find((opt) => opt.value === value);\n  const handleOpenChange = React.useCallback(\n    (nextOpen: boolean) => {\n      setOpen(nextOpen);\n      onOpenChange?.(nextOpen);\n    },\n    [onOpenChange]\n  );\n\n  return (\n    <Popover open={open} onOpenChange={handleOpenChange}>\n      <PopoverTrigger asChild>\n        <button\n          id={id}\n          type=\"button\"\n          role=\"combobox\"\n          aria-expanded={open}\n          aria-controls={listboxId}\n          disabled={disabled}\n          className={cn(\n            'flex h-8 w-full items-center justify-between rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-1 text-xs shadow-sm transition-colors placeholder:text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] disabled:cursor-not-allowed disabled:opacity-50',\n            className\n          )}\n        >\n          <span className=\"min-w-0 truncate text-left\">\n            {selectedOption\n              ? (renderTriggerLabel?.(selectedOption) ?? selectedOption.label)\n              : placeholder}\n          </span>\n          <ChevronsUpDown className=\"ml-2 size-3.5 shrink-0 opacity-50\" />\n        </button>\n      </PopoverTrigger>\n      {open ? (\n        <PopoverContent\n          id={listboxId}\n          className=\"w-[var(--radix-popover-trigger-width)] p-0\"\n          align=\"start\"\n          sideOffset={4}\n          collisionPadding={8}\n          avoidCollisions\n        >\n          <CommandPrimitive\n            className=\"flex size-full flex-col overflow-hidden rounded-md bg-[var(--color-surface)]\"\n            shouldFilter={false}"
+    },
+    {
+      "path": "src/renderer/components/ui/combobox.tsx",
+      "firstLine": 134,
+      "lastLine": 183,
+      "text": "              {options\n                .filter((opt) => {\n                  if (!search.trim()) return true;\n                  const q = search.toLowerCase();\n                  return (\n                    opt.label.toLowerCase().includes(q) ||\n                    opt.value.toLowerCase().includes(q) ||\n                    (opt.description?.toLowerCase().includes(q) ?? false)\n                  );\n                })\n                .map((option) => {\n                  const isSelected = option.value === value;\n                  return (\n                    <CommandPrimitive.Item\n                      key={option.value}\n                      value={option.value}\n                      disabled={option.disabled}\n                      aria-disabled={option.disabled === true}\n                      onSelect={() => {\n                        if (option.disabled) {\n                          return;\n                        }\n                        onValueChange(option.value);\n                        setOpen(false);\n                        setSearch('');\n                      }}\n                      className={cn(\n                        'relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none data-[selected=true]:bg-[var(--color-surface-raised)] data-[selected=true]:text-[var(--color-text)]',\n                        option.disabled && 'cursor-not-allowed opacity-60'\n                      )}\n                    >\n                      {renderOption ? (\n                        renderOption(option, isSelected, search)\n                      ) : (\n                        <>\n                          {isSelected ? <Check className=\"mr-2 size-3.5 shrink-0\" /> : null}\n                          <div className=\"min-w-0 flex-1\">\n                            <p className=\"truncate font-medium text-[var(--color-text)]\">\n                              {option.label}\n                            </p>\n                            {option.description ? (\n                              <p className=\"truncate text-[var(--color-text-muted)]\">\n                                {option.description}\n                              </p>\n                            ) : null}\n                          </div>\n                        </>\n                      )}\n                    </CommandPrimitive.Item>\n                  );"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "firstLine": 260,
+      "lastLine": 294,
+      "text": "  const isSchedule = props.mode === 'schedule';\n  const schedule = isSchedule ? (props.schedule ?? null) : null;\n  const isEditing = isSchedule && !!schedule;\n  // Team name: always present for launch mode, may be absent in schedule mode (standalone page)\n  const propsTeamName = props.teamName ?? '';\n  const [selectedTeamName, setSelectedTeamName] = useState('');\n  const { teamByName, openDashboard } = useStore(\n    useShallow((s) => ({\n      teamByName: s.teamByName,\n      openDashboard: s.openDashboard,\n    }))\n  );\n  const openTeamTab = useStore((s) => s.openTeamTab);\n  const teamOptions = useMemo(\n    () =>\n      Object.values(teamByName)\n        .sort((a, b) => a.teamName.localeCompare(b.teamName))\n        .map((team) => ({\n          value: team.teamName,\n          label: team.displayName || team.teamName,\n          description: team.description || undefined,\n          meta: { color: team.color },\n        })),\n    [teamByName]\n  );\n  const effectiveTeamName = propsTeamName || selectedTeamName;\n  const defaultProjectPath = isLaunchMode ? props.defaultProjectPath : undefined;\n  const hydrationSourceRevision = useRef<string | undefined>(undefined);\n  const [launchHydratedTeamName, setLaunchHydratedTeamName] = useState<string | null>(null);\n  const savedLaunchSource = useLaunchDialogSavedRequest(open, isLaunchMode, effectiveTeamName);\n  const ownerHydrationPending =\n    savedLaunchSource.host &&\n    (!savedLaunchSource.ready || launchHydratedTeamName !== savedLaunchSource.key);\n  const needsTeamSelector = isSchedule && !propsTeamName;\n"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "firstLine": 2559,
+      "lastLine": 2610,
+      "text": "          {needsTeamSelector ? (\n            <div className=\"space-y-1.5\">\n              <Label className=\"text-xs\">{t('launch.schedule.team')}</Label>\n              <Combobox\n                options={teamOptions}\n                value={selectedTeamName}\n                onValueChange={(name) => { setSelectedTeamName(name); setScheduleFormTouched(true); setLocalError(null); }}\n                placeholder={t('launch.schedule.selectTeam')}\n                searchPlaceholder={t('launch.schedule.searchTeams')}\n                emptyMessage={\n                  teamOptions.length === 0\n                    ? t('launch.schedule.noTeams')\n                    : t('launch.schedule.noMatches')\n                }\n                disabled={teamOptions.length === 0}\n                renderOption={(option, isSelected) => {\n                  const colorName = option.meta?.color as string | undefined;\n                  const colorSet = colorName\n                    ? getTeamColorSet(colorName)\n                    : nameColorSet(option.label);\n                  return (\n                    <>\n                      {isSelected ? (\n                        <Check className=\"mr-2 size-3.5 shrink-0 text-[var(--color-text)]\" />\n                      ) : (\n                        <span\n                          className=\"mr-2 size-3.5 shrink-0 rounded-full\"\n                          style={{ backgroundColor: colorSet.text }}\n                        />\n                      )}\n                      <div className=\"min-w-0 flex-1\">\n                        <div className=\"flex items-center gap-1.5\">\n                          {isSelected ? (\n                            <span\n                              className=\"size-2 shrink-0 rounded-full\"\n                              style={{ backgroundColor: colorSet.text }}\n                            />\n                          ) : null}\n                          <p className=\"truncate font-medium text-[var(--color-text)]\">\n                            {option.label}\n                          </p>\n                        </div>\n                        {option.description ? (\n                          <p className=\"truncate text-[var(--color-text-muted)]\">\n                            {option.description}\n                          </p>\n                        ) : null}\n                      </div>\n                    </>\n                  );\n                }}\n              />"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "firstLine": 2634,
+      "lastLine": 2639,
+      "text": "          ) : null}\n\n          {isTaskFirstSchedule && savedPromptReview?.teamName === effectiveTeamName ? (\n            <HistoricalPromptReview prompt={savedPromptReview.prompt} confirmed={savedPromptReview.confirmed}\n              onConfirmedChange={(confirmed) => setSavedPromptReview((current) => current && ({ ...current, confirmed }))} />\n          ) : null}"
+    },
+    {
+      "path": "src/renderer/components/team/schedule/useSavedPromptReview.ts",
+      "firstLine": 19,
+      "lastLine": 44,
+      "text": "  const { open, enabled, teamName, scheduleId, reviewed } = input;\n  const [review, setReview] = useState<SavedPromptReview | null>(null);\n\n  useEffect(() => setReview(null), [teamName, scheduleId, open]);\n  useEffect(() => {\n    if (!open || !enabled || !teamName) return;\n    let cancelled = false;\n    void api.teams.getSavedRequest(teamName).then((saved) => {\n      if (cancelled) return;\n      const prompt = saved?.prompt?.trim() ?? '';\n      if (!prompt) {\n        setReview(null);\n        return;\n      }\n      setReview((current) =>\n        current?.teamName === teamName && current.prompt === prompt\n          ? current\n          : { teamName, prompt, confirmed: reviewed }\n      );\n    }).catch(() => {\n      // The submit path performs the authoritative read and reports errors.\n    });\n    return () => { cancelled = true; };\n  }, [enabled, open, reviewed, teamName]);\n\n  return [review, setReview] as const;"
+    }
+  ],
+  "actions": {
+    "newAPIOrCIReads": false,
+    "downloads": false,
+    "projectOrNodeExecution": false,
+    "sourceOrRefMutation": false,
+    "proposalAuthored": false,
+    "candidateSelected": false,
+    "oldPacketChanged": false
+  },
+  "disposition": "Retain0df016a1 as a valid bounded source weakness. Require separately reviewed caller-specific R1 for any selected-option amendment; historical cause, physical event recipient and post-click selected identity remain unproved."
+}

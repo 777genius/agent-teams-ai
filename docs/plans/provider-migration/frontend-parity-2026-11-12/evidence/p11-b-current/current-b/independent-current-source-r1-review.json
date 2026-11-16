@@ -1,0 +1,167 @@
+{
+  "kind": "INDEPENDENT_FRESH_CURRENT_P11_B_R1_SOURCE_REVIEW",
+  "reviewer": "/root/native_failures",
+  "reviewedAtUTC": "2026-11-16T09:46:43.175977+00:00",
+  "verdict": "APPROVE exact prospective one-driver P11 B source/R1 and current Models A composition; no correction. No source application or future GREEN claim.",
+  "R1": {
+    "path": "p11-b-current-fc580/R1-current-p11-deadline-fix.md",
+    "bytes": 13255,
+    "lines": 54,
+    "blob": "2b335707039efabbba75f223a7a1bbcf1a12ed34",
+    "sha256": "8d6d65a17d8ecc074a91fb8848fc4a63078b4d78b7fb7e4385dbceed1a70c85d"
+  },
+  "metadata": {
+    "path": "p11-b-current-fc580/candidate-metadata.json",
+    "bytes": 34878,
+    "lines": 957,
+    "blob": "14665c362e87082daeefffdb2dab836ee60110da",
+    "sha256": "691687d0b63573812485029b26ad6a85292dbaa49cfd5a38d334263c4e5554cf"
+  },
+  "byteProof": {
+    "path": "p11-b-current-fc580/independent-byte-source-proof.json",
+    "bytes": 41587,
+    "lines": 1046,
+    "blob": "aa6c4a8038249cc0bade7fcdb5c148388cf00a2d",
+    "sha256": "843778bfcaed789f876d7e59ef8e4a61cae78581603e1085c58f603a17878caf"
+  },
+  "base": "fc580db9bafbe7d9f28dc86edd484af3e151de6f",
+  "baseTree": "fb5a7bb3cfd8f8bcd48628e1bc93232868a559bd",
+  "soleParent": "9286c1009a3b6348598a7ded7b93cfc582d18d6d",
+  "currentPublishedReadbacks": [
+    {
+      "path": "models-a-publication/root-actual-source-readback.json",
+      "bytes": 188693,
+      "lines": 3817,
+      "blob": "df521f590b7e0090bc121b57655df54bc862f604",
+      "sha256": "9acffb3827b9c9cbd4b964f445fd8c66d8b57a04dc533a0676dcec2a4b1a1aad"
+    },
+    {
+      "path": "models-a-independent-actual-source-readback.json",
+      "bytes": 442485,
+      "lines": 8554,
+      "blob": "00172da203762f1b63378aa5128fa5cf28c40e5b",
+      "sha256": "7115fddfc1e5322de47bd460b8c3c4034678a0050d484084ff9209d91fe1e97b"
+    }
+  ],
+  "sourcePath": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+  "preimage": {
+    "bytes": 45707,
+    "lines": 570,
+    "blob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+    "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+  },
+  "candidate": {
+    "bytes": 45795,
+    "lines": 572,
+    "blob": "5026f0ec6165bb092717ddc989043848a25081dc",
+    "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b"
+  },
+  "patch": {
+    "path": "p11-b-current-fc580/candidate.patch",
+    "bytes": 727,
+    "lines": 13,
+    "blob": "8161a1b342e71ed0c46ea0f40cb70bdfdb01846d",
+    "sha256": "80fb75f384686fcabc2bf076069d3e9864204f86a4ba04f43ae15528eddc7890"
+  },
+  "reverse": {
+    "path": "p11-b-current-fc580/reverse.patch",
+    "bytes": 727,
+    "lines": 13,
+    "blob": "f9750ecc069b632ec6184ad684e127d1fe8985d9",
+    "sha256": "a3378eeca1759fdd77a8e548295b414a1fa56a31126a1181cb135bec2d3cea06"
+  },
+  "fullBodyPreservation": {
+    "addedBytes": 88,
+    "addedLines": 2,
+    "removedLines": 0,
+    "forwardAndReverseExact": true,
+    "entireOld570LinesPreserved": true,
+    "candidate572Below800Cap": true
+  },
+  "semanticReview": [
+    "The first successful await observe result is checked against the one original Date.now()+90000 cutoff before acceptance can be evaluated.",
+    "Every later successful awaited observation in the loop receives the same strict cutoff check before the next acceptance evaluation. Exactly-at-cutoff is rejected.",
+    "No extra observe(), current(), timer, action, cancellation or native request is added. The original100ms timer, currentness position, accepts calls and final acceptance assertion remain byte-identical.",
+    "An observe rejection propagates the same original error before the new assertion. A currentness throw occurs in the same place before the timer and next observation. The late false/control/error identities are not replaced by a new wrapper.",
+    "The two added Date.now/assertion sites are synchronous extra work paid inside the original budgets. The chosen wall clock is unchanged; this does not provide monotonic, atomic or instantaneous acceptance.",
+    "A pending observe can still remain pending beyond90s; the new check rejects its late successful settlement, not interrupt the original operation. Enclosing deadlines and cleanup remain intact."
+  ],
+  "actualRedBasis": {
+    "Taskboard": {
+      "source": "72e6ec04444969d343d73834c70bc4e261100fc9",
+      "runId": 43831885807,
+      "jobId": 133178913159,
+      "total": 123,
+      "passed": 120,
+      "failed": 3,
+      "skipped": 0,
+      "cancelled": 0,
+      "independentReview": "fb7f28180bd65d164a3e22990c76a898fb3d1666",
+      "laterTraceAssertionsExecuted": false
+    },
+    "TeamSupplement": {
+      "jobId": 133178913364,
+      "total": 123,
+      "passed": 120,
+      "failed": 3,
+      "independentReview": "0fff8c06b5aadf10fe91aa6129f52338f3bb613a",
+      "downstreamTeamAndStaticExecuted": false
+    },
+    "actualCurrentDriverEqualsOriginalRed": true,
+    "exactSuffix": {
+      "bytes": 4264,
+      "lines": 62,
+      "blob": "08699c4890b2ef83bcbda53094c450c6a9c3b366",
+      "sha256": "a299b6ec1497dc542f675fd7868a430d8e9d4d0503199c9ff0343a7187b5312d"
+    },
+    "postAssertionReadTraceDelayChecksPreviouslyUnexecuted": true,
+    "controlPreviouslyPassed": "Timely89999, original100ms cadence, unchanged read/currentness error object identities, false90000 rejection.",
+    "futureGreenNeedsAllThreeNowReachableTraceChecks": true
+  },
+  "composition": {
+    "all48CurrentPinsFreshlyRead": true,
+    "onlyTwoChangesAmongOriginal29": [
+      "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "scripts/legacy-agent-host/desktop-ui-controls.ts"
+    ],
+    "currentFullTeamTest": {
+      "bytes": 123149,
+      "lines": 2072,
+      "blob": "1b0ad5b15b056857817858d1e85f6dfe81f6e782",
+      "sha256": "c73b55cbd07ef632b174609e99e05e536d584b8dae9c124c2fc1a14e1c76c4da"
+    },
+    "publishedGeometryPreserved": true,
+    "publishedCredentialCopyPreserved": true,
+    "publishedModelsATestPreserved": "48bf7f181ae6836a9003ebe687abab0a0ae2db20",
+    "ModelsProductionHookUnchanged": "1176fd06b70f1b717ba83deb387f87b05b18b45b",
+    "other8797NonDocLeavesUnchanged": true,
+    "baseNonDocMap": "2b7c2c128f6169308531d2bd4797089b8bcac107c78a01e5579d0d9791e954b3",
+    "projectedNonDocMap": "15486b81750d93df49ccf4e374ba006dadfb21f779b530c8876ea16e7e6fd812"
+  },
+  "venueAndSequence": {
+    "originalCIOnly": true,
+    "literalWholeEight": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+    "Node": "24.21.0",
+    "jobTimeoutMinutes": 45,
+    "frozenInstallAndOriginalBuildPrerequisites": "Unchanged current workflow and source pins; actual baseline raw retained separately.",
+    "wholeEight133AllPass": "Source prediction only: old123 plus net10 geometry cases; complete resulting original raw remains mandatory.",
+    "geometryCountReason": "Final-owner negative loop grows2→4 (+2), and added actual-helper registrations contribute1+2+1+4 (+8).",
+    "installerNext": "Original seven-case command follows whole8 in same set-e block.",
+    "Team179Stderr24AndTypes": "Original team-lane-only downstream steps remain selected only in Team, and require whole8 success before execution.",
+    "driverFastLint": "Absent from unchanged93 operands; no driver-lint claim.",
+    "driverCompiler": "Included by existing scripts/legacy-agent-host/**/*.ts project; future success still requires actual original result.",
+    "Models90_84Pass6Fail": "Separate prediction and original containing frontend venue; actual Models RED not yet available.",
+    "BCompositionSelectedForReview": true,
+    "P11CSelected": false,
+    "ModelsBSelected": false,
+    "publication": "Current full Plan prefix and R1/docs readbacks first, then separately guarded one-source child; currentness/history guards remain root responsibility."
+  },
+  "qualificationLimits": [
+    "This source/R1 review does not run the candidate, create a commit, move a ref, poll CI or qualify the resulting source.",
+    "Current119-old/4-new original RED results do not establish the current geometry/copy/Models outcomes.",
+    "No P11C/live-member route, real provider invocation, Ready/main/release/default activation or complete migration acceptance is selected.",
+    "Existing Windows, P08, P09, Creation, I386/full-policy and physical-cleanup obligations remain separate.",
+    "Full original raw outcomes, including unrelated failures and all frontend shards, must be retained; source predictions cannot replace actual original GREEN/RED."
+  ],
+  "allFrozenInputsPostflightUnchanged": true
+}

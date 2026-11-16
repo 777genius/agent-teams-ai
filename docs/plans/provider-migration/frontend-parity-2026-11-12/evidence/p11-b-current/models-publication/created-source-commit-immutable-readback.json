@@ -1,0 +1,22 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Action completed."
+    }
+  ],
+  "structuredContent": {
+    "content": "{\"sha\":\"fc580db9bafbe7d9f28dc86edd484af3e151de6f\",\"node_id\":\"C_kwDORVTEtNoAKGZjNTgwZGI5YmFmYmU3ZDlmMjhkYzg2ZWRkNDg0YWYzZTE1MWRlNmY\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/fc580db9bafbe7d9f28dc86edd484af3e151de6f\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/fc580db9bafbe7d9f28dc86edd484af3e151de6f\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T09:39:11Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T09:39:11Z\"},\"tree\":{\"sha\":\"fb5a7bb3cfd8f8bcd48628e1bc93232868a559bd\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/fb5a7bb3cfd8f8bcd48628e1bc93232868a559bd\"},\"message\":\"test: cover overlapping Models refresh loading ownership\\n\\nAdd the reviewed regression and control cases for a silent refresh superseding a visible refresh. Preserve the current production hook and all existing assertions for the original CI regression gate.\",\"parents\":[{\"sha\":\"9286c1009a3b6348598a7ded7b93cfc582d18d6d\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/9286c1009a3b6348598a7ded7b93cfc582d18d6d\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/9286c1009a3b6348598a7ded7b93cfc582d18d6d\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+    "title": "fc580db9bafbe7d9f28dc86edd484af3e151de6f",
+    "modified_date": null,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/fc580db9bafbe7d9f28dc86edd484af3e151de6f",
+    "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/fc580db9bafbe7d9f28dc86edd484af3e151de6f",
+    "display_title": "fc580db9bafbe7d9f28dc86edd484af3e151de6f",
+    "structuredContent": {
+      "title": "fc580db9bafbe7d9f28dc86edd484af3e151de6f",
+      "content": "{\"sha\":\"fc580db9bafbe7d9f28dc86edd484af3e151de6f\",\"node_id\":\"C_kwDORVTEtNoAKGZjNTgwZGI5YmFmYmU3ZDlmMjhkYzg2ZWRkNDg0YWYzZTE1MWRlNmY\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/fc580db9bafbe7d9f28dc86edd484af3e151de6f\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/fc580db9bafbe7d9f28dc86edd484af3e151de6f\",\"author\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T09:39:11Z\"},\"committer\":{\"name\":\"Илия\",\"email\":\"iliyazelenkog@gmail.com\",\"date\":\"2026-11-16T09:39:11Z\"},\"tree\":{\"sha\":\"fb5a7bb3cfd8f8bcd48628e1bc93232868a559bd\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/trees/fb5a7bb3cfd8f8bcd48628e1bc93232868a559bd\"},\"message\":\"test: cover overlapping Models refresh loading ownership\\n\\nAdd the reviewed regression and control cases for a silent refresh superseding a visible refresh. Preserve the current production hook and all existing assertions for the original CI regression gate.\",\"parents\":[{\"sha\":\"9286c1009a3b6348598a7ded7b93cfc582d18d6d\",\"url\":\"https://api.github.com/repos/777genius/agent-teams-ai/git/commits/9286c1009a3b6348598a7ded7b93cfc582d18d6d\",\"html_url\":\"https://github.com/777genius/agent-teams-ai/commit/9286c1009a3b6348598a7ded7b93cfc582d18d6d\"}],\"verification\":{\"verified\":false,\"reason\":\"unsigned\",\"signature\":null,\"payload\":null,\"verified_at\":null}}",
+      "display_url": "https://api.github.com/repos/777genius/agent-teams-ai/git/commits/fc580db9bafbe7d9f28dc86edd484af3e151de6f"
+    }
+  },
+  "isError": false
+}

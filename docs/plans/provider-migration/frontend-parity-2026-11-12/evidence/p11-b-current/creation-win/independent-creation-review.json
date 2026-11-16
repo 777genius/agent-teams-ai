@@ -1,0 +1,441 @@
+{
+  "kind": "INDEPENDENT_E3_CREATION_R2",
+  "reviewer": "/root/native_failures",
+  "reviewedAtUTC": "2026-11-16T09:19:02.426507+00:00",
+  "verdict": "APPROVE_SCOPED_ORIGINAL_RESULT_NO_CORRECTIONS",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "sourceTree": "de80fbfbffb3fe4daabf6cc9be258cc8df534524",
+  "runId": 43831885626,
+  "jobId": 133178909857,
+  "authorCheckpoint": {
+    "path": "ci-72e6ec/creation-windows/checkpoint.json",
+    "bytes": 3537,
+    "blob": "a8914e8d8ff618b54f11c68803778e6be733ed51",
+    "sha256": "5d0a4606b7e1e9b8b5af79e7e1b86b95512d5c6fe454d305d9c7ce60959db6c5"
+  },
+  "authorAudit": {
+    "path": "ci-72e6ec/creation-windows/audit.json",
+    "bytes": 37670,
+    "blob": "0aee86873bfc25f15873542d8d5fb622cc4e4340",
+    "sha256": "b807ff97a911191ca2480630626c68c8aec536cbf22edb5073d6714df05d3024"
+  },
+  "authorAppendix": {
+    "path": "ci-72e6ec/creation-windows/Plan29-appendix.md",
+    "bytes": 3765,
+    "blob": "a340110723ac73e034e1cac2fe0188e5bb17375f",
+    "sha256": "18475fc0263d9ce8940a6b0ad1f20358b420900a102a37f64a9bad090e8b655b"
+  },
+  "foundation": {
+    "fullPayloadCount": 10,
+    "fullPayloadBytes": 2143543,
+    "fullOriginalMcpUtf8Join": true,
+    "rawIdentity": {
+      "path": "ci-72e6ec/creation-windows/job.log",
+      "bytes": 91368,
+      "blob": "14b4d07df64b0ba6069c87c7512a06ec9967f5f7",
+      "sha256": "8a862a4181fb2f6254b00469b00e3546981a05a192d0d632d90c917dc12db225"
+    },
+    "rawLineCount": 958,
+    "rawCRLFCount": 956,
+    "officialZip": {
+      "path": "ci-72e6ec/creation-windows/artifact-14210737149.zip",
+      "bytes": 1855760,
+      "blob": "76359758be6647344ccc80ee16d342e61fcd19a1",
+      "sha256": "7dce234f53c223dc6bc90e5ad5ac9adbb2fec2b4e2925f2821cdd92e201659cf"
+    },
+    "all41MembersSafeUniqueCrcAndExtractionEqual": true,
+    "40PngByteAndDimensionChecks": true,
+    "threeActualIndependentSingleImageViews": [
+      {
+        "path": "teams-create-restarted.png",
+        "bytes": 49635,
+        "blob": "398e08563f0efb47457529c04cf09777b1d80770",
+        "sha256": "e461c0b3cbb91e46b8cc80437c835c6e993feccf5c962da4f553309dc55385e2",
+        "crc32": "c6c01941",
+        "dimensions": [
+          1024,
+          720
+        ],
+        "independentlyViewed": true,
+        "method": "view_image, one original PNG per tool call",
+        "interpretation": "Actual singly opened original frame: restored Create Team editor; named draft, lead, checked Run command after create. This is editor persistence, not runtime readiness."
+      },
+      {
+        "path": "teams-create-copy-resumed-edits.png",
+        "bytes": 52064,
+        "blob": "29f68f691e5a6aac1d13b29beae7d16cd526e4a8",
+        "sha256": "e0cefc60c3aa89337e45fba3f41c3a30aa49b7249aa34a08e8375685827b6775",
+        "crc32": "a58f07ca",
+        "dimensions": [
+          1024,
+          720
+        ],
+        "independentlyViewed": true,
+        "method": "view_image, one original PNG per tool call",
+        "interpretation": "Actual singly opened original frame: edited copied-team name and retained editor controls; collapsed prompt/description bodies are not independently visible."
+      },
+      {
+        "path": "teams-create-launch-controls-loaded.png",
+        "bytes": 54799,
+        "blob": "f2c12e4b4707204c1c8c213ff0e592f7a78cb51a",
+        "sha256": "701db49ace09e22ee5b9c5c4f6b6b22f6345e8526567b0c2012102314a986fd1",
+        "crc32": "34261706",
+        "dimensions": [
+          1024,
+          720
+        ],
+        "independentlyViewed": true,
+        "method": "view_image, one original PNG per tool call",
+        "interpretation": "Actual singly opened original frame: loaded Launch modal, sandbox-project/OpenCode/test-model; disabled Launch. Provider status is separately recorded below; no accepted runtime launch."
+      }
+    ],
+    "fourClaimSourceBodiesFreshGitEqualE2": [
+      {
+        "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+        "bytes": 6522,
+        "blob": "72c1a8f760a99c53ce7d279c7bb9d5e3ddaa7298",
+        "sha256": "3cb53bb19e4ee77c51947c5ce39fa4efb8cccbcaa648c6da0293129c92effdaa",
+        "fullFreshGitRead": true,
+        "equalE2Source": true
+      },
+      {
+        "path": "scripts/e2e/teams-create-page-desktop.mjs",
+        "bytes": 103360,
+        "blob": "764d42763c8eab6592235acf75073253538cfe38",
+        "sha256": "e1c09e6efffa777bd7f042c813f49cb93d20957d07bed45582474a2930312c1e",
+        "fullFreshGitRead": true,
+        "equalE2Source": true
+      },
+      {
+        "path": "scripts/e2e/teams-create-page-owned-processes.mjs",
+        "bytes": 1349,
+        "blob": "d73d56bdbc40e3abc70b53ad5db1690c53ed4c5a",
+        "sha256": "4acd26c18441682b134edc480b6659c72f9033904bf5b1110d73285f2f65bc69",
+        "fullFreshGitRead": true,
+        "equalE2Source": true
+      },
+      {
+        "path": "scripts/e2e/teams-create-page-owned-processes.test.mjs",
+        "bytes": 1404,
+        "blob": "d3779ede535583c88f81fa5e747d008f45863c48",
+        "sha256": "67c040e8c87f11ce09ce56d3dfe2734bc6f352c0dc170073fa4861ee2794938a",
+        "fullFreshGitRead": true,
+        "equalE2Source": true
+      }
+    ],
+    "additionalContextSource": {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "bytes": 12614,
+      "blob": "5e21bb5f8c50a3c9dd2a18b1d8c461896e0f91a9",
+      "sha256": "a407196b363ba102f68bfcce1da2faa4d0757a84a00f937872aef909a6bb01c4",
+      "purpose": "Independent context for original processes() and PID/birth parser; not an additional artifact capture pin"
+    },
+    "sourceBoundary": "Four claim/venue Git bodies plus one independently read parser/context source. No 1757 Desktop census, full compiled-output census or independent rebuild."
+  },
+  "originalAcceptance": {
+    "terminalJobSuccess": true,
+    "node": "26.12.1",
+    "pnpm": "11.22.0",
+    "helperArgv": "node --test scripts/e2e/teams-create-page-owned-processes.test.mjs",
+    "helperCounts": {
+      "tests": [
+        3
+      ],
+      "pass": [
+        3
+      ],
+      "fail": [
+        0
+      ],
+      "cancelled": [
+        0
+      ],
+      "skipped": [
+        0
+      ],
+      "todo": [
+        0
+      ],
+      "duration_ms": [
+        90.1725
+      ]
+    },
+    "driverArgv": "node scripts/e2e/teams-create-page-desktop.mjs",
+    "orderedMarkers": [
+      {
+        "line": 766,
+        "timestamp": "2026-11-16T08:53:52.1550309Z",
+        "step": "start isolated Electron profile"
+      },
+      {
+        "line": 769,
+        "timestamp": "2026-11-16T08:55:02.2343335Z",
+        "step": "click real Create Team button"
+      },
+      {
+        "line": 770,
+        "timestamp": "2026-11-16T08:55:06.2870152Z",
+        "step": "restore unedited Advanced CLI defaults for a saved team name"
+      },
+      {
+        "line": 771,
+        "timestamp": "2026-11-16T08:55:06.8238953Z",
+        "step": "edit Advanced CLI while the team name is explicitly empty"
+      },
+      {
+        "line": 772,
+        "timestamp": "2026-11-16T08:55:06.9382396Z",
+        "step": "naming and renaming a team preserves in-progress Advanced CLI overrides"
+      },
+      {
+        "line": 773,
+        "timestamp": "2026-11-16T08:55:07.1782008Z",
+        "step": "Back to Teams and resume saved draft"
+      },
+      {
+        "line": 774,
+        "timestamp": "2026-11-16T08:55:07.7624947Z",
+        "step": "open Providers Settings through the real model picker and resume the draft"
+      },
+      {
+        "line": 775,
+        "timestamp": "2026-11-16T08:55:07.8563945Z",
+        "step": "click provider refresh and verify native-store checks in the isolated Electron session"
+      },
+      {
+        "line": 776,
+        "timestamp": "2026-11-16T08:55:09.3279460Z",
+        "step": "render creation page in both themes and at 200% CSS zoom"
+      },
+      {
+        "line": 777,
+        "timestamp": "2026-11-16T08:55:09.9492157Z",
+        "step": "verify actual BrowserWindow.zoomFactor=2 in isolated Electron main process"
+      },
+      {
+        "line": 778,
+        "timestamp": "2026-11-16T08:55:10.1560519Z",
+        "step": "split into two panes and prevent duplicate creation editors"
+      },
+      {
+        "line": 779,
+        "timestamp": "2026-11-16T08:55:10.6488644Z",
+        "step": "restart real Electron process retaining the same isolated data root"
+      },
+      {
+        "line": 784,
+        "timestamp": "2026-11-16T08:56:16.9704424Z",
+        "step": "Launch existing sandbox team must still open a modal"
+      },
+      {
+        "line": 785,
+        "timestamp": "2026-11-16T08:56:18.3512889Z",
+        "step": "close launch dialog without starting the deny-all runtime"
+      },
+      {
+        "line": 786,
+        "timestamp": "2026-11-16T08:56:18.3690312Z",
+        "step": "create an actual config-only team from the restored screen"
+      },
+      {
+        "line": 787,
+        "timestamp": "2026-11-16T08:56:20.4281810Z",
+        "step": "native config-only save rejection retains the editor and its working directory"
+      },
+      {
+        "line": 788,
+        "timestamp": "2026-11-16T08:56:21.2584476Z",
+        "step": "copy an existing sandbox team using the real Teams card"
+      },
+      {
+        "line": 789,
+        "timestamp": "2026-11-16T08:56:22.7016876Z",
+        "step": "template replacement must be cancelable without losing copied draft"
+      },
+      {
+        "line": 790,
+        "timestamp": "2026-11-16T08:56:23.4868383Z",
+        "step": "create from actual Organization Map and verify native placement"
+      },
+      {
+        "line": 791,
+        "timestamp": "2026-11-16T08:56:30.6170678Z",
+        "step": "duplicate team-name validation and recovery in organization editor"
+      },
+      {
+        "line": 792,
+        "timestamp": "2026-11-16T08:56:31.6037762Z",
+        "step": "reject invalid cron and timezone at the actual native IPC boundary"
+      },
+      {
+        "line": 793,
+        "timestamp": "2026-11-16T08:56:31.6212213Z",
+        "step": "open real Schedules UI in isolated Electron"
+      },
+      {
+        "line": 794,
+        "timestamp": "2026-11-16T08:56:32.8055619Z",
+        "step": "select the fixture team and review its saved one-time startup prompt"
+      },
+      {
+        "line": 795,
+        "timestamp": "2026-11-16T08:56:33.0893072Z",
+        "step": "invalid cron is field-level visible and blocks Save"
+      },
+      {
+        "line": 796,
+        "timestamp": "2026-11-16T08:56:33.4730672Z",
+        "step": "exercise list presentation in dark/light and native Electron 200% zoom"
+      },
+      {
+        "line": 797,
+        "timestamp": "2026-11-16T08:56:33.8765407Z",
+        "step": "capture the schedule UI at a genuinely narrow viewport"
+      },
+      {
+        "line": 798,
+        "timestamp": "2026-11-16T08:56:33.9942092Z",
+        "step": "edit the real schedule without migrating its task-first semantics"
+      },
+      {
+        "line": 799,
+        "timestamp": "2026-11-16T08:56:34.4830523Z",
+        "step": "pause and resume the schedule through the real actions menu"
+      },
+      {
+        "line": 800,
+        "timestamp": "2026-11-16T08:56:34.8053644Z",
+        "step": "run now and inspect the actual schedule run history"
+      },
+      {
+        "line": 801,
+        "timestamp": "2026-11-16T08:56:35.1213464Z",
+        "step": "destructive action demands confirmation and Cancel preserves the record"
+      },
+      {
+        "line": 802,
+        "timestamp": "2026-11-16T08:56:35.6483791Z",
+        "step": "restart isolated native Electron in zh-TW for member MCP UI qualification"
+      },
+      {
+        "line": 807,
+        "timestamp": "2026-11-16T08:57:35.4834653Z",
+        "step": "inspect native zh-TW task detail dialog and separate task tab"
+      }
+    ],
+    "25BehaviorFlags": {
+      "retainedAcrossBack": true,
+      "retainedAcrossTabSwitch": true,
+      "manageProvidersNavigationRetainsDraft": true,
+      "retainedAcrossProcessRestart": true,
+      "advancedCliRetainedAcrossRename": true,
+      "teammateModeOverridePersistedThroughNativeUi": true,
+      "teammateModeOverrideValidatedThroughNativeUi": true,
+      "missingRequiredCliValueRejectedThroughNativeUi": true,
+      "advancedCliRetainedAcrossPaneSplit": true,
+      "advancedCliRetainedAcrossBackRemount": true,
+      "advancedCliRestoresUneditedDefaults": true,
+      "unnamedAdvancedCliEditsRetained": true,
+      "launchStillModal": true,
+      "launchContentLoaded": true,
+      "configOnlyCreatedThroughUi": true,
+      "nativeConfigOnlyRejectionKeepsDraft": true,
+      "copiedTeamUsesSharedEditor": true,
+      "copiedDraftDoesNotReplaySeed": true,
+      "templateReplacementCancelledAndConfirmed": true,
+      "organizationPlacementPersistedViaNativeApi": true,
+      "duplicateNameValidationRecovered": true,
+      "themeDarkLightRendered": true,
+      "cssZoom200Rendered": true,
+      "nativeElectronZoom200Rendered": true,
+      "splitPaneSingleEditor": true
+    },
+    "scheduleUiEvidence": {
+      "scheduleLabel": "schedule-visual-e2e-51b5d12f",
+      "scheduleId": "834b392b-042f-4fcc-8df9-66845a146c93",
+      "createdAndDeleted": true
+    },
+    "zhTwMcpUiEvidence": {
+      "locale": "zh-TW",
+      "taskDetailUiEvidence": {
+        "taskId": "77",
+        "locale": "zh-TW",
+        "dialogOpenTabAction": "在獨立分頁中開啟",
+        "dialogScreenshot": "teams-create-zh-tw-task-detail-dialog.png",
+        "tabScreenshot": "teams-create-zh-tw-task-detail-tab.png",
+        "nativeTaskTabVisible": true
+      },
+      "strictAllowlistVisible": true,
+      "placeholder": "github, sentry",
+      "parsedServerNames": [
+        "github",
+        "sentry"
+      ],
+      "screenshot": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+      "controlEditedThroughNativeCdp": true
+    },
+    "resultPrintedEqualsArchivedBytes": true,
+    "macInputSelectionFallbackCount": 0,
+    "launchLimit": "Original driver verifies loaded modal then sends Escape without starting the deny-all runtime. Screenshot status is not NativeReady or runtime execution. Config-only creation, validation, and schedule Run-now/persistence checks are distinct from provider execution.",
+    "vendorLimit": "Exact source binds finite metadata-only Claude/Codex peers and deny-all lifecycle runtime. This is not execution or qualification of real vendors, login, or a paid provider."
+  },
+  "cleanup": {
+    "originalResult": {
+      "processGroupAbsent": null,
+      "windowsTaskkillExitedZero": true,
+      "windowsExactOwnedProcessesAbsent": true,
+      "windowsTeardowns": [
+        {
+          "launcherPid": 8116,
+          "taskkillAttempted": true,
+          "taskkillExitCode": 0,
+          "observedIdentityCount": 17,
+          "exactOwnedProcessesAbsent": true,
+          "cdpPortAbsent": true
+        },
+        {
+          "launcherPid": 2092,
+          "taskkillAttempted": true,
+          "taskkillExitCode": 0,
+          "observedIdentityCount": 17,
+          "exactOwnedProcessesAbsent": true,
+          "cdpPortAbsent": true
+        },
+        {
+          "launcherPid": 860,
+          "taskkillAttempted": true,
+          "taskkillExitCode": 0,
+          "observedIdentityCount": 17,
+          "exactOwnedProcessesAbsent": true,
+          "cdpPortAbsent": true
+        }
+      ],
+      "temporaryProfileRemoved": true
+    },
+    "forced": true,
+    "naturalExitQualified": false,
+    "nativeProviderCustodyQualified": false,
+    "productStopQualified": false,
+    "sourceOrder": "Original cleanup awaits termination/absence and profile removal; saved success JSON is emitted only after scenario and cleanup error checks. Simultaneous failure retains AggregateError precedence.",
+    "windowsLimit": "PID/birth history and CDP absence jointly gate success after taskkill /PID /T /F. Three counts of17 are per teardown, not51 globally distinct. No archived identity-array or per-child exit ledger, original-HANDLE certificate or natural-exit claim.",
+    "unixLimit": null
+  },
+  "rawCorrection": "Exact original CRLF bytes recovered from retained original MCP; LF-normalized predecessor reproduced and identified. No endpoint refetch.",
+  "visualStatus": "Checking, disabled Launch",
+  "qualificationLimits": [
+    "Only this original platform Creation result at72e; same-source macOS failure remains failed and has no final cleanup certificate.",
+    "No Team/static, P11 semantic RED, Models tests, whole frontend, other Desktop, packaged/native or release qualification.",
+    "No result transfer to later bfc/followup source and no historical causal repair assertion.",
+    "Complete raw log read; artifact images are three actual views and37 remaining byte/CRC/dimension checks, not40 visual reviews."
+  ],
+  "changesRequired": [],
+  "originalPayloadsPreserved": true,
+  "noProjectExecution": true,
+  "noApiCallsOrCiSourceRefMutations": true,
+  "byteSourceProof": {
+    "path": "ci-72e6ec/creation-windows/independent-creation-byte-source-proof.json",
+    "bytes": 51473,
+    "blob": "ebd1f380027cae3f9507c48efb7d06af1c8226d4",
+    "sha256": "1c414ff573640dd05344f839b514647afcbba84119749110fdcde20488bc97b0"
+  }
+}

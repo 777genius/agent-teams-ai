@@ -1,0 +1,569 @@
+{
+  "kind": "E3-all18-desktop-terminal-original-helper-result-correlation",
+  "createdAtUTC": "2026-11-16T09:47:12.239018+00:00",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "runId": 43831885807,
+  "jobSnapshot": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/owned-jobs-0942.json",
+    "bytes": 212040,
+    "blob": "ff7eaf0efa1971d70f0022df79e6b0f7a004a0ff",
+    "sha256": "c09162e3b1d2475e6cf966f54d645391b90fa039de424a7d3595897e38032eca"
+  },
+  "referenceTeamAudit": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/team/p11-team-red-audit.json",
+    "bytes": 45553,
+    "blob": "760d51346092215eff54f5be6ed10f2fef035f16",
+    "sha256": "dcf89866f351e5b45229d91708c0bd3745a37c7c72701fe46ab7aba18e9c7088"
+  },
+  "casesReference": "All123 names and order freshly compared against each complete original log; no selected tests were re-executed.",
+  "rows": [
+    {
+      "lane": "taskboard",
+      "raw": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/taskboard/job.log",
+        "bytes": 94289,
+        "blob": "4f7af0d5218f6c2b34457e63a4dcce05f4f2ce84",
+        "sha256": "79164ffcbff3edb86387a7d11786602b5e24f2e8fd159fb5b8cf409e4c1c9d97"
+      },
+      "mcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/taskboard/job-original-response.json",
+        "bytes": 95941,
+        "blob": "b2194f1a0c9d9d8324c9486c78e328c9f5f82b1f",
+        "sha256": "f8c470c3afdb9e65c652f6949cb2702bcaf03b3d63b65e698e42d7e893ed20cf"
+      },
+      "mcpUtf8Exact": true,
+      "all123NamesSameOrderAsTeam": true,
+      "sameOriginalWholeEightCommand": true,
+      "counts": {
+        "PASS": 120,
+        "FAIL": 3,
+        "SKIP": 0
+      },
+      "sameThreeActualFailureNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      ],
+      "missingExpectedRejections": 3,
+      "onlyOutcomeDifferencesFromTeam": []
+    },
+    {
+      "lane": "import",
+      "raw": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/import/job.log",
+        "bytes": 94294,
+        "blob": "afd4099a0ebbb0ce5ab50b81d77d1f68079bc532",
+        "sha256": "773d2848f50ee259826dd7e71990ad4ce727770b75ee64200097401cd105af72"
+      },
+      "mcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/import/job-original-response.json",
+        "bytes": 95947,
+        "blob": "998cd434b0f5f2ca81589c08814d545b0ef9e39b",
+        "sha256": "bc3f74de97567475d3dc5c190db1f788f88934537072116c25fdf3ccfaf4a823"
+      },
+      "mcpUtf8Exact": true,
+      "all123NamesSameOrderAsTeam": true,
+      "sameOriginalWholeEightCommand": true,
+      "counts": {
+        "PASS": 120,
+        "FAIL": 3,
+        "SKIP": 0
+      },
+      "sameThreeActualFailureNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      ],
+      "missingExpectedRejections": 3,
+      "onlyOutcomeDifferencesFromTeam": []
+    },
+    {
+      "lane": "extensions",
+      "raw": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/extensions/job.log",
+        "bytes": 94032,
+        "blob": "f16d5dc7242b264040ff33ecdeac06604fb54977",
+        "sha256": "dc81c787650ab1ef4159a034000f695bc15dbf62d6b9a522087b16c6467b9cfb"
+      },
+      "mcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/extensions/job-original-response.json",
+        "bytes": 95681,
+        "blob": "5439b84cfe1e06786b54f8589b394d01ca87d607",
+        "sha256": "2ef56164e4fa7e1c86d7a22910e3bbc8ad1829ba5e63cab8d71d4cecb7994f1b"
+      },
+      "mcpUtf8Exact": true,
+      "all123NamesSameOrderAsTeam": true,
+      "sameOriginalWholeEightCommand": true,
+      "counts": {
+        "PASS": 120,
+        "FAIL": 3,
+        "SKIP": 0
+      },
+      "sameThreeActualFailureNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      ],
+      "missingExpectedRejections": 3,
+      "onlyOutcomeDifferencesFromTeam": []
+    },
+    {
+      "lane": "collaboration",
+      "raw": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/collaboration/job.log",
+        "bytes": 95355,
+        "blob": "1a9954a2244562c9d0b13ec5a80d474ef87e1506",
+        "sha256": "1cfaaec3f2c0959fbcf328008c91cb46ad29d6e4d35853d32487355f5449a966"
+      },
+      "mcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/collaboration/job-original-response.json",
+        "bytes": 97026,
+        "blob": "ee7dcb7252689c3860f53b67799e79c3043b64b5",
+        "sha256": "401d3c80910bb0bf50588b7533b1c34113a2eb02db5a60584efcc0e562058060"
+      },
+      "mcpUtf8Exact": true,
+      "all123NamesSameOrderAsTeam": true,
+      "sameOriginalWholeEightCommand": true,
+      "counts": {
+        "PASS": 120,
+        "FAIL": 3,
+        "SKIP": 0
+      },
+      "sameThreeActualFailureNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      ],
+      "missingExpectedRejections": 3,
+      "onlyOutcomeDifferencesFromTeam": []
+    },
+    {
+      "lane": "team",
+      "raw": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/team/job.log",
+        "bytes": 95536,
+        "blob": "ec5cd1206ef7b7bf3fae604f3a9ffdd74ab003ad",
+        "sha256": "2091b79602e5ee3fa595e89c99f2bac1942efc9ff5ee4dd16f912e2f5ec0aaa0"
+      },
+      "mcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/team/job-original-response.json",
+        "bytes": 97211,
+        "blob": "0a528aea660212e3d46f6722a6e411772690b050",
+        "sha256": "6ca71c4736e21f6145c9e303c2c8d4a3c040fcdb281e99287892e79b8bec9c33"
+      },
+      "mcpUtf8Exact": true,
+      "all123NamesSameOrderAsTeam": true,
+      "sameOriginalWholeEightCommand": true,
+      "counts": {
+        "PASS": 120,
+        "FAIL": 3,
+        "SKIP": 0
+      },
+      "sameThreeActualFailureNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      ],
+      "missingExpectedRejections": 3,
+      "onlyOutcomeDifferencesFromTeam": []
+    },
+    {
+      "lane": "management",
+      "raw": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/management/job.log",
+        "bytes": 93009,
+        "blob": "c6e2e5f0e59b9748420cf55dd0e55c849b1ac1bc",
+        "sha256": "de194aab07784d2b2d58d4969f8089a7089afd7a715c6330f74974112bf1cf8f"
+      },
+      "mcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/management/job-original-response.json",
+        "bytes": 94642,
+        "blob": "ee234cd8f3d4cf6b6115ff0d93f7f336e3c1db21",
+        "sha256": "0dc01ea6e59d24fbcea585fc71c199e5d9f73034a79104cf87a464d2021b9930"
+      },
+      "mcpUtf8Exact": true,
+      "all123NamesSameOrderAsTeam": true,
+      "sameOriginalWholeEightCommand": true,
+      "counts": {
+        "PASS": 120,
+        "FAIL": 3,
+        "SKIP": 0
+      },
+      "sameThreeActualFailureNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      ],
+      "missingExpectedRejections": 3,
+      "onlyOutcomeDifferencesFromTeam": []
+    },
+    {
+      "lane": "skills",
+      "raw": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/skills/job.log",
+        "bytes": 95472,
+        "blob": "65f3487679b0ddf0c6e5f10ce13645120c31e82a",
+        "sha256": "0ee610c8a4b0c8b5cb707cf92a8e88575a9778b84df1ddfb186470db8def5d15"
+      },
+      "mcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/skills/job-original-response.json",
+        "bytes": 97137,
+        "blob": "3ce7f01f0d165356d3e5aea4e12131d8e7082b2c",
+        "sha256": "375a189c09a1cf1ee5b53269f7919c160f547450aea7a5b2edd77cc00222eda9"
+      },
+      "mcpUtf8Exact": true,
+      "all123NamesSameOrderAsTeam": true,
+      "sameOriginalWholeEightCommand": true,
+      "counts": {
+        "PASS": 120,
+        "FAIL": 3,
+        "SKIP": 0
+      },
+      "sameThreeActualFailureNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      ],
+      "missingExpectedRejections": 3,
+      "onlyOutcomeDifferencesFromTeam": []
+    },
+    {
+      "lane": "cross-team",
+      "raw": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/cross-team/job.log",
+        "bytes": 95595,
+        "blob": "c86c2c46118095b06fb4d2567c08dc6d939c9fbd",
+        "sha256": "a3354b7c65ac359b6a700e5652e3d679eb03a54133b21a5035fa5af02170aafd"
+      },
+      "mcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/cross-team/job-original-response.json",
+        "bytes": 97270,
+        "blob": "ea862921023835a8b7570753acfc66e59aaacecd",
+        "sha256": "ed7d4bc1c582ad7c9089fad2c5017f455c3ce2a478a700705d3076a1b688faff"
+      },
+      "mcpUtf8Exact": true,
+      "all123NamesSameOrderAsTeam": true,
+      "sameOriginalWholeEightCommand": true,
+      "counts": {
+        "PASS": 120,
+        "FAIL": 3,
+        "SKIP": 0
+      },
+      "sameThreeActualFailureNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      ],
+      "missingExpectedRejections": 3,
+      "onlyOutcomeDifferencesFromTeam": []
+    },
+    {
+      "lane": "selection",
+      "raw": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/selection/job.log",
+        "bytes": 94290,
+        "blob": "e0a58ae8bdb1afe8f34fd32137481d9615128be7",
+        "sha256": "52d49fb455c5ba1de047132690545430891e026f681ef92bbabc701f4716ad0f"
+      },
+      "mcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/selection/job-original-response.json",
+        "bytes": 95942,
+        "blob": "0b49f5ecb0ecd9605bf99a8a1fd4a086459ca1a3",
+        "sha256": "fd53c09edc5f71ac4118145cee4a2cbcae9e20e14132e0387c85976f0a819281"
+      },
+      "mcpUtf8Exact": true,
+      "all123NamesSameOrderAsTeam": true,
+      "sameOriginalWholeEightCommand": true,
+      "counts": {
+        "PASS": 120,
+        "FAIL": 3,
+        "SKIP": 0
+      },
+      "sameThreeActualFailureNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      ],
+      "missingExpectedRejections": 3,
+      "onlyOutcomeDifferencesFromTeam": []
+    },
+    {
+      "lane": "codex",
+      "raw": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/codex/job.log",
+        "bytes": 93331,
+        "blob": "56ace34b1bbfd512d2a51d06d694db671ae501ce",
+        "sha256": "8540cd65b39ade34921a8a5c0c73615ff5cbe37436a1d7ea724f3d86c21f2256"
+      },
+      "mcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/codex/job-original-response.json",
+        "bytes": 94970,
+        "blob": "32e820f1a260d90d2904351234afb75d51e4e6ab",
+        "sha256": "d899fa7c75f61948997ccfc6cd10160f31e757ef9015cc0af0ee7fe661c831c5"
+      },
+      "mcpUtf8Exact": true,
+      "all123NamesSameOrderAsTeam": true,
+      "sameOriginalWholeEightCommand": true,
+      "counts": {
+        "PASS": 120,
+        "FAIL": 3,
+        "SKIP": 0
+      },
+      "sameThreeActualFailureNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      ],
+      "missingExpectedRejections": 3,
+      "onlyOutcomeDifferencesFromTeam": []
+    },
+    {
+      "lane": "codex-login",
+      "raw": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/codex-login/job.log",
+        "bytes": 92921,
+        "blob": "5f0bc1fbf26f16133c352220c8f256f8a1e935b5",
+        "sha256": "b09821b624c00d82b5c40eccfd148af946d505d9879b3d98230bcb3053327fb5"
+      },
+      "mcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/codex-login/job-original-response.json",
+        "bytes": 94552,
+        "blob": "9d9eb41d50d4fac7cf640acf66204552489409c5",
+        "sha256": "d0e3d69fcf5d72e67b42703b326105dc525f0183cb00f973f71612b3d3d474a5"
+      },
+      "mcpUtf8Exact": true,
+      "all123NamesSameOrderAsTeam": true,
+      "sameOriginalWholeEightCommand": true,
+      "counts": {
+        "PASS": 120,
+        "FAIL": 3,
+        "SKIP": 0
+      },
+      "sameThreeActualFailureNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      ],
+      "missingExpectedRejections": 3,
+      "onlyOutcomeDifferencesFromTeam": []
+    },
+    {
+      "lane": "review",
+      "raw": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/review/job.log",
+        "bytes": 93101,
+        "blob": "4e864bc93b7a53d5fa36f3884b7515b8e67341fc",
+        "sha256": "cbb65b66e9f7203761a2f6db931f98a6a18eb91517d5b3a93b9d1c28175d0428"
+      },
+      "mcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/review/job-original-response.json",
+        "bytes": 94738,
+        "blob": "24fbd0484377fcdd39ebaf1ce2aa4697440dab33",
+        "sha256": "e6cb98ee864f8ba48d14ef3fe179bed6e2af18951e9d59a6c334df7e6afc3c2a"
+      },
+      "mcpUtf8Exact": true,
+      "all123NamesSameOrderAsTeam": true,
+      "sameOriginalWholeEightCommand": true,
+      "counts": {
+        "PASS": 120,
+        "FAIL": 3,
+        "SKIP": 0
+      },
+      "sameThreeActualFailureNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      ],
+      "missingExpectedRejections": 3,
+      "onlyOutcomeDifferencesFromTeam": []
+    },
+    {
+      "lane": "v2-management",
+      "raw": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/v2-management/job.log",
+        "bytes": 95888,
+        "blob": "7105e0ec634009f2f64fe31ba6a43980d739d387",
+        "sha256": "af1036ac4a7016af6472615b58171c473afa2760d57ab839053c4aea68430f86"
+      },
+      "mcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/v2-management/job-original-response.json",
+        "bytes": 97564,
+        "blob": "37ff7fb1b976b32998b78122739b0431ca450076",
+        "sha256": "e81d103eee9414c9754c3b4577eed1672a5d347a33bd97f9f2a9bb3a1eadcee3"
+      },
+      "mcpUtf8Exact": true,
+      "all123NamesSameOrderAsTeam": true,
+      "sameOriginalWholeEightCommand": true,
+      "counts": {
+        "PASS": 120,
+        "FAIL": 3,
+        "SKIP": 0
+      },
+      "sameThreeActualFailureNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      ],
+      "missingExpectedRejections": 3,
+      "onlyOutcomeDifferencesFromTeam": []
+    },
+    {
+      "lane": "claude",
+      "raw": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/claude/job.log",
+        "bytes": 92286,
+        "blob": "ea8718e30d47ea23c76002af06c598469de8c836",
+        "sha256": "bd8462e969b9fac99f50474b0d86a6293ce3426877480b3bc859df00694a2526"
+      },
+      "mcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/claude/job-original-response.json",
+        "bytes": 93912,
+        "blob": "58998a70d0781202272c54331d2cb5c47e956be8",
+        "sha256": "de6006c0d33bd5c8c9ac0bf5669cbac58d04174731e305091069257cac7afd25"
+      },
+      "mcpUtf8Exact": true,
+      "all123NamesSameOrderAsTeam": true,
+      "sameOriginalWholeEightCommand": true,
+      "counts": {
+        "PASS": 120,
+        "FAIL": 3,
+        "SKIP": 0
+      },
+      "sameThreeActualFailureNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      ],
+      "missingExpectedRejections": 3,
+      "onlyOutcomeDifferencesFromTeam": []
+    },
+    {
+      "lane": "processes",
+      "raw": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/processes/job.log",
+        "bytes": 95590,
+        "blob": "27925cd974a4e346bc4c5ec322f103d0a8508ef2",
+        "sha256": "c7105e8c732572da0907bd48ae56b588cc9c79bcbe5b750cadee5cbda0dce712"
+      },
+      "mcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/processes/job-original-response.json",
+        "bytes": 97264,
+        "blob": "1449bfdfca8c52e2a56d0cadd1df80e68c91bc2c",
+        "sha256": "ba1f2e9a45cfc9c75613f4851d91dd9ae834c5e8b397e75cdf4cddc78db24924"
+      },
+      "mcpUtf8Exact": true,
+      "all123NamesSameOrderAsTeam": true,
+      "sameOriginalWholeEightCommand": true,
+      "counts": {
+        "PASS": 120,
+        "FAIL": 3,
+        "SKIP": 0
+      },
+      "sameThreeActualFailureNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      ],
+      "missingExpectedRejections": 3,
+      "onlyOutcomeDifferencesFromTeam": []
+    },
+    {
+      "lane": "installer",
+      "raw": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/installer/job.log",
+        "bytes": 91603,
+        "blob": "6b0e1f2bf6ca35a2294b14344c7485bc3e883cae",
+        "sha256": "5d8e405f729d4f90cf3b2eed19beeb0077217d8fe9ca46f5333097e27bfc55b5"
+      },
+      "mcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/installer/job-original-response.json",
+        "bytes": 93221,
+        "blob": "20fc71643a2b194c7c87755c31011477ad8f881d",
+        "sha256": "75e1698bf7efe57d7bc1d5858e7e04fe746e7db72d9601a1e1236172a7926050"
+      },
+      "mcpUtf8Exact": true,
+      "all123NamesSameOrderAsTeam": true,
+      "sameOriginalWholeEightCommand": true,
+      "counts": {
+        "PASS": 119,
+        "FAIL": 3,
+        "SKIP": 1
+      },
+      "sameThreeActualFailureNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      ],
+      "missingExpectedRejections": 3,
+      "onlyOutcomeDifferencesFromTeam": [
+        {
+          "name": "Linux CDP diagnostics retain the original bounded descriptor read without accepting a second holder",
+          "thisOutcome": "SKIP",
+          "teamOutcome": "PASS"
+        }
+      ]
+    },
+    {
+      "lane": "claude-lifecycle",
+      "raw": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/claude-lifecycle/job.log",
+        "bytes": 94183,
+        "blob": "26f6e302517e9c91e73995d51b306ed979d52655",
+        "sha256": "cc44c5c299783b48ab001b5dd169bc3817590a02892a397bada6182b152f7d7a"
+      },
+      "mcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/claude-lifecycle/job-original-response.json",
+        "bytes": 95833,
+        "blob": "2c6392d70a753944bfd15668668bc56446058c84",
+        "sha256": "805cd88de5fb26bd730b01ebb32981d8e727cca510a8a44fd042a33b3ec8f968"
+      },
+      "mcpUtf8Exact": true,
+      "all123NamesSameOrderAsTeam": true,
+      "sameOriginalWholeEightCommand": true,
+      "counts": {
+        "PASS": 120,
+        "FAIL": 3,
+        "SKIP": 0
+      },
+      "sameThreeActualFailureNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      ],
+      "missingExpectedRejections": 3,
+      "onlyOutcomeDifferencesFromTeam": []
+    },
+    {
+      "lane": "opencode",
+      "raw": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/opencode/job.log",
+        "bytes": 95728,
+        "blob": "a1cab7b8edd8120b83eb1b46a232bd3bda75890d",
+        "sha256": "63a0b33bab931502f9cefa1800a1480a0af33cca2388ae194f2e8bea27479f96"
+      },
+      "mcp": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/opencode/job-original-response.json",
+        "bytes": 97404,
+        "blob": "f2b4588ca47e581a4a559e6a6f1ed07b31a2cef2",
+        "sha256": "2785e8fd0b5cb16e9b9c6225518847e2b159ab0841c396ffaa430c23e034b414"
+      },
+      "mcpUtf8Exact": true,
+      "all123NamesSameOrderAsTeam": true,
+      "sameOriginalWholeEightCommand": true,
+      "counts": {
+        "PASS": 120,
+        "FAIL": 3,
+        "SKIP": 0
+      },
+      "sameThreeActualFailureNames": [
+        "P11 keeps the original 90-second cutoff for first result at the exact cutoff",
+        "P11 keeps the original 90-second cutoff for first result after the cutoff",
+        "P11 keeps the original 90-second cutoff for polled result after the cutoff"
+      ],
+      "missingExpectedRejections": 3,
+      "onlyOutcomeDifferencesFromTeam": []
+    }
+  ],
+  "scope": "This is original raw/MCP and full-helper case correlation, not18 independent Desktop UI or setup/source-payload audits. Full semantic independent R2 exists separately for Taskboard and Team. All18 stopped at prerequisites; original installer7 and selected downstream UI were not reached. Team-selected179/static were blocked in Team; other matrix lanes do not select those Team-only steps.",
+  "noRefetchOrProjectExecution": true
+}

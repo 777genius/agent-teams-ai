@@ -1,0 +1,1519 @@
+{
+  "kind": "AUTHOR_READ_ONLY_E3_ORIGINAL_V2_AUDIT",
+  "auditedAtUTC": "2026-11-16T08:50:39.214269+00:00",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "runId": 43831885742,
+  "jobId": 133178915729,
+  "job": {
+    "id": 133178915729,
+    "name": "Embedded V2.1.4 original Host (win32-x64)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43831885742,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Require immutable source HEAD and record actual runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Install exact source workspace dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build original Host and its pinned provider implementation",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Check original graph and custody boundaries",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Prepare exact Bun, engine graph and original-process artifact",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Prove actual Darwin executable custody and adversarial cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 12
+      },
+      {
+        "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Prove original Windows Job custody and surviving descendant cleanup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 14
+      },
+      {
+        "name": "Require exact Windows original-process evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15
+      },
+      {
+        "name": "Check original Desktop private recipe composition",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17
+      },
+      {
+        "name": "Exercise Windows automatic approval and cold Host Resume",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 18
+      },
+      {
+        "name": "Exercise native catalog and model probe without tool allocation",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Exercise effective permissions and active Stop with a surviving sibling",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Exercise captured external MCP and app-only through the native Host",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Require complete native management and permission evidence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Require product-path Host proof after exact candidate qualification",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24
+      },
+      {
+        "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 25
+      },
+      {
+        "name": "Preserve exact native evidence or candidate HOLD",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 26
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 50
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 51
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 52
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 53
+      }
+    ]
+  },
+  "originalJobsResponse": {
+    "path": "ci-72e6ec/native/owned-v2-jobs-response-0848.json",
+    "bytes": 23372,
+    "blob": "719d95a9426a4a41ceaeb12a87b8c4d9cc7a258f",
+    "sha256": "5086881e777be9989557e5ebb135c4438d997690c28ef3be97552faf598b35dd"
+  },
+  "officialArtifactsResponse": {
+    "path": "ci-72e6ec/native/official-v2-artifacts-0849.json",
+    "bytes": 1061,
+    "blob": "51f90d72ded708f80ff4c98b2685917d544f23b7",
+    "sha256": "888f527f645c0c5e3ad7dbefcc49af4ee2f7f1d84ba04a025477f5b6097bfa66"
+  },
+  "officialArtifact": {
+    "id": 14209218619,
+    "name": "opencode-v2-embedded-native-win32-x64",
+    "size_in_bytes": 13292,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14209218619",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14209218619/zip",
+    "expired": false,
+    "created_at": "2026-11-16T08:44:52Z",
+    "expires_at": "2026-11-23T08:44:51Z",
+    "updated_at": "2026-11-16T08:44:52Z",
+    "digest": "sha256:d71d6d5828bf0d69f9d4b0f15feb5ac1d092281a41899e5d9cf28fa76028c43e",
+    "workflow_run": {
+      "id": 43831885742,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "72e6ec04444969d343d73834c70bc4e261100fc9"
+    }
+  },
+  "fullLog": {
+    "path": "ci-72e6ec/native/v2-windows-x64/job-133178915729.log",
+    "bytes": 92238,
+    "blob": "9ba10a28ddc1e833889002ca3728cfc817909a00",
+    "sha256": "b2d08b1cfad63b0a3578007f3f9357874ef5bbeda43307c175d53414c1758b62"
+  },
+  "originalResponse": {
+    "path": "ci-72e6ec/native/v2-windows-x64/original-job-log-response.json",
+    "bytes": 96155,
+    "blob": "6ad7fecb78c090d19b745efd74d4d67f111e2f37",
+    "sha256": "fd916f3e9e5ebab9e62a5e98248a7833d92b19a138fce78730f467d9b8d07c7e"
+  },
+  "entireUtf8ContentEquals": true,
+  "archive": {
+    "path": "ci-72e6ec/native/v2-windows-x64/artifact-14209218619.zip",
+    "bytes": 13292,
+    "blob": "ac1ecf8f00379626ff20cb02097a435aee647b2b",
+    "sha256": "d71d6d5828bf0d69f9d4b0f15feb5ac1d092281a41899e5d9cf28fa76028c43e"
+  },
+  "archiveRetention": {
+    "path": "ci-72e6ec/native/v2-windows-x64/archive-retention.json",
+    "bytes": 1504,
+    "blob": "aa7cabef9d378f460b309f03ecc65c0f982953f7",
+    "sha256": "9e2213742fb4c318c7a063b96da6c8533c0feed9ab3bd5bda8035537be8ecef3"
+  },
+  "archiveByteReview": {
+    "safeUniqueNonsymlinkNames": true,
+    "allCRC": true,
+    "members": [
+      {
+        "path": "opencode-v2-embedded-inputs.json",
+        "bytes": 780,
+        "blob": "6fd5c68470728fe0243fb2733642491437395bc2",
+        "sha256": "06c64b5c5958a4971b2e879392333ee2aa582879f8ffe42e7d80a065f424e9e6",
+        "crc32": "4e28b346",
+        "extracted": "ci-72e6ec/native/v2-windows-x64/extracted/opencode-v2-embedded-inputs.json",
+        "exactExtractedBytes": true
+      },
+      {
+        "path": "opencode-v2-windows-custody.json",
+        "bytes": 907,
+        "blob": "15175f9f0323a3ad9c20419c665272aeac4c903b",
+        "sha256": "35fa8cb107813b791e61b6d813a2ab57df69ff6d6083acfd0403bb77fd5eee47",
+        "crc32": "c05f449e",
+        "extracted": "ci-72e6ec/native/v2-windows-x64/extracted/opencode-v2-windows-custody.json",
+        "exactExtractedBytes": true
+      },
+      {
+        "path": "opencode-v2-embedded-host.json",
+        "bytes": 95099,
+        "blob": "8aad55edf4b8fab2733dbd679ebd4d2830f2ba21",
+        "sha256": "921188a43a3fbccab32fb46373b4ff45b3863742d22b14ddf4a52bb43b5aa4c6",
+        "crc32": "b71f4a15",
+        "extracted": "ci-72e6ec/native/v2-windows-x64/extracted/opencode-v2-embedded-host.json",
+        "exactExtractedBytes": true
+      },
+      {
+        "path": "opencode-v2-embedded-host-auto.json",
+        "bytes": 94913,
+        "blob": "2a70f02a1529f77b2d4d0b34f9d1582d1bbbfde0",
+        "sha256": "f1555cd4f80405a116c22e64e63ccd181ba01fa8bec8689cea02fab05c0130e1",
+        "crc32": "d4569cb7",
+        "extracted": "ci-72e6ec/native/v2-windows-x64/extracted/opencode-v2-embedded-host-auto.json",
+        "exactExtractedBytes": true
+      }
+    ]
+  },
+  "commands": [
+    {
+      "line": 36,
+      "text": "git config --global core.longpaths true"
+    },
+    {
+      "line": 52,
+      "text": "actions/checkout@v6"
+    },
+    {
+      "line": 271,
+      "text": "set -euo pipefail"
+    },
+    {
+      "line": 291,
+      "text": "pnpm/action-setup@v6"
+    },
+    {
+      "line": 327,
+      "text": "actions/setup-node@v6"
+    },
+    {
+      "line": 368,
+      "text": "node ./scripts/ci/install-dependencies-with-retry.mjs"
+    },
+    {
+      "line": 640,
+      "text": "pnpm --filter @agent-teams/legacy-agent-host build"
+    },
+    {
+      "line": 660,
+      "text": "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts packages/legacy-agent-host/tests/registered-process-build-selection.test.ts packages/legacy-agent-host/tests/windows-job-custody.test.ts packages/legacy-agent-host/tests/opencode-v2-native-paths.test.ts packages/legacy-agent-host/tests/owner-scoped-backup.test.ts packages/legacy-agent-host/tests/member-attachment-delivery.test.ts"
+    },
+    {
+      "line": 744,
+      "text": "node scripts/stage-runtime.mjs --platform win32-x64"
+    },
+    {
+      "line": 766,
+      "text": "node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts"
+    },
+    {
+      "line": 783,
+      "text": "node --test packages/legacy-agent-host/tests/windows-job-custody.native.ts"
+    },
+    {
+      "line": 815,
+      "text": "node --input-type=module -e \""
+    },
+    {
+      "line": 854,
+      "text": "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts"
+    },
+    {
+      "line": 886,
+      "text": "node --test packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts"
+    },
+    {
+      "line": 919,
+      "text": "node --input-type=module -e \""
+    },
+    {
+      "line": 982,
+      "text": "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+    }
+  ],
+  "reporterBlocks": [
+    {
+      "line": 736,
+      "tests": 58,
+      "suites": 0,
+      "pass": 57,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 1,
+      "todo": 0,
+      "duration_ms": 11360.1087
+    },
+    {
+      "line": 807,
+      "tests": 1,
+      "suites": 0,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "duration_ms": 21931.1299
+    },
+    {
+      "line": 878,
+      "tests": 1,
+      "suites": 0,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "duration_ms": 199165.5079
+    },
+    {
+      "line": 911,
+      "tests": 1,
+      "suites": 0,
+      "pass": 1,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "duration_ms": 178297.7166
+    }
+  ],
+  "sourceIdentityLines": [
+    {
+      "line": 44,
+      "text": "  OPENCODE_V2_TEST_SOURCE_HEAD: 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 54,
+      "text": "  ref: 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 74,
+      "text": "  OPENCODE_V2_TEST_SOURCE_HEAD: 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 120,
+      "text": "[command]\"C:\\Program Files\\Git\\bin\\git.exe\" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 122,
+      "text": " * branch            72e6ec04444969d343d73834c70bc4e261100fc9 -> FETCH_HEAD"
+    },
+    {
+      "line": 123,
+      "text": "[command]\"C:\\Program Files\\Git\\bin\\git.exe\" rev-parse --verify --quiet 72e6ec04444969d343d73834c70bc4e261100fc9^{object}"
+    },
+    {
+      "line": 124,
+      "text": "72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 131,
+      "text": "[command]\"C:\\Program Files\\Git\\bin\\git.exe\" checkout --progress --force 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 222,
+      "text": "Note: switching to '72e6ec04444969d343d73834c70bc4e261100fc9'."
+    },
+    {
+      "line": 239,
+      "text": "HEAD is now at 72e6ec0 test(migration): cover late P11 readiness observations at the original deadline"
+    },
+    {
+      "line": 242,
+      "text": "72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 282,
+      "text": "  OPENCODE_V2_TEST_SOURCE_HEAD: 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 304,
+      "text": "  OPENCODE_V2_TEST_SOURCE_HEAD: 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 339,
+      "text": "  OPENCODE_V2_TEST_SOURCE_HEAD: 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 376,
+      "text": "  OPENCODE_V2_TEST_SOURCE_HEAD: 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 648,
+      "text": "  OPENCODE_V2_TEST_SOURCE_HEAD: 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 668,
+      "text": "  OPENCODE_V2_TEST_SOURCE_HEAD: 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 752,
+      "text": "  OPENCODE_V2_TEST_SOURCE_HEAD: 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 774,
+      "text": "  OPENCODE_V2_TEST_SOURCE_HEAD: 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 791,
+      "text": "  OPENCODE_V2_TEST_SOURCE_HEAD: 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 840,
+      "text": "  OPENCODE_V2_TEST_SOURCE_HEAD: 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 862,
+      "text": "  OPENCODE_V2_TEST_SOURCE_HEAD: 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 894,
+      "text": "  OPENCODE_V2_TEST_SOURCE_HEAD: 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 968,
+      "text": "  OPENCODE_V2_TEST_SOURCE_HEAD: 72e6ec04444969d343d73834c70bc4e261100fc9"
+    },
+    {
+      "line": 1006,
+      "text": "  OPENCODE_V2_TEST_SOURCE_HEAD: 72e6ec04444969d343d73834c70bc4e261100fc9"
+    }
+  ],
+  "sourceLeaves": [
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36309,
+      "blob": "7ccbfb3cf20349d35087798b66e369c95e91a71e",
+      "sha256": "6db4370dc3ee5521847cef9c039f21bddfcfc412b6dabba49dda73585985996a",
+      "lines": 630,
+      "sameBytesAsPrevious578": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "bytes": 33259,
+      "blob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+      "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff",
+      "lines": 499,
+      "sameBytesAsPrevious578": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/windows-job-custody.native.ts",
+      "bytes": 9536,
+      "blob": "a224b47e942a337e823135d0cfca0fa11cd475bd",
+      "sha256": "88ee29496c076870605d2e2c6849c92e9286a06809f00cb10444b033757f4687",
+      "lines": 165,
+      "sameBytesAsPrevious578": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v1-version-source.ts",
+      "bytes": 9765,
+      "blob": "78cb6f0026821785b1d0c0c1ad21ddfe76cdaee4",
+      "sha256": "0ff252732bedb1807cf428370e41628922a4d719090f479a41f25117d7227979",
+      "lines": 186,
+      "sameBytesAsPrevious578": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "bytes": 15303,
+      "blob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5",
+      "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01",
+      "lines": 389,
+      "sameBytesAsPrevious578": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "bytes": 37181,
+      "blob": "625c6ddd74357abbdf565bf386388274cebd4068",
+      "sha256": "7b1ecb5894fb164b605e66030549aa897957986d270575398d2f34b28543606b",
+      "lines": 565,
+      "sameBytesAsPrevious578": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts",
+      "bytes": 38584,
+      "blob": "ff0aeba42e3a4e845428146969360dff91c25de8",
+      "sha256": "f25659fe4c89e30072e9c2bc923fcdf6f1a3dd2efdca81387659e485170c74c3",
+      "lines": 753,
+      "sameBytesAsPrevious578": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-message-image.ts",
+      "bytes": 5377,
+      "blob": "1eeab2d4ba765c683b37a3d0cf5790b21aef919b",
+      "sha256": "e8cbeabf1968baabbeedbccad60f17c281e2f5aa64a444c3f5245f6ac04421e1",
+      "lines": 130,
+      "sameBytesAsPrevious578": true
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "bytes": 12355,
+      "blob": "e39cb2ba89c125d850710828a65a30ae25b7344b",
+      "sha256": "77efb91a29ed4ba662ca7dcebc0843965d27305ad9d62f04ef6c84b517732e0b",
+      "lines": 304,
+      "sameBytesAsPrevious578": true
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+      "lines": 26665,
+      "sameBytesAsPrevious578": true
+    },
+    {
+      "path": "runtime.lock.json",
+      "bytes": 6127,
+      "blob": "1757d79786da78e739a322e8bba81cd3dc88dcaa",
+      "sha256": "fa614f6dcc672b47342a838300f4c1c7b82ae0f05899c108af17838c58c53a87",
+      "lines": 197,
+      "sameBytesAsPrevious578": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/registered-process-executable.native.ts",
+      "bytes": 27709,
+      "blob": "f1e1d1145898e201723be343fa8768d73332fcb1",
+      "sha256": "b249d30a6168eb015658f35f5524ed4314cd7c4093afe5a14690a1ba6743df2e",
+      "lines": 547,
+      "sameBytesAsPrevious578": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/posix-exec-native.c",
+      "bytes": 21219,
+      "blob": "19aca56c55a666654b04827b3c2446d2ad03ad8d",
+      "sha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+      "lines": 412,
+      "sameBytesAsPrevious578": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-fixture.test.ts",
+      "bytes": 9204,
+      "blob": "2c6337c664510cd8951c2f753ddb6c55264bb9c6",
+      "sha256": "4ccac355836ed8da26b1d0a54e2d62abf2a8e323b376e2b603b39f6eac3b5dd7",
+      "lines": 184,
+      "sameBytesAsPrevious578": true
+    }
+  ],
+  "selectedProviderPairGitBytes": [
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-implementations-0.0.0.tgz",
+      "bytes": 185996,
+      "blob": "7130609dd29851148c9e2106e2764b75982739b1",
+      "sha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+      "lines": 716,
+      "sameBytesAsPrevious578": true
+    },
+    {
+      "path": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "bytes": 6230,
+      "blob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+      "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+      "lines": 28,
+      "sameBytesAsPrevious578": true
+    }
+  ],
+  "hostSourceAudit": {
+    "path": "ci-72e6ec/native/host-source-E3-git-audit.json",
+    "bytes": 217192,
+    "blob": "96da518a89077c1b4bceaaf6cdca1a7703d96d76",
+    "sha256": "aaf2e11d778cdb914a4c9da4a9ff67c3011f2a3c94009a5ec45e8a49be550864"
+  },
+  "freshHostSourceFiles": 619,
+  "inputs": {
+    "receipt": {
+      "path": "ci-72e6ec/native/v2-windows-x64/extracted/opencode-v2-embedded-inputs.json",
+      "bytes": 780,
+      "blob": "6fd5c68470728fe0243fb2733642491437395bc2",
+      "sha256": "06c64b5c5958a4971b2e879392333ee2aa582879f8ffe42e7d80a065f424e9e6"
+    },
+    "content": {
+      "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+      "status": "READY",
+      "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+      "platform": "win32-x64",
+      "nodeVersion": "v24.21.0",
+      "productQualified": false,
+      "stage": "prepared",
+      "baseArchiveSha256": "fafa3d891922cb3a5df6d1bd7dec80cc105352c619b39e298761657add677f49",
+      "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "bun": {
+        "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\resources\\runtime\\bun\\bun.exe",
+        "sha256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+        "version": "1.4.3"
+      },
+      "supportArchiveSha256": "9cea106d78a0482a0ea8bd05b0a7cb44c604fcf4f6de3fdac5549a5ba552787c",
+      "manifestSha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628"
+    }
+  },
+  "custody": {
+    "receipt": {
+      "path": "ci-72e6ec/native/v2-windows-x64/extracted/opencode-v2-windows-custody.json",
+      "bytes": 907,
+      "blob": "15175f9f0323a3ad9c20419c665272aeac4c903b",
+      "sha256": "35fa8cb107813b791e61b6d813a2ab57df69ff6d6083acfd0403bb77fd5eee47"
+    },
+    "content": {
+      "kind": "TEST_WINDOWS_ORIGINAL_JOB_CUSTODY",
+      "status": "PASS",
+      "cleanup": true,
+      "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+      "platform": "win32-x64",
+      "nodeVersion": "v24.21.0",
+      "bunSha256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+      "manifestSha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+      "hostBuild": {
+        "hostSourceDigest": "95d196f87beb284995d5518b0eafc0da5e92aaac4af21d1c465e6c54d2d0d474",
+        "hostDistDigest": "7bbbd0a4afa5c633562aa8f44fdf74ae1b1035fd0764b8a5b8ee7100e32bb602",
+        "providerDigest": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+      },
+      "productQualified": false,
+      "desktopQualified": false,
+      "captureBeforeInput": true,
+      "descendantSurvivedRootExit": true,
+      "originalJobCleanup": "confirmed",
+      "neighborSurvivedTargetStop": true,
+      "neighborJobCleanup": "confirmed"
+    }
+  },
+  "manualAndAuto": [
+    {
+      "receipt": {
+        "path": "ci-72e6ec/native/v2-windows-x64/extracted/opencode-v2-embedded-host.json",
+        "bytes": 95099,
+        "blob": "8aad55edf4b8fab2733dbd679ebd4d2830f2ba21",
+        "sha256": "921188a43a3fbccab32fb46373b4ff45b3863742d22b14ddf4a52bb43b5aa4c6"
+      },
+      "selectedFacts": {
+        "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+        "status": "PASS",
+        "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+        "platform": "win32-x64",
+        "version": "2.1.4",
+        "approvalMode": "manual",
+        "nodeVersion": "v24.21.0",
+        "modelSelection": {
+          "providerId": "TEST-local",
+          "modelId": "TEST-model-B",
+          "variant": "high"
+        },
+        "configurationSelection": {
+          "scope": "project",
+          "original": "project-A",
+          "later": "project-B"
+        },
+        "preferencesSelection": {
+          "nativeDefault": "TEST-local/TEST-model",
+          "appDefault": "TEST-local/TEST-model-B"
+        },
+        "digests": {
+          "bun": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+          "manifest": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+          "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+          "hostSource": "95d196f87beb284995d5518b0eafc0da5e92aaac4af21d1c465e6c54d2d0d474",
+          "hostDist": "7bbbd0a4afa5c633562aa8f44fdf74ae1b1035fd0764b8a5b8ee7100e32bb602",
+          "provider": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+          "windowsShell": "38f4384643b3fa0de714d2367b712c2e0fa1c89e2cfd131ae6b831ad962b1033"
+        },
+        "steps": [
+          "original_host_embedded_native_and_mcp_ready",
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+          "changed_project_config_did_not_retarget_running_native_session",
+          "original_uploaded_PNG_native_image_inference_and_public_readback",
+          "checkpoint_and_original_host_native_cleanup_confirmed",
+          "cold_host_restored_native_history_without_model_or_tool_replay"
+        ],
+        "cleanup": true,
+        "phaseElapsedMs": {
+          "original_host_embedded_native_and_mcp_ready": 49201,
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 155620,
+          "changed_project_config_did_not_retarget_running_native_session": 155620,
+          "original_uploaded_PNG_native_image_inference_and_public_readback": 155620,
+          "checkpoint_and_original_host_native_cleanup_confirmed": 156559,
+          "cold_host_restored_native_history_without_model_or_tool_replay": 197318
+        },
+        "elapsedMs": 198824,
+        "cancelled": false,
+        "inputObservation": {
+          "reads": 387,
+          "last": {
+            "phase": "allocated",
+            "custody": "owned",
+            "nativeReady": true,
+            "attached": true,
+            "sealed": false,
+            "diagnostic": null,
+            "inputs": [
+              {
+                "phase": "terminal",
+                "terminal": "succeeded"
+              },
+              {
+                "phase": "terminal",
+                "terminal": "succeeded"
+              }
+            ],
+            "interactions": [
+              {
+                "kind": "permission",
+                "phase": "resolved"
+              },
+              {
+                "kind": "permission",
+                "phase": "resolved"
+              }
+            ]
+          }
+        },
+        "launchObservation": {
+          "openElapsedMs": 41600,
+          "afterOpen": {
+            "available": true,
+            "status": "ready",
+            "reason": "context-applied",
+            "elapsedSinceAttemptMs": 40384,
+            "capturedTimeoutMs": 120000,
+            "claimed": true,
+            "nativeReady": true,
+            "contextApplied": true,
+            "everReady": true,
+            "usable": true,
+            "controlAvailable": true,
+            "noAllocation": false
+          }
+        },
+        "originalHostCpu": {
+          "epoch": 1,
+          "scope": "original-source-host-including-cleanup",
+          "status": "available",
+          "rawDiscarded": true,
+          "samplingIntervalUs": 10000,
+          "profileDurationUs": 150696563,
+          "sampledUs": 150696405,
+          "unsampledUs": 158,
+          "nodeCount": 26911,
+          "sampleCount": 14359,
+          "attribution": "nearest-allowlisted-stack-frame",
+          "categories": [
+            {
+              "category": "configuration-read",
+              "exclusiveSamples": 249,
+              "exclusiveSampledUs": 2514500,
+              "inclusiveSamples": 7421,
+              "inclusiveSampledUs": 76798282
+            },
+            {
+              "category": "credential-read",
+              "exclusiveSamples": 2339,
+              "exclusiveSampledUs": 23928893,
+              "inclusiveSamples": 8316,
+              "inclusiveSampledUs": 85935909
+            },
+            {
+              "category": "team-writer-authority",
+              "exclusiveSamples": 6933,
+              "exclusiveSampledUs": 71797349,
+              "inclusiveSamples": 6933,
+              "inclusiveSampledUs": 71797349
+            },
+            {
+              "category": "custody-image",
+              "exclusiveSamples": 1024,
+              "exclusiveSampledUs": 11330976,
+              "inclusiveSamples": 1287,
+              "inclusiveSampledUs": 14133462
+            },
+            {
+              "category": "provider-transport",
+              "exclusiveSamples": 101,
+              "exclusiveSampledUs": 992226,
+              "inclusiveSamples": 3302,
+              "inclusiveSampledUs": 33952103
+            },
+            {
+              "category": "other",
+              "exclusiveSamples": 2802,
+              "exclusiveSampledUs": 30646302,
+              "inclusiveSamples": 2802,
+              "inclusiveSampledUs": 30646302
+            },
+            {
+              "category": "idle",
+              "exclusiveSamples": 911,
+              "exclusiveSampledUs": 9486159,
+              "inclusiveSamples": 911,
+              "inclusiveSampledUs": 9486159
+            }
+          ],
+          "teamWriterDetails": [
+            {
+              "family": "namespace-fence",
+              "exclusiveSamples": 5847,
+              "exclusiveSampledUs": 60663854
+            },
+            {
+              "family": "team-state",
+              "exclusiveSamples": 85,
+              "exclusiveSampledUs": 863094
+            },
+            {
+              "family": "team-state-validation",
+              "exclusiveSamples": 16,
+              "exclusiveSampledUs": 154940
+            },
+            {
+              "family": "launch-binding-read",
+              "exclusiveSamples": 243,
+              "exclusiveSampledUs": 2459958
+            },
+            {
+              "family": "launch-binding-current",
+              "exclusiveSamples": 38,
+              "exclusiveSampledUs": 389983
+            },
+            {
+              "family": "launch-binding-clone",
+              "exclusiveSamples": 36,
+              "exclusiveSampledUs": 368063
+            },
+            {
+              "family": "other-writer",
+              "exclusiveSamples": 668,
+              "exclusiveSampledUs": 6897457
+            }
+          ],
+          "namespaceFenceDetails": [
+            {
+              "family": "directoryPath",
+              "exclusiveSamples": 1371,
+              "exclusiveSampledUs": 14225029
+            },
+            {
+              "family": "tree",
+              "exclusiveSamples": 1492,
+              "exclusiveSampledUs": 15382764
+            },
+            {
+              "family": "controller-lock",
+              "exclusiveSamples": 2356,
+              "exclusiveSampledUs": 24677742
+            },
+            {
+              "family": "residual",
+              "exclusiveSamples": 628,
+              "exclusiveSampledUs": 6378319
+            }
+          ],
+          "teamWriterCallers": {
+            "attribution": "outermost-allowlisted-caller-on-sampled-stack",
+            "rows": [
+              {
+                "caller": "node-timer",
+                "exclusiveSamples": 658,
+                "exclusiveSampledUs": 7042622,
+                "namespaceSamples": 582,
+                "namespaceSampledUs": 6239548
+              },
+              {
+                "caller": "v2-request-admission",
+                "exclusiveSamples": 396,
+                "exclusiveSampledUs": 4172290,
+                "namespaceSamples": 331,
+                "namespaceSampledUs": 3492003
+              },
+              {
+                "caller": "v2-request-password",
+                "exclusiveSamples": 1474,
+                "exclusiveSampledUs": 15185223,
+                "namespaceSamples": 1256,
+                "namespaceSampledUs": 12958037
+              },
+              {
+                "caller": "v2-read-snapshot",
+                "exclusiveSamples": 462,
+                "exclusiveSampledUs": 4802445,
+                "namespaceSamples": 365,
+                "namespaceSampledUs": 3817640
+              },
+              {
+                "caller": "runtime-session-read",
+                "exclusiveSamples": 23,
+                "exclusiveSampledUs": 235566,
+                "namespaceSamples": 0,
+                "namespaceSampledUs": 0
+              },
+              {
+                "caller": "provider-attestation-wait",
+                "exclusiveSamples": 82,
+                "exclusiveSampledUs": 836049,
+                "namespaceSamples": 74,
+                "namespaceSampledUs": 754574
+              },
+              {
+                "caller": "unclassified",
+                "exclusiveSamples": 3838,
+                "exclusiveSampledUs": 39523154,
+                "namespaceSamples": 3239,
+                "namespaceSampledUs": 33402052
+              }
+            ]
+          },
+          "fileBytes": 6291659,
+          "fileOverLimit": false
+        },
+        "failureCode": null,
+        "hosts": [
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          },
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          }
+        ],
+        "modelOrigin": "localhost-scripted",
+        "modelRequests": 11,
+        "modelProgress": [
+          {
+            "elapsedMs": 49455,
+            "requests": 0
+          },
+          {
+            "elapsedMs": 58723,
+            "requests": 1
+          },
+          {
+            "elapsedMs": 59130,
+            "requests": 2
+          },
+          {
+            "elapsedMs": 59572,
+            "requests": 3
+          },
+          {
+            "elapsedMs": 59968,
+            "requests": 4
+          },
+          {
+            "elapsedMs": 99341,
+            "requests": 5
+          },
+          {
+            "elapsedMs": 99783,
+            "requests": 6
+          },
+          {
+            "elapsedMs": 100289,
+            "requests": 7
+          },
+          {
+            "elapsedMs": 100605,
+            "requests": 8
+          },
+          {
+            "elapsedMs": 120038,
+            "requests": 9
+          },
+          {
+            "elapsedMs": 149331,
+            "requests": 10
+          },
+          {
+            "elapsedMs": 149678,
+            "requests": 11
+          }
+        ],
+        "coordination": {
+          "status": "unqualified",
+          "cleanup": null
+        },
+        "modelFailures": [],
+        "vendorAuthQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      },
+      "CPUArithmeticJoins": {
+        "exclusiveCategoryTotals": {
+          "samples": 14359,
+          "sampledUs": 150696405
+        },
+        "profileDurationEqualsSampledPlusUnsampled": true,
+        "writerDetailsAndCallerTotalsEqualWriterCategory": true,
+        "namespaceDetailsAndCallerTotalsEqualNamespaceFamily": true,
+        "limits": "Original Host epoch 1 including cleanup only. Inclusive categories overlap; sampled time is not a per-query elapsed measure. Raw CPU profile discarded; no Bun, later Host, native-wide or causal latency attribution."
+      },
+      "passiveTrace": {
+        "rows": 254,
+        "eventCounts": {
+          "child-spawn": 1,
+          "child-ready": 1,
+          "request": 105,
+          "response": 104,
+          "request-send-headers": 15,
+          "request-body-sent": 15,
+          "response-end": 12,
+          "trace-limit": 1
+        },
+        "epochs": [
+          1
+        ],
+        "last": {
+          "epoch": 1,
+          "event": "trace-limit",
+          "atMs": 68192,
+          "child": null,
+          "request": null,
+          "route": null,
+          "method": null,
+          "durationMs": null,
+          "status": null,
+          "contentEncoding": null,
+          "stage": null,
+          "code": null,
+          "exitCode": null,
+          "signal": null
+        },
+        "complete": false,
+        "limit": "Bounded passive trace ends before the complete scenario; does not establish later original exit or epoch-2 cleanup. Those rely on distinct original final receipts/assertions."
+      },
+      "allReceiptBytesRecoverableFromOfficialZip": true
+    },
+    {
+      "receipt": {
+        "path": "ci-72e6ec/native/v2-windows-x64/extracted/opencode-v2-embedded-host-auto.json",
+        "bytes": 94913,
+        "blob": "2a70f02a1529f77b2d4d0b34f9d1582d1bbbfde0",
+        "sha256": "f1555cd4f80405a116c22e64e63ccd181ba01fa8bec8689cea02fab05c0130e1"
+      },
+      "selectedFacts": {
+        "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+        "status": "PASS",
+        "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+        "platform": "win32-x64",
+        "version": "2.1.4",
+        "approvalMode": "auto",
+        "nodeVersion": "v24.21.0",
+        "modelSelection": {
+          "providerId": "TEST-local",
+          "modelId": "TEST-model-B",
+          "variant": "high"
+        },
+        "configurationSelection": {
+          "scope": "project",
+          "original": "project-A",
+          "later": "project-B"
+        },
+        "preferencesSelection": {
+          "nativeDefault": "TEST-local/TEST-model",
+          "appDefault": "TEST-local/TEST-model-B"
+        },
+        "digests": {
+          "bun": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+          "manifest": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+          "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+          "hostSource": "95d196f87beb284995d5518b0eafc0da5e92aaac4af21d1c465e6c54d2d0d474",
+          "hostDist": "7bbbd0a4afa5c633562aa8f44fdf74ae1b1035fd0764b8a5b8ee7100e32bb602",
+          "provider": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+          "windowsShell": "38f4384643b3fa0de714d2367b712c2e0fa1c89e2cfd131ae6b831ad962b1033"
+        },
+        "steps": [
+          "original_host_embedded_native_and_mcp_ready",
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+          "changed_project_config_did_not_retarget_running_native_session",
+          "original_uploaded_PNG_native_image_inference_and_public_readback",
+          "checkpoint_and_original_host_native_cleanup_confirmed",
+          "cold_host_restored_native_history_without_model_or_tool_replay"
+        ],
+        "cleanup": true,
+        "phaseElapsedMs": {
+          "original_host_embedded_native_and_mcp_ready": 49174,
+          "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 135043,
+          "changed_project_config_did_not_retarget_running_native_session": 135043,
+          "original_uploaded_PNG_native_image_inference_and_public_readback": 135043,
+          "checkpoint_and_original_host_native_cleanup_confirmed": 135894,
+          "cold_host_restored_native_history_without_model_or_tool_replay": 176514
+        },
+        "elapsedMs": 177949,
+        "cancelled": false,
+        "inputObservation": {
+          "reads": 309,
+          "last": {
+            "phase": "allocated",
+            "custody": "owned",
+            "nativeReady": true,
+            "attached": true,
+            "sealed": false,
+            "diagnostic": null,
+            "inputs": [
+              {
+                "phase": "terminal",
+                "terminal": "succeeded"
+              },
+              {
+                "phase": "terminal",
+                "terminal": "succeeded"
+              }
+            ],
+            "interactions": []
+          }
+        },
+        "launchObservation": {
+          "openElapsedMs": 41532,
+          "afterOpen": {
+            "available": true,
+            "status": "ready",
+            "reason": "context-applied",
+            "elapsedSinceAttemptMs": 40300,
+            "capturedTimeoutMs": 120000,
+            "claimed": true,
+            "nativeReady": true,
+            "contextApplied": true,
+            "everReady": true,
+            "usable": true,
+            "controlAvailable": true,
+            "noAllocation": false
+          }
+        },
+        "originalHostCpu": {
+          "epoch": 1,
+          "scope": "original-source-host-including-cleanup",
+          "status": "available",
+          "rawDiscarded": true,
+          "samplingIntervalUs": 10000,
+          "profileDurationUs": 129963336,
+          "sampledUs": 129963149,
+          "unsampledUs": 187,
+          "nodeCount": 26171,
+          "sampleCount": 12434,
+          "attribution": "nearest-allowlisted-stack-frame",
+          "categories": [
+            {
+              "category": "configuration-read",
+              "exclusiveSamples": 255,
+              "exclusiveSampledUs": 2605910,
+              "inclusiveSamples": 6202,
+              "inclusiveSampledUs": 64105112
+            },
+            {
+              "category": "credential-read",
+              "exclusiveSamples": 1999,
+              "exclusiveSampledUs": 20437790,
+              "inclusiveSamples": 6920,
+              "inclusiveSampledUs": 71416758
+            },
+            {
+              "category": "team-writer-authority",
+              "exclusiveSamples": 5769,
+              "exclusiveSampledUs": 59703342,
+              "inclusiveSamples": 5769,
+              "inclusiveSampledUs": 59703342
+            },
+            {
+              "category": "custody-image",
+              "exclusiveSamples": 1044,
+              "exclusiveSampledUs": 11517584,
+              "inclusiveSamples": 1300,
+              "inclusiveSampledUs": 14239548
+            },
+            {
+              "category": "provider-transport",
+              "exclusiveSamples": 92,
+              "exclusiveSampledUs": 857108,
+              "inclusiveSamples": 2729,
+              "inclusiveSampledUs": 27987602
+            },
+            {
+              "category": "other",
+              "exclusiveSamples": 2411,
+              "exclusiveSampledUs": 25968963,
+              "inclusiveSamples": 2411,
+              "inclusiveSampledUs": 25968963
+            },
+            {
+              "category": "idle",
+              "exclusiveSamples": 864,
+              "exclusiveSampledUs": 8872452,
+              "inclusiveSamples": 864,
+              "inclusiveSampledUs": 8872452
+            }
+          ],
+          "teamWriterDetails": [
+            {
+              "family": "namespace-fence",
+              "exclusiveSamples": 4864,
+              "exclusiveSampledUs": 50385143
+            },
+            {
+              "family": "team-state",
+              "exclusiveSamples": 65,
+              "exclusiveSampledUs": 664469
+            },
+            {
+              "family": "team-state-validation",
+              "exclusiveSamples": 18,
+              "exclusiveSampledUs": 193986
+            },
+            {
+              "family": "launch-binding-read",
+              "exclusiveSamples": 214,
+              "exclusiveSampledUs": 2183465
+            },
+            {
+              "family": "launch-binding-current",
+              "exclusiveSamples": 24,
+              "exclusiveSampledUs": 264296
+            },
+            {
+              "family": "launch-binding-clone",
+              "exclusiveSamples": 24,
+              "exclusiveSampledUs": 245227
+            },
+            {
+              "family": "other-writer",
+              "exclusiveSamples": 560,
+              "exclusiveSampledUs": 5766756
+            }
+          ],
+          "namespaceFenceDetails": [
+            {
+              "family": "directoryPath",
+              "exclusiveSamples": 1134,
+              "exclusiveSampledUs": 11746365
+            },
+            {
+              "family": "tree",
+              "exclusiveSamples": 1151,
+              "exclusiveSampledUs": 11938842
+            },
+            {
+              "family": "controller-lock",
+              "exclusiveSamples": 2030,
+              "exclusiveSampledUs": 21053919
+            },
+            {
+              "family": "residual",
+              "exclusiveSamples": 549,
+              "exclusiveSampledUs": 5646017
+            }
+          ],
+          "teamWriterCallers": {
+            "attribution": "outermost-allowlisted-caller-on-sampled-stack",
+            "rows": [
+              {
+                "caller": "node-timer",
+                "exclusiveSamples": 540,
+                "exclusiveSampledUs": 5709326,
+                "namespaceSamples": 465,
+                "namespaceSampledUs": 4940555
+              },
+              {
+                "caller": "v2-request-admission",
+                "exclusiveSamples": 288,
+                "exclusiveSampledUs": 3114161,
+                "namespaceSamples": 247,
+                "namespaceSampledUs": 2658064
+              },
+              {
+                "caller": "v2-request-password",
+                "exclusiveSamples": 1158,
+                "exclusiveSampledUs": 11849215,
+                "namespaceSamples": 998,
+                "namespaceSampledUs": 10209142
+              },
+              {
+                "caller": "v2-read-snapshot",
+                "exclusiveSamples": 447,
+                "exclusiveSampledUs": 4652698,
+                "namespaceSamples": 365,
+                "namespaceSampledUs": 3814108
+              },
+              {
+                "caller": "runtime-session-read",
+                "exclusiveSamples": 24,
+                "exclusiveSampledUs": 245216,
+                "namespaceSamples": 0,
+                "namespaceSampledUs": 0
+              },
+              {
+                "caller": "provider-attestation-wait",
+                "exclusiveSamples": 72,
+                "exclusiveSampledUs": 734582,
+                "namespaceSamples": 60,
+                "namespaceSampledUs": 612457
+              },
+              {
+                "caller": "unclassified",
+                "exclusiveSamples": 3240,
+                "exclusiveSampledUs": 33398144,
+                "namespaceSamples": 2729,
+                "namespaceSampledUs": 28150817
+              }
+            ]
+          },
+          "fileBytes": 6087603,
+          "fileOverLimit": false
+        },
+        "failureCode": null,
+        "hosts": [
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          },
+          {
+            "exitCode": 0,
+            "signalCode": null,
+            "stdoutValid": true
+          }
+        ],
+        "modelOrigin": "localhost-scripted",
+        "modelRequests": 11,
+        "modelProgress": [
+          {
+            "elapsedMs": 49425,
+            "requests": 0
+          },
+          {
+            "elapsedMs": 58599,
+            "requests": 1
+          },
+          {
+            "elapsedMs": 58960,
+            "requests": 2
+          },
+          {
+            "elapsedMs": 59433,
+            "requests": 3
+          },
+          {
+            "elapsedMs": 59830,
+            "requests": 4
+          },
+          {
+            "elapsedMs": 85974,
+            "requests": 5
+          },
+          {
+            "elapsedMs": 86337,
+            "requests": 6
+          },
+          {
+            "elapsedMs": 86944,
+            "requests": 7
+          },
+          {
+            "elapsedMs": 87361,
+            "requests": 8
+          },
+          {
+            "elapsedMs": 105052,
+            "requests": 9
+          },
+          {
+            "elapsedMs": 130796,
+            "requests": 10
+          },
+          {
+            "elapsedMs": 131212,
+            "requests": 11
+          }
+        ],
+        "coordination": {
+          "status": "unqualified",
+          "cleanup": null
+        },
+        "modelFailures": [],
+        "vendorAuthQualified": false,
+        "desktopQualified": false,
+        "releaseQualified": false
+      },
+      "CPUArithmeticJoins": {
+        "exclusiveCategoryTotals": {
+          "samples": 12434,
+          "sampledUs": 129963149
+        },
+        "profileDurationEqualsSampledPlusUnsampled": true,
+        "writerDetailsAndCallerTotalsEqualWriterCategory": true,
+        "namespaceDetailsAndCallerTotalsEqualNamespaceFamily": true,
+        "limits": "Original Host epoch 1 including cleanup only. Inclusive categories overlap; sampled time is not a per-query elapsed measure. Raw CPU profile discarded; no Bun, later Host, native-wide or causal latency attribution."
+      },
+      "passiveTrace": {
+        "rows": 254,
+        "eventCounts": {
+          "child-spawn": 1,
+          "child-ready": 1,
+          "request": 105,
+          "response": 104,
+          "request-send-headers": 15,
+          "request-body-sent": 15,
+          "response-end": 12,
+          "trace-limit": 1
+        },
+        "epochs": [
+          1
+        ],
+        "last": {
+          "epoch": 1,
+          "event": "trace-limit",
+          "atMs": 67718,
+          "child": null,
+          "request": null,
+          "route": null,
+          "method": null,
+          "durationMs": null,
+          "status": null,
+          "contentEncoding": null,
+          "stage": null,
+          "code": null,
+          "exitCode": null,
+          "signal": null
+        },
+        "complete": false,
+        "limit": "Bounded passive trace ends before the complete scenario; does not establish later original exit or epoch-2 cleanup. Those rely on distinct original final receipts/assertions."
+      },
+      "allReceiptBytesRecoverableFromOfficialZip": true
+    }
+  ],
+  "totals": {
+    "tests": 61,
+    "pass": 60,
+    "fail": 0,
+    "skipped": 1,
+    "cancelled": 0
+  },
+  "scopeLimits": [
+    "Source-bound original TEST leaf results only. No current Team179/stderr24 or P11 A semantic RED, whole renderer/types/lint, Process or packaged P08 qualification.",
+    "Host source digest independently joins all619 Git source files with actual runner EOL form. Host dist/runtime/Bun/native image hashes remain captured original build/input evidence, not a local independent rebuild.",
+    "No actual vendor credential/model action or installed product/release qualification; local-scripted model only.",
+    "Manual and auto are separate original invocations; passive trace ends at254, no full trace/custody or CPU performance causal inference.",
+    "All Git source comparisons are exact72e6; historical source equality is not result transfer. No project commands or original actions repeated by auditor."
+  ]
+}

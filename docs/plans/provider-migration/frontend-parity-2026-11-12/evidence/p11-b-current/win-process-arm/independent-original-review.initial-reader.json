@@ -1,0 +1,1207 @@
+{
+  "kind": "Independent original E3 Windows ARM Process evidence and bounded source review",
+  "reviewedAtUTC": "2026-11-16T09:44:42.345566+00:00",
+  "reviewer": "/root/ui_failures",
+  "evidenceAuthor": "/root/native_failures",
+  "verdict": "APPROVE_EVIDENCE_AND_SOURCE_BOUNDARIES_NO_CORRECTION",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "sourceTree": "de80fbfbffb3fe4daabf6cc9be258cc8df534524",
+  "runId": 43831885690,
+  "jobId": 133178915394,
+  "scope": "Independent full retained ARM job/ZIP/source review of c98da825 and the ARM plus shared-source portions of 2b1f18c4. This does not repeat or qualify the separate x64 execution in that assessment.",
+  "references": [
+    {
+      "path": "ci-72e6ec/native/process-windows-arm64/independent-byte-source-proof.json",
+      "bytes": 717298,
+      "blob": "a18562ceb05a6ddfbd52bbaa6969bf51fe802c0f",
+      "sha256": "ce4b1c6c60453e2554dc73b56dcf827d6416b477ff959b2be92d51f36aad6517"
+    },
+    {
+      "path": "ci-72e6ec/native/process-windows-arm64/original-windows-process-failure-audit.json",
+      "bytes": 270880,
+      "blob": "c98da825d0140ec8695a2376b9ffb30ec798ed13",
+      "sha256": "13550b8de8fea2596b2e9c2b5fb6513af1ae1eb9b88f468777179600176ed03d"
+    },
+    {
+      "path": "ci-72e6ec/native/windows-first-refusal-source-assessment.json",
+      "bytes": 66899,
+      "blob": "2b1f18c4d7cc7c271f70034b3e3a120639c22da6",
+      "sha256": "f2cdaf55f639d1a8750b21d80851de360983f62fbde9dd1e0c4455b5fcdd2ef6"
+    },
+    {
+      "path": "ci-72e6ec/native/process-windows-arm64/archive-retention.json",
+      "bytes": 4720,
+      "blob": "de65d6726a84b22f19c73d26dea52fc60b751a0e",
+      "sha256": "ba4699240a599fea97974bafea05e7ef0045667ddb8caa1b4213f5ab8f13145f"
+    },
+    {
+      "path": "ci-72e6ec/native/host-source-E3-git-audit.json",
+      "bytes": 217192,
+      "blob": "96da518a89077c1b4bceaaf6cdca1a7703d96d76",
+      "sha256": "aaf2e11d778cdb914a4c9da4a9ff67c3011f2a3c94009a5ec45e8a49be550864"
+    },
+    {
+      "path": "ci-72e6ec/native/owned-process-jobs-response-0854.json",
+      "bytes": 17481,
+      "blob": "ce0f43f88d46de3ad869cc97afcaa1f9f489e25d",
+      "sha256": "e8c14d0d0213eb5c432a87d8b33ae7484605e56b1a928ca367661f8403661ef1"
+    },
+    {
+      "path": "ci-72e6ec/native/official-process-artifacts-0855.json",
+      "bytes": 2962,
+      "blob": "1d25b7f5e97b1aa399d5df5e59c3f0e4bf3a301b",
+      "sha256": "f0dabafcd72e4f4a84d46a02e5f696c5a2c171bd4af86bf8c6bbe3b64cb13032"
+    },
+    {
+      "path": "ci-72e6ec/native/process-windows-arm64/original-job-log-response.json",
+      "bytes": 413415,
+      "blob": "f4bbb8d3ff5f48be1ca0db634554f335752f29f1",
+      "sha256": "3e825ee5cbc5003818011515786f8e95eca753fdf1a540e4e589f37f27c07e5b"
+    },
+    {
+      "path": "ci-72e6ec/native/process-windows-arm64/job-133178915394.log",
+      "bytes": 375624,
+      "blob": "07df322330d230a885b9f42ef681b4f2c30c86c7",
+      "sha256": "afc097e5b3cf84a24d86468e9398f8cf898a832bffc6658561d12e3d3360bc5c"
+    },
+    {
+      "path": "ci-72e6ec/native/process-windows-arm64/artifact-14209389308.zip",
+      "bytes": 34542,
+      "blob": "484fa8a1fef94f4b0d512be5fb78401721bccc64",
+      "sha256": "4c43a227150768e47cc6b783b00d6e6e86c1e78e20e8ec487760ad61d281d099"
+    },
+    {
+      "path": "external-primary-0833/initial-api-and-fetch.json",
+      "bytes": 1230559,
+      "blob": "c06fa9afb4bce716cc66c872aca533c10fba4fec",
+      "sha256": "a79ff970d4b9bf71483168e870519182f44c1be53f16595519659b2607c52b5b"
+    },
+    {
+      "path": "ci-72e6ec/native/process-windows-arm64/independent-reader-correction.json",
+      "bytes": 1109,
+      "blob": "90a52b7ffaa4981f87995d37007d33675e3805f9",
+      "sha256": "a67207f3552ee59d14dadaf484001574195ff92063987b49d44ae7390aba37f6"
+    },
+    {
+      "path": "ci-72e6ec/native/process-windows-arm64/build-independent-byte-proof.py",
+      "bytes": 14601,
+      "blob": "089cd15f3ed2ddf0857ae56826d930c7ddff4f80",
+      "sha256": "52da6188b19202b6f0c3860ce4c39a665870cf6ce55cae947d8fc091063dd247"
+    },
+    {
+      "path": "ci-72e6ec/native/process-windows-arm64/build-independent-byte-proof-v2.py",
+      "bytes": 14669,
+      "blob": "a216cf0fe9c05b81a361cb7324bac0e542218a2f",
+      "sha256": "b32c912d44be3f7cfe8e0233003a804ef60101ff2b33dda943645dcb85f27397"
+    }
+  ],
+  "originalByteVerification": {
+    "rawResponseJoin": "Full retained structuredContent.content encoded as UTF-8 exactly equals all 375624 raw job bytes; no re-fetch or reconstructed original.",
+    "runJobArtifact": "Exact source72e/run43831885690/job133178915394 and official artifact14209389308 verified from retained initial run, terminal jobs and official artifact API responses.",
+    "zip": "All14 unique safe non-symlink members pass CRC, archive digest/size and exact extracted-byte comparisons; no images occur in this archive.",
+    "tee": "All seven complete retained tee files join contiguously to the original job after only each documented BOM/line-ending/ANSI normalization and job timestamp removal. Original files remain byte-identical.",
+    "authorRows": "All decoded author outcome, readiness, first-refusal, epoch and cleanup operands were rejoined to the original logs/receipts in the independent proof; no author-only fact is promoted to original observation.",
+    "source": "648 distinct immutable current Git bodies freshly hashed, including full619 Host census and all36 original interpretation leaves. Fourteen selected artifact source-pin occurrences match current Git with observed Windows CRLF. Twenty-one other captured digest occurrences refer to generated, installed or compiled inputs and are not independently reconstructed binary payloads.",
+    "hostGitCensus": {
+      "files": 619,
+      "LF": "5c76bf6f2750c0070c59b8bf10db3dd83ea1a8c5c34aca5389c5c575bdc4a008",
+      "CRLF": "95d196f87beb284995d5518b0eafc0da5e92aaac4af21d1c465e6c54d2d0d474",
+      "limit": "Git source census; source artifact pins cover selected14 occurrences, not a whole619 source-bundle receipt or compiled payload proof."
+    },
+    "wholePayloadQualification": false
+  },
+  "actualStepResults": {
+    "wholeJob": "FAILURE",
+    "successfulPrerequisites": {
+      "hostContracts": {
+        "tests": 167,
+        "suites": 0,
+        "pass": 164,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 3,
+        "todo": 0
+      },
+      "originalSkipRows": [
+        "﹣ Linux builder refuses an existing or linked output leaf before any compiler dispatch (1.5074ms) # SKIP",
+        "﹣ Linux original executable compares signed Node and unsigned native inode bits exactly (1.5035ms) # SKIP",
+        "﹣ actual pinned SDK standalone run completes, cancels and survives cold replay without mutating the Team recipe (0.4156ms) # POSIX TEST shebang; actual Windows custody has its separate native gate"
+      ],
+      "vitest": [
+        {
+          "file": "protocol.log",
+          "files": [
+            {
+              "path": "tools/owned-process-broker/protocol.test.ts",
+              "tests": 47
+            },
+            {
+              "path": "tools/owned-process-broker/nativeGateEvents.test.ts",
+              "tests": 4
+            },
+            {
+              "path": "tools/owned-process-broker/nativeGateContext.test.ts",
+              "tests": 3
+            }
+          ],
+          "pass": 54,
+          "fail": 0,
+          "skip": 0
+        },
+        {
+          "file": "retained-main.log",
+          "files": [
+            {
+              "path": "test/features/agent-backend/desktopBackendFeature.test.ts",
+              "tests": 16
+            },
+            {
+              "path": "test/features/agent-backend/capturedHostClient.test.ts",
+              "tests": 33
+            },
+            {
+              "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+              "tests": 7
+            },
+            {
+              "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+              "tests": 5
+            },
+            {
+              "path": "test/features/agent-backend/capturedWindowsSelection.test.ts",
+              "tests": 5
+            },
+            {
+              "path": "test/features/agent-backend/fileTeamModelProbeIntents.test.ts",
+              "tests": 10
+            },
+            {
+              "path": "test/features/agent-backend/capturedWindowsSourcePending.test.ts",
+              "tests": 2
+            },
+            {
+              "path": "test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts",
+              "tests": 3
+            }
+          ],
+          "pass": 81,
+          "fail": 0,
+          "skip": 0
+        }
+      ],
+      "pass": 299,
+      "skip": 3
+    },
+    "steps17And18": "Original Node24 and Electron native-gate invocations returned successfully. Their result labels, phase rows, intentional negatives and cleanup records remain separate from later source A/B failure.",
+    "step19": "Original TEST wrappers and Main Host provider route parity PASS; not the later Codex Team-A readiness or a real vendor run.",
+    "firstFailedStep": {
+      "number": 20,
+      "name": "Qualify original codex source A B with TEST peer"
+    },
+    "unexecuted": [
+      {
+        "number": 21,
+        "name": "Qualify original claude source A B with TEST peer"
+      },
+      {
+        "number": 22,
+        "name": "Qualify original opencode source A B with TEST peer"
+      },
+      {
+        "number": 23,
+        "name": "Require completed original platform receipts and unchanged source"
+      }
+    ],
+    "step24": "Original failure evidence upload succeeded; it does not qualify the skipped final receipts gate.",
+    "runtime": "Original captured Node24.21.0; Electron44.10.1 reports Node24.22.1. Existing frozen package installation and original builds ran in CI; this reviewer did not rebuild anything."
+  },
+  "nativeNodeAndElectron": [
+    {
+      "file": {
+        "path": "ci-72e6ec/native/process-windows-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-node24.log",
+        "bytes": 89884,
+        "blob": "16fc3b27ad43ad06dd1a0919b6ab0c193afac00c",
+        "sha256": "a478fb4a3dbed555e70a4265ab54aa29f06683d2044f99bfbd6a79a4d049a50a"
+      },
+      "runtime": "24.21.0",
+      "resultLabels": 25,
+      "completePhaseRows": 31,
+      "i386": {
+        "line": 115,
+        "row": {
+          "nativeI386ChildObservation": {
+            "status": "observed",
+            "fixtureSha256": "b10e6fad13f233dc0154b535c22e3e2a1421a7fefe9c93d65ea62b5a10e13461",
+            "child": {
+              "pid": 10832,
+              "birth": "01dd75a76c488073"
+            },
+            "observations": [
+              {
+                "pid": 7640,
+                "birth": "01dd75a76c1f32d4",
+                "code": 2147483651,
+                "firstChance": 1,
+                "handled": 1
+              },
+              {
+                "pid": 7640,
+                "birth": "01dd75a76c1f32d4",
+                "code": 1073741855,
+                "firstChance": 1,
+                "handled": 1
+              },
+              {
+                "pid": 10832,
+                "birth": "01dd75a76c488073",
+                "code": 2147483651,
+                "firstChance": 1,
+                "handled": 1
+              },
+              {
+                "pid": 10832,
+                "birth": "01dd75a76c488073",
+                "code": 1073741855,
+                "firstChance": 1,
+                "handled": 1
+              },
+              {
+                "pid": 10832,
+                "birth": "01dd75a76c488073",
+                "code": 1073741855,
+                "firstChance": 1,
+                "handled": 0
+              },
+              {
+                "pid": 10832,
+                "birth": "01dd75a76c488073",
+                "code": 1073741855,
+                "firstChance": 1,
+                "handled": 0
+              }
+            ],
+            "directI386RootLateHandler": "unqualified"
+          }
+        }
+      },
+      "pendingCreate": {
+        "line": 171,
+        "row": {
+          "nativeServicePendingCreate": {
+            "rootExited": false,
+            "activeProcesses": 0,
+            "queryError": 0,
+            "dispatchError": 0,
+            "stopReplied": false
+          }
+        }
+      },
+      "helperCount": 64,
+      "allClosedAndStreamsEnded": true,
+      "exitPairs": [
+        {
+          "code": null,
+          "signal": "SIGTERM",
+          "count": 2
+        },
+        {
+          "code": 0,
+          "signal": null,
+          "count": 56
+        },
+        {
+          "code": 74,
+          "signal": null,
+          "count": 1
+        },
+        {
+          "code": 70,
+          "signal": null,
+          "count": 2
+        },
+        {
+          "code": 75,
+          "signal": null,
+          "count": 3
+        }
+      ],
+      "intentionalNegativeRows": [
+        {
+          "line": 323,
+          "row": {
+            "nativeNegative": "failure-winner-after-complete-ack",
+            "completeAck": true,
+            "brokerExit": 74
+          }
+        },
+        {
+          "line": 335,
+          "row": {
+            "nativeNegative": "owner-eof",
+            "brokerExit": {
+              "code": 70,
+              "signal": null
+            }
+          }
+        },
+        {
+          "line": 347,
+          "row": {
+            "nativeNegative": "broker-crash",
+            "brokerExit": {
+              "code": null,
+              "signal": "SIGTERM"
+            }
+          }
+        },
+        {
+          "line": 359,
+          "row": {
+            "nativeNegative": "wrong-generation",
+            "brokerExit": {
+              "code": 75,
+              "signal": null
+            }
+          }
+        },
+        {
+          "line": 372,
+          "row": {
+            "nativeNegative": "lost-prepared",
+            "brokerExit": {
+              "code": 70,
+              "signal": null
+            }
+          }
+        },
+        {
+          "line": 384,
+          "row": {
+            "nativeNegative": "malformed",
+            "brokerExit": {
+              "code": 75,
+              "signal": null
+            }
+          }
+        },
+        {
+          "line": 396,
+          "row": {
+            "nativeNegative": "truncated",
+            "brokerExit": {
+              "code": 75,
+              "signal": null
+            }
+          }
+        }
+      ],
+      "controller": {
+        "line": 415,
+        "row": {
+          "gateController": "drained",
+          "rootExitCode": 0,
+          "activeProcesses": 0
+        }
+      },
+      "retainedCapabilities": []
+    },
+    {
+      "file": {
+        "path": "ci-72e6ec/native/process-windows-arm64/extracted/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-electron.log",
+        "bytes": 89910,
+        "blob": "f8c4093e9010ec4174cdfd470988c5cc2fded4ce",
+        "sha256": "db909c76a7a4631fb613ce5366125b5682fddf36424d7d7579f9ae7db5db010d"
+      },
+      "runtime": "24.22.1",
+      "resultLabels": 25,
+      "completePhaseRows": 31,
+      "i386": {
+        "line": 115,
+        "row": {
+          "nativeI386ChildObservation": {
+            "status": "observed",
+            "fixtureSha256": "b10e6fad13f233dc0154b535c22e3e2a1421a7fefe9c93d65ea62b5a10e13461",
+            "child": {
+              "pid": 9824,
+              "birth": "01dd75a7738c7e18"
+            },
+            "observations": [
+              {
+                "pid": 844,
+                "birth": "01dd75a773836467",
+                "code": 2147483651,
+                "firstChance": 1,
+                "handled": 1
+              },
+              {
+                "pid": 844,
+                "birth": "01dd75a773836467",
+                "code": 1073741855,
+                "firstChance": 1,
+                "handled": 1
+              },
+              {
+                "pid": 9824,
+                "birth": "01dd75a7738c7e18",
+                "code": 2147483651,
+                "firstChance": 1,
+                "handled": 1
+              },
+              {
+                "pid": 9824,
+                "birth": "01dd75a7738c7e18",
+                "code": 1073741855,
+                "firstChance": 1,
+                "handled": 1
+              },
+              {
+                "pid": 9824,
+                "birth": "01dd75a7738c7e18",
+                "code": 1073741855,
+                "firstChance": 1,
+                "handled": 0
+              },
+              {
+                "pid": 9824,
+                "birth": "01dd75a7738c7e18",
+                "code": 1073741855,
+                "firstChance": 1,
+                "handled": 0
+              }
+            ],
+            "directI386RootLateHandler": "unqualified"
+          }
+        }
+      },
+      "pendingCreate": {
+        "line": 171,
+        "row": {
+          "nativeServicePendingCreate": {
+            "rootExited": false,
+            "activeProcesses": 0,
+            "queryError": 0,
+            "dispatchError": 0,
+            "stopReplied": false
+          }
+        }
+      },
+      "helperCount": 64,
+      "allClosedAndStreamsEnded": true,
+      "exitPairs": [
+        {
+          "code": null,
+          "signal": "SIGTERM",
+          "count": 2
+        },
+        {
+          "code": 0,
+          "signal": null,
+          "count": 56
+        },
+        {
+          "code": 74,
+          "signal": null,
+          "count": 1
+        },
+        {
+          "code": 70,
+          "signal": null,
+          "count": 2
+        },
+        {
+          "code": 75,
+          "signal": null,
+          "count": 3
+        }
+      ],
+      "intentionalNegativeRows": [
+        {
+          "line": 323,
+          "row": {
+            "nativeNegative": "failure-winner-after-complete-ack",
+            "completeAck": true,
+            "brokerExit": 74
+          }
+        },
+        {
+          "line": 335,
+          "row": {
+            "nativeNegative": "owner-eof",
+            "brokerExit": {
+              "code": 70,
+              "signal": null
+            }
+          }
+        },
+        {
+          "line": 347,
+          "row": {
+            "nativeNegative": "broker-crash",
+            "brokerExit": {
+              "code": null,
+              "signal": "SIGTERM"
+            }
+          }
+        },
+        {
+          "line": 359,
+          "row": {
+            "nativeNegative": "wrong-generation",
+            "brokerExit": {
+              "code": 75,
+              "signal": null
+            }
+          }
+        },
+        {
+          "line": 372,
+          "row": {
+            "nativeNegative": "lost-prepared",
+            "brokerExit": {
+              "code": 70,
+              "signal": null
+            }
+          }
+        },
+        {
+          "line": 384,
+          "row": {
+            "nativeNegative": "malformed",
+            "brokerExit": {
+              "code": 75,
+              "signal": null
+            }
+          }
+        },
+        {
+          "line": 396,
+          "row": {
+            "nativeNegative": "truncated",
+            "brokerExit": {
+              "code": 75,
+              "signal": null
+            }
+          }
+        }
+      ],
+      "controller": {
+        "line": 415,
+        "row": {
+          "gateController": "drained",
+          "rootExitCode": 0,
+          "activeProcesses": 0
+        }
+      },
+      "retainedCapabilities": []
+    }
+  ],
+  "nativeNegativeAndAccountingLimits": [
+    "Each original native gate has25 result labels and31 completed phase rows; these are different counters, not31 newly qualified top-level cases.",
+    "The I386 child observation retains six original rows; handled root/startup and matching-child late-unhandled distinctions are preserved. directI386RootLateHandler remains explicitly unqualified.",
+    "The pending-CREATE read reports rootExited:false, activeProcesses:0 and stopReplied:false. Zero active count does not establish completed Stop or query-caused root exit.",
+    "All64 final helper records are closed with ended stdout/stderr, but exit counts include intentional74/70/75 and two SIGTERM records. No all-natural/all-zero-exit claim is made.",
+    "The nine retained capabilities report write completion; one intentionally exits70 while the remaining eight report0. A write-completed row is not fsync/durability or complete exception census."
+  ],
+  "wrapperProviderReceipt": {
+    "kind": "TEST_WINDOWS_EMULATED_PROVIDER_PARITY",
+    "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+    "platform": "win32-arm64",
+    "nodeVersion": "v24.21.0",
+    "status": "PASS",
+    "pins": [
+      {
+        "path": "C:\\a\\_temp\\TEST-process-stage-arm64\\owned-process-broker.exe",
+        "sha256": "3740bf267d5c4bc85e6ef2238d567659f29110bb052277c6452df934cc480c59"
+      },
+      {
+        "path": "C:\\a\\_temp\\TEST-process-build-arm64\\Release\\owned-process-fixture.exe",
+        "sha256": "134f0210da22ca107a7f1318ecd22ec4336fa4348b937713e8ec2998a033f9f6"
+      },
+      {
+        "path": "C:\\a\\_temp\\TEST-process-scoped-stage-arm64\\owned-process-broker.exe",
+        "sha256": "c123254014194dd348af905e0be32b8ef11ec248d497021d9eb519fa778e0ac3"
+      }
+    ],
+    "wrappers": [
+      "npm-node",
+      "generated-bun",
+      "opaque-cmd",
+      "positional-bat",
+      "npm-native"
+    ],
+    "providers": [
+      {
+        "provider": "codex",
+        "wrapper": "npm-node",
+        "pins": {
+          "node": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+          "peer": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+          "wrapper": "d43e0701ac8436be9ce28b2832791e08fd7fa02585422c75fadb531ed6cd564f",
+          "cli": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+          "source": "439029364d96eb86c546f0094fa9b4be733bc120766b71fcb0d9ea16d62a1bf7"
+        },
+        "counts": {
+          "allocate": 1,
+          "prepare": 1,
+          "resume": 1,
+          "stop": 1,
+          "release": 1,
+          "serviceCapture": 2,
+          "serviceStop": 2,
+          "serviceSettle": 2
+        },
+        "nativeReady": true,
+        "inputCompleted": true,
+        "registeredServices": 2,
+        "scopedStops": 2,
+        "neighborSurvivedPrimary": true,
+        "providerSurvivedScopedStops": true,
+        "cleanup": true
+      },
+      {
+        "provider": "opencode",
+        "wrapper": "opaque-cmd",
+        "pins": {
+          "node": "dff59da18b6ffe1bf1ca99e1d2af4906080c481740619f5b5098c0fca28bd9b7",
+          "peer": "039f2e29a17d40cb21a287770eb41354191f495f06e8e9f350eb8a3453e7bddc",
+          "wrapper": "cb47ac0c670cc03cf1f40edb052ba855553525dffd7f8429e1a00bdca78c641d",
+          "cli": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+          "source": "4c980dce4f456f972aa2d34bbe4a96490dd0a2547be70efa4ec55ddcb38f41d2"
+        },
+        "counts": {
+          "allocate": 1,
+          "prepare": 1,
+          "resume": 1,
+          "stop": 1,
+          "release": 1,
+          "serviceCapture": 2,
+          "serviceStop": 2,
+          "serviceSettle": 2
+        },
+        "nativeReady": true,
+        "inputCompleted": true,
+        "registeredServices": 2,
+        "scopedStops": 2,
+        "neighborSurvivedPrimary": true,
+        "providerSurvivedScopedStops": true,
+        "cleanup": true
+      }
+    ],
+    "cleanup": true,
+    "realProviderExecuted": false,
+    "desktopQualified": false,
+    "releaseQualified": false
+  },
+  "originalFailure": {
+    "provider": "codex",
+    "stage": "Team-A",
+    "message": "Original source Team readiness",
+    "originalPollLine": 64,
+    "predicate": "post-read deadline",
+    "originalBudgetMs": 15000,
+    "budgetAnchor": "after original Start acknowledgement for non-Claude source lanes",
+    "readiness": {
+      "source": {
+        "sourceId": "f1061a2fe270877fa746ef1a51cfa5841c3db234bfbc287cdbfc597216602b1a",
+        "revision": "17634b481fcbc56acc07e0fe390e86dc43b811d48c0a997cf74cbd4f0495ac7f"
+      },
+      "image": "A",
+      "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+      "readCount": 101,
+      "elapsedMs": 15054.170799999998,
+      "lastRuntimeRead": {
+        "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+        "memberId": "alice-id",
+        "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+        "phase": "allocated",
+        "sealed": false,
+        "custody": "owned",
+        "nativeReady": false,
+        "attached": true
+      }
+    },
+    "runtimeProjection": {
+      "status": "observed",
+      "atomicWithFailure": false,
+      "viewDigest": "39f940b75a038e05c628b9d1142aab9a92bec4aa69e298f194bf35ca476ac495",
+      "bindingMatches": true,
+      "recordReady": false,
+      "providerReady": null,
+      "ownerCurrent": null,
+      "nativeReady": false
+    },
+    "firstRefusal": {
+      "status": "observed",
+      "observations": [
+        {
+          "kind": "native",
+          "phase": "resume",
+          "reason": "unknown",
+          "dispatched": true,
+          "staged": true,
+          "rootCaptured": true,
+          "deadlineExpired": null,
+          "ordinal": 1,
+          "source": {
+            "sourceId": "f1061a2fe270877fa746ef1a51cfa5841c3db234bfbc287cdbfc597216602b1a",
+            "revision": "17634b481fcbc56acc07e0fe390e86dc43b811d48c0a997cf74cbd4f0495ac7f"
+          }
+        }
+      ]
+    },
+    "errorLines": [
+      {
+        "line": 2271,
+        "text": "AggregateError: TEST source scenario cleanup incomplete"
+      },
+      {
+        "line": 2277,
+        "text": "    AssertionError [ERR_ASSERTION]: Original source Team readiness"
+      },
+      {
+        "line": 2278,
+        "text": "        at poll (C:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts:64:12)"
+      },
+      {
+        "line": 2291,
+        "text": "    AggregateError: TEST original source epoch cleanup incomplete"
+      },
+      {
+        "line": 2298,
+        "text": "        AssertionError [ERR_ASSERTION]: Every original physical Job retains confirmed Stop/drain/release"
+      }
+    ]
+  },
+  "lastReadMeaning": [
+    "The first original error is the strict post-read poll assertion at Scenario64 for Codex Team-A, not an explicit provider/model exception.",
+    "The poll uses the retained15s deadline anchored after original Start acknowledgement, strict checks before and after the original awaited read and the unchanged25ms cadence. The last read counter101 and elapsed15054.170799999998ms use the separate readiness-start sample; they must not be equated to a Main-epoch clock origin or a new budget.",
+    "The last view is allocated/owned/attached, unsealed and nativeReady:false. The non-atomic diagnostic projection joins the same view digest and binding, recordReady:false with providerReady/ownerCurrent null. It does not identify the exact catalog/provider callback or underlying result.",
+    "The source-bound native resume/unknown row is an observed closed Host custody status after dispatch/staging/root capture. Its own timestamp, original wire response, thrown exception, OS acknowledgement and timeout operand are missing."
+  ],
+  "sourceReview": {
+    "exactCriticalLeaves": [
+      {
+        "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+        "bytes": 15423,
+        "blob": "ff8389cb7c44d3116c17a9826f1daf9c17551c7d",
+        "sha256": "189b8a98f8708d22b1ffabc84ef235efd320a910bf7a9ee19c266846ccd3f1ac",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+        "bytes": 44781,
+        "blob": "08552af73c0f67cd62fca0e5b773cde2281eb152",
+        "sha256": "eb985c1ba5f4a6d22a3816cd80795374f817645e8a59fb8ad70a1734f3e20fc3",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+        "bytes": 22408,
+        "blob": "3b5a244c27d004af6e82fffa092fa83e1894de73",
+        "sha256": "447a3ae82ab6ce0ec866305af2cd426619df3618fbec2397931212379d945784",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts",
+        "bytes": 20070,
+        "blob": "10e1a457bb65a136128eb1db5176a4701d2fe4e2",
+        "sha256": "cd06debca46ae13d02935268f4905b2ade7f3a5c8c4ed8a81139dde99de5c117",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/owned-process/hostCustody.ts",
+        "bytes": 21129,
+        "blob": "af69d8430ffd473d471a5e663606fcaea640d2e5",
+        "sha256": "ae2bc6fe45b4dded8cff67b13daf01e8a5f5c4fc3e835ce7eb98a8c58adaf435",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/owned-process/windowsBroker.ts",
+        "bytes": 28794,
+        "blob": "32b3315f04d91ae6da375bcca710e16948e09ad3",
+        "sha256": "751df6b6e8e07b717a8ade1c88b064dbe8a099e2b07ce328a9f052530dd78b79",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+        "bytes": 30469,
+        "blob": "a566efc5987b6859d004a8531cb8e6bac80bec30",
+        "sha256": "478bead841e1344f55a77ff16852f7359826b459f6d5986859c5a454f3fc476d",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "bytes": 58249,
+        "blob": "dd1e8cd2f1ea052f0480833cfe1fca6be9b5d2e6",
+        "sha256": "442fc644470c06095932c89434cdd8d24ffb6971bdb475d2ca1a3e6257be760d",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+        "bytes": 32767,
+        "blob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+        "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138",
+        "sameGitBytesAs578": true
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+        "bytes": 7213,
+        "blob": "e84ee4b6e2ff4cea7d468c3173bc0851c59cdeae",
+        "sha256": "f12be6e141ab12b41feb394e17d5b373e6eeb6511c6425212bb9c33bf44afb72",
+        "sameGitBytesAs578": true
+      }
+    ],
+    "checkedExcerpts": [
+      {
+        "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+        "firstLine": 98,
+        "lastLine": 108,
+        "text": "  async request(\n    operation: HostCustodyCall['operation'], build: (deadlineMs: number) => HostCustodyCall, deadline?: number,\n    onRefusal?: (reason: 'refused' | 'unknown' | 'result-mismatch') => void\n  ): Promise<HostCustodyResult> {\n    const reply = await this.connected().requestWhenReady(operation, build, deadline);\n    if (reply.status !== 'completed' || reply.value.operation !== operation) {\n      try { onRefusal?.(reply.status === 'completed' ? 'result-mismatch' : reply.status); } catch { /* Passive only. */ }\n      unavailable();\n    }\n    return reply.value;\n  }\n"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+        "firstLine": 289,
+        "lastLine": 303,
+        "text": "  private readonly refuse = (reason: LaunchRefusal, deadlineExpired: true | null = null): void => {\n    if (this.refusalObserved) return;\n    this.refusalObserved = true;\n    if (refusalChannel.hasSubscribers) try {\n      refusalChannel.publish({ kind: 'native', capability: this.key, phase: this.phase, reason,\n        dispatched: this.dispatched, staged: this.staged, rootCaptured: this.rootIdentity !== undefined, deadlineExpired });\n    } catch { /* The original refusal remains authoritative. */ }\n  };\n  private assertInput(preparing = false): void {\n    if (this.sealed) { if (preparing) this.refuse('sealed'); unavailable(); }\n    let current: boolean;\n    try { current = this.current(); } catch (error) { if (preparing) this.refuse('current-threw'); throw error; }\n    if (!current) { if (preparing) this.refuse('current-false'); unavailable(); }\n    if (preparing && performance.now() >= this.deadline) { this.refuse('launch-deadline', true); unavailable(); }\n  }\n"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+        "firstLine": 370,
+        "lastLine": 409,
+        "text": "  async prepare(): Promise<Preparation> {\n    this.phase = 'prepare';\n    try {\n      this.assertInput(true);\n      if (!this.staged || this.rootIdentity) unavailable();\n      const prepared = await this.source.request(\n        'prepare', () => {\n          this.assertInput(true);\n          return { operation: 'prepare', capability: this.key };\n        }, this.deadline, this.refuse\n      );\n      if (prepared.operation !== 'prepare') { this.refuse('result-mismatch'); unavailable(); }\n      this.rootIdentity = Object.freeze({ ...prepared.root });\n      if (this.stateHint) void this.observeState();\n      this.phase = 'post-prepare'; this.assertInput(true);\n      return { kind: 'prepared', process: this };\n    } catch {\n      return this.failed();\n    }\n  }\n\n  async resume(expectedOwner: ProcessOwner, installOwner: () => Promise<void>): Promise<void> {\n    this.phase = 'resume';\n    if (!sameOwner(expectedOwner, this.owner) || !this.rootIdentity || this.resumed) {\n      this.refuse('preparation-failed'); unavailable();\n    }\n    this.assertInput(true);\n    try { await installOwner(); } catch (error) { this.refuse('preparation-failed'); throw error; }\n    this.assertInput(true);\n    const result = await this.source.request(\n      'resume', () => {\n        this.assertInput(true);\n        return { operation: 'resume', capability: this.key };\n      }, this.deadline, this.refuse\n    );\n    if (result.operation !== 'resume') { this.refuse('result-mismatch'); unavailable(); }\n    this.assertInput(true);\n    this.resumed = true;\n    this.readable('state');\n  }\n"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/owned-process/hostCustody.ts",
+        "firstLine": 289,
+        "lastLine": 401,
+        "text": "  /** Only references wait here. The builder receives the fixed deadline after queueing and timeout clamping. */\n  requestWhenReady(\n    operation: HostCustodyCall['operation'],\n    build: (deadlineMs: number) => HostCustodyCall,\n    deadlineMs?: number\n  ): Promise<HostCustodyReply> {\n    const now = performance.now();\n    const deadline = Math.min(deadlineMs ?? now + this.options.timeoutMs, now + this.options.timeoutMs);\n    const queued = this.admissions.control.length + this.admissions.work.length;\n    if (this.sealed || !this.binding || this.next > MAX_SEQUENCE ||\n      (this.inputSealed && !hostCustodyCleanup({ operation })) ||\n      !Number.isFinite(deadline) || deadline <= now || queued + this.pending.size >= 6 * 256)\n      return Promise.resolve({ status: 'refused' });\n    const lane = hostCustodyControl({ operation }) ? this.admissions.control : this.admissions.work;\n    return new Promise((resolve) => {\n      let settled = false;\n      const admission: NativeAdmission = {\n        operation, build, deadline,\n        timer: setTimeout(() => admission.finish({ status: 'refused' }), deadline - now),\n        finish: (reply) => {\n          if (settled) return;\n          settled = true;\n          clearTimeout(admission.timer);\n          const index = lane.indexOf(admission);\n          if (index >= 0) lane.splice(index, 1);\n          resolve(reply);\n          this.resumeAdmission();\n        },\n      };\n      lane.push(admission);\n      this.resumeAdmission();\n    });\n  }\n\n  /** Called when the original output write frees shared bytes, or a reply frees a request slot. */\n  resumeAdmission(): void {\n    if (this.admitting || this.sealed) return;\n    this.admitting = true;\n    try {\n      for (;;) {\n        const lane = this.admissions.control.length ? this.admissions.control : this.admissions.work;\n        const admission = lane[0];\n        if (!admission) return;\n        const control = hostCustodyControl(admission);\n        const capacity = this.options.limits.maxPendingRequests -\n          (control ? 0 : this.options.limits.reservedControlRequests);\n        if (admission.deadline <= performance.now() ||\n          (this.inputSealed && !hostCustodyCleanup(admission))) {\n          admission.finish({ status: 'refused' });\n          continue;\n        }\n        if (this.pending.size >= capacity || this.options.canSend?.(control) === false) return;\n        lane.shift();\n        clearTimeout(admission.timer);\n        let parsed: ReturnType<typeof callSchema.safeParse>;\n        try { parsed = callSchema.safeParse(admission.build(admission.deadline)); }\n        catch { admission.finish({ status: 'refused' }); continue; }\n        if (!parsed.success || parsed.data.operation !== admission.operation) {\n          admission.finish({ status: 'refused' }); continue;\n        }\n        // dispatch rechecks the original deadline after the lazy builder, without extending it.\n        void this.dispatch(parsed.data, admission.deadline).then(admission.finish);\n      }\n    } finally { this.admitting = false; }\n  }\n\n  private dispatch(call: HostCustodyCall, deadline: number): Promise<HostCustodyReply> {\n    if (this.sealed || !this.binding || this.next > MAX_SEQUENCE ||\n      (this.inputSealed && !hostCustodyCleanup(call)))\n      return Promise.resolve({ status: 'refused' });\n    const remaining = Math.floor(deadline - performance.now());\n    if (!Number.isFinite(remaining) || remaining <= 0) return Promise.resolve({ status: 'refused' });\n    const control = hostCustodyControl(call);\n    if (call.operation === 'read' && [...this.pending.values()].some(({ call: other }) =>\n      other.operation === 'read' && other.capability === call.capability && other.stream === call.stream))\n      return Promise.resolve({ status: 'refused' });\n    const id = `custody:${this.binding.hostIncarnation}:${control ? 'control' : 'work'}:${this.next++}`;\n    const hintKey = hostCustodyHintKey(call);\n    const admittedHint = hintKey ? this.hints.get(hintKey) : undefined;\n    const wireCall = call.operation === 'allocate' ? (() => {\n      const { runtimeSourceOrigin, ...original } = call;\n      return runtimeSourceOrigin === undefined ? original : { ...original, runtimeSourceOrigin };\n    })() : call;\n    const frame: RpcRequest = {\n      jsonrpc: '2.0', id, method: HOST_CUSTODY_METHOD, params: { binding: this.binding, call: wireCall, remainingMs: remaining },\n    };\n    return new Promise((resolve) => {\n      let returned = false;\n      const settle = (reply: HostCustodyReply) => {\n        if (!returned) { returned = true; resolve(reply); }\n      };\n      const finish = (reply: HostCustodyReply) => {\n        const pending = this.pending.get(id);\n        if (!pending) return;\n        clearTimeout(pending.timer);\n        this.pending.delete(id);\n        if (reply.status === 'completed' && hintKey) {\n          const current = this.hints.get(hintKey);\n          if (current === admittedHint) this.hints.delete(hintKey);\n          else if (current) for (const observer of this.observers) observer(current);\n        }\n        if (reply.status === 'completed' && reply.value.operation === 'release' && reply.value.state === 'released')\n          for (const key of this.hints.keys()) if (key.startsWith(`${call.capability}:`)) this.hints.delete(key);\n        settle(reply);\n        this.resumeAdmission();\n      };\n      // A caller timeout is not an ACK: retain its slot, ID and marker until the original reply.\n      const expire = () => settle({ status: 'unknown' });\n      const timer = setTimeout(expire, remaining);\n      this.pending.set(id, { call, finish, timer });\n      try { if (!this.options.send(frame, control)) finish({ status: 'refused' }); }\n      catch { expire(); }\n    });\n"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/owned-process/hostCustody.ts",
+        "firstLine": 414,
+        "lastLine": 470,
+        "text": "  /** Returns false only for an ordinary Host request. Malformed private frames fail the transport. */\n  receive(value: unknown, frameBytes: number): boolean {\n    const candidate = value as { id?: unknown; method?: unknown } | null;\n    if (candidate?.method === HOST_CUSTODY_READY_METHOD) {\n      const ready = readySchema.safeParse(value);\n      if (frameBytes > HOST_CUSTODY_FRAME_BYTES || !ready.success)\n        throw new Error('Invalid private custody readiness');\n      if (\n        !this.sealed &&\n        this.binding &&\n        sameHostCustodyBinding(this.binding, ready.data.params.binding)\n      ) {\n        const hint = ready.data.params.hint;\n        const key = `${hint.capability}:${hint.stream}`;\n        const previous = this.hints.get(key);\n        if (!previous) {\n          if (this.hints.size >= HOST_CUSTODY_MAX_ALLOCATIONS * 3)\n            throw new Error('Private custody readiness capacity');\n        }\n        // A pending read can acknowledge only the marker it actually observed.\n        this.hints.set(key, hint);\n        if (!previous) for (const observer of this.observers) observer(hint);\n      }\n      return true;\n    }\n    if (typeof candidate?.id !== 'string' || !candidate.id.startsWith('custody:')) return false;\n    const pending = this.pending.get(candidate.id);\n    if (!pending) return true; // Old, retired or timed-out reply cannot finish a different request/epoch.\n    const response = responseSchema.safeParse(value);\n    if (\n      frameBytes > HOST_CUSTODY_FRAME_BYTES ||\n      !response.success ||\n      !this.binding ||\n      !sameHostCustodyBinding(this.binding, response.data.result.binding)\n    )\n      throw new Error('Invalid private custody response');\n    const reply = response.data.result.reply;\n    if (reply.status === 'completed') validateHostCustodyResult(pending.call, reply.value);\n    pending.finish(reply);\n    return true;\n  }\n\n  seal(): void {\n    if (this.sealed) return;\n    this.sealed = true;\n    for (const pending of this.pending.values()) pending.finish({ status: 'unknown' });\n    for (const admission of [...this.admissions.control, ...this.admissions.work])\n      admission.finish({ status: 'refused' });\n    this.observers.clear();\n    this.hints.clear();\n  }\n\n  sealInput(): void {\n    this.inputSealed = true;\n    for (const admission of [...this.admissions.control, ...this.admissions.work])\n      if (!hostCustodyCleanup(admission)) admission.finish({ status: 'refused' });\n    this.resumeAdmission();\n"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+        "firstLine": 328,
+        "lastLine": 416,
+        "text": "export function inspectMemberModelReadiness(options: {\n  management?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget'>;\n  launch: TeamLaunchOwner; entry: MemberEntry; assertCurrent(): void;\n  hostIncarnation: string; phase?: 'preclaim' | 'allocation';\n}): { assertCurrent(): void; consumerId: string; kind: 'preparation' | 'continuation' | 'initial';\n  reference?: ModelReadinessReference; assertReadinessCredential?(scopeDigest: string): void } {\n  const { entry, launch } = options;\n  const selected = { binding: entry.binding, configRevision: entry.profile.configRevision,\n    configurationDigest: runtimeDigest(entry.profile) };\n  const original = launch.readModelReadiness(selected);\n  if (original.consumer.initialProfile) return inspectInitialRuntimeModelAdmission({ ...options,\n    phase: options.phase ?? 'preclaim' });\n  const observedAccount: { value?: NonNullable<ReturnType<typeof captureOpenCodeProbeAccount>> } = {};\n  let refusalObserved = false;\n  const currentCalls = { count: 0, totalMs: 0, maxMs: 0, lastMs: null as number | null, truncated: false };\n  const current = () => {\n    let phase = 'initial-authority', reason: 'held' | 'threw' = 'threw';\n    let cutoff: number | null = null, observedAt: number | null = null;\n    let started: number | undefined, failed = false;\n    try {\n      if (readinessRefusal.hasSubscribers && !refusalObserved) {\n        currentCalls.lastMs = null;\n        if (currentCalls.count < 4096) { currentCalls.count++; started = performance.now(); }\n        else currentCalls.truncated = true;\n      }\n    } catch { currentCalls.truncated = true; }\n    try {\n      options.assertCurrent(); phase = 'read-consumer';\n      const current = launch.readModelReadiness(selected), consumer = current.consumer;\n      phase = 'identity';\n      if (consumer.consumerId !== original.consumer.consumerId ||\n          consumer.baseConfigurationDigest !== runtimeDigest(entry.baseProfile)) { reason = 'held'; held(); }\n      phase = 'continuation';\n      if (consumer.continuation) {\n        const restore = entry.selection?.restore;\n        if (!restore || restore.reference !== consumer.continuation.reference ||\n            runtimeDigest(restore.sourceBinding) !== runtimeDigest(consumer.continuation.sourceBinding)) { reason = 'held'; held(); }\n        return;\n      }\n      phase = 'requirements';\n      if (!options.management || !current.reference || consumer.cutoff === undefined) { reason = 'held'; held(); }\n      phase = 'cutoff';\n      if ((observedAt = Date.now()) >= (cutoff = consumer.cutoff)) { reason = 'held'; held(); }\n      phase = 'reference';\n      const observed = readPreparedModelReference({ management: options.management, profile: entry.profile,\n        commandId: current.reference.commandId, context: current.reference.context,\n        ...(current.reference.purpose === 'ordinary' ? { kind: 'native' as const } : {}),\n        observeAccount: value => { if (value) observedAccount.value = value; else delete observedAccount.value; },\n        isCurrent: () => { try { options.assertCurrent(); return true; } catch { return false; } } }, true);\n      phase = 'equality';\n      if (runtimeDigest(observed) !== runtimeDigest(current.reference)) { reason = 'held'; held(); }\n      phase = 'final-authority'; options.assertCurrent();\n    } catch (error) {\n      failed = true; throw error;\n    } finally {\n      if (started !== undefined) try {\n        const elapsed = Math.round(performance.now() - started);\n        if (!Number.isSafeInteger(elapsed) || elapsed < 0 || !Number.isSafeInteger(currentCalls.totalMs + elapsed))\n          currentCalls.truncated = true;\n        else { currentCalls.totalMs += elapsed; currentCalls.maxMs = Math.max(currentCalls.maxMs, elapsed); currentCalls.lastMs = elapsed; }\n      } catch { currentCalls.truncated = true; }\n      if (failed && !refusalObserved) {\n        refusalObserved = true;\n        try { if (readinessRefusal.hasSubscribers) readinessRefusal.publish({\n          kind: 'consumer', actionDigest: runtimeDigest(original.consumer.actionId),\n          groupDigest: runtimeDigest({ commandDigest: runtimeDigest(original.consumer.groupCommandId ?? null),\n            contextDigest: runtimeDigest(original.reference?.context ?? null) }), bindingDigest: managementDigest(selected.binding),\n          consumerId: original.consumer.consumerId, phase, reason, cutoff, observedAt, currentCalls: { ...currentCalls },\n        }); } catch { /* Original TEST subscriber handles its own errors; preserve this refusal. */ }\n      }\n    }\n  };\n  current();\n  return { assertCurrent: current, consumerId: original.consumer.consumerId,\n    kind: original.consumer.continuation ? 'continuation' : 'preparation',\n    ...(original.reference ? { reference: original.reference } : {}),\n    ...(!original.consumer.continuation && observedAccount.value?.nativeCredentialScopeDigest !== undefined ? {\n      assertReadinessCredential(scopeDigest: string) {\n        current();\n        const account = observedAccount.value;\n        if (!account || !account.isCurrent() || account.nativeCredentialScopeDigest !== scopeDigest) held();\n      },\n    } : {}) };\n}\n\nexport function consumeMemberModelReadiness(options: Parameters<typeof inspectMemberModelReadiness>[0]) {\n  const captured = inspectMemberModelReadiness({ ...options, phase: 'allocation' });\n  options.launch.consumeModelReadiness(captured.consumerId);\n  return captured;\n"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+        "firstLine": 123,
+        "lastLine": 143,
+        "text": "      authority.assertCurrent();\n      await assertRuntimeWorktree(entry);\n      authority.assertCurrent();\n      assertAllocation();\n      const readiness = (() => {\n        if (entry.profile.provider !== 'opencode') return undefined;\n        const launch = options.readinessLaunch?.(entry);\n        if (!launch) throw new RuntimeOwnerError('hold');\n        return consumeMemberModelReadiness({ ...(options.modelReadiness ? { management: options.modelReadiness } : {}),\n          launch, entry, hostIncarnation: options.hostIncarnation,\n          assertCurrent: () => { authority.assertCurrent(); assertAllocation(); } });\n      })();\n      const setupCurrent = () => {\n        try {\n          if (!authority.isCurrent()) return false;\n          const state = options.readRuntime(entry.binding);\n          if (state.record?.phase === 'opening' && !state.attached) readiness?.assertCurrent();\n          return true;\n        } catch { return false; }\n      };\n      const canAllocate = () => authority.canAllocate() && setupCurrent();\n"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+        "firstLine": 239,
+        "lastLine": 311,
+        "text": "        const processOrigin = options.captureProcessOrigin?.(entry);\n        const provider = (\n          options.createProvider ??\n          (entry.profile.provider === 'claude'\n            ? createClaudeMemberProvider\n            : entry.profile.provider === 'codex'\n              ? createCodexMemberProvider\n              : entry.profile.nativeGeneration === 'v2'\n                ? createOpenCodeV2EmbeddedMemberProvider\n                : createOpenCodeMemberProvider)\n        )({\n          profile: entry.profile,\n          ...(processOrigin ? { processOrigin } : {}),\n          request,\n          endpoint,\n          connection,\n          ...(options.processCustody ? { processCustody: options.processCustody } : {}),\n          ...((entry.profile.provider !== 'opencode' || entry.profile.nativeGeneration !== 'v2') &&\n              options.retainedWindowsLaunch\n            ? { retainedWindowsLaunch: options.retainedWindowsLaunch } : {}),\n          instructions: memberInitialInstructions(\n            selected.name,\n            selected.role,\n            delivery.teamName,\n            entry.profile.cwd\n          ),\n          ...evidence,\n          attachments: attachmentDelivery.port,\n          ...(subagents ? { subagents } : {}),\n          isCurrent: authority.isCurrent,\n          canAllocate: readiness ? canAllocate : authority.canAllocate,\n          ...(readiness?.kind === 'preparation' && readiness.assertReadinessCredential\n            ? { assertReadinessCredential: readiness.assertReadinessCredential } : {}),\n          canCaptureRegisteredProcess: authority.isCurrent,\n          readCheckpoint: options.readCheckpoint,\n          ...(observeProcessOutput && entry.profile.provider !== 'opencode' ? {\n            observeProcessOutput: (observation) => {\n              try {\n                assertProcessSource();\n                observeProcessOutput(binding, capturedConfig, observation, assertProcessSource);\n              } catch { /* Diagnostics cannot change the original process outcome. */ }\n            },\n          } : {}),\n          ...(entry.profile.provider === 'claude' && request.checkpointRef !== undefined ? {\n            readCheckpointSource: createClaudeCheckpointSource({\n              entry, request, profileId: options.profileId, hostIncarnation: options.hostIncarnation,\n              readRuntime: options.readRuntime, assertCurrent: authority.assertCurrent, assertAllocation,\n            }),\n          } : {}),\n          onProgress: () => options.onProgress(entry),\n        });\n        options.captureInteractions(entry);\n        entry.provider = provider;\n        const opened = await provider.factory.open(request);\n        const source = opened.driver;\n        return {\n          ...opened,\n          driver: {\n            sessionRef: source.sessionRef,\n            submit: (input) => source.submit(attachmentDelivery.prepareInput(input)),\n            observe: () => source.observe(),\n            respondToInteraction: (reference, reply) =>\n              source.respondToInteraction(reference, reply),\n            interrupt: (operation) => source.interrupt(operation),\n            checkReadiness: () => source.checkReadiness(),\n            checkpoint: () => source.checkpoint(),\n            close: () => source.close(),\n          },\n        };\n      } catch (error) {\n        endpoint.revoke();\n        await endpoint.close();\n        throw error;\n"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+        "firstLine": 217,
+        "lastLine": 259,
+        "text": "  private async allocate(\n    binding: RuntimeBinding,\n    config: OpenConfig,\n    assertAuthority?: () => void\n  ): Promise<RuntimeSessionRecord> {\n    try {\n      assertAuthority?.();\n      const opened = await this.options.driverFactory.open(config, assertAuthority);\n      this.drivers.set(this.key(binding), opened.driver);\n      if (\n        typeof opened.driver.sessionRef !== 'string' ||\n        !opened.driver.sessionRef ||\n        opened.driver.sessionRef.length > 1024\n      )\n        throw new RuntimeOwnerError('hold');\n      let record = this.publish(binding, (current) => {\n        if (!this.options.authorize(binding, 'admit') || !this.authorityCurrent(assertAuthority)) current.sealed = true;\n        current.sessionRef = opened.driver.sessionRef;\n        current.custody = 'owned';\n        current.phase = current.sealed ? 'closing' : 'allocated';\n      });\n      void this.observe(binding, opened.driver);\n      if (record.sealed) return await this.stopOwned(binding, true);\n      const ready = await opened.driver.checkReadiness();\n      record = this.publish(binding, (current) => {\n        if (current.phase !== 'allocated' || current.sealed) return;\n        current.nativeReady =\n          ready.ok &&\n          config.requiredCapabilities.every((capability) =>\n            opened.capabilities.includes(capability)\n          );\n        if (!current.nativeReady) current.diagnostic = 'readiness-unavailable';\n      });\n      return record;\n    } catch {\n      return this.publish(binding, (current) => {\n        if (current.phase === 'closed') return;\n        current.phase = 'held';\n        current.nativeReady = false;\n        current.custody = 'unknown';\n        current.diagnostic = 'open-unknown';\n      });\n    }\n"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "firstLine": 59,
+        "lastLine": 67,
+        "text": "async function poll(check: () => Promise<boolean>, message: string, budget = 15000, absoluteDeadline?: number): Promise<void> {\n  const deadline = absoluteDeadline ?? performance.now() + budget;\n  for (;;) {\n    assert.ok(performance.now() < deadline, message);\n    const ready = await check();\n    assert.ok(performance.now() < deadline, message);\n    if (ready) return;\n    await delay(25);\n  }\n"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "firstLine": 176,
+        "lastLine": 258,
+        "text": "  const open = () => {\n    const physical = captureMainWindowsCustody(fixture.host, [grant]); assert.ok(physical);\n    const jobs: Job[] = [], pending = { admitted: 0, revoked: 0 }, counts = { service: 0 };\n    const phaseClock = performance.now();\n    let firstCloseEntryMs: number | null = null;\n    let projectionHostExit: 'confirmed' | 'unknown' | null = null;\n    let available = true, foreground = true, closed = false;\n    const observed: HostCustodyOwner = { mainEpoch: physical.mainEpoch,\n      attach(context) {\n        const original = physical.attach(context);\n        return { ...original, async handle(call) {\n          const preparation = call.operation === 'prepare'\n            ? { phase: 'owner' as 'owner' | 'witness' | 'complete', started: performance.now() } : undefined;\n          const phase = call.operation === 'allocate' || call.operation === 'prepare' ||\n            call.operation === 'resume' || call.operation === 'stop' || call.operation === 'drain' ||\n            call.operation === 'release' ? call.operation : undefined;\n          const timings = phase === 'allocate' ? custodyTimings()\n            : phase ? jobs.find(job => job.capability === call.capability)?.timings : undefined;\n          const stagingPhase = call.operation === 'launch-chunk' || call.operation === 'launch-commit'\n            ? call.operation : undefined;\n          const timing = phase ? timings?.[phase] : stagingPhase\n            ? jobs.find(job => job.capability === call.capability)?.stagingTimings[stagingPhase] : undefined;\n          const phaseStarted = timing ? performance.now() : undefined;\n          if (timing && phaseStarted !== undefined) {\n            timing.calls++; timing.firstStartMs ??= phaseStarted - phaseClock;\n          }\n          try {\n            let result: Awaited<ReturnType<typeof original.handle>>;\n            try {\n              result = await original.handle(call);\n              if (timing) timing.returned++;\n            } finally {\n              if (timing && phaseStarted !== undefined) {\n                const ended = performance.now();\n                timing.settled++; timing.totalMs += ended - phaseStarted;\n                timing.lastEndMs = ended - phaseClock;\n              }\n            }\n            if (call.operation === 'allocate') {\n              assert.ok(jobs.length < 64 && !jobs.some(value => value.capability === call.capability));\n              jobs.push({ capability: call.capability, timings: timings!, stagingTimings: stagingTimings(),\n                ...(call.runtimeSourceOrigin ? { origin: structuredClone(call.runtimeSourceOrigin) } : {}),\n                resumed: false, stopped: false, drained: false, released: false, handleAbsent: false, threadEphemeral: [], wire: '' });\n            }\n            const job = jobs.find(value => value.capability === call.capability); assert.ok(job);\n            if (result.operation === 'prepare') {\n              assert.equal(job.root, undefined); job.root = result.root;\n              if (preparation) preparation.phase = 'witness';\n              // Capture the original suspended root HANDLE before forwarding preparation to Host/resume.\n              job.witness = await capturedQueryableWitness(actor, result.root.pid, result.root.birth, track, events,\n                'query-wait-gated');\n              job.entryStart = entries().length;\n              if (preparation) preparation.phase = 'complete';\n            }\n            if (result.operation === 'resume') job.resumed = true;\n            if (result.operation === 'stop' && result.state === 'confirmed') job.stopped = true;\n            if (result.operation === 'drain' && result.state === 'complete') job.drained = true;\n            if (result.operation === 'release' && result.state === 'released') {\n              job.released = true;\n              if (job.root && job.witness && job.entryStart !== undefined && !job.handleAbsent)\n                job.entryEnd ??= entries().length;\n            }\n            if (call.operation.startsWith('service-')) counts.service++;\n            if (provider === 'codex' && call.operation === 'write') {\n              job.wire += Buffer.from(call.bytes, 'base64').toString('utf8');\n              assert.ok(Buffer.byteLength(job.wire) <= 131072);\n              for (let end = job.wire.indexOf('\\n'); end >= 0; end = job.wire.indexOf('\\n')) {\n                const line = job.wire.slice(0, end); job.wire = job.wire.slice(end + 1);\n                const frame = object(JSON.parse(line));\n                // Only the original ephemeral boolean is retained, never stdin prompts/MCP credentials.\n                if (frame.method === 'thread/start') {\n                  const ephemeral = object(frame.params).ephemeral;\n                  assert.ok(ephemeral === undefined || typeof ephemeral === 'boolean');\n                  job.threadEphemeral.push(ephemeral === true);\n                }\n              }\n            }\n            return result;\n          } finally {\n            if (preparation) {\n              const jobSlot = jobs.findIndex(job => job.capability === call.capability), job = jobs[jobSlot];\n              console.log(JSON.stringify({ kind: 'TEST_SOURCE_PREPARATION', provider, mainEpoch: physical.mainEpoch,\n                jobSlot, phase: preparation.phase, elapsedMs: performance.now() - preparation.started,\n"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "firstLine": 290,
+        "lastLine": 314,
+        "text": "      async close() {\n        firstCloseEntryMs ??= performance.now() - phaseClock;\n        if (closed) return;\n        const failures: unknown[] = [];\n        try { projectionHostExit = (await client.shutdown()).childExit; } catch (error) { failures.push(error); }\n        try { assert.equal(await physical.close(), true); } catch (error) { failures.push(error); }\n        available = false;\n        for (const [jobSlot, job] of jobs.entries()) {\n          try {\n            console.log(JSON.stringify({ kind: 'TEST_SOURCE_CLEANUP', provider, mainEpoch: physical.mainEpoch,\n              jobSlot, source: job.origin ? sourceRef(job.origin) : null,\n              rootCaptured: job.root !== undefined, witnessCaptured: job.witness !== undefined,\n              resumed: job.resumed, stopped: job.stopped, drained: job.drained, released: job.released,\n              originalHandleAbsent: job.handleAbsent, custodyTimings: job.timings,\n              stagingTimings: job.stagingTimings, firstCloseEntryMs }));\n            assert.ok(job.root && job.witness && job.resumed && job.stopped && job.drained && job.released,\n              'Every original physical Job retains confirmed Stop/drain/release');\n            assert.equal(await job.witness.wait(), 0);\n            job.handleAbsent = true;\n          } catch (error) { failures.push(error); }\n        }\n        assert.equal(counts.service, 0, 'Source metadata/probes/standalone do not register Team services');\n        if (failures.length) throw new AggregateError(failures, 'TEST original source epoch cleanup incomplete');\n        closed = true;\n      },\n"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "firstLine": 470,
+        "lastLine": 485,
+        "text": "      // Original readiness observation starts once after the Start acknowledgement.\n      if (provider !== 'claude') memberReadinessDeadline = performance.now() + 15000;\n      let view: Record<string, unknown> = {};\n      const readiness = { source: sourceRef(source), image, launchId, readCount: 0, elapsedMs: 0,\n        lastRuntimeRead: null as Record<string, unknown> | null };\n      evidence.lastLaunchReadiness = readiness;\n      const readinessStarted = performance.now();\n      try {\n        await poll(async () => { view = await first.rpc(team, 'runtime.read', `TEST-ready-${image}`, { memberId: 'alice-id' });\n          try { lastRuntimeViewDigest = runtimeDigest(view); } catch { lastRuntimeViewDigest = undefined; }\n          Object.assign(readiness, { readCount: readiness.readCount + 1, elapsedMs: performance.now() - readinessStarted,\n            lastRuntimeRead: { viewDigest: lastRuntimeViewDigest ?? null, memberId: view.memberId, generation: view.generation, phase: view.phase,\n              sealed: view.sealed, custody: view.custody, nativeReady: view.nativeReady, attached: view.attached,\n              ...(view.diagnostic === undefined ? {} : { diagnostic: view.diagnostic }) } });\n          return view.nativeReady === true; }, 'Original source Team readiness',\n          undefined, memberReadinessDeadline);\n"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "firstLine": 712,
+        "lastLine": 742,
+        "text": "  } catch (error) { failure = error; }\n  finally {\n    const errors: unknown[] = [];\n    for (const epoch of epochs) try { await epoch.close(); } catch (error) { errors.push(error); }\n    try { effects(); for (const pin of fixture.pins) assert.equal(fileHash(pin.path), pin.sha256); }\n    catch (error) { errors.push(error); }\n    evidence.epochs = epochs.map(epoch => ({ mainEpoch: epoch.physical.mainEpoch, pending: epoch.pending,\n      serviceOperations: epoch.counts.service, firstCloseEntryMs: epoch.firstCloseEntryMs,\n      jobs: epoch.jobs.map(job => ({ capability: job.capability, stagingTimings: job.stagingTimings,\n        origin: job.origin ?? null, root: job.root ?? null, resumed: job.resumed, stopped: job.stopped,\n        drained: job.drained, released: job.released, originalHandleAbsent: job.handleAbsent,\n        entryStart: job.entryStart ?? null, entryEnd: job.entryEnd ?? null,\n        threadEphemeral: job.threadEphemeral })) }));\n    evidence.cleanup = errors.length === 0;\n    // Original Job/HANDLE cleanup above is mandatory; these are only gate-owned observer children.\n    for (const child of observedChildren) if (child.exitCode === null && child.signalCode === null) child.kill();\n    if (errors.length) failure = new AggregateError([...(failure ? [failure] : []), ...errors], 'TEST source scenario cleanup incomplete');\n    // TEST_RUNTIME_PROJECTION_READER_BEGIN\n    if (failure) try {\n      assert.equal(epochs.length, 1);\n      assert.equal(epochs[0]?.projectionHostExit, 'confirmed');\n      const stat = lstatSync(fixture.runtimeProjectionLedger);\n      assert.ok(stat.isFile() && !stat.isSymbolicLink() && stat.size <= 512);\n      const raw = readFileSync(fixture.runtimeProjectionLedger, 'utf8'); assert.ok(Buffer.byteLength(raw) <= 512);\n      const ledger = object(JSON.parse(raw)); assert.deepEqual(Object.keys(ledger).sort(), ['rows', 'status']);\n      assert.equal(ledger.status, 'observed'); assert.ok(Array.isArray(ledger.rows) && ledger.rows.length <= 4);\n      const digests = new Set<string>();\n      const records = ledger.rows.map((tuple: unknown) => {\n        assert.ok(Array.isArray(tuple) && tuple.length === 6);\n        const digest = text(tuple[0]); assert.match(digest, /^[a-f0-9]{64}$/); assert.equal(digests.has(digest), false); digests.add(digest);\n        assert.equal(typeof tuple[1], 'boolean'); assert.equal(typeof tuple[5], 'boolean');\n"
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+        "firstLine": 489,
+        "lastLine": 514,
+        "text": "\n  private receiveNative(value: unknown, frameBytes: number): void {\n    const receivedAt = performance.now(), parsed = hostCustodyRequestSchema.safeParse(value);\n    const binding = this.nativeBinding, port = this.nativePort;\n    if (!parsed.success || frameBytes > HOST_CUSTODY_FRAME_BYTES || !binding || !port ||\n      !sameHostCustodyBinding(parsed.data.params.binding, binding)) throw new Error('Native request');\n    const { id, params: { call, remainingMs } } = parsed.data;\n    const control = hostCustodyControl(call);\n    const sequence = hostCustodySequence(id, binding.hostIncarnation, control);\n    if (sequence === undefined) throw new Error('Native request ID');\n    const lane = control ? 'control' : 'work';\n    if (sequence <= this.nativeHighWatermark[lane]) { this.replyNative(id, { status: 'unknown' }); return; }\n    this.nativeHighWatermark[lane] = sequence;\n    const capacity = this.limits.maxPendingRequests - (control ? 0 : this.limits.reservedControlRequests);\n    if (this.nativePending.size >= capacity || (call.operation === 'read' &&\n      [...this.nativePending.values()].some(({ call: other }) =>\n        other.operation === 'read' && other.capability === call.capability && other.stream === call.stream))) {\n      this.replyNative(id, { status: 'refused' }); return;\n    }\n    const entry: NativeRequest = { call, deadline: receivedAt + remainingMs, reserved: false };\n    this.nativePending.set(id, entry);\n    entry.timer = setTimeout(() => {\n      if (this.nativePending.get(id) === entry && !entry.reserved && !entry.reply) {\n        entry.reply = { status: 'refused' }; this.pumpNative();\n      }\n    }, Math.max(0, entry.deadline - performance.now()));\n"
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+        "firstLine": 561,
+        "lastLine": 579,
+        "text": "    } catch { this.fail(new HostClientError('transport-closed', 'unknown')); }\n    finally {\n      this.nativePumping = false;\n      if (!this.sealed) { this.pumpNativeHints(); this.nativePort?.resumeReadable?.(); }\n    }\n  }\n\n  private async executeNative(id: string, entry: NativeRequest, port: HostCustodyPort): Promise<void> {\n    const remaining = Math.floor(entry.deadline - performance.now());\n    if (remaining <= 0) { entry.reply = { status: 'refused' }; this.pumpNative(); return; }\n    const original = entry.call;\n    const call: HostCustodyCall = 'budgetMs' in original ? { ...original,\n      budgetMs: Math.min(original.budgetMs, remaining) } : original;\n    let reply: HostCustodyReply;\n    try { reply = { status: 'completed', value: validateHostCustodyResult(call, await port.handle(call)) }; }\n    catch { reply = { status: 'unknown' }; }\n    if (this.sealed || this.nativePending.get(id) !== entry) return;\n    entry.reply = reply;\n    this.pumpNative();\n"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/owned-process/RetainedWindowsCustody.ts",
+        "firstLine": 352,
+        "lastLine": 380,
+        "text": "      case 'prepare':\n        allocation.preparation ??= this.prepare(allocation);\n        await allocation.preparation;\n        this.input(attached, allocation);\n        return { operation: call.operation, root: { ...allocation.prepared!.root } };\n      case 'launch-commit':\n        this.commit(allocation);\n        return { operation: call.operation, state: 'committed' };\n      case 'resume':\n        if (!allocation.prepared || !allocation.spec) unavailable();\n        allocation.resumption ??= allocation.prepared\n          .resume(allocation.pending.owner, async () => {\n            this.input(attached, allocation);\n            await this.options.verifyLaunch(\n              allocation.spec!,\n              allocation.call.executableSha256,\n              allocation.selection,\n              { capability: allocation.call.capability, phase: 'resume', runtimeSourceOrigin: allocation.call.runtimeSourceOrigin }\n            );\n            this.input(attached, allocation);\n          })\n          .then(() => {\n            this.input(attached, allocation);\n            allocation.running = true;\n            clearTimeout(allocation.timer);\n          });\n        await allocation.resumption;\n        this.input(attached, allocation);\n        return { operation: call.operation, state: 'running' };\n"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/owned-process/windowsBroker.ts",
+        "firstLine": 473,
+        "lastLine": 500,
+        "text": "  async resume(expectedOwner: ProcessOwner, installOwner: () => Promise<void>): Promise<void> {\n    if (\n      !sameOwner(this.owner, expectedOwner) ||\n      this.sealed ||\n      this.resumeStarted ||\n      !this.rootIdentity\n    ) {\n      throw new Error('Resume ownership unavailable');\n    }\n    this.resumeStarted = true;\n    try {\n      await installOwner();\n      if (this.sealed || this.transportFailure)\n        throw new Error('Resume sealed during owner installation');\n      this.creation = 'uncertain'; // dispatch may resume natively before its acknowledgement arrives\n      const frame = await this.request(\n        Op.resume,\n        Op.resumed,\n        Buffer.alloc(0),\n        performance.now() + 5000\n      );\n      if (frame.payload.length) throw new Error('Invalid resume acknowledgement');\n      this.creation = 'running';\n    } catch (error) {\n      this.sealed = true;\n      throw error;\n    }\n  }\n"
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts",
+        "firstLine": 84,
+        "lastLine": 111,
+        "text": "  );\n  const owner = new RetainedWindowsCustody({\n    profileId: profile.profileId,\n    profileDigest: capturedHostProfileDigest(profile),\n    selectBroker: (reference) => brokers.get(reference) ?? unavailable(),\n    async verifyLaunch(spec, executableSha256, broker, admission) {\n      // A changed source refuses new work without discarding original cleanup capabilities.\n      readCapturedProfile(path, sha256);\n      const originalRecipe = admission.runtimeSourceOrigin === undefined ? recipes.find(({ profile: value, launcher }) =>\n        launcher.executable.sha256 === executableSha256 &&\n        matchesCapturedWindowsLauncher(launcher, spec) && value.windowsBroker &&\n        windowsBrokerReference(value.windowsBroker) === windowsBrokerReference(broker)) : undefined;\n      const selectedRecipe: WindowsSourceLaunchSelection | undefined = originalRecipe\n        ? { ...originalRecipe, assertCurrent: assertOriginal }\n        : sources?.select(spec, executableSha256, broker, admission);\n      if (!selectedRecipe) unavailable();\n      selectedRecipe.assertCurrent();\n      if ((await realpath(spec.cwd)) !== spec.cwd || !(await stat(spec.cwd)).isDirectory())\n        unavailable();\n      await verifyFile(broker.path, broker.sha256, true);\n      verifyStagedBroker(broker.path, broker.arch, broker.capability ?? 'whole-job-v1');\n      for (const file of selectedRecipe.launcher.files) await verifyFile(file.path, file.sha256, false);\n      selectedRecipe.assertCurrent();\n      readCapturedProfile(path, sha256);\n    },\n  });\n  if (sources) bindMainWindowsRuntimeSources(owner, sources);\n  return owner;\n"
+      }
+    ],
+    "unknownSemantics": "HostWindowsLaunch.request maps closed status unknown to the retained reason; HostCustodyClient can produce that status through a dispatched-request timeout, a synchronous send exception, an accepted unknown response, or sealing pending work. Pre-admission deadline/build refusal instead returns refused. The retained unknown does not choose among those branches.",
+    "physicalHandler": "Scenario wrapper increments calls on entry, returned only after awaited original.handle succeeds, and settled in finally. Main resume calls1/settled1/returned0 therefore proves rejection of that physical-handler await, not the thrown operand or a completed native resume.",
+    "resumeSource": "The original retained Windows resume includes owner/input/currentness guards, fresh verifyLaunch checks and a native resume request. Close/seal can interact with in-flight work; the raw data does not select a specific check, transport result or timing cause.",
+    "selectedRepair": null
+  },
+  "sameMainClockOrdering": {
+    "basis": "Every value below is an original performance.now sample minus the same Main epoch phaseClock in Scenario179/198–211/291. These are not mixed Date and performance clocks.",
+    "resumeStartMs": 25048.242,
+    "firstCloseEntryMs": 25112.7464,
+    "stopStartMs": 25332.0145,
+    "stopEndMs": 25349.9825,
+    "resumeThrownSettlementMs": 25361.194199999998,
+    "resumeDurationMs": 312.9521999999997,
+    "firstCloseAfterResumeStartMs": 64.5044,
+    "resumeEndAfterFirstCloseMs": 248.4478,
+    "physicalStopCompletedBeforeResumeSettlement": true,
+    "implication": "Main resume remained in flight when original failure cleanup began, and original Stop completed before that await threw. This failed settlement cannot alone be treated as the cause of the preceding readiness cutoff. The first-refusal row lacks its own timestamp, so its Host-local publication may not be placed before or after the cutoff from this evidence."
+  },
+  "orderingQualification": "The original Main resume was in flight when failure cleanup began, and original physical Stop completed before that resume await settled by throwing. That late failed settlement cannot alone be named the cause of the preceding readiness cutoff. The untimestamped Host first-refusal row cannot be placed before or after that cutoff from these observations.",
+  "custody": {
+    "mainEpoch": "becd3169-4e83-44ab-a690-7787ff877b60",
+    "pending": {
+      "admitted": 1,
+      "revoked": 1
+    },
+    "serviceOperations": 0,
+    "jobs": [
+      {
+        "slot": 0,
+        "root": {
+          "pid": 860,
+          "birth": "01dd75a7961d891c"
+        },
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "entryStart": 0,
+        "entryEnd": 1,
+        "threadEphemeral": []
+      },
+      {
+        "slot": 1,
+        "root": {
+          "pid": 1868,
+          "birth": "01dd75a7985109ad"
+        },
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "entryStart": 1,
+        "entryEnd": 2,
+        "threadEphemeral": []
+      },
+      {
+        "slot": 2,
+        "root": {
+          "pid": 10804,
+          "birth": "01dd75a79acfc85b"
+        },
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "entryStart": 2,
+        "entryEnd": 3,
+        "threadEphemeral": []
+      },
+      {
+        "slot": 3,
+        "root": {
+          "pid": 5560,
+          "birth": "01dd75a79c87346e"
+        },
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "entryStart": 3,
+        "entryEnd": 6,
+        "threadEphemeral": [
+          false
+        ]
+      },
+      {
+        "slot": 4,
+        "root": {
+          "pid": 8024,
+          "birth": "01dd75a79e55cae5"
+        },
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "entryStart": 4,
+        "entryEnd": 5,
+        "threadEphemeral": []
+      },
+      {
+        "slot": 5,
+        "root": {
+          "pid": 7148,
+          "birth": "01dd75a7a095092f"
+        },
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "entryStart": 5,
+        "entryEnd": 6,
+        "threadEphemeral": []
+      },
+      {
+        "slot": 6,
+        "root": {
+          "pid": 4048,
+          "birth": "01dd75a7a27aa0ba"
+        },
+        "resumed": false,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "entryStart": 6,
+        "entryEnd": 6,
+        "threadEphemeral": []
+      }
+    ],
+    "lastBeforeWaitRow": {
+      "kind": "TEST_SOURCE_CLEANUP",
+      "provider": "codex",
+      "mainEpoch": "becd3169-4e83-44ab-a690-7787ff877b60",
+      "jobSlot": 6,
+      "source": {
+        "sourceId": "f1061a2fe270877fa746ef1a51cfa5841c3db234bfbc287cdbfc597216602b1a",
+        "revision": "17634b481fcbc56acc07e0fe390e86dc43b811d48c0a997cf74cbd4f0495ac7f"
+      },
+      "rootCaptured": true,
+      "witnessCaptured": true,
+      "resumed": false,
+      "stopped": true,
+      "drained": true,
+      "released": true,
+      "originalHandleAbsent": false,
+      "custodyTimings": {
+        "allocate": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 0.27639999999883,
+          "firstStartMs": 24189.2375,
+          "lastEndMs": 24189.513899999998
+        },
+        "prepare": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 342.22290000000066,
+          "firstStartMs": 24327.450399999998,
+          "lastEndMs": 24669.6733
+        },
+        "resume": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 0,
+          "totalMs": 312.9521999999997,
+          "firstStartMs": 25048.242,
+          "lastEndMs": 25361.194199999998
+        },
+        "stop": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 17.96799999999712,
+          "firstStartMs": 25332.0145,
+          "lastEndMs": 25349.9825
+        },
+        "drain": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 0.0768000000025495,
+          "firstStartMs": 25392.7073,
+          "lastEndMs": 25392.7841
+        },
+        "release": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 2.4431000000004133,
+          "firstStartMs": 25394.4465,
+          "lastEndMs": 25396.8896
+        }
+      },
+      "stagingTimings": {
+        "launch-chunk": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 0.07790000000022701,
+          "firstStartMs": 24245.2808,
+          "lastEndMs": 24245.3587
+        },
+        "launch-commit": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 0.41849999999976717,
+          "firstStartMs": 24264.4633,
+          "lastEndMs": 24264.8818
+        }
+      },
+      "firstCloseEntryMs": 25112.7464
+    },
+    "scenarioCleanup": false,
+    "outerGateCleanup": true,
+    "mandatoryWitnessLimit": "For slot6 root4048/birth01dd75a7a27aa0ba the cleanup conjunction rejects resumed:false before the required original witness.wait. Its originalHandleAbsent:false is an unfinished mandatory confirmation, not an observed live root or a failed absent-witness result. Earlier passive rows are printed before wait and cannot replace the later final confirmed bits for slots0..5.",
+    "finiteEntryLimit": "Slot6 retains entryStart6/entryEnd6; no entry advance is retained. This does not identify execution of a catalog/provider stage. Other entry counts are not catalog-success proof.",
+    "errorPreservation": "The original readiness AssertionError is preserved as the first nested AggregateError member; incomplete original source-epoch cleanup remains an additional failure. It is not hidden by the outer cleanup flag.",
+    "outerAccounting": "Outer provider gate cleanup:true is the separately implemented sentinel/controller cleanup. Original source controller drained with rootExit1/active0 and wrapper exit104 are retained; neither completes missing per-root mandatory custody nor promotes the source scenario to PASS."
+  },
+  "authorAssessmentConclusion": "No source-specific cause or safe repair is established. No required currentness/file check, deadline, Stop, native receipt or catalog oracle may be removed on this evidence. The author audit and ARM/shared-source assessment are accepted within their explicit evidence boundaries.",
+  "limits": [
+    "This is actual source72e ARM evidence only; unrelated historical x64/E1/E2 results, current followup geometry/copy changes and future Models/P11 stages are not qualified.",
+    "There is no original Codex Team-B or standalone completion proof after the failed Team-A readiness and no original Claude/OpenCode source A/B execution in this job.",
+    "Real-provider execution, Desktop qualification and release qualification remain false in the original receipts.",
+    "Compiled native binaries, installed Node and private generated full profile/peer ledgers are not all archived. Current source hashes plus original build/pin logs are not an independent binary rebuild or full payload census.",
+    "No original raw file, author report or source was modified. Reader-only skip-reason parsing correction is retained separately and is not a project/CI failure.",
+    "No network API polling, original re-fetch, project execution, installation, native/provider invocation, source/ref change or CI action was performed for this independent review."
+  ]
+}

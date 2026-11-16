@@ -1,0 +1,31 @@
+{
+  "kind": "original-official-artifact-byte-retention-only",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "jobId": 133178912777,
+  "runId": 43831885807,
+  "artifactId": 14211070806,
+  "archive": {
+    "bytes": 297362,
+    "blob": "a40097fd89dc374dc2ce0b4155c35430d503c3ce",
+    "sha256": "dee2f72593c18a0655c3374cc22dd07f397b1b3fd1b41c6e3cf275538096635f"
+  },
+  "members": [
+    {
+      "name": "host-offline-tests-3.json",
+      "bytes": 2190351,
+      "blob": "3253c7541c72b637e8d2627dab80f6f75ed5154e",
+      "sha256": "703c92341feecc6652321d5a8a9bcc2bdf889296b29822f1c434d6adb3880dba",
+      "crc32": "ddbd6bfc"
+    },
+    {
+      "name": "host-offline-tests-3.log",
+      "bytes": 95556,
+      "blob": "d89e8ce42c948a3ee34bc393f0dc75dd9883d82a",
+      "sha256": "17c00a4bac12e96cb7698eec7b1893399a32a020bdbe4cd8977524d4d8c4c702",
+      "crc32": "64b6d9a6"
+    }
+  ],
+  "allSafeUniqueNonSymlinkCrc": true,
+  "semanticQualificationPending": true,
+  "signedUrlsRetained": false
+}

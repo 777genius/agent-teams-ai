@@ -1,0 +1,935 @@
+{
+  "kind": "E3_MACOS_CREATION_INDEPENDENT_BYTE_SOURCE_PROOF",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "sourceTree": "de80fbfbffb3fe4daabf6cc9be258cc8df534524",
+  "originalCheckpoint": {
+    "path": "ci-72e6ec/creation-macos/checkpoint.json",
+    "bytes": 3016,
+    "gitBlob": "b18418a326deb78d5bf60d96910ba13115685955",
+    "sha256": "ac42555cc450724e88032acabe4d2a688d79860e4700d8cf34b2d9f2520ab6b5"
+  },
+  "payloads": [
+    {
+      "path": "ci-72e6ec/creation-macos/job.log",
+      "bytes": 66388,
+      "gitBlob": "be8e37438f24a2e6288a6a24be27fd181a671ff7",
+      "sha256": "49070d538c8377d29c7d16a30071c5fda6be17413f6bd4de3679fea22f004122"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/job-original-response.json",
+      "bytes": 67680,
+      "gitBlob": "a21d2b98b8d029f4112983830089431e69619882",
+      "sha256": "6b9a15d8e648247ed30a9bef09a198987ac9a2c4dd03c841d2a8576902db37bb"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/artifact-14209557495.zip",
+      "bytes": 1446976,
+      "gitBlob": "6f5c74644f617090031d218c385236835c2dec85",
+      "sha256": "4e991a16c17dec8b2bffe6632c1236f1badb90105c97feb3ca94535e09fdcb8e"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/archive-retention.json",
+      "bytes": 7666,
+      "gitBlob": "21ab2ddfe32dc6c2e61bbc8d6709ce19c2ff3853",
+      "sha256": "c6a329a849703ae7e4faea684c579bb8b98335a7cba6661e5da5cd1ef02e8600"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/audit.json",
+      "bytes": 24388,
+      "gitBlob": "1a3c1c2053b4d730f63ab5b5bbf05a8954d55d28",
+      "sha256": "f11d5c8d5a7a18931d31b7fb3b1c9cc2e31248098b3934b42186cee617b46688"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/source-proof.json",
+      "bytes": 25770,
+      "gitBlob": "2d6d91f0d57bb0720e30651e3ded621376e65a3c",
+      "sha256": "8285c84cacb0fd622695477e6b8107269c6cf576091c0280fe3b0461c5df75c6"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/Plan29-appendix.md",
+      "bytes": 5799,
+      "gitBlob": "615619b96184255342b95c18181e4026bd4057d5",
+      "sha256": "d26364504140b92e1301a7f08787d5fd72163936417b09ba3346575b57fa8ab8"
+    },
+    {
+      "path": "ci-72e6ec/initial-owned-api-0838.json",
+      "bytes": 16047,
+      "gitBlob": "fc4b4f307abfd89adec13369792f3d18e9919c81",
+      "sha256": "d8296131bde0b8ed78e9db43e094c3862f96e1afd6e27338d6f24d3f03c597e8"
+    },
+    {
+      "path": "ci-72e6ec/owned-jobs-0843.json",
+      "bytes": 17325,
+      "gitBlob": "f286078787dc6d34a957e173f0a1abc4d7781032",
+      "sha256": "e0d087967710036e0c36f79d808a77962af8c0df2a2ced06a5115fb58b51c07a"
+    },
+    {
+      "path": "ci-72e6ec/creation-artifacts-0843.json",
+      "bytes": 2030,
+      "gitBlob": "e4629f2b92fd949cb489660315783cec4645bf6f",
+      "sha256": "b4a36ffd46c82487ba4b11bb63a3ac02501ae286a14de653ad6fccdae3d83707"
+    }
+  ],
+  "payloadCount": 10,
+  "totalBytes": 1680069,
+  "fullMcpRawUtf8Exact": true,
+  "originalRawLines": 788,
+  "originalTerminalJob": {
+    "id": 133178909700,
+    "name": "Creation page (macos-latest)",
+    "status": "completed",
+    "conclusion": "failure",
+    "run_id": 43831885626,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 2
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Prepare Linux virtual display and zh-TW font fallback",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 6
+      },
+      {
+        "name": "Install frozen dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build isolated Host before Electron startup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Stage pinned terminal-platform runtime before Electron startup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Ensure Electron binary before UI E2E",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Verify owned Windows process census and fail-closed teardown invariants",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Exercise actual Electron Create/Back/Resume/Copy/Launch",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 12
+      },
+      {
+        "name": "Upload sanitized evidence",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 24
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 25
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 26
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 27
+      }
+    ]
+  },
+  "originalInitialJob": {
+    "id": 133178909700,
+    "name": "Creation page (macos-latest)",
+    "status": "in_progress",
+    "conclusion": null,
+    "run_id": 43831885626,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 2
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Prepare Linux virtual display and zh-TW font fallback",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 6
+      },
+      {
+        "name": "Install frozen dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build isolated Host before Electron startup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Stage pinned terminal-platform runtime before Electron startup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Ensure Electron binary before UI E2E",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Verify owned Windows process census and fail-closed teardown invariants",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Exercise actual Electron Create/Back/Resume/Copy/Launch",
+        "status": "in_progress",
+        "conclusion": null,
+        "number": 12
+      },
+      {
+        "name": "Upload sanitized evidence",
+        "status": "pending",
+        "conclusion": null,
+        "number": 13
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "pending",
+        "conclusion": null,
+        "number": 24
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "pending",
+        "conclusion": null,
+        "number": 25
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "pending",
+        "conclusion": null,
+        "number": 26
+      }
+    ]
+  },
+  "officialArtifact": {
+    "id": 14209557495,
+    "name": "teams-create-page-macos-latest-72e6ec04444969d343d73834c70bc4e261100fc9",
+    "size_in_bytes": 1446976,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14209557495",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14209557495/zip",
+    "expired": false,
+    "created_at": "2026-11-16T08:41:57Z",
+    "expires_at": "2026-11-30T08:41:56Z",
+    "updated_at": "2026-11-16T08:41:57Z",
+    "digest": "sha256:4e991a16c17dec8b2bffe6632c1236f1badb90105c97feb3ca94535e09fdcb8e",
+    "workflow_run": {
+      "id": 43831885626,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "72e6ec04444969d343d73834c70bc4e261100fc9"
+    }
+  },
+  "zipMembers": [
+    {
+      "path": "teams-create-config-only-created.png",
+      "bytes": 32034,
+      "gitBlob": "d45dc32601ba53a73b41ae46b7c8d71b348db05a",
+      "sha256": "1125d2e18f05ab9a7943d32d5a58cc56e805f143ff544b0a93130770310f338e",
+      "crc32": "190082d4",
+      "dimensions": [
+        1024,
+        674
+      ]
+    },
+    {
+      "path": "teams-create-copy-resumed-edits.png",
+      "bytes": 62430,
+      "gitBlob": "7eb1528b294f3abdbcdbf6bbe61e2a46ad4757a7",
+      "sha256": "a1761fa08186db6527ad6f14dc3682f12565cbdad222be9b77f3ebebdfbd3bb2",
+      "crc32": "1d830c7b",
+      "dimensions": [
+        1024,
+        674
+      ]
+    },
+    {
+      "path": "teams-create-css-zoom-200.png",
+      "bytes": 52588,
+      "gitBlob": "39f94cb6132759bf4203fcb49ee18fa49e74245b",
+      "sha256": "7229e702ab48c495c9a18fbe2fdd8b2fa4f903b0fe4c944c4f16f102d0615ec3",
+      "crc32": "208fe708",
+      "dimensions": [
+        1024,
+        677
+      ]
+    },
+    {
+      "path": "teams-create-edited.png",
+      "bytes": 62564,
+      "gitBlob": "a55d715dadfe9d4435fc451f8e4d597a008ac35b",
+      "sha256": "2ef2295c9156050f5b8d68477d2fe72c2ee58fd844da8c14bc8336c5418bf015",
+      "crc32": "42fd98f8",
+      "dimensions": [
+        1024,
+        677
+      ]
+    },
+    {
+      "path": "teams-create-failure.png",
+      "bytes": 64167,
+      "gitBlob": "a8933df3a3c8ac00a90aaaed2e5cad66b975ee2e",
+      "sha256": "f2dda383a2bde2c59935f39e8b214c2d41f0d5d001584d41c7ae1ab33c5176c1",
+      "crc32": "5141dd09",
+      "dimensions": [
+        1024,
+        674
+      ]
+    },
+    {
+      "path": "teams-create-launch-controls-loaded.png",
+      "bytes": 75880,
+      "gitBlob": "c588fdcbfd7db8b2cd6b5826df885cfef95915ac",
+      "sha256": "c748895808abec1486b1e79be16db54fd46a90e53292c676447e902fff6f0fe7",
+      "crc32": "48480a93",
+      "dimensions": [
+        1024,
+        674
+      ]
+    },
+    {
+      "path": "teams-create-launch-still-modal.png",
+      "bytes": 68669,
+      "gitBlob": "a1a5fffb5e0b07c73813290c4de72527c388d281",
+      "sha256": "bb2a6222b6219c73c4bc3ac286b470f3c0e88071433f8cdcc5fe85bc63af46aa",
+      "crc32": "21964156",
+      "dimensions": [
+        1024,
+        674
+      ]
+    },
+    {
+      "path": "teams-create-missing-cli-value-validated.png",
+      "bytes": 70642,
+      "gitBlob": "81189443e423ac6ea1c3867dfabd551212f76701",
+      "sha256": "422a46c6d51e9918eee8a51057f80c4320a53deda20bf75836ae5f1c7e67f76f",
+      "crc32": "7efc6b91",
+      "dimensions": [
+        1024,
+        674
+      ]
+    },
+    {
+      "path": "teams-create-native-electron-zoom-200.png",
+      "bytes": 53463,
+      "gitBlob": "2926c6f9ab01f7521da40bd8c344df8af496342b",
+      "sha256": "22e24eec132976437a9714a02bcb331be74f7a2d0d2a727045596919bb235e06",
+      "crc32": "07e7b03f",
+      "dimensions": [
+        1024,
+        677
+      ]
+    },
+    {
+      "path": "teams-create-opened.png",
+      "bytes": 57050,
+      "gitBlob": "d5af1c14d95df879a334fb283dab9dfa37f68cb1",
+      "sha256": "4f14157447c1b4f2395bc98439e9ee7a70237c6f21bb72011e97260874cca7ce",
+      "crc32": "24c64410",
+      "dimensions": [
+        1024,
+        677
+      ]
+    },
+    {
+      "path": "teams-create-organization-created.png",
+      "bytes": 36976,
+      "gitBlob": "e69116c7429c05278a7d158f08076591f84f2b29",
+      "sha256": "3eb026bc891285de59469e55d9d6be393667ed0d6d81556c7ed3d8d78fcc29d2",
+      "crc32": "e0714e12",
+      "dimensions": [
+        1024,
+        674
+      ]
+    },
+    {
+      "path": "teams-create-organization-entry.png",
+      "bytes": 64468,
+      "gitBlob": "3a55a996c4f8d6361025c45892c662af5fa3960d",
+      "sha256": "c62b3a39b50945d1cf2666e247d3520bf86f7294ac7e3a71d90a395c8a81fdc5",
+      "crc32": "25d962a1",
+      "dimensions": [
+        1024,
+        674
+      ]
+    },
+    {
+      "path": "teams-create-provider-refreshed.png",
+      "bytes": 59889,
+      "gitBlob": "1397d3d362bb93d24267e94d2dbf65de1f838565",
+      "sha256": "4848c6aee89ce9365ab3b1ecb68350dce112201491ced8e3d5c100ece1035946",
+      "crc32": "b2ddf794",
+      "dimensions": [
+        1024,
+        677
+      ]
+    },
+    {
+      "path": "teams-create-restarted.png",
+      "bytes": 58920,
+      "gitBlob": "83ed0c3b70b9d28104aa9ff51b88b9c5672973c6",
+      "sha256": "fd99104b29378dd7f56bd26875f0f40d834a9c8b8c4916d3ff348577e809d0a2",
+      "crc32": "38f2544d",
+      "dimensions": [
+        1024,
+        674
+      ]
+    },
+    {
+      "path": "teams-create-resumed.png",
+      "bytes": 79075,
+      "gitBlob": "03b530305c8242fa9486b9e948bfcb77d0107de7",
+      "sha256": "12eba479a3d6900e36255f927723a830ba0f04a0cb7004367c959638e0645442",
+      "crc32": "94941549",
+      "dimensions": [
+        1024,
+        677
+      ]
+    },
+    {
+      "path": "teams-create-save-rejected.png",
+      "bytes": 48792,
+      "gitBlob": "85d1266a289df2039215ad16b06812385a6c29bb",
+      "sha256": "c42714b6204fd27f24899cbe5da7dbfddcca0c568a70d2945842129aeacf9d3f",
+      "crc32": "732119ee",
+      "dimensions": [
+        1024,
+        674
+      ]
+    },
+    {
+      "path": "teams-create-schedules-editor-opened.png",
+      "bytes": 61828,
+      "gitBlob": "0b365e4ff0d45ea2b92ec2cb2c1f57d15d4d4164",
+      "sha256": "b2c61f2b066e63c4a24bb125e5501c5f4b7316f5d1a50a169b875ee74313d484",
+      "crc32": "9ffc5e12",
+      "dimensions": [
+        1024,
+        674
+      ]
+    },
+    {
+      "path": "teams-create-schedules-pristine-submit-validation.png",
+      "bytes": 56804,
+      "gitBlob": "3df69e5b2ca43496ef651ac1c72ad80a6dc45f83",
+      "sha256": "3c0be09a39d02f29f48bd5cd8124ddac298dc30d17243a039146442a2b58bf1c",
+      "crc32": "480538f7",
+      "dimensions": [
+        1024,
+        674
+      ]
+    },
+    {
+      "path": "teams-create-split-pane.png",
+      "bytes": 97959,
+      "gitBlob": "cee05b9ecb4df6b64ccb02f9b8eb53db7b8a78ae",
+      "sha256": "b91130b67b592d3792095a265b55981743702239c3ba695cb591f1cf6442d00d",
+      "crc32": "7b9aba59",
+      "dimensions": [
+        1024,
+        677
+      ]
+    },
+    {
+      "path": "teams-create-teammate-mode-override.png",
+      "bytes": 71224,
+      "gitBlob": "5ae1a38381103beb7a3e1962a8224145aaed2658",
+      "sha256": "6c75d26491c63469212de86d6498f1199459ca8907766e909ba96ee0083a9147",
+      "crc32": "04a3c05f",
+      "dimensions": [
+        1024,
+        674
+      ]
+    },
+    {
+      "path": "teams-create-teammate-mode-validated.png",
+      "bytes": 72376,
+      "gitBlob": "365f8759acd409a55ed4ad6deb6afd51d38dc9ff",
+      "sha256": "7b5b87a7734e5bd0e3b35e7a93c3beeb5733132bc9fd6222fdd15e0fe74d768f",
+      "crc32": "874ffa59",
+      "dimensions": [
+        1024,
+        674
+      ]
+    },
+    {
+      "path": "teams-create-template-confirmed.png",
+      "bytes": 75300,
+      "gitBlob": "b351aef59f48b5e2eec66c55ad9cf23f5145b957",
+      "sha256": "ff91651e56dca0f6e02d02b445dabec306ef189d4ab2cbf184b8734c3fa6431c",
+      "crc32": "3a190c6b",
+      "dimensions": [
+        1024,
+        674
+      ]
+    },
+    {
+      "path": "teams-create-theme-dark.png",
+      "bytes": 63935,
+      "gitBlob": "42ee7b9d32099b8dfbb12f272bcb6870c2c481cd",
+      "sha256": "ebe7725947cc105a9999dc57358fb11b0dab2e06cfc049224c8bc7df83db6543",
+      "crc32": "2c7e5f34",
+      "dimensions": [
+        1024,
+        677
+      ]
+    },
+    {
+      "path": "teams-create-theme-light.png",
+      "bytes": 62183,
+      "gitBlob": "7216fa65be09cbdd3d3cfa9140a93af4965dd963",
+      "sha256": "acb66203064806735815f7128bc2ffbd5cbf7c4db7e3e3bbd887787f2c4e7b57",
+      "crc32": "d9924c7e",
+      "dimensions": [
+        1024,
+        677
+      ]
+    }
+  ],
+  "allSafeUniqueNonSymlinkCRCAndExtractedBytesExact": true,
+  "freshGitFiles": [
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "bytes": 6522,
+      "gitBlob": "72c1a8f760a99c53ce7d279c7bb9d5e3ddaa7298",
+      "sha256": "3cb53bb19e4ee77c51947c5ce39fa4efb8cccbcaa648c6da0293129c92effdaa",
+      "byteIdenticalTo578": true
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-desktop.mjs",
+      "bytes": 103360,
+      "gitBlob": "764d42763c8eab6592235acf75073253538cfe38",
+      "sha256": "e1c09e6efffa777bd7f042c813f49cb93d20957d07bed45582474a2930312c1e",
+      "byteIdenticalTo578": true
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-owned-processes.mjs",
+      "bytes": 1349,
+      "gitBlob": "d73d56bdbc40e3abc70b53ad5db1690c53ed4c5a",
+      "sha256": "4acd26c18441682b134edc480b6659c72f9033904bf5b1110d73285f2f65bc69",
+      "byteIdenticalTo578": true
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-owned-processes.test.mjs",
+      "bytes": 1404,
+      "gitBlob": "d3779ede535583c88f81fa5e747d008f45863c48",
+      "sha256": "67c040e8c87f11ce09ce56d3dfe2734bc6f352c0dc170073fa4861ee2794938a",
+      "byteIdenticalTo578": true
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "bytes": 132317,
+      "gitBlob": "4bd95a0f2e5636a21d1f0d83dd45f228b054b048",
+      "sha256": "af7b6f9da352008ef014dad120b868090626e071cd5d94037fd03385e2234d40",
+      "byteIdenticalTo578": true
+    },
+    {
+      "path": "src/renderer/components/team/schedule/HistoricalPromptReview.tsx",
+      "bytes": 1479,
+      "gitBlob": "b16e01839622d05065ed727b79f9a2d2e5fdffa4",
+      "sha256": "0e031cc543df222044ddf56d7e452eee5350ad85d0f3126cc719ac6bad693392",
+      "byteIdenticalTo578": true
+    },
+    {
+      "path": "src/renderer/components/team/schedule/useSavedPromptReview.ts",
+      "bytes": 1342,
+      "gitBlob": "d19cfb5fecd85630af7e381c2aaac7b5429b2612",
+      "sha256": "063384266f95242e78f445d96c0e2deb7aef43d97c31c468f1117e7ae992bd86",
+      "byteIdenticalTo578": true
+    },
+    {
+      "path": "src/renderer/components/ui/combobox.tsx",
+      "bytes": 7533,
+      "gitBlob": "b441f61b4f9ff3e31bec1ca1ed78b3933499d2ae",
+      "sha256": "494b52828660b0cd7ae06bab143a8c3b4d0949176fc61b5fa7762131cdb5b21e",
+      "byteIdenticalTo578": true
+    }
+  ],
+  "allEightEqual578": true,
+  "sourceBindings": [
+    {
+      "path": "scripts/e2e/teams-create-page-desktop.mjs",
+      "firstLine": 437,
+      "lastLine": 488,
+      "text": "        response.exceptionDetails.exception?.description ?? 'Renderer evaluation failed'\n      );\n    }\n    return response.result.value;\n  }\n\n  async waitFor(expression, label, timeoutMs = 30_000) {\n    const deadline = Date.now() + timeoutMs;\n    let lastTransientError = null;\n    while (Date.now() < deadline) {\n      try {\n        if (await this.evaluate(`Boolean(${expression})`)) return;\n        lastTransientError = null;\n      } catch (error) {\n        if (\n          !/execution context was destroyed|cannot find (?:default )?execution context/i.test(\n            String(error)\n          )\n        ) {\n          throw error;\n        }\n        lastTransientError = error;\n      }\n      await new Promise((resolve) => setTimeout(resolve, 80));\n    }\n    throw new Error(\n      `Timed out waiting for ${label}${lastTransientError ? `: ${String(lastTransientError)}` : ''}`\n    );\n  }\n\n  async click(expression) {\n    await this.waitFor(expression, expression);\n    const target = await this.evaluate(`(() => {\n      const element = ${expression};\n      if (!element || element.disabled) return null;\n      element.scrollIntoView({ block: 'center', inline: 'nearest' });\n      const rect = element.getBoundingClientRect();\n      return rect.width > 0 && rect.height > 0\n        ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }\n        : null;\n    })()`);\n    assert(target, `Missing/disabled/hidden E2E click target: ${expression}`);\n    await this.send('Input.dispatchMouseEvent', {\n      type: 'mousePressed', x: target.x, y: target.y, button: 'left', clickCount: 1,\n    });\n    await this.send('Input.dispatchMouseEvent', {\n      type: 'mouseReleased', x: target.x, y: target.y, button: 'left', clickCount: 1,\n    });\n  }\n\n  async fill(selector, value) {\n    const expression = `document.querySelector(${JSON.stringify(selector)})`;\n",
+      "freshGitExact": true
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-desktop.mjs",
+      "firstLine": 590,
+      "lastLine": 682,
+      "text": "async function cleanup(fixture) {\n  if (cdp) {\n    try {\n      cdp.close();\n    } catch {\n      // already gone\n    }\n    cdp = null;\n  }\n  if (appProcessGroupId && process.platform !== 'win32') {\n    try {\n      process.kill(-appProcessGroupId, 'SIGKILL');\n    } catch {\n      appProcess?.kill('SIGKILL');\n    }\n    if (!(await waitForProcessGroupExit(appProcessGroupId, 4_000))) {\n      throw new Error('Disposable Electron process group is still present after teardown');\n    }\n  } else if (appProcess?.pid && process.platform === 'win32') {\n    // taskkill can return nonzero after a normal launcher exit. Do not accept\n    // either its exit status OR launcher absence as proof the Electron tree died.\n    const launcher = windowsOwnedHistory[0];\n    assert(launcher?.pid === appProcess.pid && launcher.birth,\n      'Disposable Windows launcher identity was not pinned');\n    let current = processes();\n    const currentLauncher = current.find((value) => value.pid === launcher.pid);\n    assert(!currentLauncher || currentLauncher.birth === launcher.birth,\n      'Disposable Windows launcher PID was reused; refusing taskkill');\n    let history = extendOwnedHistory(windowsOwnedHistory, current);\n    let taskkillExitCode = null;\n    if (currentLauncher) {\n      taskkillExitCode = await new Promise((resolve, reject) => {\n        const killer = spawn('taskkill', ['/PID', String(launcher.pid), '/T', '/F'], {\n          windowsHide: true, stdio: 'ignore',\n        });\n        killer.once('error', reject);\n        killer.once('close', resolve);\n      });\n    }\n    const deadline = Date.now() + 12_000;\n    let remaining = [];\n    let debugStillListening = false;\n    for (;;) {\n      current = processes();\n      history = extendOwnedHistory(history, current);\n      remaining = remainingOwned(history, current);\n      debugStillListening = false;\n      if (appCdpPort !== null) {\n        try {\n          await getTargets(appCdpPort);\n          debugStillListening = true;\n        } catch {\n          // Only the OS census below authorizes cleanup. CDP absence alone is insufficient.\n        }\n      }\n      if (!remaining.length && !debugStillListening) break;\n      if (Date.now() >= deadline) {\n        throw new Error(\n          'Disposable Windows Electron process-tree termination unconfirmed: ' +\n          `taskkill=${String(taskkillExitCode)} ownedRemaining=${remaining.map(p => p.pid).join(',')} cdp=${debugStillListening}`\n        );\n      }\n      await new Promise((resolve) => setTimeout(resolve, 250));\n    }\n    windowsTeardowns.push({\n      launcherPid: launcher.pid,\n      taskkillAttempted: taskkillExitCode !== null,\n      taskkillExitCode,\n      observedIdentityCount: history.length,\n      exactOwnedProcessesAbsent: true,\n      cdpPortAbsent: true,\n    });\n    windowsOwnedHistory = [];\n  } else if (appProcess?.pid) {\n    appProcess.kill('SIGKILL');\n  }\n  appProcess = null;\n  appProcessGroupId = null;\n  appCdpPort = null;\n  if (fixture?.root && process.env.TEAMS_CREATE_PAGE_E2E_KEEP !== '1') {\n    for (let attempt = 0; attempt < 8; attempt += 1) {\n      try {\n        await rm(fixture.root, { recursive: true, force: true });\n        return;\n      } catch (error) {\n        if (attempt === 7) {\n          process.stderr.write(`Fixture cleanup failed: ${String(error)}\\n`);\n          throw error;\n        }\n        await new Promise((resolve) => setTimeout(resolve, 250));\n      }\n    }\n  }\n",
+      "freshGitExact": true
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-desktop.mjs",
+      "firstLine": 685,
+      "lastLine": 700,
+      "text": "async function dumpRenderer(client, label) {\n  if (!client) return;\n  try {\n    const snapshot = await client.evaluate(`(() => {\n      const dialog = document.querySelector('[role=\"dialog\"]');\n      return {\n        label: ${JSON.stringify(label)},\n        dialog: Boolean(dialog),\n        creationPageName: document.querySelector('[data-testid=\"create-team-page\"] #team-name')?.value ?? null,\n        bodyText: (document.body?.innerText ?? '').slice(0, 800),\n      };\n    })()`);\n    process.stderr.write(`${JSON.stringify(snapshot, null, 2)}\\n`);\n  } catch (error) {\n    process.stderr.write(`Renderer dump failed: ${String(error)}\\n`);\n  }\n",
+      "freshGitExact": true
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-desktop.mjs",
+      "firstLine": 833,
+      "lastLine": 880,
+      "text": "async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebuggerUrl) {\n  const scheduleLabel = 'schedule-visual-e2e-' + randomUUID().slice(0, 8);\n  log('reject invalid cron and timezone at the actual native IPC boundary');\n  for (const { timing, expectedError } of [\n    { timing: { cronExpression: 'not a cron', timezone: 'UTC' }, expectedError: /cron/i },\n    { timing: { cronExpression: '0 9 * * *', timezone: 'Mars/Olympus' }, expectedError: /time ?zone/i },\n  ]) {\n    const invalidInput = {\n      teamName: fixture.teamName,\n      ...timing,\n      launchConfig: { cwd: fixture.projectPath, prompt: 'No execution' },\n    };\n    const result = await client.evaluate(\n      'window.electronAPI.schedules.create(' + JSON.stringify(invalidInput) +\n        ').then(() => \"UNEXPECTED_SUCCESS\", error => String(error?.message ?? error))'\n    );\n    assert.notEqual(result, 'UNEXPECTED_SUCCESS', 'Native IPC accepted invalid schedule timing');\n    assert(expectedError.test(result), 'Native IPC returned an unrelated error: ' + result);\n  }\n\n  log('open real Schedules UI in isolated Electron');\n  await client.evaluate('window.__agentTeamsDevStore.getState().openSchedulesTab()');\n  await client.waitFor(createButtonExpression('Add Schedule'), 'Schedules screen ready', 45_000);\n  await client.click(createButtonExpression('Add Schedule'));\n  await client.waitFor(\"document.querySelector('[role=dialog] #schedule-label')\",\n    'actual schedule editor loaded', 45_000);\n  await captureScreenshot(client, fixture, 'schedules-editor-opened');\n  // The empty-state page also has a \"Create Schedule\" button behind the modal.\n  // Target the enabled dialog submit, not the background trigger.\n  const saveButton = \"Array.from(document.querySelectorAll('[role=dialog] button'))\" +\n    \".find(button => button.textContent?.trim() === 'Create Schedule')\";\n  await client.click(saveButton);\n  await client.waitFor(\n    \"document.querySelector('[role=dialog]')?.textContent?.includes('Team is required')\",\n    'pristine form shows a reason after Save', 20_000);\n  await captureScreenshot(client, fixture, 'schedules-pristine-submit-validation');\n\n  log('select the fixture team and review its saved one-time startup prompt');\n  await client.click(\"document.querySelector('[role=dialog] button[role=combobox]')\");\n  const teamOption = \"Array.from(document.querySelectorAll('[cmdk-item]'))\" +\n    \".find(option => option.textContent?.includes(\" + JSON.stringify(fixture.teamName) + \"))\";\n  await client.click(teamOption);\n  await client.waitFor(\n    \"document.querySelector('#schedule-saved-prompt-reviewed')\",\n    'saved prompt acknowledgement visible before Save', 45_000);\n  await captureScreenshot(client, fixture, 'schedules-old-prompt-review');\n\n  await client.fill('#schedule-label', scheduleLabel);\n",
+      "freshGitExact": true
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-desktop.mjs",
+      "firstLine": 2029,
+      "lastLine": 2103,
+      "text": "    const scheduleUiEvidence = await exerciseScheduleUx(cdp, fixture, log, started.inspectorWebSocketDebuggerUrl);\n    const zhTwMcpUiEvidence = await exerciseTraditionalChineseMcpUi(fixture, log);\n\n    qualifiedResult = {\n      success: true,\n      scheduleUiEvidence,\n      zhTwMcpUiEvidence,\n      unique,\n      retainedAcrossBack: true,\n      retainedAcrossTabSwitch: true,\n      manageProvidersNavigationRetainsDraft: true,\n      retainedAcrossProcessRestart: true,\n      advancedCliRetainedAcrossRename: true,\n      teammateModeOverridePersistedThroughNativeUi: true,\n      teammateModeOverrideValidatedThroughNativeUi: true,\n      missingRequiredCliValueRejectedThroughNativeUi: true,\n      advancedCliRetainedAcrossPaneSplit: true,\n      advancedCliRetainedAcrossBackRemount: true,\n      advancedCliRestoresUneditedDefaults: true,\n      unnamedAdvancedCliEditsRetained: true,\n      launchStillModal: true,\n      launchContentLoaded: true,\n      configOnlyCreatedThroughUi: true,\n      nativeConfigOnlyRejectionKeepsDraft: true,\n      copiedTeamUsesSharedEditor: true,\n      copiedDraftDoesNotReplaySeed: true,\n      templateReplacementCancelledAndConfirmed: true,\n      organizationPlacementPersistedViaNativeApi: true,\n      duplicateNameValidationRecovered: true,\n      themeDarkLightRendered: true,\n      cssZoom200Rendered: true,\n      nativeElectronZoom200Rendered: true,\n      splitPaneSingleEditor: true,\n      macInputSelectionFallbackCount: inputSelectAllDomFallbacks,\n      sandboxRoot: fixture.root,\n    };\n\n  } catch (error) {\n    failure = error;\n    await dumpRenderer(cdp, 'teams-create-page-failure');\n    if (cdp) {\n      try { await captureScreenshot(cdp, fixture, 'failure'); } catch { /* disconnected */ }\n    }\n  } finally {\n    try {\n      await cleanup(fixture);\n    } catch (error) {\n      cleanupFailure = error;\n    }\n  }\n  if (failure && cleanupFailure) {\n    throw new AggregateError([failure, cleanupFailure], 'Create Page E2E and cleanup both failed');\n  }\n  if (failure) throw failure;\n  if (cleanupFailure) throw cleanupFailure;\n  assert(qualifiedResult, 'Missing Create Page E2E proof');\n  qualifiedResult.cleanup = {\n    processGroupAbsent: process.platform !== 'win32' ? true : null,\n    windowsTaskkillExitedZero: process.platform === 'win32'\n      ? windowsTeardowns.every((item) => item.taskkillExitCode === 0) : null,\n    windowsExactOwnedProcessesAbsent: process.platform === 'win32'\n      ? windowsTeardowns.length === 3 && windowsTeardowns.every((item) => item.exactOwnedProcessesAbsent) : null,\n    windowsTeardowns: process.platform === 'win32' ? windowsTeardowns : null,\n    temporaryProfileRemoved: process.env.TEAMS_CREATE_PAGE_E2E_KEEP !== '1',\n  };\n  const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();\n  await mkdir(outDir, { recursive: true });\n  await writeFile(path.join(outDir, 'teams-create-page-result.json'),\n    JSON.stringify(qualifiedResult, null, 2));\n  process.stdout.write(JSON.stringify(qualifiedResult, null, 2) + '\\n');\n}\n\nmain().catch(async (error) => {\n  process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\\n`);\n  process.stderr.write(`${appLogTail.slice(-40).join('\\n')}\\n`);\n",
+      "freshGitExact": true
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "firstLine": 262,
+      "lastLine": 293,
+      "text": "  const isEditing = isSchedule && !!schedule;\n  // Team name: always present for launch mode, may be absent in schedule mode (standalone page)\n  const propsTeamName = props.teamName ?? '';\n  const [selectedTeamName, setSelectedTeamName] = useState('');\n  const { teamByName, openDashboard } = useStore(\n    useShallow((s) => ({\n      teamByName: s.teamByName,\n      openDashboard: s.openDashboard,\n    }))\n  );\n  const openTeamTab = useStore((s) => s.openTeamTab);\n  const teamOptions = useMemo(\n    () =>\n      Object.values(teamByName)\n        .sort((a, b) => a.teamName.localeCompare(b.teamName))\n        .map((team) => ({\n          value: team.teamName,\n          label: team.displayName || team.teamName,\n          description: team.description || undefined,\n          meta: { color: team.color },\n        })),\n    [teamByName]\n  );\n  const effectiveTeamName = propsTeamName || selectedTeamName;\n  const defaultProjectPath = isLaunchMode ? props.defaultProjectPath : undefined;\n  const hydrationSourceRevision = useRef<string | undefined>(undefined);\n  const [launchHydratedTeamName, setLaunchHydratedTeamName] = useState<string | null>(null);\n  const savedLaunchSource = useLaunchDialogSavedRequest(open, isLaunchMode, effectiveTeamName);\n  const ownerHydrationPending =\n    savedLaunchSource.host &&\n    (!savedLaunchSource.ready || launchHydratedTeamName !== savedLaunchSource.key);\n  const needsTeamSelector = isSchedule && !propsTeamName;\n",
+      "freshGitExact": true
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "firstLine": 423,
+      "lastLine": 430,
+      "text": "  const isTaskFirstSchedule = isSchedule && (schedule?.taskFirst === true || !isEditing);\n  const usesSavedTeamRuntime = isTeamSchedule || isTaskFirstSchedule;\n  const supportsScheduleLimits = supportsScheduleExecutionLimits(isHostTeamSelectionKey(effectiveTeamName), selectedProviderId);\n  const scheduleRuntimeEditedRef = useRef({ provider: false, model: false, effort: false, fastMode: false, skipPermissions: false });\n  const [savedPromptReview, setSavedPromptReview] = useSavedPromptReview({\n    open, enabled: isTaskFirstSchedule, teamName: effectiveTeamName,\n    scheduleId: schedule?.id, reviewed: schedule?.reviewedSavedPrompt === true,\n  });\n",
+      "freshGitExact": true
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "firstLine": 2559,
+      "lastLine": 2605,
+      "text": "          {needsTeamSelector ? (\n            <div className=\"space-y-1.5\">\n              <Label className=\"text-xs\">{t('launch.schedule.team')}</Label>\n              <Combobox\n                options={teamOptions}\n                value={selectedTeamName}\n                onValueChange={(name) => { setSelectedTeamName(name); setScheduleFormTouched(true); setLocalError(null); }}\n                placeholder={t('launch.schedule.selectTeam')}\n                searchPlaceholder={t('launch.schedule.searchTeams')}\n                emptyMessage={\n                  teamOptions.length === 0\n                    ? t('launch.schedule.noTeams')\n                    : t('launch.schedule.noMatches')\n                }\n                disabled={teamOptions.length === 0}\n                renderOption={(option, isSelected) => {\n                  const colorName = option.meta?.color as string | undefined;\n                  const colorSet = colorName\n                    ? getTeamColorSet(colorName)\n                    : nameColorSet(option.label);\n                  return (\n                    <>\n                      {isSelected ? (\n                        <Check className=\"mr-2 size-3.5 shrink-0 text-[var(--color-text)]\" />\n                      ) : (\n                        <span\n                          className=\"mr-2 size-3.5 shrink-0 rounded-full\"\n                          style={{ backgroundColor: colorSet.text }}\n                        />\n                      )}\n                      <div className=\"min-w-0 flex-1\">\n                        <div className=\"flex items-center gap-1.5\">\n                          {isSelected ? (\n                            <span\n                              className=\"size-2 shrink-0 rounded-full\"\n                              style={{ backgroundColor: colorSet.text }}\n                            />\n                          ) : null}\n                          <p className=\"truncate font-medium text-[var(--color-text)]\">\n                            {option.label}\n                          </p>\n                        </div>\n                        {option.description ? (\n                          <p className=\"truncate text-[var(--color-text-muted)]\">\n                            {option.description}\n                          </p>\n                        ) : null}\n",
+      "freshGitExact": true
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "firstLine": 2636,
+      "lastLine": 2639,
+      "text": "          {isTaskFirstSchedule && savedPromptReview?.teamName === effectiveTeamName ? (\n            <HistoricalPromptReview prompt={savedPromptReview.prompt} confirmed={savedPromptReview.confirmed}\n              onConfirmedChange={(confirmed) => setSavedPromptReview((current) => current && ({ ...current, confirmed }))} />\n          ) : null}\n",
+      "freshGitExact": true
+    },
+    {
+      "path": "src/renderer/components/team/schedule/useSavedPromptReview.ts",
+      "firstLine": 1,
+      "lastLine": 44,
+      "text": "import { useEffect, useState } from 'react';\n\nimport { api } from '@renderer/api';\n\nexport interface SavedPromptReview {\n  teamName: string;\n  prompt: string;\n  confirmed: boolean;\n}\n\n/** Preview saved one-time instructions; submit re-reads them authoritatively. */\nexport function useSavedPromptReview(input: {\n  open: boolean;\n  enabled: boolean;\n  teamName: string;\n  scheduleId?: string;\n  reviewed: boolean;\n}) {\n  const { open, enabled, teamName, scheduleId, reviewed } = input;\n  const [review, setReview] = useState<SavedPromptReview | null>(null);\n\n  useEffect(() => setReview(null), [teamName, scheduleId, open]);\n  useEffect(() => {\n    if (!open || !enabled || !teamName) return;\n    let cancelled = false;\n    void api.teams.getSavedRequest(teamName).then((saved) => {\n      if (cancelled) return;\n      const prompt = saved?.prompt?.trim() ?? '';\n      if (!prompt) {\n        setReview(null);\n        return;\n      }\n      setReview((current) =>\n        current?.teamName === teamName && current.prompt === prompt\n          ? current\n          : { teamName, prompt, confirmed: reviewed }\n      );\n    }).catch(() => {\n      // The submit path performs the authoritative read and reports errors.\n    });\n    return () => { cancelled = true; };\n  }, [enabled, open, reviewed, teamName]);\n\n  return [review, setReview] as const;\n",
+      "freshGitExact": true
+    },
+    {
+      "path": "src/renderer/components/team/schedule/HistoricalPromptReview.tsx",
+      "firstLine": 14,
+      "lastLine": 38,
+      "text": "export const HistoricalPromptReview = ({\n  prompt, confirmed, onConfirmedChange,\n}: HistoricalPromptReviewProps): React.JSX.Element => {\n  const { t } = useAppTranslation('team');\n  return (\n    <section className=\"space-y-2 rounded-md border border-[var(--warning-border)] p-3\">\n      <p className=\"text-xs text-[var(--warning-text)]\">\n        {t('launch.schedule.historicalPromptReviewRequired')}\n      </p>\n      <pre className=\"max-h-32 overflow-auto whitespace-pre-wrap break-words rounded-md bg-[var(--color-surface-raised)] p-2 text-xs\">\n        {prompt}\n      </pre>\n      <div className=\"flex items-start gap-2\">\n        <Checkbox\n          id=\"schedule-saved-prompt-reviewed\"\n          checked={confirmed}\n          onCheckedChange={(value) => onConfirmedChange(value === true)}\n        />\n        <Label htmlFor=\"schedule-saved-prompt-reviewed\" className=\"cursor-pointer text-xs font-normal\">\n          {t('launch.schedule.historicalPromptAcknowledged')}\n        </Label>\n      </div>\n    </section>\n  );\n};\n",
+      "freshGitExact": true
+    },
+    {
+      "path": "src/renderer/components/ui/combobox.tsx",
+      "firstLine": 157,
+      "lastLine": 182,
+      "text": "                        setOpen(false);\n                        setSearch('');\n                      }}\n                      className={cn(\n                        'relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none data-[selected=true]:bg-[var(--color-surface-raised)] data-[selected=true]:text-[var(--color-text)]',\n                        option.disabled && 'cursor-not-allowed opacity-60'\n                      )}\n                    >\n                      {renderOption ? (\n                        renderOption(option, isSelected, search)\n                      ) : (\n                        <>\n                          {isSelected ? <Check className=\"mr-2 size-3.5 shrink-0\" /> : null}\n                          <div className=\"min-w-0 flex-1\">\n                            <p className=\"truncate font-medium text-[var(--color-text)]\">\n                              {option.label}\n                            </p>\n                            {option.description ? (\n                              <p className=\"truncate text-[var(--color-text-muted)]\">\n                                {option.description}\n                              </p>\n                            ) : null}\n                          </div>\n                        </>\n                      )}\n                    </CommandPrimitive.Item>\n",
+      "freshGitExact": true
+    }
+  ],
+  "actualHelperCounts": {
+    "tests": [
+      "3"
+    ],
+    "pass": [
+      "3"
+    ],
+    "fail": [
+      "0"
+    ],
+    "cancelled": [
+      "0"
+    ],
+    "skipped": [
+      "0"
+    ],
+    "duration_ms": [
+      "81.606459"
+    ]
+  },
+  "actualHelperNames": [
+    "retains exact descendants when a verified parent exits",
+    "never adopts children of a reused parent PID",
+    "refuses older child identity and an unknown owner history"
+  ],
+  "actionMarkers": [
+    {
+      "line": 666,
+      "timestamp": "2026-11-16T08:37:22.0474190Z",
+      "step": "start isolated Electron profile"
+    },
+    {
+      "line": 667,
+      "timestamp": "2026-11-16T08:39:19.6732600Z",
+      "step": "click real Create Team button"
+    },
+    {
+      "line": 668,
+      "timestamp": "2026-11-16T08:39:27.1481170Z",
+      "step": "restore unedited Advanced CLI defaults for a saved team name"
+    },
+    {
+      "line": 669,
+      "timestamp": "2026-11-16T08:39:28.1504040Z",
+      "step": "edit Advanced CLI while the team name is explicitly empty"
+    },
+    {
+      "line": 670,
+      "timestamp": "2026-11-16T08:39:28.4938230Z",
+      "step": "naming and renaming a team preserves in-progress Advanced CLI overrides"
+    },
+    {
+      "line": 671,
+      "timestamp": "2026-11-16T08:39:28.8612790Z",
+      "step": "Back to Teams and resume saved draft"
+    },
+    {
+      "line": 672,
+      "timestamp": "2026-11-16T08:39:29.5767840Z",
+      "step": "open Providers Settings through the real model picker and resume the draft"
+    },
+    {
+      "line": 673,
+      "timestamp": "2026-11-16T08:39:29.7097980Z",
+      "step": "click provider refresh and verify native-store checks in the isolated Electron session"
+    },
+    {
+      "line": 674,
+      "timestamp": "2026-11-16T08:39:33.0895400Z",
+      "step": "render creation page in both themes and at 200% CSS zoom"
+    },
+    {
+      "line": 675,
+      "timestamp": "2026-11-16T08:39:34.5042290Z",
+      "step": "verify actual BrowserWindow.zoomFactor=2 in isolated Electron main process"
+    },
+    {
+      "line": 676,
+      "timestamp": "2026-11-16T08:39:34.7608430Z",
+      "step": "split into two panes and prevent duplicate creation editors"
+    },
+    {
+      "line": 677,
+      "timestamp": "2026-11-16T08:39:35.4595910Z",
+      "step": "restart real Electron process retaining the same isolated data root"
+    },
+    {
+      "line": 678,
+      "timestamp": "2026-11-16T08:40:44.4338430Z",
+      "step": "Launch existing sandbox team must still open a modal"
+    },
+    {
+      "line": 679,
+      "timestamp": "2026-11-16T08:40:47.1571380Z",
+      "step": "close launch dialog without starting the deny-all runtime"
+    },
+    {
+      "line": 680,
+      "timestamp": "2026-11-16T08:40:47.2201350Z",
+      "step": "create an actual config-only team from the restored screen"
+    },
+    {
+      "line": 681,
+      "timestamp": "2026-11-16T08:40:50.6463920Z",
+      "step": "native config-only save rejection retains the editor and its working directory"
+    },
+    {
+      "line": 682,
+      "timestamp": "2026-11-16T08:40:52.9606120Z",
+      "step": "copy an existing sandbox team using the real Teams card"
+    },
+    {
+      "line": 683,
+      "timestamp": "2026-11-16T08:40:57.5046660Z",
+      "step": "template replacement must be cancelable without losing copied draft"
+    },
+    {
+      "line": 684,
+      "timestamp": "2026-11-16T08:40:59.4389920Z",
+      "step": "create from actual Organization Map and verify native placement"
+    },
+    {
+      "line": 685,
+      "timestamp": "2026-11-16T08:41:04.6487010Z",
+      "step": "duplicate team-name validation and recovery in organization editor"
+    },
+    {
+      "line": 686,
+      "timestamp": "2026-11-16T08:41:05.8851700Z",
+      "step": "reject invalid cron and timezone at the actual native IPC boundary"
+    },
+    {
+      "line": 687,
+      "timestamp": "2026-11-16T08:41:05.9128820Z",
+      "step": "open real Schedules UI in isolated Electron"
+    },
+    {
+      "line": 688,
+      "timestamp": "2026-11-16T08:41:07.7383330Z",
+      "step": "select the fixture team and review its saved one-time startup prompt"
+    }
+  ],
+  "old578MarkerComparison": {
+    "originalLog": {
+      "path": "ci-57885c/creation-macos/job.log",
+      "bytes": 59983,
+      "gitBlob": "b65cd1c36ea8be8154d208a119b54849bb623cc4",
+      "sha256": "3304fa56235ea0b6d8b5d9477affb9a25991a74cf591094c9d606e3b93105f8e"
+    },
+    "count": 32,
+    "first23NamesEqual": true,
+    "wholeQualificationTransferred": false
+  },
+  "originalFirstFailure": [
+    "2026-11-16T08:41:54.8473610Z Error: Timed out waiting for saved prompt acknowledgement visible before Save",
+    "2026-11-16T08:41:54.8485040Z     at CdpClient.waitFor (file:///Users/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/teams-create-page-desktop.mjs:462:11)",
+    "2026-11-16T08:41:54.8486650Z     at async exerciseScheduleUx (file:///Users/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/teams-create-page-desktop.mjs:875:3)",
+    "2026-11-16T08:41:54.8488130Z     at async main (file:///Users/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/teams-create-page-desktop.mjs:2029:32)"
+  ],
+  "originalRendererDump": {
+    "label": "teams-create-page-failure",
+    "dialog": true,
+    "creationPageName": null,
+    "bodyText": "Teams\ncreate-page-e2e-dbc00c96\nOrganizations\norg-team-e2e-8e8d57e5\nSchedules\n265\nSchedules\nAdd Schedule\n\nNo scheduled tasks\n\nCreate a schedule on any team to automate team task execution with cron expressions. Schedules from all teams will appear here.\n\nCreate Schedule\nTasks\nBy time\nProject\nNo tasks found\nClose\nCreate Schedule\n\nSchedule automatic runs for team \"org-team-e2e-8e8d57e5\"\n\nTeam\norg-team-e2e-8e8d57e5\nSCHEDULE\nExecution\nOne agent\nVia team lead\nAssign to\nTeam lead (default)\n\nThe selected teammate receives a board task after the team is safely started, if needed. Busy agents are not interrupted.\n\nLabel (optional)\nCron expression\nEvery hour\nEvery 6 hours\nDaily at 9am\nWeekdays at 9am\nMonday at 9am\nEvery 30 min\n\nAt 09:00, Monday through Friday\n\nNext runs:\n\nMon, Nov 16, 09:00\nTue, Nov "
+  },
+  "independentlyViewedImages": [
+    {
+      "path": "teams-create-launch-controls-loaded.png",
+      "bytes": 75880,
+      "gitBlob": "c588fdcbfd7db8b2cd6b5826df885cfef95915ac",
+      "sha256": "c748895808abec1486b1e79be16db54fd46a90e53292c676447e902fff6f0fe7",
+      "crc32": "48480a93",
+      "dimensions": [
+        1024,
+        674
+      ],
+      "independentlyActuallyViewed": true,
+      "method": "Original image opened singly using view_image; three views completed before this byte review",
+      "interpretation": "Earlier actual Launch frame names intended fixture teams-create-page-e2e-961f3812-d46d-4321-a219-8e7161c753d4. OpenCode/test-model is Needs attention; runtime environment unavailable and fresh catalog diagnostic visible. No provider launch is claimed."
+    },
+    {
+      "path": "teams-create-schedules-pristine-submit-validation.png",
+      "bytes": 56804,
+      "gitBlob": "3df69e5b2ca43496ef651ac1c72ad80a6dc45f83",
+      "sha256": "3c0be09a39d02f29f48bd5cd8124ddac298dc30d17243a039146442a2b58bf1c",
+      "crc32": "480538f7",
+      "dimensions": [
+        1024,
+        674
+      ],
+      "independentlyActuallyViewed": true,
+      "method": "Original image opened singly using view_image; three views completed before this byte review",
+      "interpretation": "Earlier Schedule form is scrolled down and visibly shows Team is required after the original pristine Save attempt. No selected-team identity is visible in this cropped form position."
+    },
+    {
+      "path": "teams-create-failure.png",
+      "bytes": 64167,
+      "gitBlob": "a8933df3a3c8ac00a90aaaed2e5cad66b975ee2e",
+      "sha256": "f2dda383a2bde2c59935f39e8b214c2d41f0d5d001584d41c7ae1ab33c5176c1",
+      "crc32": "5141dd09",
+      "dimensions": [
+        1024,
+        674
+      ],
+      "independentlyActuallyViewed": true,
+      "method": "Original image opened singly using view_image; three views completed before this byte review",
+      "interpretation": "Failure frame visibly names org-team-e2e-8e8d57e5 in the Schedule description and Team selector, with empty label and default cron0 9 * * 1-5. The frame is scrolled at its top; lower content is not visible. Absence of #schedule-saved-prompt-reviewed is established by the original DOM wait, not by the cropped image alone."
+    }
+  ]
+}

@@ -1,0 +1,208 @@
+{
+  "kind": "E3-original-terminal-raw-retention-only",
+  "createdAtUTC": "2026-11-16T09:42:49.650474+00:00",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "jobsSnapshot": "owned-jobs-0942.json",
+  "artifactSnapshots": [
+    "official-host-artifacts-0943.json",
+    "official-packaged-artifacts-0943.json"
+  ],
+  "originals": [
+    {
+      "lane": "codex-login",
+      "log": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/codex-login/job.log",
+        "bytes": 92921,
+        "gitBlob": "5f0bc1fbf26f16133c352220c8f256f8a1e935b5",
+        "sha256": "b09821b624c00d82b5c40eccfd148af946d505d9879b3d98230bcb3053327fb5"
+      },
+      "originalResponse": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/codex-login/job-original-response.json",
+        "bytes": 94552,
+        "gitBlob": "9d9eb41d50d4fac7cf640acf66204552489409c5",
+        "sha256": "d0e3d69fcf5d72e67b42703b326105dc525f0183cb00f973f71612b3d3d474a5"
+      },
+      "summaryLines": [
+        "2026-11-16T09:35:21.6346430Z ℹ tests 123",
+        "2026-11-16T09:35:21.6346699Z ℹ pass 120",
+        "2026-11-16T09:35:21.6346831Z ℹ fail 3",
+        "2026-11-16T09:35:21.6346955Z ℹ cancelled 0",
+        "2026-11-16T09:35:21.6347086Z ℹ skipped 0",
+        "2026-11-16T09:35:21.6356356Z   AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+        "2026-11-16T09:35:21.6359574Z   AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+        "2026-11-16T09:35:21.6363684Z   AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+        "2026-11-16T09:35:21.6418111Z ##[error]Process completed with exit code 1."
+      ],
+      "classification": "raw-only; full semantic review not claimed"
+    },
+    {
+      "lane": "v2-management",
+      "log": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/v2-management/job.log",
+        "bytes": 95888,
+        "gitBlob": "7105e0ec634009f2f64fe31ba6a43980d739d387",
+        "sha256": "af1036ac4a7016af6472615b58171c473afa2760d57ab839053c4aea68430f86"
+      },
+      "originalResponse": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/v2-management/job-original-response.json",
+        "bytes": 97564,
+        "gitBlob": "37ff7fb1b976b32998b78122739b0431ca450076",
+        "sha256": "e81d103eee9414c9754c3b4577eed1672a5d347a33bd97f9f2a9bb3a1eadcee3"
+      },
+      "summaryLines": [
+        "2026-11-16T09:35:59.7322278Z ℹ tests 123",
+        "2026-11-16T09:35:59.7323756Z ℹ pass 120",
+        "2026-11-16T09:35:59.7324479Z ℹ fail 3",
+        "2026-11-16T09:35:59.7324847Z ℹ cancelled 0",
+        "2026-11-16T09:35:59.7325113Z ℹ skipped 0",
+        "2026-11-16T09:35:59.7338906Z   AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+        "2026-11-16T09:35:59.7351489Z   AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+        "2026-11-16T09:35:59.7361852Z   AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+        "2026-11-16T09:35:59.7420641Z ##[error]Process completed with exit code 1."
+      ],
+      "classification": "raw-only; full semantic review not claimed"
+    },
+    {
+      "lane": "claude",
+      "log": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/claude/job.log",
+        "bytes": 92286,
+        "gitBlob": "ea8718e30d47ea23c76002af06c598469de8c836",
+        "sha256": "bd8462e969b9fac99f50474b0d86a6293ce3426877480b3bc859df00694a2526"
+      },
+      "originalResponse": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/claude/job-original-response.json",
+        "bytes": 93912,
+        "gitBlob": "58998a70d0781202272c54331d2cb5c47e956be8",
+        "sha256": "de6006c0d33bd5c8c9ac0bf5669cbac58d04174731e305091069257cac7afd25"
+      },
+      "summaryLines": [
+        "2026-11-16T09:36:21.7189652Z ℹ tests 123",
+        "2026-11-16T09:36:21.7190076Z ℹ pass 120",
+        "2026-11-16T09:36:21.7190252Z ℹ fail 3",
+        "2026-11-16T09:36:21.7190414Z ℹ cancelled 0",
+        "2026-11-16T09:36:21.7190577Z ℹ skipped 0",
+        "2026-11-16T09:36:21.7200314Z   AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+        "2026-11-16T09:36:21.7204891Z   AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+        "2026-11-16T09:36:21.7210119Z   AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+        "2026-11-16T09:36:21.7256389Z ##[error]Process completed with exit code 1."
+      ],
+      "classification": "raw-only; full semantic review not claimed"
+    },
+    {
+      "lane": "processes",
+      "log": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/processes/job.log",
+        "bytes": 95590,
+        "gitBlob": "27925cd974a4e346bc4c5ec322f103d0a8508ef2",
+        "sha256": "c7105e8c732572da0907bd48ae56b588cc9c79bcbe5b750cadee5cbda0dce712"
+      },
+      "originalResponse": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/processes/job-original-response.json",
+        "bytes": 97264,
+        "gitBlob": "1449bfdfca8c52e2a56d0cadd1df80e68c91bc2c",
+        "sha256": "ba1f2e9a45cfc9c75613f4851d91dd9ae834c5e8b397e75cdf4cddc78db24924"
+      },
+      "summaryLines": [
+        "2026-11-16T09:38:43.3432863Z ℹ tests 123",
+        "2026-11-16T09:38:43.3433610Z ℹ pass 120",
+        "2026-11-16T09:38:43.3433839Z ℹ fail 3",
+        "2026-11-16T09:38:43.3434059Z ℹ cancelled 0",
+        "2026-11-16T09:38:43.3434288Z ℹ skipped 0",
+        "2026-11-16T09:38:43.3447286Z   AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+        "2026-11-16T09:38:43.3454648Z   AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+        "2026-11-16T09:38:43.3461738Z   AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+        "2026-11-16T09:38:43.3518608Z ##[error]Process completed with exit code 1."
+      ],
+      "classification": "raw-only; full semantic review not claimed"
+    },
+    {
+      "lane": "installer",
+      "log": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/installer/job.log",
+        "bytes": 91603,
+        "gitBlob": "6b0e1f2bf6ca35a2294b14344c7485bc3e883cae",
+        "sha256": "5d8e405f729d4f90cf3b2eed19beeb0077217d8fe9ca46f5333097e27bfc55b5"
+      },
+      "originalResponse": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/installer/job-original-response.json",
+        "bytes": 93221,
+        "gitBlob": "20fc71643a2b194c7c87755c31011477ad8f881d",
+        "sha256": "75e1698bf7efe57d7bc1d5858e7e04fe746e7db72d9601a1e1236172a7926050"
+      },
+      "summaryLines": [
+        "2026-11-16T09:41:50.8319860Z ℹ tests 123",
+        "2026-11-16T09:41:50.8320730Z ℹ pass 119",
+        "2026-11-16T09:41:50.8320980Z ℹ fail 3",
+        "2026-11-16T09:41:50.8321250Z ℹ cancelled 0",
+        "2026-11-16T09:41:50.8321510Z ℹ skipped 1",
+        "2026-11-16T09:41:50.8334600Z   AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+        "2026-11-16T09:41:50.8344620Z   AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+        "2026-11-16T09:41:50.8353710Z   AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+        "2026-11-16T09:41:50.8478270Z ##[error]Process completed with exit code 1."
+      ],
+      "classification": "raw-only; full semantic review not claimed"
+    },
+    {
+      "lane": "opencode",
+      "log": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/opencode/job.log",
+        "bytes": 95728,
+        "gitBlob": "a1cab7b8edd8120b83eb1b46a232bd3bda75890d",
+        "sha256": "63a0b33bab931502f9cefa1800a1480a0af33cca2388ae194f2e8bea27479f96"
+      },
+      "originalResponse": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/opencode/job-original-response.json",
+        "bytes": 97404,
+        "gitBlob": "f2b4588ca47e581a4a559e6a6f1ed07b31a2cef2",
+        "sha256": "2785e8fd0b5cb16e9b9c6225518847e2b159ab0841c396ffaa430c23e034b414"
+      },
+      "summaryLines": [
+        "2026-11-16T09:38:52.7029233Z ℹ tests 123",
+        "2026-11-16T09:38:52.7030009Z ℹ pass 120",
+        "2026-11-16T09:38:52.7030366Z ℹ fail 3",
+        "2026-11-16T09:38:52.7030751Z ℹ cancelled 0",
+        "2026-11-16T09:38:52.7031188Z ℹ skipped 0",
+        "2026-11-16T09:38:52.7045450Z   AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+        "2026-11-16T09:38:52.7052978Z   AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+        "2026-11-16T09:38:52.7060918Z   AssertionError [ERR_ASSERTION]: Missing expected rejection.",
+        "2026-11-16T09:38:52.7119718Z ##[error]Process completed with exit code 1."
+      ],
+      "classification": "raw-only; full semantic review not claimed"
+    },
+    {
+      "lane": "packaged-mac-arm",
+      "log": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/packaged-mac-arm/job.log",
+        "bytes": 157712,
+        "gitBlob": "961f2244b0cf90e5bc1061a468d170c49adf4424",
+        "sha256": "52c7dddff72d01cae1a3d291b431b3ec7547c31a1bff16a51ff7961756e8c92c"
+      },
+      "originalResponse": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/packaged-mac-arm/job-original-response.json",
+        "bytes": 175430,
+        "gitBlob": "bbfaa925c63073b557bdfabb868acf08a893b8ff",
+        "sha256": "e76ac9184e941dd9675ffedff2a1a3e6bed6c2b96bec68d5da55b706666ff8fc"
+      },
+      "summaryLines": [
+        "2026-11-16T09:31:47.4771850Z ℹ tests 11",
+        "2026-11-16T09:31:47.4772150Z ℹ pass 11",
+        "2026-11-16T09:31:47.4772300Z ℹ fail 0",
+        "2026-11-16T09:31:47.4772410Z ℹ cancelled 0",
+        "2026-11-16T09:31:47.4772530Z ℹ skipped 0",
+        "2026-11-16T09:31:47.7875930Z ℹ tests 2",
+        "2026-11-16T09:31:47.7876210Z ℹ pass 2",
+        "2026-11-16T09:31:47.7876350Z ℹ fail 0",
+        "2026-11-16T09:31:47.7876470Z ℹ cancelled 0",
+        "2026-11-16T09:31:47.7876600Z ℹ skipped 0",
+        "2026-11-16T09:33:10.2686210Z ℹ tests 26",
+        "2026-11-16T09:33:10.2686440Z ℹ pass 25",
+        "2026-11-16T09:33:10.2686850Z ℹ fail 0",
+        "2026-11-16T09:33:10.2687000Z ℹ cancelled 0",
+        "2026-11-16T09:33:10.2687130Z ℹ skipped 1"
+      ],
+      "classification": "raw-only; full semantic review not claimed"
+    }
+  ],
+  "noRefetchOrExecution": true
+}

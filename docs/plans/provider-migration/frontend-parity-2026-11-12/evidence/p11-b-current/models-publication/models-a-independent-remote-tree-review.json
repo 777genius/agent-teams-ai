@@ -1,0 +1,70 @@
+{
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUTC": "2026-11-16T09:36:50.912053+00:00",
+  "originalInputs": {
+    "manifest": {
+      "path": "models-a-publication/upload-manifest.json",
+      "bytes": 535965,
+      "blob": "5d0699bf2d14ba7b9881d5d5b8115b190a1e776f",
+      "sha256": "0b07f9a715b971e76053aa5bb4172dc7957267601ee688c1e450ee720513535b"
+    },
+    "prepublicationReview": {
+      "path": "models-a-independent-prepublication-review.json",
+      "bytes": 14195,
+      "blob": "b52329e398e429dfd5ab5ea3f4097b5f5ae22969",
+      "sha256": "710fdeaa874c4c1f98f9b293dce3cb61b5a432dd128b5c9b9154a9e13151c124"
+    },
+    "prepublicationProof": {
+      "path": "models-a-independent-byte-tree-proof.json",
+      "bytes": 417254,
+      "blob": "1f67940277cfd2a18ae194ecb6b2fde23118f909",
+      "sha256": "fe9a2cee9e03d032037476073da2d2bcf3847b4c14d3b98df6fef16fa3f2d4dc"
+    }
+  },
+  "projectExecution": false,
+  "sourceOrRefMutation": false,
+  "APIOrCIPoll": false,
+  "fetch": false,
+  "kind": "Independent complete retained official immutable Models A remote-tree R2",
+  "result": "APPROVE",
+  "independentRemoteReadbackExact": true,
+  "trees": [
+    {
+      "response": {
+        "path": "models-a-publication/remote-docs-tree-response.json",
+        "bytes": 8272740,
+        "blob": "0cf894162332d1f9beffdff17508ed1f5d8f919f",
+        "sha256": "57b081bf9b856ae8a717f41e9b2b7a508ff09e81d46d21b0ee3ae52ff51ca616"
+      },
+      "tree": "77bc55dc1ee21a87b4f3d3983e1903873549fc92",
+      "entries": 13320,
+      "leaves": 11573,
+      "directoryObjectsIncludingRoot": 1748,
+      "truncated": false,
+      "allModesTypesBlobSizesAndIdentitiesExact": true,
+      "allDirectoryHashesReconstructed": true
+    },
+    {
+      "response": {
+        "path": "models-a-publication/remote-source-tree-response.json",
+        "bytes": 8272740,
+        "blob": "850962fcc145131370158c2cf4ddc9bc4473c15b",
+        "sha256": "4acb28a1f02dd881d1826c0d5f7b295c319e9aef304cd93a5ea9d3b15e138c0a"
+      },
+      "tree": "fb5a7bb3cfd8f8bcd48628e1bc93232868a559bd",
+      "entries": 13320,
+      "leaves": 11573,
+      "directoryObjectsIncludingRoot": 1748,
+      "truncated": false,
+      "allModesTypesBlobSizesAndIdentitiesExact": true,
+      "allDirectoryHashesReconstructed": true
+    }
+  ],
+  "sourceOnlyOnePath": [
+    "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+  ],
+  "all8798DocsParentNonDocUnchanged": true,
+  "all8797OtherSourceNonDocUnchanged": true,
+  "completePlanAndBodiesPriorBound": true,
+  "noCommitOrPublicationClaim": true
+}

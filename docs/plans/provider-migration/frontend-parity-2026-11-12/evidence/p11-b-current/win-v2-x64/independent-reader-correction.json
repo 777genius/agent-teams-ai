@@ -1,0 +1,14 @@
+{
+  "kind": "pure-evidence-reader-path-correction",
+  "initial": {
+    "bytes": 13284,
+    "blob": "4b7d3a3318ad602964e1fa465bb276e618f90373",
+    "sha256": "eacdb1ad412dd84ff9d08cd78b72cdf7f49b77450cbe6ed9e33d42e84821270a"
+  },
+  "corrected": {
+    "bytes": 13218,
+    "blob": "45c55393efc7812184bbeca75753be403007ca2e",
+    "sha256": "29e8e9558fb12b4cbd3e678b8f9ebf162d91fde53c8ed284a79c0f485e77c763"
+  },
+  "reason": "The reviewer guessed a separate native-host-close.ts interpretation source, but closeNativeHostInput is defined in already selected fixtures/native-host.ts. Git rev-parse refused the nonexistent path before any proof was published. Removed only the nonexistent extra path; all original payload/source/semantic checks retained. No project test or production code executed."
+}

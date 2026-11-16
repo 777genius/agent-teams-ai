@@ -1,0 +1,208 @@
+{
+  "kind": "INDEPENDENT_MODELS_A_FULL_PREPUBLICATION_REVIEW",
+  "reviewer": "/root/migration_scope",
+  "reviewedAtUTC": "2026-11-16T09:28:59.901648+00:00",
+  "result": "APPROVE",
+  "blockingFindings": [],
+  "approvalScope": "Exact frozen documentation package and its one-test prospective source projection. This is not actual remote publication, source application, candidate execution, semantic RED, resulting-source GREEN or overall acceptance.",
+  "manifest": {
+    "path": "/workspace/scratch/82d3f9ba6b85/models-a-publication/upload-manifest.json",
+    "bytes": 535965,
+    "blob": "5d0699bf2d14ba7b9881d5d5b8115b190a1e776f",
+    "sha256": "0b07f9a715b971e76053aa5bb4172dc7957267601ee688c1e450ee720513535b"
+  },
+  "independentMechanicalProof": {
+    "path": "/workspace/scratch/82d3f9ba6b85/models-a-independent-byte-tree-proof.json",
+    "bytes": 417254,
+    "blob": "1f67940277cfd2a18ae194ecb6b2fde23118f909",
+    "sha256": "fe9a2cee9e03d032037476073da2d2bcf3847b4c14d3b98df6fef16fa3f2d4dc"
+  },
+  "independentCurrentSourceR1Review": {
+    "path": "/workspace/scratch/82d3f9ba6b85/models-phase-a-current-bfc/independent-current-source-r1-review.json",
+    "bytes": 31905,
+    "blob": "234760d64e1adb14da4bb9f6de458fb7d2238392",
+    "sha256": "8b2a4f9067f022c3bd38a5c5558cd59b27ba85f09a8a5e66e37dc5fdf0cf8f92"
+  },
+  "independentCurrentSourceProof": {
+    "path": "/workspace/scratch/82d3f9ba6b85/models-phase-a-current-bfc/independent-current-byte-source-proof.json",
+    "bytes": 28753,
+    "blob": "b8e1f2f3a50573f7092af90e9cfab845b889f189",
+    "sha256": "166712c94c2ca3b2b1e07e1b82bd84361b7533178f0b67efc34cc21a672c3fe3"
+  },
+  "currentR1": {
+    "path": "/workspace/scratch/82d3f9ba6b85/models-phase-a-current-bfc/R1-current-models-test-only.md",
+    "bytes": 12000,
+    "blob": "c5decc6d0707c011a16d9d1082178f087b0f4f8f",
+    "sha256": "ff9fb7826b8caa97702c45dd46ad015a9119cb36629aa365f548cd20af22a905"
+  },
+  "base": {
+    "head": "bfc1ceca293f2291a0deb1129fdbe6e94c7f8999",
+    "tree": "1c006663973e6fce5791ac10c5d01cc5c5d8ae28",
+    "parents": [
+      "e055dda7e259b432bce5027ef33df1fb395d2d68",
+      "72e6ec04444969d343d73834c70bc4e261100fc9"
+    ],
+    "bytes": 708,
+    "sha256": "5bcad280de057d2f906d81fdfe3b7163ba727fcb3d0ab7f9fa9ba7fb970f095b"
+  },
+  "prospectiveDocumentation": {
+    "tree": "77bc55dc1ee21a87b4f3d3983e1903873549fc92",
+    "soleParent": "bfc1ceca293f2291a0deb1129fdbe6e94c7f8999",
+    "changedPaths": 43,
+    "newPaths": 42,
+    "modifiedExistingPaths": [
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md"
+    ],
+    "payloadBytes": 9309338,
+    "leaves": 11573,
+    "directoriesIncludingRoot": 1748,
+    "all11530UnlistedBaseLeavesUnchanged": true,
+    "all8798NonDocumentationLeavesUnchanged": true,
+    "nonDocumentationMapSha256": "3aac1b178739ba20b80ca23dde15867dc630b8862733a8d02b5829564c0d5ae2",
+    "all262PriorNonPlanPayloadsPreservedExactly": true,
+    "all40ShortPathMovesPreserved": true,
+    "maximumRepositoryPathCharacters": 216,
+    "sourceChangeInDocumentationCommit": false,
+    "previewSourceStoredAsTextOnly": true
+  },
+  "prospectiveSource": {
+    "tree": "fb5a7bb3cfd8f8bcd48628e1bc93232868a559bd",
+    "soleParent": "EXACT_ACTUALLY_VERIFIED_DOCUMENTATION_CHILD",
+    "changes": [
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "preimage": {
+          "bytes": 180058,
+          "blob": "67e50eea1c894cb4f8502f51974e34a2a6a745fc",
+          "sha256": "70597b6bb603515e31ec1239eb6543cc9f1fb18beb20ac20c6a357ee03f748ed"
+        },
+        "candidate": {
+          "bytes": 188073,
+          "blob": "48bf7f181ae6836a9003ebe687abab0a0ae2db20",
+          "sha256": "d52e9af5bef20bd8fa99f10ddfb25b2287b9d643ecaf3f448c43dd6cc75fd8ee"
+        },
+        "candidateScratchPath": "/workspace/scratch/82d3f9ba6b85/models-phase-a-current-bfc/candidate/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "addedLines": 165,
+        "removedLines": 0
+      }
+    ],
+    "other11572WholeTreeLeavesUnchangedFromDocumentationParent": true,
+    "all8797OtherNonDocumentationLeavesUnchangedFromActualBase": true,
+    "allDocumentationLeavesIdenticalToDocumentationParent": true,
+    "nonDocumentationMapSha256": "2b7c2c128f6169308531d2bd4797089b8bcac107c78a01e5579d0d9791e954b3",
+    "freshSourceAndVenuePins": 26,
+    "noSecondParentNeeded": "The actual bfc base already contains incoming72e history in its ordered parents; this selected Models-only child has one verified documentation parent."
+  },
+  "completeIntegrityChecks": {
+    "files": "Independently read and hashed every complete staged body and original source mapping; modes, sizes, Git blob IDs and SHA256 match the frozen manifest.",
+    "references": {
+      "current": 71,
+      "inherited": 403,
+      "total": 474,
+      "allFullBodiesAndMappingsVerified": true,
+      "previousManifest": {
+        "bytes": 719944,
+        "blob": "22a1d162ad1631e97d9ab90f53186ca267553713",
+        "sha256": "a59ea3cb26e1db2e21313154da4409be9f2a86cede010b523a86c25b0d7dc799"
+      },
+      "inheritedGroupsPreservedExactly": true,
+      "explicitDeduplication": "The two original ordinary push response bodies are byte-identical and intentionally share the same durable payload. Complete mappings retain each original role. Complete candidates and patches similarly reuse only exact existing bytes."
+    },
+    "archives": {
+      "uniqueOriginalZIPs": 18,
+      "recoverableMembers": 180,
+      "allSafeNamesCRCCompleteMemberBodiesVerified": true,
+      "scope": "Archive recovery and byte identity do not independently enlarge the semantic approval scopes of inherited native or desktop author-only packets."
+    },
+    "gzip": {
+      "new": 2,
+      "inherited": 4,
+      "total": 6,
+      "completeDecodedOriginalEqualityVerified": true,
+      "scope": "Each compressed tree response decodes to the full retained original byte sequence, with both raw and compressed identities checked; none substitutes a summary for the original response."
+    },
+    "trees": "Independently reconstructed the full base tree from immutable Git, both complete prospective leaf maps and every directory tree hash. Both roots match the frozen docs/source identities.",
+    "shortenedPaths": "All40 original long locations remain absent, all40 shortened locations retain their exact mode/type/blob bytes, and no maximum-path regression was introduced.",
+    "index": "The full publication index agrees with source selection, all current/inherited mappings, actual/prior history, archives, gzip records, exact Plan offsets and current source R2."
+  },
+  "planAssembly": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "prefix": {
+      "bytes": 2118839,
+      "blob": "a21bba9cd9eb05339a2e17e4f4755b30eb6e2087",
+      "sha256": "4e27b366e7e11d8b83e5175825b10ae772ca9c7b2521e21517eee787b37007b8"
+    },
+    "segments": [
+      {
+        "label": "Current Models test-only A R1 governs last",
+        "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/models-a-current/current-phase-a/R1-current-models-test-only.md",
+        "bytes": 12000,
+        "blob": "c5decc6d0707c011a16d9d1082178f087b0f4f8f",
+        "sha256": "ff9fb7826b8caa97702c45dd46ad015a9119cb36629aa365f548cd20af22a905",
+        "separatorOffset": 2118839,
+        "contentOffset": 2118841,
+        "exact": true
+      }
+    ],
+    "result": {
+      "bytes": 2130841,
+      "blob": "237c4b2ed5aac8fdca85da31222b3f95c3c1bb9b",
+      "sha256": "a0e61e7070ab3452f816797343993883ebcfe5d55152e63029ab60d0efd5d6f0"
+    },
+    "wholePrefixExact": true,
+    "exactEOF": true
+  },
+  "planInterpretation": {
+    "entireActualBasePrefixPreserved": true,
+    "prefixBytes": 2118839,
+    "literalSeparator": "two LF bytes",
+    "singleAppendedBlockBytes": 12000,
+    "resultBytes": 2130841,
+    "lastGoverningBlock": "c5decc6d0707c011a16d9d1082178f087b0f4f8f current Models test-only A R1",
+    "exactEOF": true,
+    "noIncomingOrHistoricalReordering": true,
+    "historicalApplicability": "Older two-test selections, invalid matcher v1, corrected pre-copy candidates, conditional hook changes and baseline results remain exact history. The final current R1 does not adopt their stale whole files or promote them to current execution."
+  },
+  "sourceSemanticJoin": {
+    "existingIndependentReview": "Current source/R1 review234760 and proofb8e1 are included verbatim and were independently source-checked before this publication review; their full identities were rejoined now.",
+    "onlyInsertion": "Exactly8015 bytes/165 lines are inserted immediately before the existing final four-byte describe terminator. Full preimage and afterimage, strict forward/reverse patches and inverses are retained. Every original assertion and the published credential-copy expectation remain.",
+    "productionHookUnchanged": "1176fd06b70f1b717ba83deb387f87b05b18b45b remains unchanged. Conditional c2faa156015707bc5fbd7f8123a7ffd9c4faa486 is not selected.",
+    "geometryAndP11Unchanged": "The whole actual geometry/P11 test1b0ad5b15b056857817858d1e85f6dfe81f6e782, geometry helper76dda75f25e876e42ea6c7358827cd1128ed52fc and P11 driverbd8bc728808eda00a45b300fd328d49e4e919bc2 remain exact. Incoming P11 A is already applied and preserved; neither P11 B nor C is selected.",
+    "copyPreserved": "Formatter1738fe12e51e14b9a5288313b8a253d1fdf3823e and the complete67e50-derived credential expectation remain. Historical817fe and370e files are not selected.",
+    "finiteActualHookCases": "Ten cases use the existing real hook and public refresh actions with finite mocked Electron promises. Six overlap cases predict semantic loading failures; four controls cover context replacement, last-rendered state after unmount, and an idle silent refresh.",
+    "matcherCorrection": "The two custom messages remain on expect(actual,message), with toBe receiving only its expected value, matching the retained pinned declaration. Historical incorrect817fe arity and its withdrawn applicability remain disclosed.",
+    "noActualCandidateResult": "90 cases / predicted84 PASS and6 FAIL remain unexecuted source predictions. Assertions after a failed decisive expectation cannot be credited as executed."
+  },
+  "venuesAndAcceptanceLimits": {
+    "originalVenue": "Only the existing complete Host offline-frontend-tests four-shard command is the authorized Models regression venue. It remains independent of the full8 helper job at workflow level.",
+    "unchangedBounds": "Four shards, maxWorkers2, original three exclusions, happy-dom, setup, original install/build prerequisites,45-minute job limit,15000ms default and all individual per-test overrides remain unchanged.",
+    "runtimeDistinction": "The existing workspace runtime pin26.12.1 and captured Host Node24.21 remain distinct. Compiler7.0.2 and typed-lint TypeScript5.9.3 remain different scopes.",
+    "semanticREDRequirement": "Inspect the complete actual containing shard and all90 file cases, requiring six intended loading failures, four new controls and all80 retained cases with exact source/build/runtime provenance. Import/build/type/setup/timeout failures cannot replace semantic RED.",
+    "futureModelsB": "Only a later fresh R1/R2 after original complete semantic RED and independent review may select the one-line conditional hook edit. It must preserve exact current tests and request/context fences and then obtain the original resulting-source frontend and required wider gates.",
+    "baselineNonTransfer": "Original57880-case frontend,119-helper/7-installer/179-Team/24-stderr/types/typed-lint and Management observations remain their source-specific evidence. No80-case actual result on67e50 or48bf is inferred, and historical spinner/timeouts do not establish this hook race as their cause.",
+    "noOverallQualification": "This package does not close current desktop/native/packaged, P08/P09, direct I386, full-policy or M16 requirements and makes no goal-complete or Stage2 claim."
+  },
+  "publicationAndPhaseOrder": {
+    "first": "Fresh exact followup/primary/PR/base guards and current source binding remain required. Publish the exact docs-only child of actualbfc by ordinary expected-parent update, preserving Draft and all historical evidence.",
+    "second": "Root and independent actual complete documentation readbacks must finish before the sole-parent one-test source child is created and ordinary-pushed.",
+    "third": "Read back the actual whole source and all unchanged leaves independently. This prepublication report is not that actual gate.",
+    "primary": "Primary advancement remains separate and subject to fresh original-work inventory. The current original72e P11 A full8 evidence and its independent semantic RED review must be preserved; the venue must not be cancelled or replaced to accelerate Models. A queued row alone does not create an all-terminal barrier.",
+    "futureComposition": "No Models B, P11 B/C or other subsequent combined source is selected. Any later composition needs its own current R1/R2 and exact phase accounting.",
+    "freshnessLimit": "No remote ref or CI query was performed for this review. originalPrimary72e is the manifest binding; root must verify the actual fresh route before publication and handle any drift explicitly."
+  },
+  "actionsPerformed": {
+    "immutableGitAndLocalByteReads": true,
+    "newExclusiveScratchReports": true,
+    "projectTestsCompilerLintBuildInstallNodeOrVendorExecution": false,
+    "CIOrAPIPoll": false,
+    "fetch": false,
+    "authorWriterInvoked": false,
+    "frozenFilesModified": false,
+    "sourceApplied": false,
+    "gitObjectOrRefMutation": false,
+    "remoteTreeCreated": false,
+    "publicationPerformed": false
+  },
+  "nextGate": "Create/read back the exact immutable remote docs/source proposals only after fresh guards, then independently verify actual docs and actual source separately after root announces each fetch-ready publication."
+}

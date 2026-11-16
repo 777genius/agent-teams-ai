@@ -1,0 +1,133 @@
+{
+  "kind": "E3_FIRST_ORIGINAL_P11_WHOLE_EIGHT_RED_AUTHOR_CHECKPOINT",
+  "frozenAtUTC": "2026-11-16T09:33:56.235320+00:00",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "runId": 43831885807,
+  "jobId": 133178913159,
+  "outcome": {
+    "total": 123,
+    "pass": 120,
+    "fail": 3,
+    "skip": 0,
+    "cancelled": 0,
+    "originalOld119Passed": true,
+    "newControlPassed": true,
+    "newDeadlineFailures": 3
+  },
+  "payloads": [
+    {
+      "path": "ci-72e6ec/taskboard/job.log",
+      "bytes": 94289,
+      "blob": "4f7af0d5218f6c2b34457e63a4dcce05f4f2ce84",
+      "sha256": "79164ffcbff3edb86387a7d11786602b5e24f2e8fd159fb5b8cf409e4c1c9d97"
+    },
+    {
+      "path": "ci-72e6ec/taskboard/job-original-response.json",
+      "bytes": 95941,
+      "blob": "b2194f1a0c9d9d8324c9486c78e328c9f5f82b1f",
+      "sha256": "f8c470c3afdb9e65c652f6949cb2702bcaf03b3d63b65e698e42d7e893ed20cf"
+    },
+    {
+      "path": "ci-72e6ec/owned-jobs-0928.json",
+      "bytes": 74851,
+      "blob": "5c294c70948c2487c20a1f9431b93729cee10afb",
+      "sha256": "adefc03b39da44b4e23177fc655032683fc1e2ab05252cdd0d07a09fc4d0c46e"
+    },
+    {
+      "path": "ci-72e6ec/official-host-artifacts-0929.json",
+      "bytes": 3850,
+      "blob": "26cd8b1765d289c4912b9f1f6ffaf29bcaece945",
+      "sha256": "c82a51b3cee928abaddbe7a19e19e11f3ca105fed7bbc729dbc463c069d38540"
+    },
+    {
+      "path": "external-primary-0833/initial-api-and-fetch.json",
+      "bytes": 1230559,
+      "blob": "c06fa9afb4bce716cc66c872aca533c10fba4fec",
+      "sha256": "a79ff970d4b9bf71483168e870519182f44c1be53f16595519659b2607c52b5b"
+    },
+    {
+      "path": "ci-72e6ec/taskboard/p11-byte-source-proof.json",
+      "bytes": 235220,
+      "blob": "b4afc9cc262342c97aa2f996e65b4608cd6215e3",
+      "sha256": "175f1567827552d2038a039510458e823b8225d6561724ddbc9a9c00c495d4df"
+    },
+    {
+      "path": "ci-72e6ec/taskboard/p11-semantic-red-audit.json",
+      "bytes": 7407,
+      "blob": "5c20c2b25f44c5e04d25c9500c60191c9c061e10",
+      "sha256": "3d5a4ae078378506bf0ebfbcd1fc3cd5c62f069c04f7ae07a7e0f1fdf216c80a"
+    },
+    {
+      "path": "ci-72e6ec/taskboard/Plan29-p11-first-original-red-appendix.md",
+      "bytes": 5822,
+      "blob": "8a8e40286952342a60970c17f97884b3ae8dd675",
+      "sha256": "b5efa2bec7d239890a20287c7a281fd20d445d4b078026e613c24728837cd8fd"
+    },
+    {
+      "path": "ci-72e6ec/taskboard/reader-correction-provenance.json",
+      "bytes": 981,
+      "blob": "c64cb49d41159c62ea1a7904dd4ae2213f56f561",
+      "sha256": "a9bec11138df5da11a529006021551ac0dae71411195a3aeb717a75a9519a261"
+    },
+    {
+      "path": "ci-72e6ec/taskboard/reader-api-envelope-provenance.json",
+      "bytes": 1085,
+      "blob": "c8acc0ad99ebf04cbcf8618ce7bfe8681f743a0b",
+      "sha256": "ab84b376bcfb2c09582d9e405d664ef8b2598ecbe3c7fb25be1ef295ac95ab72"
+    },
+    {
+      "path": "ci-72e6ec/taskboard/build-readonly-p11-audit.py",
+      "bytes": 13183,
+      "blob": "d002384e98fd5fc14e5fc27c05ed924a8f7912fb",
+      "sha256": "2916457126dd3b1826a073bfbdf4e659a435d3fd1512283941e29d28111d026a"
+    },
+    {
+      "path": "ci-72e6ec/taskboard/build-readonly-p11-audit-v2.py",
+      "bytes": 13184,
+      "blob": "e036aa477a7f7e35d4130c438cad82bd9017f892",
+      "sha256": "b0621abc75a13e47a01850cf2758e5ab8b53039107236ad154afd0dc890f21b2"
+    },
+    {
+      "path": "ci-72e6ec/taskboard/build-readonly-p11-audit-v3.py",
+      "bytes": 13328,
+      "blob": "19f15aac6a228f5b4f00725b311e02916b181125",
+      "sha256": "e78c643b0ed129d90f9519035b3059eb6b3b858f7ff6aa7401f1434db977fab8"
+    }
+  ],
+  "payloadBytes": 1789700,
+  "supportingNameComparisonOnly": [
+    {
+      "path": "ci-57885c/taskboard/job.log",
+      "bytes": 183992,
+      "blob": "a6c699f25c98307520111f36e7c00449fd685296",
+      "sha256": "879c06cf75752bd942a7f716250a3a75e9fef8c7fe3417262516db687efa4ab5"
+    },
+    {
+      "path": "ci-57885c/taskboard/job-original-response.json",
+      "bytes": 193903,
+      "blob": "8ccd188db6e802e6910011a81bcb694812c8c79c",
+      "sha256": "5632d69ba0470776d956be918b2a90291fe025014b5b03fce87f2cf099a7dd04"
+    }
+  ],
+  "proof": {
+    "path": "ci-72e6ec/taskboard/p11-byte-source-proof.json",
+    "bytes": 235220,
+    "blob": "b4afc9cc262342c97aa2f996e65b4608cd6215e3",
+    "sha256": "175f1567827552d2038a039510458e823b8225d6561724ddbc9a9c00c495d4df"
+  },
+  "audit": {
+    "path": "ci-72e6ec/taskboard/p11-semantic-red-audit.json",
+    "bytes": 7407,
+    "blob": "5c20c2b25f44c5e04d25c9500c60191c9c061e10",
+    "sha256": "3d5a4ae078378506bf0ebfbcd1fc3cd5c62f069c04f7ae07a7e0f1fdf216c80a"
+  },
+  "appendix": {
+    "path": "ci-72e6ec/taskboard/Plan29-p11-first-original-red-appendix.md",
+    "bytes": 5822,
+    "blob": "8a8e40286952342a60970c17f97884b3ae8dd675",
+    "sha256": "b5efa2bec7d239890a20287c7a281fd20d445d4b078026e613c24728837cd8fd"
+  },
+  "scope": "Original full-eight prerequisite semantic RED only. No Team/static/Desktop/native qualification, no PhaseB/C selection, no current followup qualification.",
+  "independentReview": "Pending separate Native R2 at freeze",
+  "noProjectOrCIExecutionByReader": true
+}

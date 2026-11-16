@@ -1,0 +1,68 @@
+{
+  "kind": "ORIGINAL_TERMINAL_RAW_RETENTION_ONLY",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "runId": 43831885807,
+  "jobId": 133178913131,
+  "retainedAtUTC": "2026-11-16T09:07:37.538293+00:00",
+  "artifact": {
+    "id": 14211011775,
+    "name": "host-offline-tests-72e6ec04444969d343d73834c70bc4e261100fc9-1",
+    "size_in_bytes": 294350,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14211011775",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14211011775/zip",
+    "expired": false,
+    "created_at": "2026-11-16T09:02:22Z",
+    "expires_at": "2026-11-30T09:02:21Z",
+    "updated_at": "2026-11-16T09:02:22Z",
+    "digest": "sha256:b701ce8ae4ae5dcc7050b3519aa791eb30fc40a21bf11b60567df99fa4ed67fe",
+    "workflow_run": {
+      "id": 43831885807,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "72e6ec04444969d343d73834c70bc4e261100fc9"
+    }
+  },
+  "raw": {
+    "bytes": 167703,
+    "blob": "04a33c5af686e047f83eae5c8e3bdfa41e211ff9",
+    "sha256": "106a783f66b111a333ff64880ec19568a2d3e41b6456f37a2e76612763e7878c"
+  },
+  "response": {
+    "bytes": 206619,
+    "blob": "733b1c46b94a3117a5d0e381c4639ef550f90ea8",
+    "sha256": "cd63bc0e7789009440fba8ee652a339cb2f7ba9a0beaa14a7ad8a8a0ac07fbcc"
+  },
+  "rawUtf8ExactMcpContent": true,
+  "zip": {
+    "bytes": 294350,
+    "blob": "974dd7f47d4d6d1bf77905d1bd31b6951953e6f5",
+    "sha256": "b701ce8ae4ae5dcc7050b3519aa791eb30fc40a21bf11b60567df99fa4ed67fe"
+  },
+  "members": [
+    {
+      "path": "host-offline-tests-1.json",
+      "bytes": 2168436,
+      "blob": "9d02eaa0411eeaeb74c2330e64d742e3b7b96456",
+      "sha256": "beeb628661a4012850965bcc4c1fa97d524d5d11775740e4f6b65152e838e9e8",
+      "crc32": "4c29bf93"
+    },
+    {
+      "path": "host-offline-tests-1.log",
+      "bytes": 97577,
+      "blob": "2b51c913aecb8f2616831111669754b7c8a69d03",
+      "sha256": "7c6f4680f844e36a952fa56b50986def311797566a9a2191ef21f55a2bd7280c",
+      "crc32": "213d074d"
+    }
+  ],
+  "safeCrc": true,
+  "summary": {
+    "success": true,
+    "numTotalTests": 6228,
+    "numPassedTests": 6222,
+    "numFailedTests": 0,
+    "numPendingTests": 6
+  },
+  "actualFileCount": 541,
+  "scope": "Original shard only; no all-four or independent source/guard qualification."
+}\n

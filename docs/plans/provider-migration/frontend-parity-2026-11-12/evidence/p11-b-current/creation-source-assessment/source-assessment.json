@@ -1,0 +1,293 @@
+{
+  "kind": "creation-schedule-team-selector-source-assessment-v1",
+  "observedAtUTC": "2026-11-16T08:58:09.899769+00:00",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "comparisonSourceHead": "57885c055a18b27c180c304762643eac632513ad",
+  "sourceTree": "de80fbfbffb3fe4daabf6cc9be258cc8df534524",
+  "runId": 43831885626,
+  "jobId": 133178909700,
+  "scope": "Read-only source assessment, separate from immutable original failure author packet. No source/test/CI action or runtime experiment. This is not an independent re-audit of the author packet.",
+  "basis": [
+    {
+      "path": "ci-72e6ec/creation-macos/audit.json",
+      "bytes": 24388,
+      "gitBlob": "1a3c1c2053b4d730f63ab5b5bbf05a8954d55d28",
+      "sha256": "f11d5c8d5a7a18931d31b7fb3b1c9cc2e31248098b3934b42186cee617b46688"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/checkpoint.json",
+      "bytes": 3016,
+      "gitBlob": "b18418a326deb78d5bf60d96910ba13115685955",
+      "sha256": "ac42555cc450724e88032acabe4d2a688d79860e4700d8cf34b2d9f2520ab6b5"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/job.log",
+      "bytes": 66388,
+      "gitBlob": "be8e37438f24a2e6288a6a24be27fd181a671ff7",
+      "sha256": "49070d538c8377d29c7d16a30071c5fda6be17413f6bd4de3679fea22f004122"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/source-proof.json",
+      "bytes": 25770,
+      "gitBlob": "2d6d91f0d57bb0720e30651e3ded621376e65a3c",
+      "sha256": "8285c84cacb0fd622695477e6b8107269c6cf576091c0280fe3b0461c5df75c6"
+    }
+  ],
+  "sources": [
+    {
+      "path": "scripts/e2e/teams-create-page-desktop.mjs",
+      "bytes": 103360,
+      "gitBlob": "764d42763c8eab6592235acf75073253538cfe38",
+      "sha256": "e1c09e6efffa777bd7f042c813f49cb93d20957d07bed45582474a2930312c1e",
+      "lines": 2105,
+      "byteExactToE2": true,
+      "reviewedExcerpts": [
+        {
+          "firstLine": 70,
+          "lastLine": 98,
+          "text": "async function seedFixture() {\n  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'teams-create-page-e2e-')));\n  const runtimeLock = JSON.parse(await readFile(path.join(repoRoot, 'runtime.lock.json'), 'utf8'));\n  const fixture = {\n    kind: 'teams-create-page-desktop-v1',\n    root,\n    claudeRoot: path.join(root, '.claude'),\n    userDataRoot: path.join(root, 'user-data'),\n    claudeConfigDir: path.join(root, 'claude-config'),\n    multimodelDataHome: path.join(root, 'multimodel-data'),\n    multimodelCacheHome: path.join(root, 'multimodel-cache'),\n    xdgConfigHome: path.join(root, 'xdg-config'),\n    xdgDataHome: path.join(root, 'xdg-data'),\n    xdgCacheHome: path.join(root, 'xdg-cache'),\n    xdgStateHome: path.join(root, 'xdg-state'),\n    xdgRuntimeDir: path.join(root, 'xdg-runtime'),\n    projectPath: path.join(root, 'sandbox-project'),\n    teamName: `teams-create-page-e2e-${randomUUID()}`,\n    memberName: 'team-lead',\n    runtimeScriptPath: path.join(root, 'fixture-runtime-deny.cjs'),\n    runtimeWrapperPath: path.join(\n      root, process.platform === 'win32' ? 'fixture-runtime-deny.cmd' : 'fixture-runtime-deny.cjs'\n    ),\n    runtimeLedgerPath: path.join(root, 'fixture-runtime-ledger.ndjson'),\n    providerLedgerPath: path.join(root, 'fixture-provider-ledger.ndjson'),\n    providerCliPaths: {},\n    codexHome: path.join(root, 'codex-home'),\n    deliveryRuntimeVersion: runtimeLock.version,\n  };"
+        },
+        {
+          "firstLine": 196,
+          "lastLine": 222,
+          "text": "  const teamDir = path.join(fixture.claudeRoot, 'teams', fixture.teamName);\n  await json(path.join(fixture.claudeRoot, 'agent-teams-config.json'), {\n    general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark', defaultTab: 'teams' },\n  });\n  await json(path.join(teamDir, 'config.json'), {\n    name: fixture.teamName,\n    description: 'Disposable Teams creation E2E fixture',\n    color: 'blue',\n    language: 'en',\n    createdAt: Date.now(),\n    leadAgentId: member.agentId,\n    members: [member],\n    projectPath: fixture.projectPath,\n    projectPathHistory: [fixture.projectPath],\n  });\n  await json(path.join(teamDir, 'members.meta.json'), { version: 1, members: [member] });\n  await json(path.join(teamDir, 'team.meta.json'), {\n    version: 1,\n    cwd: fixture.projectPath,\n    providerId: 'opencode',\n    model: 'test-model',\n    prompt: 'Renderer fixture only. Never launch any provider.',\n    createdAt: Date.now(),\n  });\n  await mkdir(path.join(fixture.claudeRoot, 'projects'), { recursive: true });\n  await mkdir(path.join(fixture.claudeRoot, 'tasks', fixture.teamName), { recursive: true });\n  await json(path.join(root, 'fixture.json'), fixture);"
+        },
+        {
+          "firstLine": 443,
+          "lastLine": 485,
+          "text": "  async waitFor(expression, label, timeoutMs = 30_000) {\n    const deadline = Date.now() + timeoutMs;\n    let lastTransientError = null;\n    while (Date.now() < deadline) {\n      try {\n        if (await this.evaluate(`Boolean(${expression})`)) return;\n        lastTransientError = null;\n      } catch (error) {\n        if (\n          !/execution context was destroyed|cannot find (?:default )?execution context/i.test(\n            String(error)\n          )\n        ) {\n          throw error;\n        }\n        lastTransientError = error;\n      }\n      await new Promise((resolve) => setTimeout(resolve, 80));\n    }\n    throw new Error(\n      `Timed out waiting for ${label}${lastTransientError ? `: ${String(lastTransientError)}` : ''}`\n    );\n  }\n\n  async click(expression) {\n    await this.waitFor(expression, expression);\n    const target = await this.evaluate(`(() => {\n      const element = ${expression};\n      if (!element || element.disabled) return null;\n      element.scrollIntoView({ block: 'center', inline: 'nearest' });\n      const rect = element.getBoundingClientRect();\n      return rect.width > 0 && rect.height > 0\n        ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }\n        : null;\n    })()`);\n    assert(target, `Missing/disabled/hidden E2E click target: ${expression}`);\n    await this.send('Input.dispatchMouseEvent', {\n      type: 'mousePressed', x: target.x, y: target.y, button: 'left', clickCount: 1,\n    });\n    await this.send('Input.dispatchMouseEvent', {\n      type: 'mouseReleased', x: target.x, y: target.y, button: 'left', clickCount: 1,\n    });\n  }"
+        },
+        {
+          "firstLine": 833,
+          "lastLine": 877,
+          "text": "async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebuggerUrl) {\n  const scheduleLabel = 'schedule-visual-e2e-' + randomUUID().slice(0, 8);\n  log('reject invalid cron and timezone at the actual native IPC boundary');\n  for (const { timing, expectedError } of [\n    { timing: { cronExpression: 'not a cron', timezone: 'UTC' }, expectedError: /cron/i },\n    { timing: { cronExpression: '0 9 * * *', timezone: 'Mars/Olympus' }, expectedError: /time ?zone/i },\n  ]) {\n    const invalidInput = {\n      teamName: fixture.teamName,\n      ...timing,\n      launchConfig: { cwd: fixture.projectPath, prompt: 'No execution' },\n    };\n    const result = await client.evaluate(\n      'window.electronAPI.schedules.create(' + JSON.stringify(invalidInput) +\n        ').then(() => \"UNEXPECTED_SUCCESS\", error => String(error?.message ?? error))'\n    );\n    assert.notEqual(result, 'UNEXPECTED_SUCCESS', 'Native IPC accepted invalid schedule timing');\n    assert(expectedError.test(result), 'Native IPC returned an unrelated error: ' + result);\n  }\n\n  log('open real Schedules UI in isolated Electron');\n  await client.evaluate('window.__agentTeamsDevStore.getState().openSchedulesTab()');\n  await client.waitFor(createButtonExpression('Add Schedule'), 'Schedules screen ready', 45_000);\n  await client.click(createButtonExpression('Add Schedule'));\n  await client.waitFor(\"document.querySelector('[role=dialog] #schedule-label')\",\n    'actual schedule editor loaded', 45_000);\n  await captureScreenshot(client, fixture, 'schedules-editor-opened');\n  // The empty-state page also has a \"Create Schedule\" button behind the modal.\n  // Target the enabled dialog submit, not the background trigger.\n  const saveButton = \"Array.from(document.querySelectorAll('[role=dialog] button'))\" +\n    \".find(button => button.textContent?.trim() === 'Create Schedule')\";\n  await client.click(saveButton);\n  await client.waitFor(\n    \"document.querySelector('[role=dialog]')?.textContent?.includes('Team is required')\",\n    'pristine form shows a reason after Save', 20_000);\n  await captureScreenshot(client, fixture, 'schedules-pristine-submit-validation');\n\n  log('select the fixture team and review its saved one-time startup prompt');\n  await client.click(\"document.querySelector('[role=dialog] button[role=combobox]')\");\n  const teamOption = \"Array.from(document.querySelectorAll('[cmdk-item]'))\" +\n    \".find(option => option.textContent?.includes(\" + JSON.stringify(fixture.teamName) + \"))\";\n  await client.click(teamOption);\n  await client.waitFor(\n    \"document.querySelector('#schedule-saved-prompt-reviewed')\",\n    'saved prompt acknowledgement visible before Save', 45_000);"
+        },
+        {
+          "firstLine": 1248,
+          "lastLine": 1265,
+          "text": "async function main() {\n  const fixture = await seedFixture();\n  const unique = `create-page-e2e-${randomUUID().slice(0, 8)}`;\n  let failure = null;\n  let cleanupFailure = null;\n  let qualifiedResult = null;\n  const log = (step) => process.stdout.write(`STEP: ${step}\\n`);\n  const renderSnapshot = async (client) => {\n    return client.evaluate(`(() => {\n      const page = document.querySelector('[data-testid=\"create-team-page\"]');\n      const dialog = document.querySelector('[role=\"dialog\"]');\n      return {\n        inCreatePage: Boolean(page),\n        pageName: page?.querySelector('#team-name')?.value ?? null,\n        dialogOpen: Boolean(dialog),\n        bodyText: document.body?.innerText?.slice(0, 800) ?? '',\n      };\n    })()`);"
+        },
+        {
+          "firstLine": 1771,
+          "lastLine": 1815,
+          "text": "    log('copy an existing sandbox team using the real Teams card');\n    await cdp.evaluate(\n      `window.__agentTeamsDevStore.getState().openTeamsTab(${JSON.stringify(fixture.projectPath)})`\n    );\n    const copyTarget =\n      \"Array.from(document.querySelectorAll('.team-row-zebra-card'))\" +\n      \".find(card => card.textContent?.includes(\" + JSON.stringify(fixture.teamName) + \"))\" +\n      \"?.querySelector('button[aria-label=\\\"Copy team\\\"]')\";\n    await cdp.click(copyTarget);\n    await cdp.waitFor(\n      `document.querySelector('[data-testid=create-team-page] #team-name')?.value?.startsWith(${JSON.stringify(fixture.teamName)})`,\n      'copy action initialized the new team identity from the selected card',\n      30_000\n    );\n    const copiedName = await cdp.evaluate(\n      \"document.querySelector('[data-testid=create-team-page] #team-name')?.value\"\n    );\n    assert.notEqual(copiedName, fixture.teamName, 'Copy reused the original identity');\n    assert(copiedName.startsWith('teams-create-page-e2e-'),\n      'Copy did not use the existing team name as its source');\n    const editedCopyName = `copy-edited-e2e-${randomUUID().slice(0, 8)}`;\n    await cdp.fill('#team-name', editedCopyName);\n    await cdp.click(\n      \"document.querySelector('[data-testid=create-team-page] button[aria-label=\\\"Back to teams\\\"]')\"\n    );\n    await cdp.waitFor(createButtonExpression('Continue creating'), 'resume copied draft');\n    await cdp.click(createButtonExpression('Continue creating'));\n    await cdp.waitFor(\n      `document.querySelector('#team-name')?.value === ${JSON.stringify(editedCopyName)}`,\n      'copy seed did not replay over an edited draft'\n    );\n    await captureScreenshot(cdp, fixture, 'copy-resumed-edits');\n    log('template replacement must be cancelable without losing copied draft');\n    await cdp.click(\n      \"Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))\" +\n      \".find(b => b.textContent?.includes('Optional team details'))\"\n    );\n    await cdp.waitFor(\"document.querySelector('#team-description')\", 'expanded team details');\n    const copiedDescription = await cdp.evaluate(\n      \"document.querySelector('#team-description')?.value\"\n    );\n    assert.equal(\n      copiedDescription,\n      'Disposable Teams creation E2E fixture',\n      'Copied team description did not hydrate from its persisted config'"
+        },
+        {
+          "firstLine": 1880,
+          "lastLine": 1887,
+          "text": "      `Array.from((${templateConfirmationExpression})?.querySelectorAll('button') ?? [])` +\n      \".find(button => button.textContent?.trim() === 'Apply template')\"\n    );\n    await cdp.waitFor(\n      \"document.querySelector('#team-description')?.value === \" +\n      JSON.stringify('Design, build and validate apps, websites and digital products.'),\n      'template applied after explicit confirmation'\n    );"
+        },
+        {
+          "firstLine": 1995,
+          "lastLine": 2029,
+          "text": "    log('duplicate team-name validation and recovery in organization editor');\n    await cdp.fill('#team-name', fixture.teamName);\n    await cdp.waitFor(\n      \"document.querySelector('[data-testid=create-team-page]')?.innerText.includes('Team name already exists')\",\n      'existing team name rejected'\n    );\n    const orgTeamName = 'org-team-e2e-' + randomUUID().slice(0, 8);\n    await cdp.fill('#team-name', orgTeamName);\n    await cdp.click(createButtonExpression('Custom path'));\n    await cdp.fill(\n      '[data-testid=create-team-page] input[aria-label=\"Custom working directory\"]',\n      fixture.projectPath\n    );\n    const orgLaunchChecked = await cdp.evaluate(\n      \"document.querySelector('#launch-team')?.getAttribute('data-state') === 'checked'\"\n    );\n    if (orgLaunchChecked) {\n      await cdp.click(\"document.querySelector('[data-testid=create-team-page] #launch-team')\");\n    }\n    await cdp.click(createButtonExpression('Create'));\n    await cdp.waitFor(\n      \"!document.querySelector('[data-testid=create-team-page]')\",\n      'organization team saved and editor closed', 45_000\n    );\n    const structure = await cdp.evaluate(\n      \"window.electronAPI.organizations.getOrganizationStructure()\"\n    );\n    assert(\n      structure.units.some(u => u.kind === 'team' &&\n        u.teamName === orgTeamName && u.organizationId === organization.id),\n      'Created team was not assigned to the requested organization'\n    );\n    await captureScreenshot(cdp, fixture, 'organization-created');\n\n    const scheduleUiEvidence = await exerciseScheduleUx(cdp, fixture, log, started.inspectorWebSocketDebuggerUrl);"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/components/schedules/SchedulesView.tsx",
+      "bytes": 22785,
+      "gitBlob": "afb3388174ee6b044574d945870e21b5759e067a",
+      "sha256": "255084d0c3a9847368fd3d4b6cb35a7a9e4834938a52c4f0e898c5f17951d942",
+      "lines": 596,
+      "byteExactToE2": true,
+      "reviewedExcerpts": [
+        {
+          "firstLine": 286,
+          "lastLine": 291,
+          "text": "  const [searchQuery, setSearchQuery] = useState('');\n  const [statusFilter, setStatusFilter] = useState<ScheduleStatus | 'all'>('all');\n  const [teamFilter, setTeamFilter] = useState<string | null>(null);\n  const [dialogOpen, setDialogOpen] = useState(false);\n  const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);\n  const { feedback, act: actOnSchedule } = useScheduleActions();"
+        },
+        {
+          "firstLine": 353,
+          "lastLine": 369,
+          "text": "    return counts;\n  }, [schedules]);\n\n  const handleEdit = useCallback((schedule: Schedule) => {\n    setEditingSchedule(schedule);\n    setDialogOpen(true);\n  }, []);\n\n  const handleCreate = useCallback(() => {\n    setEditingSchedule(null);\n    setDialogOpen(true);\n  }, []);\n\n  const handleClose = useCallback(() => {\n    setDialogOpen(false);\n    setEditingSchedule(null);\n  }, []);"
+        },
+        {
+          "firstLine": 573,
+          "lastLine": 593,
+          "text": "      {/* Create/Edit Dialog */}\n      {dialogOpen && (\n        <Suspense\n          fallback={\n            <LaunchTeamDialogLoadingFallback\n              mode=\"schedule\"\n              teamName={editingSchedule?.teamName}\n              isEditingSchedule={Boolean(editingSchedule)}\n              onClose={handleClose}\n            />\n          }\n        >\n          <LaunchTeamDialog\n            mode=\"schedule\"\n            open={dialogOpen}\n            teamName={editingSchedule?.teamName}\n            schedule={editingSchedule}\n            onClose={handleClose}\n          />\n        </Suspense>\n      )}"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
+      "bytes": 132317,
+      "gitBlob": "4bd95a0f2e5636a21d1f0d83dd45f228b054b048",
+      "sha256": "af7b6f9da352008ef014dad120b868090626e071cd5d94037fd03385e2234d40",
+      "lines": 3219,
+      "byteExactToE2": true,
+      "reviewedExcerpts": [
+        {
+          "firstLine": 260,
+          "lastLine": 293,
+          "text": "  const isSchedule = props.mode === 'schedule';\n  const schedule = isSchedule ? (props.schedule ?? null) : null;\n  const isEditing = isSchedule && !!schedule;\n  // Team name: always present for launch mode, may be absent in schedule mode (standalone page)\n  const propsTeamName = props.teamName ?? '';\n  const [selectedTeamName, setSelectedTeamName] = useState('');\n  const { teamByName, openDashboard } = useStore(\n    useShallow((s) => ({\n      teamByName: s.teamByName,\n      openDashboard: s.openDashboard,\n    }))\n  );\n  const openTeamTab = useStore((s) => s.openTeamTab);\n  const teamOptions = useMemo(\n    () =>\n      Object.values(teamByName)\n        .sort((a, b) => a.teamName.localeCompare(b.teamName))\n        .map((team) => ({\n          value: team.teamName,\n          label: team.displayName || team.teamName,\n          description: team.description || undefined,\n          meta: { color: team.color },\n        })),\n    [teamByName]\n  );\n  const effectiveTeamName = propsTeamName || selectedTeamName;\n  const defaultProjectPath = isLaunchMode ? props.defaultProjectPath : undefined;\n  const hydrationSourceRevision = useRef<string | undefined>(undefined);\n  const [launchHydratedTeamName, setLaunchHydratedTeamName] = useState<string | null>(null);\n  const savedLaunchSource = useLaunchDialogSavedRequest(open, isLaunchMode, effectiveTeamName);\n  const ownerHydrationPending =\n    savedLaunchSource.host &&\n    (!savedLaunchSource.ready || launchHydratedTeamName !== savedLaunchSource.key);\n  const needsTeamSelector = isSchedule && !propsTeamName;"
+        },
+        {
+          "firstLine": 420,
+          "lastLine": 430,
+          "text": "  const [scheduleTargetMember, setScheduleTargetMember] = useState('');\n  const [scheduleFormTouched, setScheduleFormTouched] = useState(false);\n  const isTeamSchedule = isSchedule && scheduleExecutionMode === 'team';\n  const isTaskFirstSchedule = isSchedule && (schedule?.taskFirst === true || !isEditing);\n  const usesSavedTeamRuntime = isTeamSchedule || isTaskFirstSchedule;\n  const supportsScheduleLimits = supportsScheduleExecutionLimits(isHostTeamSelectionKey(effectiveTeamName), selectedProviderId);\n  const scheduleRuntimeEditedRef = useRef({ provider: false, model: false, effort: false, fastMode: false, skipPermissions: false });\n  const [savedPromptReview, setSavedPromptReview] = useSavedPromptReview({\n    open, enabled: isTaskFirstSchedule, teamName: effectiveTeamName,\n    scheduleId: schedule?.id, reviewed: schedule?.reviewedSavedPrompt === true,\n  });"
+        },
+        {
+          "firstLine": 792,
+          "lastLine": 818,
+          "text": "  const resetFormState = (): void => {\n    submissionFence.refreshPreparation(prepareRequestSeqRef);\n    savedLaunchSource.reset();\n    hydrationRef.current = { key: null, dirty: false, rosterDirty: false };\n    setLocalError(null);\n    setIsSubmitting(false);\n    setContinuationMode('fresh');\n    setPrepareState('idle');\n    setPrepareMessage(null);\n    setPrepareWarnings([]);\n    prepareChecksRef.current = [];\n    setPrepareChecks([]);\n    setAllowExperimentalLocalModels(false);\n    setCwdMode('project');\n    setSelectedProjectPath('');\n    setCustomCwd('');\n    setConflictDismissed(false);\n    setMembersDrafts([]);\n    setSyncModelsWithLead(false);\n    chipDraft.clearChipDraft();\n    setSelectedTeamName('');\n    setSchedLabel('');\n    setCronExpression('0 9 * * 1-5');\n    setTimezone(getLocalTimezone());\n    setWarmUpMinutes(15);\n    setMaxTurns(50);\n    setMaxBudgetUsd('');"
+        },
+        {
+          "firstLine": 827,
+          "lastLine": 897,
+          "text": "  // Populate form in schedule edit mode\n  useEffect(() => {\n    if (!open || !isSchedule) return;\n    scheduleRuntimeEditedRef.current = {\n      provider: false, model: false, effort: false, fastMode: false, skipPermissions: false,\n    };\n    if (schedule) {\n      // Edit mode — preserve the missing mode of existing schedules on Save.\n      setScheduleExecutionMode(schedule.executionMode ?? 'legacy');\n      setScheduleTargetMember(schedule.targetMember ?? '');\n      setSchedLabel(schedule.label ?? '');\n      setCronExpression(schedule.cronExpression);\n      setTimezone(schedule.timezone);\n      setWarmUpMinutes(schedule.warmUpMinutes);\n      setMaxTurns(schedule.maxTurns ?? 50);\n      setMaxBudgetUsd(schedule.maxBudgetUsd != null ? String(schedule.maxBudgetUsd) : '');\n      promptDraft.setValueRaw(schedule.launchConfig.prompt);\n      setCustomCwd(schedule.launchConfig.cwd);\n      setCwdMode('custom');\n      const scheduleProviderId = normalizeOneShotProviderForMode(\n        schedule.launchConfig.providerId,\n        multimodelEnabled\n      );\n      const scheduleSourceProviderId = normalizeOptionalTeamProviderId(\n        schedule.launchConfig.providerId\n      );\n      setSelectedProviderIdRaw(scheduleProviderId);\n      setSelectedModelRaw(\n        scheduleSourceProviderId !== 'gemini' &&\n          scheduleSourceProviderId !== 'opencode' &&\n          scheduleProviderId ===\n            normalizeOneShotProviderForMode(schedule.launchConfig.providerId, true)\n          ? (schedule.launchConfig.model ?? '')\n          : getStoredTeamModel('anthropic')\n      );\n      setSkipPermissionsRaw(schedule.launchConfig.skipPermissions !== false);\n      setSelectedEffortRaw(schedule.launchConfig.effort ?? '');\n      setSelectedFastModeRaw(schedule.launchConfig.fastMode ?? getStoredTeamFastMode());\n      setSavedLaunchProviderBackendId(schedule.launchConfig.providerBackendId ?? null);\n      setScheduleHydrationKey(`${schedule.id}:${schedule.updatedAt ?? ''}`);\n    } else {\n      // Create mode — the new default is a smart one-agent schedule.\n      setScheduleExecutionMode('agent');\n      setScheduleTargetMember('');\n      setSchedLabel('');\n      setCronExpression('0 9 * * 1-5');\n      setTimezone(getLocalTimezone());\n      setWarmUpMinutes(15);\n      setMaxTurns(50);\n      setMaxBudgetUsd('');\n      promptDraft.setValueRaw('');\n      setCwdMode('project');\n      setSelectedProjectPath('');\n      setCustomCwd('');\n      const storedProviderId = normalizeOneShotProviderForMode(\n        getStoredTeamProvider(),\n        multimodelEnabled\n      );\n      setSelectedProviderIdRaw(storedProviderId);\n      setSelectedModelRaw(getStoredTeamModel(storedProviderId));\n      setSelectedEffortRaw('');\n      setSelectedFastModeRaw(getStoredTeamFastMode());\n      setSavedLaunchProviderBackendId(null);\n      setScheduleHydrationKey(null);\n    }\n\n    setLocalError(null);\n    setScheduleFormTouched(false);\n    setIsSubmitting(false);\n    // eslint-disable-next-line react-hooks/exhaustive-deps\n  }, [open, isSchedule, schedule?.id]);"
+        },
+        {
+          "firstLine": 2554,
+          "lastLine": 2610,
+          "text": "        <fieldset\n          disabled={ownerHydrationPending}\n          aria-busy={ownerHydrationPending}\n          className=\"space-y-4\"\n        >\n          {needsTeamSelector ? (\n            <div className=\"space-y-1.5\">\n              <Label className=\"text-xs\">{t('launch.schedule.team')}</Label>\n              <Combobox\n                options={teamOptions}\n                value={selectedTeamName}\n                onValueChange={(name) => { setSelectedTeamName(name); setScheduleFormTouched(true); setLocalError(null); }}\n                placeholder={t('launch.schedule.selectTeam')}\n                searchPlaceholder={t('launch.schedule.searchTeams')}\n                emptyMessage={\n                  teamOptions.length === 0\n                    ? t('launch.schedule.noTeams')\n                    : t('launch.schedule.noMatches')\n                }\n                disabled={teamOptions.length === 0}\n                renderOption={(option, isSelected) => {\n                  const colorName = option.meta?.color as string | undefined;\n                  const colorSet = colorName\n                    ? getTeamColorSet(colorName)\n                    : nameColorSet(option.label);\n                  return (\n                    <>\n                      {isSelected ? (\n                        <Check className=\"mr-2 size-3.5 shrink-0 text-[var(--color-text)]\" />\n                      ) : (\n                        <span\n                          className=\"mr-2 size-3.5 shrink-0 rounded-full\"\n                          style={{ backgroundColor: colorSet.text }}\n                        />\n                      )}\n                      <div className=\"min-w-0 flex-1\">\n                        <div className=\"flex items-center gap-1.5\">\n                          {isSelected ? (\n                            <span\n                              className=\"size-2 shrink-0 rounded-full\"\n                              style={{ backgroundColor: colorSet.text }}\n                            />\n                          ) : null}\n                          <p className=\"truncate font-medium text-[var(--color-text)]\">\n                            {option.label}\n                          </p>\n                        </div>\n                        {option.description ? (\n                          <p className=\"truncate text-[var(--color-text-muted)]\">\n                            {option.description}\n                          </p>\n                        ) : null}\n                      </div>\n                    </>\n                  );\n                }}\n              />"
+        },
+        {
+          "firstLine": 2636,
+          "lastLine": 2639,
+          "text": "          {isTaskFirstSchedule && savedPromptReview?.teamName === effectiveTeamName ? (\n            <HistoricalPromptReview prompt={savedPromptReview.prompt} confirmed={savedPromptReview.confirmed}\n              onConfirmedChange={(confirmed) => setSavedPromptReview((current) => current && ({ ...current, confirmed }))} />\n          ) : null}"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/components/ui/combobox.tsx",
+      "bytes": 7533,
+      "gitBlob": "b441f61b4f9ff3e31bec1ca1ed78b3933499d2ae",
+      "sha256": "494b52828660b0cd7ae06bab143a8c3b4d0949176fc61b5fa7762131cdb5b21e",
+      "lines": 191,
+      "byteExactToE2": true,
+      "reviewedExcerpts": [
+        {
+          "firstLine": 9,
+          "lastLine": 16,
+          "text": "export interface ComboboxOption {\n  value: string;\n  label: string;\n  description?: string;\n  disabled?: boolean;\n  /** Extra data for renderOption (e.g. sessionCount, path). */\n  meta?: Record<string, unknown>;\n}"
+        },
+        {
+          "firstLine": 54,
+          "lastLine": 85,
+          "text": "  const [open, setOpen] = React.useState(false);\n  const [search, setSearch] = React.useState('');\n  const listboxId = React.useId();\n\n  const selectedOption = options.find((opt) => opt.value === value);\n  const handleOpenChange = React.useCallback(\n    (nextOpen: boolean) => {\n      setOpen(nextOpen);\n      onOpenChange?.(nextOpen);\n    },\n    [onOpenChange]\n  );\n\n  return (\n    <Popover open={open} onOpenChange={handleOpenChange}>\n      <PopoverTrigger asChild>\n        <button\n          id={id}\n          type=\"button\"\n          role=\"combobox\"\n          aria-expanded={open}\n          aria-controls={listboxId}\n          disabled={disabled}\n          className={cn(\n            'flex h-8 w-full items-center justify-between rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-1 text-xs shadow-sm transition-colors placeholder:text-[var(--color-text-muted)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] disabled:cursor-not-allowed disabled:opacity-50',\n            className\n          )}\n        >\n          <span className=\"min-w-0 truncate text-left\">\n            {selectedOption\n              ? (renderTriggerLabel?.(selectedOption) ?? selectedOption.label)\n              : placeholder}"
+        },
+        {
+          "firstLine": 90,
+          "lastLine": 112,
+          "text": "      {open ? (\n        <PopoverContent\n          id={listboxId}\n          className=\"w-[var(--radix-popover-trigger-width)] p-0\"\n          align=\"start\"\n          sideOffset={4}\n          collisionPadding={8}\n          avoidCollisions\n        >\n          <CommandPrimitive\n            className=\"flex size-full flex-col overflow-hidden rounded-md bg-[var(--color-surface)]\"\n            shouldFilter={false}\n          >\n            <div className=\"flex items-center border-b border-[var(--color-border)]\">\n              <CommandPrimitive.Input\n                value={search}\n                onValueChange={setSearch}\n                placeholder={searchPlaceholder}\n                className=\"flex h-8 w-full border-0 bg-[var(--color-form-control-bg)] px-2 py-1 text-xs text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)]\"\n              />\n            </div>\n            <CommandPrimitive.List\n              className=\"max-h-72 overflow-y-auto overscroll-contain px-2 py-1\""
+        },
+        {
+          "firstLine": 134,
+          "lastLine": 183,
+          "text": "              {options\n                .filter((opt) => {\n                  if (!search.trim()) return true;\n                  const q = search.toLowerCase();\n                  return (\n                    opt.label.toLowerCase().includes(q) ||\n                    opt.value.toLowerCase().includes(q) ||\n                    (opt.description?.toLowerCase().includes(q) ?? false)\n                  );\n                })\n                .map((option) => {\n                  const isSelected = option.value === value;\n                  return (\n                    <CommandPrimitive.Item\n                      key={option.value}\n                      value={option.value}\n                      disabled={option.disabled}\n                      aria-disabled={option.disabled === true}\n                      onSelect={() => {\n                        if (option.disabled) {\n                          return;\n                        }\n                        onValueChange(option.value);\n                        setOpen(false);\n                        setSearch('');\n                      }}\n                      className={cn(\n                        'relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none data-[selected=true]:bg-[var(--color-surface-raised)] data-[selected=true]:text-[var(--color-text)]',\n                        option.disabled && 'cursor-not-allowed opacity-60'\n                      )}\n                    >\n                      {renderOption ? (\n                        renderOption(option, isSelected, search)\n                      ) : (\n                        <>\n                          {isSelected ? <Check className=\"mr-2 size-3.5 shrink-0\" /> : null}\n                          <div className=\"min-w-0 flex-1\">\n                            <p className=\"truncate font-medium text-[var(--color-text)]\">\n                              {option.label}\n                            </p>\n                            {option.description ? (\n                              <p className=\"truncate text-[var(--color-text-muted)]\">\n                                {option.description}\n                              </p>\n                            ) : null}\n                          </div>\n                        </>\n                      )}\n                    </CommandPrimitive.Item>\n                  );"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/components/ui/popover.tsx",
+      "bytes": 1630,
+      "gitBlob": "ab5c334d683c034f279db2994110b40f0e96441e",
+      "sha256": "1d847f561b6009183481859a3b289311329e09b5730f55f4c35a5ba2d667c5b8",
+      "lines": 31,
+      "byteExactToE2": true,
+      "reviewedExcerpts": [
+        {
+          "firstLine": 11,
+          "lastLine": 27,
+          "text": "const PopoverContent = React.forwardRef<\n  React.ComponentRef<typeof PopoverPrimitive.Content>,\n  React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>\n>(({ className, align = 'center', sideOffset = 4, ...props }, ref) => (\n  <PopoverPrimitive.Portal>\n    <PopoverPrimitive.Content\n      ref={ref}\n      align={align}\n      sideOffset={sideOffset}\n      className={cn(\n        'z-50 max-h-[min(80vh,24rem)] min-h-0 w-72 overflow-y-auto overflow-x-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-[var(--color-text)] shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',\n        className\n      )}\n      {...props}\n    />\n  </PopoverPrimitive.Portal>\n));"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/components/team/schedule/useSavedPromptReview.ts",
+      "bytes": 1342,
+      "gitBlob": "d19cfb5fecd85630af7e381c2aaac7b5429b2612",
+      "sha256": "063384266f95242e78f445d96c0e2deb7aef43d97c31c468f1117e7ae992bd86",
+      "lines": 45,
+      "byteExactToE2": true,
+      "reviewedExcerpts": [
+        {
+          "firstLine": 11,
+          "lastLine": 45,
+          "text": "/** Preview saved one-time instructions; submit re-reads them authoritatively. */\nexport function useSavedPromptReview(input: {\n  open: boolean;\n  enabled: boolean;\n  teamName: string;\n  scheduleId?: string;\n  reviewed: boolean;\n}) {\n  const { open, enabled, teamName, scheduleId, reviewed } = input;\n  const [review, setReview] = useState<SavedPromptReview | null>(null);\n\n  useEffect(() => setReview(null), [teamName, scheduleId, open]);\n  useEffect(() => {\n    if (!open || !enabled || !teamName) return;\n    let cancelled = false;\n    void api.teams.getSavedRequest(teamName).then((saved) => {\n      if (cancelled) return;\n      const prompt = saved?.prompt?.trim() ?? '';\n      if (!prompt) {\n        setReview(null);\n        return;\n      }\n      setReview((current) =>\n        current?.teamName === teamName && current.prompt === prompt\n          ? current\n          : { teamName, prompt, confirmed: reviewed }\n      );\n    }).catch(() => {\n      // The submit path performs the authoritative read and reports errors.\n    });\n    return () => { cancelled = true; };\n  }, [enabled, open, reviewed, teamName]);\n\n  return [review, setReview] as const;\n}"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/components/team/schedule/HistoricalPromptReview.tsx",
+      "bytes": 1479,
+      "gitBlob": "b16e01839622d05065ed727b79f9a2d2e5fdffa4",
+      "sha256": "0e031cc543df222044ddf56d7e452eee5350ad85d0f3126cc719ac6bad693392",
+      "lines": 38,
+      "byteExactToE2": true,
+      "reviewedExcerpts": [
+        {
+          "firstLine": 13,
+          "lastLine": 38,
+          "text": "/** Saved instructions remain intact; acknowledgement authorizes only non-replay. */\nexport const HistoricalPromptReview = ({\n  prompt, confirmed, onConfirmedChange,\n}: HistoricalPromptReviewProps): React.JSX.Element => {\n  const { t } = useAppTranslation('team');\n  return (\n    <section className=\"space-y-2 rounded-md border border-[var(--warning-border)] p-3\">\n      <p className=\"text-xs text-[var(--warning-text)]\">\n        {t('launch.schedule.historicalPromptReviewRequired')}\n      </p>\n      <pre className=\"max-h-32 overflow-auto whitespace-pre-wrap break-words rounded-md bg-[var(--color-surface-raised)] p-2 text-xs\">\n        {prompt}\n      </pre>\n      <div className=\"flex items-start gap-2\">\n        <Checkbox\n          id=\"schedule-saved-prompt-reviewed\"\n          checked={confirmed}\n          onCheckedChange={(value) => onConfirmedChange(value === true)}\n        />\n        <Label htmlFor=\"schedule-saved-prompt-reviewed\" className=\"cursor-pointer text-xs font-normal\">\n          {t('launch.schedule.historicalPromptAcknowledged')}\n        </Label>\n      </div>\n    </section>\n  );\n};"
+        }
+      ]
+    }
+  ],
+  "actualBoundary": {
+    "firstError": "Error: Timed out waiting for saved prompt acknowledgement visible before Save",
+    "sourceStack": [
+      "CdpClient.waitFor:462",
+      "exerciseScheduleUx:875",
+      "main:2029"
+    ],
+    "lastStep": {
+      "line": 688,
+      "timestamp": "2026-11-16T08:41:07.7383330Z",
+      "step": "select the fixture team and review its saved one-time startup prompt"
+    },
+    "intendedFixtureTeam": "teams-create-page-e2e-961f3812-d46d-4321-a219-8e7161c753d4",
+    "lastVisibleTeam": "org-team-e2e-8e8d57e5",
+    "selectedTeamMismatchRetained": true,
+    "clickedOptionIdentityRetained": false,
+    "selectionTransitionHistoryRetained": false,
+    "savedRequestCompletionRetained": false
+  },
+  "exactSelectionChain": [
+    "SchedulesView.handleCreate sets editingSchedule=null and dialogOpen=true; create dialog receives editingSchedule?.teamName, so the source create path does not pass the currently open org-team tab as a teamName prop.",
+    "LaunchTeamDialog starts selectedTeamName at the empty string. Its team options sort teamByName values by teamName; value=teamName, label=displayName||teamName, description=description||undefined. Effective identity is propsTeamName||selectedTeamName.",
+    "Creation driver first clicks the first role=combobox button inside any role=dialog, without an exact listbox/control identity. The team control occurs before SmartScheduleFields in the current dialog source; the actual selector match count is unretained.",
+    "The item expression searches every document [cmdk-item], accepts textContent.includes(full fixture team name), and takes the first match. It does not join the opened trigger aria-controls/listbox ID, check exact option value, assert one matching item, or retain the matched element identity.",
+    "CdpClient.click first waits for truthiness of that expression, then separately evaluates it again, scrolls the selected element, and reads one center point. It sends original mousePressed and mouseReleased to that point. It does not record the actual hit target or selected option, or assert selectedTeamName after the click.",
+    "Combobox renders each item from one option keyed/value-bound by option.value. The non-disabled onSelect closure synchronously calls onValueChange(option.value), then closes and clears search. LaunchTeamDialog directly stores that name. No mapping from the selected fixture value to org-team was found.",
+    "The only other setSelectedTeamName write in LaunchTeamDialog resets it to an empty string. The saved-prompt hook reads the effective selected identity and writes only its separate review state; it cannot select org-team.",
+    "Saved-prompt display additionally requires task-first mode, a current same-team review and a nonempty resolved saved prompt. Missing/failed/currentness-cancelled request may leave the acknowledgement absent. No specific request result or branch is retained in this failure."
+  ],
+  "selectorContractFinding": {
+    "finding": "The test selector is not an exact identity predicate: allowed label/description text and prefix-sharing names can satisfy it for a different value; global first-match selection also does not prove uniqueness or the intended open listbox.",
+    "finiteSourceReasoningOnly": {
+      "target": "teams-create-page-e2e-<full-id>",
+      "earlierAllowedOption": {
+        "value": "another-team",
+        "label": "another-team",
+        "description": "teams-create-page-e2e-<full-id>"
+      },
+      "laterIntendedOption": {
+        "value": "teams-create-page-e2e-<full-id>",
+        "label": "teams-create-page-e2e-<full-id>"
+      },
+      "deduction": "With this allowed rendered ordering, textContent.includes(target) would accept the first option, while its onSelect would correctly deliver another-team. This is a source counterexample to selector identity, not observed DOM, a test execution, or evidence that the retained org-team had such text."
+    },
+    "actualApplicabilityUnknown": true,
+    "knownFixtureLimits": "The seeded fixture description is the fixed Disposable Teams creation E2E fixture. The earlier copied-description check and applied-template description do not contain the full UUID team name. The org-team label itself differs and does not contain it. The archive retains only screenshots, not the complete current team catalog/option DOM or matched option value, so a particular duplicate/substring match is not established."
+  },
+  "whatIsNotEstablished": [
+    "No deterministic product onSelect/state mapping defect is demonstrated.",
+    "No actual duplicate option, wrong selector match, hidden listbox, displayName alias, option reorder, keyboard selection or pointer retarget is retained.",
+    "Popover source permits portal placement and open/close animation; this is not evidence that animation or layout caused this failure.",
+    "A returned CDP press/release command does not identify its DOM recipient or certify a specific React state transition.",
+    "The later org-team image does not distinguish selection of org-team at dispatch from a subsequent change; no duration or sequence is inferred.",
+    "The original 45-second wait, 80ms delay and 30-second CDP command bound remain unchanged; extending or retrying them is not a selected remedy.",
+    "E2 mac success on the same seven reviewed leaves is a separate original outcome, not a repair proof or qualification transfer to E3."
+  ],
+  "minimumMissingEvidence": "The identity/value and listbox ownership of the actual item selected by the original click, plus the first post-click selected-team observation, are missing. Any future observation/acceptance change would require a separately reviewed bounded R1 preserving original actions and budgets; none is proposed or applied here.",
+  "disposition": "No repair selected. Preserve the concrete selector-identity weakness separately from the unknown cause of actual org-team selection and saved-prompt timeout.",
+  "mutations": {
+    "trackedSource": false,
+    "refs": false,
+    "ci": false,
+    "projectExecution": false,
+    "scratchEvidenceOnly": true
+  }
+}

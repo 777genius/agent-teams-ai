@@ -1,0 +1,21 @@
+{
+  "kind": "REVIEW_READER_ONLY_CORRECTION",
+  "createdAtUTC": "2026-11-16T09:41:52.766596+00:00",
+  "originalReader": {
+    "path": "ci-72e6ec/team/independent_p11_team_reader.py",
+    "bytes": 14763,
+    "blob": "b032745afdf6da0aa2e7254a632765cd921b7607",
+    "sha256": "23c132536488cbc5ede1eb6a567e1f1cbb87246c0e704d6563d93d7473edde24"
+  },
+  "correctedReader": {
+    "path": "ci-72e6ec/team/independent_p11_team_reader_v2.py",
+    "bytes": 14805,
+    "blob": "401c24eecf1cde1ef24551e4df67ee23c75d3ce4",
+    "sha256": "aa2dd0abe56fc9e8814f40a7d5932a715193527b8a9f7f20fe093cecd98ca17b"
+  },
+  "error": "Reader required artifact names to contain the descriptive word frontend; original four names instead are host-offline-tests-<exact source>-<shard1..4>.",
+  "correction": "Verify exact full set of four official artifact names; no artifact/result/source criterion relaxed.",
+  "noReportsWrittenBeforeReaderAssertion": true,
+  "projectOrCiRunOrRefetch": false,
+  "authorOriginalsChanged": false
+}

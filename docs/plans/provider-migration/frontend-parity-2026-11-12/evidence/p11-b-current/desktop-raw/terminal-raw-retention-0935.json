@@ -1,0 +1,300 @@
+{
+  "kind": "ONCE_RETAINED_ORIGINAL_TERMINAL_LOGS_RAW_ONLY",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "retainedAtUTC": "2026-11-16T09:35:24.516920+00:00",
+  "officialArtifacts": {
+    "path": "ci-72e6ec/official-host-artifacts-0935.json",
+    "bytes": 3850,
+    "blob": "26cd8b1765d289c4912b9f1f6ffaf29bcaece945",
+    "sha256": "c82a51b3cee928abaddbe7a19e19e11f3ca105fed7bbc729dbc463c069d38540"
+  },
+  "jobsSnapshot": {
+    "path": "ci-72e6ec/owned-jobs-0934.json",
+    "bytes": 173818,
+    "blob": "19202bc3231bb7690ed34812e301518888de372a",
+    "sha256": "17de841d51e8f963b40c69e3ecb8cf7502dda7411df7e90094823d8cae331e52"
+  },
+  "records": [
+    {
+      "lane": "import",
+      "originalResponse": {
+        "path": "ci-72e6ec/import/job-original-response.json",
+        "bytes": 95947,
+        "blob": "998cd434b0f5f2ca81589c08814d545b0ef9e39b",
+        "sha256": "bc3f74de97567475d3dc5c190db1f788f88934537072116c25fdf3ccfaf4a823"
+      },
+      "fullRaw": {
+        "path": "ci-72e6ec/import/job.log",
+        "bytes": 94294,
+        "blob": "afd4099a0ebbb0ce5ab50b81d77d1f68079bc532",
+        "sha256": "773d2848f50ee259826dd7e71990ad4ce727770b75ee64200097401cd105af72"
+      },
+      "rawEqualsMCPUTF8": true,
+      "reporterSummaries": [
+        {
+          "tests": 123,
+          "suites": 0,
+          "pass": 120,
+          "fail": 3,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        }
+      ],
+      "missingExpectedRejectionCount": 3
+    },
+    {
+      "lane": "extensions",
+      "originalResponse": {
+        "path": "ci-72e6ec/extensions/job-original-response.json",
+        "bytes": 95681,
+        "blob": "5439b84cfe1e06786b54f8589b394d01ca87d607",
+        "sha256": "2ef56164e4fa7e1c86d7a22910e3bbc8ad1829ba5e63cab8d71d4cecb7994f1b"
+      },
+      "fullRaw": {
+        "path": "ci-72e6ec/extensions/job.log",
+        "bytes": 94032,
+        "blob": "f16d5dc7242b264040ff33ecdeac06604fb54977",
+        "sha256": "dc81c787650ab1ef4159a034000f695bc15dbf62d6b9a522087b16c6467b9cfb"
+      },
+      "rawEqualsMCPUTF8": true,
+      "reporterSummaries": [
+        {
+          "tests": 123,
+          "suites": 0,
+          "pass": 120,
+          "fail": 3,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        }
+      ],
+      "missingExpectedRejectionCount": 3
+    },
+    {
+      "lane": "collaboration",
+      "originalResponse": {
+        "path": "ci-72e6ec/collaboration/job-original-response.json",
+        "bytes": 97026,
+        "blob": "ee7dcb7252689c3860f53b67799e79c3043b64b5",
+        "sha256": "401d3c80910bb0bf50588b7533b1c34113a2eb02db5a60584efcc0e562058060"
+      },
+      "fullRaw": {
+        "path": "ci-72e6ec/collaboration/job.log",
+        "bytes": 95355,
+        "blob": "1a9954a2244562c9d0b13ec5a80d474ef87e1506",
+        "sha256": "1cfaaec3f2c0959fbcf328008c91cb46ad29d6e4d35853d32487355f5449a966"
+      },
+      "rawEqualsMCPUTF8": true,
+      "reporterSummaries": [
+        {
+          "tests": 123,
+          "suites": 0,
+          "pass": 120,
+          "fail": 3,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        }
+      ],
+      "missingExpectedRejectionCount": 3
+    },
+    {
+      "lane": "management",
+      "originalResponse": {
+        "path": "ci-72e6ec/management/job-original-response.json",
+        "bytes": 94642,
+        "blob": "ee234cd8f3d4cf6b6115ff0d93f7f336e3c1db21",
+        "sha256": "0dc01ea6e59d24fbcea585fc71c199e5d9f73034a79104cf87a464d2021b9930"
+      },
+      "fullRaw": {
+        "path": "ci-72e6ec/management/job.log",
+        "bytes": 93009,
+        "blob": "c6e2e5f0e59b9748420cf55dd0e55c849b1ac1bc",
+        "sha256": "de194aab07784d2b2d58d4969f8089a7089afd7a715c6330f74974112bf1cf8f"
+      },
+      "rawEqualsMCPUTF8": true,
+      "reporterSummaries": [
+        {
+          "tests": 123,
+          "suites": 0,
+          "pass": 120,
+          "fail": 3,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        }
+      ],
+      "missingExpectedRejectionCount": 3
+    },
+    {
+      "lane": "skills",
+      "originalResponse": {
+        "path": "ci-72e6ec/skills/job-original-response.json",
+        "bytes": 97137,
+        "blob": "3ce7f01f0d165356d3e5aea4e12131d8e7082b2c",
+        "sha256": "375a189c09a1cf1ee5b53269f7919c160f547450aea7a5b2edd77cc00222eda9"
+      },
+      "fullRaw": {
+        "path": "ci-72e6ec/skills/job.log",
+        "bytes": 95472,
+        "blob": "65f3487679b0ddf0c6e5f10ce13645120c31e82a",
+        "sha256": "0ee610c8a4b0c8b5cb707cf92a8e88575a9778b84df1ddfb186470db8def5d15"
+      },
+      "rawEqualsMCPUTF8": true,
+      "reporterSummaries": [
+        {
+          "tests": 123,
+          "suites": 0,
+          "pass": 120,
+          "fail": 3,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        }
+      ],
+      "missingExpectedRejectionCount": 3
+    },
+    {
+      "lane": "cross-team",
+      "originalResponse": {
+        "path": "ci-72e6ec/cross-team/job-original-response.json",
+        "bytes": 97270,
+        "blob": "ea862921023835a8b7570753acfc66e59aaacecd",
+        "sha256": "ed7d4bc1c582ad7c9089fad2c5017f455c3ce2a478a700705d3076a1b688faff"
+      },
+      "fullRaw": {
+        "path": "ci-72e6ec/cross-team/job.log",
+        "bytes": 95595,
+        "blob": "c86c2c46118095b06fb4d2567c08dc6d939c9fbd",
+        "sha256": "a3354b7c65ac359b6a700e5652e3d679eb03a54133b21a5035fa5af02170aafd"
+      },
+      "rawEqualsMCPUTF8": true,
+      "reporterSummaries": [
+        {
+          "tests": 123,
+          "suites": 0,
+          "pass": 120,
+          "fail": 3,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        }
+      ],
+      "missingExpectedRejectionCount": 3
+    },
+    {
+      "lane": "selection",
+      "originalResponse": {
+        "path": "ci-72e6ec/selection/job-original-response.json",
+        "bytes": 95942,
+        "blob": "0b49f5ecb0ecd9605bf99a8a1fd4a086459ca1a3",
+        "sha256": "fd53c09edc5f71ac4118145cee4a2cbcae9e20e14132e0387c85976f0a819281"
+      },
+      "fullRaw": {
+        "path": "ci-72e6ec/selection/job.log",
+        "bytes": 94290,
+        "blob": "e0a58ae8bdb1afe8f34fd32137481d9615128be7",
+        "sha256": "52d49fb455c5ba1de047132690545430891e026f681ef92bbabc701f4716ad0f"
+      },
+      "rawEqualsMCPUTF8": true,
+      "reporterSummaries": [
+        {
+          "tests": 123,
+          "suites": 0,
+          "pass": 120,
+          "fail": 3,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        }
+      ],
+      "missingExpectedRejectionCount": 3
+    },
+    {
+      "lane": "codex",
+      "originalResponse": {
+        "path": "ci-72e6ec/codex/job-original-response.json",
+        "bytes": 94970,
+        "blob": "32e820f1a260d90d2904351234afb75d51e4e6ab",
+        "sha256": "d899fa7c75f61948997ccfc6cd10160f31e757ef9015cc0af0ee7fe661c831c5"
+      },
+      "fullRaw": {
+        "path": "ci-72e6ec/codex/job.log",
+        "bytes": 93331,
+        "blob": "56ace34b1bbfd512d2a51d06d694db671ae501ce",
+        "sha256": "8540cd65b39ade34921a8a5c0c73615ff5cbe37436a1d7ea724f3d86c21f2256"
+      },
+      "rawEqualsMCPUTF8": true,
+      "reporterSummaries": [
+        {
+          "tests": 123,
+          "suites": 0,
+          "pass": 120,
+          "fail": 3,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        }
+      ],
+      "missingExpectedRejectionCount": 3
+    },
+    {
+      "lane": "review",
+      "originalResponse": {
+        "path": "ci-72e6ec/review/job-original-response.json",
+        "bytes": 94738,
+        "blob": "24fbd0484377fcdd39ebaf1ce2aa4697440dab33",
+        "sha256": "e6cb98ee864f8ba48d14ef3fe179bed6e2af18951e9d59a6c334df7e6afc3c2a"
+      },
+      "fullRaw": {
+        "path": "ci-72e6ec/review/job.log",
+        "bytes": 93101,
+        "blob": "4e864bc93b7a53d5fa36f3884b7515b8e67341fc",
+        "sha256": "cbb65b66e9f7203761a2f6db931f98a6a18eb91517d5b3a93b9d1c28175d0428"
+      },
+      "rawEqualsMCPUTF8": true,
+      "reporterSummaries": [
+        {
+          "tests": 123,
+          "suites": 0,
+          "pass": 120,
+          "fail": 3,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        }
+      ],
+      "missingExpectedRejectionCount": 3
+    },
+    {
+      "lane": "claude-lifecycle",
+      "originalResponse": {
+        "path": "ci-72e6ec/claude-lifecycle/job-original-response.json",
+        "bytes": 95833,
+        "blob": "2c6392d70a753944bfd15668668bc56446058c84",
+        "sha256": "805cd88de5fb26bd730b01ebb32981d8e727cca510a8a44fd042a33b3ec8f968"
+      },
+      "fullRaw": {
+        "path": "ci-72e6ec/claude-lifecycle/job.log",
+        "bytes": 94183,
+        "blob": "26f6e302517e9c91e73995d51b306ed979d52655",
+        "sha256": "cc44c5c299783b48ab001b5dd169bc3817590a02892a397bada6182b152f7d7a"
+      },
+      "rawEqualsMCPUTF8": true,
+      "reporterSummaries": [
+        {
+          "tests": 123,
+          "suites": 0,
+          "pass": 120,
+          "fail": 3,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        }
+      ],
+      "missingExpectedRejectionCount": 3
+    }
+  ],
+  "scope": "Full original terminal responses/raw only; summary parsing does not replace independent source/semantic qualification; no CI or native reruns."
+}

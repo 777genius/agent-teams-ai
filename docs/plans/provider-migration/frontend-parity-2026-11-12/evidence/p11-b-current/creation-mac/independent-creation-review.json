@@ -1,0 +1,185 @@
+{
+  "kind": "E3_MACOS_CREATION_INDEPENDENT_R2",
+  "reviewer": "/root/native_failures",
+  "reviewedAtUTC": "2026-11-16T08:58:10.538856+00:00",
+  "verdict": "APPROVE original FAIL retention and qualified author wording; no repair or broader qualification",
+  "authorPacketUnchanged": true,
+  "findings": [],
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "sourceTree": "de80fbfbffb3fe4daabf6cc9be258cc8df534524",
+  "runId": 43831885626,
+  "jobId": 133178909700,
+  "originalCheckpoint": {
+    "path": "ci-72e6ec/creation-macos/checkpoint.json",
+    "bytes": 3016,
+    "gitBlob": "b18418a326deb78d5bf60d96910ba13115685955",
+    "sha256": "ac42555cc450724e88032acabe4d2a688d79860e4700d8cf34b2d9f2520ab6b5"
+  },
+  "authorAudit": {
+    "path": "ci-72e6ec/creation-macos/audit.json",
+    "bytes": 24388,
+    "gitBlob": "1a3c1c2053b4d730f63ab5b5bbf05a8954d55d28",
+    "sha256": "f11d5c8d5a7a18931d31b7fb3b1c9cc2e31248098b3934b42186cee617b46688"
+  },
+  "authorSourceProof": {
+    "path": "ci-72e6ec/creation-macos/source-proof.json",
+    "bytes": 25770,
+    "gitBlob": "2d6d91f0d57bb0720e30651e3ded621376e65a3c",
+    "sha256": "8285c84cacb0fd622695477e6b8107269c6cf576091c0280fe3b0461c5df75c6"
+  },
+  "authorAppendix": {
+    "path": "ci-72e6ec/creation-macos/Plan29-appendix.md",
+    "bytes": 5799,
+    "gitBlob": "615619b96184255342b95c18181e4026bd4057d5",
+    "sha256": "d26364504140b92e1301a7f08787d5fd72163936417b09ba3346575b57fa8ab8"
+  },
+  "independentProof": {
+    "path": "ci-72e6ec/creation-macos/independent-creation-byte-source-proof.json",
+    "bytes": 50860,
+    "gitBlob": "198f09eafe58ad98f43436d96c8e4dad93d84d0d",
+    "sha256": "afe89f145c5561f20598cd83cf35508867197db8805705509050cdbef45844ad"
+  },
+  "integrity": {
+    "payloads": 10,
+    "payloadBytes": 1680069,
+    "zipFiles": 1,
+    "zipMembers": 24,
+    "allPngByteCrcDimensionsChecked": true,
+    "actuallyViewedPngs": 3,
+    "remaining21IntegrityOnly": true,
+    "fullMcpToRawEquality": true,
+    "allEightGitBodiesFresh": true,
+    "allEightEqual578": true,
+    "all12AuthorSourceBindingsExact": true,
+    "sourceCensus1757Claimed": false,
+    "rebuiltRuntimeInventoryClaimed": false
+  },
+  "originalJob": {
+    "status": "completed",
+    "conclusion": "failure",
+    "failedStep": {
+      "name": "Exercise actual Electron Create/Back/Resume/Copy/Launch",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 12
+    },
+    "checkoutExactHead": true,
+    "runnerNode": "26.12.1",
+    "pnpm": "11.22.0",
+    "os": "macOS 26.7.2 / 25G332, macos-26-arm64",
+    "prerequisiteInstallHostBuildRuntimeStageElectronEnsureAndThreeHelperTestsSucceeded": true,
+    "helperArgv": "node --test scripts/e2e/teams-create-page-owned-processes.test.mjs",
+    "helperTests": 3,
+    "helperPassed": 3,
+    "helperFailed": 0,
+    "helperSkipped": 0,
+    "helperCancelled": 0,
+    "noP11WholeEightOrTeamOrStaticQualification": true
+  },
+  "firstBoundary": {
+    "error": "Error: Timed out waiting for saved prompt acknowledgement visible before Save",
+    "rawLine": 695,
+    "stack": [
+      "2026-11-16T08:41:54.8473610Z Error: Timed out waiting for saved prompt acknowledgement visible before Save",
+      "2026-11-16T08:41:54.8485040Z     at CdpClient.waitFor (file:///Users/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/teams-create-page-desktop.mjs:462:11)",
+      "2026-11-16T08:41:54.8486650Z     at async exerciseScheduleUx (file:///Users/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/teams-create-page-desktop.mjs:875:3)",
+      "2026-11-16T08:41:54.8488130Z     at async main (file:///Users/runner/work/agent-teams-ai/agent-teams-ai/scripts/e2e/teams-create-page-desktop.mjs:2029:32)"
+    ],
+    "lastActionMarker": {
+      "line": 688,
+      "timestamp": "2026-11-16T08:41:07.7383330Z",
+      "step": "select the fixture team and review its saved one-time startup prompt"
+    },
+    "originalScheduleOrder": "Invalid cron/timezone native refusals; open editor; pristine Save and Team-is-required; open team Combobox; one option click selected by includes(fixture.teamName); then acknowledgement DOM wait.",
+    "intendedFixture": "teams-create-page-e2e-961f3812-d46d-4321-a219-8e7161c753d4",
+    "finalVisibleSelectedTeam": "org-team-e2e-8e8d57e5",
+    "retainedMismatch": true,
+    "actualOptionDispatchUnknown": true,
+    "geometryAndSelectionTransitionHistoryUnknown": true,
+    "savedRequestCompletionPromptAndPendingStateUnknown": true,
+    "wait": {
+      "milliseconds": 45000,
+      "pollDelayMs": 80,
+      "cdpCommandMs": 30000,
+      "preReadDeadlineOnly": true,
+      "strictPostReadBound": false,
+      "actualReadCountUnretained": true
+    },
+    "rendererProjection": {
+      "keys": [
+        "label",
+        "dialog",
+        "creationPageName",
+        "bodyText"
+      ],
+      "bodyPrefixCharacters": 800
+    },
+    "sourceImplication": "Combobox non-disabled onSelect forwards its captured option.value; LaunchTeamDialog stores it. Saved-prompt hook reads that team, suppresses cancelled or empty results and only writes review state. These source branches do not identify the historical dispatched option or request outcome.",
+    "noCauseOrSourceRepairProven": true
+  },
+  "views": [
+    {
+      "path": "teams-create-launch-controls-loaded.png",
+      "bytes": 75880,
+      "gitBlob": "c588fdcbfd7db8b2cd6b5826df885cfef95915ac",
+      "sha256": "c748895808abec1486b1e79be16db54fd46a90e53292c676447e902fff6f0fe7",
+      "crc32": "48480a93",
+      "dimensions": [
+        1024,
+        674
+      ],
+      "independentlyActuallyViewed": true,
+      "method": "Original image opened singly using view_image; three views completed before this byte review",
+      "interpretation": "Earlier actual Launch frame names intended fixture teams-create-page-e2e-961f3812-d46d-4321-a219-8e7161c753d4. OpenCode/test-model is Needs attention; runtime environment unavailable and fresh catalog diagnostic visible. No provider launch is claimed."
+    },
+    {
+      "path": "teams-create-schedules-pristine-submit-validation.png",
+      "bytes": 56804,
+      "gitBlob": "3df69e5b2ca43496ef651ac1c72ad80a6dc45f83",
+      "sha256": "3c0be09a39d02f29f48bd5cd8124ddac298dc30d17243a039146442a2b58bf1c",
+      "crc32": "480538f7",
+      "dimensions": [
+        1024,
+        674
+      ],
+      "independentlyActuallyViewed": true,
+      "method": "Original image opened singly using view_image; three views completed before this byte review",
+      "interpretation": "Earlier Schedule form is scrolled down and visibly shows Team is required after the original pristine Save attempt. No selected-team identity is visible in this cropped form position."
+    },
+    {
+      "path": "teams-create-failure.png",
+      "bytes": 64167,
+      "gitBlob": "a8933df3a3c8ac00a90aaaed2e5cad66b975ee2e",
+      "sha256": "f2dda383a2bde2c59935f39e8b214c2d41f0d5d001584d41c7ae1ab33c5176c1",
+      "crc32": "5141dd09",
+      "dimensions": [
+        1024,
+        674
+      ],
+      "independentlyActuallyViewed": true,
+      "method": "Original image opened singly using view_image; three views completed before this byte review",
+      "interpretation": "Failure frame visibly names org-team-e2e-8e8d57e5 in the Schedule description and Team selector, with empty label and default cron0 9 * * 1-5. The frame is scrolled at its top; lower content is not visible. Absence of #schedule-saved-prompt-reviewed is established by the original DOM wait, not by the cropped image alone."
+    }
+  ],
+  "cleanup": {
+    "originalFinallySourceOrderReviewed": true,
+    "originalCleanupReturnImpliedBySingleError": true,
+    "inferenceBasis": "The original failure is rethrown after awaited cleanup; cleanup failure together with this Error would emit the distinct AggregateError branch.",
+    "originalUnixStrategy": "SIGKILL original process group, fallback launcher kill, original 4s group-exit wait; fixture removal up to original eight attempts.",
+    "finalIndependentGroupCensusArchived": false,
+    "finalCleanupResultArchived": false,
+    "processGroupIdArchived": false,
+    "appOrHostExitCodesArchived": false,
+    "naturalExitProven": false,
+    "physicalCustodyCertificateProven": false,
+    "githubPostJobCleanupNotSubstitutedForHarnessEvidence": true
+  },
+  "limits": [
+    "Twenty-three marker names match the earlier successful E2 prefix; the earlier PASS is not transferred.",
+    "No final result JSON or complete 25-flag success record; later Schedule acknowledgement acceptance, valid create/update/delete and zh-TW path are unreached.",
+    "The failure frame cannot prove lower offscreen content absent. The original DOM wait supplies the refusal boundary.",
+    "Deny-all/degraded-runtime and SQLite fallback tail messages do not establish selection or saved-prompt cause.",
+    "All three image interpretations were independently viewed; the other 21 were integrity checked only.",
+    "No new API read, download, local project/native/vendor execution, CI action, source/ref change or candidate was performed for this independent review."
+  ]
+}

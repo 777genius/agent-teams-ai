@@ -1,0 +1,21 @@
+{
+  "kind": "local-text-writer-EOL-correction-from-original-retained-MCP-response",
+  "originalResponse": {
+    "bytes": 95397,
+    "blob": "feb9bd877b1cb85289357cec4db211c20461187c",
+    "sha256": "a988e53ec01b0c21d058daaace2f696ee782497ff713326b37764c69b108ff83"
+  },
+  "firstLocalLog": {
+    "bytes": 90412,
+    "blob": "ebe8cb7d07b316eef1538857e66d2295b316d6cb",
+    "sha256": "f369adc2609408f9237523b2f27ea8e67d8b90e7d5dbce0a1c6cd1d3d9d9b1a6"
+  },
+  "retainedOriginalLog": {
+    "bytes": 91368,
+    "blob": "14b4d07df64b0ba6069c87c7512a06ec9967f5f7",
+    "sha256": "8a862a4181fb2f6254b00469b00e3546981a05a192d0d632d90c917dc12db225"
+  },
+  "cause": "apply_patch text writer normalized original CRLF to LF; original full MCP response retained losslessly, original raw reconstructed directly from that response with no new fetch",
+  "apiRefetched": false,
+  "rawSourceChanged": false
+}

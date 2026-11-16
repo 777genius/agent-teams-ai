@@ -1,0 +1,327 @@
+{
+  "schema": "original-artifact-byte-preservation-v1",
+  "source": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "run": 43831885626,
+  "job": 133178910281,
+  "artifact": {
+    "id": 14209850260,
+    "name": "teams-create-page-ubuntu-latest-72e6ec04444969d343d73834c70bc4e261100fc9",
+    "size_in_bytes": 2867814,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14209850260",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14209850260/zip",
+    "expired": false,
+    "created_at": "2026-11-16T08:37:11Z",
+    "expires_at": "2026-11-30T08:37:10Z",
+    "updated_at": "2026-11-16T08:37:11Z",
+    "digest": "sha256:653a74a18635296b599895e8f9976723482645016f2f6ed94d3fa309b10dc109",
+    "workflow_run": {
+      "id": 43831885626,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "72e6ec04444969d343d73834c70bc4e261100fc9"
+    }
+  },
+  "archive": {
+    "path": "ci-72e6ec/creation-ubuntu/artifact-14209850260.zip",
+    "bytes": 2867814,
+    "gitBlob": "ef8355305fdf9ca77989df641df01153d69f3eca",
+    "sha256": "653a74a18635296b599895e8f9976723482645016f2f6ed94d3fa309b10dc109"
+  },
+  "members": [
+    {
+      "path": "teams-create-config-only-created.png",
+      "crc": 3859256502,
+      "bytes": 44617,
+      "gitBlob": "a553d87ff51d3d23628f8b309e1ae8bc7609794b",
+      "sha256": "f446180b67e00549bc26b4173dd05c6ea7691060c45f02e125bc68cd781459e2"
+    },
+    {
+      "path": "teams-create-css-zoom-200.png",
+      "crc": 3940771587,
+      "bytes": 64614,
+      "gitBlob": "5a244bcf0269e75717c8c6514ed4c2824137c9db",
+      "sha256": "299aa73a2f0d38560f00c39bbd69f4ebde230a6ec68e1da042783be0d37206d7"
+    },
+    {
+      "path": "teams-create-copy-resumed-edits.png",
+      "crc": 1275978712,
+      "bytes": 73726,
+      "gitBlob": "3124845cab492a168a7161b86f1efe778101e804",
+      "sha256": "05c2d80fa990a123f4b4e09da825b0f7130f3235ca9f8867f543af2200903bb5"
+    },
+    {
+      "path": "teams-create-edited.png",
+      "crc": 2898422281,
+      "bytes": 80997,
+      "gitBlob": "6e36889446961c2e05d11aee9379618337e9f38f",
+      "sha256": "cb02f7ec562baed5318b5a8c3ab5b1b01434130a078d8fe11d398555c5a7bd39"
+    },
+    {
+      "path": "teams-create-launch-controls-loaded.png",
+      "crc": 3997940006,
+      "bytes": 87040,
+      "gitBlob": "5f66b56ee20192de85f0406fd6254e15d71fe8ed",
+      "sha256": "353bfdf9dc393b92030241364a5b7f93db29892c8052cc734f08b5a15205ca65"
+    },
+    {
+      "path": "teams-create-launch-still-modal.png",
+      "crc": 4018157829,
+      "bytes": 92268,
+      "gitBlob": "f6311b51f0cb5f5afde49d80f7083191f64e168a",
+      "sha256": "d7c52701d98976e918bff7232175a42afffb3933b83d56263a0fd2f3741b5d4e"
+    },
+    {
+      "path": "teams-create-missing-cli-value-validated.png",
+      "crc": 2394440272,
+      "bytes": 91137,
+      "gitBlob": "4ac581016c741bc9504041b9ea6e4dd327dfa817",
+      "sha256": "8b9c98be18c7dc0b7b6155037a51e07823476ddbac3669984a9708bbc12d0ecd"
+    },
+    {
+      "path": "teams-create-native-electron-zoom-200.png",
+      "crc": 2674790959,
+      "bytes": 77111,
+      "gitBlob": "2889976af59d9a96d7c17e3a0022693dd3169913",
+      "sha256": "a82e2c934d7efc72444645fcc53d3808fe2073f65f648d885ff9c416c1d15085"
+    },
+    {
+      "path": "teams-create-opened.png",
+      "crc": 1288990285,
+      "bytes": 68036,
+      "gitBlob": "431540841fb5be0c365ea06527be6f58bb890e79",
+      "sha256": "9dd63e02be0d52e5ed84903e8619ea5866832eee9a5cc04861b6f0f205802650"
+    },
+    {
+      "path": "teams-create-organization-created.png",
+      "crc": 2928689507,
+      "bytes": 40705,
+      "gitBlob": "b73a232cf41becc575d329477e6de4d1e5e5b522",
+      "sha256": "f6d15f63c3a9cafab75c9787ea128d13b048c0ed0a20bf341e7ab3364e8dbc76"
+    },
+    {
+      "path": "teams-create-organization-entry.png",
+      "crc": 1751066733,
+      "bytes": 75546,
+      "gitBlob": "2e7c6913fce37ad7f49c14cd829e718168cff014",
+      "sha256": "716eb2ea757832a6e3e2257fbd08f1b4cabf9ebfdabba3370eb5f215eccd86df"
+    },
+    {
+      "path": "teams-create-page-result.json",
+      "crc": 666272917,
+      "bytes": 2207,
+      "gitBlob": "39868a8296988ad60d8e077693d86d56807e246a",
+      "sha256": "e7bcad4b741a4718b2034b29a237cf46df104f000cd24b027df4b0a00a474f88"
+    },
+    {
+      "path": "teams-create-provider-refreshed.png",
+      "crc": 2050076873,
+      "bytes": 92536,
+      "gitBlob": "1fb709a3bb277145adda1cb7a3c3c97074ad89c0",
+      "sha256": "2f4e788594e2af2f6caaf6d1deeba02433e96f6a548a71587f3709cc3c8e1931"
+    },
+    {
+      "path": "teams-create-restarted.png",
+      "crc": 941972890,
+      "bytes": 69435,
+      "gitBlob": "eab7a4434c4c2cc913c90ae722251df422a0db6a",
+      "sha256": "8947a65c253f8b90a6935a32ed0c9cac1e6a7b659bc20620a5310175e7bc049f"
+    },
+    {
+      "path": "teams-create-resumed.png",
+      "crc": 3765914781,
+      "bytes": 96402,
+      "gitBlob": "da9db2877b33cb8f73a37a9d79e9566fb340ff62",
+      "sha256": "9fa7edc2a98cf859cd8f968ab4578e665918722295f1fd62a144316063a1b852"
+    },
+    {
+      "path": "teams-create-save-rejected.png",
+      "crc": 217303974,
+      "bytes": 54263,
+      "gitBlob": "02103c0da75b02c196dffc6d7558aad6b8d567e1",
+      "sha256": "9d4c9f3156aa1cff224f853fb67b4844c2b0b5eb502b1d57c01cf39de297a4e0"
+    },
+    {
+      "path": "teams-create-schedules-delete-confirm.png",
+      "crc": 3546844617,
+      "bytes": 62038,
+      "gitBlob": "809f265d5e9813eacdab123951673b95e28e27be",
+      "sha256": "0e8847c0fc51d22b9621a965c1e409c8a842d947c0257add2cd97b1111c53a0e"
+    },
+    {
+      "path": "teams-create-schedules-edit.png",
+      "crc": 2671161078,
+      "bytes": 93020,
+      "gitBlob": "8de67261429004d79ac1e5686798240ef018f30f",
+      "sha256": "1b407e482ffd2020844c5ec87521677b936585b7231f84a9b3e6a2f06d31eb19"
+    },
+    {
+      "path": "teams-create-schedules-editor-opened.png",
+      "crc": 3107296487,
+      "bytes": 97355,
+      "gitBlob": "c29cdb0d9083810112171927f0a5d9474d3bbce8",
+      "sha256": "641492449cf32bf06841c5c8efbf2f88639d64eaca36502c46f47a4f57f088a3"
+    },
+    {
+      "path": "teams-create-schedules-deleted.png",
+      "crc": 2909970604,
+      "bytes": 42648,
+      "gitBlob": "ca8b6bd2b98055ce26dee8c8f7511dc19101d036",
+      "sha256": "2bdd67e57961869ba94671f874e2204bcf8aa7bc365ff908b8c7339f268a5a53"
+    },
+    {
+      "path": "teams-create-schedules-invalid-cron.png",
+      "crc": 3500608145,
+      "bytes": 91838,
+      "gitBlob": "80e6f664a743f797a761bbd639317583bb22d68a",
+      "sha256": "ec9db6d0000ce1b7f495e9d271ec8bb1d753b69bd1bfe404289647b724c889c6"
+    },
+    {
+      "path": "teams-create-schedules-list-dark.png",
+      "crc": 1450736538,
+      "bytes": 48021,
+      "gitBlob": "1aa0eac5e794e4b92f0efc5cc5eb7d03124d366f",
+      "sha256": "259d9e36cd5a48390d0585d4bff948008230b8933d6f5809fdc177bd454c92fb"
+    },
+    {
+      "path": "teams-create-schedules-list-light.png",
+      "crc": 1521613846,
+      "bytes": 48318,
+      "gitBlob": "5961c752ff7ff174689d42cca800d120db66ad2a",
+      "sha256": "88e7f9f8ae7178d90a005418358bbd27294ba7b44634d8637ce97bfc2b92946a"
+    },
+    {
+      "path": "teams-create-schedules-list-narrow-700.png",
+      "crc": 55225766,
+      "bytes": 40660,
+      "gitBlob": "9de6260f3dc0e95be26415c3c17f82f610665ccb",
+      "sha256": "c00cc4610fd00a5e153132c502bd51078a94fefc5aa17da13b6517d1728057c5"
+    },
+    {
+      "path": "teams-create-schedules-list-native-electron-zoom-200.png",
+      "crc": 112588961,
+      "bytes": 90178,
+      "gitBlob": "1f3bee1491b263e3b195ec8e6cb802a0986a2779",
+      "sha256": "f9e17ebe21e101e1fa33773c996f7ee18d1036839ee42a2137fa8100f1478e7b"
+    },
+    {
+      "path": "teams-create-schedules-paused.png",
+      "crc": 599095713,
+      "bytes": 51081,
+      "gitBlob": "376de731facf7a598148fe553c945c9540519301",
+      "sha256": "d4d7160098334cd9937464789b66344107695762f35ec08e40c0ae226b856ed6"
+    },
+    {
+      "path": "teams-create-schedules-pristine-submit-validation.png",
+      "crc": 3934809414,
+      "bytes": 75624,
+      "gitBlob": "eb4824487b756c1f5e28067321265ee2a451e94b",
+      "sha256": "89a466e8b56b34ebf81475b941ecfb2cf4d79e03a5d8b65510427bd617ba769d"
+    },
+    {
+      "path": "teams-create-schedules-ready-to-create.png",
+      "crc": 367436060,
+      "bytes": 87580,
+      "gitBlob": "897d0b2ac574df48ba2775e7ce67f9bdc2cb6378",
+      "sha256": "905bc2e6d1591dee7601b11aeb1f7533e72285e37be6430b7e60f9eacd0e9eda"
+    },
+    {
+      "path": "teams-create-schedules-old-prompt-review.png",
+      "crc": 3648293782,
+      "bytes": 95272,
+      "gitBlob": "cffc38cddff559a4e7d5dda86fbcfbf747c4223f",
+      "sha256": "1b7e58e0ca3f89715db628684daff4d76e4d2878170974b8bb18aa5a70ed75a2"
+    },
+    {
+      "path": "teams-create-schedules-resumed.png",
+      "crc": 771523481,
+      "bytes": 47725,
+      "gitBlob": "3ebaf9b0c74ff69f4b59af1bb09fdd271f39ccb9",
+      "sha256": "ac7011d5f910f7544876b3c97810673634533b588c808952119f27ea86d7b71a"
+    },
+    {
+      "path": "teams-create-schedules-run-history.png",
+      "crc": 252135447,
+      "bytes": 55225,
+      "gitBlob": "4accb6c106618f90c69cd5b35b49fa4223ddfaf2",
+      "sha256": "a8ee31f60d60470f5ef0a47f79e00f4e13b029a26d2bd3cc9cf834d02a48e571"
+    },
+    {
+      "path": "teams-create-schedules-run-log.png",
+      "crc": 733757513,
+      "bytes": 62861,
+      "gitBlob": "bb671a4bad868d906e199a889a32f22a560234bf",
+      "sha256": "50eb5127235042acbbeadfae6b85fcf76b0985d5f786f7db484ecdc0a1894c46"
+    },
+    {
+      "path": "teams-create-split-pane.png",
+      "crc": 3839005920,
+      "bytes": 137315,
+      "gitBlob": "9b031dda5e640ca0fc49e5e900db9742075ea867",
+      "sha256": "57dc9cf68b7e85ba0e44562016b35e8e6cbc94ee7936a5f03e1c3d4f1b0d595f"
+    },
+    {
+      "path": "teams-create-teammate-mode-override.png",
+      "crc": 2609686922,
+      "bytes": 91375,
+      "gitBlob": "a201fa35fb6e80c305474c6215a8073851d5c5e0",
+      "sha256": "ad64ab6af5db55b84f91e4214ee272d6f23236fad7f0c62356344b00e8af617b"
+    },
+    {
+      "path": "teams-create-teammate-mode-validated.png",
+      "crc": 1257381895,
+      "bytes": 93064,
+      "gitBlob": "6500a48b95ab8a978e0f2ae57cb395c9407084cb",
+      "sha256": "a3c13606b63a69db47be25c4f829feb1b720a90f9cc95bb75fb7626c969ff91d"
+    },
+    {
+      "path": "teams-create-template-confirmed.png",
+      "crc": 419628323,
+      "bytes": 99955,
+      "gitBlob": "78d1f2cd1149a0c67cebb30e297c151023e08a62",
+      "sha256": "23d1903244076607adb099048fe64f5a9e2438f02e64e18311f801393e35f94c"
+    },
+    {
+      "path": "teams-create-theme-dark.png",
+      "crc": 154457734,
+      "bytes": 82541,
+      "gitBlob": "cca0b8c38a2365ecfb3819545a786725ea08e740",
+      "sha256": "61012df4a4e0df816b6dc8a880e6117cfa7a2a63aff1af00d1148e3230d44520"
+    },
+    {
+      "path": "teams-create-theme-light.png",
+      "crc": 3756185535,
+      "bytes": 81839,
+      "gitBlob": "7379e5239a2e47b90305e7c6b6ae698e9de862b6",
+      "sha256": "301292531439082961f269be802c7f4df779f0a8740cc84a763187794347f85e"
+    },
+    {
+      "path": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+      "crc": 3067599173,
+      "bytes": 100262,
+      "gitBlob": "efc7785bf46d5b6d91121901098252cea1f8e806",
+      "sha256": "8ea509ce16264365d6b108700026db84df6007244581a5cb4fea715e451c9ef3"
+    },
+    {
+      "path": "teams-create-zh-tw-task-detail-dialog.png",
+      "crc": 2661186037,
+      "bytes": 95145,
+      "gitBlob": "ddf5b8b13d43ad21435a3e8fa0b84210d94d7617",
+      "sha256": "2ea414ec954d6cb9ae48ac1f75d7c26635d230bddf14eb5bb928130d61d398b2"
+    },
+    {
+      "path": "teams-create-zh-tw-task-detail-tab.png",
+      "crc": 3071298559,
+      "bytes": 60179,
+      "gitBlob": "0bbfc5f3cc66cf271630c3f2c22fe4d6b1d094d4",
+      "sha256": "1e54c9b2d002f9fd4c5498251d5549e70525999d2f537ccfb75a02949eada7e0"
+    }
+  ],
+  "memberCount": 41,
+  "pngCount": 40,
+  "safePaths": true,
+  "crcAllValid": true,
+  "rawLogResponseExact": true,
+  "transportUrlsRetained": false,
+  "qualification": "raw preservation only; semantic/image/source audit pending"
+}

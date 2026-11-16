@@ -1,0 +1,81 @@
+{
+  "kind": "E3_MACOS_CREATION_ORIGINAL_FAILURE_CHECKPOINT",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "runId": 43831885626,
+  "jobId": 133178909700,
+  "payloads": [
+    {
+      "path": "ci-72e6ec/creation-macos/job.log",
+      "bytes": 66388,
+      "gitBlob": "be8e37438f24a2e6288a6a24be27fd181a671ff7",
+      "sha256": "49070d538c8377d29c7d16a30071c5fda6be17413f6bd4de3679fea22f004122"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/job-original-response.json",
+      "bytes": 67680,
+      "gitBlob": "a21d2b98b8d029f4112983830089431e69619882",
+      "sha256": "6b9a15d8e648247ed30a9bef09a198987ac9a2c4dd03c841d2a8576902db37bb"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/artifact-14209557495.zip",
+      "bytes": 1446976,
+      "gitBlob": "6f5c74644f617090031d218c385236835c2dec85",
+      "sha256": "4e991a16c17dec8b2bffe6632c1236f1badb90105c97feb3ca94535e09fdcb8e"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/archive-retention.json",
+      "bytes": 7666,
+      "gitBlob": "21ab2ddfe32dc6c2e61bbc8d6709ce19c2ff3853",
+      "sha256": "c6a329a849703ae7e4faea684c579bb8b98335a7cba6661e5da5cd1ef02e8600"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/audit.json",
+      "bytes": 24388,
+      "gitBlob": "1a3c1c2053b4d730f63ab5b5bbf05a8954d55d28",
+      "sha256": "f11d5c8d5a7a18931d31b7fb3b1c9cc2e31248098b3934b42186cee617b46688"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/source-proof.json",
+      "bytes": 25770,
+      "gitBlob": "2d6d91f0d57bb0720e30651e3ded621376e65a3c",
+      "sha256": "8285c84cacb0fd622695477e6b8107269c6cf576091c0280fe3b0461c5df75c6"
+    },
+    {
+      "path": "ci-72e6ec/creation-macos/Plan29-appendix.md",
+      "bytes": 5799,
+      "gitBlob": "615619b96184255342b95c18181e4026bd4057d5",
+      "sha256": "d26364504140b92e1301a7f08787d5fd72163936417b09ba3346575b57fa8ab8"
+    },
+    {
+      "path": "ci-72e6ec/initial-owned-api-0838.json",
+      "bytes": 16047,
+      "gitBlob": "fc4b4f307abfd89adec13369792f3d18e9919c81",
+      "sha256": "d8296131bde0b8ed78e9db43e094c3862f96e1afd6e27338d6f24d3f03c597e8"
+    },
+    {
+      "path": "ci-72e6ec/owned-jobs-0843.json",
+      "bytes": 17325,
+      "gitBlob": "f286078787dc6d34a957e173f0a1abc4d7781032",
+      "sha256": "e0d087967710036e0c36f79d808a77962af8c0df2a2ced06a5115fb58b51c07a"
+    },
+    {
+      "path": "ci-72e6ec/creation-artifacts-0843.json",
+      "bytes": 2030,
+      "gitBlob": "e4629f2b92fd949cb489660315783cec4645bf6f",
+      "sha256": "b4a36ffd46c82487ba4b11bb63a3ac02501ae286a14de653ad6fccdae3d83707"
+    }
+  ],
+  "payloadCount": 10,
+  "totalBytes": 1680069,
+  "zipMembers": 24,
+  "pngBytesChecked": 24,
+  "pngActuallyViewed": 3,
+  "status": "FAIL",
+  "independentReview": "pending; author packet only",
+  "limits": [
+    "No final JSON/all25flags",
+    "Retained last-selected mismatch; actual dispatch/cause unknown",
+    "Source-implied cleanup return only, no final custody/exit certificate",
+    "Creation3helpers only; no P11/Team/static qualification"
+  ]
+}

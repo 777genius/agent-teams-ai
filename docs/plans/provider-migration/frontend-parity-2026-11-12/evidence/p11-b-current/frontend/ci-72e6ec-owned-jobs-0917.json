@@ -1,0 +1,588 @@
+{
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "startedAtUTC": "2026-11-16 09:17:54 UTC",
+  "completedAtUTC": "2026-11-16 09:17:55 UTC",
+  "reads": [
+    {
+      "lane": "host",
+      "status": "fulfilled",
+      "response": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "jobs": [
+            {
+              "id": 133178912777,
+              "name": "Offline frontend tests (3/4)",
+              "status": "completed",
+              "conclusion": "success",
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": [
+                {
+                  "name": "Set up job",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 1
+                },
+                {
+                  "name": "Run actions/checkout@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 2
+                },
+                {
+                  "name": "Run pnpm/action-setup@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 3
+                },
+                {
+                  "name": "Run actions/setup-node@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 4
+                },
+                {
+                  "name": "Verify source and capture the original Host test runtime",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 5
+                },
+                {
+                  "name": "Setup the original workspace test runtime",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 6
+                },
+                {
+                  "name": "Prepare original test prerequisites",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 7
+                },
+                {
+                  "name": "Run the complete safe frontend shard",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 8
+                },
+                {
+                  "name": "Preserve original test results, including failures",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 9
+                },
+                {
+                  "name": "Post Setup the original workspace test runtime",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 15
+                },
+                {
+                  "name": "Post Run actions/setup-node@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 16
+                },
+                {
+                  "name": "Post Run pnpm/action-setup@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 17
+                },
+                {
+                  "name": "Post Run actions/checkout@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 18
+                },
+                {
+                  "name": "Complete job",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 19
+                }
+              ]
+            },
+            {
+              "id": 133178913038,
+              "name": "Offline frontend tests (2/4)",
+              "status": "completed",
+              "conclusion": "success",
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": [
+                {
+                  "name": "Set up job",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 1
+                },
+                {
+                  "name": "Run actions/checkout@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 2
+                },
+                {
+                  "name": "Run pnpm/action-setup@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 3
+                },
+                {
+                  "name": "Run actions/setup-node@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 4
+                },
+                {
+                  "name": "Verify source and capture the original Host test runtime",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 5
+                },
+                {
+                  "name": "Setup the original workspace test runtime",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 6
+                },
+                {
+                  "name": "Prepare original test prerequisites",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 7
+                },
+                {
+                  "name": "Run the complete safe frontend shard",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 8
+                },
+                {
+                  "name": "Preserve original test results, including failures",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 9
+                },
+                {
+                  "name": "Post Setup the original workspace test runtime",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 15
+                },
+                {
+                  "name": "Post Run actions/setup-node@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 16
+                },
+                {
+                  "name": "Post Run pnpm/action-setup@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 17
+                },
+                {
+                  "name": "Post Run actions/checkout@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 18
+                },
+                {
+                  "name": "Complete job",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 19
+                }
+              ]
+            },
+            {
+              "id": 133178913127,
+              "name": "Offline frontend tests (4/4)",
+              "status": "completed",
+              "conclusion": "success",
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": [
+                {
+                  "name": "Set up job",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 1
+                },
+                {
+                  "name": "Run actions/checkout@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 2
+                },
+                {
+                  "name": "Run pnpm/action-setup@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 3
+                },
+                {
+                  "name": "Run actions/setup-node@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 4
+                },
+                {
+                  "name": "Verify source and capture the original Host test runtime",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 5
+                },
+                {
+                  "name": "Setup the original workspace test runtime",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 6
+                },
+                {
+                  "name": "Prepare original test prerequisites",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 7
+                },
+                {
+                  "name": "Run the complete safe frontend shard",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 8
+                },
+                {
+                  "name": "Preserve original test results, including failures",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 9
+                },
+                {
+                  "name": "Post Setup the original workspace test runtime",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 15
+                },
+                {
+                  "name": "Post Run actions/setup-node@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 16
+                },
+                {
+                  "name": "Post Run pnpm/action-setup@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 17
+                },
+                {
+                  "name": "Post Run actions/checkout@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 18
+                },
+                {
+                  "name": "Complete job",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 19
+                }
+              ]
+            },
+            {
+              "id": 133178913131,
+              "name": "Offline frontend tests (1/4)",
+              "status": "completed",
+              "conclusion": "success",
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": [
+                {
+                  "name": "Set up job",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 1
+                },
+                {
+                  "name": "Run actions/checkout@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 2
+                },
+                {
+                  "name": "Run pnpm/action-setup@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 3
+                },
+                {
+                  "name": "Run actions/setup-node@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 4
+                },
+                {
+                  "name": "Verify source and capture the original Host test runtime",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 5
+                },
+                {
+                  "name": "Setup the original workspace test runtime",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 6
+                },
+                {
+                  "name": "Prepare original test prerequisites",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 7
+                },
+                {
+                  "name": "Run the complete safe frontend shard",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 8
+                },
+                {
+                  "name": "Preserve original test results, including failures",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 9
+                },
+                {
+                  "name": "Post Setup the original workspace test runtime",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 15
+                },
+                {
+                  "name": "Post Run actions/setup-node@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 16
+                },
+                {
+                  "name": "Post Run pnpm/action-setup@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 17
+                },
+                {
+                  "name": "Post Run actions/checkout@v6",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 18
+                },
+                {
+                  "name": "Complete job",
+                  "status": "completed",
+                  "conclusion": "success",
+                  "number": 19
+                }
+              ]
+            },
+            {
+              "id": 133178913159,
+              "name": "Offline Host Desktop (linux-x64, taskboard)",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": null
+            },
+            {
+              "id": 133178913321,
+              "name": "Offline Host Desktop (linux-x64, import)",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": null
+            },
+            {
+              "id": 133178913337,
+              "name": "Offline Host Desktop (linux-x64, extensions)",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": null
+            },
+            {
+              "id": 133178913340,
+              "name": "Offline Host Desktop (linux-x64, collaboration)",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": null
+            },
+            {
+              "id": 133178913364,
+              "name": "Offline Host Desktop (linux-x64, team)",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": null
+            },
+            {
+              "id": 133178913386,
+              "name": "Offline Host Desktop (linux-x64, management)",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": null
+            },
+            {
+              "id": 133178913416,
+              "name": "Offline Host Desktop (linux-x64, skills)",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": null
+            },
+            {
+              "id": 133178913429,
+              "name": "Offline Host Desktop (linux-x64, cross-team)",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": null
+            },
+            {
+              "id": 133178913482,
+              "name": "Offline Host Desktop (linux-x64, selection)",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": null
+            },
+            {
+              "id": 133178913512,
+              "name": "Offline Host Desktop (linux-x64, codex)",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": null
+            },
+            {
+              "id": 133178913514,
+              "name": "Offline Host Desktop (linux-x64, codex-login)",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": null
+            },
+            {
+              "id": 133178913523,
+              "name": "Offline Host Desktop (linux-x64, review)",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": null
+            },
+            {
+              "id": 133178913533,
+              "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": null
+            },
+            {
+              "id": 133178913535,
+              "name": "Offline Host Desktop (linux-x64, claude)",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": null
+            },
+            {
+              "id": 133178913608,
+              "name": "Offline Host Desktop (linux-x64, processes)",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": null
+            },
+            {
+              "id": 133178913635,
+              "name": "Offline Host Desktop (darwin-arm64, installer)",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": null
+            },
+            {
+              "id": 133178913643,
+              "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": null
+            },
+            {
+              "id": 133178914338,
+              "name": "Offline Host Desktop (linux-x64, opencode)",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885807,
+              "logs_url": null,
+              "steps": null
+            }
+          ]
+        },
+        "isError": false
+      }
+    },
+    {
+      "lane": "packaged",
+      "status": "fulfilled",
+      "response": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "jobs": [
+            {
+              "id": 133178920049,
+              "name": "classify packaged smoke",
+              "status": "queued",
+              "conclusion": null,
+              "run_id": 43831885834,
+              "logs_url": null,
+              "steps": null
+            }
+          ]
+        },
+        "isError": false
+      }
+    }
+  ]
+}

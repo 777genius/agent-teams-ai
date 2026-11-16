@@ -1,0 +1,19 @@
+{
+  "kind": "EVIDENCE_API_ENVELOPE_READER_CORRECTION",
+  "recordedAtUTC": "2026-11-16T09:32:40.935142+00:00",
+  "priorReader": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/taskboard/build-readonly-p11-audit-v2.py",
+    "bytes": 13184,
+    "blob": "e036aa477a7f7e35d4130c438cad82bd9017f892",
+    "sha256": "b0621abc75a13e47a01850cf2758e5ab8b53039107236ad154afd0dc890f21b2"
+  },
+  "priorResult": "Read-only assertion at line37: direct dictionary walker found no run object because original generic GitHub API content is serialized JSON inside structuredContent.content. No final audit/proof had been written.",
+  "correction": "Decode retained JSON object/array strings before recursively locating the original run. API and all CI bytes unchanged; no refetch.",
+  "correctedReader": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/taskboard/build-readonly-p11-audit-v3.py",
+    "bytes": 13328,
+    "blob": "19f15aac6a228f5b4f00725b311e02916b181125",
+    "sha256": "e78c643b0ed129d90f9519035b3059eb6b3b858f7ff6aa7401f1434db977fab8"
+  },
+  "projectOrCIRerun": false
+}

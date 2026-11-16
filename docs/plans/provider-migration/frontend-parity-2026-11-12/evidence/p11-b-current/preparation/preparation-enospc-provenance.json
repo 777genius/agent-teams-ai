@@ -1,0 +1,24 @@
+{
+  "atUTC": "2026-11-16T09:52:46.381385+00:00",
+  "kind": "Inert documentation preparation ENOSPC and additive exact-byte resume",
+  "initialWriter": {
+    "bytes": 19985,
+    "blob": "49874d13fb66b0f0083789fc36cfddeaa4f42cff",
+    "sha256": "eabdaea92df6c1613deb115f8d14b9e40706fe5324e901edefb64b0d71bcda7f"
+  },
+  "resumeWriter": {
+    "bytes": 20643,
+    "blob": "a39d34f867f4cf322a6357dfe2710c3b47641ddf",
+    "sha256": "3db53a1429ceec4b0698c58dc9a4f9c700088ebfcd1a18c7de70ccc4474b2249"
+  },
+  "initialFailure": "OSError: [Errno 28] No space left on device at mkdir p11-b-current/general-plan; first writer prepare.py line134; no upload manifest, tree, commit or ref created",
+  "partialPreparationHasNoSourceAction": true,
+  "existingPartialFilesVerifiedBeforeReuse": true,
+  "originalWriterPreserved": true,
+  "sourceCandidateAndR1Unchanged": true,
+  "storageRecoveryReport": {
+    "bytes": 449462,
+    "blob": "35a7187ff6ca702763f8b4068304aab675fc838e",
+    "sha256": "e8bca1be403f172ffd51dc5246ad87556307c7f5a79fdfc7ba751abd1e4ce42d"
+  }
+}

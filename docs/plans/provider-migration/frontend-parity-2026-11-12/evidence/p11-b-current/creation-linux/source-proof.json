@@ -1,0 +1,77 @@
+{
+  "kind": "E3_UBUNTU_CREATION_FOUR_CURRENT_SOURCE_BODIES",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "sourceTree": "de80fbfbffb3fe4daabf6cc9be258cc8df534524",
+  "files": [
+    {
+      "path": ".github/workflows/teams-create-page-desktop-e2e.yml",
+      "bytes": 6522,
+      "blob": "72c1a8f760a99c53ce7d279c7bb9d5e3ddaa7298",
+      "sha256": "3cb53bb19e4ee77c51947c5ce39fa4efb8cccbcaa648c6da0293129c92effdaa",
+      "byteExactE2Comparison": true,
+      "lines": 130
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-desktop.mjs",
+      "bytes": 103360,
+      "blob": "764d42763c8eab6592235acf75073253538cfe38",
+      "sha256": "e1c09e6efffa777bd7f042c813f49cb93d20957d07bed45582474a2930312c1e",
+      "byteExactE2Comparison": true,
+      "lines": 2105
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-owned-processes.mjs",
+      "bytes": 1349,
+      "blob": "d73d56bdbc40e3abc70b53ad5db1690c53ed4c5a",
+      "sha256": "4acd26c18441682b134edc480b6659c72f9033904bf5b1110d73285f2f65bc69",
+      "byteExactE2Comparison": true,
+      "lines": 30
+    },
+    {
+      "path": "scripts/e2e/teams-create-page-owned-processes.test.mjs",
+      "bytes": 1404,
+      "blob": "d3779ede535583c88f81fa5e747d008f45863c48",
+      "sha256": "67c040e8c87f11ce09ce56d3dfe2734bc6f352c0dc170073fa4861ee2794938a",
+      "byteExactE2Comparison": true,
+      "lines": 28
+    }
+  ],
+  "bindings": [
+    {
+      "sourcePath": "scripts/e2e/teams-create-page-desktop.mjs",
+      "firstLine": 568,
+      "lastLine": 607,
+      "label": "Unix process-group ESRCH observation and forced cleanup",
+      "text": "async function waitForProcessGroupExit(processGroupId, timeoutMs) {\n  const deadline = Date.now() + timeoutMs;\n  while (Date.now() < deadline) {\n    try {\n      process.kill(-processGroupId, 0);\n    } catch (error) {\n      if (error?.code === 'ESRCH') return true;\n      // EPERM proves a group may still exist; it never authorizes cleanup success.\n      if (error?.code !== 'EPERM') throw error;\n    }\n    await new Promise((resolve) => setTimeout(resolve, 50));\n  }\n  try {\n    process.kill(-processGroupId, 0);\n    return false;\n  } catch (error) {\n    if (error?.code === 'ESRCH') return true;\n    if (error?.code === 'EPERM') return false;\n    throw error;\n  }\n}\n\nasync function cleanup(fixture) {\n  if (cdp) {\n    try {\n      cdp.close();\n    } catch {\n      // already gone\n    }\n    cdp = null;\n  }\n  if (appProcessGroupId && process.platform !== 'win32') {\n    try {\n      process.kill(-appProcessGroupId, 'SIGKILL');\n    } catch {\n      appProcess?.kill('SIGKILL');\n    }\n    if (!(await waitForProcessGroupExit(appProcessGroupId, 4_000))) {\n      throw new Error('Disposable Electron process group is still present after teardown');\n    }\n"
+    },
+    {
+      "sourcePath": "scripts/e2e/teams-create-page-desktop.mjs",
+      "firstLine": 669,
+      "lastLine": 681,
+      "label": "temporary profile removal",
+      "text": "  if (fixture?.root && process.env.TEAMS_CREATE_PAGE_E2E_KEEP !== '1') {\n    for (let attempt = 0; attempt < 8; attempt += 1) {\n      try {\n        await rm(fixture.root, { recursive: true, force: true });\n        return;\n      } catch (error) {\n        if (attempt === 7) {\n          process.stderr.write(`Fixture cleanup failed: ${String(error)}\\n`);\n          throw error;\n        }\n        await new Promise((resolve) => setTimeout(resolve, 250));\n      }\n    }\n"
+    },
+    {
+      "sourcePath": "scripts/e2e/teams-create-page-desktop.mjs",
+      "firstLine": 1620,
+      "lastLine": 1668,
+      "label": "real restart and loaded modal closed without provider launch",
+      "text": "    // Graceful rebuild of the renderer with the same IndexedDB profile.\n    started = await startApp(fixture);\n    cdp = await CdpClient.connect(started.renderer.webSocketDebuggerUrl);\n    await initializeTeams(cdp, fixture, { afterRestart: true });\n    const restored = await cdp.evaluate(`(() => {\n      const el = document.querySelector('[data-testid=create-team-page] #team-name');\n      return el ? { inPage: true, value: el.value } : { inPage: false, value: null };\n    })()`);\n    if (!restored.inPage) {\n      await cdp.click(createButtonExpression('Continue creating'));\n    }\n    await cdp.waitFor(`document.querySelector('#team-name')?.value === ${JSON.stringify(unique)}`,\n      'draft survived real Electron restart');\n    await captureScreenshot(cdp, fixture, 'restarted');\n\n    log('Launch existing sandbox team must still open a modal');\n    await cdp.click(\"document.querySelector('[data-testid=create-team-page] button[aria-label=\\\"Back to teams\\\"]')\");\n    await cdp.waitFor(\"!document.querySelector('[data-testid=create-team-page]')\",\n      'list restored');\n    await cdp.waitFor(\"document.querySelector('button[aria-label=\\\"Launch team\\\"]')\",\n      'existing team Launch action', 30_000);\n    await cdp.click(\"document.querySelector('button[aria-label=\\\"Launch team\\\"]')\");\n    await cdp.waitFor(\"document.querySelector('[role=dialog]')\",\n      'unchanged launch modal');\n    // The lazy Suspense fallback also has role=dialog. Wait for the REAL\n    // LaunchTeamDialog's project controls before signing off the launch path.\n    await cdp.waitFor(\n      \"(() => { const d = document.querySelector('[role=dialog]'); return d && d.querySelectorAll('button').length >= 5 && d.innerText.includes('Project'); })()\",\n      'loaded launch dialog with existing project controls',\n      45_000\n    );\n    assert.equal((await renderSnapshot(cdp)).inCreatePage, false);\n    await captureScreenshot(cdp, fixture, 'launch-still-modal');\n\n    // The real dialog is already verified above. Runtime/model controls are\n    // intentionally collapsed under Optional launch settings in this fixture;\n    // do not require hidden optional controls to exist before expansion.\n    await captureScreenshot(cdp, fixture, 'launch-controls-loaded');\n\n    log('close launch dialog without starting the deny-all runtime');\n    await cdp.send('Input.dispatchKeyEvent', {\n      type: 'rawKeyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,\n    });\n    await cdp.send('Input.dispatchKeyEvent', {\n      type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27,\n    });\n    await cdp.waitFor(\"!document.querySelector('[role=dialog]')\", 'launch modal closed');\n\n    log('create an actual config-only team from the restored screen');\n"
+    },
+    {
+      "sourcePath": "scripts/e2e/teams-create-page-desktop.mjs",
+      "firstLine": 1787,
+      "lastLine": 1817,
+      "label": "copied editor exact name and retained changes",
+      "text": "    );\n    assert.notEqual(copiedName, fixture.teamName, 'Copy reused the original identity');\n    assert(copiedName.startsWith('teams-create-page-e2e-'),\n      'Copy did not use the existing team name as its source');\n    const editedCopyName = `copy-edited-e2e-${randomUUID().slice(0, 8)}`;\n    await cdp.fill('#team-name', editedCopyName);\n    await cdp.click(\n      \"document.querySelector('[data-testid=create-team-page] button[aria-label=\\\"Back to teams\\\"]')\"\n    );\n    await cdp.waitFor(createButtonExpression('Continue creating'), 'resume copied draft');\n    await cdp.click(createButtonExpression('Continue creating'));\n    await cdp.waitFor(\n      `document.querySelector('#team-name')?.value === ${JSON.stringify(editedCopyName)}`,\n      'copy seed did not replay over an edited draft'\n    );\n    await captureScreenshot(cdp, fixture, 'copy-resumed-edits');\n    log('template replacement must be cancelable without losing copied draft');\n    await cdp.click(\n      \"Array.from(document.querySelectorAll('[data-testid=create-team-page] button'))\" +\n      \".find(b => b.textContent?.includes('Optional team details'))\"\n    );\n    await cdp.waitFor(\"document.querySelector('#team-description')\", 'expanded team details');\n    const copiedDescription = await cdp.evaluate(\n      \"document.querySelector('#team-description')?.value\"\n    );\n    assert.equal(\n      copiedDescription,\n      'Disposable Teams creation E2E fixture',\n      'Copied team description did not hydrate from its persisted config'\n    );\n    const templateConfirmationExpression =\n"
+    },
+    {
+      "sourcePath": "scripts/e2e/teams-create-page-desktop.mjs",
+      "firstLine": 2028,
+      "lastLine": 2099,
+      "label": "complete result after cleanup with error precedence",
+      "text": "\n    const scheduleUiEvidence = await exerciseScheduleUx(cdp, fixture, log, started.inspectorWebSocketDebuggerUrl);\n    const zhTwMcpUiEvidence = await exerciseTraditionalChineseMcpUi(fixture, log);\n\n    qualifiedResult = {\n      success: true,\n      scheduleUiEvidence,\n      zhTwMcpUiEvidence,\n      unique,\n      retainedAcrossBack: true,\n      retainedAcrossTabSwitch: true,\n      manageProvidersNavigationRetainsDraft: true,\n      retainedAcrossProcessRestart: true,\n      advancedCliRetainedAcrossRename: true,\n      teammateModeOverridePersistedThroughNativeUi: true,\n      teammateModeOverrideValidatedThroughNativeUi: true,\n      missingRequiredCliValueRejectedThroughNativeUi: true,\n      advancedCliRetainedAcrossPaneSplit: true,\n      advancedCliRetainedAcrossBackRemount: true,\n      advancedCliRestoresUneditedDefaults: true,\n      unnamedAdvancedCliEditsRetained: true,\n      launchStillModal: true,\n      launchContentLoaded: true,\n      configOnlyCreatedThroughUi: true,\n      nativeConfigOnlyRejectionKeepsDraft: true,\n      copiedTeamUsesSharedEditor: true,\n      copiedDraftDoesNotReplaySeed: true,\n      templateReplacementCancelledAndConfirmed: true,\n      organizationPlacementPersistedViaNativeApi: true,\n      duplicateNameValidationRecovered: true,\n      themeDarkLightRendered: true,\n      cssZoom200Rendered: true,\n      nativeElectronZoom200Rendered: true,\n      splitPaneSingleEditor: true,\n      macInputSelectionFallbackCount: inputSelectAllDomFallbacks,\n      sandboxRoot: fixture.root,\n    };\n\n  } catch (error) {\n    failure = error;\n    await dumpRenderer(cdp, 'teams-create-page-failure');\n    if (cdp) {\n      try { await captureScreenshot(cdp, fixture, 'failure'); } catch { /* disconnected */ }\n    }\n  } finally {\n    try {\n      await cleanup(fixture);\n    } catch (error) {\n      cleanupFailure = error;\n    }\n  }\n  if (failure && cleanupFailure) {\n    throw new AggregateError([failure, cleanupFailure], 'Create Page E2E and cleanup both failed');\n  }\n  if (failure) throw failure;\n  if (cleanupFailure) throw cleanupFailure;\n  assert(qualifiedResult, 'Missing Create Page E2E proof');\n  qualifiedResult.cleanup = {\n    processGroupAbsent: process.platform !== 'win32' ? true : null,\n    windowsTaskkillExitedZero: process.platform === 'win32'\n      ? windowsTeardowns.every((item) => item.taskkillExitCode === 0) : null,\n    windowsExactOwnedProcessesAbsent: process.platform === 'win32'\n      ? windowsTeardowns.length === 3 && windowsTeardowns.every((item) => item.exactOwnedProcessesAbsent) : null,\n    windowsTeardowns: process.platform === 'win32' ? windowsTeardowns : null,\n    temporaryProfileRemoved: process.env.TEAMS_CREATE_PAGE_E2E_KEEP !== '1',\n  };\n  const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();\n  await mkdir(outDir, { recursive: true });\n  await writeFile(path.join(outDir, 'teams-create-page-result.json'),\n    JSON.stringify(qualifiedResult, null, 2));\n  process.stdout.write(JSON.stringify(qualifiedResult, null, 2) + '\\n');\n}\n"
+    }
+  ],
+  "limit": "Four fresh Git bodies and original checkout/build records; no1757 Desktop census, complete built payload inventory or independent rebuild."
+}

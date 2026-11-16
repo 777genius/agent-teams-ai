@@ -1,0 +1,19 @@
+{
+  "kind": "EVIDENCE_READER_ONLY_CORRECTION",
+  "recordedAtUTC": "2026-11-16T09:32:15.797032+00:00",
+  "firstReader": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/taskboard/build-readonly-p11-audit.py",
+    "bytes": 13183,
+    "blob": "d002384e98fd5fc14e5fc27c05ed924a8f7912fb",
+    "sha256": "2916457126dd3b1826a073bfbdf4e659a435d3fd1512283941e29d28111d026a"
+  },
+  "firstResult": "Python SyntaxError at line91: closing parenthesis does not match opening bracket; exit1 before any reader body or output audit/proof execution.",
+  "correction": "Only close the evidence-filter literal list before any(). Original reader and every CI raw byte preserved.",
+  "correctedReader": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-72e6ec/taskboard/build-readonly-p11-audit-v2.py",
+    "bytes": 13184,
+    "blob": "e036aa477a7f7e35d4130c438cad82bd9017f892",
+    "sha256": "b0621abc75a13e47a01850cf2758e5ab8b53039107236ad154afd0dc890f21b2"
+  },
+  "projectOrCIRerun": false
+}

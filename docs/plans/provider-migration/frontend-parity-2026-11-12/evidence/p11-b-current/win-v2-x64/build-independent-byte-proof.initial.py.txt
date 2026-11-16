@@ -1,0 +1,206 @@
+from pathlib import Path,PurePosixPath
+import json,hashlib,subprocess,zipfile,stat,re,collections,datetime
+ROOT=Path('/workspace/scratch/82d3f9ba6b85')
+REPO=ROOT/'agent-teams-e2e'
+D=ROOT/'ci-72e6ec/native/v2-windows-x64'
+HEAD='72e6ec04444969d343d73834c70bc4e261100fc9'
+OLD='57885c055a18b27c180c304762643eac632513ad'
+def identity(b):
+ return {'bytes':len(b),'blob':hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest(),'sha256':hashlib.sha256(b).hexdigest()}
+def file_identity(p):
+ b=p.read_bytes();return {'path':str(p.relative_to(ROOT)),**identity(b)}
+def git(*a):
+ return subprocess.run(['git',*a],cwd=REPO,capture_output=True,check=True).stdout
+def load(p):return json.loads(p.read_text())
+def same_record(record):
+ p=ROOT/record['path'];x=file_identity(p)
+ for k in ['bytes','blob','sha256']:
+  assert x[k]==record[k],(record['path'],k,x[k],record[k])
+ return x
+audit=load(D/'original-v2-and-p09-audit.json')
+assert identity((D/'original-v2-and-p09-audit.json').read_bytes())['blob'].startswith('ee5bb8ad')
+refs=[file_identity(D/'original-v2-and-p09-audit.json')]
+for k in ['originalJobsResponse','officialArtifactsResponse','fullLog','originalResponse','archive','archiveRetention','hostSourceAudit']:
+ refs.append(same_record(audit[k]))
+jobs=load(ROOT/audit['originalJobsResponse']['path'])['structuredContent']['jobs']
+job=next(x for x in jobs if x['id']==133178915729)
+assert job==audit['job']
+assert job['run_id']==43831885742 and job['conclusion']=='success' and job['status']=='completed'
+artifacts=load(ROOT/audit['officialArtifactsResponse']['path'])['structuredContent']['artifacts']
+artifact=next(x for x in artifacts if x['id']==14209218619)
+assert artifact==audit['officialArtifact']
+assert artifact['workflow_run']['head_sha']==HEAD and artifact['workflow_run']['id']==43831885742
+raw=(D/'job-133178915729.log').read_bytes()
+response=load(D/'original-job-log-response.json')
+assert response['isError']==False and response['structuredContent']['content'].encode()==raw
+zip_bytes=(D/'artifact-14209218619.zip').read_bytes()
+assert artifact['size_in_bytes']==len(zip_bytes)
+assert artifact['digest']=='sha256:'+hashlib.sha256(zip_bytes).hexdigest()
+retention=load(D/'archive-retention.json')
+members=[]
+with zipfile.ZipFile(D/'artifact-14209218619.zip') as z:
+ assert z.testzip() is None
+ names=z.namelist();assert len(names)==len(set(names))==4
+ for zi in z.infolist():
+  p=PurePosixPath(zi.filename)
+  assert not p.is_absolute() and not any(x in ('','..','.') for x in p.parts)
+  assert '\\' not in zi.filename and ':' not in zi.filename and '\0' not in zi.filename
+  assert not stat.S_ISLNK(zi.external_attr>>16) and not zi.is_dir()
+  b=z.read(zi.filename);assert b==(D/'extracted'/zi.filename).read_bytes()
+  row={'path':zi.filename,**identity(b),'crc32':f'{zi.CRC:08x}'}
+  author=next(x for x in audit['archiveByteReview']['members'] if x['path']==zi.filename)
+  for k in ['bytes','blob','sha256','crc32']:assert row[k]==author[k]
+  saved=next(x for x in retention['members'] if x['name']==zi.filename)
+  for k in ['bytes','blob','sha256','crc32']:assert row[k]==saved[k]
+  members.append(row)
+# Independently enumerate the immutable Git tree rather than trusting author's source roster.
+tree=git('ls-tree','-r','-z',HEAD,'--','packages/legacy-agent-host/src').split(b'\0')
+rows=[]
+for line in filter(None,tree):
+ mode,kind,rest=line.split(b' ',2);oid,p=rest.split(b'\t',1)
+ assert mode==b'100644' and kind==b'blob'
+ if p.endswith(b'.ts'):rows.append((p.decode(),oid.decode()))
+assert len(rows)==619
+requested=rows+[(x['path'],x['blob']) for x in audit['sourceLeaves']+audit['selectedProviderPairGitBytes']]
+extra_paths=['scripts/legacy-agent-host/prepare-opencode-v2-native.ts','scripts/stage-runtime.mjs','packages/legacy-agent-host/tests/fixtures/native-host-close.ts',
+'packages/legacy-agent-host/tests/opencode-v2-embedded-graph.test.ts','packages/legacy-agent-host/tests/registered-process-build-selection.test.ts',
+'packages/legacy-agent-host/tests/windows-job-custody.test.ts','packages/legacy-agent-host/tests/opencode-v2-native-paths.test.ts',
+'packages/legacy-agent-host/tests/owner-scoped-backup.test.ts','packages/legacy-agent-host/tests/member-attachment-delivery.test.ts']
+for p in extra_paths:
+ oid=git('rev-parse',HEAD+':'+p).decode().strip();requested.append((p,oid))
+requested=list(dict(requested).items())
+bulk=subprocess.run(['git','cat-file','--batch'],cwd=REPO,input=''.join(oid+'\n' for _,oid in requested).encode(),capture_output=True,check=True).stdout
+contents={};off=0
+for p,oid in requested:
+ e=bulk.index(b'\n',off);returned,typ,n=bulk[off:e].split()
+ assert returned.decode()==oid and typ==b'blob'
+ n=int(n);b=bulk[e+1:e+1+n];assert len(b)==n and bulk[e+1+n:e+2+n]==b'\n'
+ assert identity(b)['blob']==oid
+ contents[p]=b;off=e+2+n
+assert off==len(bulk)
+lf=hashlib.sha256();crlf=hashlib.sha256();hostrows=[]
+src_prefix='packages/legacy-agent-host/src/'
+author_host=load(ROOT/audit['hostSourceAudit']['path'])
+assert author_host['sourceHead']==HEAD and author_host['files']==619
+for p,oid in sorted(rows):
+ b=contents[p];windows=b.replace(b'\n',b'\r\n')
+ assert b'\r\n' not in b
+ rel=p[len(src_prefix):].encode()
+ lf.update(rel+b'\0'+b+b'\0');crlf.update(rel+b'\0'+windows+b'\0')
+ row={'path':p,**identity(b),'crlfSha256':hashlib.sha256(windows).hexdigest()}
+ author=next(x for x in author_host['rows'] if x['path']==p)
+ assert row==author
+ hostrows.append(row)
+assert lf.hexdigest()==author_host['LF'] and crlf.hexdigest()==author_host['CRLF']
+old_tree=git('ls-tree','-r','-z',OLD,'--','packages/legacy-agent-host/src')
+assert old_tree==git('ls-tree','-r','-z',HEAD,'--','packages/legacy-agent-host/src')
+source_leaves=[]
+for x in audit['sourceLeaves']+audit['selectedProviderPairGitBytes']:
+ b=contents[x['path']];i=identity(b)
+ assert all(i[k]==x[k] for k in i)
+ assert git('rev-parse',OLD+':'+x['path']).decode().strip()==x['blob']
+ source_leaves.append({'path':x['path'],**i,'sameGitBytesAs578':True})
+for p in extra_paths:source_leaves.append({'path':p,**identity(contents[p]),'additionalInterpretationSource':True})
+# Parse actual full original reporter output after timestamp/ANSI removal only.
+lines=raw.decode().splitlines()
+plain=[re.sub(r'\x1b\[[0-9;]*m','',re.sub(r'^\d{4}-\d\d-\d\dT\S+Z ','',l)) for l in lines]
+blocks=[]
+for i,l in enumerate(plain):
+ if re.fullmatch(r'ℹ tests \d+',l):
+  vals={'line':i+1}
+  for t in plain[i:i+8]:
+   m=re.fullmatch(r'ℹ (\S+) ([0-9.]+)',t);assert m
+   vals[m.group(1)]=float(m.group(2)) if '.' in m.group(2) else int(m.group(2))
+  blocks.append(vals)
+assert blocks==audit['reporterBlocks']
+assert [(x['tests'],x['pass'],x['fail'],x['skipped'],x['cancelled']) for x in blocks]==[(58,57,0,1,0),(1,1,0,0,0),(1,1,0,0,0),(1,1,0,0,0)]
+assert sum(l.startswith('✔ ') for l in plain)==60
+skips=[{'line':i+1,'text':l} for i,l in enumerate(plain) if '# SKIP' in l]
+assert len(skips)==1 and 'Linux builder refuses an existing or linked output leaf' in skips[0]['text']
+assert not any(l.startswith('✖ ') or l.startswith('not ok ') for l in plain)
+for x in audit['commands']:
+ assert plain[x['line']-1]=='##[group]Run '+x['text']
+assert 'node: v24.21.0' in plain
+assert any('Done in 39s using pnpm v11.22.0' in l for l in plain)
+assert sum(l==HEAD for l in plain)>=2
+wf=contents['.github/workflows/opencode-v2-stage1-preflight.yml'].decode()
+for command in [x['text'] for x in audit['commands'] if x['text'].startswith('node --test ')]:
+ assert command in wf
+# Actual archive receipts and cross-input identities.
+inp=load(D/'extracted/opencode-v2-embedded-inputs.json')
+cust=load(D/'extracted/opencode-v2-windows-custody.json')
+assert inp==audit['inputs']['content'] and cust==audit['custody']['content']
+assert inp['status']=='READY' and inp['productQualified'] is False
+assert cust['status']=='PASS' and cust['cleanup'] is True
+assert all(cust[k] is True for k in ['captureBeforeInput','descendantSurvivedRootExit','neighborSurvivedTargetStop'])
+assert cust['originalJobCleanup']==cust['neighborJobCleanup']=='confirmed'
+assert cust['productQualified'] is cust['desktopQualified'] is False
+assert inp['sourceHead']==cust['sourceHead']==HEAD
+assert inp['platform']==cust['platform']=='win32-x64'
+assert inp['nodeVersion']==cust['nodeVersion']=='v24.21.0'
+assert inp['bun']['sha256']==cust['bunSha256']
+assert inp['manifestSha256']==cust['manifestSha256']
+assert cust['hostBuild']['hostSourceDigest']==crlf.hexdigest()
+provider=next(x for x in source_leaves if x['path'].endswith('/agent-teams-provider-implementations-0.0.0.tgz'))
+assert provider['sha256']==cust['hostBuild']['providerDigest']
+lock=json.loads(contents['runtime.lock.json'])
+assert inp['baseArchiveSha256'] in json.dumps(lock)
+assert inp['supportArchiveSha256'] in json.dumps(lock)
+assert inp['runtimeSource'] in json.dumps(lock)
+host_summaries=[]
+for mode,name in [('manual','opencode-v2-embedded-host.json'),('auto','opencode-v2-embedded-host-auto.json')]:
+ r=load(D/'extracted'/name)
+ author=next(x for x in audit['manualAndAuto'] if x['selectedFacts']['approvalMode']==mode)
+ assert all(r[k]==v for k,v in author['selectedFacts'].items())
+ assert r['status']=='PASS' and r['cleanup'] is True and r['cancelled'] is False
+ assert r['sourceHead']==HEAD and r['platform']=='win32-x64' and r['nodeVersion']=='v24.21.0' and r['version']=='2.1.4'
+ assert r['approvalMode']==mode and r['modelRequests']==11 and r['modelFailures']==[]
+ assert r['modelOrigin']=='localhost-scripted'
+ assert all(r[k] is False for k in ['vendorAuthQualified','desktopQualified','releaseQualified'])
+ assert r['coordination']=={'status':'unqualified','cleanup':None}
+ assert r['failureCode'] is None
+ assert r['hosts']==[{'exitCode':0,'signalCode':None,'stdoutValid':True}]*2
+ assert r['digests']['hostSource']==crlf.hexdigest()
+ assert r['digests']['hostDist']==cust['hostBuild']['hostDistDigest']
+ assert r['digests']['provider']==provider['sha256']
+ assert r['digests']['bun']==inp['bun']['sha256'] and r['digests']['manifest']==inp['manifestSha256']
+ assert len(r['steps'])==6 and len(set(r['steps']))==6
+ assert list(r['phaseElapsedMs'])==r['steps']
+ assert list(r['phaseElapsedMs'].values())==sorted(r['phaseElapsedMs'].values())
+ assert r['elapsedMs']>=max(r['phaseElapsedMs'].values())
+ last=r['inputObservation']['last']
+ assert last['phase']=='allocated' and last['custody']=='owned' and last['nativeReady'] is True and last['attached'] is True
+ assert last['inputs']==[{'phase':'terminal','terminal':'succeeded'}]*2
+ assert last['interactions']==([{'kind':'permission','phase':'resolved'}]*2 if mode=='manual' else [])
+ trace=r['passiveNativeDiagnostics'];assert len(trace)==254 and trace[-1]['event']=='trace-limit'
+ assert {x['epoch'] for x in trace}=={1}
+ counts=dict(collections.Counter(x['event'] for x in trace));assert counts==author['passiveTrace']['eventCounts']
+ assert trace[-1]==author['passiveTrace']['last']
+ cpu=r['originalHostCpu'];assert cpu['status']=='available' and cpu['epoch']==1 and cpu['rawDiscarded'] is True
+ assert cpu['sampledUs']+cpu['unsampledUs']==cpu['profileDurationUs']
+ assert sum(x['exclusiveSamples'] for x in cpu['categories'])==cpu['sampleCount']
+ assert sum(x['exclusiveSampledUs'] for x in cpu['categories'])==cpu['sampledUs']
+ writer=next(x for x in cpu['categories'] if x['category']=='team-writer-authority')
+ ns=next(x for x in cpu['teamWriterDetails'] if x['family']=='namespace-fence')
+ for key in ['exclusiveSamples','exclusiveSampledUs']:
+  assert sum(x[key] for x in cpu['teamWriterDetails'])==writer[key]
+  assert sum(x[key] for x in cpu['namespaceFenceDetails'])==ns[key]
+  assert sum(x[key] for x in cpu['teamWriterCallers']['rows'])==writer[key]
+ for k,other in [('namespaceSamples','exclusiveSamples'),('namespaceSampledUs','exclusiveSampledUs')]:
+  assert sum(x[k] for x in cpu['teamWriterCallers']['rows'])==ns[other]
+ host_summaries.append({'mode':mode,'receipt':file_identity(D/'extracted'/name),
+  'steps':r['steps'],'phaseElapsedMs':r['phaseElapsedMs'],'elapsedMs':r['elapsedMs'],
+  'inputObservation':r['inputObservation'],'launchObservation':r['launchObservation'],
+  'hosts':r['hosts'],'coordination':r['coordination'],'modelRequests':r['modelRequests'],
+  'modelFailures':r['modelFailures'],'trace':{'rows':len(trace),'eventCounts':counts,'last':trace[-1],'complete':False},
+  'cpuArithmeticVerified':True,'cpuScope':cpu['scope'],'cpu':cpu})
+proof={'kind':'INDEPENDENT_E3_WINDOWS_V2_ORIGINAL_BYTE_SOURCE_PROOF','reviewedAtUTC':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+ 'sourceHead':HEAD,'sourceTree':git('rev-parse',HEAD+'^{tree}').decode().strip(),'runId':43831885742,'jobId':133178915729,
+ 'originalReferences':refs,'job':job,'artifact':artifact,'rawMcpContentExact':True,'safeZipCrcExactExtracted':True,'members':members,
+ 'reporterBlocks':blocks,'recountedIndividualPassRows':60,'originalSkip':skips,'sourceLeaves':source_leaves,
+ 'freshHostSource':{'files':619,'LF':lf.hexdigest(),'CRLF':crlf.hexdigest(),'all619ByteExactTo578':True,'rows':hostrows},
+ 'inputs':inp,'custody':cust,'manualAuto':host_summaries,
+ 'noProjectExecution':True,'noNetworkOrOriginalReplay':True}
+f=D/'independent-byte-source-proof.json';assert not f.exists();f.write_text(json.dumps(proof,ensure_ascii=False,indent=2)+'\n')
+print(json.dumps(file_identity(f),indent=2))
+

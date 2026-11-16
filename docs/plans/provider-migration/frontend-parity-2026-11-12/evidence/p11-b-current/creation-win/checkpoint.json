@@ -1,0 +1,94 @@
+{
+  "kind": "FROZEN_ORIGINAL_E3_WINDOWS_CREATION_AUTHOR_PACKET",
+  "sourceHead": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "runId": 43831885626,
+  "jobId": 133178909857,
+  "status": "PASS_WITH_SCOPED_FORCED_CLEANUP",
+  "authorAudit": {
+    "path": "ci-72e6ec/creation-windows/audit.json",
+    "bytes": 37670,
+    "blob": "0aee86873bfc25f15873542d8d5fb622cc4e4340",
+    "sha256": "b807ff97a911191ca2480630626c68c8aec536cbf22edb5073d6714df05d3024"
+  },
+  "appendix": {
+    "path": "ci-72e6ec/creation-windows/Plan29-appendix.md",
+    "bytes": 3765,
+    "blob": "a340110723ac73e034e1cac2fe0188e5bb17375f",
+    "sha256": "18475fc0263d9ce8940a6b0ad1f20358b420900a102a37f64a9bad090e8b655b"
+  },
+  "sourceProof": {
+    "path": "ci-72e6ec/creation-windows/source-proof.json",
+    "bytes": 16363,
+    "blob": "d2507569210b321f8ab3d58b8a159ccfee90e8c1",
+    "sha256": "544d3f4566d98d015798f70795e45ca32de8a696b108bc3ada24460dd4f8a15b"
+  },
+  "payloads": [
+    {
+      "path": "ci-72e6ec/creation-windows/job.log",
+      "bytes": 91368,
+      "blob": "14b4d07df64b0ba6069c87c7512a06ec9967f5f7",
+      "sha256": "8a862a4181fb2f6254b00469b00e3546981a05a192d0d632d90c917dc12db225"
+    },
+    {
+      "path": "ci-72e6ec/creation-windows/job-original-response.json",
+      "bytes": 95397,
+      "blob": "feb9bd877b1cb85289357cec4db211c20461187c",
+      "sha256": "a988e53ec01b0c21d058daaace2f696ee782497ff713326b37764c69b108ff83"
+    },
+    {
+      "path": "ci-72e6ec/creation-windows/artifact-14210737149.zip",
+      "bytes": 1855760,
+      "blob": "76359758be6647344ccc80ee16d342e61fcd19a1",
+      "sha256": "7dce234f53c223dc6bc90e5ad5ac9adbb2fec2b4e2925f2821cdd92e201659cf"
+    },
+    {
+      "path": "ci-72e6ec/creation-windows/archive-retention.json",
+      "bytes": 11048,
+      "blob": "4b2abaee7c25b26fbc827068111e00d723be2250",
+      "sha256": "281a7ecc3aad872b508c1c1e8be86a2640cba2e2cf1585379e15619d6f844006"
+    },
+    {
+      "path": "ci-72e6ec/creation-windows/raw-serialization-correction.json",
+      "bytes": 888,
+      "blob": "0a4dcaf5a468062faa36ae0e2a9aeb4c4a8f2b68",
+      "sha256": "ffadb19e5f1cf78c58b481a01d8b69e827ab9f28127a7e67e1356a75ec15686e"
+    },
+    {
+      "path": "ci-72e6ec/official-creation-artifacts-0902.json",
+      "bytes": 2964,
+      "blob": "1e44352d00f6bdf605b218b9a0c1a500e5c70c3e",
+      "sha256": "c743b4599746d95a365a92da25379e951acc94a2066daf829545bc44c53d6bbe"
+    },
+    {
+      "path": "ci-72e6ec/owned-jobs-0901.json",
+      "bytes": 28320,
+      "blob": "7df01c7737c81079c8cd9a769980ef9b261751db",
+      "sha256": "a01b63a279d4a475196866cc31b12e0ca59f288f36375aebcfdaf760bc4662ab"
+    },
+    {
+      "path": "ci-72e6ec/creation-windows/source-proof.json",
+      "bytes": 16363,
+      "blob": "d2507569210b321f8ab3d58b8a159ccfee90e8c1",
+      "sha256": "544d3f4566d98d015798f70795e45ca32de8a696b108bc3ada24460dd4f8a15b"
+    },
+    {
+      "path": "ci-72e6ec/creation-windows/audit.json",
+      "bytes": 37670,
+      "blob": "0aee86873bfc25f15873542d8d5fb622cc4e4340",
+      "sha256": "b807ff97a911191ca2480630626c68c8aec536cbf22edb5073d6714df05d3024"
+    },
+    {
+      "path": "ci-72e6ec/creation-windows/Plan29-appendix.md",
+      "bytes": 3765,
+      "blob": "a340110723ac73e034e1cac2fe0188e5bb17375f",
+      "sha256": "18475fc0263d9ce8940a6b0ad1f20358b420900a102a37f64a9bad090e8b655b"
+    }
+  ],
+  "payloadCount": 10,
+  "payloadBytes": 2143543,
+  "officialZipMembers": 41,
+  "pngBytesChecked": 40,
+  "pngActuallyViewed": 3,
+  "independentReviewPending": true,
+  "noProjectExecution": true
+}
